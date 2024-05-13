@@ -94,8 +94,8 @@ public:
 
     TestTableSchema() {
         auto add_column = [&](string_view column_name, string_view type) -> void {
-            m_columns.emplace_back(column_name);
-            m_column_types.emplace_back(column_name, type);
+            m_column_names.emplace_back(column_name);
+            m_column_names_and_types.emplace_back(column_name, type);
         };
 
         add_column(cPath, "TEXT PRIMARY KEY");
@@ -108,16 +108,16 @@ public:
 
     [[nodiscard]] auto get_name() const -> string_view { return m_name; }
 
-    [[nodiscard]] auto get_columns() const -> vector<string> const& { return m_columns; }
+    [[nodiscard]] auto get_column_names() const -> vector<string> const& { return m_column_names; }
 
-    [[nodiscard]] auto get_column_types() const -> vector<pair<string, string>> const& {
-        return m_column_types;
+    [[nodiscard]] auto get_column_names_and_types() const -> vector<pair<string, string>> const& {
+        return m_column_names_and_types;
     }
 
 private:
     string m_name{"CLP_TEST_TABLE"};
-    vector<string> m_columns;
-    vector<pair<string, string>> m_column_types;
+    vector<string> m_column_names;
+    vector<pair<string, string>> m_column_names_and_types;
 };
 
 /**
@@ -133,7 +133,7 @@ auto create_table(SQLiteDB& db, TestTableSchema const& table_schema) -> void {
             stmt_buf_it,
             "CREATE TABLE IF NOT EXISTS {} ({}) WITHOUT ROWID",
             table_schema.get_name(),
-            clp::get_field_names_and_types_sql(table_schema.get_column_types())
+            clp::get_field_names_and_types_sql(table_schema.get_column_names_and_types())
     );
     auto create_table_stmt{db.prepare_statement(statement_buffer.data(), statement_buffer.size())};
     create_table_stmt.step();
@@ -211,37 +211,37 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
     create_table(sqlite_db, table_schema);
     create_indices(sqlite_db, table_schema);
 
-    auto table_columns{table_schema.get_columns()};
+    auto table_columns{table_schema.get_column_names()};
     // Shuffle table columns to test inserting with random ordering
     // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
     std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
-    unordered_map<string, int> placeholder_idx_map;
-    int idx{2};
-    std::optional<int> segment_x_pos_idx{std::nullopt};
-    fmt::memory_buffer placeholder_buf;
-    auto placeholder_buf_it{std::back_insert_iterator(placeholder_buf)};
-    bool is_first_placeholder{true};
+    unordered_map<string, int> column_name_to_param_id;
+    int next_id{2};
+    std::optional<int> segment_xxx_pos_column_param_id{std::nullopt};
+    fmt::memory_buffer param_id_buf;
+    auto param_id_buf_it{std::back_insert_iterator(param_id_buf)};
+    bool is_first_param{true};
     for (auto const& column : table_columns) {
-        int placeholder_idx{};
+        int param_id{};
         if (TestTableSchema::cSegmentTsPos == column || TestTableSchema::cSegmentVarPos == column) {
             // Ensure `segment_timestamp_position` and `segment_variable_position` always bind to
-            // the same value by assigning them the same placeholder index
-            if (segment_x_pos_idx.has_value()) {
-                placeholder_idx = segment_x_pos_idx.value();
+            // the same value by assigning them the same parameter ID
+            if (segment_xxx_pos_column_param_id.has_value()) {
+                param_id = segment_xxx_pos_column_param_id.value();
             } else {
-                placeholder_idx = idx++;
-                segment_x_pos_idx.emplace(placeholder_idx);
+                param_id = next_id++;
+                segment_xxx_pos_column_param_id.emplace(param_id);
             }
         } else {
-            placeholder_idx = idx++;
+            param_id = next_id++;
         }
-        if (is_first_placeholder) {
-            fmt::format_to(placeholder_buf_it, "?{}", placeholder_idx);
-            is_first_placeholder = false;
+        if (is_first_param) {
+            fmt::format_to(param_id_buf_it, "?{}", param_id);
+            is_first_param = false;
         } else {
-            fmt::format_to(placeholder_buf_it, ",?{}", placeholder_idx);
+            fmt::format_to(param_id_buf_it, ",?{}", param_id);
         }
-        placeholder_idx_map.emplace(column, placeholder_idx);
+        column_name_to_param_id.emplace(column, param_id);
     }
 
     // Insert rows into the table
@@ -254,7 +254,7 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
             "INSERT INTO {} ({}) VALUES ({})",
             table_schema.get_name(),
             clp::get_field_names_sql(table_columns),
-            string{placeholder_buf.begin(), placeholder_buf.end()}
+            string{param_id_buf.begin(), param_id_buf.end()}
     );
     auto insert_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
@@ -262,41 +262,41 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
     for (auto const& row : rows) {
         transaction_begin_stmt.step();
 
-        // Bind values to the columns with the corresponded placeholder index.
-        auto const path_placeholder_idx_it{placeholder_idx_map.find(TestTableSchema::cPath)};
-        REQUIRE((placeholder_idx_map.cend() != path_placeholder_idx_it));
-        insert_stmt.bind_text(path_placeholder_idx_it->second, row.get_path(), false);
+        // Bind values to the columns with the corresponded parameter ID.
+        auto const path_param_id_it{column_name_to_param_id.find(TestTableSchema::cPath)};
+        REQUIRE((column_name_to_param_id.cend() != path_param_id_it));
+        insert_stmt.bind_text(path_param_id_it->second, row.get_path(), false);
 
-        auto const begin_ts_placeholder_idx_it{placeholder_idx_map.find(TestTableSchema::cBeginTs)};
-        REQUIRE((placeholder_idx_map.cend() != begin_ts_placeholder_idx_it));
-        insert_stmt.bind_int64(begin_ts_placeholder_idx_it->second, row.get_begin_ts());
+        auto const begin_ts_param_id_it{column_name_to_param_id.find(TestTableSchema::cBeginTs)};
+        REQUIRE((column_name_to_param_id.cend() != begin_ts_param_id_it));
+        insert_stmt.bind_int64(begin_ts_param_id_it->second, row.get_begin_ts());
 
-        auto const end_ts_placeholder_idx_it{placeholder_idx_map.find(TestTableSchema::cEndTs)};
-        REQUIRE((placeholder_idx_map.cend() != end_ts_placeholder_idx_it));
-        insert_stmt.bind_int64(end_ts_placeholder_idx_it->second, row.get_end_ts());
+        auto const end_ts_param_id_it{column_name_to_param_id.find(TestTableSchema::cEndTs)};
+        REQUIRE((column_name_to_param_id.cend() != end_ts_param_id_it));
+        insert_stmt.bind_int64(end_ts_param_id_it->second, row.get_end_ts());
 
-        auto const seg_id_placeholder_idx_it{placeholder_idx_map.find(TestTableSchema::cSegmentId)};
-        REQUIRE((placeholder_idx_map.cend() != seg_id_placeholder_idx_it));
+        auto const seg_id_param_id_it{column_name_to_param_id.find(TestTableSchema::cSegmentId)};
+        REQUIRE((column_name_to_param_id.cend() != seg_id_param_id_it));
         insert_stmt.bind_int64(
-                seg_id_placeholder_idx_it->second,
+                seg_id_param_id_it->second,
                 static_cast<int64_t>(row.get_segment_id())
         );
 
-        auto const seg_ts_pos_placeholder_idx_it{
-                placeholder_idx_map.find(TestTableSchema::cSegmentTsPos)
+        auto const seg_ts_pos_param_id_it{
+                column_name_to_param_id.find(TestTableSchema::cSegmentTsPos)
         };
-        REQUIRE((placeholder_idx_map.cend() != seg_ts_pos_placeholder_idx_it));
+        REQUIRE((column_name_to_param_id.cend() != seg_ts_pos_param_id_it));
         insert_stmt.bind_int64(
-                seg_ts_pos_placeholder_idx_it->second,
+                seg_ts_pos_param_id_it->second,
                 static_cast<int64_t>(row.get_segment_ts_pos())
         );
 
-        // We don't need to bind var pos explicitly since it has the same idx with ts pos
-        auto const seg_var_pos_placeholder_idx_it{
-                placeholder_idx_map.find(TestTableSchema::cSegmentVarPos)
+        // We don't need to bind var pos explicitly since it has the same next_id with ts pos
+        auto const seg_var_pos_param_id_it{
+                column_name_to_param_id.find(TestTableSchema::cSegmentVarPos)
         };
-        REQUIRE((placeholder_idx_map.cend() != seg_var_pos_placeholder_idx_it));
-        REQUIRE((seg_ts_pos_placeholder_idx_it->second == seg_var_pos_placeholder_idx_it->second));
+        REQUIRE((column_name_to_param_id.cend() != seg_var_pos_param_id_it));
+        REQUIRE((seg_ts_pos_param_id_it->second == seg_var_pos_param_id_it->second));
         REQUIRE((row.get_segment_ts_pos() == row.get_segment_var_pos()));
 
         insert_stmt.step();
@@ -328,14 +328,14 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
 
     // Create indices for each column in the order they are defined in the insert statement,
     // counting from 0.
-    auto table_columns{table_schema.get_columns()};
+    auto table_columns{table_schema.get_column_names()};
     // Shuffle table columns to test selecting with random ordering
     // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
     std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
-    unordered_map<string, int> selected_column_idx;
+    unordered_map<string, int> column_name_to_idx;
     size_t idx{0};
     for (auto const& column : table_columns) {
-        selected_column_idx.emplace(column, idx++);
+        column_name_to_idx.emplace(column, idx++);
     }
 
     // Read all the columns from db, sorted by the begin ts
@@ -359,30 +359,30 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
         }
 
         string path;
-        auto const path_idx_it{selected_column_idx.find(TestTableSchema::cPath)};
-        REQUIRE((selected_column_idx.cend() != path_idx_it));
+        auto const path_idx_it{column_name_to_idx.find(TestTableSchema::cPath)};
+        REQUIRE((column_name_to_idx.cend() != path_idx_it));
         select_stmt.column_string(path_idx_it->second, path);
 
-        auto const begin_ts_idx_it{selected_column_idx.find(TestTableSchema::cBeginTs)};
-        REQUIRE((selected_column_idx.cend() != begin_ts_idx_it));
+        auto const begin_ts_idx_it{column_name_to_idx.find(TestTableSchema::cBeginTs)};
+        REQUIRE((column_name_to_idx.cend() != begin_ts_idx_it));
         epochtime_t const begin_ts{select_stmt.column_int64(begin_ts_idx_it->second)};
 
-        auto const end_ts_idx_it{selected_column_idx.find(TestTableSchema::cEndTs)};
-        REQUIRE((selected_column_idx.cend() != end_ts_idx_it));
+        auto const end_ts_idx_it{column_name_to_idx.find(TestTableSchema::cEndTs)};
+        REQUIRE((column_name_to_idx.cend() != end_ts_idx_it));
         epochtime_t const end_ts{select_stmt.column_int64(end_ts_idx_it->second)};
 
-        auto const seg_id_idx_it{selected_column_idx.find(TestTableSchema::cSegmentId)};
-        REQUIRE((selected_column_idx.cend() != seg_id_idx_it));
+        auto const seg_id_idx_it{column_name_to_idx.find(TestTableSchema::cSegmentId)};
+        REQUIRE((column_name_to_idx.cend() != seg_id_idx_it));
         size_t const seg_id{static_cast<size_t>(select_stmt.column_int64(seg_id_idx_it->second))};
 
-        auto const seg_ts_pos_idx_it{selected_column_idx.find(TestTableSchema::cSegmentTsPos)};
-        REQUIRE((selected_column_idx.cend() != seg_ts_pos_idx_it));
+        auto const seg_ts_pos_idx_it{column_name_to_idx.find(TestTableSchema::cSegmentTsPos)};
+        REQUIRE((column_name_to_idx.cend() != seg_ts_pos_idx_it));
         size_t const seg_ts_pos{
                 static_cast<size_t>(select_stmt.column_int64(seg_ts_pos_idx_it->second))
         };
 
-        auto const seg_var_pos_idx_it{selected_column_idx.find(TestTableSchema::cSegmentVarPos)};
-        REQUIRE((selected_column_idx.cend() != seg_var_pos_idx_it));
+        auto const seg_var_pos_idx_it{column_name_to_idx.find(TestTableSchema::cSegmentVarPos)};
+        REQUIRE((column_name_to_idx.cend() != seg_var_pos_idx_it));
         size_t const seg_var_pos{
                 static_cast<size_t>(select_stmt.column_int64(seg_var_pos_idx_it->second))
         };
