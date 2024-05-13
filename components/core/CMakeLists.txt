@@ -460,5 +460,5 @@ target_link_libraries(unitTest
         ZStd::ZStd
         )
 target_compile_features(unitTest
-        PRIVATE cxx_std_17
+        PRIVATE cxx_std_20
         )
