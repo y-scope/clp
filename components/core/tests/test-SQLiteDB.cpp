@@ -27,7 +27,7 @@ using std::vector;
 
 namespace {
 /**
- * A class for inserting and retrieving rows from the test table.
+ * A row in the test table.
  */
 class Row {
 public:
@@ -79,7 +79,7 @@ private:
 };
 
 /**
- * A class that defines a sqlite table schema (column names and types) for testing purposes.
+ * A class that defines a SQLite table schema (column names and types) for testing purposes.
  */
 class TestTableSchema {
 public:
@@ -186,14 +186,15 @@ auto create_indices(SQLiteDB& db, TestTableSchema const& table_schema) -> void {
 }
 
 /**
- * @return The absolute path of the generated test sqlite database.
+ * @return The absolute path of the generated test SQLite database.
  */
 [[nodiscard]] auto get_test_db_abs_path() -> std::filesystem::path {
     return std::filesystem::current_path() / "sqlite-test.db";
 }
 
 /**
- * Creates a SQLite database using the given table schema, and inserts the rows into the table.
+ * Creates a SQLite database using the given table schema, and inserts the given rows into the
+ * table.
  * @param table_schema
  * @param rows
  */
