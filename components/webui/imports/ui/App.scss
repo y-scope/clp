@@ -1,4 +1,4 @@
-@import "bootstrap-customized.scss";
+@import "./bootstrap-customized";
 
 html {
   font-size: 14px;
@@ -6,15 +6,14 @@ html {
 }
 
 body {
-  background-image: linear-gradient(135deg, white, rgba(255, 255, 255, 0.5));
-  font-family: 'Source Sans Pro', sans-serif;
+  background-image: linear-gradient(165deg, white 80%, rgba(122, 194, 204, 0.1) 80%),
+                    linear-gradient(115deg, white 90%, rgba(122, 194, 204, 0.2) 90%);
+  font-family: 'Source Sans 3', sans-serif;
   height: 100%;
 }
 
 #page-container {
   flex-grow: 1;
-}
 
-@import "IngestView/IngestView.scss";
-@import "SearchView/SearchView.scss";
-@import "Sidebar/Sidebar.scss";
+  overflow-y: auto;
+}

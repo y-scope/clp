@@ -1,14 +1,23 @@
-import {logger} from "/imports/utils/logger";
 import mysql from "mysql2/promise";
 
-import {deinitStatsDbManager, initStatsDbManager} from "../api/ingestion/server/publications";
-import {initSearchJobsDbManager} from "../api/search/server/methods";
+import {
+    deinitCompressionDbManager,
+    deinitStatsDbManager,
+    initCompressionDbManager,
+    initStatsDbManager,
+} from "/imports/api/ingestion/server/publications";
+import {initSearchJobsDbManager} from "/imports/api/search/server/methods";
+import {logger} from "/imports/utils/logger";
 
+
+const DB_CONNECTION_LIMIT = 2;
+const DB_MAX_IDLE = DB_CONNECTION_LIMIT;
+const DB_IDLE_TIMEOUT_MILLIS = 10000;
 
 /**
- * @type {mysql.Connection|null}
+ * @type {import("mysql2/promise").Pool|null}
  */
-let dbConnection = null;
+let dbConnPool = null;
 
 /**
  * Creates a new database connection and initializes DB managers with it.
@@ -17,67 +26,83 @@ let dbConnection = null;
  * @param {string} dbConfig.dbHost
  * @param {number} dbConfig.dbPort
  * @param {string} dbConfig.dbName
- * @param {string} dbConfig.dbUser
  * @param {string} dbConfig.dbPassword
- *
+ * @param {string} dbConfig.dbUser
  * @param {object} tableNames
- * @param {string} tableNames.searchJobsTableName
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
- *
- * @returns {Promise<void>}
+ * @param {string} tableNames.compressionJobsTableName
+ * @param {string} tableNames.searchJobsTableName
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const initDbManagers = async ({
     dbHost,
     dbPort,
     dbName,
-    dbUser,
     dbPassword,
+    dbUser,
 }, {
-    searchJobsTableName,
     clpArchivesTableName,
     clpFilesTableName,
+    compressionJobsTableName,
+    searchJobsTableName,
 }) => {
-    if (null !== dbConnection) {
-        logger.error("This method should not be called twice.");
-        return;
+    if (null !== dbConnPool) {
+        throw Error("This method should not be called twice.");
     }
 
     try {
-        dbConnection = await mysql.createConnection({
+        // This method shall not be called twice and therefore incurs no race condition.
+        // eslint-disable-next-line require-atomic-updates
+        dbConnPool = await mysql.createPool({
             host: dbHost,
             port: dbPort,
+
             database: dbName,
-            user: dbUser,
             password: dbPassword,
+            user: dbUser,
+
             bigNumberStrings: true,
             supportBigNumbers: true,
-        });
-        await dbConnection.connect();
+            timezone: "Z",
 
-        initSearchJobsDbManager(dbConnection, {
+            connectionLimit: DB_CONNECTION_LIMIT,
+            enableKeepAlive: true,
+            idleTimeout: DB_IDLE_TIMEOUT_MILLIS,
+            maxIdle: DB_MAX_IDLE,
+        });
+
+        initCompressionDbManager(dbConnPool, {
+            compressionJobsTableName,
+        });
+        initSearchJobsDbManager(dbConnPool, {
             searchJobsTableName,
         });
-        initStatsDbManager(dbConnection, {
+        initStatsDbManager(dbConnPool, {
             clpArchivesTableName,
             clpFilesTableName,
         });
     } catch (e) {
-        logger.error("Unable to create MySQL / mariadb connection.", e.toString());
+        logger.error("Unable to create MySQL / mariadb connection pool.", e.toString());
         throw e;
     }
 };
 
 /**
- * De-initialize database managers.
- * @returns {Promise<void>}
+ * De-initializes database managers.
+ *
+ * @return {Promise<void>}
  * @throws {Error} on error.
  */
 const deinitDbManagers = async () => {
+    deinitCompressionDbManager();
     deinitStatsDbManager();
 
-    await dbConnection.end();
+    await dbConnPool.end();
 };
 
-export {initDbManagers, deinitDbManagers};
+export {
+    deinitDbManagers,
+    initDbManagers,
+};

@@ -1,6 +1,11 @@
 name: "clp-lint"
 
-on: ["pull_request", "push", "workflow_dispatch"]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
@@ -9,7 +14,10 @@ concurrency:
 
 jobs:
   lint-check:
-    runs-on: "ubuntu-latest"
+    strategy:
+      matrix:
+        os: ["macos-latest", "ubuntu-latest"]
+    runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v3"
         with:
@@ -22,6 +30,10 @@ jobs:
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli"
+
+      - if: "matrix.os == 'macos-latest'"
+        name: "Install coreutils (for md5sum)"
+        run: "brew install coreutils"
 
       - name: "Run lint task"
         shell: "bash"

@@ -1,59 +1,70 @@
-import React from "react";
+import {
+    faAngleDoubleLeft,
+    faAngleDoubleRight,
+    faCircleInfo,
+    faMessage,
+} from "@fortawesome/free-solid-svg-icons";
 
-import {faAngleDoubleLeft, faAngleDoubleRight} from "@fortawesome/free-solid-svg-icons";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {NavLink} from "react-router-dom";
+import SidebarButton from "./SidebarButton";
+
+import "./Sidebar.scss";
 
 
 /**
  * Renders a sidebar navigation component, which includes navigation links and a toggle for
  * collapsing or expanding the sidebar.
  *
- * @param {boolean} isSidebarCollapsed indicates whether the sidebar is collapsed
- * @param {Object[]} routes objects for navigation links
- * @param {function} onSidebarToggle callback to toggle the sidebar's collapsed state
- * @returns {JSX.Element}
+ * @param {object} props
+ * @param {boolean} props.isSidebarCollapsed indicates whether the sidebar is collapsed
+ * @param {object[]} props.routes objects for navigation links
+ * @param {Function} props.onSidebarToggle callback to toggle the sidebar's collapsed state
+ * @return {React.ReactElement}
  */
 const Sidebar = ({
     isSidebarCollapsed,
     routes,
     onSidebarToggle,
-}) => {
-    return (
-        <div
-            id="sidebar"
-            className={isSidebarCollapsed ? "collapsed" : ""}
-        >
-            <div className="brand">
-                {!isSidebarCollapsed && <b style={{marginRight: "0.25rem"}}>YScope</b>}
-                {isSidebarCollapsed ? <b>CLP</b> : "CLP"}
-            </div>
-
-            <div className="flex-column sidebar-menu">
-                {routes.map((route, i) =>
-                        (false === (route["hide"] ?? false)) && (
-                            <NavLink to={route["path"]} activeClassName="active" key={i}>
-                                <div className={"sidebar-item-icon"}>
-                                    <FontAwesomeIcon fixedWidth={true}
-                                                     size={"sm"}
-                                                     icon={route["icon"]}/>
-                                </div>
-                                <span className={"sidebar-item-text"}>{route["label"]}</span>
-                            </NavLink>
-                        ),
-                )}
-            </div>
-
-            <div className="sidebar-collapse-toggle" onClick={onSidebarToggle}>
-                <div className={"sidebar-collapse-icon"}>{
-                    isSidebarCollapsed ?
-                        <FontAwesomeIcon icon={faAngleDoubleRight} size={"sm"}/> :
-                        <FontAwesomeIcon icon={faAngleDoubleLeft} size={"sm"}/>
-                }</div>
-                <span className={"sidebar-collapse-text"}>Collapse Menu</span>
-            </div>
+}) => (
+    <div
+        id={"sidebar"}
+        className={isSidebarCollapsed ?
+            "collapsed" :
+            ""}
+    >
+        <div className={"brand"}>
+            {!isSidebarCollapsed && <b style={{marginRight: "0.25rem"}}>YScope</b>}
+            {isSidebarCollapsed ?
+                <b>CLP</b> :
+                "CLP"}
         </div>
-    );
-};
+
+        <div className={"flex-grow-1 sidebar-menu"}>
+            {routes.map((route, i) => (false === (route.hide ?? false)) && (
+                <SidebarButton
+                    icon={route.icon}
+                    key={i}
+                    label={route.label}
+                    link={route.path}/>
+            ))}
+        </div>
+
+        <div className={"flex-grow-0 sidebar-menu"}>
+            <SidebarButton
+                icon={faCircleInfo}
+                label={"Documentation"}
+                link={"https://docs.yscope.com/clp/main/"}/>
+            <SidebarButton
+                icon={faMessage}
+                label={"Get Support"}
+                link={Meteor.settings.public.SupportUrl}/>
+            <SidebarButton
+                label={"Collapse Menu"}
+                icon={isSidebarCollapsed ?
+                    faAngleDoubleRight :
+                    faAngleDoubleLeft}
+                onClick={onSidebarToggle}/>
+        </div>
+    </div>
+);
 
 export default Sidebar;
