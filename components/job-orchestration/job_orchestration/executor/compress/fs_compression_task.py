@@ -203,7 +203,7 @@ def run_clp(
     proc = subprocess.Popen(compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file)
 
     # Compute the total amount of data compressed
-    last_archive_stats = None
+    last_archive_id = ""
     total_uncompressed_size = 0
     total_compressed_size = 0
     while True:
@@ -211,32 +211,28 @@ def run_clp(
         if not line:
             break
         stats = json.loads(line.decode("ascii"))
-        if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
-            # We've started a new archive so add the previous archive's last
-            # reported size to the total
-            total_uncompressed_size += last_archive_stats["uncompressed_size"]
-            total_compressed_size += last_archive_stats["size"]
+        if stats["id"] != last_archive_id:
+            total_uncompressed_size += stats["uncompressed_size"]
+            total_compressed_size += stats["size"]
             if tag_ids is not None:
                 update_tags(
                     db_conn,
                     db_cursor,
                     clp_metadata_db_connection_config["table_prefix"],
-                    last_archive_stats["id"],
+                    stats["id"],
                     tag_ids,
                 )
-        last_archive_stats = stats
-    if last_archive_stats is not None:
-        # Add the last archive's last reported size
-        total_uncompressed_size += last_archive_stats["uncompressed_size"]
-        total_compressed_size += last_archive_stats["size"]
-        if tag_ids is not None:
-            update_tags(
-                db_conn,
+            increment_compression_job_metadata(
                 db_cursor,
-                clp_metadata_db_connection_config["table_prefix"],
-                last_archive_stats["id"],
-                tag_ids,
+                job_id,
+                dict(
+                    uncompressed_size=stats["uncompressed_size"],
+                    compressed_size=stats["size"],
+                ),
             )
+            db_conn.commit()
+
+        last_archive_id = stats["id"]
 
     # Wait for compression to finish
     return_code = proc.wait()
@@ -326,15 +322,7 @@ def compress(
             )
             db_conn.commit()
 
-            increment_compression_job_metadata(
-                db_cursor,
-                job_id,
-                dict(
-                    num_tasks_completed=1,
-                    uncompressed_size=uncompressed_size,
-                    compressed_size=compressed_size,
-                ),
-            )
+            increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
             db_conn.commit()
 
             return CompressionTaskResult(
