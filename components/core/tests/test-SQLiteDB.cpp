@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
-#include <optional>
 #include <random>
 #include <string>
 #include <string_view>
@@ -211,40 +210,45 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
     create_table(sqlite_db, table_schema);
     create_indices(sqlite_db, table_schema);
 
+    // We want to test a prepared insertion statement where the template parameters for the values
+    // are arbitrary numeric values and at least one of the template parameters is used twice for
+    // different columns. E.g. `INSERT INTO table (col2, col3, col1) VALUES (?99, ?34, ?99)`.
+    // To test this, we shuffle the table's columns and then assign an ID to each column, starting
+    // from an arbitrary value. To test using a parameter repeatedly, we use a single template
+    // parameter for the segment_xxx_position columns.
+
+    // Shuffle the columns
     auto table_columns{table_schema.get_column_names()};
-    // Shuffle table columns to test inserting with random ordering
     // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
     std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
-    unordered_map<string, int> column_name_to_param_id;
+
+    // Assign an ID, starting from 2, to each column
     int next_id{2};
-    std::optional<int> segment_xxx_pos_column_param_id{std::nullopt};
+    auto segment_xxx_pos_column_param_id{next_id++};
+    unordered_map<string, int> column_name_to_param_id;
     fmt::memory_buffer param_id_buf;
     auto param_id_buf_it{std::back_insert_iterator(param_id_buf)};
     bool is_first_param{true};
     for (auto const& column : table_columns) {
         int param_id{};
         if (TestTableSchema::cSegmentTsPos == column || TestTableSchema::cSegmentVarPos == column) {
-            // Ensure `segment_timestamp_position` and `segment_variable_position` always bind to
-            // the same value by assigning them the same parameter ID
-            if (segment_xxx_pos_column_param_id.has_value()) {
-                param_id = segment_xxx_pos_column_param_id.value();
-            } else {
-                param_id = next_id++;
-                segment_xxx_pos_column_param_id.emplace(param_id);
-            }
+            param_id = segment_xxx_pos_column_param_id;
         } else {
             param_id = next_id++;
         }
+
         if (is_first_param) {
-            fmt::format_to(param_id_buf_it, "?{}", param_id);
             is_first_param = false;
         } else {
-            fmt::format_to(param_id_buf_it, ",?{}", param_id);
+            // Add a comma to join multiple parameters
+            fmt::format_to(param_id_buf_it, ",");
         }
+        fmt::format_to(param_id_buf_it, "?{}", param_id);
+
         column_name_to_param_id.emplace(column, param_id);
     }
 
-    // Insert rows into the table
+    // Prepare the statements
     auto transaction_begin_stmt{sqlite_db.prepare_statement("BEGIN TRANSACTION")};
     auto transaction_end_stmt{sqlite_db.prepare_statement("END TRANSACTION")};
     fmt::memory_buffer stmt_buf;
@@ -259,10 +263,11 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
     auto insert_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
 
+    // Insert rows into the table
     for (auto const& row : rows) {
         transaction_begin_stmt.step();
 
-        // Bind values to the columns with the corresponded parameter ID.
+        // Bind a value to each column using its corresponding parameter ID
         auto const path_param_id_it{column_name_to_param_id.find(TestTableSchema::cPath)};
         REQUIRE((column_name_to_param_id.cend() != path_param_id_it));
         insert_stmt.bind_text(path_param_id_it->second, row.get_path(), false);
@@ -291,7 +296,8 @@ auto create_db(TestTableSchema const& table_schema, vector<Row> const& rows) -> 
                 static_cast<int64_t>(row.get_segment_ts_pos())
         );
 
-        // We don't need to bind var pos explicitly since it has the same next_id with ts pos
+        // We don't need to bind segment_var_pos explicitly since it has the same
+        // parameter ID as segment_ts_pos
         auto const seg_var_pos_param_id_it{
                 column_name_to_param_id.find(TestTableSchema::cSegmentVarPos)
         };
@@ -326,19 +332,24 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     SQLiteDB sqlite_db;
     sqlite_db.open(test_db_path.string());
 
-    // Create indices for each column in the order they are defined in the insert statement,
-    // counting from 0.
+    // We want to test a prepared select statement where the selected columns are arbitrarily
+    // ordered compared to how they were created in the table. To test this, we first shuffle the
+    // table's columns. Then, to retrieve the value of each column by name, we need to record the
+    // mapping between its name and index in the select statement.
+
+    // Shuffle the columns
     auto table_columns{table_schema.get_column_names()};
-    // Shuffle table columns to test selecting with random ordering
     // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
     std::shuffle(table_columns.begin(), table_columns.end(), std::default_random_engine{});
+
+    // Compute the mapping between each column's name and index in the select statement
     unordered_map<string, int> column_name_to_idx;
     size_t idx{0};
     for (auto const& column : table_columns) {
         column_name_to_idx.emplace(column, idx++);
     }
 
-    // Read all the columns from db, sorted by the begin ts
+    // Prepare a statement to read all columns from the database, sorted by begin_ts
     fmt::memory_buffer stmt_buf;
     auto stmt_buf_it{std::back_inserter(stmt_buf)};
     fmt::format_to(
@@ -351,6 +362,7 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     auto select_stmt{sqlite_db.prepare_statement(stmt_buf.data(), stmt_buf.size())};
     stmt_buf.clear();
 
+    // Read the rows
     vector<Row> rows;
     while (true) {
         select_stmt.step();
@@ -390,7 +402,7 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
         rows.emplace_back(path, begin_ts, end_ts, seg_id, seg_ts_pos, seg_var_pos);
     }
 
-    // Sort the reference rows by the begin ts
+    // Sort the reference rows by begin_ts
     std::sort(ref_rows.begin(), ref_rows.end(), [](Row const& lhs, Row const& rhs) -> bool {
         if (lhs.get_begin_ts() == rhs.get_begin_ts()) {
             return lhs.get_path() < rhs.get_path();
@@ -399,6 +411,7 @@ TEST_CASE("sqlite_db_basic", "[SQLiteDB]") {
     });
 
     REQUIRE((ref_rows == rows));
+
     sqlite_db.close();
 
     // Cleanup
