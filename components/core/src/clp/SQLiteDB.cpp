@@ -24,7 +24,7 @@ SQLiteDB::~SQLiteDB() {
         return;
     }
     if (false == close()) {
-        SPDLOG_WARN("Memory leak due to failure of closing sqlite database.");
+        SPDLOG_WARN("Failed to close underlying SQLite database - this may cause a memory leak.");
     }
 }
 
