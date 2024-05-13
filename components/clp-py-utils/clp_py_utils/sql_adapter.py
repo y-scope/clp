@@ -114,9 +114,9 @@ class SQL_Adapter:
             return self.create_connection(disable_localhost_socket_connection)
 
         if "mysql" == self.database_config.type:
-            dialect = mysqlconnector.dialect
+            dialect = mysqlconnector.dialect()
         elif "mariadb" == self.database_config.type:
-            dialect = mariadbconnector.dialect
+            dialect = mariadbconnector.dialect()
         else:
             raise NotImplementedError
         return ConnectionPoolWrapper(

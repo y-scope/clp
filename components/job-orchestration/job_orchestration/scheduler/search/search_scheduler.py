@@ -492,7 +492,7 @@ async def handle_jobs(
             db_conn_pool, results_cache_uri, num_archives_to_search_per_sub_job
         )
         if 0 == len(reducer_acquisition_tasks):
-            tasks.append(asyncio.sleep(jobs_poll_delay))
+            tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
         else:
             tasks.extend(reducer_acquisition_tasks)
 
