@@ -98,7 +98,15 @@ tasks:
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        yamllint --strict .
+        yamllint --strict \
+          .github \
+          .yamllint.yml \
+          components/core/.clang-format \
+          components/core/config \
+          components/package-template/src/etc \
+          docs \
+          lint-tasks.yml \
+          Taskfile.yml
 
   cpp:
     internal: true
