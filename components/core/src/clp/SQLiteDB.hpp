@@ -6,8 +6,8 @@
 #include <sqlite3/sqlite3.h>
 
 #include "ErrorCode.hpp"
-#include "SQLitePreparedStatement.hpp"
 #include "SQLitePreparedSelectStatement.hpp"
+#include "SQLitePreparedStatement.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -49,7 +49,7 @@ public:
      * @return a new constructed select statement.
      * @throw clp::SQLiteDB::OperationFailed if the db is not initialized.
      * @throw clp::SQLitePreparedStatement::OperationFailed if it fails to create a new statement.
-    */
+     */
     SQLitePreparedSelectStatement prepare_select_statement(
             std::vector<std::string> const& columns_to_select,
             std::string_view table,
