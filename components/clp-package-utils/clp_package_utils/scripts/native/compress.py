@@ -8,6 +8,11 @@ from contextlib import closing
 
 import brotli
 import msgpack
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    get_clp_home,
+    validate_and_load_config_file,
+)
 from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -16,12 +21,6 @@ from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
 )
 from job_orchestration.scheduler.job_config import ClpIoConfig, InputConfig, OutputConfig
-
-from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    get_clp_home,
-    validate_and_load_config_file,
-)
 
 # Setup logging
 # Create logger
@@ -32,6 +31,19 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
+
+
+def print_compression_job_status(job_row, current_time):
+    job_uncompressed_size = job_row["uncompressed_size"]
+    job_compressed_size = job_row["compressed_size"]
+    job_start_time = job_row["start_time"]
+    compression_ratio = float(job_uncompressed_size) / job_compressed_size
+    compression_speed = job_uncompressed_size / (current_time - job_start_time).total_seconds()
+    logger.info(
+        f"Compressed {pretty_size(job_uncompressed_size)} into "
+        f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}). "
+        f"Speed: {pretty_size(compression_speed)}/s."
+    )
 
 
 def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
@@ -63,18 +75,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         if CompressionJobStatus.SUCCEEDED == job_status:
             # All tasks in the job is done
             if not no_progress_reporting:
-                job_uncompressed_size = job_row["uncompressed_size"]
-                job_compressed_size = job_row["compressed_size"]
-                compression_speed = (
-                    job_uncompressed_size / (current_time - job_row["start_time"]).total_seconds()
-                )
-                compression_ratio = float(job_uncompressed_size) / job_compressed_size
-                logger.info(
-                    f"Compression finished. "
-                    f"Compressed {pretty_size(job_uncompressed_size)} into "
-                    f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}). "
-                    f"Speed: {pretty_size(compression_speed)}/s."
-                )
+                logger.info("Compression finished.")
+                print_compression_job_status(job_row, current_time)
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
@@ -84,19 +86,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         if CompressionJobStatus.RUNNING == job_status:
             if not no_progress_reporting:
                 job_uncompressed_size = job_row["uncompressed_size"]
-                job_compressed_size = job_row["compressed_size"]
-
                 if job_last_uncompressed_size < job_uncompressed_size:
-                    compression_ratio = float(job_uncompressed_size) / job_compressed_size
-                    compression_speed = (
-                        job_uncompressed_size
-                        / (current_time - job_row["start_time"]).total_seconds()
-                    )
-                    logger.info(
-                        f"Compressed {pretty_size(job_uncompressed_size)} into "
-                        f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}). "
-                        f"Speed: {pretty_size(compression_speed)}/s."
-                    )
+                    print_compression_job_status(job_row, current_time)
                     job_last_uncompressed_size = job_uncompressed_size
         elif CompressionJobStatus.PENDING == job_status:
             pass  # Simply wait another iteration

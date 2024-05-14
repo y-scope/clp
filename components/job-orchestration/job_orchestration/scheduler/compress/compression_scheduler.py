@@ -239,18 +239,19 @@ def poll_running_jobs(db_conn, db_cursor):
             # Check for finished jobs
             for task_result in returned_results:
                 task_result = CompressionTaskResult.parse_obj(task_result)
-                if not task_result.status == CompressionTaskStatus.SUCCEEDED:
+                if task_result.status == CompressionTaskStatus.SUCCEEDED:
+                    logger.info(
+                        f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
+                        f" {task_result.duration} second(s)."
+                    )
+                else:
                     job_success = False
                     error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
                     logger.error(
                         f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
                         f" error: {task_result.error_message}."
                     )
-                else:
-                    logger.info(
-                        f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
-                        f" {task_result.duration} second(s)."
-                    )
+
         except Exception as e:
             logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
