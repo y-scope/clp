@@ -48,7 +48,7 @@ constexpr int8_t TimestampDeltaShort = 0x32;
 constexpr int8_t TimestampDeltaInt = 0x33;
 constexpr int8_t TimestampDeltaLong = 0x34;
 
-constexpr int8_t UtcOffsetChange = 0x41;
+constexpr int8_t UtcOffsetChange = 0x3F;
 }  // namespace Payload
 
 constexpr int8_t FourByteEncodingMagicNumber[]
