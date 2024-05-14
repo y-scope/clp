@@ -3,7 +3,6 @@
 #include <vector>
 
 #include <fmt/core.h>
-#include <fmt/fmt.h>
 
 #include "../database_utils.hpp"
 #include "../Defs.h"
@@ -37,14 +36,14 @@ using std::vector;
 
 namespace clp::streaming_archive {
 static void
-create_tables(std::string_view sql_file_field_names_and_types, SQLiteDB& db) {
+create_tables(vector<std::pair<string, string>> const& file_field_names_and_types, SQLiteDB& db) {
     fmt::memory_buffer statement_buffer;
     auto statement_buffer_ix = std::back_inserter(statement_buffer);
     fmt::format_to(
             statement_buffer_ix,
             "CREATE TABLE IF NOT EXISTS {} ({}) WITHOUT ROWID",
             streaming_archive::cMetadataDB::FilesTableName,
-            sql_file_field_names_and_types
+            get_field_names_and_types_sql(file_field_names_and_types)
     );
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
     auto create_files_table
@@ -275,7 +274,7 @@ static SQLitePreparedStatement get_files_select_statement(
         );
     }
 
-    SPDLOG_WARN("{:.{}}", statement_buffer.data(), statement_buffer.size());
+    SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
 
     return statement;
 }
@@ -504,8 +503,7 @@ void MetadataDB::open(string const& path) {
                     .second
             = "INTEGER";
 
-    auto const sql_field_names_and_types{get_field_names_and_types_sql(file_field_names_and_types)};
-    create_tables(sql_field_names_and_types, m_db);
+    create_tables(file_field_names_and_types, m_db);
 
     fmt::memory_buffer statement_buffer;
     auto statement_buffer_ix = std::back_inserter(statement_buffer);
@@ -515,7 +513,7 @@ void MetadataDB::open(string const& path) {
             statement_buffer_ix,
             "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO UPDATE SET {}",
             streaming_archive::cMetadataDB::FilesTableName,
-            sql_field_names_and_types,
+            get_field_names_sql(file_field_names_and_types),
             get_numbered_placeholders_sql(file_field_names_and_types.size()),
             streaming_archive::cMetadataDB::File::Id,
             get_numbered_set_field_sql(
