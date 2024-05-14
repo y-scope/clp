@@ -915,7 +915,9 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
             }
 
             std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
-            if (query_string.find('*') == std::string::npos) {
+            if (query_string.find('*') == std::string::npos
+                && query_string.find('?') == std::string::npos)
+            {
                 auto entry = m_var_dict->get_entry_matching_value(query_string, m_ignore_case);
 
                 if (entry != nullptr) {

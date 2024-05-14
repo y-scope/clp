@@ -68,7 +68,7 @@ private:
             m_string_type = LiteralType::VarStringT;
         }
 
-        if (m_v.find('*') != std::string::npos) {
+        if (m_v.find('*') != std::string::npos || m_v.find('?') != std::string::npos) {
             m_string_type |= LiteralType::ClpStringT;
         }
     }

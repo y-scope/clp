@@ -64,7 +64,7 @@ fragment UNQUOTED_CHARACTER
     |  ~[\\():<>"{} \r\n\t]
     ;
 
-fragment WILDCARD:   '*';
+fragment WILDCARD:   '*' | '?';
 
 // TODO: unescape keywords
 fragment ESCAPED_KEYWORD
@@ -96,7 +96,7 @@ fragment ESCAPED_SPACE
     ;
 
 fragment SPECIAL_CHARACTER
-    : [\\():<>"*{}]
+    : [\\():<>"*?{}]
     ;
 
 
