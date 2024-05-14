@@ -8,11 +8,6 @@ from contextlib import closing
 
 import brotli
 import msgpack
-from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    get_clp_home,
-    validate_and_load_config_file,
-)
 from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -21,6 +16,12 @@ from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
 )
 from job_orchestration.scheduler.job_config import ClpIoConfig, InputConfig, OutputConfig
+
+from clp_package_utils.general import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    get_clp_home,
+    validate_and_load_config_file,
+)
 
 # Setup logging
 # Create logger
