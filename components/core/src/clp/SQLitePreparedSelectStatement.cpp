@@ -15,7 +15,7 @@
 #include "SQLitePreparedStatement.hpp"
 
 namespace clp {
-[[nodiscard]] auto SQLitePreparedSelectStatement::create_sqlite_prepared_select_statement(
+auto SQLitePreparedSelectStatement::create_sqlite_prepared_select_statement(
         std::vector<std::string> const& columns_to_select,
         std::string_view table,
         std::vector<std::string> const& where_clause,
@@ -58,8 +58,12 @@ namespace clp {
         fmt::format_to(statement_buffer_ix, " ORDER BY");
         bool is_first{true};
         for (auto const& ordering : ordering_clause) {
-            fmt::format_to(statement_buffer_ix, is_first ? " {}" : ", {}", ordering);
-            is_first = false;
+            if (is_first) {
+                fmt::format_to(statement_buffer_ix, " {}", ordering);
+                is_first = false;
+                continue;
+            }
+            fmt::format_to(statement_buffer_ix, ", {}", ordering);
         }
     }
 
@@ -68,5 +72,17 @@ namespace clp {
             db_handle,
             idx_map
     };
+}
+
+auto SQLitePreparedSelectStatement::get_selected_column_idx(std::string const& selected_column
+) const -> size_t {
+    auto const idx_it{m_idx_map.find(selected_column)};
+    if (m_idx_map.cend() == idx_it) {
+        std::string const msg{
+                "clp::SQLitePreparedSelectStatement Failed with unknown selected column: "
+        };
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__, msg + selected_column);
+    }
+    return idx_it->second;
 }
 }  // namespace clp

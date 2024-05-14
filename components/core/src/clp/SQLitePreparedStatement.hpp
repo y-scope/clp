@@ -37,7 +37,7 @@ public:
     SQLitePreparedStatement& operator=(SQLitePreparedStatement&& rhs) noexcept;
 
     // Methods
-    virtual void reset();
+    void reset();
     void bind_int(int parameter_index, int value);
     void bind_int(std::string const& parameter_name, int value);
     void bind_int64(int parameter_index, int64_t value);
