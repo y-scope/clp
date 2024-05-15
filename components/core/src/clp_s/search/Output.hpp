@@ -74,7 +74,7 @@ private:
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
 
-    std::map<std::string, Query> m_string_query_map;
+    std::map<std::string, std::optional<Query>> m_string_query_map;
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
     std::unordered_map<Expression*, Query*> m_expr_clp_query;
     std::unordered_map<Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
@@ -185,29 +185,25 @@ private:
      * @param op
      * @param q
      * @param readers
-     * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_clp_string_filter(
             FilterOperation op,
             Query* q,
-            std::vector<ClpStringColumnReader*> const& readers,
-            std::shared_ptr<Literal> const& operand
-    );
+            std::vector<ClpStringColumnReader*> const& readers
+    ) const;
 
     /**
      * Evaluates a var string filter expression
      * @param op
      * @param reader
      * @param matching_vars
-     * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_var_string_filter(
             FilterOperation op,
             std::vector<VariableStringColumnReader*> const& readers,
-            std::unordered_set<int64_t>* matching_vars,
-            std::shared_ptr<Literal> const& operand
+            std::unordered_set<int64_t>* matching_vars
     ) const;
 
     /**
