@@ -6,8 +6,8 @@
 #include <string>
 #include <utility>
 
-#include "../../VariableEncoder.hpp"
 #include "../../Utils.hpp"
+#include "../../VariableEncoder.hpp"
 #include "EncodedVariableInterpreter.hpp"
 
 using std::string;
