@@ -61,7 +61,8 @@ def update_tags(db_cursor, table_prefix, archive_id, tag_ids):
 
 
 def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archive_stats):
-    update_tags(db_cursor, table_prefix, archive_stats["id"], tag_ids)
+    if tag_ids is not None:
+        update_tags(db_cursor, table_prefix, archive_stats["id"], tag_ids)
     increment_compression_job_metadata(
         db_cursor,
         job_id,
