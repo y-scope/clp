@@ -153,7 +153,7 @@ def run_clp(
     :param task_id:
     :param tag_ids:
     :param paths_to_compress: PathToCompress
-    :param sql_adapter:
+    :param sql_adapter: SQL_Adapter
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
@@ -224,8 +224,8 @@ def run_clp(
         if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
             # We've started a new archive so add the previous archive's last
             # reported size to the total
-            total_uncompressed_size += stats["uncompressed_size"]
-            total_compressed_size += stats["size"]
+            total_uncompressed_size += last_archive_stats["uncompressed_size"]
+            total_compressed_size += last_archive_stats["size"]
             with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                 db_conn.cursor(dictionary=True)
             ) as db_cursor:
@@ -341,16 +341,16 @@ def compress(
         )
         db_conn.commit()
 
-    compression_task_result = CompressionTaskResult(
-        task_id=task_id,
-        status=compression_task_status,
-        duration=duration,
-    )
+        compression_task_result = CompressionTaskResult(
+            task_id=task_id,
+            status=compression_task_status,
+            duration=duration,
+        )
 
-    if CompressionTaskStatus.SUCCEEDED == compression_task_status:
-        increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
-        db_conn.commit()
-    else:
-        compression_task_result.error_message = worker_output["error_message"]
+        if CompressionTaskStatus.SUCCEEDED == compression_task_status:
+            increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
+            db_conn.commit()
+        else:
+            compression_task_result.error_message = worker_output["error_message"]
 
-    return compression_task_result.dict()
+        return compression_task_result.dict()
