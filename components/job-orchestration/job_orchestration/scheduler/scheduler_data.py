@@ -18,8 +18,8 @@ class CompressionJob(BaseModel):
 class CompressionTaskResult(BaseModel):
     task_id: int
     status: int
-    start_time: datetime.datetime
     duration: float
+    error_message: Optional[str]
 
     @validator("status")
     def valid_status(cls, field):
@@ -27,15 +27,6 @@ class CompressionTaskResult(BaseModel):
         if field not in supported_status:
             raise ValueError(f'must be one of the following {"|".join(supported_status)}')
         return field
-
-
-class CompressionTaskFailureResult(CompressionTaskResult):
-    error_message: str
-
-
-class CompressionTaskSuccessResult(CompressionTaskResult):
-    total_uncompressed_size: int
-    total_compressed_size: int
 
 
 class InternalJobState(Enum):
