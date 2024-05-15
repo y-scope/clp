@@ -109,17 +109,19 @@ public:
      * Sets combined file message offset
      * @param offset
      */
-    void set_combined_file_msg_offset (size_t offset);
+    void set_combined_file_msg_offset(size_t offset);
 
     /**
      * Gets combined file message offset
      */
-     uint64_t get_combined_file_msg_offset() const { return m_combined_file_msg_offset; }
+    uint64_t get_combined_file_msg_offset() const { return m_combined_file_msg_offset; }
 
     /**
      * @return The total number of messages in the file once the current split is combined.
      */
-    uint64_t get_combined_file_num_messages () const { return m_combined_file_msg_offset + m_num_messages; }
+    uint64_t get_combined_file_num_messages() const {
+        return m_combined_file_msg_offset + m_num_messages;
+    }
 
     /**
      * Gets the file's uncompressed size

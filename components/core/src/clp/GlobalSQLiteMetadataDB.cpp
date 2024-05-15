@@ -307,9 +307,13 @@ void GlobalSQLiteMetadataDB::open() {
             .second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset)].first
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset
+                               )]
+            .first
             = streaming_archive::cMetadataDB::File::CombinedFileMsgOffset;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset)].second
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset
+                               )]
+            .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first

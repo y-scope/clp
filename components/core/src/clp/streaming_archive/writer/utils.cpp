@@ -51,7 +51,7 @@ auto split_file_and_archive(
     auto has_ts_pattern = encoded_file.has_ts_pattern();
     auto orig_file_id = encoded_file.get_orig_file_id();
     auto split_ix = encoded_file.get_split_ix();
-    const auto combined_file_num_messages = encoded_file.get_combined_file_num_messages();
+    auto const combined_file_num_messages = encoded_file.get_combined_file_num_messages();
     archive_writer.set_file_is_split(true);
     close_file_and_append_to_segment(archive_writer);
 
