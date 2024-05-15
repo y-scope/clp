@@ -1,18 +1,16 @@
 #include "Output.hpp"
 
-#include <regex>
-#include <stack>
+#include <string>
+#include <vector>
 
 #include "../../clp/type_utils.hpp"
-#include "../ArchiveReader.hpp"
-#include "../FileWriter.hpp"
-#include "../ReaderUtils.hpp"
 #include "../Utils.hpp"
 #include "AndExpr.hpp"
 #include "clp_search/EncodedVariableInterpreter.hpp"
 #include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
 #include "FilterExpr.hpp"
+#include "Literal.hpp"
 #include "OrExpr.hpp"
 #include "SearchUtils.hpp"
 
@@ -259,11 +257,10 @@ bool Output::evaluate(Expression* expr, int32_t schema) {
 bool Output::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     auto literal = expr->get_operand();
     auto* column = expr->get_column().get();
-    std::unordered_set<int64_t>* matching_vars = m_expr_var_match_map[expr];
     auto op = expr->get_operation();
     if (column->matches_type(LiteralType::ClpStringT)) {
         Query* q = m_expr_clp_query[expr];
-        for (auto entry : m_clp_string_readers) {
+        for (auto const& entry : m_clp_string_readers) {
             if (evaluate_clp_string_filter(op, q, entry.second)) {
                 return true;
             }
@@ -271,7 +268,8 @@ bool Output::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     }
 
     if (column->matches_type(LiteralType::VarStringT)) {
-        for (auto entry : m_var_string_readers) {
+        std::unordered_set<int64_t>* matching_vars = m_expr_var_match_map[expr];
+        for (auto const& entry : m_var_string_readers) {
             if (evaluate_var_string_filter(op, entry.second, matching_vars)) {
                 return true;
             }
@@ -473,7 +471,7 @@ bool Output::evaluate_clp_string_filter(
 
     bool matched = false;
     for (ClpStringColumnReader* reader : readers) {
-        int64_t const id = reader->get_encoded_id(m_cur_message);
+        int64_t id = reader->get_encoded_id(m_cur_message);
         auto vars = reader->get_encoded_vars(m_cur_message);
         if (q->contains_sub_queries()) {
             for (auto const& subquery : q->get_sub_queries()) {

@@ -15,7 +15,6 @@
 #include "../Utils.hpp"
 #include "clp_search/Query.hpp"
 #include "Expression.hpp"
-#include "Integral.hpp"
 #include "OutputHandler.hpp"
 #include "SchemaMatch.hpp"
 #include "StringLiteral.hpp"
