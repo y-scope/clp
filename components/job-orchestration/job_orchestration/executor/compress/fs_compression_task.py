@@ -27,7 +27,6 @@ logger = get_task_logger(__name__)
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
     if not len(kv):
-        logger.error("Must specify at least one field to update")
         raise ValueError("Must specify at least one field to update")
 
     field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
@@ -41,7 +40,6 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
 
 def increment_compression_job_metadata(db_cursor, job_id, kv):
     if not len(kv):
-        logger.error("Must specify at least one field to update")
         raise ValueError("Must specify at least one field to update")
 
     field_set_expressions = [f"{k}={k}+{v}" for k, v in kv.items()]
