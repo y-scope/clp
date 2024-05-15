@@ -1,10 +1,9 @@
 #include "Output.hpp"
 
-#include <string>
+#include <memory>
 #include <vector>
 
 #include "../../clp/type_utils.hpp"
-#include "../Utils.hpp"
 #include "AndExpr.hpp"
 #include "clp_search/EncodedVariableInterpreter.hpp"
 #include "clp_search/Grep.hpp"
@@ -317,7 +316,7 @@ bool Output::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
 }
 
 bool Output::evaluate_filter(FilterExpr* expr, int32_t schema) {
-    auto column = expr->get_column().get();
+    auto* column = expr->get_column().get();
     int32_t column_id = column->get_column_id();
     auto literal = expr->get_operand();
     Query* q = nullptr;
