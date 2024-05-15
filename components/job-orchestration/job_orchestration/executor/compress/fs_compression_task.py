@@ -28,7 +28,7 @@ logger = get_task_logger(__name__)
 def update_compression_task_metadata(db_cursor, task_id, kv):
     if not len(kv):
         logger.error("Must specify at least one field to update")
-        raise ValueError
+        raise ValueError("Must specify at least one field to update")
 
     field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
     query = f"""
@@ -42,7 +42,7 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
 def increment_compression_job_metadata(db_cursor, job_id, kv):
     if not len(kv):
         logger.error("Must specify at least one field to update")
-        raise ValueError
+        raise ValueError("Must specify at least one field to update")
 
     field_set_expressions = [f"{k}={k}+{v}" for k, v in kv.items()]
     query = f"""
@@ -213,10 +213,9 @@ def run_clp(
     proc = subprocess.Popen(compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file)
 
     # Compute the total amount of data compressed
-    last_archive_id = ""
+    last_archive_stats = None
     total_uncompressed_size = 0
     total_compressed_size = 0
-    last_archive_stats = None
     while True:
         line = proc.stdout.readline()
         if not line:
@@ -340,18 +339,17 @@ def compress(
                 duration=duration,
             ),
         )
-        db_conn.commit()
-
-        compression_task_result = CompressionTaskResult(
-            task_id=task_id,
-            status=compression_task_status,
-            duration=duration,
-        )
-
         if CompressionTaskStatus.SUCCEEDED == compression_task_status:
             increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
-            db_conn.commit()
-        else:
-            compression_task_result.error_message = worker_output["error_message"]
+        db_conn.commit()
 
-        return compression_task_result.dict()
+    compression_task_result = CompressionTaskResult(
+        task_id=task_id,
+        status=compression_task_status,
+        duration=duration,
+    )
+
+    if CompressionTaskStatus.FAILED == compression_task_status:
+        compression_task_result.error_message = worker_output["error_message"]
+
+    return compression_task_result.dict()

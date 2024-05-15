@@ -42,7 +42,7 @@ def print_compression_job_status(job_row, current_time):
     compression_speed = job_uncompressed_size / (current_time - job_start_time).total_seconds()
     logger.info(
         f"Compressed {pretty_size(job_uncompressed_size)} into "
-        f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}). "
+        f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}x). "
         f"Speed: {pretty_size(compression_speed)}/s."
     )
 
