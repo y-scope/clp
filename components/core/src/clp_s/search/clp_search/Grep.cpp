@@ -498,6 +498,10 @@ std::optional<Query> Grep::process_raw_query(
         }
     }
 
+    if (sub_queries.empty()) {
+        return std::nullopt;
+    }
+
     return Query{ignore_case, processed_search_string, std::move(sub_queries)};
 }
 
