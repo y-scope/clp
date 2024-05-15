@@ -93,6 +93,10 @@ void File::change_ts_pattern(TimestampPattern const* pattern) {
     m_is_metadata_clean = false;
 }
 
+void File::set_combined_file_msg_offset(const size_t offset) {
+    m_combined_file_msg_offset = offset;
+    m_is_metadata_clean = false;
+}
 bool File::is_in_uncommitted_segment() const {
     return (SegmentationState_MovingToSegment == m_segmentation_state);
 }

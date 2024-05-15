@@ -281,6 +281,13 @@ void Archive::set_file_is_split(bool is_split) {
     m_file->set_is_split(is_split);
 }
 
+void Archive::set_combined_file_message_offset (const size_t offset) {
+    if (m_file == nullptr) {
+        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+    }
+    m_file->set_combined_file_msg_offset(offset);
+}
+
 void Archive::change_ts_pattern(TimestampPattern const* pattern) {
     if (m_file == nullptr) {
         throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);

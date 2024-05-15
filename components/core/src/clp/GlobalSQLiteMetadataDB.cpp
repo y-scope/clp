@@ -35,6 +35,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     BeginTimestamp,
     EndTimestamp,
     NumUncompressedBytes,
+    CombinedFileMsgOffset,
     NumMessages,
     ArchiveId,
     Length,
@@ -306,6 +307,11 @@ void GlobalSQLiteMetadataDB::open() {
             .second
             = "INTEGER";
 
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset)].first
+            = streaming_archive::cMetadataDB::File::CombinedFileMsgOffset;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset)].second
+            = "INTEGER";
+
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
             = streaming_archive::cMetadataDB::File::NumMessages;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].second
@@ -513,6 +519,10 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes) + 1,
                 (int64_t)file->get_num_uncompressed_bytes()
+        );
+        m_upsert_file_statement->bind_int64(
+                enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset) + 1,
+                (int64_t)file->get_combined_file_msg_offset()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,
