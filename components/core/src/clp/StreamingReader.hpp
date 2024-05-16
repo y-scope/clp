@@ -223,6 +223,12 @@ private:
     class TransferThread : public Thread {
     public:
         // Constructor
+        /**
+         * Constructs a clp::thread for data downloading.
+         * @param reader
+         * @param offset The offset of bytes to start downloading.
+         * @param disable_caching Whether to disable caching.
+         */
         TransferThread(StreamingReader& reader, size_t offset, bool disable_caching)
                 : m_reader{reader},
                   m_offset{offset},
