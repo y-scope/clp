@@ -224,6 +224,10 @@ public:
         return get_state_code() == State::InProgress;
     }
 
+    [[nodiscard]] auto get_curl_return_code() const -> std::optional<CURLcode> {
+        return m_curl_return_code;
+    }
+
 private:
     /**
      * This class implements clp::Thread to fetch data using CURL.

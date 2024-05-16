@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <curl/curl.h>
 
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/FileReader.hpp"
@@ -76,7 +77,10 @@ TEST_CASE("streaming_reader_basic", "[StreamingReader]") {
     clp::StreamingReader reader(cTestUrl);
     std::vector<char> streamed_data;
     read_into_memory_buffer(reader, streamed_data);
-
+    auto const ret_code{reader.get_curl_return_code()};
+    REQUIRE(ret_code.has_value());
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+    REQUIRE((CURLE_OK == ret_code.value()));
     REQUIRE((streamed_data == ref_data));
     clp::StreamingReader::deinit();
 }
@@ -94,17 +98,30 @@ TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
     std::vector<char> streamed_data;
 
     // Read by opening with the offset.
-    clp::StreamingReader reader_using_offset(cTestUrl, cOffset);
-    read_into_memory_buffer(reader_using_offset, streamed_data);
-    REQUIRE((streamed_data == ref_data));
-    streamed_data.clear();
+    {
+        clp::StreamingReader reader_using_offset(cTestUrl, cOffset);
+        read_into_memory_buffer(reader_using_offset, streamed_data);
+        auto const ret_code_using_offset{reader_using_offset.get_curl_return_code()};
+        REQUIRE(ret_code_using_offset.has_value());
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+        REQUIRE((CURLE_OK == ret_code_using_offset.value()));
+        REQUIRE((streamed_data == ref_data));
+        streamed_data.clear();
+    }
 
     // Read by seeking to the offset.
-    clp::StreamingReader reader_using_seek(cTestUrl);
-    reader_using_seek.seek_from_begin(cOffset);
-    read_into_memory_buffer(reader_using_seek, streamed_data);
-    REQUIRE((streamed_data == ref_data));
-    streamed_data.clear();
+    {
+        clp::StreamingReader reader_using_seek(cTestUrl);
+        reader_using_seek.seek_from_begin(cOffset);
+        read_into_memory_buffer(reader_using_seek, streamed_data);
+        auto const ret_code_using_seek{reader_using_seek.get_curl_return_code()};
+        REQUIRE(ret_code_using_seek.has_value());
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+        REQUIRE((CURLE_OK == ret_code_using_seek.value()));
+        REQUIRE((streamed_data == ref_data));
+        streamed_data.clear();
+    }
+
     clp::StreamingReader::deinit();
 }
 
