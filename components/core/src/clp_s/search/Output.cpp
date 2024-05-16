@@ -932,7 +932,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                     }
                 }
 
-                const auto *entry = m_var_dict->get_entry_matching_value(
+                auto const* entry = m_var_dict->get_entry_matching_value(
                         unescaped_query_string,
                         m_ignore_case
                 );
@@ -948,14 +948,14 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                                        sub_query
                                ))
             {
-                for (const auto& var : sub_query.get_vars()) {
+                for (auto const& var : sub_query.get_vars()) {
                     if (var.is_precise_var()) {
-                        const auto *entry = var.get_var_dict_entry();
+                        auto const* entry = var.get_var_dict_entry();
                         if (entry != nullptr) {
                             matching_vars.insert(entry->get_id());
                         }
                     } else {
-                        for (const auto *entry : var.get_possible_var_dict_entries()) {
+                        for (auto const* entry : var.get_possible_var_dict_entries()) {
                             matching_vars.insert(entry->get_id());
                         }
                     }
