@@ -918,7 +918,24 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
             if (query_string.find('*') == std::string::npos
                 && query_string.find('?') == std::string::npos)
             {
-                auto entry = m_var_dict->get_entry_matching_value(query_string, m_ignore_case);
+                // Unescape '\' before matching
+                std::string unescaped_query_string;
+                bool escape = false;
+                for (char const c : query_string) {
+                    if (escape) {
+                        unescaped_query_string.push_back(c);
+                        escape = false;
+                    } else if (c == '\\') {
+                        escape = true;
+                    } else {
+                        unescaped_query_string.push_back(c);
+                    }
+                }
+
+                const auto *entry = m_var_dict->get_entry_matching_value(
+                        unescaped_query_string,
+                        m_ignore_case
+                );
 
                 if (entry != nullptr) {
                     matching_vars.insert(entry->get_id());
@@ -931,14 +948,14 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                                        sub_query
                                ))
             {
-                for (auto& var : sub_query.get_vars()) {
+                for (const auto& var : sub_query.get_vars()) {
                     if (var.is_precise_var()) {
-                        auto entry = var.get_var_dict_entry();
+                        const auto *entry = var.get_var_dict_entry();
                         if (entry != nullptr) {
                             matching_vars.insert(entry->get_id());
                         }
                     } else {
-                        for (auto entry : var.get_possible_var_dict_entries()) {
+                        for (const auto *entry : var.get_possible_var_dict_entries()) {
                             matching_vars.insert(entry->get_id());
                         }
                     }
