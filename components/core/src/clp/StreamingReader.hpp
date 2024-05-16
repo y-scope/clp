@@ -4,7 +4,6 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -44,9 +43,7 @@ public:
     class OperationFailed : public TraceableException {
     public:
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {
-            std::cerr << std::string{filename} << ": " << line_number << "\n";
-        }
+                : TraceableException(error_code, filename, line_number) {}
 
         [[nodiscard]] auto what() const noexcept -> char const* override {
             return "clp::StreamingReader operation failed.";
