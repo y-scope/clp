@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -43,7 +44,9 @@ public:
     class OperationFailed : public TraceableException {
     public:
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : TraceableException(error_code, filename, line_number) {
+            std::cerr << std::string{filename} << ": " << line_number << "\n";
+        }
 
         [[nodiscard]] auto what() const noexcept -> char const* override {
             return "clp::StreamingReader operation failed.";
@@ -216,6 +219,14 @@ public:
      */
     [[nodiscard]] auto write_to_fetching_buffer(BufferView data_to_write) -> size_t;
 
+    /**
+     * @return true if the download is still in progress.
+     * @return false if there is no more data to download.
+     */
+    [[nodiscard]] auto is_download_in_progress() const -> bool {
+        return get_state_code() == State::InProgress;
+    }
+
 private:
     /**
      * This class implements clp::Thread to fetch data using CURL.
@@ -242,8 +253,6 @@ private:
         size_t m_offset;
         bool m_disable_caching;
     };
-
-    static constexpr uint32_t cConditionVariableTimeoutMilliSecond{50};
 
     static bool m_initialized;
 
@@ -318,9 +327,9 @@ private:
             char* dst
     ) -> ErrorCode;
 
-    auto set_status_code(State code) -> void { m_status_code.store(code); }
+    auto set_state_code(State code) -> void { m_state_code.store(code); }
 
-    [[nodiscard]] auto get_status_code() -> State { return m_status_code.load(); }
+    [[nodiscard]] auto get_state_code() const -> State { return m_state_code.load(); }
 
     std::string m_src_url;
     size_t m_file_pos{0};
@@ -346,7 +355,7 @@ private:
 
     std::unique_ptr<TransferThread> m_transfer_thread{nullptr};
     std::atomic<bool> m_transfer_aborted{false};
-    std::atomic<State> m_status_code{State::InProgress};
+    std::atomic<State> m_state_code{State::InProgress};
     std::optional<CURLcode> m_curl_return_code{std::nullopt};
 };
 }  // namespace clp

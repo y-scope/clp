@@ -72,12 +72,13 @@ auto StreamingReader::TransferThread::thread_method() -> void {
         retval = curl_handler.perform();
     } catch (CurlOperationFailed const& ex) {
         m_reader.m_curl_return_code = ex.get_curl_err();
-        m_reader.set_status_code(State::Failed);
+        m_reader.set_state_code(State::Failed);
         return;
     }
 
     m_reader.commit_fetching_buffer();
-    m_reader.set_status_code((CURLE_OK == retval) ? State::Finished : State::Failed);
+    m_reader.set_state_code((CURLE_OK == retval) ? State::Finished : State::Failed);
+    m_reader.m_cv_reader.notify_all();
     m_reader.m_curl_return_code = retval;
 }
 
@@ -147,7 +148,7 @@ StreamingReader::StreamingReader(
 }
 
 StreamingReader::~StreamingReader() {
-    if (State::InProgress == get_status_code()) {
+    if (is_download_in_progress()) {
         // We need to kill the current connected session to reclaim CURL resources. Since we use
         // async thread for downloading, we need to abort the session to stop data transfer.
         abort_data_transfer();
@@ -160,6 +161,7 @@ StreamingReader::~StreamingReader() {
 
 auto StreamingReader::abort_data_transfer() -> void {
     m_transfer_aborted.store(true);
+    m_cv_fetcher.notify_all();
 }
 
 auto StreamingReader::set_fetching_buffer() -> bool {
@@ -171,14 +173,7 @@ auto StreamingReader::set_fetching_buffer() -> bool {
         if (m_num_fetched_buffer != m_buffer_pool_size) {
             throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
         }
-        if (std::cv_status::timeout
-            != m_cv_fetcher.wait_for(
-                    buffer_resource_lock,
-                    std::chrono::milliseconds(cConditionVariableTimeoutMilliSecond)
-            ))
-        {
-            continue;
-        }
+        m_cv_fetcher.wait(buffer_resource_lock);
         if (is_transfer_aborted()) {
             return false;
         }
@@ -215,13 +210,10 @@ auto StreamingReader::set_reading_buffer() -> bool {
         throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
     }
     while (m_fetched_buffer_queue.empty()) {
-        if (false == is_transfer_thread_running()) {
+        if (false == is_download_in_progress()) {
             return false;
         }
-        m_cv_reader.wait_for(
-                buffer_resource_lock,
-                std::chrono::milliseconds(cConditionVariableTimeoutMilliSecond)
-        );
+        m_cv_reader.wait(buffer_resource_lock);
     }
     auto const next_reading_buffer{m_fetched_buffer_queue.front()};
     m_fetched_buffer_queue.pop();

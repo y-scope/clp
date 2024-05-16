@@ -1,6 +1,9 @@
+#include <chrono>
 #include <filesystem>
+#include <future>
 #include <memory>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -11,10 +14,12 @@
 #include "../src/clp/StreamingReader.hpp"
 
 namespace {
-static constexpr char cTestUrl[]{
+constexpr char const* cTestUrl{
         "https://raw.githubusercontent.com/y-scope/clp/main/components/core/tests/"
         "test_network_reader_src/random.log"
 };
+
+constexpr size_t cDefaultReaderBufferSize{1024};
 
 [[nodiscard]] auto get_ref_file_abs_path() -> std::filesystem::path {
     std::filesystem::path const file_path{__FILE__};
@@ -32,17 +37,31 @@ static constexpr char cTestUrl[]{
 auto read_into_memory_buffer(
         clp::ReaderInterface& reader,
         std::vector<char>& in_mem_buf,
-        size_t reader_buffer_size = 1024
+        size_t reader_buffer_size = cDefaultReaderBufferSize
 ) -> void {
     in_mem_buf.clear();
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     auto const read_buffer{std::make_unique<char[]>(reader_buffer_size)};
     size_t num_bytes_read{};
     bool has_more_content{true};
     while (has_more_content) {
         has_more_content = reader.read(read_buffer.get(), reader_buffer_size, num_bytes_read);
-        std::string_view view{read_buffer.get(), num_bytes_read};
+        std::string_view const view{read_buffer.get(), num_bytes_read};
         in_mem_buf.insert(in_mem_buf.cend(), view.cbegin(), view.cend());
     }
+}
+
+/**
+ * Runs a function with a timeout.
+ * @tparam Func The function to run. A lambda function is expected, which takes no parameter.
+ * @param timeout Timeout in milliseconds.
+ * @param func Function to run.
+ * @return true if the function completes without timeout triggered, false otherwise.
+ */
+template <typename Func>
+[[nodiscard]] auto run_with_timeout(std::chrono::milliseconds timeout, Func&& func) -> bool {
+    auto future{std::async(std::launch::async, std::forward<Func>(func))};
+    return future.wait_for(timeout) == std::future_status::ready;
 }
 }  // namespace
 
@@ -53,36 +72,74 @@ TEST_CASE("streaming_reader_basic", "[StreamingReader]") {
     read_into_memory_buffer(ref_reader, ref_data);
     ref_reader.close();
 
-    REQUIRE(clp::ErrorCode_Success == clp::StreamingReader::init());
+    REQUIRE((clp::ErrorCode_Success == clp::StreamingReader::init()));
     clp::StreamingReader reader(cTestUrl);
     std::vector<char> streamed_data;
     read_into_memory_buffer(reader, streamed_data);
 
-    REQUIRE(streamed_data == ref_data);
+    REQUIRE((streamed_data == ref_data));
+    clp::StreamingReader::deinit();
 }
 
 TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
-    size_t const offset{319};
+    constexpr size_t cOffset{319};
     clp::FileReader ref_reader;
     ref_reader.open(get_ref_file_abs_path().string());
-    ref_reader.seek_from_begin(offset);
+    ref_reader.seek_from_begin(cOffset);
     std::vector<char> ref_data;
     read_into_memory_buffer(ref_reader, ref_data);
     ref_reader.close();
 
-    REQUIRE(clp::ErrorCode_Success == clp::StreamingReader::init());
+    REQUIRE((clp::ErrorCode_Success == clp::StreamingReader::init()));
     std::vector<char> streamed_data;
 
     // Read by opening with the offset.
-    clp::StreamingReader reader_using_offset(cTestUrl, offset);
+    clp::StreamingReader reader_using_offset(cTestUrl, cOffset);
     read_into_memory_buffer(reader_using_offset, streamed_data);
-    REQUIRE(streamed_data == ref_data);
+    REQUIRE((streamed_data == ref_data));
     streamed_data.clear();
 
     // Read by seeking to the offset.
     clp::StreamingReader reader_using_seek(cTestUrl);
-    reader_using_seek.seek_from_begin(offset);
+    reader_using_seek.seek_from_begin(cOffset);
     read_into_memory_buffer(reader_using_seek, streamed_data);
-    REQUIRE(streamed_data == ref_data);
+    REQUIRE((streamed_data == ref_data));
     streamed_data.clear();
+    clp::StreamingReader::deinit();
+}
+
+TEST_CASE("streaming_reader_destruct", "[StreamingReader]") {
+    REQUIRE((clp::ErrorCode_Success == clp::StreamingReader::init()));
+
+    // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+    bool peacefully_destructed{false};
+    auto test_abort = [&]() -> void {
+        // We sleep for a while to fill out all the buffers, and we delete the reader. The
+        // destructor should be called to abort the underlying transfer session. We should ensure
+        // destructor is successfully executed without deadlock or exceptions in this case.
+        try {
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            auto* reader = new clp::StreamingReader{
+                    cTestUrl,
+                    0,
+                    true,
+                    clp::StreamingReader::cDefaultOverallTimeout,
+                    clp::StreamingReader::cDefaultConnectionTimeout,
+                    3,
+                    512
+            };
+            std::this_thread::sleep_for(std::chrono::seconds{1});
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            delete reader;
+        } catch (clp::StreamingReader::OperationFailed const& ex) {
+            return;
+        }
+        peacefully_destructed = true;
+    };
+
+    REQUIRE(run_with_timeout(std::chrono::milliseconds{1500}, test_abort));
+    REQUIRE(peacefully_destructed);
+    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+
+    clp::StreamingReader::deinit();
 }
