@@ -342,7 +342,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 // Note: Marshalling structured arrays is left intentionally stubbed out so that we
                 // can split up the PR for supporting structurized arrays.
                 m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
-                m_json_serializer.add_special_key(child_node.get_key_name());
+                m_json_serializer.add_special_key(key);
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
