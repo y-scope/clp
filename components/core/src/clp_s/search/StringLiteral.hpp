@@ -68,8 +68,19 @@ private:
             m_string_type = LiteralType::VarStringT;
         }
 
-        if (m_v.find('*') != std::string::npos || m_v.find('?') != std::string::npos) {
-            m_string_type |= LiteralType::ClpStringT;
+        // If '?' and '*' are not escaped, we add LiteralType::ClpStringT to m_string_type
+        bool escape = false;
+        for (char const c : m_v) {
+            if ('\\' == c) {
+                escape = !escape;
+            } else if ('?' == c || '*' == c) {
+                if (!escape) {
+                    m_string_type |= LiteralType::ClpStringT;
+                    break;
+                }
+            } else {
+                escape = false;
+            }
         }
     }
 };
