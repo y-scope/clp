@@ -57,7 +57,6 @@ curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_
 bool StreamingReader::m_initialized{false};
 
 auto StreamingReader::TransferThread::thread_method() -> void {
-    CURLcode retval{CURLE_FAILED_INIT};
     try {
         CurlDownloadHandler curl_handler{
                 m_reader.m_src_url,
@@ -69,17 +68,17 @@ auto StreamingReader::TransferThread::thread_method() -> void {
                 m_offset,
                 m_disable_caching
         };
-        retval = curl_handler.perform();
+        m_reader.m_curl_return_code = curl_handler.perform();
+        m_reader.commit_fetching_buffer();
+        m_reader.set_state_code(
+                (CURLE_OK == m_reader.m_curl_return_code) ? State::Finished : State::Failed
+        );
     } catch (CurlOperationFailed const& ex) {
         m_reader.m_curl_return_code = ex.get_curl_err();
         m_reader.set_state_code(State::Failed);
-        return;
     }
 
-    m_reader.commit_fetching_buffer();
-    m_reader.set_state_code((CURLE_OK == retval) ? State::Finished : State::Failed);
     m_reader.m_cv_reader.notify_all();
-    m_reader.m_curl_return_code = retval;
 }
 
 auto StreamingReader::init() -> ErrorCode {
