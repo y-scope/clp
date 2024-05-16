@@ -54,11 +54,9 @@ TEST_CASE("streaming_reader_basic", "[StreamingReader]") {
     ref_reader.close();
 
     REQUIRE(clp::ErrorCode_Success == clp::StreamingReader::init());
-    clp::StreamingReader reader;
+    clp::StreamingReader reader(cTestUrl);
     std::vector<char> streamed_data;
-    reader.open(cTestUrl);
     read_into_memory_buffer(reader, streamed_data);
-    reader.close();
 
     REQUIRE(streamed_data == ref_data);
 }
@@ -73,18 +71,18 @@ TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
     ref_reader.close();
 
     REQUIRE(clp::ErrorCode_Success == clp::StreamingReader::init());
-    clp::StreamingReader reader;
     std::vector<char> streamed_data;
 
     // Read by opening with the offset.
-    reader.open(cTestUrl, offset);
-    read_into_memory_buffer(reader, streamed_data);
-    reader.close();
+    clp::StreamingReader reader_using_offset(cTestUrl, offset);
+    read_into_memory_buffer(reader_using_offset, streamed_data);
     REQUIRE(streamed_data == ref_data);
+    streamed_data.clear();
 
     // Read by seeking to the offset.
-    reader.open(cTestUrl);
-    reader.seek_from_begin(offset);
-    reader.close();
+    clp::StreamingReader reader_using_seek(cTestUrl);
+    reader_using_seek.seek_from_begin(offset);
+    read_into_memory_buffer(reader_using_seek, streamed_data);
     REQUIRE(streamed_data == ref_data);
+    streamed_data.clear();
 }

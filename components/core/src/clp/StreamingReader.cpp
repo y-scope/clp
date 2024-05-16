@@ -276,45 +276,40 @@ auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_
     return num_bytes_to_write;
 }
 
-StreamingReader::StreamingReader(size_t buffer_pool_size, size_t buffer_size)
-        : m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
+StreamingReader::StreamingReader(
+        std::string_view src_url,
+        size_t offset,
+        bool disable_caching,
+        uint32_t overall_timeout_int_sec,
+        uint32_t connection_timeout_in_sec,
+        size_t buffer_pool_size,
+        size_t buffer_size
+)
+        : m_overall_timeout{overall_timeout_int_sec},
+          m_connection_timeout{connection_timeout_in_sec},
+          m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
           m_buffer_size{std::max(cMinBufferPoolSize, buffer_size)} {
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
         m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
     }
-}
-
-auto StreamingReader::open(std::string_view src_url, size_t offset, bool disable_caching) -> void {
     if (false == m_initialized) {
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
-    if (State::NotInit != get_status_code()) {
-        throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
-    }
     m_src_url = src_url;
-    set_status_code(State::InProgress);
     m_transfer_thread = std::make_unique<TransferThread>(std::ref(*this), offset, disable_caching);
     m_transfer_thread->start();
 }
 
-auto StreamingReader::terminate_current_transfer() -> void {
-    if (State::InProgress != get_status_code()) {
-        while (is_transfer_thread_running()) {
-        }
-    } else {
-        // If control flow reaches here, it means the we need to kill the current connected session.
-        // Since the fetcher thread is an async daemon thread, we need to set the flag for aborting
-        // and wait for it to terminate.
-        // TODO: we could use sleep here instead of actively pulling.
-        auto transfer_aborted{is_transfer_aborted()};
-        while (is_transfer_thread_running()) {
-            if (transfer_aborted) {
-                continue;
-            }
-            abort_data_transfer();
-            transfer_aborted = true;
-        }
+StreamingReader::~StreamingReader() {
+    if (State::InProgress == get_status_code()) {
+        // We need to kill the current connected session to reclaim CURL resources. Since we use
+        // async thread for downloading, we need to abort the session to stop data transfer.
+        abort_data_transfer();
+    }
+
+    while (is_transfer_thread_running()) {
+        // TODO: we could use sleep instead of pulling
     }
 }
 
@@ -435,31 +430,6 @@ auto StreamingReader::get_buffer_to_fetch(BufferView& fetching_buffer) -> bool {
             m_buffer_size - m_fetching_buffer_pos
     );
     return true;
-}
-
-auto StreamingReader::reset() -> void {
-    if (State::NotInit == get_status_code()) {
-        return;
-    }
-
-    if (is_transfer_thread_running()) {
-        throw OperationFailed(ErrorCode_Failure, __FILE__, __LINE__);
-    }
-
-    m_src_url.clear();
-    m_file_pos = 0;
-
-    std::queue<BufferView> empty_buffer_queue;
-    m_fetched_buffer_queue.swap(empty_buffer_queue);
-    m_num_fetched_buffer = 0;
-    m_fetching_buffer_pos = 0;
-    m_fetching_buffer.reset();
-    m_reading_buffer.reset();
-
-    m_transfer_thread.reset();
-    m_transfer_aborted.store(false);
-    set_status_code(State::NotInit);
-    m_curl_return_code.reset();
 }
 
 auto StreamingReader::read_from_fetched_buffers(

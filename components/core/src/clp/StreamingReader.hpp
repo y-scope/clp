@@ -54,12 +54,10 @@ public:
      * Enum defining the states of the reader.
      */
     enum class State : uint8_t {
-        // NotInit: The reader is not initialized with a source URL.
-        NotInit = 0,
+        // InProgress: The reader is fetching data from the source URL.
+        InProgress = 0,
         // Failed: The reader has failed to stream data from the source URL.
         Failed,
-        // InProgress: The reader is fetching data from the source URL.
-        InProgress,
         // Finished: The streaming of the given source URL has been accomplished.
         Finished
     };
@@ -93,10 +91,27 @@ public:
     static auto deinit() -> void;
 
     /**
+     * Constructs a new connection to stream data from the given url with a given offset.
+     * TODO: the current implementation doesn't handle the case when the given offset is out of
+     * range. The file_pos will be set to an invalid state if this happens, which can be
+     * problematic if the other part of the program depends on this position. It can be fixed by
+     * capturing the error code 416 in the response header.
+     * @param src_url
+     * @param offset The offset of the starting byte used for data fetching.
+     * @param disable_caching Whether to disable the caching.
+     * @param overall_timeout_in_sec The overall timeout in seconds used by the underlying CURL
+     * handler. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param connection_timeout_in_sec The connection timeout in seconds used by the underlying
+     * CURL handler. Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param buffer_pool_size Total number of buffers available for fetching.
      * @param buffer_size The size of each data buffer.
      */
     explicit StreamingReader(
+            std::string_view src_url,
+            size_t offset = 0,
+            bool disable_caching = false,
+            uint32_t overall_timeout_int_sec = cDefaultOverallTimeout,
+            uint32_t connection_timeout_in_sec = cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize
     );
@@ -104,14 +119,7 @@ public:
     /**
      * Destructor.
      */
-    virtual ~StreamingReader() {
-        if (State::NotInit == get_status_code()) {
-            return;
-        }
-        // We must ensure the transfer has been terminated before we cleanup the allocated
-        // resources. Otherwise, the transfer thread may trigger UB.
-        terminate_current_transfer();
-    }
+    virtual ~StreamingReader();
 
     /**
      * Copy/Move Constructors.
@@ -134,9 +142,6 @@ public:
      */
     [[nodiscard]] auto
     try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override {
-        if (State::NotInit == get_status_code()) {
-            return ErrorCode_NotInit;
-        }
         return read_from_fetched_buffers(num_bytes_to_read, num_bytes_read, buf);
     }
 
@@ -150,9 +155,6 @@ public:
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override {
-        if (State::NotInit == get_status_code()) {
-            return ErrorCode_NotInit;
-        }
         if (pos < m_file_pos) {
             return ErrorCode_Unsupported;
         }
@@ -176,55 +178,8 @@ public:
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override {
-        if (State::NotInit == get_status_code()) {
-            return ErrorCode_NotInit;
-        }
         pos = m_file_pos;
         return ErrorCode_Success;
-    }
-
-    // Methods
-    /**
-     * Opens a new connection to stream data from the given url with a given offset.
-     * TODO: the current implementation doesn't handle the case when the given offset is out of
-     * range. The file_pos will be set to an invalid state if this happens, which can be
-     * problematic if the other part of the program depends on this position. It can be fixed by
-     * capturing the error code 416 in the response header.
-     * @param src_url
-     * @param offset The offset of the starting byte used for data fetching.
-     * @param disable_caching Whether to disable the caching.
-     */
-    auto open(std::string_view src_url, size_t offset = 0, bool disable_caching = false) -> void;
-
-    /**
-     * Closes the current data transfer and resets the buffer state.
-     */
-    auto close() -> void {
-        if (State::NotInit == get_status_code()) {
-            return;
-        }
-        terminate_current_transfer();
-        reset();
-    }
-
-    /**
-     * Sets the connection timeout in seconds. This value will be used when trying to build the
-     * connections. The default value is set to `cDefaultConnectionTimeout`.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-     * @param connection_timeout_in_sec
-     */
-    auto set_connection_timeout(uint32_t connection_timeout_in_sec) -> void {
-        m_connection_timeout = connection_timeout_in_sec;
-    }
-
-    /**
-     * Sets the operation timeout in seconds. This values determines the maximum time a transfer
-     * can take. The default value is set to `cDefaultOverallTimeout`.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     * @param overall_timeout_in_sec
-     */
-    auto set_overall_timeout(uint32_t overall_timeout_in_sec) -> void {
-        m_overall_timeout = overall_timeout_in_sec;
     }
 
     /**
@@ -343,16 +298,6 @@ private:
     [[nodiscard]] auto get_buffer_to_fetch(BufferView& fetching_buffer) -> bool;
 
     /**
-     * Resets the buffer states and transfer manager.
-     * Note:
-     * 1. It is assumed that the thread that calls `reset` would be the reader thread that executed
-     *  `open`.
-     * 2. The transfer should already be terminated (either naturally or aborted) before calling
-     *  this thread.
-     */
-    auto reset() -> void;
-
-    /**
      * Reads data from the fetched buffers with a given amount of bytes.
      * @param num_bytes_to_read
      * @param num_bytes_read Returns the number of bytes read.
@@ -380,8 +325,8 @@ private:
     size_t m_curr_fetching_buffer_idx{0};
     size_t m_fetching_buffer_pos{0};
 
-    uint32_t m_connection_timeout{cDefaultConnectionTimeout};
-    uint32_t m_overall_timeout{cDefaultOverallTimeout};
+    uint32_t m_overall_timeout;
+    uint32_t m_connection_timeout;
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     std::vector<std::unique_ptr<char[]>> m_buffer_pool;
@@ -395,7 +340,7 @@ private:
 
     std::unique_ptr<TransferThread> m_transfer_thread{nullptr};
     std::atomic<bool> m_transfer_aborted{false};
-    std::atomic<State> m_status_code{State::NotInit};
+    std::atomic<State> m_status_code{State::InProgress};
     std::optional<CURLcode> m_curl_return_code{std::nullopt};
 };
 }  // namespace clp
