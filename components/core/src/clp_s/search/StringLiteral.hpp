@@ -74,7 +74,7 @@ private:
             if ('\\' == c) {
                 escape = !escape;
             } else if ('?' == c || '*' == c) {
-                if (!escape) {
+                if (false == escape) {
                     m_string_type |= LiteralType::ClpStringT;
                     break;
                 }
