@@ -9,129 +9,15 @@
 
 #include <curl/curl.h>
 
+#include "CurlDownloadHandler.hpp"
+#include "CurlOperationFailed.hpp"
+#include "CurlStringList.hpp"
 #include "ErrorCode.hpp"
 #include "Thread.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
 namespace {
-/**
- * The exception thrown by a failed libcurl operation.
- */
-class CurlOperationFailed : public TraceableException {
-public:
-    CurlOperationFailed(
-            ErrorCode error_code,
-            char const* const filename,
-            int line_number,
-            CURLcode err
-    )
-            : m_curl_err{err},
-              TraceableException(error_code, filename, line_number) {}
-
-    [[nodiscard]] auto get_curl_err() const -> CURLcode { return m_curl_err; }
-
-    [[nodiscard]] auto what() const noexcept -> char const* override {
-        return "clp::<unnamed>::CurlDownloadHandler operation failed.";
-    }
-
-private:
-    CURLcode m_curl_err;
-};
-
-/**
- * A C++ wrapper for libcurl's string linked list (curl_slist).
- */
-class CurlStringList {
-public:
-    // Constructors
-    CurlStringList() = default;
-
-    // Disable copy/move constructors/assignment operators
-    CurlStringList(CurlStringList const&) = delete;
-    CurlStringList(CurlStringList&&) = delete;
-    auto operator=(CurlStringList const&) -> CurlStringList& = delete;
-    auto operator=(CurlStringList&&) -> CurlStringList& = delete;
-
-    // Destructor
-    ~CurlStringList() { curl_slist_free_all(m_list); }
-
-    // Methods
-    /**
-     * Appends a string to the end of the list.
-     * @param str
-     * @throw CurlOperationFailed if the append operation failed.
-     */
-    auto append(std::string_view str) -> void {
-        auto* list_after_appending{curl_slist_append(m_list, str.data())};
-        if (nullptr == list_after_appending) {
-            throw CurlOperationFailed(ErrorCode_Failure, __FILE__, __LINE__, CURLE_OUT_OF_MEMORY);
-        }
-        m_list = list_after_appending;
-        ++m_size;
-    }
-
-    [[nodiscard]] auto get_raw_list() const -> struct curl_slist* { return m_list; }
-
-    [[nodiscard]] auto get_size() const -> size_t { return m_size; }
-
-    [[nodiscard]] auto is_empty() const -> bool { return 0 == get_size(); }
-
-private:
-    size_t m_size{0};
-    struct curl_slist* m_list{nullptr};
-};
-
-/**
- * This class wraps the C implementation of the Curl handler to perform data downloading. It
- * provides a cleaner interface to manage the life cycle of the object with proper error handling.
- */
-class CurlDownloadHandler {
-public:
-    // Constructor
-    CurlDownloadHandler(
-            StreamingReader& reader,
-            std::string_view src_url,
-            long connection_timeout,
-            long overall_timeout,
-            size_t offset,
-            bool disable_caching
-    );
-
-    // Methods
-    /**
-     * Downloads the data. This function returns when the download completes or fails.
-     * @return Same as `curl_easy_perform`.
-     */
-    [[nodiscard]] auto download() -> CURLcode { return curl_easy_perform(m_handler.get()); }
-
-private:
-    /**
-     * This class defines a customized deleter for the raw curl handler.
-     */
-    class CurlHandlerDeleter {
-    public:
-        auto operator()(CURL* curl_handler) -> void { curl_easy_cleanup(curl_handler); }
-    };
-
-    /**
-     * Sets the given CURL option for this handler.
-     * @tparam ValueType
-     * @param option
-     * @param value
-     * @throw CurlOperationFailed if an error occurs.
-     */
-    template <typename ValueType>
-    auto set_option(CURLoption option, ValueType value) -> void {
-        if (auto const err{curl_easy_setopt(m_handler.get(), option, value)}; CURLE_OK != err) {
-            throw CurlOperationFailed(ErrorCode_Failure, __FILE__, __LINE__, err);
-        }
-    }
-
-    CurlStringList m_http_headers;
-    std::unique_ptr<CURL, CurlHandlerDeleter> m_handler;
-};
-
 /**
  * libcurl progress callback used only to determine whether to abort the current transfer.
  * NOTE: This function must have C linkage to be a libcurl callback.
@@ -166,63 +52,24 @@ extern "C" auto
 curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
     return static_cast<StreamingReader*>(reader_ptr)->write_to_fetching_buffer({ptr, size * nmemb});
 }
-
-CurlDownloadHandler::CurlDownloadHandler(
-        StreamingReader& reader,
-        std::string_view src_url,
-        long connection_timeout,
-        long overall_timeout,
-        size_t offset,
-        bool disable_caching
-)
-        : m_handler{curl_easy_init()} {
-    if (nullptr == m_handler) {
-        throw CurlOperationFailed(ErrorCode_Failure, __FILE__, __LINE__, CURLE_FAILED_INIT);
-    }
-
-    // Set up src url
-    set_option(CURLOPT_URL, src_url.data());
-
-    // Set up progress callback
-    set_option(CURLOPT_XFERINFOFUNCTION, curl_download_progress_callback);
-    set_option(CURLOPT_XFERINFODATA, static_cast<void*>(&reader));
-    set_option(CURLOPT_NOPROGRESS, 0);
-
-    // Set up write callback
-    set_option(CURLOPT_WRITEFUNCTION, curl_download_write_callback);
-    set_option(CURLOPT_WRITEDATA, static_cast<void*>(&reader));
-
-    // Set up timeout
-    set_option(CURLOPT_CONNECTTIMEOUT, connection_timeout);
-    set_option(CURLOPT_TIMEOUT, overall_timeout);
-
-    // Set up http headers
-    if (0 != offset) {
-        std::string const range{"Range: bytes=" + std::to_string(offset) + "-"};
-        m_http_headers.append(range);
-    }
-    if (disable_caching) {
-        m_http_headers.append("Cache-Control: no-cache");
-        m_http_headers.append("Pragma: no-cache");
-    }
-    if (false == m_http_headers.is_empty()) {
-        set_option(CURLOPT_HTTPHEADER, m_http_headers.get_raw_list());
-    }
-}
 }  // namespace
+
+bool StreamingReader::m_initialized{false};
 
 auto StreamingReader::TransferThread::thread_method() -> void {
     CURLcode retval{CURLE_FAILED_INIT};
     try {
         CurlDownloadHandler curl_handler{
-                m_reader,
                 m_reader.m_src_url,
+                static_cast<void*>(&m_reader),
+                curl_download_progress_callback,
+                curl_download_write_callback,
                 static_cast<long>(m_reader.m_connection_timeout),
                 static_cast<long>(m_reader.m_overall_timeout),
                 m_offset,
                 m_disable_caching
         };
-        retval = curl_handler.download();
+        retval = curl_handler.perform();
     } catch (CurlOperationFailed const& ex) {
         m_reader.m_curl_return_code = ex.get_curl_err();
         m_reader.set_status_code(State::Failed);
@@ -233,8 +80,6 @@ auto StreamingReader::TransferThread::thread_method() -> void {
     m_reader.set_status_code((CURLE_OK == retval) ? State::Finished : State::Failed);
     m_reader.m_curl_return_code = retval;
 }
-
-bool StreamingReader::m_initialized{false};
 
 auto StreamingReader::init() -> ErrorCode {
     if (m_initialized) {

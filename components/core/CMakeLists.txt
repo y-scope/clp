@@ -279,6 +279,10 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/CurlDownloadHandler.cpp
+        src/clp/CurlDownloadHandler.hpp
+        src/clp/CurlOperationFailed.hpp
+        src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
         src/clp/database_utils.hpp
         src/clp/Defs.h
