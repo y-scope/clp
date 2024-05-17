@@ -17,6 +17,55 @@
 #include "TraceableException.hpp"
 
 namespace clp {
+/**
+ * StreamingReader behaviour description:
+ * reader_thread: The thread that creates a StreamingReader instance.
+ * transfer_thread: The thread that transfers data from a source URL using `libcurl`.
+ * buffer_pool: Empty buffers ready for filling transferred data. The pool itself is a ring buffer.
+ * filled_buffer_queue: A queue of filled buffers.
+ * transfer_buffer: A single buffer locked by `transfer_thread` to write downloaded data.
+ * reading_buffer: A single buffer locked by `reader_thread` to read downloaded data.
+ *
+ * .....................................           .........................................
+ * .                            +-------------------------+                                .
+ * .`get_filled_buffer` <====== |   filled_buffer_queue   | <====== `enqueue_filled_buffer`.
+ * .                            +-------------------------+                                .
+ * .          +                        .           .                          +            .
+ * .          +                        .           .                          +            .
+ * .          +                        .           .                          +            .
+ * .          +                        .           .                          +            .
+ * .        +++++                      .           .                        +++++          .
+ * .         +++                       .           .                         +++           .
+ * .          +                        .           .                          +            .
+ * .                                   .           .                                       .
+ * .  `reading_buffer`                 .           .                  `transfer_buffer`    .
+ * .                                   .           .                                       .
+ * .          +                        .           .                          +            .
+ * .          +                        .           .                         +++           .
+ * .          +                        .           .                        +++++          .
+ * .          +                        .           .                          +            .
+ * .        +++++                      .           .                          +            .
+ * .         +++                       .           .                          +            .
+ * .          +                        .           .                          +            .
+ * .                                +------------------+                                   .
+ * . `release_empty_buffer` ======> |    buffer_pool   | =======> `acquire_empty_buffer`   .
+ * .                                +------------------+                                   .
+ * .       `reader_thread`             .           .           `transfer_thread`           .
+ * .....................................           .........................................
+ *
+ * For `transfer_thread`:
+ *      - It gets `transfer_buffer` from buffer pool using `acquire_empty_buffer`
+ *      - It only writes to `transfer_buffer`
+ *      - When `transfer_buffer` is fully filled, or no more data is coming, it will be enqueued to
+ *        the filled buffer queue by `enqueue_filled_buffer`
+ *
+ * For `reader_thread`:
+ *      - It gets `reading_buffer` from filled buffer queue using `get_filled_buffer`
+ *      - It only reads from `reading_buffer`
+ *      - When `reading_buffer` is fully read, it will be returned back to the buffer pool by
+ *        `release_empty_buffer`
+ */
+
 namespace {
 /**
  * libcurl progress callback used only to determine whether to abort the current transfer.
@@ -28,7 +77,7 @@ namespace {
  * @param ulnow Unused
  * @return 1 if the transfer was aborted, 0 otherwise.
  */
-extern "C" auto curl_download_progress_callback(
+extern "C" auto curl_progress_callback(
         void* reader_ptr,
         [[maybe_unused]] curl_off_t dltotal,
         [[maybe_unused]] curl_off_t dlnow,
@@ -39,47 +88,22 @@ extern "C" auto curl_download_progress_callback(
 }
 
 /**
- * libcurl write callback that writes downloaded data into the fetching buffer.
+ * libcurl write callback that writes transferred data into the buffers.
  * NOTE: This function must have C linkage to be a libcurl callback.
- * @param ptr The downloaded data
+ * @param ptr A pointer to the transferred data
  * @param size Always 1
- * @param nmemb The number of bytes downloaded
+ * @param nmemb The number of bytes transferred
  * @param reader_ptr A pointer to a `StreamingReader`.
- * @return On success, the number of bytes processed. If this is less than `nmemb`, the download
+ * @return On success, the number of bytes processed. If this is less than `nmemb`, the transfer
  * will be aborted.
  */
 extern "C" auto
-curl_download_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
-    return static_cast<StreamingReader*>(reader_ptr)->write_to_fetching_buffer({ptr, size * nmemb});
+curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
+    return static_cast<StreamingReader*>(reader_ptr)->transfer_data({ptr, size * nmemb});
 }
 }  // namespace
 
 bool StreamingReader::m_initialized{false};
-
-auto StreamingReader::TransferThread::thread_method() -> void {
-    try {
-        CurlDownloadHandler curl_handler{
-                m_reader.m_src_url,
-                static_cast<void*>(&m_reader),
-                curl_download_progress_callback,
-                curl_download_write_callback,
-                static_cast<long>(m_reader.m_connection_timeout),
-                static_cast<long>(m_reader.m_overall_timeout),
-                m_offset,
-                m_disable_caching
-        };
-        m_reader.m_curl_return_code = curl_handler.perform();
-        m_reader.commit_fetching_buffer();
-        m_reader.set_state_code(
-                (CURLE_OK == m_reader.m_curl_return_code) ? State::Finished : State::Failed
-        );
-    } catch (CurlOperationFailed const& ex) {
-        m_reader.m_curl_return_code = ex.get_curl_err();
-        m_reader.set_state_code(State::Failed);
-    }
-
-    m_reader.m_cv_reader.notify_all();
-}
 
 auto StreamingReader::init() -> ErrorCode {
     if (m_initialized) {
@@ -95,6 +119,31 @@ auto StreamingReader::init() -> ErrorCode {
 auto StreamingReader::deinit() -> void {
     curl_global_cleanup();
     m_initialized = false;
+}
+
+auto StreamingReader::TransferThread::thread_method() -> void {
+    try {
+        CurlDownloadHandler curl_handler{
+                m_reader.m_src_url,
+                static_cast<void*>(&m_reader),
+                curl_progress_callback,
+                curl_write_callback,
+                static_cast<long>(m_reader.m_connection_timeout),
+                static_cast<long>(m_reader.m_overall_timeout),
+                m_offset,
+                m_disable_caching
+        };
+        m_reader.m_curl_return_code = curl_handler.perform();
+        m_reader.enqueue_filled_buffer();
+        m_reader.set_state_code(
+                (CURLE_OK == m_reader.m_curl_return_code) ? State::Finished : State::Failed
+        );
+    } catch (CurlOperationFailed const& ex) {
+        m_reader.m_curl_return_code = ex.get_curl_err();
+        m_reader.set_state_code(State::Failed);
+    }
+
+    m_reader.m_cv_reader.notify_all();
 }
 
 StreamingReader::StreamingReader(
@@ -123,9 +172,9 @@ StreamingReader::StreamingReader(
 }
 
 StreamingReader::~StreamingReader() {
-    if (is_download_in_progress()) {
-        // We need to kill the current connected session to reclaim CURL resources. Since we use
-        // async thread for downloading, we need to abort the session to stop data transfer.
+    if (is_curl_transfer_in_progress()) {
+        // We need to kill the current connected session to reclaim CURL resources. Since the
+        // transfer thread is asynchronized, we need to abort the session to stop data transfer.
         abort_data_transfer();
     }
 
@@ -136,19 +185,19 @@ StreamingReader::~StreamingReader() {
 
 auto StreamingReader::abort_data_transfer() -> void {
     m_transfer_aborted.store(true);
-    m_cv_fetcher.notify_all();
+    m_cv_transfer.notify_all();
 }
 
-auto StreamingReader::set_fetching_buffer() -> bool {
+auto StreamingReader::acquire_empty_buffer() -> bool {
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
-    if (m_fetching_buffer.has_value()) {
+    if (m_transfer_buffer.has_value()) {
         throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
     }
-    while (m_num_fetched_buffer >= m_buffer_pool_size) {
-        if (m_num_fetched_buffer != m_buffer_pool_size) {
+    while (m_num_filled_buffer >= m_buffer_pool_size) {
+        if (m_num_filled_buffer != m_buffer_pool_size) {
             throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
         }
-        m_cv_fetcher.wait(buffer_resource_lock);
+        m_cv_transfer.wait(buffer_resource_lock);
         if (is_transfer_aborted()) {
             return false;
         }
@@ -156,73 +205,72 @@ auto StreamingReader::set_fetching_buffer() -> bool {
             return false;
         }
     }
-    m_fetching_buffer.emplace(m_buffer_pool.at(m_curr_fetching_buffer_idx).get(), m_buffer_size);
+    m_transfer_buffer.emplace(m_buffer_pool.at(m_curr_transfer_buffer_idx).get(), m_buffer_size);
     return true;
 }
 
-auto StreamingReader::commit_fetching_buffer() -> void {
-    if (false == m_fetching_buffer.has_value()) {
+auto StreamingReader::enqueue_filled_buffer() -> void {
+    if (false == m_transfer_buffer.has_value()) {
         return;
     }
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
-    m_fetched_buffer_queue.emplace(
-            m_buffer_pool.at(m_curr_fetching_buffer_idx).get(),
-            m_buffer_size - m_fetching_buffer.value().size()
+    m_filled_buffer_queue.emplace(
+            m_buffer_pool.at(m_curr_transfer_buffer_idx).get(),
+            m_buffer_size - m_transfer_buffer.value().size()
     );
-    ++m_num_fetched_buffer;
+    ++m_num_filled_buffer;
 
-    m_fetching_buffer.reset();
-    ++m_curr_fetching_buffer_idx;
-    if (m_curr_fetching_buffer_idx == m_buffer_pool_size) {
-        m_curr_fetching_buffer_idx = 0;
+    m_transfer_buffer.reset();
+    ++m_curr_transfer_buffer_idx;
+    if (m_curr_transfer_buffer_idx == m_buffer_pool_size) {
+        m_curr_transfer_buffer_idx = 0;
     }
 
     m_cv_reader.notify_all();
 }
 
-auto StreamingReader::set_reading_buffer() -> bool {
+auto StreamingReader::get_filled_buffer() -> bool {
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
     if (m_reading_buffer.has_value()) {
         throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
     }
-    while (m_fetched_buffer_queue.empty()) {
-        if (false == is_download_in_progress()) {
+    while (m_filled_buffer_queue.empty()) {
+        if (false == is_curl_transfer_in_progress()) {
             return false;
         }
         m_cv_reader.wait(buffer_resource_lock);
     }
-    auto const next_reading_buffer{m_fetched_buffer_queue.front()};
-    m_fetched_buffer_queue.pop();
+    auto const next_reading_buffer{m_filled_buffer_queue.front()};
+    m_filled_buffer_queue.pop();
     m_reading_buffer.emplace(next_reading_buffer);
     return true;
 }
 
-auto StreamingReader::free_reading_buffer() -> void {
+auto StreamingReader::release_empty_buffer() -> void {
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     m_reading_buffer.reset();
-    --m_num_fetched_buffer;
-    m_cv_fetcher.notify_all();
+    --m_num_filled_buffer;
+    m_cv_transfer.notify_all();
 }
 
-auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write
-) -> size_t {
+auto StreamingReader::transfer_data(StreamingReader::BufferView data_to_write) -> size_t {
     auto const num_bytes_to_write{data_to_write.size()};
     try {
         while (false == data_to_write.empty()) {
-            if (false == m_fetching_buffer.has_value() && false == set_fetching_buffer()) {
+            if (false == m_transfer_buffer.has_value() && false == acquire_empty_buffer()) {
                 return 0;
             }
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-            auto& fetching_buffer{m_fetching_buffer.value()};
-            auto const num_bytes_to_fetch{std::min(fetching_buffer.size(), data_to_write.size())};
+            auto& buffer_to_fill{m_transfer_buffer.value()};
+            auto const num_bytes_to_fill{std::min(buffer_to_fill.size(), data_to_write.size())};
             auto const copy_it_begin{data_to_write.begin()};
             auto copy_it_end{data_to_write.begin()};
-            std::advance(copy_it_end, num_bytes_to_fetch);
-            std::copy(copy_it_begin, copy_it_end, fetching_buffer.begin());
-            data_to_write = data_to_write.subspan(num_bytes_to_fetch);
-            fetching_buffer = fetching_buffer.subspan(num_bytes_to_fetch);
-            if (fetching_buffer.empty()) {
-                commit_fetching_buffer();
+            std::advance(copy_it_end, num_bytes_to_fill);
+            std::copy(copy_it_begin, copy_it_end, buffer_to_fill.begin());
+            data_to_write = data_to_write.subspan(num_bytes_to_fill);
+            buffer_to_fill = buffer_to_fill.subspan(num_bytes_to_fill);
+            if (buffer_to_fill.empty()) {
+                enqueue_filled_buffer();
             }
         }
     } catch (TraceableException const& ex) {
@@ -232,7 +280,7 @@ auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_
     return num_bytes_to_write;
 }
 
-auto StreamingReader::read_from_fetched_buffers(
+auto StreamingReader::read_from_filled_buffers(
         size_t num_bytes_to_read,
         size_t& num_bytes_read,
         char* dst
@@ -243,7 +291,7 @@ auto StreamingReader::read_from_fetched_buffers(
         dst_view = BufferView{dst, num_bytes_to_read};
     }
     while (0 != num_bytes_to_read) {
-        if (false == m_reading_buffer.has_value() && false == set_reading_buffer()) {
+        if (false == m_reading_buffer.has_value() && false == get_filled_buffer()) {
             return ErrorCode_EndOfFile;
         }
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
@@ -265,7 +313,7 @@ auto StreamingReader::read_from_fetched_buffers(
         m_file_pos += num_bytes_to_consume_from_buffer;
         reading_buffer = reading_buffer.subspan(num_bytes_to_consume_from_buffer);
         if (reading_buffer.empty()) {
-            free_reading_buffer();
+            release_empty_buffer();
         }
     }
     return ErrorCode_Success;

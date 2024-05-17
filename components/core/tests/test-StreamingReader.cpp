@@ -145,7 +145,7 @@ TEST_CASE("streaming_reader_destruct", "[StreamingReader]") {
                     512
             )};
             std::this_thread::sleep_for(std::chrono::seconds{1});
-            REQUIRE(reader->is_download_in_progress());
+            REQUIRE(reader->is_curl_transfer_in_progress());
             reader.reset(nullptr);
         } catch (clp::StreamingReader::OperationFailed const& ex) {
             return;
