@@ -26,32 +26,32 @@ namespace clp {
  * transfer_buffer: A single buffer locked by `transfer_thread` to write downloaded data.
  * reading_buffer: A single buffer locked by `reader_thread` to read downloaded data.
  *
- * .....................................           .........................................
- * .                            +-------------------------+                                .
- * .`get_filled_buffer` <====== |   filled_buffer_queue   | <====== `enqueue_filled_buffer`.
- * .                            +-------------------------+                                .
- * .          +                        .           .                          +            .
- * .          +                        .           .                          +            .
- * .          +                        .           .                          +            .
- * .          +                        .           .                          +            .
- * .        +++++                      .           .                        +++++          .
- * .         +++                       .           .                         +++           .
- * .          +                        .           .                          +            .
- * .                                   .           .                                       .
- * .  `reading_buffer`                 .           .                  `transfer_buffer`    .
- * .                                   .           .                                       .
- * .          +                        .           .                          +            .
- * .          +                        .           .                         +++           .
- * .          +                        .           .                        +++++          .
- * .          +                        .           .                          +            .
- * .        +++++                      .           .                          +            .
- * .         +++                       .           .                          +            .
- * .          +                        .           .                          +            .
- * .                                +------------------+                                   .
- * . `release_empty_buffer` ======> |    buffer_pool   | =======> `acquire_empty_buffer`   .
- * .                                +------------------+                                   .
- * .       `reader_thread`             .           .           `transfer_thread`           .
- * .....................................           .........................................
+ *   .....................................           .........................................
+ *   |                            +-------------------------+                                |
+ *   |`get_filled_buffer` <====== <   filled_buffer_queue   < <====== `enqueue_filled_buffer`|
+ *   |                            +-------------------------+                                |
+ *   |          +                        |           |                          +            |
+ *   |          +                        |           |                          +            |
+ *   |          +                        |           |                          +            |
+ *   |          +                        |           |                          +            |
+ *   |        +++++                      |           |                        +++++          |
+ *   |         +++                       |           |                         +++           |
+ *   |          +                        |           |                          +            |
+ *   |                                   |           |                                       |
+ *   |  `reading_buffer`                 |           |                  `transfer_buffer`    |
+ *   |                                   |           |                                       |
+ *   |          +                        |           |                          +            |
+ *   |          +                        |           |                         +++           |
+ *   |          +                        |           |                        +++++          |
+ *   |          +                        |           |                          +            |
+ *   |        +++++                      |           |                          +            |
+ *   |         +++                       |           |                          +            |
+ *   |          +                        |           |                          +            |
+ *   |                                +------------------+                                   |
+ *   | `release_empty_buffer` ======> >    buffer_pool   > =======> `acquire_empty_buffer`   |
+ *   |                                +------------------+                                   |
+ *   |       `reader_thread`             |           |           `transfer_thread`           |
+ *   .....................................           .........................................
  *
  * For `transfer_thread`:
  *      - It gets `transfer_buffer` from buffer pool using `acquire_empty_buffer`
