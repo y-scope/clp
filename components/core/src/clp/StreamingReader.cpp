@@ -31,11 +31,11 @@ namespace clp {
  *   |   `get_filled_buffer` <=== <   filled_buffer_queue   < <=== `enqueue_filled_buffer`   |
  *   |                            +-------------------------+                                |
  *   |              +                    |           |                    +                  |
+ *   |              +                    |           |                   +++                 |
+ *   |              +                    |           |                  +++++                |
  *   |              +                    |           |                    +                  |
- *   |              +                    |           |                    +                  |
- *   |              +                    |           |                    +                  |
- *   |            +++++                  |           |                  +++++                |
- *   |             +++                   |           |                   +++                 |
+ *   |            +++++                  |           |                    +                  |
+ *   |             +++                   |           |                    +                  |
  *   |              +                    |           |                    +                  |
  *   |                                   |           |                                       |
  *   |      `reading_buffer`             |           |            `transfer_buffer`          |
