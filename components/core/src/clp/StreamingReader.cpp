@@ -48,7 +48,7 @@ namespace clp {
  *   |             +++                   |           |                    +                  |
  *   |              +                    |           |                    +                  |
  *   |                                +------------------+                                   |
- *   | `release_empty_buffer` ======> >    buffer_pool   > =======> `acquire_empty_buffer`   |
+ *   |    `release_empty_buffer` ===> >    buffer_pool   > ====> `acquire_empty_buffer`      |
  *   |                                +------------------+                                   |
  *   |       `reader_thread`             |           |           `transfer_thread`           |
  *   .....................................           .........................................
