@@ -292,28 +292,6 @@ private:
     auto free_reading_buffer() -> void;
 
     /**
-     * Commits the number of bytes fetched. If the buffer is full, commits it to the fetched buffer
-     * queue.
-     * @param num_bytes_fetched
-     */
-    auto commit_fetching(size_t num_bytes_fetched) -> void;
-
-    /**
-     * Commits the number of bytes read. If the entire buffer is consumed, free the buffer resource.
-     * @param num_bytes_read
-     */
-    auto commit_reading(size_t num_bytes_read) -> void;
-
-    /**
-     * Gets the buffer to fetch (which is the unfilled part of the current fetching buffer). If the
-     * current fetching buffer is full, it will commit the current buffer and get the next buffer
-     * from the buffer pool.
-     * @param fetching_buffer Output the buffer to fetch.
-     * @return true on success, false on failure (transfer aborted).
-     */
-    [[nodiscard]] auto get_buffer_to_fetch(BufferView& fetching_buffer) -> bool;
-
-    /**
      * Reads data from the fetched buffers with a given amount of bytes.
      * @param num_bytes_to_read
      * @param num_bytes_read Returns the number of bytes read.
@@ -339,7 +317,6 @@ private:
     size_t m_buffer_size;
     size_t m_num_fetched_buffer{0};
     size_t m_curr_fetching_buffer_idx{0};
-    size_t m_fetching_buffer_pos{0};
 
     uint32_t m_overall_timeout;
     uint32_t m_connection_timeout;

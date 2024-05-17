@@ -97,30 +97,6 @@ auto StreamingReader::deinit() -> void {
     m_initialized = false;
 }
 
-auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write
-) -> size_t {
-    auto const num_bytes_to_write{data_to_write.size()};
-    try {
-        while (false == data_to_write.empty()) {
-            StreamingReader::BufferView fetching_buffer;
-            if (false == get_buffer_to_fetch(fetching_buffer)) {
-                return 0;
-            }
-            auto const num_bytes_to_fetch{std::min(fetching_buffer.size(), data_to_write.size())};
-            auto const copy_it_begin{data_to_write.begin()};
-            auto copy_it_end{data_to_write.begin()};
-            std::advance(copy_it_end, num_bytes_to_fetch);
-            std::copy(copy_it_begin, copy_it_end, fetching_buffer.begin());
-            data_to_write = data_to_write.subspan(num_bytes_to_fetch);
-            commit_fetching(num_bytes_to_fetch);
-        }
-    } catch (TraceableException const& ex) {
-        // TODO: add logging to track the exceptions.
-        return 0;
-    }
-    return num_bytes_to_write;
-}
-
 StreamingReader::StreamingReader(
         std::string_view src_url,
         size_t offset,
@@ -189,12 +165,13 @@ auto StreamingReader::commit_fetching_buffer() -> void {
         return;
     }
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
-    auto const fetching_buffer{m_fetching_buffer.value()};
-    m_fetched_buffer_queue.emplace(fetching_buffer.data(), m_fetching_buffer_pos);
+    m_fetched_buffer_queue.emplace(
+            m_buffer_pool.at(m_curr_fetching_buffer_idx).get(),
+            m_buffer_size - m_fetching_buffer.value().size()
+    );
     ++m_num_fetched_buffer;
 
     m_fetching_buffer.reset();
-    m_fetching_buffer_pos = 0;
     ++m_curr_fetching_buffer_idx;
     if (m_curr_fetching_buffer_idx == m_buffer_pool_size) {
         m_curr_fetching_buffer_idx = 0;
@@ -227,45 +204,32 @@ auto StreamingReader::free_reading_buffer() -> void {
     m_cv_fetcher.notify_all();
 }
 
-auto StreamingReader::commit_fetching(size_t num_bytes_fetched) -> void {
-    m_fetching_buffer_pos += num_bytes_fetched;
-    if (m_fetching_buffer_pos > m_buffer_size) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
-    }
-    if (m_fetching_buffer_pos == m_buffer_size) {
-        commit_fetching_buffer();
-    }
-}
-
-auto StreamingReader::commit_reading(size_t num_bytes_read) -> void {
-    if (false == m_reading_buffer.has_value()) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
-    }
-    auto const reading_buffer_size{m_reading_buffer.value().size()};
-    if (reading_buffer_size < num_bytes_read) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
-    }
-    auto const num_bytes_left{reading_buffer_size - num_bytes_read};
-    if (0 == num_bytes_left) {
-        free_reading_buffer();
-    } else {
-        m_reading_buffer = m_reading_buffer.value().last(num_bytes_left);
-    }
-}
-
-auto StreamingReader::get_buffer_to_fetch(BufferView& fetching_buffer) -> bool {
-    if (false == m_fetching_buffer.has_value()) {
-        if (false == set_fetching_buffer() || false == m_fetching_buffer.has_value()) {
-            return false;
+auto StreamingReader::write_to_fetching_buffer(StreamingReader::BufferView data_to_write
+) -> size_t {
+    auto const num_bytes_to_write{data_to_write.size()};
+    try {
+        while (false == data_to_write.empty()) {
+            if (false == m_fetching_buffer.has_value() && false == set_fetching_buffer()) {
+                return 0;
+            }
+            // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+            auto& fetching_buffer{m_fetching_buffer.value()};
+            auto const num_bytes_to_fetch{std::min(fetching_buffer.size(), data_to_write.size())};
+            auto const copy_it_begin{data_to_write.begin()};
+            auto copy_it_end{data_to_write.begin()};
+            std::advance(copy_it_end, num_bytes_to_fetch);
+            std::copy(copy_it_begin, copy_it_end, fetching_buffer.begin());
+            data_to_write = data_to_write.subspan(num_bytes_to_fetch);
+            fetching_buffer = fetching_buffer.subspan(num_bytes_to_fetch);
+            if (fetching_buffer.empty()) {
+                commit_fetching_buffer();
+            }
         }
-        fetching_buffer = m_fetching_buffer.value();
-        return true;
+    } catch (TraceableException const& ex) {
+        // TODO: add logging to track the exceptions.
+        return 0;
     }
-    fetching_buffer = m_fetching_buffer.value().subspan(
-            m_fetching_buffer_pos,
-            m_buffer_size - m_fetching_buffer_pos
-    );
-    return true;
+    return num_bytes_to_write;
 }
 
 auto StreamingReader::read_from_fetched_buffers(
@@ -279,12 +243,11 @@ auto StreamingReader::read_from_fetched_buffers(
         dst_view = BufferView{dst, num_bytes_to_read};
     }
     while (0 != num_bytes_to_read) {
-        if (false == m_reading_buffer.has_value()) {
-            if (false == set_reading_buffer() || false == m_reading_buffer.has_value()) {
-                return ErrorCode_EndOfFile;
-            }
+        if (false == m_reading_buffer.has_value() && false == set_reading_buffer()) {
+            return ErrorCode_EndOfFile;
         }
-        auto const reading_buffer{m_reading_buffer.value()};
+        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+        auto& reading_buffer{m_reading_buffer.value()};
         auto const reading_buffer_size{reading_buffer.size()};
         if (0 == reading_buffer_size) {
             return ErrorCode_EndOfFile;
@@ -300,7 +263,10 @@ auto StreamingReader::read_from_fetched_buffers(
         num_bytes_to_read -= num_bytes_to_consume_from_buffer;
         num_bytes_read += num_bytes_to_consume_from_buffer;
         m_file_pos += num_bytes_to_consume_from_buffer;
-        commit_reading(num_bytes_to_consume_from_buffer);
+        reading_buffer = reading_buffer.subspan(num_bytes_to_consume_from_buffer);
+        if (reading_buffer.empty()) {
+            free_reading_buffer();
+        }
     }
     return ErrorCode_Success;
 }
