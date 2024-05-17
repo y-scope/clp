@@ -135,8 +135,7 @@ TEST_CASE("streaming_reader_destruct", "[StreamingReader]") {
         // destructor should be called to abort the underlying transfer session. We should ensure
         // destructor is successfully executed without deadlock or exceptions in this case.
         try {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto* reader = new clp::StreamingReader{
+            auto reader{std::make_unique<clp::StreamingReader>(
                     cTestUrl,
                     0,
                     true,
@@ -144,10 +143,10 @@ TEST_CASE("streaming_reader_destruct", "[StreamingReader]") {
                     clp::StreamingReader::cDefaultConnectionTimeout,
                     3,
                     512
-            };
+            )};
             std::this_thread::sleep_for(std::chrono::seconds{1});
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            delete reader;
+            REQUIRE(reader->is_download_in_progress());
+            reader.reset(nullptr);
         } catch (clp::StreamingReader::OperationFailed const& ex) {
             return;
         }

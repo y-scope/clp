@@ -2,7 +2,6 @@
 #define CLP_CURLDOWNLOADHANDLER_HPP
 
 #include <cstddef>
-#include <memory>
 
 #include <curl/curl.h>
 
