@@ -5,7 +5,7 @@
 
 namespace clp {
 // We use seconds resolution to support GPS clock offsets
-using UtcOffset = std::chrono::seconds;
+using UtcOffset = std::chrono::milliseconds;
 }  // namespace clp
 
 #endif  // CLP_TIME_TYPES_HPP
