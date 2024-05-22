@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../Defs.h"
+#include "time_types.hpp"
 #include "types.hpp"
 
 namespace clp::ir {
@@ -18,17 +19,21 @@ public:
     // Constructors
     LogEvent(
             epoch_time_ms_t timestamp,
+            UtcOffset utc_offset,
             std::string logtype,
             std::vector<std::string> dict_vars,
             std::vector<encoded_variable_t> encoded_vars
     )
             : m_timestamp{timestamp},
+              m_utc_offset{utc_offset},
               m_logtype{std::move(logtype)},
               m_dict_vars{std::move(dict_vars)},
               m_encoded_vars{std::move(encoded_vars)} {}
 
     // Methods
     [[nodiscard]] auto get_timestamp() const -> epoch_time_ms_t { return m_timestamp; }
+
+    [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
 
     [[nodiscard]] auto get_logtype() const -> std::string const& { return m_logtype; }
 
@@ -43,6 +48,7 @@ public:
 private:
     // Variables
     epoch_time_ms_t m_timestamp;
+    UtcOffset m_utc_offset;
     std::string m_logtype;
     std::vector<std::string> m_dict_vars;
     std::vector<encoded_variable_t> m_encoded_vars;

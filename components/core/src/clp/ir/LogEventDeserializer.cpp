@@ -11,8 +11,8 @@
 
 namespace clp::ir {
 template <typename encoded_variable_t>
-auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
+auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
     ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata;
     auto ir_error_code = ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata);
@@ -67,8 +67,8 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
 }
 
 template <typename encoded_variable_t>
-auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
+auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
     // Process any packets before the log event
     ffi::ir_stream::encoded_tag_t tag{};
     while (true) {
@@ -123,7 +123,7 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
         timestamp = m_prev_msg_timestamp;
     }
 
-    return LogEvent<encoded_variable_t>{timestamp, logtype, dict_vars, encoded_vars};
+    return LogEvent<encoded_variable_t>{timestamp, m_utc_offset, logtype, dict_vars, encoded_vars};
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
@@ -132,8 +132,8 @@ template auto LogEventDeserializer<eight_byte_encoded_variable_t>::create(Reader
 ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::create(ReaderInterface& reader
 ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
-template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event()
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
-template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event()
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event(
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event(
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
 }  // namespace clp::ir
