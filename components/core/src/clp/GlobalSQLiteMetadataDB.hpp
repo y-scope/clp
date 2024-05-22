@@ -30,35 +30,6 @@ public:
         }
     };
 
-    class FileSplitIterator : public GlobalMetadataDB::FileSplitIterator {
-    public:
-        // Types
-        class OperationFailed : public TraceableException {
-        public:
-            // Constructors
-            OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                    : TraceableException(error_code, filename, line_number) {}
-
-            // Methods
-            char const* what() const noexcept override {
-                return "GlobalSQLiteMetadataDB::ArchiveIterator operation failed";
-            }
-        };
-
-        // Constructors
-        FileSplitIterator(SQLiteDB& db, std::string const& file_id, size_t msg_ix);
-
-        // Methods
-        bool contains_element() const override;
-        void get_next() override;
-        void get_archive_id(std::string& archive_id) const override;
-        void get_file_split_id(std::string& file_split_id) const override;
-
-    private:
-        // Variables
-        SQLitePreparedStatement m_statement;
-    };
-
     class ArchiveIterator : public GlobalMetadataDB::ArchiveIterator {
     public:
         // Types
@@ -108,6 +79,12 @@ public:
             std::string const& archive_id,
             std::vector<streaming_archive::writer::File*> const& files
     ) override;
+    bool get_file_split(
+            std::string const& file_orig_id,
+            size_t msg_ix,
+            std::string& archive_id,
+            std::string& file_split_id
+    ) override;
 
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator() override {
         return new ArchiveIterator(m_db);
@@ -121,11 +98,6 @@ public:
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_file_path(std::string const& path
     ) override {
         return new ArchiveIterator(m_db, path);
-    }
-
-    GlobalMetadataDB::FileSplitIterator* get_iterator_for_file_split(std::string const& file_id, size_t msg_ix
-    ) override {
-        return new FileSplitIterator(m_db, file_id, msg_ix);
     }
 
 private:

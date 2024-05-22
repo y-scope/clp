@@ -213,31 +213,6 @@ get_file_split_statement(SQLiteDB& db, string const& file_id, size_t msg_ix) {
 }
 }  // namespace
 
-GlobalSQLiteMetadataDB::FileSplitIterator::FileSplitIterator(
-        clp::SQLiteDB &db,
-        std::string const& file_id,
-        size_t msg_ix
-)
-        : m_statement(get_file_split_statement(db, file_id, msg_ix)) {
-    m_statement.step();
-}
-
-bool GlobalSQLiteMetadataDB::FileSplitIterator::contains_element() const {
-    return m_statement.is_row_ready();
-}
-
-void GlobalSQLiteMetadataDB::FileSplitIterator::get_next() {
-    m_statement.step();
-}
-
-void GlobalSQLiteMetadataDB::FileSplitIterator::get_archive_id(string& archive_id) const {
-    m_statement.column_string(0, archive_id);
-}
-
-void GlobalSQLiteMetadataDB::FileSplitIterator::get_file_split_id(string& file_split_id) const {
-    m_statement.column_string(1, file_split_id);
-}
-
 GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator(SQLiteDB& db)
         : m_statement(get_archives_select_statement(db)) {
     m_statement.step();
@@ -604,4 +579,24 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
     m_upsert_files_transaction_begin_statement->reset();
     m_upsert_files_transaction_end_statement->reset();
 }
+
+bool GlobalSQLiteMetadataDB::get_file_split(
+    std::string const& file_orig_id,
+    size_t msg_ix,
+    std::string& archive_id,
+    std::string& file_split_id
+) {
+    SQLitePreparedStatement statement(get_file_split_statement(m_db, file_orig_id, msg_ix));
+    statement.step();
+    if (false == statement.is_row_ready()) {
+        return false;
+    }
+
+    statement.column_string(0, archive_id);
+    statement.column_string(1, file_split_id);
+
+    return true;
+
+}
+
 }  // namespace clp

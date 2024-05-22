@@ -13,17 +13,6 @@ namespace clp {
  */
 class GlobalMetadataDB {
 public:
-    class FileSplitIterator {
-    public:
-        // Destructor
-        virtual ~FileSplitIterator() = default;
-
-        // Methods
-        virtual bool contains_element() const = 0;
-        virtual void get_next() = 0;
-        virtual void get_archive_id(std::string& archive_id) const = 0;
-        virtual void get_file_split_id(std::string& file_split_id) const = 0;
-    };
     // Types
     class ArchiveIterator {
     public:
@@ -102,11 +91,20 @@ public:
     virtual ArchiveIterator* get_archive_iterator_for_file_path(std::string const& path) = 0;
 
     /**
-     * Gets an iterator to iterate over every archive that contains a given file ID and line number in the global
-     * metadata database
-     * @return The archive iterator
+     * Gets the file split id and associated archive id that contains the specific log event index in the
+     * file identified by the original file id in the global metadata database
+     * @param file_orig_id
+     * @param msg_ix
+     * @param archive_id
+     * @param file_split_id
+     * @return True if such file split is found. Otherwise false.
      */
-    virtual FileSplitIterator* get_iterator_for_file_split(std::string const& file_orig_id, size_t msg_ix) = 0;
+    virtual bool get_file_split(
+        std::string const& file_orig_id,
+        size_t msg_ix,
+        std::string& archive_id,
+        std::string& file_split_id
+        ) = 0;
 
 protected:
     // Variables
