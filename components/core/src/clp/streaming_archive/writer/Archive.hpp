@@ -130,7 +130,6 @@ public:
 
     /**
      * Wrapper for streaming_archive::writer::File::set_combined_file_msg_offset
-     * @param file File to set the combined-file message offset for
      * @param offset
      */
     void set_combined_file_message_offset(size_t offset);
