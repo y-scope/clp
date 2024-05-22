@@ -176,7 +176,67 @@ get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
 
     return statement;
 }
+
+SQLitePreparedStatement
+get_file_split_statement(SQLiteDB& db, string const& file_id, size_t msg_ix) {
+    auto statement_string = fmt::format(
+            "SELECT DISTINCT {}.{}, {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} = ?"
+            " AND ? >= {}.{} AND ? < ({}.{} + {}.{}) ORDER BY {} ASC, {} ASC",
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::Archive::Id,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::Id,
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::Archive::Id,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::ArchiveId,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::OrigFileId,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::CombinedFileMsgOffset,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::NumMessages,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::CombinedFileMsgOffset,
+            streaming_archive::cMetadataDB::Archive::CreatorId,
+            streaming_archive::cMetadataDB::Archive::CreationIx
+    );
+    SPDLOG_DEBUG("{}", statement_string);
+    auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
+    statement.bind_text(1, file_id, true);
+    statement.bind_int(2, static_cast<int>(msg_ix));
+    statement.bind_int(3, static_cast<int>(msg_ix));
+
+    return statement;
+}
 }  // namespace
+
+GlobalSQLiteMetadataDB::FileSplitIterator::FileSplitIterator(
+        clp::SQLiteDB &db,
+        std::string const& file_id,
+        size_t msg_ix
+)
+        : m_statement(get_file_split_statement(db, file_id, msg_ix)) {
+    m_statement.step();
+}
+
+bool GlobalSQLiteMetadataDB::FileSplitIterator::contains_element() const {
+    return m_statement.is_row_ready();
+}
+
+void GlobalSQLiteMetadataDB::FileSplitIterator::get_next() {
+    m_statement.step();
+}
+
+void GlobalSQLiteMetadataDB::FileSplitIterator::get_archive_id(string& archive_id) const {
+    m_statement.column_string(0, archive_id);
+}
+
+void GlobalSQLiteMetadataDB::FileSplitIterator::get_file_split_id(string& file_split_id) const {
+    m_statement.column_string(1, file_split_id);
+}
 
 GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator(SQLiteDB& db)
         : m_statement(get_archives_select_statement(db)) {

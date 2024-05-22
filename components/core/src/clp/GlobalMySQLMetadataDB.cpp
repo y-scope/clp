@@ -42,6 +42,16 @@ enum class FilesTableFieldIndexes : uint16_t {
 };
 
 namespace clp {
+void GlobalMySQLMetadataDB::FileSplitIterator::get_archive_id(std::string &archive_id) const {
+    throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    m_db_iterator->get_field_as_string(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), archive_id);
+}
+
+void GlobalMySQLMetadataDB::FileSplitIterator::get_file_split_id(std::string &file_split_id) const {
+    throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    m_db_iterator->get_field_as_string(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), file_split_id);
+}
+
 void GlobalMySQLMetadataDB::ArchiveIterator::get_id(string& id) const {
     m_db_iterator->get_field_as_string(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), id);
 }
@@ -453,4 +463,13 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
 
     return new ArchiveIterator(m_db.get_iterator());
 }
+
+GlobalMetadataDB::FileSplitIterator* GlobalMySQLMetadataDB::get_iterator_for_file_split(
+        string const& file_id, size_t msg_ix
+) {
+    SPDLOG_ERROR("Unexpected call");
+    throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    return new FileSplitIterator(m_db.get_iterator());
+}
+
 }  // namespace clp

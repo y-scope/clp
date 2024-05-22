@@ -25,6 +25,39 @@ public:
         }
     };
 
+    class FileSplitIterator : public GlobalMetadataDB::FileSplitIterator {
+    public:
+        // Types
+        class OperationFailed : public TraceableException {
+        public:
+            // Constructors
+            OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                    : TraceableException(error_code, filename, line_number) {}
+
+            // Methods
+            char const* what() const noexcept override {
+                return "GlobalMySQLMetadataDB::FileSplitIterator operation failed";
+            }
+        };
+
+        // Constructors
+        explicit FileSplitIterator(MySQLDB::Iterator&& iterator)
+                : m_db_iterator(std::make_unique<MySQLDB::Iterator>(std::move(iterator))) {}
+
+        // Methods
+        bool contains_element() const override { return m_db_iterator->contains_element(); }
+
+        void get_next() override { m_db_iterator->get_next(); }
+
+        void get_archive_id(std::string& archive_id) const override;
+
+        void get_file_split_id(std::string& file_split_id) const override;
+
+    private:
+        // Variables
+        std::unique_ptr<MySQLDB::Iterator> m_db_iterator;
+    };
+
     class ArchiveIterator : public GlobalMetadataDB::ArchiveIterator {
     public:
         // Types
@@ -93,7 +126,9 @@ public:
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_file_path(
             std::string const& file_path
     ) override;
-
+    GlobalMetadataDB::FileSplitIterator* get_iterator_for_file_split(
+            std::string const& file_id, size_t msg_ix
+    ) override;
 private:
     // Variables
     std::string m_host;
