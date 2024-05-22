@@ -120,7 +120,7 @@ set(
 )
 
 add_executable(clg ${CLG_SOURCES})
-target_compile_features(clg PRIVATE cxx_std_17)
+target_compile_features(clg PRIVATE cxx_std_20)
 target_include_directories(clg PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clg
         PRIVATE

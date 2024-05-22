@@ -17,20 +17,37 @@ public:
         AddStringField,
         AddArrayField,
         AddNullField,
+        AddIntValue,
+        AddFloatValue,
+        AddBoolValue,
+        AddStringValue,
+        AddNullValue
     };
 
     static int64_t const cReservedLength = 4096;
 
-    explicit JsonSerializer(int64_t reserved_length = cReservedLength) : m_special_keys_index(0) {
+    explicit JsonSerializer(int64_t reserved_length = cReservedLength) {
         m_json_string.reserve(cReservedLength);
     }
 
     std::string& get_serialized_string() { return m_json_string; }
 
+    /**
+     * Resets the JsonSerializer for the next record.
+     */
     void reset() {
         m_json_string.clear();
         m_op_list_index = 0;
         m_special_keys_index = 0;
+    }
+
+    /**
+     * Clears the contents of the JsonSerializer to make room for a new set of operations.
+     */
+    void clear() {
+        reset();
+        m_op_list.clear();
+        m_special_keys.clear();
     }
 
     void add_op(Op op) { m_op_list.push_back(op); }
@@ -78,6 +95,7 @@ public:
 
     void append_value_from_column(clp_s::BaseColumnReader* column, uint64_t cur_message) {
         column->extract_string_value_into_buffer(cur_message, m_json_string);
+        m_json_string += ",";
     }
 
     void
@@ -92,8 +110,8 @@ private:
     std::vector<Op> m_op_list;
     std::vector<std::string> m_special_keys;
 
-    size_t m_op_list_index;
-    size_t m_special_keys_index;
+    size_t m_op_list_index{0};
+    size_t m_special_keys_index{0};
 };
 
 #endif  // CLP_S_JSONSERIALIZER_HPP

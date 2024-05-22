@@ -1,6 +1,5 @@
 import datetime
 import json
-import logging
 import os
 import pathlib
 import subprocess
@@ -9,19 +8,67 @@ from contextlib import closing
 import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import Database, StorageEngine
+from clp_py_utils.clp_config import (
+    COMPRESSION_JOBS_TABLE_NAME,
+    COMPRESSION_TASKS_TABLE_NAME,
+    Database,
+    StorageEngine,
+)
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
-from job_orchestration.scheduler.scheduler_data import (
-    CompressionTaskFailureResult,
-    CompressionTaskSuccessResult,
-)
+from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+
+def update_compression_task_metadata(db_cursor, task_id, kv):
+    if not len(kv):
+        raise ValueError("Must specify at least one field to update")
+
+    field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
+    query = f"""
+    UPDATE {COMPRESSION_TASKS_TABLE_NAME}
+    SET {", ".join(field_set_expressions)}
+    WHERE id={task_id}
+    """
+    db_cursor.execute(query)
+
+
+def increment_compression_job_metadata(db_cursor, job_id, kv):
+    if not len(kv):
+        raise ValueError("Must specify at least one field to update")
+
+    field_set_expressions = [f"{k}={k}+{v}" for k, v in kv.items()]
+    query = f"""
+    UPDATE {COMPRESSION_JOBS_TABLE_NAME}
+    SET {", ".join(field_set_expressions)}
+    WHERE id={job_id}
+    """
+    db_cursor.execute(query)
+
+
+def update_tags(db_cursor, table_prefix, archive_id, tag_ids):
+    db_cursor.executemany(
+        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES (%s, %s)",
+        [(archive_id, tag_id) for tag_id in tag_ids],
+    )
+
+
+def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archive_stats):
+    if tag_ids is not None:
+        update_tags(db_cursor, table_prefix, archive_stats["id"], tag_ids)
+    increment_compression_job_metadata(
+        db_cursor,
+        job_id,
+        dict(
+            uncompressed_size=archive_stats["uncompressed_size"],
+            compressed_size=archive_stats["size"],
+        ),
+    )
 
 
 def make_clp_command(
@@ -80,14 +127,6 @@ def make_clp_s_command(
     return compression_cmd
 
 
-def update_tags(db_conn, db_cursor, table_prefix, archive_id, tag_ids):
-    db_cursor.executemany(
-        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES (%s, %s)",
-        [(archive_id, tag_id) for tag_id in tag_ids],
-    )
-    db_conn.commit()
-
-
 def run_clp(
     clp_config: ClpIoConfig,
     clp_home: pathlib.Path,
@@ -98,6 +137,7 @@ def run_clp(
     task_id: int,
     tag_ids,
     paths_to_compress: PathsToCompress,
+    sql_adapter: SQL_Adapter,
     clp_metadata_db_connection_config,
 ):
     """
@@ -112,6 +152,7 @@ def run_clp(
     :param task_id:
     :param tag_ids:
     :param paths_to_compress: PathToCompress
+    :param sql_adapter: SQL_Adapter
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
@@ -169,45 +210,49 @@ def run_clp(
     compression_successful = False
     proc = subprocess.Popen(compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file)
 
-    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_connection_config))
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
-        # Compute the total amount of data compressed
-        last_archive_stats = None
-        total_uncompressed_size = 0
-        total_compressed_size = 0
-        while True:
-            line = proc.stdout.readline()
-            if not line:
-                break
-            stats = json.loads(line.decode("ascii"))
-            if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
-                # We've started a new archive so add the previous archive's last
-                # reported size to the total
-                total_uncompressed_size += last_archive_stats["uncompressed_size"]
-                total_compressed_size += last_archive_stats["size"]
-                if tag_ids is not None:
-                    update_tags(
-                        db_conn,
-                        db_cursor,
-                        clp_metadata_db_connection_config["table_prefix"],
-                        last_archive_stats["id"],
-                        tag_ids,
-                    )
-            last_archive_stats = stats
-        if last_archive_stats is not None:
-            # Add the last archive's last reported size
+    # Compute the total amount of data compressed
+    last_archive_stats = None
+    total_uncompressed_size = 0
+    total_compressed_size = 0
+    while True:
+        line = proc.stdout.readline()
+        if not line:
+            break
+        stats = json.loads(line.decode("ascii"))
+        if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
+            # We've started a new archive so add the previous archive's last
+            # reported size to the total
             total_uncompressed_size += last_archive_stats["uncompressed_size"]
             total_compressed_size += last_archive_stats["size"]
-            if tag_ids is not None:
-                update_tags(
-                    db_conn,
+            with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+                db_conn.cursor(dictionary=True)
+            ) as db_cursor:
+                update_job_metadata_and_tags(
                     db_cursor,
+                    job_id,
                     clp_metadata_db_connection_config["table_prefix"],
-                    last_archive_stats["id"],
                     tag_ids,
+                    last_archive_stats,
                 )
+                db_conn.commit()
+
+        last_archive_stats = stats
+
+    if last_archive_stats is not None:
+        # Add the last archive's last reported size
+        total_uncompressed_size += last_archive_stats["uncompressed_size"]
+        total_compressed_size += last_archive_stats["size"]
+        with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+            db_conn.cursor(dictionary=True)
+        ) as db_cursor:
+            update_job_metadata_and_tags(
+                db_cursor,
+                job_id,
+                clp_metadata_db_connection_config["table_prefix"],
+                tag_ids,
+                last_archive_stats,
+            )
+            db_conn.commit()
 
     # Wait for compression to finish
     return_code = proc.wait()
@@ -225,13 +270,15 @@ def run_clp(
     # Close stderr log file
     stderr_log_file.close()
 
+    worker_output = {
+        "total_uncompressed_size": total_uncompressed_size,
+        "total_compressed_size": total_compressed_size,
+    }
     if compression_successful:
-        return compression_successful, {
-            "total_uncompressed_size": total_uncompressed_size,
-            "total_compressed_size": total_compressed_size,
-        }
+        return CompressionTaskStatus.SUCCEEDED, worker_output
     else:
-        return compression_successful, {"error_message": f"See logs {stderr_log_path}"}
+        worker_output["error_message"] = f"See logs {stderr_log_path}"
+        return CompressionTaskStatus.FAILED, worker_output
 
 
 @app.task(bind=True)
@@ -256,9 +303,11 @@ def compress(
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
+    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_connection_config))
+
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
-    compression_successful, worker_output = run_clp(
+    compression_task_status, worker_output = run_clp(
         clp_io_config,
         pathlib.Path(clp_home_str),
         pathlib.Path(data_dir_str),
@@ -268,25 +317,37 @@ def compress(
         task_id,
         tag_ids,
         paths_to_compress,
+        sql_adapter,
         clp_metadata_db_connection_config,
     )
     duration = (datetime.datetime.now() - start_time).total_seconds()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
 
-    if compression_successful:
-        return CompressionTaskSuccessResult(
-            task_id=task_id,
-            status=CompressionTaskStatus.SUCCEEDED,
-            start_time=start_time,
-            duration=duration,
-            total_uncompressed_size=worker_output["total_uncompressed_size"],
-            total_compressed_size=worker_output["total_compressed_size"],
-        ).dict()
-    else:
-        return CompressionTaskFailureResult(
-            task_id=task_id,
-            status=CompressionTaskStatus.FAILED,
-            start_time=start_time,
-            duration=duration,
-            error_message=worker_output["error_message"],
-        ).dict()
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        update_compression_task_metadata(
+            db_cursor,
+            task_id,
+            dict(
+                start_time=start_time,
+                status=compression_task_status,
+                partition_uncompressed_size=worker_output["total_uncompressed_size"],
+                partition_compressed_size=worker_output["total_compressed_size"],
+                duration=duration,
+            ),
+        )
+        if CompressionTaskStatus.SUCCEEDED == compression_task_status:
+            increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
+        db_conn.commit()
+
+    compression_task_result = CompressionTaskResult(
+        task_id=task_id,
+        status=compression_task_status,
+        duration=duration,
+    )
+
+    if CompressionTaskStatus.FAILED == compression_task_status:
+        compression_task_result.error_message = worker_output["error_message"]
+
+    return compression_task_result.dict()

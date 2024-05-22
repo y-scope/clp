@@ -44,6 +44,12 @@ public:
 
     void close() override;
 
+    /**
+     * Closes this ZstdDecompressor with a hint that the ZstdDecompressor will be reused. This
+     * makes the ZstdDecompressor hold onto its internal buffer, avoiding reallocations.
+     */
+    void close_for_reuse();
+
     // Methods
     /***
      * Initialize streaming decompressor to decompress from a compressed file specified by the given

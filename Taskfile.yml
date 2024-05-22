@@ -16,7 +16,7 @@ vars:
   G_WEBUI_NODEJS_BIN_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}/bin"
 
   # Versions
-  G_PACKAGE_VERSION: "0.0.3-dev"
+  G_PACKAGE_VERSION: "0.2.0-dev"
 
 tasks:
   default:

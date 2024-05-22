@@ -20,7 +20,7 @@ enum LiteralType : uint32_t {
     ArrayT = 1 << 5,
     NullT = 1 << 6,
     EpochDateT = 1 << 7,
-    TypesEnd = 1 << 9,
+    TypesEnd = 1 << 8,
     UnknownT = ((uint32_t)1) << 31
 };
 

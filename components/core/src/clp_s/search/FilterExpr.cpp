@@ -20,6 +20,8 @@ std::string FilterExpr::op_type_str(FilterOperation op) {
     switch (op) {
         case FilterOperation::EXISTS:
             return "EXISTS";
+        case FilterOperation::NEXISTS:
+            return "NEXISTS";
         case FilterOperation::EQ:
             return "EQ";
         case FilterOperation::NEQ:
