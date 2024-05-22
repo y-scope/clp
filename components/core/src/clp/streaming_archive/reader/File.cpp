@@ -32,6 +32,7 @@ ErrorCode File::open_me(
     file_metadata_ix.get_path(m_orig_path);
     m_begin_ts = file_metadata_ix.get_begin_ts();
     m_end_ts = file_metadata_ix.get_end_ts();
+    m_combined_file_msg_offset = file_metadata_ix.get_combined_file_msg_offset();
 
     string encoded_timestamp_patterns;
     file_metadata_ix.get_timestamp_patterns(encoded_timestamp_patterns);
