@@ -1,8 +1,10 @@
 #include "SchemaTree.hpp"
 
+#include <cstddef>
 #include <string>
 
 #include "../ErrorCode.hpp"
+#include "SchemaTreeNode.hpp"
 
 namespace clp::ffi {
 auto SchemaTree::get_node(SchemaTreeNode::id_t id) const -> SchemaTreeNode const& {

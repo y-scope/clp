@@ -1,9 +1,4 @@
-#include <chrono>
-#include <fstream>
-#include <iostream>
-
 #include <Catch2/single_include/catch2/catch.hpp>
-#include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
 
 #include "../src/clp/ffi/SchemaTree.hpp"

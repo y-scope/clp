@@ -1,8 +1,10 @@
 #ifndef CLP_FFI_SCHEMATREENODE_HPP
 #define CLP_FFI_SCHEMATREENODE_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace clp::ffi {

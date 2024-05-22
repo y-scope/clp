@@ -1,11 +1,14 @@
 #ifndef CLP_FFI_SCHEMATREE_HPP
 #define CLP_FFI_SCHEMATREE_HPP
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
+#include "../ErrorCode.hpp"
 #include "../TraceableException.hpp"
 #include "SchemaTreeNode.hpp"
 
