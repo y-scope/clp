@@ -63,6 +63,7 @@ public:
     segment_id_t get_segment_id() const { return m_segment_id; }
 
     uint64_t get_combined_file_msg_offset() const { return m_combined_file_msg_offset; }
+
     uint64_t get_num_messages() const { return m_num_messages; }
 
     bool is_split() const { return m_is_split; }
