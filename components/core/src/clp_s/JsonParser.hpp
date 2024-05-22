@@ -78,7 +78,7 @@ private:
      * @param line the JSON array
      * @param parent_node_id the parent node id
      */
-    void parse_array_obj(ondemand::array line, int32_t parent_node_id);
+    void parse_array(ondemand::array line, int32_t parent_node_id);
 
     /**
      * Parses an object within an array in a JSON line
