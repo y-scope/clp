@@ -97,9 +97,9 @@ def main(argv):
                 CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `status` INT NOT NULL DEFAULT '{SearchJobStatus.PENDING}',
-                    `submission_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-                    `num_archives_to_search` INT NULL DEFAULT NULL,
-                    `num_archives_searched` INT NULL DEFAULT NULL,
+                    `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                    `num_tasks` INT NOT NULL DEFAULT '0',
+                    `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
                     `search_config` VARBINARY(60000) NOT NULL,

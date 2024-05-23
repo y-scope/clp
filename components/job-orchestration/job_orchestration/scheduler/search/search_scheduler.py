@@ -179,8 +179,8 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 await release_reducer_for_job(job)
             else:
                 continue
-            
-            # Temporary solution: mark all tasks as cancelled 
+
+            # Temporary solution: mark all tasks as cancelled
             # TODO: is there a way to know which task failed and whick task succeeded?
             task_ids = job.current_task_ids
             for task_id in task_ids:
@@ -484,7 +484,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                     await job.reducer_handler_msg_queues.put_to_handler(msg)
 
-                # Temporary solution: mark all tasks as failed 
+                # Temporary solution: mark all tasks as failed
                 # TODO: is there a way to know which task failed and whick task succeeded?
                 task_ids = job.current_task_ids
                 for task_id in task_ids:
