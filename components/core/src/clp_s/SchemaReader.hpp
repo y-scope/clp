@@ -194,11 +194,35 @@ private:
     void generate_json_template(int32_t id);
 
     /**
+     * Generates a json template for a structured array
+     * @param id
+     * @param column_start
+     * @param schema
+     */
+    size_t
+    generate_structured_array_template(int32_t id, size_t column_start, std::span<int32_t> schema);
+
+    /**
+     * Generates a json template for a structured object
+     * @param id
+     * @param column_start
+     * @param schema
+     */
+    size_t
+    generate_structured_object_template(int32_t id, size_t column_start, std::span<int32_t> schema);
+
+    /**
      * @param schema
      * @return the first column ID found in the given schema, or -1 if the schema contains no
      * columns
      */
     static inline int32_t get_first_column_in_span(std::span<int32_t> schema);
+
+    void find_intersection_and_fix_brackets(
+            int32_t cur_root,
+            int32_t next_root,
+            std::vector<int32_t>& path_to_intersection
+    );
 
     /**
      * Generates a json string from the extracted values
