@@ -915,10 +915,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
             }
 
             std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
-            if (query_string.find('*') == std::string::npos
-                && query_string.find('?') == std::string::npos)
-            {
-                // Unescape '\' before matching
+            if (false == StringUtils::has_unescaped_wildcards(query_string)) {
                 std::string unescaped_query_string;
                 bool escape = false;
                 for (char const c : query_string) {
