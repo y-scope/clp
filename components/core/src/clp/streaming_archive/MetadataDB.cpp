@@ -18,7 +18,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     EndTimestamp,
     TimestampPatterns,
     NumUncompressedBytes,
-    CombinedFileMsgOffset,
+    BeginMsgIdx,
     NumMessages,
     NumVariables,
     IsSplit,
@@ -155,8 +155,8 @@ static SQLitePreparedStatement get_files_select_statement(
             = streaming_archive::cMetadataDB::File::TimestampPatterns;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
-    field_names[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset)]
-            = streaming_archive::cMetadataDB::File::CombinedFileMsgOffset;
+    field_names[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx)]
+            = streaming_archive::cMetadataDB::File::BeginMsgIdx;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)]
             = streaming_archive::cMetadataDB::File::NumMessages;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumVariables)]
@@ -363,10 +363,8 @@ size_t MetadataDB::FileIterator::get_num_uncompressed_bytes() const {
     );
 }
 
-size_t MetadataDB::FileIterator::get_combined_file_msg_offset() const {
-    return m_statement.column_int64(
-            enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset)
-    );
+size_t MetadataDB::FileIterator::get_begin_msg_idx() const {
+    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx));
 }
 
 size_t MetadataDB::FileIterator::get_num_messages() const {
@@ -460,14 +458,14 @@ void MetadataDB::open(string const& path) {
             .second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset
-                               )]
-            .first
-            = streaming_archive::cMetadataDB::File::CombinedFileMsgOffset;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset
-                               )]
-            .second
-            = "INTEGER";
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx
+    )]
+        .first
+        = streaming_archive::cMetadataDB::File::BeginMsgIdx;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx
+    )]
+        .second
+        = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
             = streaming_archive::cMetadataDB::File::NumMessages;
@@ -616,8 +614,8 @@ void MetadataDB::update_files(vector<writer::File*> const& files) {
                 (int64_t)file->get_num_uncompressed_bytes()
         );
         m_upsert_file_statement->bind_int64(
-                enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset) + 1,
-                (int64_t)file->get_combined_file_msg_offset()
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx) + 1,
+                (int64_t) file->get_begin_msg_idx()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,

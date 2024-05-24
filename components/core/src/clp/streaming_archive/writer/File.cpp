@@ -93,8 +93,8 @@ void File::change_ts_pattern(TimestampPattern const* pattern) {
     m_is_metadata_clean = false;
 }
 
-void File::set_combined_file_msg_offset(size_t const offset) {
-    m_combined_file_msg_offset = offset;
+void File::set_begin_msg_idx(size_t msg_idx) {
+    m_begin_msg_idx = msg_idx;
     m_is_metadata_clean = false;
 }
 

@@ -84,6 +84,7 @@ def main(argv):
                     `path` VARCHAR(12288) NOT NULL,
                     `begin_timestamp` BIGINT NOT NULL,
                     `end_timestamp` BIGINT NOT NULL,
+                    `begin_msg_idx` BIGINT NOT NULL,
                     `num_uncompressed_bytes` BIGINT NOT NULL,
                     `num_messages` BIGINT NOT NULL,
                     `archive_id` VARCHAR(64) NOT NULL,

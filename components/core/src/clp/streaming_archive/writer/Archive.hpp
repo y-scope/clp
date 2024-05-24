@@ -129,10 +129,11 @@ public:
     void set_file_is_split(bool is_split);
 
     /**
-     * Wrapper for streaming_archive::writer::File::set_combined_file_msg_offset
-     * @param offset
+     * Wrapper for streaming_archive::writer::File::set_begin_msg_idx
+     * @param file File to set the combined-file message msg_idx for
+     * @param msg_idx
      */
-    void set_combined_file_message_offset(size_t offset);
+    void set_file_begin_msg_idx(size_t msg_idx);
 
     /**
      * Wrapper for streaming_archive::writer::File::change_ts_pattern

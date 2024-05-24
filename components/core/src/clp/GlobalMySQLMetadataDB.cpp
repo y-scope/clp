@@ -35,7 +35,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     BeginTimestamp,
     EndTimestamp,
     NumUncompressedBytes,
-    CombinedFileMsgOffset,
+    BeginMsgIdx,
     NumMessages,
     ArchiveId,
     Length,
@@ -134,8 +134,8 @@ void GlobalMySQLMetadataDB::open() {
             = streaming_archive::cMetadataDB::File::EndTimestamp;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
-    file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset)]
-            = streaming_archive::cMetadataDB::File::CombinedFileMsgOffset;
+    file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx)]
+            = streaming_archive::cMetadataDB::File::BeginMsgIdx;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)]
             = streaming_archive::cMetadataDB::File::NumMessages;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId)]
@@ -311,10 +311,10 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
                 num_uncompressed_bytes
         );
 
-        auto combined_file_msg_offset = file->get_combined_file_msg_offset();
+        auto begin_msg_idx = file->get_begin_msg_idx();
         statement_bindings.bind_uint64(
-                enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset),
-                combined_file_msg_offset
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx),
+                begin_msg_idx
         );
 
         auto num_messages = file->get_num_messages();
@@ -354,8 +354,8 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
                 num_uncompressed_bytes
         );
         statement_bindings.bind_uint64(
-                enum_to_underlying_type(FilesTableFieldIndexes::CombinedFileMsgOffset) + offset,
-                combined_file_msg_offset
+            enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx) + offset,
+                begin_msg_idx
         );
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + offset,

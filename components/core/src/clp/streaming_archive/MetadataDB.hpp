@@ -90,7 +90,7 @@ public:
         epochtime_t get_end_ts() const;
         void get_timestamp_patterns(std::string& timestamp_patterns) const;
         size_t get_num_uncompressed_bytes() const;
-        size_t get_combined_file_msg_offset() const;
+        size_t get_begin_msg_idx() const;
         size_t get_num_messages() const;
         size_t get_num_variables() const;
         bool is_split() const;

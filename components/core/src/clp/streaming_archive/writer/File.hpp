@@ -47,7 +47,7 @@ public:
               m_end_ts(cEpochTimeMin),
               m_group_id(group_id),
               m_num_uncompressed_bytes(0),
-              m_combined_file_msg_offset(0),
+              m_begin_msg_idx(0),
               m_num_messages(0),
               m_num_variables(0),
               m_segment_id(cInvalidSegmentId),
@@ -106,21 +106,21 @@ public:
     bool has_ts_pattern() const { return m_timestamp_patterns.empty() == false; }
 
     /**
-     * Sets combined file message offset
+     * Sets the File's begin message index
      * @param offset
      */
-    void set_combined_file_msg_offset(size_t offset);
+    void set_begin_msg_idx(size_t msg_idx);
 
     /**
-     * Gets combined file message offset
+     * @return File's begin message index
      */
-    uint64_t get_combined_file_msg_offset() const { return m_combined_file_msg_offset; }
+    uint64_t get_begin_msg_idx() const { return m_begin_msg_idx; }
 
     /**
-     * @return The total number of messages in the file once the current split is combined.
+     * @return File's end message index
      */
-    uint64_t get_combined_file_num_messages() const {
-        return m_combined_file_msg_offset + m_num_messages;
+    uint64_t get_end_msg_idx() const {
+        return m_begin_msg_idx + m_num_messages;
     }
 
     /**
@@ -248,7 +248,7 @@ private:
 
     uint64_t m_num_uncompressed_bytes;
 
-    uint64_t m_combined_file_msg_offset;
+    uint64_t m_begin_msg_idx;
     uint64_t m_num_messages;
     uint64_t m_num_variables;
 
