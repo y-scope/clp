@@ -94,7 +94,7 @@ public:
      * problematic if the other part of the program depends on this position. It can be fixed by
      * capturing the error code 416 in the response header.
      * @param src_url
-* @param offset Index of the byte at which to start the download
+     * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
      * @param overall_timeout Maximum time (in seconds) that the transfer may take. Note that this
      * includes `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
