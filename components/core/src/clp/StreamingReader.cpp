@@ -18,13 +18,19 @@
 
 namespace clp {
 /**
- * StreamingReader behaviour description:
- * reader_thread: The thread that creates a StreamingReader instance.
- * transfer_thread: The thread that transfers data from a source URL using `libcurl`.
- * buffer_pool: Empty buffers ready for filling transferred data. The pool itself is a ring buffer.
- * filled_buffer_queue: A queue of filled buffers.
- * transfer_buffer: A single buffer locked by `transfer_thread` to write downloaded data.
- * reading_buffer: A single buffer locked by `reader_thread` to read downloaded data.
+ * To understand the implementation, we first define several terms:
+ *
+ * - reader_thread: The thread that creates and uses the public API of a StreamingReader instance
+ *   (can be the main thread).
+ * - downloader_thread: The thread that invokes libcurl to download and buffer data.
+ * - buffer_pool: Empty buffers that the downloader thread uses to buffer the data. The pool itself
+ *   is a ring buffer.
+ * - filled_buffer_queue: A queue of filled (fully or partially) buffers.
+ * - curr_downloader_buf: The buffer currently used by `downloader_thread` to buffer downloaded
+ *   data.
+ * - curr_reader_buf: The buffer currently used by `reader_thread` to read data out of.
+ *
+ * The diagram below illustrates the relationship between these terms:
  *
  *   .....................................           .........................................
  *   |                            +-------------------------+                                |
@@ -38,7 +44,7 @@ namespace clp {
  *   |             +++                   |           |                    +                  |
  *   |              +                    |           |                    +                  |
  *   |                                   |           |                                       |
- *   |      `reading_buffer`             |           |            `transfer_buffer`          |
+ *   |      `curr_reader_buf`            |           |          `curr_downloader_buf`        |
  *   |                                   |           |                                       |
  *   |              +                    |           |                    +                  |
  *   |              +                    |           |                   +++                 |
@@ -50,21 +56,21 @@ namespace clp {
  *   |                                +------------------+                                   |
  *   |    `release_empty_buffer` ===> >    buffer_pool   > ====> `acquire_empty_buffer`      |
  *   |                                +------------------+                                   |
- *   |       `reader_thread`             |           |           `transfer_thread`           |
+ *   |       `reader_thread`             |           |            `downloader_thread`        |
  *   .....................................           .........................................
  *
  * `downloader_thread` operates as follows:
  * - It acquires an empty buffer from the buffer pool using `acquire_empty_buffer` and saves it as
- *   `current_downloader_buf`.
- * - It writes downloaded data into `current_downloader_buf`.
- * - When `current_downloader_buf` is filled or the download is complete, it will be enqueued in
+ *   `curr_downloader_buf`.
+ * - It writes downloaded data into `curr_downloader_buf`.
+ * - When `curr_downloader_buf` is filled or the download is complete, it will be enqueued in
  *   `filled_buffer_queue` using `enqueue_filled_buffer`.
  *
  * `reader_thread` operates as follows:
  * - It dequeues a buffer from `filled_buffer_queue` using `dequeue_filled_buffer` and saves it as
- *   `current_reader_buf`.
- * - It performs any reads using data in `current_reader_buf`.
- * - When `current_reader_buf` is exhausted, it is returned to `buffer_pool` using
+ *   `curr_reader_buf`.
+ * - It performs any reads using data in `curr_reader_buf`.
+ * - When `curr_reader_buf` is exhausted, it is returned to `buffer_pool` using
  *   `release_empty_buffer`.
  */
 
@@ -86,22 +92,22 @@ extern "C" auto curl_progress_callback(
         [[maybe_unused]] curl_off_t ultotal,
         [[maybe_unused]] curl_off_t ulnow
 ) -> int {
-    return static_cast<StreamingReader*>(reader_ptr)->is_transfer_aborted() ? 1 : 0;
+    return static_cast<StreamingReader*>(reader_ptr)->is_download_aborted() ? 1 : 0;
 }
 
 /**
  * libcurl write callback that writes downloaded data into the buffers.
  * NOTE: This function must have C linkage to be a libcurl callback.
- * @param ptr A pointer to the transferred data
- * @param size Always 1
- * @param nmemb The number of bytes transferred
+ * @param ptr A pointer to the downloaded data
+ * @param size Always 1.
+ * @param nmemb The number of bytes downloaded.
  * @param reader_ptr A pointer to a `StreamingReader`.
- * @return On success, the number of bytes processed. If this is less than `nmemb`, the transfer
+ * @return On success, the number of bytes processed. If this is less than `nmemb`, the download
  * will be aborted.
  */
 extern "C" auto
 curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
-    return static_cast<StreamingReader*>(reader_ptr)->transfer_data({ptr, size * nmemb});
+    return static_cast<StreamingReader*>(reader_ptr)->download_data({ptr, size * nmemb});
 }
 }  // namespace
 
@@ -123,7 +129,7 @@ auto StreamingReader::deinit() -> void {
     m_initialized = false;
 }
 
-auto StreamingReader::TransferThread::thread_method() -> void {
+auto StreamingReader::DownloaderThread::thread_method() -> void {
     try {
         CurlDownloadHandler curl_handler{
                 m_reader.m_src_url,
@@ -170,62 +176,63 @@ StreamingReader::StreamingReader(
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
     m_src_url = src_url;
-    m_transfer_thread = std::make_unique<TransferThread>(std::ref(*this), offset, disable_caching);
-    m_transfer_thread->start();
+    m_downloader_thread
+            = std::make_unique<DownloaderThread>(std::ref(*this), offset, disable_caching);
+    m_downloader_thread->start();
 }
 
 StreamingReader::~StreamingReader() {
-    if (is_curl_transfer_in_progress()) {
+    if (is_download_in_progress()) {
         // Abort the download so the downloader thread can destroy the CURL resources and exit.
-        abort_data_transfer();
+        abort_data_download();
     }
 
-    while (is_transfer_thread_running()) {
+    while (is_downloader_thread_running()) {
         // We could use sleep instead of busy waiting
     }
 }
 
-auto StreamingReader::abort_data_transfer() -> void {
-    m_transfer_aborted.store(true);
-    m_cv_transfer.notify_all();
+auto StreamingReader::abort_data_download() -> void {
+    m_download_aborted.store(true);
+    m_cv_downloader.notify_all();
 }
 
 auto StreamingReader::acquire_empty_buffer() -> bool {
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
-    if (m_transfer_buffer.has_value()) {
+    if (m_curr_downloader_buf.has_value()) {
         throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
     }
     while (m_num_filled_buffer >= m_buffer_pool_size) {
         if (m_num_filled_buffer != m_buffer_pool_size) {
             throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
         }
-        m_cv_transfer.wait(buffer_resource_lock);
-        if (is_transfer_aborted()) {
+        m_cv_downloader.wait(buffer_resource_lock);
+        if (is_download_aborted()) {
             return false;
         }
-        if (is_transfer_timedout()) {
+        if (is_download_timedout()) {
             return false;
         }
     }
-    m_transfer_buffer.emplace(m_buffer_pool.at(m_curr_transfer_buffer_idx).get(), m_buffer_size);
+    m_curr_downloader_buf.emplace(m_buffer_pool.at(m_curr_downloader_buf_idx).get(), m_buffer_size);
     return true;
 }
 
 auto StreamingReader::enqueue_filled_buffer() -> void {
-    if (false == m_transfer_buffer.has_value()) {
+    if (false == m_curr_downloader_buf.has_value()) {
         return;
     }
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     m_filled_buffer_queue.emplace(
-            m_buffer_pool.at(m_curr_transfer_buffer_idx).get(),
-            m_buffer_size - m_transfer_buffer.value().size()
+            m_buffer_pool.at(m_curr_downloader_buf_idx).get(),
+            m_buffer_size - m_curr_downloader_buf.value().size()
     );
     ++m_num_filled_buffer;
 
-    m_transfer_buffer.reset();
-    ++m_curr_transfer_buffer_idx;
-    if (m_curr_transfer_buffer_idx == m_buffer_pool_size) {
-        m_curr_transfer_buffer_idx = 0;
+    m_curr_downloader_buf.reset();
+    ++m_curr_downloader_buf_idx;
+    if (m_curr_downloader_buf_idx == m_buffer_pool_size) {
+        m_curr_downloader_buf_idx = 0;
     }
 
     m_cv_reader.notify_all();
@@ -233,37 +240,37 @@ auto StreamingReader::enqueue_filled_buffer() -> void {
 
 auto StreamingReader::get_filled_buffer() -> bool {
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
-    if (m_reading_buffer.has_value()) {
+    if (m_curr_reader_buf.has_value()) {
         throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
     }
     while (m_filled_buffer_queue.empty()) {
-        if (false == is_curl_transfer_in_progress()) {
+        if (false == is_download_in_progress()) {
             return false;
         }
         m_cv_reader.wait(buffer_resource_lock);
     }
-    auto const next_reading_buffer{m_filled_buffer_queue.front()};
+    auto const next_reader_buffer{m_filled_buffer_queue.front()};
     m_filled_buffer_queue.pop();
-    m_reading_buffer.emplace(next_reading_buffer);
+    m_curr_reader_buf.emplace(next_reader_buffer);
     return true;
 }
 
 auto StreamingReader::release_empty_buffer() -> void {
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
-    m_reading_buffer.reset();
+    m_curr_reader_buf.reset();
     --m_num_filled_buffer;
-    m_cv_transfer.notify_all();
+    m_cv_downloader.notify_all();
 }
 
-auto StreamingReader::transfer_data(StreamingReader::BufferView data_to_write) -> size_t {
+auto StreamingReader::download_data(StreamingReader::BufferView data_to_write) -> size_t {
     auto const num_bytes_to_write{data_to_write.size()};
     try {
         while (false == data_to_write.empty()) {
-            if (false == m_transfer_buffer.has_value() && false == acquire_empty_buffer()) {
+            if (false == m_curr_downloader_buf.has_value() && false == acquire_empty_buffer()) {
                 return 0;
             }
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-            auto& buffer_to_fill{m_transfer_buffer.value()};
+            auto& buffer_to_fill{m_curr_downloader_buf.value()};
             auto const num_bytes_to_fill{std::min(buffer_to_fill.size(), data_to_write.size())};
             auto const copy_it_begin{data_to_write.begin()};
             auto copy_it_end{data_to_write.begin()};
@@ -293,28 +300,28 @@ auto StreamingReader::read_from_filled_buffers(
         dst_view = BufferView{dst, num_bytes_to_read};
     }
     while (0 != num_bytes_to_read) {
-        if (false == m_reading_buffer.has_value() && false == get_filled_buffer()) {
+        if (false == m_curr_reader_buf.has_value() && false == get_filled_buffer()) {
             return ErrorCode_EndOfFile;
         }
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        auto& reading_buffer{m_reading_buffer.value()};
-        auto const reading_buffer_size{reading_buffer.size()};
-        if (0 == reading_buffer_size) {
+        auto& curr_reader_buf{m_curr_reader_buf.value()};
+        auto const reader_buf_size{curr_reader_buf.size()};
+        if (0 == reader_buf_size) {
             return ErrorCode_EndOfFile;
         }
         auto const num_bytes_to_consume_from_buffer{
-                num_bytes_to_read > reading_buffer_size ? reading_buffer_size : num_bytes_to_read
+                num_bytes_to_read > reader_buf_size ? reader_buf_size : num_bytes_to_read
         };
         if (dst_view.has_value()) {
             memcpy(dst_view.value().last(num_bytes_to_read).data(),
-                   reading_buffer.data(),
+                   curr_reader_buf.data(),
                    num_bytes_to_consume_from_buffer);
         }
         num_bytes_to_read -= num_bytes_to_consume_from_buffer;
         num_bytes_read += num_bytes_to_consume_from_buffer;
         m_file_pos += num_bytes_to_consume_from_buffer;
-        reading_buffer = reading_buffer.subspan(num_bytes_to_consume_from_buffer);
-        if (reading_buffer.empty()) {
+        curr_reader_buf = curr_reader_buf.subspan(num_bytes_to_consume_from_buffer);
+        if (curr_reader_buf.empty()) {
             release_empty_buffer();
         }
     }

@@ -5,6 +5,7 @@
 
 #include <curl/curl.h>
 
+#include "CurlEasyHandle.hpp"
 #include "CurlOperationFailed.hpp"
 #include "CurlStringList.hpp"
 #include "ErrorCode.hpp"
@@ -42,7 +43,7 @@ public:
      */
     explicit CurlDownloadHandler(
             std::string_view src_url,
-            void* data,
+            void* arg,
             ProgressCallback progress_callback,
             WriteCallback write_callback,
             long connection_timeout,
@@ -58,38 +59,18 @@ public:
     auto operator=(CurlDownloadHandler&&) -> CurlDownloadHandler& = delete;
 
     // Destructor
-    ~CurlDownloadHandler() { curl_easy_cleanup(m_handler); }
+    ~CurlDownloadHandler() = default;
 
     // Methods
     /**
      * Starts downloading the data and only returns when the download completes or fails.
-     * @return Same as `curl_easy_perform`.
+     * @return Error code returned from the underlying curl handler.
      */
-    [[nodiscard]] auto perform() -> CURLcode { return curl_easy_perform(m_handler); }
+    [[nodiscard]] auto perform() -> CURLcode { return m_easy_handle.perform(); }
 
 private:
-    /**
-     * Sets the given CURL option for this handler.
-     * @tparam ValueType
-     * @param option
-     * @param value
-     * @throw CurlOperationFailed if an error occurs.
-     */
-    template <typename ValueType>
-    auto set_option(CURLoption option, ValueType value) -> void {
-        if (auto const err{curl_easy_setopt(m_handler, option, value)}; CURLE_OK != err) {
-            throw CurlOperationFailed(
-                    ErrorCode_Failure,
-                    __FILE__,
-                    __LINE__,
-                    err,
-                    "`curl_easy_setopt` failed."
-            );
-        }
-    }
-
+    CurlEasyHandle m_easy_handle;
     CurlStringList m_http_headers;
-    CURL* m_handler{nullptr};
 };
 }  // namespace clp
 

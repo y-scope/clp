@@ -3,40 +3,29 @@
 namespace clp {
 CurlDownloadHandler::CurlDownloadHandler(
         std::string_view src_url,
-        void* data,
+        void* arg,
         ProgressCallback progress_callback,
         WriteCallback write_callback,
         long connection_timeout,
         long overall_timeout,
         size_t offset,
         bool disable_caching
-)
-        : m_handler{curl_easy_init()} {
-    if (nullptr == m_handler) {
-        throw CurlOperationFailed(
-                ErrorCode_Failure,
-                __FILE__,
-                __LINE__,
-                CURLE_FAILED_INIT,
-                "Failed to call `curl_easy_init`."
-        );
-    }
-
+) {
     // Set up src url
-    set_option(CURLOPT_URL, src_url.data());
+    m_easy_handle.set_option(CURLOPT_URL, src_url.data());
 
     // Set up progress callback
-    set_option(CURLOPT_XFERINFOFUNCTION, progress_callback);
-    set_option(CURLOPT_XFERINFODATA, data);
-    set_option(CURLOPT_NOPROGRESS, 0);
+    m_easy_handle.set_option(CURLOPT_XFERINFOFUNCTION, progress_callback);
+    m_easy_handle.set_option(CURLOPT_XFERINFODATA, arg);
+    m_easy_handle.set_option(CURLOPT_NOPROGRESS, 0);
 
     // Set up write callback
-    set_option(CURLOPT_WRITEFUNCTION, write_callback);
-    set_option(CURLOPT_WRITEDATA, data);
+    m_easy_handle.set_option(CURLOPT_WRITEFUNCTION, write_callback);
+    m_easy_handle.set_option(CURLOPT_WRITEDATA, arg);
 
     // Set up timeouts
-    set_option(CURLOPT_CONNECTTIMEOUT, connection_timeout);
-    set_option(CURLOPT_TIMEOUT, overall_timeout);
+    m_easy_handle.set_option(CURLOPT_CONNECTTIMEOUT, connection_timeout);
+    m_easy_handle.set_option(CURLOPT_TIMEOUT, overall_timeout);
 
     // Set up http headers
     if (0 != offset) {
@@ -48,7 +37,7 @@ CurlDownloadHandler::CurlDownloadHandler(
         m_http_headers.append("Pragma: no-cache");
     }
     if (false == m_http_headers.is_empty()) {
-        set_option(CURLOPT_HTTPHEADER, m_http_headers.get_raw_list());
+        m_easy_handle.set_option(CURLOPT_HTTPHEADER, m_http_headers.get_raw_list());
     }
 }
 }  // namespace clp

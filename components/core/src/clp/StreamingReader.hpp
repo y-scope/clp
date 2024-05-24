@@ -55,7 +55,7 @@ public:
      * The possible states of the reader.
      */
     enum class State : uint8_t {
-        // InProgress: The reader is transferring data from the source URL.
+        // InProgress: The reader is downloading data from the source URL.
         InProgress = 0,
         // Failed: The reader has failed to stream data from the source URL.
         Failed,
@@ -96,7 +96,7 @@ public:
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
-     * @param overall_timeout Maximum time (in seconds) that the transfer may take. Note that this
+     * @param overall_timeout Maximum time (in seconds) that the download may take. Note that this
      * includes `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
      * @param connection_timeout Maximum time (in seconds) that the connection phase may take.
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
@@ -176,18 +176,18 @@ public:
 
     // Methods
     /**
-     * @return true if the transfer has been killed, false otherwise.
+     * @return true if the download (curl transfer) has been killed, false otherwise.
      */
-    [[nodiscard]] auto is_transfer_aborted() const -> bool { return m_transfer_aborted.load(); }
+    [[nodiscard]] auto is_download_aborted() const -> bool { return m_download_aborted.load(); }
 
     /**
-     * @return true the transfer thread is running, false otherwise.
+     * @return true the downloader thread is running, false otherwise.
      */
-    [[nodiscard]] auto is_transfer_thread_running() const -> bool {
-        if (nullptr == m_transfer_thread) {
+    [[nodiscard]] auto is_downloader_thread_running() const -> bool {
+        if (nullptr == m_downloader_thread) {
             return false;
         }
-        return m_transfer_thread->is_running();
+        return m_downloader_thread->is_running();
     }
 
     /**
@@ -196,20 +196,20 @@ public:
      * @param data_to_write
      * @return Number of bytes buffered.
      */
-    [[nodiscard]] auto transfer_data(BufferView data_to_write) -> size_t;
+    [[nodiscard]] auto download_data(BufferView data_to_write) -> size_t;
 
     /**
-     * @return true if the CURL data transfer is still in progress.
-     * @return false if there will be no more data transferred.
+     * @return true if the CURL data downloading is still in progress.
+     * @return false if there will be no more data downloaded.
      */
-    [[nodiscard]] auto is_curl_transfer_in_progress() const -> bool {
+    [[nodiscard]] auto is_download_in_progress() const -> bool {
         return get_state_code() == State::InProgress;
     }
 
     /**
-     * @returns Whether the transfer has timed out
+     * @returns Whether the download has timed out
      */
-    [[nodiscard]] auto is_transfer_timedout() const -> bool {
+    [[nodiscard]] auto is_download_timedout() const -> bool {
         if (false == m_curl_return_code.has_value()) {
             return false;
         }
@@ -223,18 +223,18 @@ public:
 
 private:
     /**
-     * This class implements clp::Thread to transfer (download) data using CURL.
+     * This class implements clp::Thread to download data using CURL.
      */
-    class TransferThread : public Thread {
+    class DownloaderThread : public Thread {
     public:
         // Constructor
         /**
-         * Constructs a clp::thread for data transfer.
+         * Constructs a clp::thread for data downloading.
          * @param reader
-         * @param offset The offset of bytes to start transferring data.
+         * @param offset The offset of bytes to start downloading data.
          * @param disable_caching Whether to disable caching.
          */
-        TransferThread(StreamingReader& reader, size_t offset, bool disable_caching)
+        DownloaderThread(StreamingReader& reader, size_t offset, bool disable_caching)
                 : m_reader{reader},
                   m_offset{offset},
                   m_disable_caching{disable_caching} {}
@@ -251,18 +251,18 @@ private:
     static bool m_initialized;
 
     /**
-     * Aborts the current on-going data transfer session.
+     * Aborts the current on-going curl download session.
      */
-    auto abort_data_transfer() -> void;
+    auto abort_data_download() -> void;
 
     /**
-     * Acquires an empty buffer to write transferred data.
-     * @return true on success, false if the transfer has been aborted.
+     * Acquires an empty buffer to write downloaded data.
+     * @return true on success, false if the download has been aborted.
      */
     [[nodiscard]] auto acquire_empty_buffer() -> bool;
 
     /**
-     * Enqueues the current transfer buffer into the filled buffer queue.
+     * Enqueues the current downloader buffer into the filled buffer queue.
      */
     auto enqueue_filled_buffer() -> void;
 
@@ -303,7 +303,7 @@ private:
     size_t m_buffer_pool_size;
     size_t m_buffer_size;
     size_t m_num_filled_buffer{0};
-    size_t m_curr_transfer_buffer_idx{0};
+    size_t m_curr_downloader_buf_idx{0};
 
     uint32_t m_overall_timeout;
     uint32_t m_connection_timeout;
@@ -311,15 +311,15 @@ private:
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     std::vector<std::unique_ptr<char[]>> m_buffer_pool;
     std::queue<BufferView> m_filled_buffer_queue;
-    std::optional<BufferView> m_transfer_buffer{std::nullopt};
-    std::optional<BufferView> m_reading_buffer{std::nullopt};
+    std::optional<BufferView> m_curr_downloader_buf{std::nullopt};
+    std::optional<BufferView> m_curr_reader_buf{std::nullopt};
 
     std::mutex m_buffer_resource_mutex;
-    std::condition_variable m_cv_transfer;
+    std::condition_variable m_cv_downloader;
     std::condition_variable m_cv_reader;
 
-    std::unique_ptr<TransferThread> m_transfer_thread{nullptr};
-    std::atomic<bool> m_transfer_aborted{false};
+    std::unique_ptr<DownloaderThread> m_downloader_thread{nullptr};
+    std::atomic<bool> m_download_aborted{false};
     std::atomic<State> m_state_code{State::InProgress};
     std::optional<CURLcode> m_curl_return_code;
 };
