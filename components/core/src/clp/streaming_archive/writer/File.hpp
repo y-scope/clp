@@ -119,9 +119,7 @@ public:
     /**
      * @return File's end message index
      */
-    uint64_t get_end_msg_idx() const {
-        return m_begin_msg_idx + m_num_messages;
-    }
+    uint64_t get_end_msg_idx() const { return m_begin_msg_idx + m_num_messages; }
 
     /**
      * Gets the file's uncompressed size

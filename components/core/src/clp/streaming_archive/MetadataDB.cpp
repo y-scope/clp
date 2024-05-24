@@ -458,14 +458,10 @@ void MetadataDB::open(string const& path) {
             .second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx
-    )]
-        .first
-        = streaming_archive::cMetadataDB::File::BeginMsgIdx;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx
-    )]
-        .second
-        = "INTEGER";
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx)].first
+            = streaming_archive::cMetadataDB::File::BeginMsgIdx;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx)].second
+            = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
             = streaming_archive::cMetadataDB::File::NumMessages;
@@ -615,7 +611,7 @@ void MetadataDB::update_files(vector<writer::File*> const& files) {
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx) + 1,
-                (int64_t) file->get_begin_msg_idx()
+                (int64_t)file->get_begin_msg_idx()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,

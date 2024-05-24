@@ -354,7 +354,7 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
                 num_uncompressed_bytes
         );
         statement_bindings.bind_uint64(
-            enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx) + offset,
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMsgIdx) + offset,
                 begin_msg_idx
         );
         statement_bindings.bind_uint64(
