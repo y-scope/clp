@@ -72,7 +72,7 @@ void SchemaReader::generate_json_string() {
                 m_json_serializer.end_object();
                 break;
             }
-            case JsonSerializer::Op::BeginDocument: {
+            case JsonSerializer::Op::BeginUnnamedObject: {
                 m_json_serializer.begin_document();
                 break;
             }
@@ -84,7 +84,7 @@ void SchemaReader::generate_json_string() {
                 m_json_serializer.end_array();
                 break;
             }
-            case JsonSerializer::Op::BeginArrayDocument: {
+            case JsonSerializer::Op::BeginUnnamedArray: {
                 m_json_serializer.begin_array_document();
                 break;
             }
@@ -337,12 +337,12 @@ void SchemaReader::find_intersection_and_fix_brackets(
         }
         if (NodeType::Object == node.get_type()) {
             m_json_serializer.add_op(
-                    no_name ? JsonSerializer::Op::BeginDocument : JsonSerializer::Op::BeginObject
+                    no_name ? JsonSerializer::Op::BeginUnnamedObject
+                            : JsonSerializer::Op::BeginObject
             );
         } else if (NodeType::StructuredArray == node.get_type()) {
             m_json_serializer.add_op(
-                    no_name ? JsonSerializer::Op::BeginArrayDocument
-                            : JsonSerializer::Op::BeginArray
+                    no_name ? JsonSerializer::Op::BeginUnnamedArray : JsonSerializer::Op::BeginArray
             );
         }
     }
@@ -371,7 +371,7 @@ size_t SchemaReader::generate_structured_array_template(
                                 get_first_column_in_span(sub_object_schema),
                                 NodeType::StructuredArray
                         );
-                m_json_serializer.add_op(JsonSerializer::Op::BeginArrayDocument);
+                m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedArray);
                 column_idx = generate_structured_array_template(
                         sub_array_root,
                         column_idx,
@@ -384,7 +384,7 @@ size_t SchemaReader::generate_structured_array_template(
                         get_first_column_in_span(sub_object_schema),
                         NodeType::Object
                 );
-                m_json_serializer.add_op(JsonSerializer::Op::BeginDocument);
+                m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedObject);
                 column_idx = generate_structured_object_template(
                         object_root,
                         column_idx,
@@ -408,7 +408,7 @@ size_t SchemaReader::generate_structured_array_template(
                     break;
                 }
                 case NodeType::StructuredArray: {
-                    m_json_serializer.add_op(JsonSerializer::Op::BeginArrayDocument);
+                    m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedArray);
                     m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                     break;
                 }

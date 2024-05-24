@@ -24,8 +24,8 @@ public:
         AddNullValue,
         BeginArray,
         EndArray,
-        BeginDocument,
-        BeginArrayDocument,
+        BeginUnnamedObject,
+        BeginUnnamedArray,
     };
 
     static int64_t const cReservedLength = 4096;
@@ -79,7 +79,7 @@ public:
 
     void end_object() {
         if (m_op_list[m_op_list_index - 2] != BeginObject
-            && m_op_list[m_op_list_index - 2] != BeginDocument)
+            && m_op_list[m_op_list_index - 2] != BeginUnnamedObject)
         {
             m_json_string.pop_back();
         }
@@ -95,7 +95,7 @@ public:
 
     void end_array() {
         if (m_op_list[m_op_list_index - 2] != BeginArray
-            && m_op_list[m_op_list_index - 2] != BeginArrayDocument)
+            && m_op_list[m_op_list_index - 2] != BeginUnnamedArray)
         {
             m_json_string.pop_back();
         }
