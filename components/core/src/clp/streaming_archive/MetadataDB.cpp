@@ -275,11 +275,7 @@ static SQLitePreparedStatement get_files_select_statement(
         );
     }
     if (false == file_id.empty()) {
-        statement.bind_text(
-                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
-                file_id,
-                true
-        );
+        statement.bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1, file_id, true);
     }
     if (false == file_path.empty()) {
         statement.bind_text(

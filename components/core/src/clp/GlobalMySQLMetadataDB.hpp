@@ -94,10 +94,10 @@ public:
             std::string const& file_path
     ) override;
     bool get_file_split(
-        std::string const& file_orig_id,
-        size_t msg_idx,
-        std::string& archive_id,
-        std::string& file_split_id
+            std::string const& file_orig_id,
+            size_t msg_idx,
+            std::string& archive_id,
+            std::string& file_split_id
     ) override;
 
 private:

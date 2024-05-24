@@ -455,8 +455,12 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
     return new ArchiveIterator(m_db.get_iterator());
 }
 
-bool GlobalMySQLMetadataDB::get_file_split(const std::string &file_orig_id, size_t msg_idx, std::string &archive_id,
-                                           std::string &file_split_id) {
+bool GlobalMySQLMetadataDB::get_file_split(
+        std::string const& file_orig_id,
+        size_t msg_idx,
+        std::string& archive_id,
+        std::string& file_split_id
+) {
     auto statement_string = fmt::format(
             "SELECT DISTINCT {}{}.{}, {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} WHERE "
             "{}{}.{} = '{}' "

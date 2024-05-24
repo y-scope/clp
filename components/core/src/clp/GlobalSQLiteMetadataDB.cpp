@@ -581,10 +581,10 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
 }
 
 bool GlobalSQLiteMetadataDB::get_file_split(
-    std::string const& file_orig_id,
-    size_t msg_ix,
-    std::string& archive_id,
-    std::string& file_split_id
+        std::string const& file_orig_id,
+        size_t msg_ix,
+        std::string& archive_id,
+        std::string& file_split_id
 ) {
     SQLitePreparedStatement statement(get_file_split_statement(m_db, file_orig_id, msg_ix));
     statement.step();
@@ -596,7 +596,6 @@ bool GlobalSQLiteMetadataDB::get_file_split(
     statement.column_string(1, file_split_id);
 
     return true;
-
 }
 
 }  // namespace clp
