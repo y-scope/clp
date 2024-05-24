@@ -30,6 +30,7 @@ import pymongo
 from clp_py_utils.clp_config import (
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
+    Database,
     SEARCH_JOBS_TABLE_NAME,
     SEARCH_TASKS_TABLE_NAME,
 )
@@ -136,11 +137,11 @@ def set_job_status(
     **kwargs,
 ) -> bool:
     """
-    Sets the status of the job identified by `job_id` to `status`. If `prev_status` is specified,
-    the update is conditional on the job's current status matching `prev_status`. If `kwargs` are
-    specified, the fields identified by the args are also updated.
+    Sets the status of a job or a task identified by `id` to `status`. If `prev_status` is
+    specified, the update is conditional on the job's current status matching `prev_status`. If
+    `kwargs` are specified, the fields identified by the args are also updated.
     :param db_conn:
-    :param job_id:
+    :param job_id: The id of the job or task to update.
     :param status:
     :param prev_status:
     :param kwargs:
@@ -180,22 +181,59 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
             else:
                 continue
 
-            # Temporary solution: mark all tasks as cancelled
-            # TODO: is there a way to know which task failed and whick task succeeded?
-            task_ids = job.current_task_ids
-            for task_id in task_ids:
-                update_search_task_metadata(db_conn, task_id, status=SearchTaskStatus.CANCELLED)
+            set_task_status(
+                db_conn,
+                job_id,
+                SearchTaskStatus.CANCELLED,
+                [SearchTaskStatus.RUNNING, SearchTaskStatus.PENDING],
+            )
 
             if set_job_status(
                 db_conn,
                 job_id,
                 SearchJobStatus.CANCELLED,
-                prev_status=SearchJobStatus.CANCELLING,
+                SearchJobStatus.CANCELLING,
                 duration=(datetime.datetime.now() - job.start_time).total_seconds(),
             ):
                 logger.info(f"Cancelled job {job_id}.")
             else:
                 logger.error(f"Failed to cancel job {job_id}.")
+
+
+def insert_search_tasks(db_conn, job_id, archive_ids: List[str]) -> List[int]:
+    task_ids = []
+    with contextlib.closing(db_conn.cursor()) as cursor:
+        for archive_id in archive_ids:
+            cursor.execute(
+                f"""
+                INSERT INTO {SEARCH_TASKS_TABLE_NAME}
+                (job_id, archive_id)
+                VALUES({job_id}, '{archive_id}')
+                """
+            )
+            task_ids.append(cursor.lastrowid)
+    db_conn.commit()
+    return task_ids
+
+
+def set_task_status(
+    db_conn,
+    job_id: str,
+    status: SearchTaskStatus,
+    prev_status: Optional[SearchTaskStatus | List[SearchTaskStatus]] = None,
+):
+    update = f"UPDATE {SEARCH_TASKS_TABLE_NAME} SET status={status} WHERE job_id={job_id}"
+    if prev_status is not None:
+        if isinstance(prev_status, list):
+            update += f" AND status IN ({', '.join([str(s) for s in prev_status])})"
+        else:
+            update += f" AND status={prev_status}"
+
+    with contextlib.closing(db_conn.cursor()) as cursor:
+        cursor.execute(update)
+        db_conn.commit()
+        rval = cursor.rowcount != 0
+    return rval
 
 
 @exception_default_value(default=[])
@@ -230,55 +268,25 @@ def get_archives_for_search(
     return archives_for_search
 
 
-def insert_search_tasks(db_conn, job_id, archive_ids: List[str]) -> List[int]:
-    task_ids = []
-    with contextlib.closing(db_conn.cursor()) as cursor:
-        for archive_id in archive_ids:
-            cursor.execute(
-                f"""
-                INSERT INTO {SEARCH_TASKS_TABLE_NAME}
-                (job_id, archive_id)
-                VALUES({job_id}, '{archive_id}')
-                """
-            )
-            task_ids.append(cursor.lastrowid)
-    db_conn.commit()
-    return task_ids
-
-
-def update_search_task_metadata(db_conn, task_id, **kwargs) -> None:
-    if not len(kwargs.items()):
-        logger.error("Must specify at least one field to update")
-        raise ValueError
-
-    field_set_expressions = [f'{k}="{v}"' for k, v in kwargs.items()]
-    query = f"""
-        UPDATE {SEARCH_TASKS_TABLE_NAME}
-        SET {", ".join(field_set_expressions)}
-        WHERE id='{task_id}'
-    """
-    with contextlib.closing(db_conn.cursor()) as cursor:
-        cursor.execute(query)
-    db_conn.commit()
-
-
 def get_task_group_for_job(
     archive_ids: List[str],
     task_ids: List[int],
     job_id: str,
     search_config: SearchConfig,
+    database: Database,
     results_cache_uri: str,
 ):
     search_config_obj = search_config.dict()
     return celery.group(
         search.s(
             job_id=job_id,
-            archive_id=archive_ids[ix],
-            task_id=task_ids[ix],
+            archive_id=archive_ids[i],
+            task_id=task_ids[i],
             search_config_obj=search_config_obj,
+            database=database,
             results_cache_uri=results_cache_uri,
         )
-        for ix in range(len(archive_ids))
+        for i in range(len(archive_ids))
     )
 
 
@@ -286,6 +294,7 @@ def dispatch_search_job(
     db_conn,
     job: SearchJob,
     archives_for_search: List[Dict[str, any]],
+    database: Database,
     results_cache_uri: str,
 ) -> None:
     global active_jobs
@@ -293,7 +302,7 @@ def dispatch_search_job(
     task_ids = insert_search_tasks(db_conn, job.id, archive_ids)
 
     task_group = get_task_group_for_job(
-        archive_ids, task_ids, job.id, job.search_config, results_cache_uri
+        archive_ids, task_ids, job.id, job.search_config, database, results_cache_uri
     )
     job.current_task_ids = task_ids
     job.current_sub_job_async_task_result = task_group.apply_async()
@@ -346,7 +355,10 @@ async def acquire_reducer_for_job(job: SearchJob):
 
 
 def handle_pending_search_jobs(
-    db_conn_pool, results_cache_uri: str, num_archives_to_search_per_sub_job: int
+    db_conn_pool,
+    database: Database,
+    results_cache_uri: str,
+    num_archives_to_search_per_sub_job: int,
 ) -> List[asyncio.Task]:
     global active_jobs
 
@@ -372,8 +384,8 @@ def handle_pending_search_jobs(
                     job_id,
                     SearchJobStatus.SUCCEEDED,
                     SearchJobStatus.PENDING,
-                    start_time=datetime.datetime.utcfromtimestamp(0),
-                    num_archives_to_search=0,
+                    start_time=datetime.datetime.now(),
+                    num_tasks=0,
                     duration=0,
                 ):
                     logger.info(f"No matching archives, skipping job {job['job_id']}.")
@@ -416,20 +428,20 @@ def handle_pending_search_jobs(
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
 
-            dispatch_search_job(db_conn, job, archives_for_search, results_cache_uri)
+            dispatch_search_job(db_conn, job, archives_for_search, database, results_cache_uri)
             logger.info(
                 f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
             start_time = datetime.datetime.now()
-            if set_job_status(
+            job.start_time = start_time
+            set_job_status(
                 db_conn,
                 job_id,
                 SearchJobStatus.RUNNING,
                 SearchJobStatus.PENDING,
                 start_time=start_time,
-                num_archives_to_search=job.num_archives_to_search,
-            ):
-                job.start_time = start_time
+                num_tasks=job.num_archives_to_search,
+            )
 
     return reducer_acquisition_tasks
 
@@ -484,12 +496,6 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                     await job.reducer_handler_msg_queues.put_to_handler(msg)
 
-                # Temporary solution: mark all tasks as failed
-                # TODO: is there a way to know which task failed and whick task succeeded?
-                task_ids = job.current_task_ids
-                for task_id in task_ids:
-                    update_search_task_metadata(db_conn, task_id, status=SearchTaskStatus.FAILED)
-
                 del active_jobs[job_id]
                 set_job_status(
                     db_conn,
@@ -503,22 +509,23 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             if returned_results is None:
                 continue
 
-            job.num_archives_searched += len(returned_results)
             new_job_status = SearchJobStatus.RUNNING
             for task_result_obj in returned_results:
                 task_result = SearchTaskResult.parse_obj(task_result_obj)
                 task_id = task_result.task_id
                 task_status = task_result.status
-                update_search_task_metadata(
-                    db_conn,
-                    task_id,
-                    status=task_status,
-                    start_time=task_result.start_time,
-                    duration=task_result.duration,
-                )
                 if not task_status == SearchTaskStatus.SUCCEEDED:
                     new_job_status = SearchJobStatus.FAILED
-                    logger.debug(f"Task {task_id} failed - result {task_result}.")
+                    logger.error(
+                        f"Search task job-{job_id}-task-{task_id} failed. "
+                        f"Check {task_result.error_log_path} for details."
+                    )
+                else:
+                    job.num_archives_searched += 1
+                    logger.info(
+                        f"Search task job-{job_id}-task-{task_id} succeeded in "
+                        f"{task_result.duration} second(s)."
+                    )
 
             if new_job_status != SearchJobStatus.FAILED:
                 max_num_results = job.search_config.max_num_results
@@ -543,7 +550,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     job_id,
                     SearchJobStatus.RUNNING,
                     SearchJobStatus.RUNNING,
-                    num_archives_searched=job.num_archives_searched,
+                    num_tasks_completed=job.num_archives_searched,
                 )
                 continue
 
@@ -566,7 +573,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 job_id,
                 new_job_status,
                 SearchJobStatus.RUNNING,
-                num_archives_searched=job.num_archives_searched,
+                num_tasks_completed=job.num_archives_searched,
                 duration=(datetime.datetime.now() - job.start_time).total_seconds(),
             ):
                 if new_job_status == SearchJobStatus.SUCCEEDED:
@@ -587,6 +594,7 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 
 async def handle_jobs(
     db_conn_pool,
+    database: Database,
     results_cache_uri: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
@@ -598,7 +606,7 @@ async def handle_jobs(
     tasks = [handle_updating_task]
     while True:
         reducer_acquisition_tasks = handle_pending_search_jobs(
-            db_conn_pool, results_cache_uri, num_archives_to_search_per_sub_job
+            db_conn_pool, database, results_cache_uri, num_archives_to_search_per_sub_job
         )
         if 0 == len(reducer_acquisition_tasks):
             tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
@@ -677,6 +685,7 @@ async def main(argv: List[str]) -> int:
         job_handler = asyncio.create_task(
             handle_jobs(
                 db_conn_pool=db_conn_pool,
+                database=clp_config.database,
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 jobs_poll_delay=clp_config.search_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
