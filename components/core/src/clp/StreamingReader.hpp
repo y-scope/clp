@@ -302,7 +302,6 @@ private:
 
     size_t m_buffer_pool_size;
     size_t m_buffer_size;
-    size_t m_num_filled_buffer{0};
     size_t m_curr_downloader_buf_idx{0};
 
     uint32_t m_overall_timeout;

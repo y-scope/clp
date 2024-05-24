@@ -129,32 +129,6 @@ auto StreamingReader::deinit() -> void {
     m_initialized = false;
 }
 
-auto StreamingReader::DownloaderThread::thread_method() -> void {
-    try {
-        CurlDownloadHandler curl_handler{
-                m_reader.m_src_url,
-                static_cast<void*>(&m_reader),
-                curl_progress_callback,
-                curl_write_callback,
-                static_cast<long>(m_reader.m_connection_timeout),
-                static_cast<long>(m_reader.m_overall_timeout),
-                m_offset,
-                m_disable_caching
-        };
-        m_reader.m_curl_return_code = curl_handler.perform();
-        // Enqueue the last filled buffer, if any
-        m_reader.enqueue_filled_buffer();
-        m_reader.set_state_code(
-                (CURLE_OK == m_reader.m_curl_return_code) ? State::Finished : State::Failed
-        );
-    } catch (CurlOperationFailed const& ex) {
-        m_reader.m_curl_return_code = ex.get_curl_err();
-        m_reader.set_state_code(State::Failed);
-    }
-
-    m_reader.m_cv_reader.notify_all();
-}
-
 StreamingReader::StreamingReader(
         std::string_view src_url,
         size_t offset,
@@ -164,7 +138,8 @@ StreamingReader::StreamingReader(
         size_t buffer_pool_size,
         size_t buffer_size
 )
-        : m_overall_timeout{overall_timeout_int_sec},
+        : m_src_url{src_url},
+          m_overall_timeout{overall_timeout_int_sec},
           m_connection_timeout{connection_timeout_in_sec},
           m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
           m_buffer_size{std::max(cMinBufferSize, buffer_size)} {
@@ -175,9 +150,7 @@ StreamingReader::StreamingReader(
     if (false == m_initialized) {
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
-    m_src_url = src_url;
-    m_downloader_thread
-            = std::make_unique<DownloaderThread>(std::ref(*this), offset, disable_caching);
+    m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
     m_downloader_thread->start();
 }
 
@@ -190,76 +163,6 @@ StreamingReader::~StreamingReader() {
     while (is_downloader_thread_running()) {
         // We could use sleep instead of busy waiting
     }
-}
-
-auto StreamingReader::abort_data_download() -> void {
-    m_download_aborted.store(true);
-    m_cv_downloader.notify_all();
-}
-
-auto StreamingReader::acquire_empty_buffer() -> bool {
-    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
-    if (m_curr_downloader_buf.has_value()) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
-    }
-    while (m_num_filled_buffer >= m_buffer_pool_size) {
-        if (m_num_filled_buffer != m_buffer_pool_size) {
-            throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
-        }
-        m_cv_downloader.wait(buffer_resource_lock);
-        if (is_download_aborted()) {
-            return false;
-        }
-        if (is_download_timedout()) {
-            return false;
-        }
-    }
-    m_curr_downloader_buf.emplace(m_buffer_pool.at(m_curr_downloader_buf_idx).get(), m_buffer_size);
-    return true;
-}
-
-auto StreamingReader::enqueue_filled_buffer() -> void {
-    if (false == m_curr_downloader_buf.has_value()) {
-        return;
-    }
-    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
-    m_filled_buffer_queue.emplace(
-            m_buffer_pool.at(m_curr_downloader_buf_idx).get(),
-            m_buffer_size - m_curr_downloader_buf.value().size()
-    );
-    ++m_num_filled_buffer;
-
-    m_curr_downloader_buf.reset();
-    ++m_curr_downloader_buf_idx;
-    if (m_curr_downloader_buf_idx == m_buffer_pool_size) {
-        m_curr_downloader_buf_idx = 0;
-    }
-
-    m_cv_reader.notify_all();
-}
-
-auto StreamingReader::get_filled_buffer() -> bool {
-    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
-    if (m_curr_reader_buf.has_value()) {
-        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
-    }
-    while (m_filled_buffer_queue.empty()) {
-        if (false == is_download_in_progress()) {
-            return false;
-        }
-        m_cv_reader.wait(buffer_resource_lock);
-    }
-    auto const next_reader_buffer{m_filled_buffer_queue.front()};
-    m_filled_buffer_queue.pop();
-    m_curr_reader_buf.emplace(next_reader_buffer);
-    return true;
-}
-
-auto StreamingReader::release_empty_buffer() -> void {
-    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
-    m_curr_reader_buf.reset();
-    --m_num_filled_buffer;
-    m_cv_downloader.notify_all();
 }
 
 auto StreamingReader::download_data(StreamingReader::BufferView data_to_write) -> size_t {
@@ -287,6 +190,100 @@ auto StreamingReader::download_data(StreamingReader::BufferView data_to_write) -
         return 0;
     }
     return num_bytes_to_write;
+}
+
+auto StreamingReader::DownloaderThread::thread_method() -> void {
+    try {
+        CurlDownloadHandler curl_handler{
+                m_reader.m_src_url,
+                static_cast<void*>(&m_reader),
+                curl_progress_callback,
+                curl_write_callback,
+                static_cast<long>(m_reader.m_connection_timeout),
+                static_cast<long>(m_reader.m_overall_timeout),
+                m_offset,
+                m_disable_caching
+        };
+        m_reader.m_curl_return_code = curl_handler.perform();
+        // Enqueue the last filled buffer, if any
+        m_reader.enqueue_filled_buffer();
+        m_reader.set_state_code(
+                (CURLE_OK == m_reader.m_curl_return_code) ? State::Finished : State::Failed
+        );
+    } catch (CurlOperationFailed const& ex) {
+        m_reader.m_curl_return_code = ex.get_curl_err();
+        m_reader.set_state_code(State::Failed);
+    }
+
+    std::unique_lock<std::mutex> buffer_resource_lock{m_reader.m_buffer_resource_mutex};
+    m_reader.m_cv_reader.notify_all();
+}
+
+auto StreamingReader::abort_data_download() -> void {
+    m_download_aborted.store(true);
+
+    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
+    m_cv_downloader.notify_all();
+}
+
+auto StreamingReader::acquire_empty_buffer() -> bool {
+    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
+    if (m_curr_downloader_buf.has_value()) {
+        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
+    }
+    while (m_filled_buffer_queue.size() == m_buffer_pool_size) {
+        m_cv_downloader.wait(buffer_resource_lock);
+        if (is_download_aborted()) {
+            return false;
+        }
+        if (is_download_timedout()) {
+            return false;
+        }
+    }
+    m_curr_downloader_buf.emplace(m_buffer_pool.at(m_curr_downloader_buf_idx).get(), m_buffer_size);
+    return true;
+}
+
+auto StreamingReader::enqueue_filled_buffer() -> void {
+    if (false == m_curr_downloader_buf.has_value()) {
+        return;
+    }
+    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
+    m_filled_buffer_queue.emplace(
+            m_buffer_pool.at(m_curr_downloader_buf_idx).get(),
+            m_buffer_size - m_curr_downloader_buf.value().size()
+    );
+
+    m_curr_downloader_buf.reset();
+    ++m_curr_downloader_buf_idx;
+    if (m_curr_downloader_buf_idx == m_buffer_pool_size) {
+        m_curr_downloader_buf_idx = 0;
+    }
+
+    m_cv_reader.notify_all();
+}
+
+auto StreamingReader::get_filled_buffer() -> bool {
+    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
+    if (m_curr_reader_buf.has_value()) {
+        throw OperationFailed(ErrorCode_Corrupt, __FILE__, __LINE__);
+    }
+    while (m_filled_buffer_queue.empty()) {
+        if (false == is_download_in_progress()) {
+            return false;
+        }
+        m_cv_reader.wait(buffer_resource_lock);
+    }
+    auto const next_reader_buffer{m_filled_buffer_queue.front()};
+    m_curr_reader_buf.emplace(next_reader_buffer);
+    return true;
+}
+
+auto StreamingReader::release_empty_buffer() -> void {
+    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
+    m_curr_reader_buf.reset();
+    m_filled_buffer_queue.pop();
+    m_cv_downloader.notify_all();
 }
 
 auto StreamingReader::read_from_filled_buffers(
