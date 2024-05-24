@@ -178,7 +178,7 @@ get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
 }
 
 SQLitePreparedStatement
-get_file_split_statement(SQLiteDB& db, string const& file_id, size_t msg_ix) {
+get_file_split_statement(SQLiteDB& db, string const& file_orig_id, size_t msg_idx) {
     auto statement_string = fmt::format(
             "SELECT DISTINCT {}.{}, {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} = ?"
             " AND ? >= {}.{} AND ? < ({}.{} + {}.{}) ORDER BY {} ASC, {} ASC",
@@ -195,19 +195,19 @@ get_file_split_statement(SQLiteDB& db, string const& file_id, size_t msg_ix) {
             streaming_archive::cMetadataDB::FilesTableName,
             streaming_archive::cMetadataDB::File::OrigFileId,
             streaming_archive::cMetadataDB::FilesTableName,
-            streaming_archive::cMetadataDB::File::CombinedFileMsgOffset,
+            streaming_archive::cMetadataDB::File::BeginMsgIdx,
             streaming_archive::cMetadataDB::FilesTableName,
             streaming_archive::cMetadataDB::File::NumMessages,
             streaming_archive::cMetadataDB::FilesTableName,
-            streaming_archive::cMetadataDB::File::CombinedFileMsgOffset,
+            streaming_archive::cMetadataDB::File::BeginMsgIdx,
             streaming_archive::cMetadataDB::Archive::CreatorId,
             streaming_archive::cMetadataDB::Archive::CreationIx
     );
     SPDLOG_DEBUG("{}", statement_string);
     auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
-    statement.bind_text(1, file_id, true);
-    statement.bind_int(2, static_cast<int>(msg_ix));
-    statement.bind_int(3, static_cast<int>(msg_ix));
+    statement.bind_text(1, file_orig_id, true);
+    statement.bind_int(2, static_cast<int>(msg_idx));
+    statement.bind_int(3, static_cast<int>(msg_idx));
 
     return statement;
 }

@@ -91,17 +91,17 @@ public:
     virtual ArchiveIterator* get_archive_iterator_for_file_path(std::string const& path) = 0;
 
     /**
-     * Gets the file split id and associated archive id that contains the specific log event index in the
+     * Gets the file split id and associated archive id that contains the specific message index in the
      * file identified by the original file id in the global metadata database
      * @param file_orig_id
-     * @param msg_ix
+     * @param msg_idx
      * @param archive_id
      * @param file_split_id
      * @return True if such file split is found. Otherwise false.
      */
     virtual bool get_file_split(
         std::string const& file_orig_id,
-        size_t msg_ix,
+        size_t msg_idx,
         std::string& archive_id,
         std::string& file_split_id
         ) = 0;
