@@ -137,11 +137,11 @@ def set_job_status(
     **kwargs,
 ) -> bool:
     """
-    Sets the status of a job or a task identified by `id` to `status`. If `prev_status` is
-    specified, the update is conditional on the job's current status matching `prev_status`. If
-    `kwargs` are specified, the fields identified by the args are also updated.
+    Sets the status of the job identified by `job_id` to `status`. If `prev_status` is specified,
+    the update is conditional on the job's current status matching `prev_status`. If `kwargs` are
+    specified, the fields identified by the args are also updated.
     :param db_conn:
-    :param job_id: The id of the job or task to update.
+    :param job_id:
     :param status:
     :param prev_status:
     :param kwargs:
