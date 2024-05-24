@@ -40,7 +40,7 @@ public:
                     __FILE__,
                     __LINE__,
                     CURLE_OUT_OF_MEMORY,
-                    "Failed to call `curl_slist_append`."
+                    "curl_slist_append failed."
             );
         }
         m_list = list_after_appending;

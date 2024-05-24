@@ -23,9 +23,12 @@
 
 namespace clp {
 /**
- * This class implements a ReaderInterface to stream data directly from a given URL (e.g., streaming
- * from a pre-signed S3 URL). When opening a URL, a thread will be created to transfer data in
- * the background using libcurl.
+ * This class implements the ReaderInterface to stream data directly from a given URL (e.g.,
+ * streaming from a pre-signed S3 URL). This class uses a background thread to download and buffer
+ * data in buffers from a buffer pool. When buffering data, if no empty buffer is available, the
+ * downloading thread will block until there is, or until the download times out. Any read
+ * operations will read from the next filled buffer from a queue. If no filled buffer is available,
+ * the thread calling read will block until there is a filled buffer, or the download times out.
  *
  * This class guarantees synchronization between the read operations and data streaming
  * (downloading). The reader is only designed for single threaded sequencial read.
@@ -49,42 +52,38 @@ public:
     };
 
     /**
-     * Enum defining the states of the reader.
+     * The possible states of the reader.
      */
     enum class State : uint8_t {
         // InProgress: The reader is transferring data from the source URL.
         InProgress = 0,
         // Failed: The reader has failed to stream data from the source URL.
         Failed,
-        // Finished: The streaming of the given source URL has been accomplished.
+        // Finished: The data at the given URL has been downloaded.
         Finished
     };
 
+    // Constants
     static constexpr size_t cDefaultBufferPoolSize{8};
     static constexpr size_t cDefaultBufferSize{4096};
 
     static constexpr size_t cMinBufferPoolSize{2};
     static constexpr size_t cMinBufferSize{512};
 
-    /**
-     * These static members defines the default connection timeout and operation timeout.
-     * Please refer to the libcurl documentation for more details:
-     * ConnectionTimeout: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-     * OverallTimeout: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     */
+    // See https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
     static constexpr uint32_t cDefaultConnectionTimeout{10};  // Seconds
+    // See https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
     static constexpr uint32_t cDefaultOverallTimeout{45};  // Seconds
 
     /**
-     * Initializes the underlying libcurl functionalities globally. It should be called before
-     * opening a source URL for data transferring.
+     * Initializes static resources for this class. This must be called before using the class.
      * @return ErrorCode_Success on success.
      * @return ErrorCode_Failure if libcurl initialization failed.
      */
     [[nodiscard]] static auto init() -> ErrorCode;
 
     /**
-     * Releases the globally initialized libcurl resources.
+     * De-initializes any static resources.
      */
     static auto deinit() -> void;
 
@@ -95,14 +94,14 @@ public:
      * problematic if the other part of the program depends on this position. It can be fixed by
      * capturing the error code 416 in the response header.
      * @param src_url
-     * @param offset The offset of the starting byte used for data transferring.
+* @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
-     * @param overall_timeout_in_sec The overall timeout in seconds used by the underlying CURL
-     * handler. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     * @param connection_timeout_in_sec The connection timeout in seconds used by the underlying
-     * CURL handler. Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-     * @param buffer_pool_size Total number of buffers available for transferring.
-     * @param buffer_size The size of each data buffer.
+     * @param overall_timeout Maximum time (in seconds) that the transfer may take. Note that this
+     * includes `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param connection_timeout Maximum time (in seconds) that the connection phase may take.
+     * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
+     * @param buffer_pool_size The required number of buffers in the buffer pool.
+     * @param buffer_size The size of each buffer in the buffer pool.
      */
     explicit StreamingReader(
             std::string_view src_url,
@@ -114,15 +113,12 @@ public:
             size_t buffer_size = cDefaultBufferSize
     );
 
-    /**
-     * Destructor.
-     */
+    // Destructor
     virtual ~StreamingReader();
 
-    /**
-     * Copy/Move Constructors.
-     * They are all disabled since the synchronization primitives are non-copyable and non-moveable.
-     */
+    // Copy/Move Constructors
+    // These are disabled since this class' synchronization primitives are non-copyable and
+    // non-moveable.
     StreamingReader(StreamingReader const&) = delete;
     StreamingReader(StreamingReader&&) = delete;
     auto operator=(StreamingReader const&) -> StreamingReader& = delete;
@@ -130,12 +126,11 @@ public:
 
     // Methods implementing `clp::ReaderInterface`
     /**
-     * Tries to read up to a given number of bytes from the buffer.
+     * Tries to read up to a given number of bytes from the buffered data.
      * @param buf
      * @param num_bytes_to_read
      * @param num_bytes_read Returns the number of bytes read.
-     * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data.
-     * @return ErrorCode_NotInit if the reader is not opened yet.
+     * @return ErrorCode_EndOfFile if there is no more buffered data.
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto
@@ -144,12 +139,11 @@ public:
     }
 
     /**
-     * Tries to seek to the given position, relative to the beginning of the buffer.
+     * Tries to seek to the given position, relative to the beginning of the data.
      * @param pos
      * @return ErrorCode_Unsupported if the given position is lower than the current position.
-     * Since this is a streaming reader, it should not seek backward.
-     * @return ErrorCode_NotInit if the reader is not opened yet.
-     * @return ErrorCode_OutOfBounds if the given pos is out of bound.
+     * Since this is a streaming reader, it cannot seek backwards.
+     * @return ErrorCode_OutOfBounds if the given pos is past the end of the data.
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override {
@@ -180,6 +174,7 @@ public:
         return ErrorCode_Success;
     }
 
+    // Methods
     /**
      * @return true if the transfer has been killed, false otherwise.
      */
@@ -196,10 +191,10 @@ public:
     }
 
     /**
-     * Transfers data from CURL handler to fill underlying buffers.
-     * Notes: This function should be called by libcurl's write callback only.
+     * Adds the given data to the currently acquired or next available buffer from the buffer pool.
+     * NOTE: This function should be called by the libcurl write callback only.
      * @param data_to_write
-     * @return Number of bytes transferred.
+     * @return Number of bytes buffered.
      */
     [[nodiscard]] auto transfer_data(BufferView data_to_write) -> size_t;
 
@@ -212,7 +207,7 @@ public:
     }
 
     /**
-     * @returns true if the transfer has timed out; false otherwise.
+     * @returns Whether the transfer has timed out
      */
     [[nodiscard]] auto is_transfer_timedout() const -> bool {
         if (false == m_curl_return_code.has_value()) {
@@ -249,17 +244,11 @@ private:
         auto thread_method() -> void final;
 
         StreamingReader& m_reader;
-        size_t m_offset;
-        bool m_disable_caching;
+        size_t m_offset{0};
+        bool m_disable_caching{false};
     };
 
     static bool m_initialized;
-
-    /**
-     * Terminates the current transfer. When this function returns, it will ensure that the current
-     * data transfer session has been terminated, and all threads exit.
-     */
-    auto terminate_current_transfer() -> void;
 
     /**
      * Aborts the current on-going data transfer session.
@@ -332,7 +321,7 @@ private:
     std::unique_ptr<TransferThread> m_transfer_thread{nullptr};
     std::atomic<bool> m_transfer_aborted{false};
     std::atomic<State> m_state_code{State::InProgress};
-    std::optional<CURLcode> m_curl_return_code{std::nullopt};
+    std::optional<CURLcode> m_curl_return_code;
 };
 }  // namespace clp
 

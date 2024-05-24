@@ -53,29 +53,31 @@ namespace clp {
  *   |       `reader_thread`             |           |           `transfer_thread`           |
  *   .....................................           .........................................
  *
- * For `transfer_thread`:
- *      - It gets `transfer_buffer` from buffer pool using `acquire_empty_buffer`
- *      - It only writes to `transfer_buffer`
- *      - When `transfer_buffer` is fully filled, or no more data is coming, it will be enqueued to
- *        the filled buffer queue by `enqueue_filled_buffer`
+ * `downloader_thread` operates as follows:
+ * - It acquires an empty buffer from the buffer pool using `acquire_empty_buffer` and saves it as
+ *   `current_downloader_buf`.
+ * - It writes downloaded data into `current_downloader_buf`.
+ * - When `current_downloader_buf` is filled or the download is complete, it will be enqueued in
+ *   `filled_buffer_queue` using `enqueue_filled_buffer`.
  *
- * For `reader_thread`:
- *      - It gets `reading_buffer` from filled buffer queue using `get_filled_buffer`
- *      - It only reads from `reading_buffer`
- *      - When `reading_buffer` is fully read, it will be returned back to the buffer pool by
- *        `release_empty_buffer`
+ * `reader_thread` operates as follows:
+ * - It dequeues a buffer from `filled_buffer_queue` using `dequeue_filled_buffer` and saves it as
+ *   `current_reader_buf`.
+ * - It performs any reads using data in `current_reader_buf`.
+ * - When `current_reader_buf` is exhausted, it is returned to `buffer_pool` using
+ *   `release_empty_buffer`.
  */
 
 namespace {
 /**
- * libcurl progress callback used only to determine whether to abort the current transfer.
+ * libcurl progress callback used to cause libcurl to abort the download if requested by the caller.
  * NOTE: This function must have C linkage to be a libcurl callback.
  * @param reader_ptr A pointer to a `StreamingReader`.
  * @param dltotal Unused
  * @param dlnow Unused
  * @param ultotal Unused
  * @param ulnow Unused
- * @return 1 if the transfer was aborted, 0 otherwise.
+ * @return 1 if the download should be aborted, 0 otherwise.
  */
 extern "C" auto curl_progress_callback(
         void* reader_ptr,
@@ -88,7 +90,7 @@ extern "C" auto curl_progress_callback(
 }
 
 /**
- * libcurl write callback that writes transferred data into the buffers.
+ * libcurl write callback that writes downloaded data into the buffers.
  * NOTE: This function must have C linkage to be a libcurl callback.
  * @param ptr A pointer to the transferred data
  * @param size Always 1
@@ -134,6 +136,7 @@ auto StreamingReader::TransferThread::thread_method() -> void {
                 m_disable_caching
         };
         m_reader.m_curl_return_code = curl_handler.perform();
+        // Enqueue the last filled buffer, if any
         m_reader.enqueue_filled_buffer();
         m_reader.set_state_code(
                 (CURLE_OK == m_reader.m_curl_return_code) ? State::Finished : State::Failed
@@ -158,7 +161,7 @@ StreamingReader::StreamingReader(
         : m_overall_timeout{overall_timeout_int_sec},
           m_connection_timeout{connection_timeout_in_sec},
           m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
-          m_buffer_size{std::max(cMinBufferPoolSize, buffer_size)} {
+          m_buffer_size{std::max(cMinBufferSize, buffer_size)} {
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
         m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
@@ -173,13 +176,12 @@ StreamingReader::StreamingReader(
 
 StreamingReader::~StreamingReader() {
     if (is_curl_transfer_in_progress()) {
-        // We need to kill the current connected session to reclaim CURL resources. Since the
-        // transfer thread is asynchronized, we need to abort the session to stop data transfer.
+        // Abort the download so the downloader thread can destroy the CURL resources and exit.
         abort_data_transfer();
     }
 
     while (is_transfer_thread_running()) {
-        // TODO: we could use sleep instead of pulling
+        // We could use sleep instead of busy waiting
     }
 }
 

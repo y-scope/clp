@@ -11,30 +11,34 @@
 
 namespace clp {
 /**
- * This class wraps the C implementation of the CURL handler to perform data downloading. It
- * provides a cleaner interface to manage the life cycle of the object with proper error handling.
+ * A class to download data from a URL using libcurl. In particular, this class manages the
+ * lifecycle of the libcurl handle and any arguments that libcurl uses during the download.
  */
 class CurlDownloadHandler {
 public:
+    /**
+     * libcurl progress callback. This method must have C linkage. Doc:
+     * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
+     */
     using ProgressCallback = int (*)(void*, curl_off_t, curl_off_t, curl_off_t, curl_off_t);
+    /**
+     * libcurl write callback. This method must have C linkage. Doc:
+     * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
+     */
     using WriteCallback = size_t (*)(char*, size_t, size_t, void*);
 
     // Constructor
     /**
-     * Constructs a CURL download handler with the given parameters.
      * @param src_url
-     * @param data Client specified data passing to `progress_callback` and `write_callback`
-     * @param progress_callback CURL progress callback. The function must have C linkage. Doc:
-     * Doc: https://curl.se/libcurl/c/CURLOPT_XFERINFOFUNCTION.html
-     * @param write_callback CURL write callback. The function must have C linkage.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
-     * @param connection_timeout CURL connection timeout in seconds.
+     * @param arg Argument to pass to `progress_callback` and `write_callback`
+     * @param progress_callback
+     * @param write_callback
+     * @param connection_timeout Maximum time that the connection phase may take.
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-     * @param overall_timeout CURL overall timeout in seconds. Notice that `connection_timeout` is
-     * included in the overall timeout.
-     * Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     * @param offset The offset of bytes to start downloading.
-     * @param disable_caching whether to disable caching.
+     * @param overall_timeout Maximum time that the transfer may take. Note that this includes
+     * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param offset Index of the byte at which to start the download
+     * @param disable_caching Whether to disable caching
      */
     explicit CurlDownloadHandler(
             std::string_view src_url,
@@ -58,8 +62,7 @@ public:
 
     // Methods
     /**
-     * Starts downloading the data. This function returns when the download completes or fails.
-     * This is a wrapper of `curl_easy_perform`.
+     * Starts downloading the data and only returns when the download completes or fails.
      * @return Same as `curl_easy_perform`.
      */
     [[nodiscard]] auto perform() -> CURLcode { return curl_easy_perform(m_handler); }
@@ -80,7 +83,7 @@ private:
                     __FILE__,
                     __LINE__,
                     err,
-                    "Failed to call `curl_easy_setopt`."
+                    "`curl_easy_setopt` failed."
             );
         }
     }
@@ -88,7 +91,6 @@ private:
     CurlStringList m_http_headers;
     CURL* m_handler{nullptr};
 };
-
 }  // namespace clp
 
 #endif

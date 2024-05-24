@@ -55,9 +55,9 @@ auto read_into_memory_buffer(
 /**
  * Runs a function with a timeout.
  * @tparam Func The function to run. A lambda function is expected, which takes no parameter.
- * @param timeout Timeout in milliseconds.
+ * @param timeout
  * @param func Function to run.
- * @return true if the function completes without timeout triggered, false otherwise.
+ * @return Whether the function completes before the timeout is triggered.
  */
 template <typename Func>
 [[nodiscard]] auto run_with_timeout(std::chrono::milliseconds timeout, Func&& func) -> bool {
@@ -97,7 +97,7 @@ TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
     REQUIRE((clp::ErrorCode_Success == clp::StreamingReader::init()));
     std::vector<char> streamed_data;
 
-    // Read by opening with the offset.
+    // Read from an offset onwards by starting the download from that offset.
     {
         clp::StreamingReader reader_using_offset(cTestUrl, cOffset);
         read_into_memory_buffer(reader_using_offset, streamed_data);
@@ -109,7 +109,7 @@ TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
         streamed_data.clear();
     }
 
-    // Read by seeking to the offset.
+    // Read from an offset onwards by seeking to that offset.
     {
         clp::StreamingReader reader_using_seek(cTestUrl);
         reader_using_seek.seek_from_begin(cOffset);

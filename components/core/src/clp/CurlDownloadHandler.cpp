@@ -34,7 +34,7 @@ CurlDownloadHandler::CurlDownloadHandler(
     set_option(CURLOPT_WRITEFUNCTION, write_callback);
     set_option(CURLOPT_WRITEDATA, data);
 
-    // Set up timeout
+    // Set up timeouts
     set_option(CURLOPT_CONNECTTIMEOUT, connection_timeout);
     set_option(CURLOPT_TIMEOUT, overall_timeout);
 

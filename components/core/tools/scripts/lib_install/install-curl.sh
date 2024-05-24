@@ -28,7 +28,7 @@ cd $temp_dir
 
 # Download source
 tar_filename=curl-${version}.tar.gz
-curl -fsSL https://curl.se/download/curl-${version}.tar.gz -o ${tar_filename}
+curl -fsSLO https://curl.se/download/${tar_filename}
 tar xzf ${tar_filename}
 cd curl-${version}
 
