@@ -29,15 +29,12 @@ namespace clp {
  * downloading thread will block until there is, or until the download times out. Any read
  * operations will read from the next filled buffer from a queue. If no filled buffer is available,
  * the thread calling read will block until there is a filled buffer, or the download times out.
- *
- * This class guarantees synchronization between the read operations and data streaming
- * (downloading). The reader is only designed for single threaded sequencial read.
  */
 class StreamingReader : public ReaderInterface {
 public:
+    // Types
     using BufferView = std::span<char>;
 
-    // Types
     /**
      * The exception thrown by this class.
      */
@@ -88,7 +85,7 @@ public:
     static auto deinit() -> void;
 
     /**
-     * Constructs a new connection to stream data from the given url with a given offset.
+     * Constructs a reader to stream data from the given URL, starting at the given offset.
      * TODO: the current implementation doesn't handle the case when the given offset is out of
      * range. The file_pos will be set to an invalid state if this happens, which can be
      * problematic if the other part of the program depends on this position. It can be fixed by
@@ -166,7 +163,6 @@ public:
 
     /**
      * @param pos Returns the position of the read head in the buffer.
-     * @return ErrorCode_NotInit if the reader is not opened yet.
      * @return ErrorCode_Success on success.
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override {
@@ -191,12 +187,13 @@ public:
     }
 
     /**
-     * Adds the given data to the currently acquired or next available buffer from the buffer pool.
+     * Buffers the downloaded data to the currently acquired or next available buffer from the
+     * buffer pool.
      * NOTE: This function should be called by the libcurl write callback only.
-     * @param data_to_write
+     * @param data
      * @return Number of bytes buffered.
      */
-    [[nodiscard]] auto download_data(BufferView data_to_write) -> size_t;
+    [[nodiscard]] auto buffer_downloaded_data(BufferView data) -> size_t;
 
     /**
      * @return true if the CURL data downloading is still in progress.
@@ -298,7 +295,7 @@ private:
     [[nodiscard]] auto get_state_code() const -> State { return m_state_code.load(); }
 
     std::string m_src_url;
-    size_t m_file_pos{0};
+    size_t m_file_pos;
 
     size_t m_buffer_pool_size;
     size_t m_buffer_size;

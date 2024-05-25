@@ -12,6 +12,10 @@ namespace clp {
  */
 class CurlEasyHandle {
 public:
+    // Constants
+    static constexpr long cCurlOptionEnable{1};
+    static constexpr long cCurlOptionDisable{0};
+
     // Constructors
     explicit CurlEasyHandle() : m_handle{curl_easy_init()} {
         if (nullptr == m_handle) {
@@ -23,6 +27,7 @@ public:
                     "Failed to call `curl_easy_init`."
             );
         }
+        set_option(CURLOPT_FAILONERROR, cCurlOptionEnable);
     }
 
     // Disable copy/move constructors/assignment operators

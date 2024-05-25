@@ -107,7 +107,7 @@ extern "C" auto curl_progress_callback(
  */
 extern "C" auto
 curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
-    return static_cast<StreamingReader*>(reader_ptr)->download_data({ptr, size * nmemb});
+    return static_cast<StreamingReader*>(reader_ptr)->buffer_downloaded_data({ptr, size * nmemb});
 }
 }  // namespace
 
@@ -139,6 +139,7 @@ StreamingReader::StreamingReader(
         size_t buffer_size
 )
         : m_src_url{src_url},
+          m_file_pos{offset},
           m_overall_timeout{overall_timeout_int_sec},
           m_connection_timeout{connection_timeout_in_sec},
           m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
@@ -165,23 +166,23 @@ StreamingReader::~StreamingReader() {
     }
 }
 
-auto StreamingReader::download_data(StreamingReader::BufferView data_to_write) -> size_t {
-    auto const num_bytes_to_write{data_to_write.size()};
+auto StreamingReader::buffer_downloaded_data(StreamingReader::BufferView data) -> size_t {
+    auto const num_bytes_to_write{data.size()};
     try {
-        while (false == data_to_write.empty()) {
+        while (false == data.empty()) {
             if (false == m_curr_downloader_buf.has_value() && false == acquire_empty_buffer()) {
                 return 0;
             }
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-            auto& buffer_to_fill{m_curr_downloader_buf.value()};
-            auto const num_bytes_to_fill{std::min(buffer_to_fill.size(), data_to_write.size())};
-            auto const copy_it_begin{data_to_write.begin()};
-            auto copy_it_end{data_to_write.begin()};
-            std::advance(copy_it_end, num_bytes_to_fill);
-            std::copy(copy_it_begin, copy_it_end, buffer_to_fill.begin());
-            data_to_write = data_to_write.subspan(num_bytes_to_fill);
-            buffer_to_fill = buffer_to_fill.subspan(num_bytes_to_fill);
-            if (buffer_to_fill.empty()) {
+            auto& curr_downloader_buf{m_curr_downloader_buf.value()};
+
+            // Copy enough to fill the downloader's buf or to exhaust the data
+            auto const data_view{data.subspan(0, std::min(curr_downloader_buf.size(), data.size()))
+            };
+            std::copy(data_view.begin(), data_view.end(), curr_downloader_buf.begin());
+            data = data.subspan(data_view.size());
+            curr_downloader_buf = curr_downloader_buf.subspan(data_view.size());
+            if (curr_downloader_buf.empty()) {
                 enqueue_filled_buffer();
             }
         }

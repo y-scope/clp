@@ -92,6 +92,7 @@ TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
     ref_reader.seek_from_begin(cOffset);
     std::vector<char> ref_data;
     read_into_memory_buffer(ref_reader, ref_data);
+    auto const ref_end_pos{ref_reader.get_pos()};
     ref_reader.close();
 
     REQUIRE((clp::ErrorCode_Success == clp::StreamingReader::init()));
@@ -105,6 +106,7 @@ TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
         REQUIRE(ret_code_using_offset.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         REQUIRE((CURLE_OK == ret_code_using_offset.value()));
+        REQUIRE((reader_using_offset.get_pos() == ref_end_pos));
         REQUIRE((streamed_data == ref_data));
         streamed_data.clear();
     }
@@ -118,6 +120,7 @@ TEST_CASE("streaming_reader_with_offset_and_seek", "[StreamingReader]") {
         REQUIRE(ret_code_using_seek.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         REQUIRE((CURLE_OK == ret_code_using_seek.value()));
+        REQUIRE((reader_using_seek.get_pos() == ref_end_pos));
         REQUIRE((streamed_data == ref_data));
         streamed_data.clear();
     }
