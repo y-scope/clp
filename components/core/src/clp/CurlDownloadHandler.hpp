@@ -1,6 +1,7 @@
 #ifndef CLP_CURLDOWNLOADHANDLER_HPP
 #define CLP_CURLDOWNLOADHANDLER_HPP
 
+#include <chrono>
 #include <cstddef>
 
 #include <curl/curl.h>
@@ -17,6 +18,7 @@ namespace clp {
  */
 class CurlDownloadHandler {
 public:
+    // Types
     /**
      * libcurl progress callback. This method must have C linkage. Doc:
      * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
@@ -28,28 +30,34 @@ public:
      */
     using WriteCallback = size_t (*)(char*, size_t, size_t, void*);
 
+    // Constants
+    // See https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
+    static constexpr std::chrono::seconds cDefaultConnectionTimeout{0};
+    // See https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+    static constexpr std::chrono::seconds cDefaultOverallTimeout{0};
+
     // Constructor
     /**
-     * @param src_url
-     * @param arg Argument to pass to `progress_callback` and `write_callback`
      * @param progress_callback
      * @param write_callback
+     * @param arg Argument to pass to `progress_callback` and `write_callback`
+     * @param src_url
+     * @param offset Index of the byte at which to start the download
+     * @param disable_caching Whether to disable caching
      * @param connection_timeout Maximum time that the connection phase may take.
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param overall_timeout Maximum time that the transfer may take. Note that this includes
      * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     * @param offset Index of the byte at which to start the download
-     * @param disable_caching Whether to disable caching
      */
     explicit CurlDownloadHandler(
-            std::string_view src_url,
-            void* arg,
             ProgressCallback progress_callback,
             WriteCallback write_callback,
-            long connection_timeout,
-            long overall_timeout,
+            void* arg,
+            std::string_view src_url,
             size_t offset = 0,
-            bool disable_caching = false
+            bool disable_caching = false,
+            std::chrono::seconds connection_timeout = cDefaultConnectionTimeout,
+            std::chrono::seconds overall_timeout = cDefaultOverallTimeout
     );
 
     // Disable copy/move constructors/assignment operators

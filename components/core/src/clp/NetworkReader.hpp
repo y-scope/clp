@@ -1,6 +1,7 @@
-#ifndef CLP_STREAMINGREADER_HPP
-#define CLP_STREAMINGREADER_HPP
+#ifndef CLP_NETWORKREADER_HPP
+#define CLP_NETWORKREADER_HPP
 
+#include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -15,6 +16,7 @@
 
 #include <curl/curl.h>
 
+#include "CurlDownloadHandler.hpp"
 #include "Defs.h"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
@@ -30,7 +32,7 @@ namespace clp {
  * operations will read from the next filled buffer from a queue. If no filled buffer is available,
  * the thread calling read will block until there is a filled buffer, or the download times out.
  */
-class StreamingReader : public ReaderInterface {
+class NetworkReader : public ReaderInterface {
 public:
     // Types
     using BufferView = std::span<char>;
@@ -44,7 +46,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "clp::StreamingReader operation failed.";
+            return "clp::NetworkReader operation failed.";
         }
     };
 
@@ -54,7 +56,7 @@ public:
     enum class State : uint8_t {
         // InProgress: The reader is downloading data from the source URL.
         InProgress = 0,
-        // Failed: The reader has failed to stream data from the source URL.
+        // Failed: The reader has failed to download data from the source URL.
         Failed,
         // Finished: The data at the given URL has been downloaded.
         Finished
@@ -66,11 +68,6 @@ public:
 
     static constexpr size_t cMinBufferPoolSize{2};
     static constexpr size_t cMinBufferSize{512};
-
-    // See https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
-    static constexpr uint32_t cDefaultConnectionTimeout{10};  // Seconds
-    // See https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-    static constexpr uint32_t cDefaultOverallTimeout{45};  // Seconds
 
     /**
      * Initializes static resources for this class. This must be called before using the class.
@@ -100,26 +97,28 @@ public:
      * @param buffer_pool_size The required number of buffers in the buffer pool.
      * @param buffer_size The size of each buffer in the buffer pool.
      */
-    explicit StreamingReader(
+    explicit NetworkReader(
             std::string_view src_url,
             size_t offset = 0,
             bool disable_caching = false,
-            uint32_t overall_timeout_int_sec = cDefaultOverallTimeout,
-            uint32_t connection_timeout_in_sec = cDefaultConnectionTimeout,
+            std::chrono::seconds overall_timeout_int_sec
+            = CurlDownloadHandler::cDefaultOverallTimeout,
+            std::chrono::seconds connection_timeout_in_sec
+            = CurlDownloadHandler::cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize
     );
 
     // Destructor
-    virtual ~StreamingReader();
+    virtual ~NetworkReader();
 
     // Copy/Move Constructors
     // These are disabled since this class' synchronization primitives are non-copyable and
     // non-moveable.
-    StreamingReader(StreamingReader const&) = delete;
-    StreamingReader(StreamingReader&&) = delete;
-    auto operator=(StreamingReader const&) -> StreamingReader& = delete;
-    auto operator=(StreamingReader&&) -> StreamingReader& = delete;
+    NetworkReader(NetworkReader const&) = delete;
+    NetworkReader(NetworkReader&&) = delete;
+    auto operator=(NetworkReader const&) -> NetworkReader& = delete;
+    auto operator=(NetworkReader&&) -> NetworkReader& = delete;
 
     // Methods implementing `clp::ReaderInterface`
     /**
@@ -139,7 +138,7 @@ public:
      * Tries to seek to the given position, relative to the beginning of the data.
      * @param pos
      * @return ErrorCode_Unsupported if the given position is lower than the current position.
-     * Since this is a streaming reader, it cannot seek backwards.
+     * Since only streaming is supported, it cannot seek backwards.
      * @return ErrorCode_OutOfBounds if the given pos is past the end of the data.
      * @return ErrorCode_Success on success.
      */
@@ -207,11 +206,8 @@ public:
      * @returns Whether the download has timed out
      */
     [[nodiscard]] auto is_download_timedout() const -> bool {
-        if (false == m_curl_return_code.has_value()) {
-            return false;
-        }
-        auto const val{m_curl_return_code.value()};
-        return (CURLE_FTP_ACCEPT_TIMEOUT == val || CURLE_OPERATION_TIMEDOUT == val);
+        return m_curl_return_code.has_value()
+               && CURLE_OPERATION_TIMEDOUT == m_curl_return_code.value();
     }
 
     [[nodiscard]] auto get_curl_return_code() const -> std::optional<CURLcode> {
@@ -231,7 +227,7 @@ private:
          * @param offset The offset of bytes to start downloading data.
          * @param disable_caching Whether to disable caching.
          */
-        DownloaderThread(StreamingReader& reader, size_t offset, bool disable_caching)
+        DownloaderThread(NetworkReader& reader, size_t offset, bool disable_caching)
                 : m_reader{reader},
                   m_offset{offset},
                   m_disable_caching{disable_caching} {}
@@ -240,7 +236,7 @@ private:
         // Methods implementing `clp::Thread`
         auto thread_method() -> void final;
 
-        StreamingReader& m_reader;
+        NetworkReader& m_reader;
         size_t m_offset{0};
         bool m_disable_caching{false};
     };
@@ -298,8 +294,8 @@ private:
     size_t m_buffer_size;
     size_t m_curr_downloader_buf_idx{0};
 
-    uint32_t m_overall_timeout;
-    uint32_t m_connection_timeout;
+    std::chrono::seconds m_overall_timeout;
+    std::chrono::seconds m_connection_timeout;
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     std::vector<std::unique_ptr<char[]>> m_buffer_pool;
@@ -318,4 +314,4 @@ private:
 };
 }  // namespace clp
 
-#endif  // CLP_STREAMINGREADER_HPP
+#endif  // CLP_NETWORKREADER_HPP

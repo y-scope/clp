@@ -361,6 +361,8 @@ set(SOURCE_FILES_unitTest
         src/clp/MySQLParamBindings.hpp
         src/clp/MySQLPreparedStatement.cpp
         src/clp/MySQLPreparedStatement.hpp
+        src/clp/NetworkReader.cpp
+        src/clp/NetworkReader.hpp
         src/clp/PageAllocatedVector.hpp
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
@@ -413,8 +415,6 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Constants.hpp
         src/clp/streaming_compression/zstd/Decompressor.cpp
         src/clp/streaming_compression/zstd/Decompressor.hpp
-        src/clp/StreamingReader.cpp
-        src/clp/StreamingReader.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
         src/clp/Thread.cpp
@@ -446,13 +446,13 @@ set(SOURCE_FILES_unitTest
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
+        tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
-        tests/test-StreamingReader.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
