@@ -254,9 +254,8 @@ private:
 
     /**
      * Acquires an empty buffer to write downloaded data.
-     * @return true on success, false if the download has been aborted.
      */
-    [[nodiscard]] auto acquire_empty_buffer() -> bool;
+    auto acquire_empty_buffer() -> void;
 
     /**
      * Enqueues the current downloader buffer into the filled buffer queue.
@@ -265,10 +264,8 @@ private:
 
     /**
      * Gets a filled buffer from the filled buffer queue.
-     * @return true if there is a buffer available for reading.
-     * @return false otherwise.
      */
-    [[nodiscard]] auto get_filled_buffer() -> bool;
+    auto get_filled_buffer() -> void;
 
     /**
      * Releases an empty buffer which has been fully consumed by the reader.
