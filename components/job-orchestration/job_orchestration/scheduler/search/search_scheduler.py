@@ -185,7 +185,16 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 db_conn,
                 job_id,
                 SearchTaskStatus.CANCELLED,
-                [SearchTaskStatus.RUNNING, SearchTaskStatus.PENDING],
+                SearchTaskStatus.PENDING,
+                duration=0,
+            )
+
+            set_task_status(
+                db_conn,
+                job_id,
+                SearchTaskStatus.CANCELLED,
+                SearchTaskStatus.RUNNING,
+                duration="TIMESTAMPDIFF(SECOND, start_time, NOW())",
             )
 
             if set_job_status(
@@ -220,14 +229,18 @@ def set_task_status(
     db_conn,
     job_id: str,
     status: SearchTaskStatus,
-    prev_status: Optional[SearchTaskStatus | List[SearchTaskStatus]] = None,
+    prev_status: Optional[SearchTaskStatus] = None,
+    **kwargs,
 ):
-    update = f"UPDATE {SEARCH_TASKS_TABLE_NAME} SET status={status} WHERE job_id={job_id}"
+    field_set_expressions = [f"{k}={v}" for k, v in kwargs.items()]
+    field_set_expressions.append(f"status={status}")
+
+    update = (
+        f"UPDATE {SEARCH_TASKS_TABLE_NAME} SET {', '.join(field_set_expressions)} "
+        f"WHERE job_id={job_id}"
+    )
     if prev_status is not None:
-        if isinstance(prev_status, list):
-            update += f" AND status IN ({', '.join([str(s) for s in prev_status])})"
-        else:
-            update += f" AND status={prev_status}"
+        update += f" AND status={prev_status}"
 
     with contextlib.closing(db_conn.cursor()) as cursor:
         cursor.execute(update)
