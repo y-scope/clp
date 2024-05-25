@@ -3,13 +3,12 @@
 
 #include <chrono>
 #include <cstddef>
+#include <string_view>
 
 #include <curl/curl.h>
 
 #include "CurlEasyHandle.hpp"
-#include "CurlOperationFailed.hpp"
 #include "CurlStringList.hpp"
-#include "ErrorCode.hpp"
 
 namespace clp {
 /**

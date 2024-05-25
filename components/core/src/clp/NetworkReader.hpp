@@ -1,23 +1,23 @@
 #ifndef CLP_NETWORKREADER_HPP
 #define CLP_NETWORKREADER_HPP
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <queue>
 #include <span>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 #include <curl/curl.h>
 
 #include "CurlDownloadHandler.hpp"
-#include "Defs.h"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 #include "Thread.hpp"

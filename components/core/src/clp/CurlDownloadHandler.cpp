@@ -1,5 +1,12 @@
 #include "CurlDownloadHandler.hpp"
 
+#include <chrono>
+#include <cstddef>
+#include <string>
+#include <string_view>
+
+#include <curl/curl.h>
+
 namespace clp {
 CurlDownloadHandler::CurlDownloadHandler(
         ProgressCallback progress_callback,

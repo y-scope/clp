@@ -2,6 +2,7 @@
 #define CLP_CURLSTRINGLIST_HPP
 
 #include <cstddef>
+#include <string_view>
 
 #include <curl/curl.h>
 

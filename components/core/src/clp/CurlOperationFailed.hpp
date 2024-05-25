@@ -2,9 +2,11 @@
 #define CLP_CURLOPERATIONFAILED_HPP
 
 #include <string>
+#include <utility>
 
 #include <curl/curl.h>
 
+#include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {

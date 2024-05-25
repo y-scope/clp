@@ -1,20 +1,19 @@
 #include "NetworkReader.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
-#include <functional>
-#include <iterator>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include <curl/curl.h>
 
 #include "CurlDownloadHandler.hpp"
 #include "CurlOperationFailed.hpp"
-#include "CurlStringList.hpp"
 #include "ErrorCode.hpp"
-#include "Thread.hpp"
-#include "TraceableException.hpp"
 
 namespace clp {
 /**
@@ -210,14 +209,14 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
         m_reader.set_state_code(State::Failed);
     }
 
-    std::unique_lock<std::mutex> buffer_resource_lock{m_reader.m_buffer_resource_mutex};
+    std::unique_lock<std::mutex> const buffer_resource_lock{m_reader.m_buffer_resource_mutex};
     m_reader.m_cv_reader.notify_all();
 }
 
 auto NetworkReader::abort_data_download() -> void {
     m_download_aborted.store(true);
 
-    std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
+    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     m_cv_downloader.notify_all();
 }
 
