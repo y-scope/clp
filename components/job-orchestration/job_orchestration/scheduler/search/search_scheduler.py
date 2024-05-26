@@ -286,7 +286,7 @@ def get_task_group_for_job(
     task_ids: List[int],
     job_id: str,
     search_config: SearchConfig,
-    database: Database,
+    database_connection_params: Dict[str, any],
     results_cache_uri: str,
 ):
     search_config_obj = search_config.dict()
@@ -296,7 +296,7 @@ def get_task_group_for_job(
             archive_id=archive_ids[i],
             task_id=task_ids[i],
             search_config_obj=search_config_obj,
-            database=database,
+            database_connection_params=database_connection_params,
             results_cache_uri=results_cache_uri,
         )
         for i in range(len(archive_ids))
@@ -307,7 +307,7 @@ def dispatch_search_job(
     db_conn,
     job: SearchJob,
     archives_for_search: List[Dict[str, any]],
-    database: Database,
+    database_connection_params: Dict[str, any],
     results_cache_uri: str,
 ) -> None:
     global active_jobs
@@ -315,7 +315,12 @@ def dispatch_search_job(
     task_ids = insert_search_tasks(db_conn, job.id, archive_ids)
 
     task_group = get_task_group_for_job(
-        archive_ids, task_ids, job.id, job.search_config, database, results_cache_uri
+        archive_ids,
+        task_ids,
+        job.id,
+        job.search_config,
+        database_connection_params,
+        results_cache_uri,
     )
     job.current_sub_job_async_task_result = task_group.apply_async()
     job.state = InternalJobState.RUNNING
@@ -368,7 +373,7 @@ async def acquire_reducer_for_job(job: SearchJob):
 
 def handle_pending_search_jobs(
     db_conn_pool,
-    database: Database,
+    database_connection_params: Dict[str, any],
     results_cache_uri: str,
     num_archives_to_search_per_sub_job: int,
 ) -> List[asyncio.Task]:
@@ -440,7 +445,9 @@ def handle_pending_search_jobs(
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
 
-            dispatch_search_job(db_conn, job, archives_for_search, database, results_cache_uri)
+            dispatch_search_job(
+                db_conn, job, archives_for_search, database_connection_params, results_cache_uri
+            )
             logger.info(
                 f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )
@@ -606,7 +613,7 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 
 async def handle_jobs(
     db_conn_pool,
-    database: Database,
+    database_connection_params: Dict[str, any],
     results_cache_uri: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
@@ -618,7 +625,10 @@ async def handle_jobs(
     tasks = [handle_updating_task]
     while True:
         reducer_acquisition_tasks = handle_pending_search_jobs(
-            db_conn_pool, database, results_cache_uri, num_archives_to_search_per_sub_job
+            db_conn_pool,
+            database_connection_params,
+            results_cache_uri,
+            num_archives_to_search_per_sub_job,
         )
         if 0 == len(reducer_acquisition_tasks):
             tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
@@ -697,7 +707,7 @@ async def main(argv: List[str]) -> int:
         job_handler = asyncio.create_task(
             handle_jobs(
                 db_conn_pool=db_conn_pool,
-                database=clp_config.database,
+                database_connection_params=clp_config.database.get_clp_connection_params_and_type(),
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 jobs_poll_delay=clp_config.search_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,

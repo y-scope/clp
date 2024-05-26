@@ -115,7 +115,7 @@ def search(
     task_id: int,
     search_config_obj: dict,
     archive_id: str,
-    database: Database,
+    database_connection_param,
     results_cache_uri: str,
 ) -> Dict[str, Any]:
     clp_home = Path(os.getenv("CLP_HOME"))
@@ -134,7 +134,7 @@ def search(
     logger.info(f"Started task for job {job_id}")
 
     search_config = SearchConfig.parse_obj(search_config_obj)
-    sql_adapter = SQL_Adapter(database)
+    sql_adapter = SQL_Adapter(Database.parse_obj(database_connection_param))
 
     start_time = datetime.datetime.now()
     search_status = SearchTaskStatus.RUNNING
