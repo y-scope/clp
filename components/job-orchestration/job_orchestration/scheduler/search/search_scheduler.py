@@ -317,7 +317,6 @@ def dispatch_search_job(
     task_group = get_task_group_for_job(
         archive_ids, task_ids, job.id, job.search_config, database, results_cache_uri
     )
-    job.current_task_ids = task_ids
     job.current_sub_job_async_task_result = task_group.apply_async()
     job.state = InternalJobState.RUNNING
 
