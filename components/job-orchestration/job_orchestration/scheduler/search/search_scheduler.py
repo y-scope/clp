@@ -194,7 +194,7 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 job_id,
                 SearchTaskStatus.CANCELLED,
                 SearchTaskStatus.RUNNING,
-                duration="TIMESTAMPDIFF(FRAC_SECOND, start_time, NOW())*1000",
+                duration="TIMESTAMPDIFF(MICROSECOND, start_time, NOW())/1000",
             )
 
             if set_job_status(
