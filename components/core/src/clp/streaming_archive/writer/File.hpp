@@ -114,7 +114,7 @@ public:
     /**
      * @return File's begin message index
      */
-    uint64_t get_begin_msg_idx() const { return m_begin_msg_idx; }
+    uint64_t get_begin_message_ix() const { return m_begin_msg_idx; }
 
     /**
      * @return File's end message index
