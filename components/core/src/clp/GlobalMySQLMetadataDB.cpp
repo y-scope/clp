@@ -457,7 +457,7 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
 
 bool GlobalMySQLMetadataDB::get_file_split(
         std::string const& file_orig_id,
-        size_t msg_idx,
+        size_t message_ix,
         std::string& archive_id,
         std::string& file_split_id
 ) {
@@ -486,14 +486,14 @@ bool GlobalMySQLMetadataDB::get_file_split(
             streaming_archive::cMetadataDB::FilesTableName,
             streaming_archive::cMetadataDB::File::OrigFileId,
             file_orig_id,
-            msg_idx,
+            message_ix,
             m_table_prefix,
             streaming_archive::cMetadataDB::FilesTableName,
-            streaming_archive::cMetadataDB::File::BeginMsgIdx,
-            msg_idx,
+            streaming_archive::cMetadataDB::File::BeginMessageIx,
+            message_ix,
             m_table_prefix,
             streaming_archive::cMetadataDB::FilesTableName,
-            streaming_archive::cMetadataDB::File::BeginMsgIdx,
+            streaming_archive::cMetadataDB::File::BeginMessageIx,
             m_table_prefix,
             streaming_archive::cMetadataDB::FilesTableName,
             streaming_archive::cMetadataDB::File::NumMessages,

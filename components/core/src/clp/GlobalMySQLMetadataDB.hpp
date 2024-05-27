@@ -95,7 +95,7 @@ public:
     ) override;
     bool get_file_split(
             std::string const& file_orig_id,
-            size_t msg_idx,
+            size_t message_ix,
             std::string& archive_id,
             std::string& file_split_id
     ) override;
