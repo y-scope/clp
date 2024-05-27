@@ -281,11 +281,11 @@ void Archive::set_file_is_split(bool is_split) {
     m_file->set_is_split(is_split);
 }
 
-void Archive::set_file_begin_msg_idx(size_t msg_idx) {
+void Archive::set_file_begin_message_ix(size_t message_ix) {
     if (m_file == nullptr) {
         throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
     }
-    m_file->set_begin_msg_idx(msg_idx);
+    m_file->set_begin_message_ix(message_ix);
 }
 
 void Archive::change_ts_pattern(TimestampPattern const* pattern) {

@@ -41,7 +41,7 @@ public:
               m_num_segment_msgs(0),
               m_num_segment_vars(0),
               m_msgs_ix(0),
-              m_begin_msg_idx(0),
+              m_begin_message_ix(0),
               m_num_messages(0),
               m_variables_ix(0),
               m_num_variables(0),
@@ -62,7 +62,7 @@ public:
 
     segment_id_t get_segment_id() const { return m_segment_id; }
 
-    uint64_t get_begin_msg_idx() const { return m_begin_msg_idx; }
+    uint64_t get_begin_message_ix() const { return m_begin_message_ix; }
 
     uint64_t get_num_messages() const { return m_num_messages; }
 
@@ -148,7 +148,7 @@ private:
     uint64_t m_num_segment_vars;
 
     size_t m_msgs_ix;
-    uint64_t m_begin_msg_idx;
+    uint64_t m_begin_message_ix;
     uint64_t m_num_messages;
     size_t m_variables_ix;
     uint64_t m_num_variables;

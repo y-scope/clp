@@ -363,7 +363,7 @@ size_t MetadataDB::FileIterator::get_num_uncompressed_bytes() const {
     );
 }
 
-size_t MetadataDB::FileIterator::get_begin_msg_idx() const {
+size_t MetadataDB::FileIterator::get_begin_message_ix() const {
     return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx));
 }
 

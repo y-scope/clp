@@ -27,7 +27,7 @@ auto split_file(
     auto const& encoded_file = archive_writer.get_file();
     auto const has_ts_pattern = encoded_file.has_ts_pattern();
     auto const orig_file_id = encoded_file.get_orig_file_id();
-    auto const end_msg_idx = encoded_file.get_end_msg_idx();
+    auto const end_message_ix = encoded_file.get_end_message_ix();
     auto const split_ix = encoded_file.get_split_ix();
     archive_writer.set_file_is_split(true);
     close_file_and_append_to_segment(archive_writer);
@@ -37,7 +37,7 @@ auto split_file(
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(last_timestamp_pattern);
     }
-    archive_writer.set_file_begin_msg_idx(end_msg_idx);
+    archive_writer.set_file_begin_message_ix(end_message_ix);
 }
 
 auto split_file_and_archive(
@@ -51,7 +51,7 @@ auto split_file_and_archive(
     auto const has_ts_pattern = encoded_file.has_ts_pattern();
     auto const orig_file_id = encoded_file.get_orig_file_id();
     auto const split_ix = encoded_file.get_split_ix();
-    auto const end_msg_idx = encoded_file.get_end_msg_idx();
+    auto const end_message_ix = encoded_file.get_end_message_ix();
     archive_writer.set_file_is_split(true);
     close_file_and_append_to_segment(archive_writer);
 
@@ -62,7 +62,7 @@ auto split_file_and_archive(
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(last_timestamp_pattern);
     }
-    archive_writer.set_file_begin_msg_idx(end_msg_idx);
+    archive_writer.set_file_begin_message_ix(end_message_ix);
 }
 
 auto close_file_and_append_to_segment(Archive& archive_writer) -> void {

@@ -93,8 +93,8 @@ void File::change_ts_pattern(TimestampPattern const* pattern) {
     m_is_metadata_clean = false;
 }
 
-void File::set_begin_msg_idx(size_t msg_idx) {
-    m_begin_msg_idx = msg_idx;
+void File::set_begin_message_ix(size_t message_ix) {
+    m_begin_message_ix = message_ix;
     m_is_metadata_clean = false;
 }
 
