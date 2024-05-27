@@ -115,7 +115,7 @@ def search(
     task_id: int,
     search_config_obj: dict,
     archive_id: str,
-    database_connection_param,
+    database_connection_param: dict,
     results_cache_uri: str,
 ) -> Dict[str, Any]:
     clp_home = Path(os.getenv("CLP_HOME"))
