@@ -31,6 +31,6 @@ docker run \
   archives. It will be mounted at `/mnt/data` in the container.
 
 Follow the usage instructions in [clp for unstructured logs](core-unstructured/index) or
-[clp for dynamically-structured logs](core-clp-s), depending on the format of your logs.
+[clp for JSON logs](core-clp-s), depending on the format of your logs.
 
 [1]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-focal

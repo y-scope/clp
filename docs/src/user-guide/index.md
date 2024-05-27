@@ -54,8 +54,8 @@ quick-start-search/index
 
 core-overview
 core-container
-core-unstructured/index
 core-clp-s
+core-unstructured/index
 :::
 
 :::{toctree}
