@@ -48,9 +48,9 @@ auto split_file_and_archive(
         Archive& archive_writer
 ) -> void {
     auto const& encoded_file = archive_writer.get_file();
-    auto has_ts_pattern = encoded_file.has_ts_pattern();
-    auto orig_file_id = encoded_file.get_orig_file_id();
-    auto split_ix = encoded_file.get_split_ix();
+    auto const has_ts_pattern = encoded_file.has_ts_pattern();
+    auto const orig_file_id = encoded_file.get_orig_file_id();
+    auto const split_ix = encoded_file.get_split_ix();
     auto const end_msg_idx = encoded_file.get_end_msg_idx();
     archive_writer.set_file_is_split(true);
     close_file_and_append_to_segment(archive_writer);
