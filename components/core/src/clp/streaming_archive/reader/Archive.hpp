@@ -113,11 +113,12 @@ public:
         );
     }
 
-    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator() {
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_path(std::string const& file_path
+    ) {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,
                 cEpochTimeMax,
-                "",
+                file_path,
                 "",
                 false,
                 cInvalidSegmentId,
@@ -125,11 +126,11 @@ public:
         );
     }
 
-    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator(std::string const& file_path) {
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator() {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,
                 cEpochTimeMax,
-                file_path,
+                "",
                 "",
                 false,
                 cInvalidSegmentId,
