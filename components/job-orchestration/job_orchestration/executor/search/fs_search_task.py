@@ -31,7 +31,7 @@ def update_search_task_metadata(
     query = f"""
         UPDATE {SEARCH_TASKS_TABLE_NAME}
         SET {', '.join([f'{k}="{v}"' for k, v in kv_pairs.items()])}
-        WHERE `task_id` = {task_id}
+        WHERE id = {task_id}
     """
     db_cursor.execute(query)
 
