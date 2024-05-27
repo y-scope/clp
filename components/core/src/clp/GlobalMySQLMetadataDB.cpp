@@ -313,8 +313,8 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
 
         auto begin_message_ix = file->get_begin_message_ix();
         statement_bindings.bind_uint64(
-            enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx),
-            begin_message_ix
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx),
+                begin_message_ix
         );
 
         auto num_messages = file->get_num_messages();
@@ -354,8 +354,8 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
                 num_uncompressed_bytes
         );
         statement_bindings.bind_uint64(
-            enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + offset,
-            begin_message_ix
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + offset,
+                begin_message_ix
         );
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + offset,

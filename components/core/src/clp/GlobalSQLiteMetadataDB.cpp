@@ -307,9 +307,11 @@ void GlobalSQLiteMetadataDB::open() {
             .second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)].first
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            .first
             = streaming_archive::cMetadataDB::File::BeginMessageIx;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)].second
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
@@ -521,8 +523,8 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
                 (int64_t)file->get_num_uncompressed_bytes()
         );
         m_upsert_file_statement->bind_int64(
-            enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + 1,
-                (int64_t) file->get_begin_message_ix()
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + 1,
+                (int64_t)file->get_begin_message_ix()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,

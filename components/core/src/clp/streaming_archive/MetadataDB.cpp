@@ -364,7 +364,8 @@ size_t MetadataDB::FileIterator::get_num_uncompressed_bytes() const {
 }
 
 size_t MetadataDB::FileIterator::get_begin_message_ix() const {
-    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx));
+    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)
+    );
 }
 
 size_t MetadataDB::FileIterator::get_num_messages() const {
@@ -458,9 +459,11 @@ void MetadataDB::open(string const& path) {
             .second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)].first
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            .first
             = streaming_archive::cMetadataDB::File::BeginMessageIx;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)].second
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
@@ -610,8 +613,8 @@ void MetadataDB::update_files(vector<writer::File*> const& files) {
                 (int64_t)file->get_num_uncompressed_bytes()
         );
         m_upsert_file_statement->bind_int64(
-            enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + 1,
-                (int64_t) file->get_begin_message_ix()
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + 1,
+                (int64_t)file->get_begin_message_ix()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,
