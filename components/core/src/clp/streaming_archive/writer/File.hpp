@@ -39,7 +39,8 @@ public:
          boost::uuids::uuid const& orig_file_id,
          std::string const& orig_log_path,
          group_id_t group_id,
-         size_t split_ix)
+         size_t split_ix,
+         size_t begin_message_ix)
             : m_id(id),
               m_orig_file_id(orig_file_id),
               m_orig_log_path(orig_log_path),
@@ -47,7 +48,7 @@ public:
               m_end_ts(cEpochTimeMin),
               m_group_id(group_id),
               m_num_uncompressed_bytes(0),
-              m_begin_message_ix(0),
+              m_begin_message_ix(begin_message_ix),
               m_num_messages(0),
               m_num_variables(0),
               m_segment_id(cInvalidSegmentId),
@@ -104,12 +105,6 @@ public:
      * @return true if the file contains a timestamp pattern, false otherwise
      */
     bool has_ts_pattern() const { return m_timestamp_patterns.empty() == false; }
-
-    /**
-     * Sets the File's begin message index
-     * @param message_ix
-     */
-    void set_begin_message_ix(size_t message_ix);
 
     /**
      * @return File's begin message index

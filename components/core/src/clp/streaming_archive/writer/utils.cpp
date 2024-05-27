@@ -32,12 +32,17 @@ auto split_file(
     archive_writer.set_file_is_split(true);
     close_file_and_append_to_segment(archive_writer);
 
-    archive_writer.create_and_open_file(path_for_compression, group_id, orig_file_id, split_ix + 1);
+    archive_writer.create_and_open_file(
+            path_for_compression,
+            group_id,
+            orig_file_id,
+            split_ix + 1,
+            end_message_ix
+    );
     if (has_ts_pattern) {
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(last_timestamp_pattern);
     }
-    archive_writer.set_file_begin_message_ix(end_message_ix);
 }
 
 auto split_file_and_archive(
@@ -57,12 +62,17 @@ auto split_file_and_archive(
 
     split_archive(archive_user_config, archive_writer);
 
-    archive_writer.create_and_open_file(path_for_compression, group_id, orig_file_id, split_ix + 1);
+    archive_writer.create_and_open_file(
+            path_for_compression,
+            group_id,
+            orig_file_id,
+            split_ix + 1,
+            end_message_ix
+    );
     if (has_ts_pattern) {
         // Initialize the file's timestamp pattern to the previous split's pattern
         archive_writer.change_ts_pattern(last_timestamp_pattern);
     }
-    archive_writer.set_file_begin_message_ix(end_message_ix);
 }
 
 auto close_file_and_append_to_segment(Archive& archive_writer) -> void {

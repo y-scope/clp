@@ -109,13 +109,15 @@ public:
      * @param group_id
      * @param orig_file_id
      * @param split_ix
+     * @param begin_message_ix
      * @return Pointer to the new file
      */
     void create_and_open_file(
             std::string const& path,
             group_id_t group_id,
             boost::uuids::uuid const& orig_file_id,
-            size_t split_ix
+            size_t split_ix = 0,
+            size_t begin_message_ix = 0
     );
 
     void close_file();
@@ -127,12 +129,6 @@ public:
      * @param is_split
      */
     void set_file_is_split(bool is_split);
-
-    /**
-     * Wrapper for streaming_archive::writer::File::set_begin_message_ix
-     * @param message_ix
-     */
-    void set_file_begin_message_ix(size_t message_ix);
 
     /**
      * Wrapper for streaming_archive::writer::File::change_ts_pattern
