@@ -30,7 +30,7 @@ Resources like log datasets, etc.
 :::
 
 :::{grid-item-card}
-:link: reference-unstructured-schema-file
+:link: reference-json-search-syntax
 Reference
 ^^^
 Reference docs like format specifications, etc.
