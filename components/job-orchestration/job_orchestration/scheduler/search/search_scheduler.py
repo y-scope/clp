@@ -707,7 +707,9 @@ async def main(argv: List[str]) -> int:
         job_handler = asyncio.create_task(
             handle_jobs(
                 db_conn_pool=db_conn_pool,
-                database_connection_params=clp_config.database.get_clp_connection_params_and_type(),
+                database_connection_params=clp_config.database.get_clp_connection_params_and_type(
+                    True
+                ),
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 jobs_poll_delay=clp_config.search_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
