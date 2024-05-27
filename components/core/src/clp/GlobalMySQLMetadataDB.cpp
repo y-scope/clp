@@ -35,6 +35,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     BeginTimestamp,
     EndTimestamp,
     NumUncompressedBytes,
+    BeginMessageIx,
     NumMessages,
     ArchiveId,
     Length,
@@ -133,6 +134,8 @@ void GlobalMySQLMetadataDB::open() {
             = streaming_archive::cMetadataDB::File::EndTimestamp;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
+    file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            = streaming_archive::cMetadataDB::File::BeginMessageIx;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)]
             = streaming_archive::cMetadataDB::File::NumMessages;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId)]
@@ -308,6 +311,12 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
                 num_uncompressed_bytes
         );
 
+        auto begin_message_ix = file->get_begin_message_ix();
+        statement_bindings.bind_uint64(
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx),
+                begin_message_ix
+        );
+
         auto num_messages = file->get_num_messages();
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages),
@@ -343,6 +352,10 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes) + offset,
                 num_uncompressed_bytes
+        );
+        statement_bindings.bind_uint64(
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + offset,
+                begin_message_ix
         );
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + offset,

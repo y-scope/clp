@@ -18,6 +18,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     EndTimestamp,
     TimestampPatterns,
     NumUncompressedBytes,
+    BeginMessageIx,
     NumMessages,
     NumVariables,
     IsSplit,
@@ -154,6 +155,8 @@ static SQLitePreparedStatement get_files_select_statement(
             = streaming_archive::cMetadataDB::File::TimestampPatterns;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
+    field_names[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            = streaming_archive::cMetadataDB::File::BeginMessageIx;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)]
             = streaming_archive::cMetadataDB::File::NumMessages;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumVariables)]
@@ -360,6 +363,11 @@ size_t MetadataDB::FileIterator::get_num_uncompressed_bytes() const {
     );
 }
 
+size_t MetadataDB::FileIterator::get_begin_message_ix() const {
+    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)
+    );
+}
+
 size_t MetadataDB::FileIterator::get_num_messages() const {
     return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::NumMessages));
 }
@@ -448,6 +456,13 @@ void MetadataDB::open(string const& path) {
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
                                )]
+            .second
+            = "INTEGER";
+
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            .first
+            = streaming_archive::cMetadataDB::File::BeginMessageIx;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
             .second
             = "INTEGER";
 
@@ -596,6 +611,10 @@ void MetadataDB::update_files(vector<writer::File*> const& files) {
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes) + 1,
                 (int64_t)file->get_num_uncompressed_bytes()
+        );
+        m_upsert_file_statement->bind_int64(
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + 1,
+                (int64_t)file->get_begin_message_ix()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,
