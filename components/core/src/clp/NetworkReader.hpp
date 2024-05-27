@@ -162,12 +162,12 @@ public:
 
     /**
      * @param pos Returns the position of the read head in the buffer.
+     * @return ErrorCode_Failure if the initial offset is not 0 and http request returned an error.
+     * @return ErrorCode_NotReady if the initial offset is not 0 and no bytes have been downloaded
+     * yet when this function is called.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override {
-        pos = m_file_pos;
-        return ErrorCode_Success;
-    }
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
 
     // Methods
     /**
@@ -206,12 +206,12 @@ public:
      * @returns Whether the download has timed out
      */
     [[nodiscard]] auto is_download_timedout() const -> bool {
-        return m_curl_return_code.has_value()
-               && CURLE_OPERATION_TIMEDOUT == m_curl_return_code.value();
+        auto const curl_return_code{get_curl_return_code()};
+        return curl_return_code.has_value() && CURLE_OPERATION_TIMEDOUT == curl_return_code.value();
     }
 
     [[nodiscard]] auto get_curl_return_code() const -> std::optional<CURLcode> {
-        return m_curl_return_code;
+        return m_atomic_curl_return_code.load();
     }
 
 private:
@@ -287,7 +287,17 @@ private:
 
     [[nodiscard]] auto get_state_code() const -> State { return m_state_code.load(); }
 
+    /**
+     * @return true if at least one byte has been downloaded through CURL write callback.
+     * @return false otherwise.
+     */
+    [[nodiscard]] auto at_least_one_byte_downloaded() const -> bool {
+        return m_at_least_one_byte_downloaded.load();
+    }
+
     std::string m_src_url;
+
+    size_t m_offset;
     size_t m_file_pos;
 
     size_t m_buffer_pool_size;
@@ -308,9 +318,10 @@ private:
     std::condition_variable m_cv_reader;
 
     std::unique_ptr<DownloaderThread> m_downloader_thread{nullptr};
+    std::atomic<bool> m_at_least_one_byte_downloaded{false};
     std::atomic<bool> m_download_aborted{false};
     std::atomic<State> m_state_code{State::InProgress};
-    std::optional<CURLcode> m_curl_return_code;
+    std::atomic<std::optional<CURLcode>> m_atomic_curl_return_code;
 };
 }  // namespace clp
 

@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -160,6 +161,26 @@ TEST_CASE("network_reader_destruct", "[NetworkReader]") {
     REQUIRE(run_with_timeout(std::chrono::milliseconds{1500}, test_abort));
     REQUIRE(peacefully_destructed);
     // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+
+    clp::NetworkReader::deinit();
+}
+
+TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
+    // Try to read from an out-of-bound offset.
+    REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
+
+    constexpr size_t cIllegalOffset{UINT32_MAX};
+    clp::NetworkReader reader_with_illegal_offset(cTestUrl, cIllegalOffset);
+    while (true) {
+        auto const retcode{reader_with_illegal_offset.get_curl_return_code()};
+        if (retcode.has_value()) {
+            auto const val{retcode.value()};
+            REQUIRE(CURLE_HTTP_RETURNED_ERROR == retcode);
+            size_t pos{};
+            REQUIRE(clp::ErrorCode_Failure == reader_with_illegal_offset.try_get_pos(pos));
+            break;
+        }
+    }
 
     clp::NetworkReader::deinit();
 }

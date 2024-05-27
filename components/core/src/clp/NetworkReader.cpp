@@ -138,6 +138,7 @@ NetworkReader::NetworkReader(
         size_t buffer_size
 )
         : m_src_url{src_url},
+          m_offset{offset},
           m_file_pos{offset},
           m_overall_timeout{overall_timeout_int_sec},
           m_connection_timeout{connection_timeout_in_sec},
@@ -165,7 +166,37 @@ NetworkReader::~NetworkReader() {
     }
 }
 
+auto NetworkReader::try_get_pos(size_t& pos) -> ErrorCode {
+    if (0 != m_offset) {
+        if (State::InProgress != get_state_code()) {
+            auto const curl_return_code{get_curl_return_code()};
+            if (false == curl_return_code.has_value()) {
+                return ErrorCode_Failure;
+            }
+            if (CURLE_HTTP_RETURNED_ERROR == curl_return_code.value()) {
+                // Download has failed due to http error. This can be caused by an out-of-bound
+                // offset specified in the http header.
+                return ErrorCode_Failure;
+            }
+        }
+
+        if (false == at_least_one_byte_downloaded()) {
+            // We don't know if there are any bytes coming in yet
+            return ErrorCode_NotReady;
+        }
+    }
+
+    pos = m_file_pos;
+    return ErrorCode_Success;
+}
+
 auto NetworkReader::buffer_downloaded_data(NetworkReader::BufferView data) -> size_t {
+    if (data.empty()) {
+        return 0;
+    }
+    if (false == at_least_one_byte_downloaded()) {
+        m_at_least_one_byte_downloaded.store(true);
+    }
     auto const num_bytes_to_write{data.size()};
     while (false == data.empty()) {
         acquire_empty_buffer();
@@ -198,14 +229,13 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
                 m_reader.m_connection_timeout,
                 m_reader.m_overall_timeout
         };
-        m_reader.m_curl_return_code = curl_handler.perform();
+        auto const retcode{curl_handler.perform()};
+        m_reader.m_atomic_curl_return_code.store(retcode);
         // Enqueue the last filled buffer, if any
         m_reader.enqueue_filled_buffer();
-        m_reader.set_state_code(
-                (CURLE_OK == m_reader.m_curl_return_code) ? State::Finished : State::Failed
-        );
+        m_reader.set_state_code((CURLE_OK == retcode) ? State::Finished : State::Failed);
     } catch (CurlOperationFailed const& ex) {
-        m_reader.m_curl_return_code = ex.get_curl_err();
+        m_reader.m_atomic_curl_return_code.store(ex.get_curl_err());
         m_reader.set_state_code(State::Failed);
     }
 
