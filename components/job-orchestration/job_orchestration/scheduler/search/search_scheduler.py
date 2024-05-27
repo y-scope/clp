@@ -591,7 +591,6 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 db_conn,
                 job_id,
                 new_job_status,
-                SearchJobStatus.RUNNING,
                 num_tasks_completed=job.num_archives_searched,
                 duration=(datetime.datetime.now() - job.start_time).total_seconds(),
             ):
