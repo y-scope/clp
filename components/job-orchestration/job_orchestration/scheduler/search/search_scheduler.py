@@ -170,8 +170,8 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         cancelling_jobs = fetch_cancelling_search_jobs(db_conn)
 
-        for job in cancelling_jobs:
-            job_id = job["job_id"]
+        for cancelling_job in cancelling_jobs:
+            job_id = str(cancelling_job["job_id"])
             if job_id in active_jobs:
                 job = active_jobs.pop(job_id)
                 cancel_job_except_reducer(job)
@@ -194,7 +194,7 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 job_id,
                 SearchTaskStatus.CANCELLED,
                 SearchTaskStatus.RUNNING,
-                duration="TIMESTAMPDIFF(SECOND, start_time, NOW())",
+                duration="TIMESTAMPDIFF(FRAC_SECOND, start_time, NOW())*1000",
             )
 
             if set_job_status(
