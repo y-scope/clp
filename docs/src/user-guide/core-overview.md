@@ -18,9 +18,9 @@ A flavour of CLP for unstructured (e.g., free-text) logs.
 
 :::{grid-item-card}
 :link: core-clp-s
-CLP for dynamically-structured logs
+CLP for JSON logs
 ^^^^^^^^^^^^
-A flavour of CLP for dynamically structured (e.g., JSON) logs.
+A flavour of CLP for JSON logs.
 :::
 ::::
 
