@@ -38,4 +38,8 @@ auto get_approximated_ir_size(std::string_view log_message, size_t num_encoded_v
     return ir_size;
 }
 
+auto get_ir_extension_name() -> std::string {
+    return "clp.zst";
+}
+
 }  // namespace clp::ir

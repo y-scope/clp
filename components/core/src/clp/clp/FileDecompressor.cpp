@@ -7,7 +7,6 @@
 #include "../ir/LogEventSerializer.hpp"
 #include "../ir/utils.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
 using clp::ir::LogEventSerializer;
 using std::string;
@@ -17,27 +16,27 @@ namespace {
 /**
  * Rename the temporary IR chunk and move it to the output directory
  * The name name follows the following format
- * <FILE_ORIG_ID>_<begin_msg_ix>_<end_msg_ix>.clp.zst
+ * <FILE_ORIG_ID>_<begin_message_ix>_<end_message_ix>.clp.zst
  * @param temp_ir
  * @param output_directory
  * @param file_orig_id
- * @param begin_msg_ix
- * @param end_msg_ix
+ * @param begin_message_ix
+ * @param end_message_ix
  * @return true if the IR is renamed and moved, false otherwise
  */
 bool rename_and_move_ir(
         boost::filesystem::path const& temp_ir_path,
         boost::filesystem::path const& output_directory,
         std::string const& file_orig_id,
-        size_t begin_msg_ix,
-        size_t end_msg_ix
+        size_t begin_message_ix,
+        size_t end_message_ix
 ) {
-    std::string ir_name = file_orig_id + "_" + std::to_string(begin_msg_ix) + "_"
-                          + std::to_string(end_msg_ix) + ".clp.zst";
+    std::string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
+                               + std::to_string(end_message_ix) + "." + ir::get_ir_extension_name();
 
-    auto renamed_ir_path = output_directory / ir_name;
+    auto renamed_ir_path = output_directory / ir_file_name;
     try {
-        boost::filesystem::rename(temp_ir_path, output_directory / ir_name);
+        boost::filesystem::rename(temp_ir_path, output_directory / ir_file_name);
     } catch (boost::filesystem::filesystem_error const& e) {
         SPDLOG_ERROR(
                 "Failed to rename from {} to {}. Error: {}",
@@ -163,7 +162,7 @@ bool FileDecompressor::decompress_ir(
     }
 
     boost::filesystem::path temp_ir_path{temp_output_dir};
-    temp_ir_path /= m_encoded_file.get_id_as_string() + ".temp.clp.zst";
+    temp_ir_path /= m_encoded_file.get_id_as_string() + ".temp." + ir::get_ir_extension_name();
 
     auto const& file_orig_id = m_encoded_file.get_orig_file_id_as_string();
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();
@@ -198,7 +197,7 @@ bool FileDecompressor::decompress_ir(
                 m_encoded_message.get_vars().size()
         );
         if (message_size_as_ir + serializer_inst->get_serialized_size() > ir_target_size) {
-            serializer_inst->flush();
+            serializer_inst->close();
             ir_compressor.close();
             m_decompressed_file_writer.close();
 
@@ -244,7 +243,7 @@ bool FileDecompressor::decompress_ir(
         }
     }
 
-    serializer_inst->flush();
+    serializer_inst->close();
     ir_compressor.close();
     m_decompressed_file_writer.close();
 

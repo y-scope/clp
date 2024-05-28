@@ -12,6 +12,11 @@ namespace clp::ir {
  */
 auto has_ir_stream_magic_number(std::string_view buf) -> bool;
 /**
+ * @param buf
+ * @return Extension name of IR
+ */
+auto get_ir_extension_name() -> std::string;
+/**
  * Estimate the approximate upper bound of the given log message when encoded as IR.
  * This function makes the following assumption to for a rough upper bound estimation
  * 1. dictionary variable lengths are all encoded with int32_t
@@ -23,7 +28,6 @@ auto has_ir_stream_magic_number(std::string_view buf) -> bool;
  * @return the approximated ir size in bytes
  */
 auto get_approximated_ir_size(std::string_view log_message, size_t num_encoded_vars) -> size_t;
-
 }  // namespace clp::ir
 
 #endif  // CLP_IR_UTILS_HPP

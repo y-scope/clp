@@ -24,6 +24,7 @@ auto LogEventSerializer<encoded_variable_t>::create(
             new LogEventSerializer<encoded_variable_t>{writer, reference_timestamp}
     );
 
+    // use dummy values for now.
     string const timestamp_pattern{"%Y-%m-%d %H:%M:%S,%3"};
     string const timestamp_pattern_syntax{""};
     string const time_zone_id{""};
@@ -101,9 +102,11 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
         epoch_time_ms_t timestamp
 ) -> bool {
     string logtype;
-    bool res{false};
+    // Increment m_log_event_ix without waiting for the return of serialize_log_event.
+    // If serialize_log_event fails, the IR will be corrupted anyway.
+    m_log_event_ix++;
     if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        res = clp::ffi::ir_stream::eight_byte_encoding::serialize_log_event(
+        return clp::ffi::ir_stream::eight_byte_encoding::serialize_log_event(
                 timestamp,
                 message,
                 logtype,
@@ -112,23 +115,26 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
     } else {
         auto timestamp_delta = timestamp - m_prev_msg_timestamp;
         m_prev_msg_timestamp = timestamp;
-        res = clp::ffi::ir_stream::four_byte_encoding::serialize_log_event(
+        return clp::ffi::ir_stream::four_byte_encoding::serialize_log_event(
                 timestamp_delta,
                 message,
                 logtype,
                 m_ir_buffer
         );
     }
-    if (true == res) {
-        m_log_event_ix++;
-    }
-    return res;
+}
+
+template <typename encoded_variable_t>
+auto LogEventSerializer<encoded_variable_t>::close() -> void {
+    m_ir_buffer.push_back(clp::ffi::ir_stream::cProtocol::Eof);
+    flush();
 }
 
 template <typename encoded_variable_t>
 auto LogEventSerializer<encoded_variable_t>::flush() -> void {
-    m_ir_buffer.push_back(clp::ffi::ir_stream::cProtocol::Eof);
     m_writer.write(reinterpret_cast<char const*>(m_ir_buffer.data()), m_ir_buffer.size());
+    serialized_size += m_ir_buffer.size();
+    m_ir_buffer.clear();
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
@@ -163,4 +169,6 @@ template auto LogEventSerializer<four_byte_encoded_variable_t>::serialize_log_ev
 ) -> bool;
 template auto LogEventSerializer<four_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::flush() -> void;
+template auto LogEventSerializer<four_byte_encoded_variable_t>::close() -> void;
+template auto LogEventSerializer<eight_byte_encoded_variable_t>::close() -> void;
 }  // namespace clp::ir
