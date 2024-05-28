@@ -163,7 +163,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         switch (command_input) {
             case (char)Command::Compress:
             case (char)Command::Extract:
-            case (char)Command::Ir:
+            case (char)Command::IR:
                 m_command = (Command)command_input;
                 break;
             default:
@@ -224,19 +224,19 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (m_archives_dir.empty()) {
                 throw invalid_argument("ARCHIVES_DIR cannot be empty.");
             }
-        } else if (Command::Ir == m_command) {
-            // Define if hidden positional options
+        } else if (Command::IR == m_command) {
+            // Define ir decompression hidden positional options
             po::options_description ir_positional_options;
             // clang-format off
             ir_positional_options.add_options()
                     ("archives-dir", po::value<string>(&m_archives_dir))
                     ("output-dir", po::value<string>(&m_output_dir))
-                    ("file-id", po::value<string>(&m_file_id));
+                    ("orig-file-id", po::value<string>(&m_orig_file_id));
             // clang-format on
             po::positional_options_description ir_positional_options_description;
             ir_positional_options_description.add("archives-dir", 1);
             ir_positional_options_description.add("output-dir", 1);
-            ir_positional_options_description.add("file-id", 1);
+            ir_positional_options_description.add("orig-file-id", 1);
 
             po::options_description options_ir("IR decompression Options");
             options_ir.add_options()(
@@ -262,7 +262,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             all_ir_options.add(ir_positional_options);
             all_ir_options.add(options_ir);
 
-            // Parse extraction options
+            // Parse ir decompression options
             vector<string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -297,7 +297,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
 
             // Validate file id is not empty
-            if (m_file_id.empty()) {
+            if (m_orig_file_id.empty()) {
                 throw invalid_argument("FILE_ID cannot be empty.");
             }
 
@@ -487,7 +487,7 @@ void CommandLineArguments::print_extraction_basic_usage() const {
 }
 
 void CommandLineArguments::print_ir_basic_usage() const {
-    cerr << "Usage: " << get_program_name() << " [OPTIONS] i ARCHIVES_DIR OUTPUT_DIR FILE_ID]"
+    cerr << "Usage: " << get_program_name() << " [OPTIONS] i ARCHIVES_DIR OUTPUT_DIR ORIG_FILE_ID"
          << endl;
 }
 }  // namespace clp::clp

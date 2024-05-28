@@ -16,7 +16,7 @@ public:
     enum class Command : char {
         Compress = 'c',
         Extract = 'x',
-        Ir = 'i'
+        IR = 'i'
     };
 
     // Constructors
@@ -69,7 +69,7 @@ public:
 
     std::vector<std::string> const& get_input_paths() const { return m_input_paths; }
 
-    std::string const& get_file_id() const { return m_file_id; }
+    std::string const& get_orig_file_id() const { return m_orig_file_id; }
 
     size_t get_ir_msg_ix() const { return m_ir_msg_ix; }
 
@@ -86,12 +86,12 @@ private:
     // Variables
     std::string m_path_list_path;
     std::string m_path_prefix_to_remove;
-    bool m_sort_input_files;
-    std::string m_file_id;
+    std::string m_orig_file_id;
     size_t m_ir_msg_ix;
     size_t m_ir_target_size;
-    std::string m_output_dir;
+    bool m_sort_input_files;
     std::string m_ir_temp_output_dir;
+    std::string m_output_dir;
     std::string m_schema_file_path;
     bool m_show_progress;
     bool m_print_archive_stats_progress;
