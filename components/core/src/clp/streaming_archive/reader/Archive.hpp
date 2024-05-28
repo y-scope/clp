@@ -89,7 +89,7 @@ public:
     bool get_next_message(File& file, Message& msg);
 
     /**
-     * Decompresses a given message from a given file
+     * Decompresses a given message from a given file with the original timestamp
      * @param file
      * @param compressed_msg
      * @param decompressed_msg
@@ -98,6 +98,15 @@ public:
      */
     bool
     decompress_message(File& file, Message const& compressed_msg, std::string& decompressed_msg);
+
+    /**
+     * Decompresses a given message from a given file without its original timestamp
+     * @param compressed_msg
+     * @param decompressed_msg
+     * @return true if message was successfully decompressed, false otherwise
+     */
+    bool
+    decompress_message_without_ts(Message const& compressed_msg, std::string& decompressed_msg);
 
     void decompress_empty_directories(std::string const& output_dir);
 

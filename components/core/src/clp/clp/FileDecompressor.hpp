@@ -24,6 +24,15 @@ public:
             std::unordered_map<std::string, std::string>& temp_path_to_final_path
     );
 
+    // Methods
+    bool decompress_ir(
+            streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
+            std::string const& output_dir,
+            std::string const& temp_output_dir,
+            streaming_archive::reader::Archive& archive_reader,
+            size_t ir_target_size
+    );
+
 private:
     // Variables
     FileWriter m_decompressed_file_writer;

@@ -321,6 +321,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp
+        src/clp/ir/LogEventSerializer.cpp
+        src/clp/ir/LogEventSerializer.hpp
         src/clp/ir/parsing.cpp
         src/clp/ir/parsing.hpp
         src/clp/ir/parsing.inc
