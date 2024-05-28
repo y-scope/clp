@@ -42,7 +42,6 @@ enum class FilesTableFieldIndexes : uint16_t {
 };
 
 namespace clp {
-
 void GlobalMySQLMetadataDB::ArchiveIterator::get_id(string& id) const {
     m_db_iterator->get_field_as_string(0, id);
 }
