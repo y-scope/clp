@@ -124,8 +124,17 @@ auto NetworkReader::init() -> ErrorCode {
 }
 
 auto NetworkReader::deinit() -> void {
+#if defined(__APPLE__)
+    // Note: calling `curl_global_init` after `curl_global_cleanup` on macos will fail SSL connect
+    // error. Therefore, we will skip `deinit` on macos for now. Related issues:
+    // - https://github.com/curl/curl/issues/12525
+    // - https://github.com/curl/curl/issues/13805
+    // TODO: add cleanup call back when the issue is fixed.
+    return;
+#else
     curl_global_cleanup();
     m_initialized = false;
+#endif
 }
 
 NetworkReader::NetworkReader(
