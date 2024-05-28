@@ -64,19 +64,6 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
     }
     return buf;
 }
-
-/**
- * Runs a function with a timeout.
- * @tparam Func The function to run. A lambda function is expected, which takes no parameter.
- * @param timeout
- * @param func Function to run.
- * @return Whether the function completes before the timeout is triggered.
- */
-template <typename Func>
-[[nodiscard]] auto run_with_timeout(std::chrono::milliseconds timeout, Func&& func) -> bool {
-    auto future{std::async(std::launch::async, std::forward<Func>(func))};
-    return future.wait_for(timeout) == std::future_status::ready;
-}
 }  // namespace
 
 TEST_CASE("network_reader_basic", "[NetworkReader]") {
