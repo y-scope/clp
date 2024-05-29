@@ -328,6 +328,14 @@ void SchemaReader::find_intersection_and_fix_brackets(
         }
     }
 
+    // The loop above ends when the parent of next node and cur node matches. When these two nodes
+    // have the same parent but are different nodes we need to close the last bracket for the
+    // previous node, and add the first key for next node.
+    if (cur_node != next_node) {
+        m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+        path_to_intersection.push_back(next_node->get_id());
+    }
+
     for (auto it = path_to_intersection.rbegin(); it != path_to_intersection.rend(); ++it) {
         auto const& node = m_global_schema_tree->get_node(*it);
         bool no_name = true;
