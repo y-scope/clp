@@ -178,6 +178,13 @@ public:
 
     int32_t get_schema_id() const { return m_schema_id; }
 
+    /**
+     * @param schema
+     * @return the first column ID found in the given schema, or -1 if the schema contains no
+     * columns
+     */
+    static int32_t get_first_column_in_span(std::span<int32_t> schema);
+
 private:
     /**
      * Merges the current local schema tree with the section of the global schema tree corresponding
@@ -210,13 +217,6 @@ private:
      */
     size_t
     generate_structured_object_template(int32_t id, size_t column_start, std::span<int32_t> schema);
-
-    /**
-     * @param schema
-     * @return the first column ID found in the given schema, or -1 if the schema contains no
-     * columns
-     */
-    static inline int32_t get_first_column_in_span(std::span<int32_t> schema);
 
     void find_intersection_and_fix_brackets(
             int32_t cur_root,
