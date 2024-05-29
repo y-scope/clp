@@ -46,7 +46,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({sea
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.searchJobId
- * @param {boolean} props.isActivelyPolling
+ * @param {boolean} props.isActivelyPolling only true when lastSignal = SEARCH_SIGNAL.REQ_QUERYING
  * @return {Mongo.Cursor} cursor that provides access to the search results.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
