@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <future>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -69,17 +68,17 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
 TEST_CASE("network_reader_basic", "[NetworkReader]") {
     clp::FileReader ref_reader;
     ref_reader.open(get_test_input_local_path());
-    auto const ref_data{get_content(ref_reader)};
+    auto const expected{get_content(ref_reader)};
     ref_reader.close();
 
     REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
     clp::NetworkReader reader{get_test_input_remote_url()};
-    auto const streamed_data{get_content(reader)};
+    auto const actual{get_content(reader)};
     auto const ret_code{reader.get_curl_return_code()};
     REQUIRE(ret_code.has_value());
     // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
     REQUIRE((CURLE_OK == ret_code.value()));
-    REQUIRE((streamed_data == ref_data));
+    REQUIRE((actual == expected));
     clp::NetworkReader::deinit();
 }
 
@@ -88,7 +87,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
     clp::FileReader ref_reader;
     ref_reader.open(get_test_input_local_path());
     ref_reader.seek_from_begin(cOffset);
-    auto const ref_data{get_content(ref_reader)};
+    auto const expected{get_content(ref_reader)};
     auto const ref_end_pos{ref_reader.get_pos()};
     ref_reader.close();
 
@@ -96,27 +95,27 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
 
     // Read from an offset onwards by starting the download from that offset.
     {
-        clp::NetworkReader reader_using_offset{get_test_input_remote_url(), cOffset};
-        auto const streamed_data{get_content(reader_using_offset)};
-        auto const ret_code_using_offset{reader_using_offset.get_curl_return_code()};
-        REQUIRE(ret_code_using_offset.has_value());
+        clp::NetworkReader reader{get_test_input_remote_url(), cOffset};
+        auto const actual{get_content(reader)};
+        auto const ret_code{reader.get_curl_return_code()};
+        REQUIRE(ret_code.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        REQUIRE((CURLE_OK == ret_code_using_offset.value()));
-        REQUIRE((reader_using_offset.get_pos() == ref_end_pos));
-        REQUIRE((streamed_data == ref_data));
+        REQUIRE((CURLE_OK == ret_code.value()));
+        REQUIRE((reader.get_pos() == ref_end_pos));
+        REQUIRE((actual == expected));
     }
 
     // Read from an offset onwards by seeking to that offset.
     {
-        clp::NetworkReader reader_using_seek(get_test_input_remote_url());
-        reader_using_seek.seek_from_begin(cOffset);
-        auto const streamed_data{get_content(reader_using_seek)};
-        auto const ret_code_using_seek{reader_using_seek.get_curl_return_code()};
-        REQUIRE(ret_code_using_seek.has_value());
+        clp::NetworkReader reader(get_test_input_remote_url());
+        reader.seek_from_begin(cOffset);
+        auto const actual{get_content(reader)};
+        auto const ret_code{reader.get_curl_return_code()};
+        REQUIRE(ret_code.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        REQUIRE((CURLE_OK == ret_code_using_seek.value()));
-        REQUIRE((reader_using_seek.get_pos() == ref_end_pos));
-        REQUIRE((streamed_data == ref_data));
+        REQUIRE((CURLE_OK == ret_code.value()));
+        REQUIRE((reader.get_pos() == ref_end_pos));
+        REQUIRE((actual == expected));
     }
 
     clp::NetworkReader::deinit();

@@ -101,10 +101,8 @@ public:
             std::string_view src_url,
             size_t offset = 0,
             bool disable_caching = false,
-            std::chrono::seconds overall_timeout_int_sec
-            = CurlDownloadHandler::cDefaultOverallTimeout,
-            std::chrono::seconds connection_timeout_in_sec
-            = CurlDownloadHandler::cDefaultConnectionTimeout,
+            std::chrono::seconds overall_timeout = CurlDownloadHandler::cDefaultOverallTimeout,
+            std::chrono::seconds connection_timeout = CurlDownloadHandler::cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize
     );
@@ -150,8 +148,9 @@ public:
             return ErrorCode_Success;
         }
         size_t num_bytes_read{};
-        auto const err{read_from_filled_buffers(pos - m_file_pos, num_bytes_read, nullptr)};
-        if (ErrorCode_EndOfFile == err) {
+        auto const num_bytes_to_read{pos - m_file_pos};
+        auto const err{read_from_filled_buffers(num_bytes_to_read, num_bytes_read, nullptr)};
+        if (ErrorCode_EndOfFile == err || (ErrorCode_Success == err && num_bytes_read < num_bytes_to_read)) {
             return ErrorCode_OutOfBounds;
         }
         if (m_file_pos != pos) {
@@ -203,9 +202,9 @@ public:
     }
 
     /**
-     * @returns Whether the download has timed out
+     * @returns Whether the download has timed out.
      */
-    [[nodiscard]] auto is_download_timedout() const -> bool {
+    [[nodiscard]] auto is_download_timed_out() const -> bool {
         auto const curl_return_code{get_curl_return_code()};
         return curl_return_code.has_value() && CURLE_OPERATION_TIMEDOUT == curl_return_code.value();
     }
@@ -241,17 +240,22 @@ private:
         bool m_disable_caching{false};
     };
 
-    static bool m_initialized;
+    static bool m_static_init_complete;
 
     /**
-     * Aborts the ongoing curl download session.
+     * Submits a request to abort the ongoing curl download session.
      */
-    auto abort_data_download() -> void;
+    auto submit_abort_download_request() -> void;
 
     /**
      * Acquires an empty buffer to write downloaded data.
      */
     auto acquire_empty_buffer() -> void;
+
+    /**
+     * Releases an empty buffer which has been fully consumed by the reader.
+     */
+    auto release_empty_buffer() -> void;
 
     /**
      * Enqueues the current downloader buffer into the filled buffer queue.
@@ -262,11 +266,6 @@ private:
      * Gets a filled buffer from the filled buffer queue.
      */
     auto get_filled_buffer() -> void;
-
-    /**
-     * Releases an empty buffer which has been fully consumed by the reader.
-     */
-    auto release_empty_buffer() -> void;
 
     /**
      * Reads data from the filled buffers with a given amount of bytes.
@@ -300,12 +299,12 @@ private:
     size_t m_offset{0};
     size_t m_file_pos{0};
 
+    std::chrono::seconds m_overall_timeout;
+    std::chrono::seconds m_connection_timeout;
+
     size_t m_buffer_pool_size{cDefaultBufferPoolSize};
     size_t m_buffer_size{cDefaultBufferSize};
     size_t m_curr_downloader_buf_idx{0};
-
-    std::chrono::seconds m_overall_timeout;
-    std::chrono::seconds m_connection_timeout;
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     std::vector<std::unique_ptr<char[]>> m_buffer_pool;
@@ -314,8 +313,8 @@ private:
     std::optional<BufferView> m_curr_reader_buf;
 
     std::mutex m_buffer_resource_mutex;
-    std::condition_variable m_cv_downloader;
-    std::condition_variable m_cv_reader;
+    std::condition_variable m_downloader_cv;
+    std::condition_variable m_reader_cv;
 
     std::unique_ptr<DownloaderThread> m_downloader_thread{nullptr};
     std::atomic<bool> m_at_least_one_byte_downloaded{false};

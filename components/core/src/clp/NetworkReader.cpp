@@ -54,7 +54,7 @@ namespace clp {
  * |           +           |                                   |          +++          |
  * |           +           |                                   |           +           |
  * |                       |      | +-----------------+ |      |                       |
- * | dequeue_filled_buffer  <<<<<<  filled_buffer_queue  <<<<<<  enqueue_filled_buffer |
+ * |   get_filled_buffer    <<<<<<  filled_buffer_queue  <<<<<<  enqueue_filled_buffer |
  * |                       |      | +-----------------+ |      |                       |
  * | +-------------------+ |                                   | +-------------------+ |
  *
@@ -66,7 +66,7 @@ namespace clp {
  *   `filled_buffer_queue` using `enqueue_filled_buffer`.
  *
  * `reader_thread` operates as follows:
- * - It dequeues a buffer from `filled_buffer_queue` using `dequeue_filled_buffer` and saves it as
+ * - It dequeues a buffer from `filled_buffer_queue` using `get_filled_buffer` and saves it as
  *   `curr_reader_buf`.
  * - It performs any reads using data in `curr_reader_buf`.
  * - When `curr_reader_buf` is exhausted, it is returned to `buffer_pool` using
@@ -110,16 +110,16 @@ curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> s
 }
 }  // namespace
 
-bool NetworkReader::m_initialized{false};
+bool NetworkReader::m_static_init_complete{false};
 
 auto NetworkReader::init() -> ErrorCode {
-    if (m_initialized) {
+    if (m_static_init_complete) {
         return ErrorCode_Success;
     }
     if (0 != curl_global_init(CURL_GLOBAL_ALL)) {
         return ErrorCode_Failure;
     }
-    m_initialized = true;
+    m_static_init_complete = true;
     return ErrorCode_Success;
 }
 
@@ -133,7 +133,7 @@ auto NetworkReader::deinit() -> void {
     return;
 #else
     curl_global_cleanup();
-    m_initialized = false;
+    m_static_init_complete = false;
 #endif
 }
 
@@ -157,7 +157,7 @@ NetworkReader::NetworkReader(
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
         m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
     }
-    if (false == m_initialized) {
+    if (false == m_static_init_complete) {
         throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
     m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
@@ -167,7 +167,7 @@ NetworkReader::NetworkReader(
 NetworkReader::~NetworkReader() {
     if (is_download_in_progress()) {
         // Abort the download so the downloader thread can destroy the CURL resources and exit.
-        abort_data_download();
+        submit_abort_download_request();
     }
 
     while (is_downloader_thread_running()) {
@@ -249,14 +249,14 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
     }
 
     std::unique_lock<std::mutex> const buffer_resource_lock{m_reader.m_buffer_resource_mutex};
-    m_reader.m_cv_reader.notify_all();
+    m_reader.m_reader_cv.notify_all();
 }
 
-auto NetworkReader::abort_data_download() -> void {
+auto NetworkReader::submit_abort_download_request() -> void {
     m_download_aborted.store(true);
 
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
-    m_cv_downloader.notify_all();
+    m_downloader_cv.notify_all();
 }
 
 auto NetworkReader::acquire_empty_buffer() -> void {
@@ -265,12 +265,19 @@ auto NetworkReader::acquire_empty_buffer() -> void {
     }
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
     while (m_filled_buffer_queue.size() == m_buffer_pool_size) {
-        m_cv_downloader.wait(buffer_resource_lock);
-        if (is_download_aborted() || is_download_timedout()) {
+        m_downloader_cv.wait(buffer_resource_lock);
+        if (is_download_aborted()) {
             return;
         }
     }
     m_curr_downloader_buf.emplace(m_buffer_pool.at(m_curr_downloader_buf_idx).get(), m_buffer_size);
+}
+
+auto NetworkReader::release_empty_buffer() -> void {
+    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
+    m_curr_reader_buf.reset();
+    m_filled_buffer_queue.pop();
+    m_downloader_cv.notify_all();
 }
 
 auto NetworkReader::enqueue_filled_buffer() -> void {
@@ -289,7 +296,7 @@ auto NetworkReader::enqueue_filled_buffer() -> void {
         m_curr_downloader_buf_idx = 0;
     }
 
-    m_cv_reader.notify_all();
+    m_reader_cv.notify_all();
 }
 
 auto NetworkReader::get_filled_buffer() -> void {
@@ -301,17 +308,10 @@ auto NetworkReader::get_filled_buffer() -> void {
         if (false == is_download_in_progress()) {
             return;
         }
-        m_cv_reader.wait(buffer_resource_lock);
+        m_reader_cv.wait(buffer_resource_lock);
     }
     auto const next_reader_buffer{m_filled_buffer_queue.front()};
     m_curr_reader_buf.emplace(next_reader_buffer);
-}
-
-auto NetworkReader::release_empty_buffer() -> void {
-    std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
-    m_curr_reader_buf.reset();
-    m_filled_buffer_queue.pop();
-    m_cv_downloader.notify_all();
 }
 
 auto NetworkReader::read_from_filled_buffers(
@@ -332,9 +332,6 @@ auto NetworkReader::read_from_filled_buffers(
         auto& curr_reader_buf{m_curr_reader_buf.value()};
 
         auto const reader_buf_size{curr_reader_buf.size()};
-        if (0 == reader_buf_size) {
-            return ErrorCode_EndOfFile;
-        }
         auto const src{curr_reader_buf.subspan(0, std::min(num_bytes_to_read, reader_buf_size))};
         if (dst_view.has_value()) {
             auto& dst_buf{dst_view.value()};
