@@ -587,13 +587,12 @@ void SchemaReader::generate_json_template(int32_t id) {
             case NodeType::StructuredArray: {
                 m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
                 m_json_serializer.add_special_key(key);
-                int32_t global_child_id = m_local_id_to_global_id[child_id];
-                auto structured_it = m_global_id_to_unordered_object.find(global_child_id);
+                auto structured_it = m_global_id_to_unordered_object.find(child_global_id);
                 if (m_global_id_to_unordered_object.end() != structured_it) {
                     size_t column_start = structured_it->second.first;
                     std::span<int32_t> structured_schema = structured_it->second.second;
                     generate_structured_array_template(
-                            global_child_id,
+                            child_global_id,
                             column_start,
                             structured_schema
                     );
