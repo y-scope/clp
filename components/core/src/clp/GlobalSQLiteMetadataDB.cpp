@@ -43,6 +43,7 @@ enum class FilesTableFieldIndexes : uint16_t {
 
 using std::pair;
 using std::string;
+using std::string_view;
 using std::to_string;
 using std::unordered_set;
 using std::vector;
@@ -178,10 +179,11 @@ get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
 }
 
 SQLitePreparedStatement
-get_file_split_statement(SQLiteDB& db, string const& file_orig_id, size_t message_ix) {
+get_file_split_statement(SQLiteDB& db, string_view orig_file_id, size_t message_ix) {
     auto statement_string = fmt::format(
-            "SELECT DISTINCT {}.{}, {}.{} FROM {} JOIN {} ON {}.{} = {}.{} WHERE {}.{} = ?"
-            " AND ? >= {}.{} AND ? < ({}.{} + {}.{}) ORDER BY {} ASC, {} ASC",
+            "SELECT DISTINCT {}.{}, {}.{} FROM {} JOIN {} ON {}.{} = {}.{} "
+            "WHERE {}.{} = ?1 AND ?2 >= {}.{} AND ?2 < ({}.{} + {}.{}) "
+            "ORDER BY {} ASC, {} ASC",
             streaming_archive::cMetadataDB::ArchivesTableName,
             streaming_archive::cMetadataDB::Archive::Id,
             streaming_archive::cMetadataDB::FilesTableName,
@@ -205,9 +207,8 @@ get_file_split_statement(SQLiteDB& db, string const& file_orig_id, size_t messag
     );
     SPDLOG_DEBUG("{}", statement_string);
     auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
-    statement.bind_text(1, file_orig_id, true);
-    statement.bind_int(2, static_cast<int>(message_ix));
-    statement.bind_int(3, static_cast<int>(message_ix));
+    statement.bind_text(1, {orig_file_id.begin(), orig_file_id.end()}, true);
+    statement.bind_int64(2, message_ix);
 
     return statement;
 }
@@ -581,12 +582,12 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
 }
 
 bool GlobalSQLiteMetadataDB::get_file_split(
-        std::string const& file_orig_id,
+        string_view orig_file_id,
         size_t msg_ix,
-        std::string& archive_id,
-        std::string& file_split_id
+        string& archive_id,
+        string& file_split_id
 ) {
-    SQLitePreparedStatement statement(get_file_split_statement(m_db, file_orig_id, msg_ix));
+    auto statement = get_file_split_statement(m_db, orig_file_id, msg_ix);
     statement.step();
     if (false == statement.is_row_ready()) {
         return false;

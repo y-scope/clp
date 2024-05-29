@@ -79,12 +79,6 @@ public:
             std::string const& archive_id,
             std::vector<streaming_archive::writer::File*> const& files
     ) override;
-    bool get_file_split(
-            std::string const& file_orig_id,
-            size_t message_ix,
-            std::string& archive_id,
-            std::string& file_split_id
-    ) override;
 
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator() override {
         return new ArchiveIterator(m_db);
@@ -99,6 +93,13 @@ public:
     ) override {
         return new ArchiveIterator(m_db, path);
     }
+
+    bool get_file_split(
+            std::string_view orig_file_id,
+            size_t message_ix,
+            std::string& archive_id,
+            std::string& file_split_id
+    ) override;
 
 private:
     // Variables

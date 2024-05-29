@@ -32,6 +32,7 @@ enum class FilesTableFieldIndexes : uint16_t {
 
 using std::make_unique;
 using std::string;
+using std::string_view;
 using std::to_string;
 using std::vector;
 
@@ -135,8 +136,8 @@ static SQLitePreparedStatement get_files_select_statement(
         SQLiteDB& db,
         epochtime_t ts_begin,
         epochtime_t ts_end,
-        std::string const& file_path,
-        std::string const& file_id,
+        string_view file_path,
+        string_view file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts
@@ -212,16 +213,6 @@ static SQLitePreparedStatement get_files_select_statement(
         );
         clause_exists = true;
     }
-    if (false == file_id.empty()) {
-        fmt::format_to(
-                statement_buffer_ix,
-                " {} {} = ?{}",
-                clause_exists ? "AND" : "WHERE",
-                streaming_archive::cMetadataDB::File::Id,
-                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1
-        );
-        clause_exists = true;
-    }
     if (false == file_path.empty()) {
         fmt::format_to(
                 statement_buffer_ix,
@@ -229,6 +220,16 @@ static SQLitePreparedStatement get_files_select_statement(
                 clause_exists ? "AND" : "WHERE",
                 streaming_archive::cMetadataDB::File::Path,
                 enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1
+        );
+        clause_exists = true;
+    }
+    if (false == file_split_id.empty()) {
+        fmt::format_to(
+                statement_buffer_ix,
+                " {} {} = ?{}",
+                clause_exists ? "AND" : "WHERE",
+                streaming_archive::cMetadataDB::File::Id,
+                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1
         );
         clause_exists = true;
     }
@@ -274,13 +275,17 @@ static SQLitePreparedStatement get_files_select_statement(
                 ts_end
         );
     }
-    if (false == file_id.empty()) {
-        statement.bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1, file_id, true);
-    }
     if (false == file_path.empty()) {
         statement.bind_text(
                 enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1,
-                file_path,
+                {file_path.begin(), file_path.end()},
+                true
+        );
+    }
+    if (false == file_split_id.empty()) {
+        statement.bind_text(
+                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
+                {file_split_id.begin(), file_split_id.end()},
                 true
         );
     }
@@ -314,8 +319,8 @@ MetadataDB::FileIterator::FileIterator(
         SQLiteDB& db,
         epochtime_t begin_timestamp,
         epochtime_t end_timestamp,
-        std::string const& file_path,
-        std::string const& file_id,
+        string_view file_path,
+        string_view file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts
@@ -325,7 +330,7 @@ MetadataDB::FileIterator::FileIterator(
                   begin_timestamp,
                   end_timestamp,
                   file_path,
-                  file_id,
+                  file_split_id,
                   in_specific_segment,
                   segment_id,
                   order_by_segment_end_ts

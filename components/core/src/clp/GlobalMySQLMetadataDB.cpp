@@ -8,6 +8,7 @@
 
 using std::pair;
 using std::string;
+using std::string_view;
 using std::vector;
 
 // Types
@@ -455,15 +456,14 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
 }
 
 bool GlobalMySQLMetadataDB::get_file_split(
-        std::string const& file_orig_id,
+        string_view orig_file_id,
         size_t message_ix,
-        std::string& archive_id,
-        std::string& file_split_id
+        string& archive_id,
+        string& file_split_id
 ) {
     auto statement_string = fmt::format(
-            "SELECT DISTINCT {}{}.{}, {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} WHERE "
-            "{}{}.{} = '{}' "
-            "AND {} >= {}{}.{} AND {} < ({}{}.{} + {}{}.{}) "
+            "SELECT DISTINCT {}{}.{}, {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} "
+            "WHERE {}{}.{} = '{}' AND {} >= {}{}.{} AND {} < ({}{}.{} + {}{}.{}) "
             "ORDER BY {} ASC, {} ASC",
             m_table_prefix,
             streaming_archive::cMetadataDB::ArchivesTableName,
@@ -484,7 +484,7 @@ bool GlobalMySQLMetadataDB::get_file_split(
             m_table_prefix,
             streaming_archive::cMetadataDB::FilesTableName,
             streaming_archive::cMetadataDB::File::OrigFileId,
-            file_orig_id,
+            orig_file_id,
             message_ix,
             m_table_prefix,
             streaming_archive::cMetadataDB::FilesTableName,
@@ -505,7 +505,7 @@ bool GlobalMySQLMetadataDB::get_file_split(
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    auto db_iterator = std::move(m_db.get_iterator());
+    auto db_iterator = m_db.get_iterator();
 
     if (false == db_iterator.contains_element()) {
         return false;
@@ -516,5 +516,4 @@ bool GlobalMySQLMetadataDB::get_file_split(
 
     return true;
 }
-
 }  // namespace clp
