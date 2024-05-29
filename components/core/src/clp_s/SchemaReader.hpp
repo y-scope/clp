@@ -203,8 +203,9 @@ private:
     /**
      * Generates a json template for a structured array
      * @param id
-     * @param column_start
+     * @param column_start the index of the first reader in m_columns belonging to this array
      * @param schema
+     * @return the index of the next reader in m_columns after those consumed by this array
      */
     size_t
     generate_structured_array_template(int32_t id, size_t column_start, std::span<int32_t> schema);
@@ -212,12 +213,36 @@ private:
     /**
      * Generates a json template for a structured object
      * @param id
-     * @param column_start
+     * @param column_start the index of the first reader in m_columns belonging to this object
      * @param schema
+     * @return the index of the next reader in m_columns after those consumed by this object
      */
     size_t
     generate_structured_object_template(int32_t id, size_t column_start, std::span<int32_t> schema);
 
+    /**
+     * Finds the common root of the subtree containing cur_root and next_root, and adds brackets
+     * and keys to m_json_serializer as necessary so that the json object is correct between the
+     * previous field which is a child of cur_root, and the next field which is a child of
+     * next_root.
+     *
+     * For example for the object {"a": {"b":"c"}, "d": {"e":{"f":"g"}} after appending "b" cur_root
+     * would be "a", and next_root would be "e". (since it is the parent of the next field "f").
+     * The current state of the object would look like {"a":{"b":"c" -- to prepare for "f" we would
+     * add },"d":{"e":{ or in other words close one bracket, add "d" and open bracket, add "e" and
+     * open bracket. After adding field "f" the current root is "e", and the next root is the
+     * original object which is the parent of "a" so we add }}.
+     *
+     * This works by tracing the path between both cur_root and next_root to their nearest common
+     * ancestor. For every step cur_root takes towards this common ancestor we must close a bracket,
+     * and for every step on the path from next_root a key must be added and a bracket must be
+     * opened. The parameter `path_to_intersection` is used as a buffer to store the path from
+     * next_root to this intersection so that the keys can be added to m_json_serializer in the
+     * correct order.
+     * @param cur_root
+     * @param next_root
+     * @param path_to_intersection
+     */
     void find_intersection_and_fix_brackets(
             int32_t cur_root,
             int32_t next_root,
