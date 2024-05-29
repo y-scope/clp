@@ -226,11 +226,11 @@ private:
      * previous field which is a child of cur_root, and the next field which is a child of
      * next_root.
      *
-     * For example for the object {"a": {"b":"c"}, "d": {"e":{"f":"g"}} after appending "b" cur_root
-     * would be "a", and next_root would be "e". (since it is the parent of the next field "f").
-     * The current state of the object would look like {"a":{"b":"c" -- to prepare for "f" we would
-     * add },"d":{"e":{ or in other words close one bracket, add "d" and open bracket, add "e" and
-     * open bracket. After adding field "f" the current root is "e", and the next root is the
+     * For example for the object {"a": {"b": "c"}, "d": {"e": {"f": "g"}}} after appending "b"
+     * cur_root would be "a", and next_root would be "e". (since it is the parent of the next field
+     * "f"). The current state of the object would look like "a":{"b":"c" -- to prepare for "f" we
+     * would add },"d":{"e":{ or in other words close one bracket, add "d" and open bracket, add "e"
+     * and open bracket. After adding field "f" the current root is "e", and the next root is the
      * original object which is the parent of "a" so we add }}.
      *
      * This works by tracing the path between both cur_root and next_root to their nearest common
