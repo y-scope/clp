@@ -8,7 +8,6 @@
 
 using std::pair;
 using std::string;
-using std::string_view;
 using std::vector;
 
 // Types
@@ -456,7 +455,7 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
 }
 
 bool GlobalMySQLMetadataDB::get_file_split(
-        string_view orig_file_id,
+        string const& orig_file_id,
         size_t message_ix,
         string& archive_id,
         string& file_split_id

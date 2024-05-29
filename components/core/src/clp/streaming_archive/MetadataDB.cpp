@@ -32,7 +32,6 @@ enum class FilesTableFieldIndexes : uint16_t {
 
 using std::make_unique;
 using std::string;
-using std::string_view;
 using std::to_string;
 using std::vector;
 
@@ -136,8 +135,8 @@ static SQLitePreparedStatement get_files_select_statement(
         SQLiteDB& db,
         epochtime_t ts_begin,
         epochtime_t ts_end,
-        string_view file_path,
-        string_view file_split_id,
+        string const& file_path,
+        string const& file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts
@@ -278,14 +277,14 @@ static SQLitePreparedStatement get_files_select_statement(
     if (false == file_path.empty()) {
         statement.bind_text(
                 enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1,
-                {file_path.begin(), file_path.end()},
+                file_path,
                 true
         );
     }
     if (false == file_split_id.empty()) {
         statement.bind_text(
                 enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
-                {file_split_id.begin(), file_split_id.end()},
+                file_split_id,
                 true
         );
     }
@@ -319,8 +318,8 @@ MetadataDB::FileIterator::FileIterator(
         SQLiteDB& db,
         epochtime_t begin_timestamp,
         epochtime_t end_timestamp,
-        string_view file_path,
-        string_view file_split_id,
+        string const& file_path,
+        string const& file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts

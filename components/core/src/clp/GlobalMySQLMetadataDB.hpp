@@ -94,7 +94,7 @@ public:
             std::string const& file_path
     ) override;
     bool get_file_split(
-            std::string_view orig_file_id,
+            std::string const& orig_file_id,
             size_t message_ix,
             std::string& archive_id,
             std::string& file_split_id

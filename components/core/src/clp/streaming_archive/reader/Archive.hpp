@@ -102,7 +102,7 @@ public:
     void decompress_empty_directories(std::string const& output_dir);
 
     std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_split_id(
-            std::string_view file_split_id
+            std::string const& file_split_id
     ) {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,
@@ -115,7 +115,7 @@ public:
         );
     }
 
-    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_path(std::string_view file_path
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_path(std::string const& file_path
     ) {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,

@@ -43,7 +43,6 @@ enum class FilesTableFieldIndexes : uint16_t {
 
 using std::pair;
 using std::string;
-using std::string_view;
 using std::to_string;
 using std::unordered_set;
 using std::vector;
@@ -179,7 +178,7 @@ get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
 }
 
 SQLitePreparedStatement
-get_file_split_statement(SQLiteDB& db, string_view orig_file_id, size_t message_ix) {
+get_file_split_statement(SQLiteDB& db, string const& orig_file_id, size_t message_ix) {
     auto statement_string = fmt::format(
             "SELECT DISTINCT {}.{}, {}.{} FROM {} JOIN {} ON {}.{} = {}.{} "
             "WHERE {}.{} = ?1 AND ?2 >= {}.{} AND ?2 < ({}.{} + {}.{}) "
@@ -207,8 +206,8 @@ get_file_split_statement(SQLiteDB& db, string_view orig_file_id, size_t message_
     );
     SPDLOG_DEBUG("{}", statement_string);
     auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
-    statement.bind_text(1, {orig_file_id.begin(), orig_file_id.end()}, true);
-    statement.bind_int64(2, message_ix);
+    statement.bind_text(1, orig_file_id, true);
+    statement.bind_int64(2, static_cast<int64_t>(message_ix));
 
     return statement;
 }
@@ -582,7 +581,7 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
 }
 
 bool GlobalSQLiteMetadataDB::get_file_split(
-        string_view orig_file_id,
+        string const& orig_file_id,
         size_t msg_ix,
         string& archive_id,
         string& file_split_id
