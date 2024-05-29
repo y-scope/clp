@@ -73,7 +73,7 @@ TEST_CASE("network_reader_basic", "[NetworkReader]") {
     ref_reader.close();
 
     REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
-    clp::NetworkReader reader(get_test_input_remote_url());
+    clp::NetworkReader reader{get_test_input_remote_url()};
     auto const streamed_data{get_content(reader)};
     auto const ret_code{reader.get_curl_return_code()};
     REQUIRE(ret_code.has_value());
@@ -125,9 +125,9 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
 TEST_CASE("network_reader_destruct", "[NetworkReader]") {
     REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
 
-    // We sleep for a while to fill out all the buffers, and we delete the reader. The destructor
-    // should be called to abort the underlying transfer session. We should ensure destructor is
-    // successfully executed without deadlock or exceptions in this case.
+    // We sleep to fill out all the buffers, and then we delete the reader. The destructor will try
+    // to abort the underlying download and then destroy the instance. So should ensure destructor
+    // is successfully executed without deadlock or exceptions.
     bool no_exception{true};
     try {
         // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
@@ -153,9 +153,9 @@ TEST_CASE("network_reader_destruct", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
-    // Try to read from an out-of-bound offset.
     REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
 
+    // Try to read from an out-of-bound offset.
     constexpr size_t cIllegalOffset{UINT32_MAX};
     clp::NetworkReader reader_with_illegal_offset(get_test_input_remote_url(), cIllegalOffset);
     while (true) {

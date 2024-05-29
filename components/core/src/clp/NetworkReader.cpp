@@ -6,7 +6,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <string>
 #include <string_view>
 
 #include <curl/curl.h>
@@ -31,32 +30,33 @@ namespace clp {
  *
  * The diagram below illustrates the relationship between these terms:
  *
- *   .....................................           .........................................
- *   |                            +-------------------------+                                |
- *   |   `get_filled_buffer` <=== <   filled_buffer_queue   < <=== `enqueue_filled_buffer`   |
- *   |                            +-------------------------+                                |
- *   |              +                    |           |                    +                  |
- *   |              +                    |           |                   +++                 |
- *   |              +                    |           |                  +++++                |
- *   |              +                    |           |                    +                  |
- *   |            +++++                  |           |                    +                  |
- *   |             +++                   |           |                    +                  |
- *   |              +                    |           |                    +                  |
- *   |                                   |           |                                       |
- *   |      `curr_reader_buf`            |           |          `curr_downloader_buf`        |
- *   |                                   |           |                                       |
- *   |              +                    |           |                    +                  |
- *   |              +                    |           |                   +++                 |
- *   |              +                    |           |                  +++++                |
- *   |              +                    |           |                    +                  |
- *   |            +++++                  |           |                    +                  |
- *   |             +++                   |           |                    +                  |
- *   |              +                    |           |                    +                  |
- *   |                                +------------------+                                   |
- *   |    `release_empty_buffer` ===> >    buffer_pool   > ====> `acquire_empty_buffer`      |
- *   |                                +------------------+                                   |
- *   |       `reader_thread`             |           |            `downloader_thread`        |
- *   .....................................           .........................................
+ * | +-------------------+ |                                   | +-------------------+ |
+ * |     reader_thread     |                                   |   downloader_thread   |
+ * | +-------------------+ |                                   | +-------------------+ |
+ * |                       |      | +-----------------+ |      |                       |
+ * | release_empty_buffer   >>>>>>      buffer_pool      >>>>>>  acquire_empty_buffer  |
+ * |                       |      | +-----------------+ |      |                       |
+ * |           +           |                                   |           +           |
+ * |          +++          |                                   |           +           |
+ * |         +++++         |                                   |           +           |
+ * |           +           |                                   |           +           |
+ * |           +           |                                   |         +++++         |
+ * |           +           |                                   |          +++          |
+ * |           +           |                                   |           +           |
+ * |                       |                                   |                       |
+ * |    curr_reader_buf    |                                   |  curr_downloader_buf  |
+ * |                       |                                   |                       |
+ * |           +           |                                   |           +           |
+ * |          +++          |                                   |           +           |
+ * |         +++++         |                                   |           +           |
+ * |           +           |                                   |           +           |
+ * |           +           |                                   |         +++++         |
+ * |           +           |                                   |          +++          |
+ * |           +           |                                   |           +           |
+ * |                       |      | +-----------------+ |      |                       |
+ * | dequeue_filled_buffer  <<<<<<  filled_buffer_queue  <<<<<<  enqueue_filled_buffer |
+ * |                       |      | +-----------------+ |      |                       |
+ * | +-------------------+ |                                   | +-------------------+ |
  *
  * `downloader_thread` operates as follows:
  * - It acquires an empty buffer from the buffer pool using `acquire_empty_buffer` and saves it as
@@ -125,11 +125,11 @@ auto NetworkReader::init() -> ErrorCode {
 
 auto NetworkReader::deinit() -> void {
 #if defined(__APPLE__)
-    // Note: calling `curl_global_init` after `curl_global_cleanup` on macos will fail SSL connect
-    // error. Therefore, we will skip `deinit` on macos for now. Related issues:
+    // NOTE: On macOS, calling `curl_global_init` after `curl_global_cleanup` will fail with
+    // CURLE_SSL_CONNECT_ERROR. Thus, for now, we skip `deinit` on macOS. Related issues:
     // - https://github.com/curl/curl/issues/12525
     // - https://github.com/curl/curl/issues/13805
-    // TODO: add cleanup call back when the issue is fixed.
+    // TODO: Remove this conditional logic when the issues are resolved.
     return;
 #else
     curl_global_cleanup();
@@ -320,7 +320,7 @@ auto NetworkReader::read_from_filled_buffers(
         char* dst
 ) -> ErrorCode {
     num_bytes_read = 0;
-    std::optional<BufferView> dst_view{std::nullopt};
+    std::optional<BufferView> dst_view;
     if (nullptr != dst) {
         dst_view = BufferView{dst, num_bytes_to_read};
     }

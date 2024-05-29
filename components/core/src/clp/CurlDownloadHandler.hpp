@@ -71,7 +71,7 @@ public:
     // Methods
     /**
      * Starts downloading the data and only returns when the download completes or fails.
-     * @return Error code returned from the underlying curl handler.
+     * @return Same as clp::CurlEasyHandle::perform
      */
     [[nodiscard]] auto perform() -> CURLcode { return m_easy_handle.perform(); }
 

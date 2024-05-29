@@ -54,11 +54,11 @@ public:
      * The possible states of the reader.
      */
     enum class State : uint8_t {
-        // InProgress: The reader is downloading data from the source URL.
+        // The reader is downloading data from the source URL.
         InProgress = 0,
-        // Failed: The reader has failed to download data from the source URL.
+        // The reader has failed to download data from the source URL.
         Failed,
-        // Finished: The data at the given URL has been downloaded.
+        // The data at the given URL has been downloaded.
         Finished
     };
 
@@ -90,9 +90,9 @@ public:
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
-     * @param overall_timeout Maximum time (in seconds) that the download may take. Note that this
-     * includes `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
-     * @param connection_timeout Maximum time (in seconds) that the connection phase may take.
+     * @param overall_timeout Maximum time that the download may take. Note that this includes
+     * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param connection_timeout Maximum time that the connection phase may take.
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param buffer_pool_size The required number of buffers in the buffer pool.
      * @param buffer_size The size of each buffer in the buffer pool.
@@ -171,7 +171,7 @@ public:
 
     // Methods
     /**
-     * @return true if the download (curl transfer) has been killed, false otherwise.
+     * @return Whether the download (curl transfer) has been killed.
      */
     [[nodiscard]] auto is_download_aborted() const -> bool { return m_download_aborted.load(); }
 
@@ -186,7 +186,7 @@ public:
     }
 
     /**
-     * Buffers the downloaded data to the currently acquired or next available buffer from the
+     * Buffers the downloaded data in the currently acquired or next available buffer from the
      * buffer pool.
      * NOTE: This function should be called by the libcurl write callback only.
      * @param data
@@ -224,7 +224,7 @@ private:
         /**
          * Constructs a clp::thread for data downloading.
          * @param reader
-         * @param offset The offset of bytes to start downloading data.
+         * @param offset Index of the byte at which to start the download.
          * @param disable_caching Whether to disable caching.
          */
         DownloaderThread(NetworkReader& reader, size_t offset, bool disable_caching)
@@ -244,7 +244,7 @@ private:
     static bool m_initialized;
 
     /**
-     * Aborts the current on-going curl download session.
+     * Aborts the ongoing curl download session.
      */
     auto abort_data_download() -> void;
 
@@ -297,11 +297,11 @@ private:
 
     std::string m_src_url;
 
-    size_t m_offset;
-    size_t m_file_pos;
+    size_t m_offset{0};
+    size_t m_file_pos{0};
 
-    size_t m_buffer_pool_size;
-    size_t m_buffer_size;
+    size_t m_buffer_pool_size{cDefaultBufferPoolSize};
+    size_t m_buffer_size{cDefaultBufferSize};
     size_t m_curr_downloader_buf_idx{0};
 
     std::chrono::seconds m_overall_timeout;
@@ -310,8 +310,8 @@ private:
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     std::vector<std::unique_ptr<char[]>> m_buffer_pool;
     std::queue<BufferView> m_filled_buffer_queue;
-    std::optional<BufferView> m_curr_downloader_buf{std::nullopt};
-    std::optional<BufferView> m_curr_reader_buf{std::nullopt};
+    std::optional<BufferView> m_curr_downloader_buf;
+    std::optional<BufferView> m_curr_reader_buf;
 
     std::mutex m_buffer_resource_mutex;
     std::condition_variable m_cv_downloader;
