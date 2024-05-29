@@ -169,7 +169,7 @@ bool Archive::decompress_message(
         string& decompressed_msg
 ) {
     if (false == decompress_message_without_ts(compressed_msg, decompressed_msg)) {
-       return false;
+        return false;
     }
 
     // Determine which timestamp pattern to use
@@ -201,8 +201,8 @@ bool Archive::decompress_message(
 }
 
 bool Archive::decompress_message_without_ts(
-    Message const& compressed_msg,
-    string& decompressed_msg
+        Message const& compressed_msg,
+        string& decompressed_msg
 ) {
     decompressed_msg.clear();
 
@@ -210,16 +210,16 @@ bool Archive::decompress_message_without_ts(
     logtype_dictionary_id_t const logtype_id = compressed_msg.get_logtype_id();
     auto const& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
     if (!EncodedVariableInterpreter::decode_variables_into_message(
-        logtype_entry,
-        m_var_dictionary,
-        compressed_msg.get_vars(),
-        decompressed_msg
-    ))
+                logtype_entry,
+                m_var_dictionary,
+                compressed_msg.get_vars(),
+                decompressed_msg
+        ))
     {
         SPDLOG_ERROR(
-            "streaming_archive::reader::Archive: Failed to decompress variables from "
-            "logtype id {}",
-            compressed_msg.get_logtype_id()
+                "streaming_archive::reader::Archive: Failed to decompress variables from "
+                "logtype id {}",
+                compressed_msg.get_logtype_id()
         );
         return false;
     }

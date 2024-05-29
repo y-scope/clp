@@ -13,7 +13,6 @@ auto has_ir_stream_magic_number(std::string_view buf) -> bool {
 }
 
 auto get_approximated_ir_size(std::string_view log_message, size_t num_encoded_vars) -> size_t {
-
     size_t const tag_size = sizeof(char);
 
     // sizeof(log type) + sizeof (dict vars) + sizeof(encoded_vars) ~= The size of log message
@@ -38,6 +37,5 @@ auto get_approximated_ir_size(std::string_view log_message, size_t num_encoded_v
 
     return ir_size;
 }
-
 
 }  // namespace clp::ir

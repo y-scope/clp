@@ -2,6 +2,7 @@
 #define CLP_IR_UTILS_HPP
 
 #include <string_view>
+
 #include "LogEvent.hpp"
 
 namespace clp::ir {
