@@ -212,8 +212,8 @@ public:
     }
 
     /**
-     * @return curl return code if download has completed.
-     * @return std::nullopt if download is still in-progress.
+     * @return curl return code if the download has completed (successfully/unsuccessfully).
+     * @return std::nullopt if the download is still in-progress.
      */
     [[nodiscard]] auto get_curl_ret_code() const -> std::optional<CURLcode> {
         return m_curl_ret_code.load();
@@ -293,7 +293,8 @@ private:
      * @param curl_code
      */
     auto set_download_completion_status(CURLcode curl_code) -> void {
-        // Note: do not switch the ordering
+        // NOTE: The ordering of these statements is important so when callers see the download is
+        // complete, they can check the CURL return code afterward.
         m_curl_ret_code.store(curl_code);
         m_state.store((CURLE_OK == curl_code) ? State::Finished : State::Failed);
     }
