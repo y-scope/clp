@@ -102,7 +102,8 @@ public:
             size_t offset = 0,
             bool disable_caching = false,
             std::chrono::seconds overall_timeout = CurlDownloadHandler::cDefaultOverallTimeout,
-            std::chrono::seconds connection_timeout = CurlDownloadHandler::cDefaultConnectionTimeout,
+            std::chrono::seconds connection_timeout
+            = CurlDownloadHandler::cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize
     );
@@ -150,7 +151,9 @@ public:
         size_t num_bytes_read{};
         auto const num_bytes_to_read{pos - m_file_pos};
         auto const err{read_from_filled_buffers(num_bytes_to_read, num_bytes_read, nullptr)};
-        if (ErrorCode_EndOfFile == err || (ErrorCode_Success == err && num_bytes_read < num_bytes_to_read)) {
+        if (ErrorCode_EndOfFile == err
+            || (ErrorCode_Success == err && num_bytes_read < num_bytes_to_read))
+        {
             return ErrorCode_OutOfBounds;
         }
         if (m_file_pos != pos) {
