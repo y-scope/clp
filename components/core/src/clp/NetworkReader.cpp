@@ -324,10 +324,10 @@ auto NetworkReader::read_from_filled_buffers(
     if (nullptr != dst) {
         dst_view = BufferView{dst, num_bytes_to_read};
     }
-    while (0 != num_bytes_to_read) {
+    while (num_bytes_to_read > 0) {
         get_filled_buffer();
         if (false == m_curr_reader_buf.has_value()) {
-            return ErrorCode_EndOfFile;
+            return num_bytes_read > 0 ? ErrorCode_Success : ErrorCode_EndOfFile;
         }
         auto& curr_reader_buf{m_curr_reader_buf.value()};
 

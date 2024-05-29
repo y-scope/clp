@@ -96,7 +96,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
 
     // Read from an offset onwards by starting the download from that offset.
     {
-        clp::NetworkReader reader_using_offset(get_test_input_remote_url(), cOffset);
+        clp::NetworkReader reader_using_offset{get_test_input_remote_url(), cOffset};
         auto const streamed_data{get_content(reader_using_offset)};
         auto const ret_code_using_offset{reader_using_offset.get_curl_return_code()};
         REQUIRE(ret_code_using_offset.has_value());

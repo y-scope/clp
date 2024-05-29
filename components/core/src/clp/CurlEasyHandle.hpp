@@ -24,7 +24,7 @@ public:
                     __FILE__,
                     __LINE__,
                     CURLE_FAILED_INIT,
-                    "Failed to call `curl_easy_init`."
+                    "`curl_easy_init` failed."
             );
         }
         set_option(CURLOPT_FAILONERROR, cCurlOptionEnable);
