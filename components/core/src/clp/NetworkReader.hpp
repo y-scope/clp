@@ -299,8 +299,6 @@ private:
         m_state.store((CURLE_OK == curl_code) ? State::Finished : State::Failed);
     }
 
-    auto set_state_code(State code) -> void { m_state.store(code); }
-
     [[nodiscard]] auto get_state() const -> State { return m_state.load(); }
 
     /**
