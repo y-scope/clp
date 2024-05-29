@@ -18,7 +18,6 @@ import {searchJobCollectionsManager} from "./collections";
  * The interval, in milliseconds, at which the Meteor Mongo collection is polled.
  */
 const COLLECTION_POLL_INTERVAL_MILLIS = 250;
-const IDLE_INTERVAL_MILLIS = 10000;
 
 /**
  * Publishes search results metadata for a specific job.
@@ -47,6 +46,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({sea
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.searchJobId
+ * @param {boolean} props.isActivelyPolling
  * @return {Mongo.Cursor} cursor that provides access to the search results.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
@@ -68,9 +68,9 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
         disableOplog: true,
-        pollingIntervalMs: isActivelyPolling
-            ? COLLECTION_POLL_INTERVAL_MILLIS
-            : IDLE_INTERVAL_MILLIS,
+        pollingIntervalMs: (false === isActivelyPolling) ?
+            COLLECTION_POLL_INTERVAL_MILLIS :
+            Infinity,
     };
 
     return collection.find({}, findOptions);
@@ -91,9 +91,9 @@ Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
     const collection = searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     const findOptions = {
         disableOplog: true,
-        pollingIntervalMs: isActivelyPolling
-            ? COLLECTION_POLL_INTERVAL_MILLIS
-            : IDLE_INTERVAL_MILLIS,
+        pollingIntervalMs: (false === isActivelyPolling) ?
+            COLLECTION_POLL_INTERVAL_MILLIS :
+            Infinity,
     };
 
     return collection.find({}, findOptions);

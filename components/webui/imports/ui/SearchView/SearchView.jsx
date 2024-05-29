@@ -103,7 +103,7 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
             searchJobId: searchJobId,
-            isActivelyPolling: resultsMetadata.lastSignal === SEARCH_SIGNAL.REQ_QUERYING,
+            isActivelyPolling: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
         });
 
         // NOTE: Although we publish and subscribe using the name
@@ -141,10 +141,10 @@ const SearchView = () => {
 
         return resultsCollection.find({}, findOptions).fetch();
     }, [
-        searchJobId,
         fieldToSortBy,
-        visibleSearchResultsLimit,
         resultsMetadata.lastSignal,
+        searchJobId,
+        visibleSearchResultsLimit,
     ]);
 
     /**
@@ -157,7 +157,7 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.AggregationResultsCollectionName, {
             aggregationJobId: aggregationJobId,
-            isActivelyPolling: resultsMetadata.lastSignal === SEARCH_SIGNAL.REQ_QUERYING,
+            isActivelyPolling: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
         });
         const collection = dbRef.current.getOrCreateCollection(aggregationJobId);
 
