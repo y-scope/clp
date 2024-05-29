@@ -74,7 +74,7 @@ TEST_CASE("network_reader_basic", "[NetworkReader]") {
     REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
     clp::NetworkReader reader{get_test_input_remote_url()};
     auto const actual{get_content(reader)};
-    auto const ret_code{reader.get_curl_return_code()};
+    auto const ret_code{reader.get_curl_ret_code()};
     REQUIRE(ret_code.has_value());
     // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
     REQUIRE((CURLE_OK == ret_code.value()));
@@ -97,7 +97,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
     {
         clp::NetworkReader reader{get_test_input_remote_url(), cOffset};
         auto const actual{get_content(reader)};
-        auto const ret_code{reader.get_curl_return_code()};
+        auto const ret_code{reader.get_curl_ret_code()};
         REQUIRE(ret_code.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         REQUIRE((CURLE_OK == ret_code.value()));
@@ -110,7 +110,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
         clp::NetworkReader reader(get_test_input_remote_url());
         reader.seek_from_begin(cOffset);
         auto const actual{get_content(reader)};
-        auto const ret_code{reader.get_curl_return_code()};
+        auto const ret_code{reader.get_curl_ret_code()};
         REQUIRE(ret_code.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
         REQUIRE((CURLE_OK == ret_code.value()));
@@ -158,7 +158,7 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     constexpr size_t cIllegalOffset{UINT32_MAX};
     clp::NetworkReader reader{get_test_input_remote_url(), cIllegalOffset};
     while (true) {
-        auto const ret_code{reader.get_curl_return_code()};
+        auto const ret_code{reader.get_curl_ret_code()};
         if (ret_code.has_value()) {
             REQUIRE((CURLE_HTTP_RETURNED_ERROR == ret_code.value()));
             size_t pos{};

@@ -91,7 +91,7 @@ extern "C" auto curl_progress_callback(
         [[maybe_unused]] curl_off_t ultotal,
         [[maybe_unused]] curl_off_t ulnow
 ) -> int {
-    return static_cast<NetworkReader*>(reader_ptr)->is_download_aborted() ? 1 : 0;
+    return static_cast<NetworkReader*>(reader_ptr)->is_abort_download_requested() ? 1 : 0;
 }
 
 /**
@@ -178,7 +178,7 @@ NetworkReader::~NetworkReader() {
 auto NetworkReader::try_get_pos(size_t& pos) -> ErrorCode {
     if (0 != m_offset) {
         if (false == is_download_in_progress()) {
-            auto const curl_return_code{get_curl_return_code()};
+            auto const curl_return_code{get_curl_ret_code()};
             if (false == curl_return_code.has_value()) {
                 // This shouldn't be possible
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -239,14 +239,12 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
                 m_reader.m_connection_timeout,
                 m_reader.m_overall_timeout
         };
-        auto const retcode{curl_handler.perform()};
-        m_reader.m_atomic_curl_return_code.store(retcode);
+        auto const ret_code{curl_handler.perform()};
         // Enqueue the last filled buffer, if any
         m_reader.enqueue_filled_buffer();
-        m_reader.set_state_code((CURLE_OK == retcode) ? State::Finished : State::Failed);
+        m_reader.set_download_completion_status(ret_code);
     } catch (CurlOperationFailed const& ex) {
-        m_reader.m_atomic_curl_return_code.store(ex.get_curl_err());
-        m_reader.set_state_code(State::Failed);
+        m_reader.set_download_completion_status(ex.get_curl_err());
     }
 
     std::unique_lock<std::mutex> const buffer_resource_lock{m_reader.m_buffer_resource_mutex};
@@ -254,7 +252,7 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
 }
 
 auto NetworkReader::submit_abort_download_request() -> void {
-    m_download_aborted.store(true);
+    m_abort_download_requested.store(true);
 
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     m_downloader_cv.notify_all();
@@ -267,7 +265,7 @@ auto NetworkReader::acquire_empty_buffer() -> void {
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
     while (m_filled_buffer_queue.size() == m_buffer_pool_size) {
         m_downloader_cv.wait(buffer_resource_lock);
-        if (is_download_aborted()) {
+        if (is_abort_download_requested()) {
             return;
         }
     }

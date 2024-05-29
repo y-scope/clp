@@ -173,7 +173,9 @@ public:
     /**
      * @return Whether the caller requested that the download (curl transfer) be aborted.
      */
-    [[nodiscard]] auto is_download_aborted() const -> bool { return m_download_aborted.load(); }
+    [[nodiscard]] auto is_abort_download_requested() const -> bool {
+        return m_abort_download_requested.load();
+    }
 
     /**
      * @return Whether the downloader thread is running.
@@ -198,19 +200,23 @@ public:
      * @return Whether the downloader thread is still downloading data.
      */
     [[nodiscard]] auto is_download_in_progress() const -> bool {
-        return get_state_code() == State::InProgress;
+        return get_state() == State::InProgress;
     }
 
     /**
      * @returns Whether the download has timed out.
      */
     [[nodiscard]] auto is_download_timed_out() const -> bool {
-        auto const curl_return_code{get_curl_return_code()};
+        auto const curl_return_code{get_curl_ret_code()};
         return curl_return_code.has_value() && CURLE_OPERATION_TIMEDOUT == curl_return_code.value();
     }
 
-    [[nodiscard]] auto get_curl_return_code() const -> std::optional<CURLcode> {
-        return m_atomic_curl_return_code.load();
+    /**
+     * @return curl return code if download has completed.
+     * @return std::nullopt if download is still in-progress.
+     */
+    [[nodiscard]] auto get_curl_ret_code() const -> std::optional<CURLcode> {
+        return m_curl_ret_code.load();
     }
 
 private:
@@ -282,9 +288,19 @@ private:
             char* dst
     ) -> ErrorCode;
 
-    auto set_state_code(State code) -> void { m_state_code.store(code); }
+    /**
+     * Sets the download completion status with the return code from curl.
+     * @param curl_code
+     */
+    auto set_download_completion_status(CURLcode curl_code) -> void {
+        // Note: do not switch the ordering
+        m_curl_ret_code.store(curl_code);
+        m_state.store((CURLE_OK == curl_code) ? State::Finished : State::Failed);
+    }
 
-    [[nodiscard]] auto get_state_code() const -> State { return m_state_code.load(); }
+    auto set_state_code(State code) -> void { m_state.store(code); }
+
+    [[nodiscard]] auto get_state() const -> State { return m_state.load(); }
 
     /**
      * @return Whether at least one byte has been downloaded through the CURL write callback.
@@ -317,9 +333,11 @@ private:
 
     std::unique_ptr<DownloaderThread> m_downloader_thread{nullptr};
     std::atomic<bool> m_at_least_one_byte_downloaded{false};
-    std::atomic<bool> m_download_aborted{false};
-    std::atomic<State> m_state_code{State::InProgress};
-    std::atomic<std::optional<CURLcode>> m_atomic_curl_return_code;
+    std::atomic<bool> m_abort_download_requested{false};
+
+    // These two members should only be set from `set_download_completion_status`
+    std::atomic<State> m_state{State::InProgress};
+    std::atomic<std::optional<CURLcode>> m_curl_ret_code;
 };
 }  // namespace clp
 
