@@ -156,14 +156,13 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
 
     // Try to read from an out-of-bound offset.
     constexpr size_t cIllegalOffset{UINT32_MAX};
-    clp::NetworkReader reader_with_illegal_offset(get_test_input_remote_url(), cIllegalOffset);
+    clp::NetworkReader reader{get_test_input_remote_url(), cIllegalOffset};
     while (true) {
-        auto const retcode{reader_with_illegal_offset.get_curl_return_code()};
-        if (retcode.has_value()) {
-            auto const val{retcode.value()};
-            REQUIRE((CURLE_HTTP_RETURNED_ERROR == val));
+        auto const ret_code{reader.get_curl_return_code()};
+        if (ret_code.has_value()) {
+            REQUIRE((CURLE_HTTP_RETURNED_ERROR == ret_code.value()));
             size_t pos{};
-            REQUIRE((clp::ErrorCode_Failure == reader_with_illegal_offset.try_get_pos(pos)));
+            REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
             break;
         }
     }

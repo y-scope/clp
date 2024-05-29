@@ -137,7 +137,7 @@ public:
      * Tries to seek to the given position, relative to the beginning of the data.
      * @param pos
      * @return ErrorCode_Unsupported if the given position is lower than the current position.
-     * Since only streaming is supported, it cannot seek backwards.
+     * Since this class only supports streaming, it cannot seek backwards.
      * @return ErrorCode_OutOfBounds if the given pos is past the end of the data.
      * @return ErrorCode_Success on success.
      */
@@ -156,15 +156,13 @@ public:
         {
             return ErrorCode_OutOfBounds;
         }
-        if (m_file_pos != pos) {
-            return ErrorCode_Failure;
-        }
         return err;
     }
 
     /**
      * @param pos Returns the position of the read head in the buffer.
-     * @return ErrorCode_Failure if the initial offset is not 0 and http request returned an error.
+     * @return ErrorCode_Failure if the initial offset is not 0 and the HTTP request returned an
+     * error.
      * @return ErrorCode_NotReady if the initial offset is not 0 and no bytes have been downloaded
      * yet when this function is called.
      * @return ErrorCode_Success on success.
@@ -173,12 +171,12 @@ public:
 
     // Methods
     /**
-     * @return Whether the download (curl transfer) has been killed.
+     * @return Whether the caller requested that the download (curl transfer) be aborted.
      */
     [[nodiscard]] auto is_download_aborted() const -> bool { return m_download_aborted.load(); }
 
     /**
-     * @return true the downloader thread is running, false otherwise.
+     * @return Whether the downloader thread is running.
      */
     [[nodiscard]] auto is_downloader_thread_running() const -> bool {
         if (nullptr == m_downloader_thread) {
@@ -197,8 +195,7 @@ public:
     [[nodiscard]] auto buffer_downloaded_data(BufferView data) -> size_t;
 
     /**
-     * @return true if the CURL data downloading is still in progress.
-     * @return false if there will be no more data downloaded.
+     * @return Whether the downloader thread is still downloading data.
      */
     [[nodiscard]] auto is_download_in_progress() const -> bool {
         return get_state_code() == State::InProgress;
@@ -251,7 +248,7 @@ private:
     auto submit_abort_download_request() -> void;
 
     /**
-     * Acquires an empty buffer to write downloaded data.
+     * Acquires an empty buffer (if curr_downloader_buf is unset) to write downloaded data.
      */
     auto acquire_empty_buffer() -> void;
 
@@ -261,12 +258,12 @@ private:
     auto release_empty_buffer() -> void;
 
     /**
-     * Enqueues the current downloader buffer into the filled buffer queue.
+     * Enqueues the current downloader buffer (if set) into the filled buffer queue.
      */
     auto enqueue_filled_buffer() -> void;
 
     /**
-     * Gets a filled buffer from the filled buffer queue.
+     * Gets a filled buffer (if curr_downloader_buf is unset) from the filled buffer queue.
      */
     auto get_filled_buffer() -> void;
 
@@ -274,8 +271,8 @@ private:
      * Reads data from the filled buffers with a given amount of bytes.
      * @param num_bytes_to_read
      * @param num_bytes_read Returns the number of bytes read.
-     * @param dst The pointer to the destination buffer. If the buffer is not nullptr, copy the data
-     * to the destination.
+     * @param dst A pointer to a destination buffer. If the pointer is not null, data will be
+     * copied to the destination.
      * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data.
      * @return ErrorCode_Success on success.
      */
@@ -290,8 +287,7 @@ private:
     [[nodiscard]] auto get_state_code() const -> State { return m_state_code.load(); }
 
     /**
-     * @return true if at least one byte has been downloaded through CURL write callback.
-     * @return false otherwise.
+     * @return Whether at least one byte has been downloaded through the CURL write callback.
      */
     [[nodiscard]] auto at_least_one_byte_downloaded() const -> bool {
         return m_at_least_one_byte_downloaded.load();

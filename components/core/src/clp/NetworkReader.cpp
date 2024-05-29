@@ -141,16 +141,16 @@ NetworkReader::NetworkReader(
         std::string_view src_url,
         size_t offset,
         bool disable_caching,
-        std::chrono::seconds overall_timeout_int_sec,
-        std::chrono::seconds connection_timeout_in_sec,
+        std::chrono::seconds overall_timeout,
+        std::chrono::seconds connection_timeout,
         size_t buffer_pool_size,
         size_t buffer_size
 )
         : m_src_url{src_url},
           m_offset{offset},
           m_file_pos{offset},
-          m_overall_timeout{overall_timeout_int_sec},
-          m_connection_timeout{connection_timeout_in_sec},
+          m_overall_timeout{overall_timeout},
+          m_connection_timeout{connection_timeout},
           m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
           m_buffer_size{std::max(cMinBufferSize, buffer_size)} {
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
@@ -177,14 +177,15 @@ NetworkReader::~NetworkReader() {
 
 auto NetworkReader::try_get_pos(size_t& pos) -> ErrorCode {
     if (0 != m_offset) {
-        if (State::InProgress != get_state_code()) {
+        if (false == is_download_in_progress()) {
             auto const curl_return_code{get_curl_return_code()};
             if (false == curl_return_code.has_value()) {
-                return ErrorCode_Failure;
+                // This shouldn't be possible
+                throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             }
             if (CURLE_HTTP_RETURNED_ERROR == curl_return_code.value()) {
-                // Download has failed due to http error. This can be caused by an out-of-bound
-                // offset specified in the http header.
+                // Download has failed due to an HTTP error. This can be caused by an out-of-bound
+                // offset specified in the HTTP header.
                 return ErrorCode_Failure;
             }
         }
