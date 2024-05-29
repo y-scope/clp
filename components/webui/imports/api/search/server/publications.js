@@ -68,7 +68,9 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
         disableOplog: true,
-        pollingIntervalMs: isActivelyPolling? COLLECTION_POLL_INTERVAL_MILLIS:IDLE_INTERVAL_MILLIS,
+        pollingIntervalMs: isActivelyPolling
+            ? COLLECTION_POLL_INTERVAL_MILLIS
+            : IDLE_INTERVAL_MILLIS,
     };
 
     return collection.find({}, findOptions);
@@ -89,7 +91,9 @@ Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
     const collection = searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     const findOptions = {
         disableOplog: true,
-        pollingIntervalMs: isActivelyPolling? COLLECTION_POLL_INTERVAL_MILLIS:IDLE_INTERVAL_MILLIS,
+        pollingIntervalMs: isActivelyPolling
+            ? COLLECTION_POLL_INTERVAL_MILLIS
+            : IDLE_INTERVAL_MILLIS,
     };
 
     return collection.find({}, findOptions);
