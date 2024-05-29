@@ -14,6 +14,7 @@
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
 #include "FileDecompressor.hpp"
+#include "utils.hpp"
 
 using std::cerr;
 using std::make_unique;
@@ -41,27 +42,7 @@ bool decompress(
     try {
         auto archives_dir = boost::filesystem::path(command_line_args.get_archives_dir());
         auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-        std::unique_ptr<GlobalMetadataDB> global_metadata_db;
-        switch (global_metadata_db_config.get_metadata_db_type()) {
-            case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-                auto global_metadata_db_path
-                        = archives_dir / streaming_archive::cMetadataDBFileName;
-                global_metadata_db
-                        = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
-                        );
-                break;
-            }
-            case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-                global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(
-                        global_metadata_db_config.get_metadata_db_host(),
-                        global_metadata_db_config.get_metadata_db_port(),
-                        global_metadata_db_config.get_metadata_db_username(),
-                        global_metadata_db_config.get_metadata_db_password(),
-                        global_metadata_db_config.get_metadata_db_name(),
-                        global_metadata_db_config.get_metadata_table_prefix()
-                );
-                break;
-        }
+        auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
 
         streaming_archive::reader::Archive archive_reader;
 

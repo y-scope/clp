@@ -200,4 +200,31 @@ bool validate_paths_exist(vector<string> const& paths) {
 
     return all_paths_exist;
 }
+
+std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
+        GlobalMetadataDBConfig const& global_metadata_db_config,
+        boost::filesystem::path const& archives_dir
+) {
+    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
+    switch (global_metadata_db_config.get_metadata_db_type()) {
+        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
+            auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
+            global_metadata_db
+                    = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
+            break;
+        }
+        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(
+                    global_metadata_db_config.get_metadata_db_host(),
+                    global_metadata_db_config.get_metadata_db_port(),
+                    global_metadata_db_config.get_metadata_db_username(),
+                    global_metadata_db_config.get_metadata_db_password(),
+                    global_metadata_db_config.get_metadata_db_name(),
+                    global_metadata_db_config.get_metadata_table_prefix()
+            );
+            break;
+    }
+
+    return global_metadata_db;
+}
 }  // namespace clp::clp

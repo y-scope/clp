@@ -5,6 +5,9 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include "../GlobalMetadataDBConfig.hpp"
+#include "../GlobalMySQLMetadataDB.hpp"
+#include "../GlobalSQLiteMetadataDB.hpp"
 #include "FileToCompress.hpp"
 
 namespace clp::clp {
@@ -61,6 +64,18 @@ bool remove_prefix_and_clean_up_path(
  * @return true if they all exist, false otherwise
  */
 bool validate_paths_exist(std::vector<std::string> const& paths);
+
+/**
+ * Loads the global metadata database
+ * @param global_metadata_db_config
+ * @archives_dir
+ * @return a unique pointer to the GlobalMetadataDB instance
+ */
+std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
+        GlobalMetadataDBConfig const& global_metadata_db_config,
+        boost::filesystem::path const& archives_dir
+);
+
 }  // namespace clp::clp
 
 #endif  // CLP_CLP_UTILS_HPP

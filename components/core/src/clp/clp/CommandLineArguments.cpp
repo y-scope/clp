@@ -163,6 +163,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         switch (command_input) {
             case (char)Command::Compress:
             case (char)Command::Extract:
+            case (char)Command::Ir:
                 m_command = (Command)command_input;
                 break;
             default:
@@ -223,6 +224,87 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (m_archives_dir.empty()) {
                 throw invalid_argument("ARCHIVES_DIR cannot be empty.");
             }
+        } else if (Command::Ir == m_command) {
+            // Define if hidden positional options
+            po::options_description ir_positional_options;
+            // clang-format off
+            ir_positional_options.add_options()
+                    ("archives-dir", po::value<string>(&m_archives_dir))
+                    ("output-dir", po::value<string>(&m_output_dir))
+                    ("file-id", po::value<string>(&m_file_id));
+            // clang-format on
+            po::positional_options_description ir_positional_options_description;
+            ir_positional_options_description.add("archives-dir", 1);
+            ir_positional_options_description.add("output-dir", 1);
+            ir_positional_options_description.add("file-id", 1);
+
+            po::options_description options_ir("IR decompression Options");
+            options_ir.add_options()(
+                    "msg-ix",
+                    po::value<size_t>(&m_ir_msg_ix)->value_name("MSG_IX")->default_value(0),
+                    "Target log event index that decompressed IR must include"
+            );
+            options_ir.add_options()(
+                    "target-size",
+                    po::value<size_t>(&m_ir_target_size)
+                            ->value_name("TARGET_SIZE")
+                            ->default_value(128 * 1024 * 1024),
+                    "Target size (B) for the IR chunk before a new chunk is created"
+            );
+            options_ir.add_options()(
+                    "temp-output-dir",
+                    po::value<string>(&m_ir_temp_output_dir)
+                            ->value_name("TEMP_OUTPUT_DIR")
+                            ->default_value(m_ir_temp_output_dir),
+                    "Temporary output directory for IR chunks"
+            );
+            po::options_description all_ir_options;
+            all_ir_options.add(ir_positional_options);
+            all_ir_options.add(options_ir);
+
+            // Parse extraction options
+            vector<string> unrecognized_options
+                    = po::collect_unrecognized(parsed.options, po::include_positional);
+            unrecognized_options.erase(unrecognized_options.begin());
+            po::store(
+                    po::command_line_parser(unrecognized_options)
+                            .options(all_ir_options)
+                            .positional(ir_positional_options_description)
+                            .run(),
+                    parsed_command_line_options
+            );
+
+            notify(parsed_command_line_options);
+
+            // Handle --help
+            if (parsed_command_line_options.count("help")) {
+                print_ir_basic_usage();
+
+                cerr << "Examples:" << endl;
+                cerr << "  # Decompress file with id FILE_ID to IR " << endl;
+                cerr << "  " << get_program_name() << " i archives-dir output-dir FILE_ID>" << endl;
+                cerr << endl;
+
+                po::options_description visible_options;
+                visible_options.add(options_general);
+                cerr << visible_options << endl;
+                return ParsingResult::InfoCommand;
+            }
+
+            // Validate archive path is not empty
+            if (m_archives_dir.empty()) {
+                throw invalid_argument("ARCHIVES_DIR cannot be empty.");
+            }
+
+            // Validate file id is not empty
+            if (m_file_id.empty()) {
+                throw invalid_argument("FILE_ID cannot be empty.");
+            }
+
+            if (m_ir_temp_output_dir.empty()) {
+                m_ir_temp_output_dir = m_output_dir;
+            }
+
         } else if (Command::Compress == m_command) {
             // Define compression hidden positional options
             po::options_description compression_positional_options;
@@ -401,6 +483,11 @@ void CommandLineArguments::print_compression_basic_usage() const {
 
 void CommandLineArguments::print_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " [OPTIONS] x ARCHIVES_DIR OUTPUT_DIR [FILE ...]"
+         << endl;
+}
+
+void CommandLineArguments::print_ir_basic_usage() const {
+    cerr << "Usage: " << get_program_name() << " [OPTIONS] i ARCHIVES_DIR OUTPUT_DIR FILE_ID]"
          << endl;
 }
 }  // namespace clp::clp
