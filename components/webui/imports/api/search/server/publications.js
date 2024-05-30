@@ -69,6 +69,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
             /* eslint-enable @stylistic/js/array-element-newline */
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
+
         // disable oplog should be always true since
         // enable w/o a sort specifier is not supported
         disableOplog: true,
