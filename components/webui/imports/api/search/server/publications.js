@@ -18,6 +18,7 @@ import {searchJobCollectionsManager} from "./collections";
  * The interval, in milliseconds, at which the Meteor Mongo collection is polled.
  */
 const COLLECTION_POLL_INTERVAL_MILLIS = 250;
+const JS_MAX_DELAY_VALUE = 2147483647;
 
 /**
  * Publishes search results metadata for a specific job.
@@ -47,7 +48,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({sea
  * @param {object} props
  * @param {string} props.searchJobId
  * @param {boolean} props.isExpectingUpdates pass true to
- * observe result changes with polling rather than op-log.
+ * enable polling rather than idling on the Mongo collection.
  * @return {Mongo.Cursor} cursor that provides access to the search results.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
@@ -71,9 +72,9 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
         // disable oplog should be always true since
         // enable w/o a sort specifier is not supported
         disableOplog: true,
-        pollingIntervalMs: (false === isExpectingUpdates) ?
+        pollingIntervalMs: (true === isExpectingUpdates) ?
             COLLECTION_POLL_INTERVAL_MILLIS :
-            Infinity,
+            JS_MAX_DELAY_VALUE,
     };
 
     return collection.find({}, findOptions);
@@ -86,7 +87,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
  * @param {object} props
  * @param {string} props.aggregationJobId
  * @param {boolean} props.isExpectingUpdates pass true to
- * observe result changes with polling rather than op-log.
+ * enable polling rather than idling on the Mongo collection.
  * @return {Mongo.Cursor} cursor that provides access to the aggregation results.
  */
 Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
@@ -98,9 +99,9 @@ Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
         // disable oplog should be always true since
         // enable w/o a sort specifier is not supported
         disableOplog: true,
-        pollingIntervalMs: (false === isExpectingUpdates) ?
+        pollingIntervalMs: (true === isExpectingUpdates) ?
             COLLECTION_POLL_INTERVAL_MILLIS :
-            Infinity,
+            JS_MAX_DELAY_VALUE,
     };
 
     return collection.find({}, findOptions);
