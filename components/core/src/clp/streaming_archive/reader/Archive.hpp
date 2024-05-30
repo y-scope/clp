@@ -101,10 +101,26 @@ public:
 
     void decompress_empty_directories(std::string const& output_dir);
 
-    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator() {
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_split_id(
+            std::string const& file_split_id
+    ) {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,
                 cEpochTimeMax,
+                "",
+                file_split_id,
+                false,
+                cInvalidSegmentId,
+                false
+        );
+    }
+
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_path(std::string const& file_path
+    ) {
+        return m_metadata_db.get_file_iterator(
+                cEpochTimeMin,
+                cEpochTimeMax,
+                file_path,
                 "",
                 false,
                 cInvalidSegmentId,
@@ -112,11 +128,12 @@ public:
         );
     }
 
-    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator(std::string const& file_path) {
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator() {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,
                 cEpochTimeMax,
-                file_path,
+                "",
+                "",
                 false,
                 cInvalidSegmentId,
                 false
@@ -133,6 +150,7 @@ public:
                 begin_ts,
                 end_ts,
                 file_path,
+                "",
                 false,
                 cInvalidSegmentId,
                 order_by_segment_end_ts
@@ -150,6 +168,7 @@ public:
                 begin_ts,
                 end_ts,
                 file_path,
+                "",
                 true,
                 segment_id,
                 order_by_segment_end_ts

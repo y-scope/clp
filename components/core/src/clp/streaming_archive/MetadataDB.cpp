@@ -135,7 +135,8 @@ static SQLitePreparedStatement get_files_select_statement(
         SQLiteDB& db,
         epochtime_t ts_begin,
         epochtime_t ts_end,
-        std::string const& file_path,
+        string const& file_path,
+        string const& file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts
@@ -221,6 +222,16 @@ static SQLitePreparedStatement get_files_select_statement(
         );
         clause_exists = true;
     }
+    if (false == file_split_id.empty()) {
+        fmt::format_to(
+                statement_buffer_ix,
+                " {} {} = ?{}",
+                clause_exists ? "AND" : "WHERE",
+                streaming_archive::cMetadataDB::File::Id,
+                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1
+        );
+        clause_exists = true;
+    }
     if (in_specific_segment) {
         fmt::format_to(
                 statement_buffer_ix,
@@ -270,6 +281,13 @@ static SQLitePreparedStatement get_files_select_statement(
                 true
         );
     }
+    if (false == file_split_id.empty()) {
+        statement.bind_text(
+                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
+                file_split_id,
+                true
+        );
+    }
     if (in_specific_segment) {
         statement.bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::SegmentId) + 1,
@@ -300,7 +318,8 @@ MetadataDB::FileIterator::FileIterator(
         SQLiteDB& db,
         epochtime_t begin_timestamp,
         epochtime_t end_timestamp,
-        std::string const& file_path,
+        string const& file_path,
+        string const& file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts
@@ -310,6 +329,7 @@ MetadataDB::FileIterator::FileIterator(
                   begin_timestamp,
                   end_timestamp,
                   file_path,
+                  file_split_id,
                   in_specific_segment,
                   segment_id,
                   order_by_segment_end_ts

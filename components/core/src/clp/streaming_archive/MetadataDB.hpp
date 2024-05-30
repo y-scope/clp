@@ -75,6 +75,7 @@ public:
                 epochtime_t begin_timestamp,
                 epochtime_t end_timestamp,
                 std::string const& file_path,
+                std::string const& file_id,
                 bool in_specific_segment,
                 segment_id_t segment_id,
                 bool order_by_segment_end_ts
@@ -137,6 +138,7 @@ public:
             epochtime_t begin_ts,
             epochtime_t end_ts,
             std::string const& file_path,
+            std::string const& file_split_id,
             bool in_specific_segment,
             segment_id_t segment_id,
             bool order_by_segment_end_ts
@@ -146,6 +148,7 @@ public:
                 begin_ts,
                 end_ts,
                 file_path,
+                file_split_id,
                 in_specific_segment,
                 segment_id,
                 order_by_segment_end_ts

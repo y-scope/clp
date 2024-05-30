@@ -94,6 +94,13 @@ public:
         return new ArchiveIterator(m_db, path);
     }
 
+    bool get_file_split(
+            std::string const& orig_file_id,
+            size_t message_ix,
+            std::string& archive_id,
+            std::string& file_split_id
+    ) override;
+
 private:
     // Variables
     std::string m_path;

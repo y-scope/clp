@@ -176,6 +176,41 @@ get_archives_for_file_select_statement(SQLiteDB& db, string const& file_path) {
 
     return statement;
 }
+
+SQLitePreparedStatement
+get_file_split_statement(SQLiteDB& db, string const& orig_file_id, size_t message_ix) {
+    auto statement_string = fmt::format(
+            "SELECT DISTINCT {}.{}, {}.{} FROM {} JOIN {} ON {}.{} = {}.{} "
+            "WHERE {}.{} = ?1 AND ?2 >= {}.{} AND ?2 < ({}.{} + {}.{}) "
+            "ORDER BY {} ASC, {} ASC",
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::Archive::Id,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::Id,
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::Archive::Id,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::ArchiveId,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::OrigFileId,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::BeginMessageIx,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::NumMessages,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::BeginMessageIx,
+            streaming_archive::cMetadataDB::Archive::CreatorId,
+            streaming_archive::cMetadataDB::Archive::CreationIx
+    );
+    SPDLOG_DEBUG("{}", statement_string);
+    auto statement = db.prepare_statement(statement_string.c_str(), statement_string.length());
+    statement.bind_text(1, orig_file_id, true);
+    statement.bind_int64(2, static_cast<int64_t>(message_ix));
+
+    return statement;
+}
 }  // namespace
 
 GlobalSQLiteMetadataDB::ArchiveIterator::ArchiveIterator(SQLiteDB& db)
@@ -544,4 +579,23 @@ void GlobalSQLiteMetadataDB::update_metadata_for_files(
     m_upsert_files_transaction_begin_statement->reset();
     m_upsert_files_transaction_end_statement->reset();
 }
+
+bool GlobalSQLiteMetadataDB::get_file_split(
+        string const& orig_file_id,
+        size_t msg_ix,
+        string& archive_id,
+        string& file_split_id
+) {
+    auto statement = get_file_split_statement(m_db, orig_file_id, msg_ix);
+    statement.step();
+    if (false == statement.is_row_ready()) {
+        return false;
+    }
+
+    statement.column_string(0, archive_id);
+    statement.column_string(1, file_split_id);
+
+    return true;
+}
+
 }  // namespace clp
