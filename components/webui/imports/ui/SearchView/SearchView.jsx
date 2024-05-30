@@ -103,7 +103,7 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
             searchJobId: searchJobId,
-            isActivelyPolling: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
+            isExpectingUpdates: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
         });
 
         // NOTE: Although we publish and subscribe using the name
@@ -157,7 +157,7 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.AggregationResultsCollectionName, {
             aggregationJobId: aggregationJobId,
-            isActivelyPolling: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
+            isExpectingUpdates: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
         });
         const collection = dbRef.current.getOrCreateCollection(aggregationJobId);
 

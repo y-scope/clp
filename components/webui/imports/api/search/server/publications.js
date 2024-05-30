@@ -46,12 +46,13 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({sea
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.searchJobId
- * @param {boolean} props.isActivelyPolling only true when lastSignal = SEARCH_SIGNAL.REQ_QUERYING
+ * @param {boolean} props.isExpectingUpdates pass true to
+ * observe result changes with polling rather than op-log.
  * @return {Mongo.Cursor} cursor that provides access to the search results.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
     searchJobId,
-    isActivelyPolling,
+    isExpectingUpdates,
 }) => {
     logger.debug(
         `Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`,
@@ -67,8 +68,10 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
             /* eslint-enable @stylistic/js/array-element-newline */
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
+        // disable oplog should be always true since
+        // enable w/o a sort specifier is not supported
         disableOplog: true,
-        pollingIntervalMs: (false === isActivelyPolling) ?
+        pollingIntervalMs: (false === isExpectingUpdates) ?
             COLLECTION_POLL_INTERVAL_MILLIS :
             Infinity,
     };
@@ -82,16 +85,20 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.aggregationJobId
+ * @param {boolean} props.isExpectingUpdates pass true to
+ * observe result changes with polling rather than op-log.
  * @return {Mongo.Cursor} cursor that provides access to the aggregation results.
  */
 Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
     aggregationJobId,
-    isActivelyPolling,
+    isExpectingUpdates,
 }) => {
     const collection = searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     const findOptions = {
+        // disable oplog should be always true since
+        // enable w/o a sort specifier is not supported
         disableOplog: true,
-        pollingIntervalMs: (false === isActivelyPolling) ?
+        pollingIntervalMs: (false === isExpectingUpdates) ?
             COLLECTION_POLL_INTERVAL_MILLIS :
             Infinity,
     };
