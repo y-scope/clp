@@ -20,19 +20,16 @@ auto LogEventSerializer<encoded_variable_t>::create(
         -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
                 std::unique_ptr<LogEventSerializer<encoded_variable_t>>> {
     static_assert(std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
+
     auto serializer_instance = std::unique_ptr<LogEventSerializer<encoded_variable_t>>(
             new LogEventSerializer<encoded_variable_t>{writer, reference_timestamp}
     );
-
-    // use dummy values for now.
-    string const timestamp_pattern{"%Y-%m-%d %H:%M:%S,%3"};
-    string const timestamp_pattern_syntax{""};
-    string const time_zone_id{""};
+    // For now, use preset values
     if (false
         == serializer_instance->serialize_preamble(
-                timestamp_pattern,
-                timestamp_pattern_syntax,
-                time_zone_id,
+                TIMESTAMP_PATTERN,
+                TIMESTAMP_PATTERN_SYNTAX,
+                TIME_ZONE_ID,
                 reference_timestamp
         ))
     {
@@ -47,17 +44,14 @@ auto LogEventSerializer<encoded_variable_t>::create(WriterInterface& writer)
         -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
                 std::unique_ptr<LogEventSerializer<encoded_variable_t>>> {
     static_assert(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>);
+
     auto serializer_instance = std::unique_ptr<LogEventSerializer<encoded_variable_t>>(
             new LogEventSerializer<encoded_variable_t>{writer}
     );
-
-    string const timestamp_pattern{"%Y-%m-%d %H:%M:%S,%3"};
-    string const timestamp_pattern_syntax{""};
-    string const time_zone_id{""};
-
+    // For now, use preset values
     if (false
         == serializer_instance
-                   ->serialize_preamble(timestamp_pattern, timestamp_pattern_syntax, time_zone_id))
+                   ->serialize_preamble(TIMESTAMP_PATTERN, TIMESTAMP_PATTERN_SYNTAX, TIME_ZONE_ID))
     {
         return std::errc::protocol_error;
     }
@@ -133,7 +127,7 @@ auto LogEventSerializer<encoded_variable_t>::close() -> void {
 template <typename encoded_variable_t>
 auto LogEventSerializer<encoded_variable_t>::flush() -> void {
     m_writer.write(reinterpret_cast<char const*>(m_ir_buffer.data()), m_ir_buffer.size());
-    serialized_size += m_ir_buffer.size();
+    m_serialized_size += m_ir_buffer.size();
     m_ir_buffer.clear();
 }
 

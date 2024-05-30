@@ -28,26 +28,23 @@ class LogEventSerializer {
 public:
     // Factory functions
     /**
-     * Creates a log event Serializer for the given stream
-     * @param reader A write for the IR stream
+     * Creates a log event Serializer for four bytes encoded IR and serializes the preamble into the
+     * internal buffer.
+     * @param writer The writer for the IR stream
+     * @param reference_timestamp
      * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
-     *   or uses an unsupported version
+     * - std::errc::protocol_error if there is a failure when serializing the preamble
      */
     static auto create(WriterInterface& writer, epoch_time_ms_t reference_timestamp)
             -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
                     std::unique_ptr<LogEventSerializer<encoded_variable_t>>>;
 
     /**
-     * Creates a log event Serializer for the given stream
-     * @param reader A reader for the IR stream
+     * Creates a log event Serializer for eight bytes encoded IR and serializes the preamble into
+     * the internal buffer.
+     * @param writer The writer for the IR stream
      * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
-     *   or uses an unsupported version
+     * - std::errc::protocol_error if there is a failure when serializing the preamble
      */
     static auto create(WriterInterface& writer)
             -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
@@ -64,14 +61,14 @@ public:
     ~LogEventSerializer() = default;
 
     [[nodiscard]] auto get_serialized_size() const -> size_t {
-        return m_ir_buffer.size() + serialized_size;
+        return m_ir_buffer.size() + m_serialized_size;
     }
 
     [[nodiscard]] auto get_log_event_ix() const -> size_t { return m_log_event_ix; }
 
     /**
      * Serializes the preamble into the internal buffer
-     * @return True if the preamble is serialized successfully, otherwise false
+     * @return True if the preamble is serialized successfully. Otherwise false
      */
     [[nodiscard]] auto serialize_preamble(
             string_view timestamp_pattern,
@@ -88,17 +85,17 @@ public:
 
     /**
      * Serializes a log event into the internal buffer
-     * @return True if the log event is serialized successfully, otherwise false
+     * @return True if the log event is serialized successfully, Otherwise false
      */
     [[nodiscard]] auto serialize_log_event(string_view message, epoch_time_ms_t timestamp) -> bool;
 
     /**
-     * Flushes the serialized data from in the internal buffer
+     * Flushes the serialized data in the internal buffer
      */
     auto flush() -> void;
 
     /**
-     * Flushes the serialized data and write the EoF tag to the IR
+     * Flushes the serialized data and writes the EoF tag to the IR
      */
     auto close() -> void;
 
@@ -110,11 +107,16 @@ private:
             : m_writer{writer},
               m_prev_msg_timestamp{ref_timestamp},
               m_log_event_ix{0},
-              serialized_size{0} {}
+              m_serialized_size{0} {}
+
+    // Constant
+    static constexpr std::string_view TIMESTAMP_PATTERN = "%Y-%m-%d %H:%M:%S,%3";
+    static constexpr std::string_view TIMESTAMP_PATTERN_SYNTAX = "";
+    static constexpr std::string_view TIME_ZONE_ID = "";
 
     // Variables
     size_t m_log_event_ix;
-    size_t serialized_size;
+    size_t m_serialized_size;
     [[no_unique_address]] std::conditional_t<
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,
