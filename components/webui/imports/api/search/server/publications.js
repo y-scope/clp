@@ -18,6 +18,11 @@ import {searchJobCollectionsManager} from "./collections";
  * The interval, in milliseconds, at which the Meteor Mongo collection is polled.
  */
 const COLLECTION_POLL_INTERVAL_MILLIS = 250;
+
+/**
+ * The maximum value that can be used as a polling interval in JavaScript.
+ * Reference: https://developer.mozilla.org/en-US/docs/Web/API/setTimeout#maximum_delay_value
+ */
 const JS_MAX_DELAY_VALUE = 2147483647;
 
 /**
