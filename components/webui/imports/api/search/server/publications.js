@@ -89,8 +89,8 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.aggregationJobId
- * @param {boolean} props.isExpectingUpdates pass true to
- * enable polling rather than idling on the Mongo collection.
+ * @param {boolean} props.isExpectingUpdates  Whether the subscriber expects that the collection will
+ * be updated.
  * @return {Mongo.Cursor} cursor that provides access to the aggregation results.
  */
 Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
