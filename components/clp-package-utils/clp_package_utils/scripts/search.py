@@ -100,6 +100,7 @@ def main(argv):
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-u", f"{os.getuid()}:{os.getgid()}",
         "--name", container_name,
+        "--log-driver", "local",
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on

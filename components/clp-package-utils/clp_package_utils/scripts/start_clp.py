@@ -140,6 +140,7 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
         "docker", "run",
         "-d",
         "--name", container_name,
+        "--log-driver", "local",
         "-e", f"MYSQL_ROOT_PASSWORD={clp_config.database.password}",
         "-e", f"MYSQL_USER={clp_config.database.username}",
         "-e", f"MYSQL_PASSWORD={clp_config.database.password}",
@@ -200,6 +201,7 @@ def create_db_tables(
         "--network", "host",
         "--rm",
         "--name", container_name,
+        "--log-driver", "local",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-u", f"{os.getuid()}:{os.getgid()}",
         "--mount", str(mounts.clp_home),
@@ -271,6 +273,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         "docker", "run",
         "-d",
         "--name", container_name,
+        "--log-driver", "local",
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
         "-e", f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
         "-e", f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
@@ -332,6 +335,7 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
         "docker", "run",
         "-d",
         "--name", container_name,
+        "--log-driver", "local",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
@@ -377,6 +381,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         "docker", "run",
         "-d",
         "--name", container_name,
+        "--log-driver", "local",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
@@ -459,6 +464,7 @@ def generic_start_scheduler(
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
+        "--log-driver", "local",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
             f"BROKER_URL=amqp://"
@@ -581,6 +587,7 @@ def generic_start_worker(
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
+        "--log-driver", "local",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
             f"BROKER_URL=amqp://"
@@ -704,6 +711,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         "-d",
         "--network", "host",
         "--name", container_name,
+        "--log-driver", "local",
         "-e", f"NODE_PATH={node_path}",
         "-e", f"MONGO_URL={clp_config.results_cache.get_uri()}",
         "-e", f"PORT={clp_config.webui.port}",
@@ -770,6 +778,7 @@ def start_reducer(
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
+        "--log-driver", "local",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
