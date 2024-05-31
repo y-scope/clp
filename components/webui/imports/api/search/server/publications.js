@@ -75,7 +75,7 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
         disableOplog: true,
-        pollingIntervalMs: (true === isExpectingUpdates) ?
+        pollingIntervalMs: isExpectingUpdates ?
             COLLECTION_POLL_INTERVAL_MILLIS :
             JS_MAX_DELAY_VALUE,
     };
