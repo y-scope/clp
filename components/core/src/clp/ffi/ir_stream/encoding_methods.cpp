@@ -4,6 +4,7 @@
 
 #include "../../ir/parsing.hpp"
 #include "../../ir/types.hpp"
+#include "../../time_types.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 
@@ -158,11 +159,6 @@ static void add_base_metadata_fields(
     metadata[cProtocol::Metadata::TimeZoneIdKey] = time_zone_id;
 }
 
-void serialize_utc_offset_change(UtcOffset utc_offset, std::vector<int8_t>& ir_buf) {
-    ir_buf.emplace_back(cProtocol::Payload::UtcOffsetChange);
-    serialize_int(static_cast<int64_t>(utc_offset.count()), ir_buf);
-}
-
 namespace eight_byte_encoding {
 bool serialize_preamble(
         string_view timestamp_pattern,
@@ -311,4 +307,9 @@ bool serialize_timestamp(epoch_time_ms_t timestamp_delta, std::vector<int8_t>& i
     return true;
 }
 }  // namespace four_byte_encoding
+
+void serialize_utc_offset_change(UtcOffset utc_offset, std::vector<int8_t>& ir_buf) {
+    ir_buf.emplace_back(cProtocol::Payload::UtcOffsetChange);
+    serialize_int(static_cast<int64_t>(utc_offset.count()), ir_buf);
+}
 }  // namespace clp::ffi::ir_stream

@@ -77,6 +77,7 @@ deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_
  * Deserializes the next log event from the given reader
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
+ * @param encoded_tag
  * @param message Returns the deserialized message
  * @param timestamp Returns the timestamp delta if
  * encoded_variable_t == four_byte_encoded_variable_t or the actual timestamp if
@@ -86,8 +87,12 @@ deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_
  * @return Same as ffi::ir_stream::deserialize_log_event
  */
 template <typename encoded_variable_t>
-static IRErrorCode
-generic_deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp);
+static IRErrorCode generic_deserialize_log_event(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        string& message,
+        epoch_time_ms_t& timestamp
+);
 
 /**
  * Deserializes metadata from the given reader
@@ -269,17 +274,10 @@ deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_
 template <typename encoded_variable_t>
 static IRErrorCode generic_deserialize_log_event(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         string& message,
         epoch_time_ms_t& timestamp
 ) {
-    encoded_tag_t encoded_tag{cProtocol::Eof};
-    if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
-        return IRErrorCode_Incomplete_IR;
-    }
-    if (cProtocol::Eof == encoded_tag) {
-        return IRErrorCode_Eof;
-    }
-
     message.clear();
 
     vector<encoded_variable_t> encoded_vars;
@@ -521,10 +519,15 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
 }
 
 namespace four_byte_encoding {
-IRErrorCode
-deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp_delta) {
+IRErrorCode deserialize_log_event(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        string& message,
+        epoch_time_ms_t& timestamp_delta
+) {
     return generic_deserialize_log_event<four_byte_encoded_variable_t>(
             reader,
+            encoded_tag,
             message,
             timestamp_delta
     );
@@ -532,9 +535,18 @@ deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t&
 }  // namespace four_byte_encoding
 
 namespace eight_byte_encoding {
-IRErrorCode
-deserialize_log_event(ReaderInterface& reader, string& message, epoch_time_ms_t& timestamp) {
-    return generic_deserialize_log_event<eight_byte_encoded_variable_t>(reader, message, timestamp);
+IRErrorCode deserialize_log_event(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        string& message,
+        epoch_time_ms_t& timestamp
+) {
+    return generic_deserialize_log_event<eight_byte_encoded_variable_t>(
+            reader,
+            encoded_tag,
+            message,
+            timestamp
+    );
 }
 }  // namespace eight_byte_encoding
 

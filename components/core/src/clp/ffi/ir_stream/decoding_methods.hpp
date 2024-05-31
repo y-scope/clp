@@ -184,8 +184,9 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
 
 namespace eight_byte_encoding {
 /**
- * Deserializes the next log event from an eight-byte encoding IR stream.
+ * Deserializes the next log event from an eight-byte encoding IR stream and decodes the message.
  * @param reader
+ * @param encoded_tag
  * @param message Returns the deserialized message
  * @param timestamp Returns the deserialized timestamp
  * @return ErrorCode_Success on success
@@ -195,6 +196,7 @@ namespace eight_byte_encoding {
  */
 IRErrorCode deserialize_log_event(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp
 );
@@ -202,8 +204,9 @@ IRErrorCode deserialize_log_event(
 
 namespace four_byte_encoding {
 /**
- * Deserializes the next log event from a four-byte encoding IR stream.
+ * Deserializes the next log event from a four-byte encoding IR stream and decodes the message.
  * @param reader
+ * @param encoded_tag
  * @param message Returns the deserialized message
  * @param timestamp_delta Returns the deserialized timestamp delta
  * @return ErrorCode_Success on success
@@ -213,6 +216,7 @@ namespace four_byte_encoding {
  */
 IRErrorCode deserialize_log_event(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp_delta
 );

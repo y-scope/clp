@@ -4,7 +4,9 @@
 #include <chrono>
 
 namespace clp {
-// We use seconds resolution to support GPS clock offsets
+// Although the highest resolution for UTC Offsets that we know of is seconds for GPS clock offsets,
+// we use milliseconds both for simplicity when working with our default timestamp resolution and
+// for future-proofing.
 using UtcOffset = std::chrono::milliseconds;
 }  // namespace clp
 

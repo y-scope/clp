@@ -1,4 +1,5 @@
 #include <optional>
+#include <utility>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
@@ -24,6 +25,7 @@ using clp::ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber;
 using clp::ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber;
 using clp::ffi::ir_stream::cProtocol::MagicNumberLength;
 using clp::ffi::ir_stream::deserialize_preamble;
+using clp::ffi::ir_stream::deserialize_tag;
 using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -45,16 +47,13 @@ using std::string_view;
 using std::vector;
 
 namespace {
-[[nodiscard]] auto get_current_ts() -> epoch_time_ms_t {
-    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-}
-
 /**
- * Unstructured log event for testing purposes, consisting a message, a timestamp, and a UTC offset.
+ * Unstructured log event for testing purposes, consisting of a message, a timestamp, and a UTC
+ * offset.
  */
 class UnstructuredLogEvent {
 public:
-    UnstructuredLogEvent(std::string message, epoch_time_ms_t timestamp, UtcOffset utc_offset)
+    UnstructuredLogEvent(string message, epoch_time_ms_t timestamp, UtcOffset utc_offset)
             : m_message{std::move(message)},
               m_timestamp{timestamp},
               m_utc_offset{utc_offset} {}
@@ -66,7 +65,7 @@ public:
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
 
 private:
-    std::string m_message;
+    string m_message;
     epoch_time_ms_t m_timestamp;
     UtcOffset m_utc_offset;
 };
@@ -74,7 +73,14 @@ private:
 /**
  * @return Log events for testing purposes.
  */
-[[nodiscard]] auto create_test_log_events() -> std::vector<UnstructuredLogEvent> {
+[[nodiscard]] auto create_test_log_events() -> std::vector<UnstructuredLogEvent>;
+
+/**
+ * @return The current UNIX epoch timestamp in millisecond.
+ */
+[[nodiscard]] auto get_current_ts() -> epoch_time_ms_t;
+
+auto create_test_log_events() -> std::vector<UnstructuredLogEvent> {
     std::vector<UnstructuredLogEvent> log_events;
 
     log_events.emplace_back(
@@ -97,6 +103,10 @@ private:
     );
 
     return log_events;
+}
+
+auto get_current_ts() -> epoch_time_ms_t {
+    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 }
 }  // namespace
 
@@ -154,6 +164,7 @@ bool serialize_message(
  * ir_buf
  * @tparam encoded_variable_t Type of the encoded variable
  * @param reader
+ * @param tag
  * @param message
  * @param decoded_ts Returns the decoded timestamp
  * @return IRErrorCode_Success on success
@@ -163,8 +174,12 @@ bool serialize_message(
  * encoded_variable_t == four_byte_encoded_variable_t
  */
 template <typename encoded_variable_t>
-IRErrorCode
-deserialize_log_event(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts);
+IRErrorCode deserialize_log_event(
+        BufferReader& reader,
+        encoded_tag_t tag,
+        string& message,
+        epoch_time_ms_t& decoded_ts
+);
 
 /**
  * Struct to hold the timestamp info from the IR stream's metadata
@@ -277,8 +292,12 @@ bool encode_message(
 }
 
 template <typename encoded_variable_t>
-IRErrorCode
-deserialize_log_event(BufferReader& reader, string& message, epoch_time_ms_t& decoded_ts) {
+IRErrorCode deserialize_log_event(
+        BufferReader& reader,
+        encoded_tag_t tag,
+        string& message,
+        epoch_time_ms_t& decoded_ts
+) {
     static_assert(
             (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
             || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -287,12 +306,14 @@ deserialize_log_event(BufferReader& reader, string& message, epoch_time_ms_t& de
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         return clp::ffi::ir_stream::eight_byte_encoding::deserialize_log_event(
                 reader,
+                tag,
                 message,
                 decoded_ts
         );
     } else {
         return clp::ffi::ir_stream::four_byte_encoding::deserialize_log_event(
                 reader,
+                tag,
                 message,
                 decoded_ts
         );
@@ -487,18 +508,21 @@ TEMPLATE_TEST_CASE(
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
     epoch_time_ms_t timestamp;
+    encoded_tag_t tag;
 
     // Test if message can be decoded properly
+    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
     REQUIRE(IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event<TestType>(ir_buffer, decoded_message, timestamp));
+            == deserialize_log_event<TestType>(ir_buffer, tag, decoded_message, timestamp));
     REQUIRE(message == decoded_message);
     REQUIRE(timestamp == reference_timestamp);
     REQUIRE(ir_buffer.get_pos() == encoded_message_end_pos);
 
     // Test corrupted IR
     ir_buffer.seek_from_begin(encoded_message_start_pos + 1);
+    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
     REQUIRE(IRErrorCode::IRErrorCode_Corrupted_IR
-            == deserialize_log_event<TestType>(ir_buffer, message, timestamp));
+            == deserialize_log_event<TestType>(ir_buffer, tag, message, timestamp));
 
     // Test incomplete IR
     ir_buf.resize(encoded_message_end_pos - 4);
@@ -506,8 +530,10 @@ TEMPLATE_TEST_CASE(
             size_checked_pointer_cast<char const>(ir_buf.data()),
             ir_buf.size()
     };
+    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(incomplete_preamble_buffer, tag));
     REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR
-            == deserialize_log_event<TestType>(incomplete_preamble_buffer, message, timestamp));
+            == deserialize_log_event<TestType>(incomplete_preamble_buffer, tag, message, timestamp)
+    );
 }
 
 // NOTE: This test only tests eight_byte_encoded_variable_t because we trigger
@@ -536,15 +562,18 @@ TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
 
     // Test if a trailing escape triggers a decoder error
     auto ir_with_extra_escape{ir_buf};
+    encoded_tag_t tag;
     ir_with_extra_escape.at(logtype_end_pos - 1)
             = enum_to_underlying_type(VariablePlaceholder::Escape);
     BufferReader ir_with_extra_escape_buffer{
             size_checked_pointer_cast<char const>(ir_with_extra_escape.data()),
             ir_with_extra_escape.size()
     };
+    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_with_extra_escape_buffer, tag));
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == deserialize_log_event<eight_byte_encoded_variable_t>(
                     ir_with_extra_escape_buffer,
+                    tag,
                     decoded_message,
                     timestamp
             ));
@@ -557,9 +586,12 @@ TEST_CASE("message_decode_error", "[ffi][deserialize_log_event]") {
             size_checked_pointer_cast<char const>(ir_with_extra_placeholder.data()),
             ir_with_extra_placeholder.size()
     };
+    REQUIRE(IRErrorCode::IRErrorCode_Success
+            == deserialize_tag(ir_with_extra_placeholder_buffer, tag));
     REQUIRE(IRErrorCode::IRErrorCode_Decode_Error
             == deserialize_log_event<eight_byte_encoded_variable_t>(
                     ir_with_extra_placeholder_buffer,
+                    tag,
                     decoded_message,
                     timestamp
             ));
@@ -591,10 +623,13 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
 
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     string decoded_message;
+    encoded_tag_t tag;
     epoch_time_ms_t decoded_delta_ts{};
+    REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(ir_buffer, tag));
     REQUIRE(IRErrorCode::IRErrorCode_Success
             == deserialize_log_event<four_byte_encoded_variable_t>(
                     ir_buffer,
+                    tag,
                     decoded_message,
                     decoded_delta_ts
             ));
@@ -623,7 +658,6 @@ TEMPLATE_TEST_CASE(
         eight_byte_encoded_variable_t
 ) {
     vector<int8_t> ir_buf;
-    string logtype;
 
     epoch_time_ms_t preamble_ts = get_current_ts();
     constexpr char timestamp_pattern[] = "%Y-%m-%d %H:%M:%S,%3";
@@ -636,8 +670,9 @@ TEMPLATE_TEST_CASE(
             preamble_ts,
             ir_buf
     ));
-    size_t const encoded_preamble_end_pos = ir_buf.size();
+    auto const encoded_preamble_end_pos = ir_buf.size();
 
+    string logtype;
     vector<string> reference_messages;
     vector<epoch_time_ms_t> reference_timestamps;
     for (auto const& log_event : create_test_log_events()) {
@@ -682,16 +717,22 @@ TEMPLATE_TEST_CASE(
 
     string decoded_message;
     epoch_time_ms_t timestamp;
+    encoded_tag_t tag;
     for (size_t ix = 0; ix < reference_messages.size(); ix++) {
+        REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(complete_ir_buffer, tag));
         REQUIRE(IRErrorCode::IRErrorCode_Success
-                == deserialize_log_event<TestType>(complete_ir_buffer, decoded_message, timestamp));
+                == deserialize_log_event<TestType>(
+                        complete_ir_buffer,
+                        tag,
+                        decoded_message,
+                        timestamp
+                ));
         REQUIRE(decoded_message == reference_messages[ix]);
         REQUIRE(timestamp == reference_timestamps[ix]);
     }
     REQUIRE(complete_ir_buffer.get_pos() == ir_buf.size());
 }
 
-// TODO Deduplicate parts copied from the test above.
 TEMPLATE_TEST_CASE(
         "clp::ir::LogEventDeserializer",
         "[clp][ir][LogEventDeserializer]",
@@ -699,7 +740,6 @@ TEMPLATE_TEST_CASE(
         eight_byte_encoded_variable_t
 ) {
     vector<int8_t> ir_buf;
-    string logtype;
 
     epoch_time_ms_t preamble_ts = get_current_ts();
     constexpr char timestamp_pattern[] = "%Y-%m-%d %H:%M:%S,%3";
@@ -712,13 +752,13 @@ TEMPLATE_TEST_CASE(
             preamble_ts,
             ir_buf
     ));
-    size_t const encoded_preamble_end_pos = ir_buf.size();
 
+    string logtype;
     UtcOffset prev_utc_offset{0};
     epoch_time_ms_t prev_ts{preamble_ts};
-    auto const log_events_to_serialize{create_test_log_events()};
+    auto const test_log_events{create_test_log_events()};
     std::vector<std::string> encoded_logtypes;
-    for (auto const& log_event : log_events_to_serialize) {
+    for (auto const& log_event : test_log_events) {
         auto const ts{log_event.get_timestamp()};
         auto const message{log_event.get_message()};
         auto const utc_offset{log_event.get_utc_offset()};
@@ -750,7 +790,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE(false == create_result.has_error());
     auto& log_event_deserializer = create_result.value();
     size_t log_event_idx{0};
-    for (auto const& ref_log_event : log_events_to_serialize) {
+    for (auto const& ref_log_event : test_log_events) {
         auto result{log_event_deserializer.deserialize_log_event()};
         REQUIRE(false == result.has_error());
         REQUIRE(log_event_deserializer.get_current_utc_offset() == ref_log_event.get_utc_offset());
@@ -759,7 +799,8 @@ TEMPLATE_TEST_CASE(
         REQUIRE(log_event.get_utc_offset() == ref_log_event.get_utc_offset());
         // We only compare the logtype since decoding messages from logtype + variables is not yet
         // supported by our public interfaces
-        REQUIRE(log_event.get_logtype() == encoded_logtypes.at(log_event_idx++));
+        REQUIRE(log_event.get_logtype() == encoded_logtypes.at(log_event_idx));
+        ++log_event_idx;
     }
     auto result = log_event_deserializer.deserialize_log_event();
     REQUIRE(result.has_error());
