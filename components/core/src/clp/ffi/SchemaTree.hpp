@@ -39,9 +39,11 @@ public:
     };
 
     /**
-     * When locating a tree node, might not always have the tree node id. Instead, we usually use
-     * the parent id, the key name, and the node type to locate a unique tree node. This class wraps
-     * the location information as a non-integer identifier to locate a unique node in the tree.
+     * When constructing the schema tree, we uniquely identify the location of a node being inserted
+     * to the tree by the unique triple of the parent id, the key name, and the node type. The
+     * reason why the triple is unique is because the combination of the key name and the node type
+     * should have no ambiguity for a parent node. This class stores such a triple and act as a
+     * unique identifier for a node in the schema tree.
      */
     class TreeNodeLocator {
     public:
