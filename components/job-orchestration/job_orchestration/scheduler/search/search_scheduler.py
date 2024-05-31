@@ -217,7 +217,6 @@ def get_task_group_for_job(
     archives_for_search: List[Dict[str, any]],
     job_id: str,
     search_config: SearchConfig,
-    results_cache_uri: str,
 ):
     search_config_obj = search_config.dict()
     return celery.group(
@@ -225,7 +224,6 @@ def get_task_group_for_job(
             job_id=job_id,
             archive_id=archive["archive_id"],
             search_config_obj=search_config_obj,
-            results_cache_uri=results_cache_uri,
         )
         for archive in archives_for_search
     )
@@ -234,12 +232,9 @@ def get_task_group_for_job(
 def dispatch_search_job(
     job: SearchJob,
     archives_for_search: List[Dict[str, any]],
-    results_cache_uri: str,
 ) -> None:
     global active_jobs
-    task_group = get_task_group_for_job(
-        archives_for_search, job.id, job.search_config, results_cache_uri
-    )
+    task_group = get_task_group_for_job(archives_for_search, job.id, job.search_config)
     job.current_sub_job_async_task_result = task_group.apply_async()
     job.state = InternalJobState.RUNNING
 
@@ -317,6 +312,13 @@ def handle_pending_search_jobs(
                     logger.info(f"No matching archives, skipping job {job['job_id']}.")
                 continue
 
+            # If this search job does not have an output destination then configure a mongodb output
+            # destination following the convention that the job ID is the collection ID. The
+            # submitter of the job can't do this itself because it does not know the job ID
+            # beforehand.
+            if search_config.network_address is None and search_config.aggregation_config is None:
+                search_config.mongodb_destination = (results_cache_uri, str(job_id))
+
             new_search_job = SearchJob(
                 id=job_id,
                 search_config=search_config,
@@ -352,7 +354,7 @@ def handle_pending_search_jobs(
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
 
-            dispatch_search_job(job, archives_for_search, results_cache_uri)
+            dispatch_search_job(job, archives_for_search)
             logger.info(
                 f"Dispatched job {job_id} with {len(archives_for_search)} archives to search."
             )

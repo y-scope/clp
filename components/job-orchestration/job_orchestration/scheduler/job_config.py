@@ -49,6 +49,8 @@ class SearchConfig(BaseModel):
     path_filter: typing.Optional[str] = None
     # Tuple of (host, port)
     network_address: typing.Optional[typing.Tuple[str, int]] = None
+    # Tuple of (mongodb uri, mongodb collection)
+    mongodb_destination: typing.Optional[typing.Tuple[str, str]] = None
     aggregation_config: typing.Optional[AggregationConfig] = None
 
     @validator("network_address")

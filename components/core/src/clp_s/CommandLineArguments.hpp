@@ -8,6 +8,7 @@
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
+#include <json/single_include/nlohmann/json.hpp>
 
 #include "../clp/GlobalMetadataDBConfig.hpp"
 #include "../reducer/types.hpp"
@@ -106,41 +107,33 @@ private:
     // Methods
     /**
      * Validates output options related to the Network Destination output handler.
-     * @param options_description
-     * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
+     * @param options
      */
-    void parse_network_dest_output_handler_options(
-            boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
-    );
-
-    /**
-     * Validates output options related to the Reducer output handler.
-     * @param options_description
-     * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
-     */
-    void parse_reducer_output_handler_options(
-            boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
-    );
+    void parse_network_dest_output_handler_options(nlohmann::json const& options);
 
     /**
      * Validates output options related to the Results Cache output handler.
-     * @param options_description
-     * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
+     * @param options
      */
-    void parse_results_cache_output_handler_options(
-            boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
+    void parse_results_cache_output_handler_options(nlohmann::json const& options);
+
+    /**
+     * Validates the extended arguments to search passed by the package.
+     * @param extended_search_arguments
+     */
+    void parse_extended_search_arguments(nlohmann::json const& extended_search_arguments);
+
+    /**
+     * Validates the extended arguments to search passed by the package.
+     * @param extended_search_arguments
+     */
+    void parse_extended_aggregation_arguments(nlohmann::json const& extended_aggregation_arguments);
+
+    /**
+     * Detects arguments that can not be used in conjunction with extended stdin arguments, and
+     * throws an exception if any such arguments are detected.
+     */
+    void detect_disallowed_duplicate_arguments(boost::program_options::variables_map const& options
     );
 
     void print_basic_usage() const;
