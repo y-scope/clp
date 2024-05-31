@@ -47,8 +47,8 @@ public:
 
 private:
     // Variables
-    epoch_time_ms_t m_timestamp;
-    UtcOffset m_utc_offset;
+    epoch_time_ms_t m_timestamp{0};
+    UtcOffset m_utc_offset{0};
     std::string m_logtype;
     std::vector<std::string> m_dict_vars;
     std::vector<encoded_variable_t> m_encoded_vars;

@@ -67,8 +67,8 @@ public:
 
 private:
     string m_message;
-    epoch_time_ms_t m_timestamp;
-    UtcOffset m_utc_offset;
+    epoch_time_ms_t m_timestamp{0};
+    UtcOffset m_utc_offset{0};
 };
 
 /**
