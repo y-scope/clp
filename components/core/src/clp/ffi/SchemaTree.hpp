@@ -104,7 +104,7 @@ public:
     /**
      * Checks whether there exists a node with the given locator.
      * @param locator
-     * @param true if the node exists, false otherwise.
+     * @return Whether the node exists.
      */
     [[nodiscard]] auto has_node(TreeNodeLocator const& locator) const -> bool {
         SchemaTreeNode::id_t node_id{};
