@@ -185,8 +185,8 @@ auto serialize_log_event(
     }
 }
 
-auto create_test_log_events() -> std::vector<UnstructuredLogEvent> {
-    std::vector<UnstructuredLogEvent> log_events;
+auto create_test_log_events() -> vector<UnstructuredLogEvent> {
+    vector<UnstructuredLogEvent> log_events;
 
     log_events.emplace_back(
             "Static <\text>, dictVar1, 123, 456.7, dictVar2, 987, 654.3, end of static text",
