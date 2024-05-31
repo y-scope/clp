@@ -281,8 +281,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 print_ir_basic_usage();
 
                 cerr << "Examples:" << endl;
-                cerr << "  # Decompress file with id FILE_ID to IR " << endl;
-                cerr << "  " << get_program_name() << " i archives-dir output-dir FILE_ID>" << endl;
+                cerr << "  # Decompress file with id ORIG_FILE_ID to IR " << endl;
+                cerr << "  " << get_program_name() << " i archives-dir output-dir ORIG_FILE_ID>"
+                     << endl;
                 cerr << endl;
 
                 po::options_description visible_options;
@@ -298,7 +299,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             // Validate file id is not empty
             if (m_orig_file_id.empty()) {
-                throw invalid_argument("FILE_ID cannot be empty.");
+                throw invalid_argument("ORIG_FILE_ID cannot be empty.");
             }
 
             if (m_ir_temp_output_dir.empty()) {
