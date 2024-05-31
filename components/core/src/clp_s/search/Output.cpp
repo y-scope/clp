@@ -888,23 +888,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
 
             // search on log type dictionary
             Query& q = m_string_query_map[query_string];
-            if (query_string.find("*") != std::string::npos
-                || filter->get_column()->matches_type(LiteralType::VarStringT))
-            {
-                // if it matches VarStringT then it contains no space, so we
-                // don't't add more wildcards. Likewise if it already contains some wildcards
-                // we do not add more
-                Grep::process_raw_query(
-                        m_log_dict,
-                        m_var_dict,
-                        query_string,
-                        m_ignore_case,
-                        q,
-                        false
-                );
-            } else {
-                Grep::process_raw_query(m_log_dict, m_var_dict, query_string, m_ignore_case, q);
-            }
+            Grep::process_raw_query(m_log_dict, m_var_dict, query_string, m_ignore_case, q, false);
         }
         SubQuery sub_query;
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
