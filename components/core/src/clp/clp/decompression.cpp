@@ -134,7 +134,7 @@ bool decompress(
                 archive_reader.refresh_dictionaries();
 
                 // Decompress all splits with the given path
-                auto file_metadata_ix_ptr = archive_reader.get_file_iterator(file_path);
+                auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_path(file_path);
                 for (auto& file_metadata_ix = *file_metadata_ix_ptr; file_metadata_ix.has_next();
                      file_metadata_ix.next())
                 {

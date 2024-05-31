@@ -172,6 +172,18 @@ bool StringUtils::is_wildcard(char c) {
     return false;
 }
 
+bool StringUtils::has_unescaped_wildcards(std::string const& str) {
+    for (size_t i = 0; i < str.size(); ++i) {
+        if ('*' == str[i] || '?' == str[i]) {
+            return true;
+        }
+        if ('\\' == str[i]) {
+            ++i;
+        }
+    }
+    return false;
+}
+
 string StringUtils::clean_up_wildcard_search_string(string_view str) {
     string cleaned_str;
 

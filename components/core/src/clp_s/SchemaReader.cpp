@@ -72,6 +72,14 @@ void SchemaReader::generate_json_string() {
                 m_json_serializer.end_object();
                 break;
             }
+            case JsonSerializer::Op::BeginArray: {
+                m_json_serializer.begin_array();
+                break;
+            }
+            case JsonSerializer::Op::EndArray: {
+                m_json_serializer.end_array();
+                break;
+            }
             case JsonSerializer::Op::AddIntField: {
                 column = m_reordered_columns[column_id_index++];
                 auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
@@ -328,6 +336,14 @@ void SchemaReader::generate_json_template(int32_t id) {
             case NodeType::UnstructuredArray: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddArrayField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
+                break;
+            }
+            case NodeType::StructuredArray: {
+                // Note: Marshalling structured arrays is left intentionally stubbed out so that we
+                // can split up the PR for supporting structurized arrays.
+                m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
+                m_json_serializer.add_special_key(key);
+                m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
             case NodeType::Integer: {

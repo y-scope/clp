@@ -251,12 +251,13 @@ void Archive::create_and_open_file(
         string const& path,
         group_id_t const group_id,
         boost::uuids::uuid const& orig_file_id,
-        size_t split_ix
+        size_t split_ix,
+        size_t begin_message_ix
 ) {
     if (m_file != nullptr) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
-    m_file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix);
+    m_file = new File(m_uuid_generator(), orig_file_id, path, group_id, split_ix, begin_message_ix);
     m_file->open();
 }
 

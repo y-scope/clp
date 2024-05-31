@@ -207,7 +207,7 @@ void FileCompressor::parse_and_encode_with_library(
     archive_writer.m_group_id = group_id;
     archive_writer.m_target_encoded_file_size = target_encoded_file_size;
     // Open compressed file
-    archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
+    archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator());
     archive_writer.m_old_ts_pattern = nullptr;
     LogSurgeonReader log_surgeon_reader(reader);
     m_reader_parser->reset_and_set_reader(log_surgeon_reader);
@@ -238,7 +238,7 @@ void FileCompressor::parse_and_encode_with_heuristic(
     m_parsed_message.clear();
 
     // Open compressed file
-    archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator(), 0);
+    archive_writer.create_and_open_file(path_for_compression, group_id, m_uuid_generator());
 
     // Parse content from file
     while (m_message_parser.parse_next_message(true, reader, m_parsed_message)) {
@@ -518,7 +518,7 @@ std::error_code FileCompressor::compress_ir_stream_by_encoding(
         streaming_archive::writer::Archive& archive,
         LogEventDeserializer<encoded_variable_t>& log_event_deserializer
 ) {
-    archive.create_and_open_file(path, group_id, m_uuid_generator(), 0);
+    archive.create_and_open_file(path, group_id, m_uuid_generator());
 
     // We assume an IR stream only has one timestamp pattern
     auto timestamp_pattern = log_event_deserializer.get_timestamp_pattern();

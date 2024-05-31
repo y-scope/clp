@@ -70,6 +70,7 @@ ErrorCode File::open_me(
         );
     }
 
+    m_begin_message_ix = file_metadata_ix.get_begin_message_ix();
     m_num_messages = file_metadata_ix.get_num_messages();
     m_num_variables = file_metadata_ix.get_num_variables();
 
@@ -158,6 +159,7 @@ void File::close_me() {
     m_segment_variables_decompressed_stream_pos = 0;
 
     m_msgs_ix = 0;
+    m_begin_message_ix = 0;
     m_num_messages = 0;
     m_variables_ix = 0;
     m_num_variables = 0;

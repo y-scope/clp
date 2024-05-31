@@ -78,11 +78,6 @@ Although you can use a single `*` to search for a kv-pair with *any* value, the 
 syntax above only works for values that are strings.
 :::
 
-:::{caution}
-CLP doesn't currently support the `?` wildcard (which matches any single character) _except_ in
-values containing multiple words. This limitation will be addressed in a future version of CLP.
-:::
-
 ### Wildcards in keys
 
 To search for a kv-pair with *any* key, you can specify the query in one of two ways:
