@@ -20,10 +20,10 @@ import {searchJobCollectionsManager} from "./collections";
 const COLLECTION_POLL_INTERVAL_MILLIS = 250;
 
 /**
- * The maximum value that can be used as a polling interval in JavaScript.
+ * The maximum value (2^31 - 1) that can be used as a polling interval in JavaScript.
  * Reference: https://developer.mozilla.org/en-US/docs/Web/API/setTimeout#maximum_delay_value
  */
-const JS_MAX_DELAY_VALUE = Math.pow(2, 31) - 1;
+const JS_MAX_DELAY_VALUE = 2147483647;
 
 /**
  * Publishes search results metadata for a specific job.
@@ -52,8 +52,8 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({sea
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.searchJobId
- * @param {boolean} props.isExpectingUpdates Whether the subscriber expects that the collection will
- * be updated.
+ * @param {boolean} props.isExpectingUpdates Whether the subscriber
+ * expects that the collection will be updated.
  * @return {Mongo.Cursor} cursor that provides access to the search results.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
@@ -89,8 +89,8 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.aggregationJobId
- * @param {boolean} props.isExpectingUpdates  Whether the subscriber expects that the collection will
- * be updated.
+ * @param {boolean} props.isExpectingUpdates Whether the subscriber
+ * expects that the collection will be updated.
  * @return {Mongo.Cursor} cursor that provides access to the aggregation results.
  */
 Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
