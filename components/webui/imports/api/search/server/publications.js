@@ -100,7 +100,7 @@ Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
     const collection = searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     const findOptions = {
         disableOplog: true,
-        pollingIntervalMs: (true === isExpectingUpdates) ?
+        pollingIntervalMs: isExpectingUpdates ?
             COLLECTION_POLL_INTERVAL_MILLIS :
             JS_MAX_DELAY_VALUE,
     };
