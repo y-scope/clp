@@ -23,7 +23,8 @@ const COLLECTION_POLL_INTERVAL_MILLIS = 250;
  * The maximum value (2^31 - 1) that can be used as a polling interval in JavaScript.
  * Reference: https://developer.mozilla.org/en-US/docs/Web/API/setTimeout#maximum_delay_value
  */
-const JS_MAX_DELAY_VALUE = 2147483647;
+// eslint-disable-next-line no-magic-numbers
+const JS_MAX_DELAY_VALUE = (2 ** 31) - 1;
 
 /**
  * Publishes search results metadata for a specific job.
