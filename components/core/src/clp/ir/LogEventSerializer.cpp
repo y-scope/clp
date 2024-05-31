@@ -25,6 +25,7 @@ auto LogEventSerializer<encoded_variable_t>::open(
     static_assert(std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
     init_states();
+    m_prev_msg_timestamp = reference_timestamp;
 
     m_writer.open(file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
     m_zstd_compressor.open(m_writer);
@@ -130,7 +131,6 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
         );
     }
     if (false == res) {
-        SPDLOG_ERROR("Failed to serialize log event: {}", message);
         return ErrorCode_Failure;
     }
     m_log_event_ix += 1;

@@ -26,7 +26,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override {
+        [[nodiscard]] char const* what() const noexcept override {
             return "ir::LogEventSerializer operation failed";
         }
     };

@@ -169,7 +169,8 @@ bool FileDecompressor::decompress_ir(
 
     // Open output file
     LogEventSerializer<four_byte_encoded_variable_t> serializer_inst;
-    if (false == serializer_inst.open(temp_ir_path.string(), m_encoded_file.get_begin_ts())) {
+    error_code = serializer_inst.open(temp_ir_path.string(), m_encoded_file.get_begin_ts());
+    if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to create Serializer");
         return false;
     }
@@ -202,20 +203,18 @@ bool FileDecompressor::decompress_ir(
             }
             begin_message_ix = end_message_ix;
 
-            if (ErrorCode_Success
-                != serializer_inst.open(temp_ir_path.string(), m_encoded_message.get_ts_in_milli()))
+            error_code = serializer_inst.open(temp_ir_path.string(), m_encoded_message.get_ts_in_milli());
+            if (ErrorCode_Success != error_code)
             {
                 SPDLOG_ERROR("Failed to open serializer");
                 return false;
             }
         }
 
-        if (ErrorCode_Success
-            != serializer_inst.serialize_log_event(
-                    m_decompressed_message,
-                    m_encoded_message.get_ts_in_milli()
-            ))
+        error_code = serializer_inst.serialize_log_event(m_decompressed_message, m_encoded_message.get_ts_in_milli());
+        if (ErrorCode_Success != error_code)
         {
+            SPDLOG_ERROR("Failed to serialize log event: {}", m_decompressed_message.c_str());
             return false;
         }
     }
