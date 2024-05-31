@@ -1,10 +1,8 @@
 #ifndef CLP_IR_LOGEVENTDESERIALIZER_HPP
 #define CLP_IR_LOGEVENTDESERIALIZER_HPP
 
-#include <optional>
-
-#include <boost-outcome/include/boost/outcome/std_result.hpp>
-
+#include "../ErrorCode.hpp"
+#include "../streaming_compression/zstd/Compressor.hpp"
 #include "../TimestampPattern.hpp"
 #include "../TraceableException.hpp"
 #include "../type_utils.hpp"
@@ -12,43 +10,29 @@
 #include "LogEvent.hpp"
 #include "types.hpp"
 
-using std::string_view;
-
 namespace clp::ir {
 /**
- * Class for Serializing log events into an IR stream. The serializer first buffers the serialized
- * data into an internal buffer, and flushes the buffer on demand.
- *
- * TODO: We're currently returning std::errc error codes, but we should replace these with our own
- * custom error codes (derived from std::error_code), ideally replacing IRErrorCode.
- * @tparam encoded_variable_t Type of encoded variables in the stream
+ * Class for Serializing log events into a Zstandard compressed IR stream. The serializer first
+ * buffers the serialized data into an internal buffer, and flushes the buffer on demand.
  */
 template <typename encoded_variable_t>
 class LogEventSerializer {
 public:
-    // Factory functions
-    /**
-     * Creates a log event Serializer for four bytes encoded IR and serializes the preamble into the
-     * internal buffer.
-     * @param writer The writer for the IR stream
-     * @param reference_timestamp
-     * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::protocol_error if there is a failure when serializing the preamble
-     */
-    static auto create(WriterInterface& writer, epoch_time_ms_t reference_timestamp)
-            -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
-                    std::unique_ptr<LogEventSerializer<encoded_variable_t>>>;
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
 
-    /**
-     * Creates a log event Serializer for eight bytes encoded IR and serializes the preamble into
-     * the internal buffer.
-     * @param writer The writer for the IR stream
-     * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::protocol_error if there is a failure when serializing the preamble
-     */
-    static auto create(WriterInterface& writer)
-            -> BOOST_OUTCOME_V2_NAMESPACE::std_result<
-                    std::unique_ptr<LogEventSerializer<encoded_variable_t>>>;
+        // Methods
+        char const* what() const noexcept override {
+            return "ir::LogEventSerializer operation failed";
+        }
+    };
+
+    // Constructors
+    explicit LogEventSerializer() : m_log_event_ix{0}, m_serialized_size{0}, m_is_open{false} {}
 
     // Delete copy constructor and assignment
     LogEventSerializer(LogEventSerializer const&) = delete;
@@ -58,36 +42,21 @@ public:
     LogEventSerializer(LogEventSerializer&&) = default;
     auto operator=(LogEventSerializer&&) -> LogEventSerializer& = default;
 
-    ~LogEventSerializer() = default;
-
-    [[nodiscard]] auto get_serialized_size() const -> size_t {
-        return m_ir_buffer.size() + m_serialized_size;
-    }
-
-    [[nodiscard]] auto get_log_event_ix() const -> size_t { return m_log_event_ix; }
+    ~LogEventSerializer();
 
     /**
-     * Serializes the preamble into the internal buffer
-     * @return True if the preamble is serialized successfully. Otherwise false
+     * Creates a Zstandard compressed eight bytes encoded IR stream and writes the preamble into it.
+     * @param file_path
      */
-    [[nodiscard]] auto serialize_preamble(
-            string_view timestamp_pattern,
-            string_view timestamp_pattern_syntax,
-            string_view time_zone_id
-    ) -> bool;
-
-    [[nodiscard]] auto serialize_preamble(
-            string_view timestamp_pattern,
-            string_view timestamp_pattern_syntax,
-            string_view time_zone_id,
-            epoch_time_ms_t reference_timestamp
-    ) -> bool;
+    auto open(std::string const& file_path) -> ErrorCode;
 
     /**
-     * Serializes a log event into the internal buffer
-     * @return True if the log event is serialized successfully, Otherwise false
+     * Creates a Zstandard compressed four bytes encoded IR stream and writes the preamble into it.
+     * @param file_path
+     * @param epoch_time_ms_t
+     * @return
      */
-    [[nodiscard]] auto serialize_log_event(string_view message, epoch_time_ms_t timestamp) -> bool;
+    auto open(std::string const& file_path, epoch_time_ms_t ref_timestamp) -> ErrorCode;
 
     /**
      * Flushes the serialized data in the internal buffer
@@ -99,15 +68,24 @@ public:
      */
     auto close() -> void;
 
-private:
-    // Constructors
-    explicit LogEventSerializer(WriterInterface& writer) : m_writer{writer}, m_log_event_ix{0} {}
+    [[nodiscard]] auto get_serialized_size() const -> size_t {
+        return m_ir_buffer.size() + m_serialized_size;
+    }
 
-    LogEventSerializer(WriterInterface& writer, epoch_time_ms_t ref_timestamp)
-            : m_writer{writer},
-              m_prev_msg_timestamp{ref_timestamp},
-              m_log_event_ix{0},
-              m_serialized_size{0} {}
+    [[nodiscard]] auto get_log_event_ix() const -> size_t { return m_log_event_ix; }
+
+    /**
+     * Serializes a log event and store it into the internal buffer
+     * @return True if the log event is serialized successfully, Otherwise false
+     */
+    [[nodiscard]] auto
+    serialize_log_event(std::string_view message, epoch_time_ms_t timestamp) -> ErrorCode;
+
+private:
+    /**
+     * Initializes the internal states
+     */
+    auto init_states() -> void;
 
     // Constant
     static constexpr std::string_view TIMESTAMP_PATTERN = "%Y-%m-%d %H:%M:%S,%3";
@@ -117,12 +95,14 @@ private:
     // Variables
     size_t m_log_event_ix;
     size_t m_serialized_size;
+    bool m_is_open;
     [[no_unique_address]] std::conditional_t<
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,
             EmptyType> m_prev_msg_timestamp{};
     std::vector<int8_t> m_ir_buffer;
-    WriterInterface& m_writer;
+    FileWriter m_writer;
+    streaming_compression::zstd::Compressor m_zstd_compressor;
 };
 }  // namespace clp::ir
 

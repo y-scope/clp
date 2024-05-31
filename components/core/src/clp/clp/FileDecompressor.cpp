@@ -168,22 +168,11 @@ bool FileDecompressor::decompress_ir(
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();
 
     // Open output file
-    streaming_compression::zstd::Compressor ir_compressor;
-    m_decompressed_file_writer.open(
-            temp_ir_path.string(),
-            FileWriter::OpenMode::CREATE_FOR_WRITING
-    );
-    ir_compressor.open(m_decompressed_file_writer);
-
-    auto result = LogEventSerializer<four_byte_encoded_variable_t>::create(
-            ir_compressor,
-            m_encoded_file.get_begin_ts()
-    );
-    if (result.has_error()) {
-        SPDLOG_ERROR("Failed to create Serializer: {}", result.error().message());
+    LogEventSerializer<four_byte_encoded_variable_t> serializer_inst;
+    if (false == serializer_inst.open(temp_ir_path.string(), m_encoded_file.get_begin_ts())) {
+        SPDLOG_ERROR("Failed to create Serializer");
         return false;
     }
-    LogEventSerializer<four_byte_encoded_variable_t>* serializer_inst = result.value().get();
 
     while (archive_reader.get_next_message(m_encoded_file, m_encoded_message)) {
         if (!archive_reader
@@ -196,12 +185,10 @@ bool FileDecompressor::decompress_ir(
                 m_decompressed_message,
                 m_encoded_message.get_vars().size()
         );
-        if (message_size_as_ir + serializer_inst->get_serialized_size() > ir_target_size) {
-            serializer_inst->close();
-            ir_compressor.close();
-            m_decompressed_file_writer.close();
+        if (message_size_as_ir + serializer_inst.get_serialized_size() > ir_target_size) {
+            serializer_inst.close();
 
-            auto end_message_ix = begin_message_ix + serializer_inst->get_log_event_ix();
+            auto end_message_ix = begin_message_ix + serializer_inst.get_log_event_ix();
             if (false
                 == rename_and_move_ir(
                         temp_ir_path,
@@ -215,37 +202,25 @@ bool FileDecompressor::decompress_ir(
             }
             begin_message_ix = end_message_ix;
 
-            m_decompressed_file_writer.open(
-                    temp_ir_path.string(),
-                    FileWriter::OpenMode::CREATE_FOR_WRITING
-            );
-            ir_compressor.open(m_decompressed_file_writer);
-
-            result = LogEventSerializer<four_byte_encoded_variable_t>::create(
-                    ir_compressor,
-                    m_encoded_message.get_ts_in_milli()
-            );
-            if (result.has_error()) {
-                SPDLOG_ERROR("Failed to create Serializer: {}", result.error().message());
+            if (ErrorCode_Success
+                != serializer_inst.open(temp_ir_path.string(), m_encoded_message.get_ts_in_milli()))
+            {
+                SPDLOG_ERROR("Failed to open serializer");
                 return false;
             }
-            serializer_inst = result.value().get();
         }
 
-        if (false
-            == serializer_inst->serialize_log_event(
+        if (ErrorCode_Success
+            != serializer_inst.serialize_log_event(
                     m_decompressed_message,
                     m_encoded_message.get_ts_in_milli()
             ))
         {
-            SPDLOG_ERROR("Failed to serialize log event: {}", m_decompressed_message.c_str());
             return false;
         }
     }
-
-    serializer_inst->close();
-    ir_compressor.close();
-    m_decompressed_file_writer.close();
+    auto end_message_ix = begin_message_ix + serializer_inst.get_log_event_ix();
+    serializer_inst.close();
 
     if (false
         == rename_and_move_ir(
@@ -253,7 +228,7 @@ bool FileDecompressor::decompress_ir(
                 output_dir,
                 file_orig_id,
                 begin_message_ix,
-                begin_message_ix + serializer_inst->get_log_event_ix()
+                end_message_ix
         ))
     {
         return false;
