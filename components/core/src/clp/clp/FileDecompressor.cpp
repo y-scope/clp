@@ -14,15 +14,15 @@ using std::string;
 namespace clp::clp {
 namespace {
 /**
- * Rename the temporary IR chunk and move it to the output directory
- * The name name follows the following format
+ * Rename a temporary IR and move it to the output directory
+ * The new name follows the following format
  * <FILE_ORIG_ID>_<begin_message_ix>_<end_message_ix>.clp.zst
  * @param temp_ir
  * @param output_directory
  * @param file_orig_id
  * @param begin_message_ix
  * @param end_message_ix
- * @return true if the IR is renamed and moved, false otherwise
+ * @return true if the IR is renamed and moved successfully. Otherwise false
  */
 bool rename_and_move_ir(
         boost::filesystem::path const& temp_ir_path,
@@ -126,7 +126,7 @@ bool FileDecompressor::decompress_ir(
         streaming_archive::reader::Archive& archive_reader,
         size_t ir_target_size
 ) {
-    // Open compressed file
+    // Open encoded file
     auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
     if (ErrorCode_Success != error_code) {
         if (ErrorCode_errno == error_code) {
@@ -167,11 +167,10 @@ bool FileDecompressor::decompress_ir(
     auto const& file_orig_id = m_encoded_file.get_orig_file_id_as_string();
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();
 
-    // Open output file
-    LogEventSerializer<four_byte_encoded_variable_t> serializer_inst;
-    error_code = serializer_inst.open(temp_ir_path.string(), m_encoded_file.get_begin_ts());
+    LogEventSerializer<four_byte_encoded_variable_t> ir_serializer;
+    // Open output IR file
+    error_code = ir_serializer.open(temp_ir_path.string(), m_encoded_file.get_begin_ts());
     if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to create Serializer");
         return false;
     }
 
@@ -186,10 +185,10 @@ bool FileDecompressor::decompress_ir(
                 m_decompressed_message,
                 m_encoded_message.get_vars().size()
         );
-        if (message_size_as_ir + serializer_inst.get_serialized_size() > ir_target_size) {
-            serializer_inst.close();
+        if (message_size_as_ir + ir_serializer.get_serialized_size() > ir_target_size) {
+            ir_serializer.close();
 
-            auto end_message_ix = begin_message_ix + serializer_inst.get_log_event_ix();
+            auto end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
             if (false
                 == rename_and_move_ir(
                         temp_ir_path,
@@ -203,23 +202,26 @@ bool FileDecompressor::decompress_ir(
             }
             begin_message_ix = end_message_ix;
 
-            error_code = serializer_inst.open(temp_ir_path.string(), m_encoded_message.get_ts_in_milli());
-            if (ErrorCode_Success != error_code)
-            {
-                SPDLOG_ERROR("Failed to open serializer");
+            error_code = ir_serializer.open(
+                    temp_ir_path.string(),
+                    m_encoded_message.get_ts_in_milli()
+            );
+            if (ErrorCode_Success != error_code) {
                 return false;
             }
         }
 
-        error_code = serializer_inst.serialize_log_event(m_decompressed_message, m_encoded_message.get_ts_in_milli());
-        if (ErrorCode_Success != error_code)
-        {
+        error_code = ir_serializer.serialize_log_event(
+                m_decompressed_message,
+                m_encoded_message.get_ts_in_milli()
+        );
+        if (ErrorCode_Success != error_code) {
             SPDLOG_ERROR("Failed to serialize log event: {}", m_decompressed_message.c_str());
             return false;
         }
     }
-    auto end_message_ix = begin_message_ix + serializer_inst.get_log_event_ix();
-    serializer_inst.close();
+    auto end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
+    ir_serializer.close();
 
     if (false
         == rename_and_move_ir(

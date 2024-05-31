@@ -24,7 +24,9 @@ auto LogEventSerializer<encoded_variable_t>::open(
 ) -> ErrorCode {
     static_assert(std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>);
 
-    init_states();
+    m_serialized_size = 0;
+    m_num_log_events = 0;
+    m_ir_buffer.clear();
     m_prev_msg_timestamp = reference_timestamp;
 
     m_writer.open(file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
@@ -56,7 +58,9 @@ template <typename encoded_variable_t>
 auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> ErrorCode {
     static_assert(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>);
 
-    init_states();
+    m_serialized_size = 0;
+    m_num_log_events = 0;
+    m_ir_buffer.clear();
 
     m_writer.open(file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
     m_zstd_compressor.open(m_writer);
@@ -133,15 +137,8 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
     if (false == res) {
         return ErrorCode_Failure;
     }
-    m_log_event_ix += 1;
+    m_num_log_events += 1;
     return ErrorCode_Success;
-}
-
-template <typename encoded_variable_t>
-auto LogEventSerializer<encoded_variable_t>::init_states() -> void {
-    m_serialized_size = 0;
-    m_log_event_ix = 0;
-    m_ir_buffer.clear();
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
@@ -168,7 +165,4 @@ template auto LogEventSerializer<four_byte_encoded_variable_t>::serialize_log_ev
         string_view message,
         epoch_time_ms_t timestamp
 ) -> ErrorCode;
-
-template auto LogEventSerializer<four_byte_encoded_variable_t>::init_states() -> void;
-template auto LogEventSerializer<eight_byte_encoded_variable_t>::init_states() -> void;
 }  // namespace clp::ir

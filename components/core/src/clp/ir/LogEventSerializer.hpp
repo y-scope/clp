@@ -12,8 +12,9 @@
 
 namespace clp::ir {
 /**
- * Class for Serializing log events into a Zstandard compressed IR stream. The serializer first
- * buffers the serialized data into an internal buffer, and flushes the buffer on demand.
+ * Class for Serializing log events into a Zstandard compressed IR stream.
+ * The serializer first  buffers the serialized data into an internal buffer,
+ * and only flushes the buffered ir into the on disk file if flush or close is called
  */
 template <typename encoded_variable_t>
 class LogEventSerializer {
@@ -32,7 +33,7 @@ public:
     };
 
     // Constructors
-    explicit LogEventSerializer() : m_log_event_ix{0}, m_serialized_size{0}, m_is_open{false} {}
+    explicit LogEventSerializer() : m_num_log_events{0}, m_serialized_size{0}, m_is_open{false} {}
 
     // Delete copy constructor and assignment
     LogEventSerializer(LogEventSerializer const&) = delete;
@@ -45,13 +46,15 @@ public:
     ~LogEventSerializer();
 
     /**
-     * Creates a Zstandard compressed eight bytes encoded IR stream and writes the preamble into it.
+     * Creates a Zstandard compressed eight bytes encoded IR on the disk, and writes the preamble to
+     * the IR and writes the preamble into it.
      * @param file_path
      */
     auto open(std::string const& file_path) -> ErrorCode;
 
     /**
-     * Creates a Zstandard compressed four bytes encoded IR stream and writes the preamble into it.
+     * Creates a Zstandard compressed four bytes encoded IR on the disk, and writes the preamble to
+     * the IR
      * @param file_path
      * @param epoch_time_ms_t
      * @return
@@ -59,12 +62,14 @@ public:
     auto open(std::string const& file_path, epoch_time_ms_t ref_timestamp) -> ErrorCode;
 
     /**
-     * Flushes the serialized data in the internal buffer
+     * Flushes the buffered serialized data.
+     * @throw FileWriter::OperationFailed on failure
      */
     auto flush() -> void;
 
     /**
-     * Flushes the serialized data and writes the EoF tag to the IR
+     * Writes the EoF tag to the end of IR, flushes the data and closes the serializer
+     * @throw FileWriter::OperationFailed on failure
      */
     auto close() -> void;
 
@@ -72,28 +77,31 @@ public:
         return m_ir_buffer.size() + m_serialized_size;
     }
 
-    [[nodiscard]] auto get_log_event_ix() const -> size_t { return m_log_event_ix; }
+    /**
+     * Gets the number of serialized log events
+     * @return
+     */
+    [[nodiscard]] auto get_num_log_events() const -> size_t { return m_num_log_events; }
 
     /**
-     * Serializes a log event and store it into the internal buffer
+     * Serializes a log event and writes it to the end of the internal buffer
      * @return True if the log event is serialized successfully, Otherwise false
      */
     [[nodiscard]] auto
     serialize_log_event(std::string_view message, epoch_time_ms_t timestamp) -> ErrorCode;
 
 private:
-    /**
-     * Initializes the internal states
-     */
-    auto init_states() -> void;
-
     // Constant
+    // Note: In the current implementation, an encoded file could have multiple timestamp patterns
+    // but IR metadata only supports a single pattern. CLP doesn't track files' time zone info
+    // either. For now, the serializer uses a set of default values. The consumer of the IR should
+    // decide what time pattern and time zone to use.
     static constexpr std::string_view TIMESTAMP_PATTERN = "%Y-%m-%d %H:%M:%S,%3";
     static constexpr std::string_view TIMESTAMP_PATTERN_SYNTAX = "";
     static constexpr std::string_view TIME_ZONE_ID = "";
 
     // Variables
-    size_t m_log_event_ix;
+    size_t m_num_log_events;
     size_t m_serialized_size;
     bool m_is_open;
     [[no_unique_address]] std::conditional_t<

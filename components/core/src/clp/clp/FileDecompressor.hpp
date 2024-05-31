@@ -24,7 +24,6 @@ public:
             std::unordered_map<std::string, std::string>& temp_path_to_final_path
     );
 
-    // Methods
     bool decompress_ir(
             streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
             std::string const& output_dir,
