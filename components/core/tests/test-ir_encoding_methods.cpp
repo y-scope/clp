@@ -207,6 +207,12 @@ auto create_test_log_events() -> vector<UnstructuredLogEvent> {
             UtcOffset{-5 * 60 * 60}
     );
 
+    log_events.emplace_back(
+            "Static text without variable and without utc offset change",
+            get_current_ts(),
+            UtcOffset{-5 * 60 * 60}
+    );
+
     return log_events;
 }
 
