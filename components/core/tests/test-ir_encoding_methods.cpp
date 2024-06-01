@@ -73,12 +73,12 @@ private:
 
 /**
  * Serializes the given log events into an IR buffer.
- * @tparam encoded_variable_t Type of the encoded variable
+ * @tparam encoded_variable_t Type of the encoded variable.
  * @param log_events
  * @param preamble_ts
  * @param ir_buf Returns the serialized IR byte sequence.
- * @param encoded_logtypes Returns the encoded log types if not `std::nullopt`
- * @return Whether a serialization error occurred.
+ * @param encoded_logtypes Returns the encoded log types.
+ * @return Whether serialize was successful.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
@@ -112,7 +112,7 @@ template <typename encoded_variable_t>
 [[nodiscard]] auto create_test_log_events() -> vector<UnstructuredLogEvent>;
 
 /**
- * @return The current UNIX epoch timestamp in millisecond.
+ * @return The current UNIX epoch timestamp in milliseconds.
  */
 [[nodiscard]] auto get_current_ts() -> epoch_time_ms_t;
 
@@ -131,7 +131,6 @@ template <typename encoded_variable_t>
     string logtype;
     UtcOffset prev_utc_offset{0};
     epoch_time_ms_t prev_ts{preamble_ts};
-    auto const test_log_events{create_test_log_events()};
     for (auto const& log_event : test_log_events) {
         auto const ts{log_event.get_timestamp()};
         auto const message{log_event.get_message()};
@@ -201,16 +200,15 @@ auto create_test_log_events() -> vector<UnstructuredLogEvent> {
             UtcOffset{5 * 60 * 60}
     );
 
+    UtcOffset const utc_offset{-5 * 60 * 60};
     log_events.emplace_back(
             "Static text without variables",
-            get_current_ts(),
-            UtcOffset{-5 * 60 * 60}
-    );
+            get_current_ts(), utc_offset);
 
     log_events.emplace_back(
             "Static text without variable and without utc offset change",
             get_current_ts(),
-            UtcOffset{-5 * 60 * 60}
+            utc_offset
     );
 
     return log_events;
