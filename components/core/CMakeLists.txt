@@ -422,6 +422,7 @@ set(SOURCE_FILES_unitTest
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp
+        src/clp/time_types.hpp
         src/clp/type_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
