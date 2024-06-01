@@ -73,12 +73,12 @@ private:
 
 /**
  * Serializes the given log events into an IR buffer.
- * @tparam encoded_variable_t Type of the encoded variable.
+ * @tparam encoded_variable_t Type of the encoded variables.
  * @param log_events
  * @param preamble_ts
  * @param ir_buf Returns the serialized IR byte sequence.
- * @param encoded_logtypes Returns the encoded log types.
- * @return Whether serialize was successful.
+ * @param encoded_logtypes Returns the encoded logtypes.
+ * @return Whether serialization was successful.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
@@ -89,14 +89,13 @@ template <typename encoded_variable_t>
 ) -> bool;
 
 /**
- * Helper function that serializes a log event of encoding type = encoded_variable_t and writes into
- * ir_buf
- * @tparam encoded_variable_t Type of the encoded variable
+ * Serializes a log event into an IR buffer.
+ * @tparam encoded_variable_t Type of the encoded variables.
  * @param timestamp
  * @param message
- * @param logtype
- * @param ir_buf
- * @return True if the log event is serialized without error, otherwise false
+ * @param logtype Returns the log event's logtype.
+ * @param ir_buf Returns the serialized IR byte sequence.
+ * @return Whether serialization was successful.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_event(
