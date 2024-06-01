@@ -131,7 +131,7 @@ template <typename encoded_variable_t>
     string logtype;
     UtcOffset prev_utc_offset{0};
     epoch_time_ms_t prev_ts{preamble_ts};
-    for (auto const& log_event : test_log_events) {
+    for (auto const& log_event : log_events) {
         auto const ts{log_event.get_timestamp()};
         auto const message{log_event.get_message()};
         auto const utc_offset{log_event.get_utc_offset()};
