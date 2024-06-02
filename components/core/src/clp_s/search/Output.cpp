@@ -891,13 +891,16 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
             }
 
             // search on log type dictionary
-            m_string_query_map.emplace(query_string, Grep::process_raw_query(
-                    m_log_dict,
-                    m_var_dict,
+            m_string_query_map.emplace(
                     query_string,
-                    m_ignore_case,
-                    false
-            ));
+                    Grep::process_raw_query(
+                            m_log_dict,
+                            m_var_dict,
+                            query_string,
+                            m_ignore_case,
+                            false
+                    )
+            );
         }
         SubQuery sub_query;
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
