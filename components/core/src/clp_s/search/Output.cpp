@@ -476,10 +476,8 @@ bool Output::evaluate_clp_string_filter(
             for (auto const& subquery : q->get_sub_queries()) {
                 if (subquery.matches_logtype(id) && subquery.matches_vars(vars)) {
                     if (subquery.wildcard_match_required()) {
-                        std::string const decompressed_message
-                                = std::get<std::string>(reader->extract_value(m_cur_message));
                         matched = StringUtils::wildcard_match_unsafe(
-                                decompressed_message,
+                                std::get<std::string>(reader->extract_value(m_cur_message)),
                                 q->get_search_string(),
                                 !q->get_ignore_case()
                         );
@@ -490,10 +488,8 @@ bool Output::evaluate_clp_string_filter(
                 }
             }
         } else {
-            std::string const decompressed_message
-                    = std::get<std::string>(reader->extract_value(m_cur_message));
             matched = StringUtils::wildcard_match_unsafe(
-                    decompressed_message,
+                    std::get<std::string>(reader->extract_value(m_cur_message)),
                     q->get_search_string(),
                     !q->get_ignore_case()
             );
@@ -894,27 +890,13 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
             }
 
             // search on log type dictionary
-            if (query_string.find("*") != std::string::npos
-                || filter->get_column()->matches_type(LiteralType::VarStringT))
-            {
-                // if it matches VarStringT then it contains no space, so we
-                // don't't add more wildcards. Likewise if it already contains some wildcards
-                // we do not add more
-                m_string_query_map[query_string] = std::move(Grep::process_raw_query(
-                        m_log_dict,
-                        m_var_dict,
-                        query_string,
-                        m_ignore_case,
-                        false
-                ));
-            } else {
-                m_string_query_map[query_string] = Grep::process_raw_query(
-                        m_log_dict,
-                        m_var_dict,
-                        query_string,
-                        m_ignore_case
-                );
-            }
+            m_string_query_map.emplace(query_string, Grep::process_raw_query(
+                    m_log_dict,
+                    m_var_dict,
+                    query_string,
+                    m_ignore_case,
+                    false
+            ));
         }
         SubQuery sub_query;
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {

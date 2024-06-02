@@ -435,8 +435,7 @@ std::optional<Query> Grep::process_raw_query(
     size_t begin_pos = 0;
     size_t end_pos = 0;
     bool is_var;
-    // FIXME: may want to use non-heuristic method of tokenizing query
-    // if (use_heuristic) {
+
     while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
         query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
     }
@@ -459,12 +458,12 @@ std::optional<Query> Grep::process_raw_query(
     // - (token1 as logtype) (token2 as var)
     // - (token1 as var) (token2 as logtype)
     // - (token1 as var) (token2 as var)
-
     vector<SubQuery> sub_queries;
     string logtype;
     bool type_of_one_token_changed = true;
     while (type_of_one_token_changed) {
         SubQuery sub_query;
+
         // Compute logtypes and variables for query
         auto matchability = generate_logtypes_and_vars_for_subquery(
                 log_dict,
