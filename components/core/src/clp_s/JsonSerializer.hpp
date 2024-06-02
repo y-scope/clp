@@ -21,7 +21,9 @@ public:
         AddFloatValue,
         AddBoolValue,
         AddStringValue,
-        AddNullValue
+        AddNullValue,
+        BeginArray,
+        EndArray
     };
 
     static int64_t const cReservedLength = 4096;
@@ -80,6 +82,18 @@ public:
         m_json_string += "},";
     }
 
+    void begin_array() {
+        append_key();
+        m_json_string += "[";
+    }
+
+    void end_array() {
+        if (m_op_list[m_op_list_index - 2] != BeginArray) {
+            m_json_string.pop_back();
+        }
+        m_json_string += "],";
+    }
+
     void append_key() { append_key(m_special_keys[m_special_keys_index++]); }
 
     void append_key(std::string const& key) {
@@ -95,6 +109,7 @@ public:
 
     void append_value_from_column(clp_s::BaseColumnReader* column, uint64_t cur_message) {
         column->extract_string_value_into_buffer(cur_message, m_json_string);
+        m_json_string += ",";
     }
 
     void

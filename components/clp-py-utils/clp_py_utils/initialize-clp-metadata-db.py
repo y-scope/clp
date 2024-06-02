@@ -85,6 +85,7 @@ def main(argv):
                     `begin_timestamp` BIGINT NOT NULL,
                     `end_timestamp` BIGINT NOT NULL,
                     `num_uncompressed_bytes` BIGINT NOT NULL,
+                    `begin_message_ix` BIGINT NOT NULL,
                     `num_messages` BIGINT NOT NULL,
                     `archive_id` VARCHAR(64) NOT NULL,
                     KEY `files_path` (path(768)) USING BTREE,

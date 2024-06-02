@@ -30,7 +30,7 @@ Resources like log datasets, etc.
 :::
 
 :::{grid-item-card}
-:link: reference-unstructured-schema-file
+:link: reference-json-search-syntax
 Reference
 ^^^
 Reference docs like format specifications, etc.
@@ -54,8 +54,8 @@ quick-start-search/index
 
 core-overview
 core-container
-core-unstructured/index
 core-clp-s
+core-unstructured/index
 :::
 
 :::{toctree}

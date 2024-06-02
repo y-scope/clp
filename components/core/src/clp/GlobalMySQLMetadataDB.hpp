@@ -93,6 +93,12 @@ public:
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_file_path(
             std::string const& file_path
     ) override;
+    bool get_file_split(
+            std::string const& orig_file_id,
+            size_t message_ix,
+            std::string& archive_id,
+            std::string& file_split_id
+    ) override;
 
 private:
     // Variables

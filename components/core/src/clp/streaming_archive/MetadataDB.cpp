@@ -18,6 +18,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     EndTimestamp,
     TimestampPatterns,
     NumUncompressedBytes,
+    BeginMessageIx,
     NumMessages,
     NumVariables,
     IsSplit,
@@ -134,7 +135,8 @@ static SQLitePreparedStatement get_files_select_statement(
         SQLiteDB& db,
         epochtime_t ts_begin,
         epochtime_t ts_end,
-        std::string const& file_path,
+        string const& file_path,
+        string const& file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts
@@ -154,6 +156,8 @@ static SQLitePreparedStatement get_files_select_statement(
             = streaming_archive::cMetadataDB::File::TimestampPatterns;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
+    field_names[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            = streaming_archive::cMetadataDB::File::BeginMessageIx;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)]
             = streaming_archive::cMetadataDB::File::NumMessages;
     field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumVariables)]
@@ -218,6 +222,16 @@ static SQLitePreparedStatement get_files_select_statement(
         );
         clause_exists = true;
     }
+    if (false == file_split_id.empty()) {
+        fmt::format_to(
+                statement_buffer_ix,
+                " {} {} = ?{}",
+                clause_exists ? "AND" : "WHERE",
+                streaming_archive::cMetadataDB::File::Id,
+                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1
+        );
+        clause_exists = true;
+    }
     if (in_specific_segment) {
         fmt::format_to(
                 statement_buffer_ix,
@@ -267,6 +281,13 @@ static SQLitePreparedStatement get_files_select_statement(
                 true
         );
     }
+    if (false == file_split_id.empty()) {
+        statement.bind_text(
+                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
+                file_split_id,
+                true
+        );
+    }
     if (in_specific_segment) {
         statement.bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::SegmentId) + 1,
@@ -297,7 +318,8 @@ MetadataDB::FileIterator::FileIterator(
         SQLiteDB& db,
         epochtime_t begin_timestamp,
         epochtime_t end_timestamp,
-        std::string const& file_path,
+        string const& file_path,
+        string const& file_split_id,
         bool in_specific_segment,
         segment_id_t segment_id,
         bool order_by_segment_end_ts
@@ -307,6 +329,7 @@ MetadataDB::FileIterator::FileIterator(
                   begin_timestamp,
                   end_timestamp,
                   file_path,
+                  file_split_id,
                   in_specific_segment,
                   segment_id,
                   order_by_segment_end_ts
@@ -357,6 +380,11 @@ void MetadataDB::FileIterator::get_timestamp_patterns(string& timestamp_patterns
 size_t MetadataDB::FileIterator::get_num_uncompressed_bytes() const {
     return m_statement.column_int64(
             enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)
+    );
+}
+
+size_t MetadataDB::FileIterator::get_begin_message_ix() const {
+    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)
     );
 }
 
@@ -448,6 +476,13 @@ void MetadataDB::open(string const& path) {
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
                                )]
+            .second
+            = "INTEGER";
+
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            .first
+            = streaming_archive::cMetadataDB::File::BeginMessageIx;
+    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
             .second
             = "INTEGER";
 
@@ -596,6 +631,10 @@ void MetadataDB::update_files(vector<writer::File*> const& files) {
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes) + 1,
                 (int64_t)file->get_num_uncompressed_bytes()
+        );
+        m_upsert_file_statement->bind_int64(
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + 1,
+                (int64_t)file->get_begin_message_ix()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,
