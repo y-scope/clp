@@ -96,9 +96,9 @@ public:
      * NOTE: We use the term "Locator" to avoid terms like "Key" or "Identifier" that are already in
      * use.
      */
-    class TreeNodeLocator {
+    class NodeLocator {
     public:
-        TreeNodeLocator(
+        NodeLocator(
                 SchemaTreeNode::id_t parent_id,
                 std::string_view key_name,
                 SchemaTreeNode::Type type
@@ -149,19 +149,18 @@ public:
     /**
      * Tries to get the ID of a node corresponding to the given locator, if the node exists.
      * @param locator
-     * @param node_id Returns the ID of the node if it exists.
-     * @return Whether the node exists.
+     * @return Tree node ID if the node exists.
+     * @return std::nullopt is the node doesn't exist.
      */
-    [[nodiscard]] auto
-    try_get_node_id(TreeNodeLocator const& locator, SchemaTreeNode::id_t& node_id) const -> bool;
+    [[nodiscard]] auto try_get_node_id(NodeLocator const& locator
+    ) const -> std::optional<SchemaTreeNode::id_t>;
 
     /**
      * @param locator
      * @return Whether there is a node that corresponds to the given locator.
      */
-    [[nodiscard]] auto has_node(TreeNodeLocator const& locator) const -> bool {
-        SchemaTreeNode::id_t node_id{};
-        return try_get_node_id(locator, node_id);
+    [[nodiscard]] auto has_node(NodeLocator const& locator) const -> bool {
+        return try_get_node_id(locator).has_value();
     }
 
     /**
@@ -170,7 +169,7 @@ public:
      * @return The ID of the inserted node.
      * @throw OperationFailed if a node that corresponds to the given locator already exists.
      */
-    [[maybe_unused]] auto insert_node(TreeNodeLocator const& locator) -> SchemaTreeNode::id_t;
+    [[maybe_unused]] auto insert_node(NodeLocator const& locator) -> SchemaTreeNode::id_t;
 
     /**
      * Takes a snapshot of the current schema tree (to allow recovery on failure).

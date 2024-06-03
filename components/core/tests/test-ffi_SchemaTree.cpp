@@ -1,8 +1,14 @@
+#include <optional>
+#include <vector>
+
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <msgpack.hpp>
 
 #include "../src/clp/ffi/SchemaTree.hpp"
 #include "../src/clp/ffi/SchemaTreeNode.hpp"
+
+using clp::ffi::SchemaTree;
+using clp::ffi::SchemaTreeNode;
 
 namespace {
 /**
@@ -12,9 +18,9 @@ namespace {
  * @return Whether the node is inserted successfully with the expected node id.
  */
 [[nodiscard]] auto insert_node(
-        clp::ffi::SchemaTree& schema_tree,
-        clp::ffi::SchemaTree::TreeNodeLocator locator,
-        clp::ffi::SchemaTreeNode::id_t expected_id
+        SchemaTree& schema_tree,
+        SchemaTree::NodeLocator locator,
+        SchemaTreeNode::id_t expected_id
 ) -> bool;
 
 /**
@@ -24,72 +30,78 @@ namespace {
  * @return Whether the node exists and its ID matches the expected ID.
  */
 [[nodiscard]] auto check_node(
-        clp::ffi::SchemaTree const& schema_tree,
-        clp::ffi::SchemaTree::TreeNodeLocator locator,
-        clp::ffi::SchemaTreeNode::id_t expected_id
+        SchemaTree const& schema_tree,
+        SchemaTree::NodeLocator locator,
+        SchemaTreeNode::id_t expected_id
 ) -> bool;
 
 auto insert_node(
-        clp::ffi::SchemaTree& schema_tree,
-        clp::ffi::SchemaTree::TreeNodeLocator locator,
-        clp::ffi::SchemaTreeNode::id_t expected_id
+        SchemaTree& schema_tree,
+        SchemaTree::NodeLocator locator,
+        SchemaTreeNode::id_t expected_id
 ) -> bool {
-    clp::ffi::SchemaTreeNode::id_t node_id{};
-    return false == schema_tree.try_get_node_id(locator, node_id)
+    return false == schema_tree.has_node(locator)
            && expected_id == schema_tree.insert_node(locator);
 }
 
 auto check_node(
-        clp::ffi::SchemaTree const& schema_tree,
-        clp::ffi::SchemaTree::TreeNodeLocator locator,
-        clp::ffi::SchemaTreeNode::id_t expected_id
+        SchemaTree const& schema_tree,
+        SchemaTree::NodeLocator locator,
+        SchemaTreeNode::id_t expected_id
 ) -> bool {
-    clp::ffi::SchemaTreeNode::id_t node_id{};
-    return schema_tree.try_get_node_id(locator, node_id) && expected_id == node_id;
+    auto const node_id{schema_tree.try_get_node_id(locator)};
+    return node_id.has_value() && node_id.value() == expected_id;
 }
 }  // namespace
 
 TEST_CASE("ffi_schema_tree", "[ffi]") {
-    using clp::ffi::SchemaTree;
-    using clp::ffi::SchemaTreeNode;
-
+    /**
+     * <0:root:Obj>
+     *      |
+     *      |------------> <1:a:Obj>
+     *      |                  |
+     *      |--> <2:a:Int>     |--> <3:b:Obj>
+     *                                  |
+     *                                  |------------> <4:c:Obj>
+     *                                  |                  |
+     *                                  |--> <5:d:Int>     |--> <7:d:UnstructuredArray>
+     *                                  |                  |
+     *                                  |--> <6:d:Bool>    |--> <8:d:Str>
+     */
     SchemaTree schema_tree;
+    std::vector<SchemaTree::NodeLocator> const locators{
+            {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Obj},
+            {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Int},
+            {1, "b", SchemaTreeNode::Type::Obj},
+            {3, "c", SchemaTreeNode::Type::Obj},
+            {3, "d", SchemaTreeNode::Type::Int},
+            {3, "d", SchemaTreeNode::Type::Bool},
+            {4, "d", SchemaTreeNode::Type::UnstructuredArray},
+            {4, "d", SchemaTreeNode::Type::Str}
+    };
 
-    REQUIRE(insert_node(schema_tree, {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Obj}, 1));
-    REQUIRE(insert_node(schema_tree, {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Int}, 2));
-    REQUIRE(insert_node(schema_tree, {1, "b", SchemaTreeNode::Type::Obj}, 3));
-    REQUIRE(insert_node(schema_tree, {3, "c", SchemaTreeNode::Type::Obj}, 4));
+    auto const snapshot_idx{static_cast<SchemaTreeNode::id_t>(locators.size() / 2)};
 
-    schema_tree.take_snapshot();
+    for (SchemaTreeNode::id_t id_to_insert{1}; id_to_insert <= locators.size(); ++id_to_insert) {
+        REQUIRE(insert_node(schema_tree, locators[id_to_insert - 1], id_to_insert));
+        if (snapshot_idx == id_to_insert) {
+            schema_tree.take_snapshot();
+        }
+    }
 
-    REQUIRE(insert_node(schema_tree, {3, "d", SchemaTreeNode::Type::Int}, 5));
-    REQUIRE(insert_node(schema_tree, {3, "d", SchemaTreeNode::Type::Bool}, 6));
-    REQUIRE(insert_node(schema_tree, {4, "d", SchemaTreeNode::Type::UnstructuredArray}, 7));
-    REQUIRE(insert_node(schema_tree, {4, "d", SchemaTreeNode::Type::Str}, 8));
-
-    REQUIRE(check_node(schema_tree, {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Obj}, 1));
-    REQUIRE(check_node(schema_tree, {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Int}, 2));
-    REQUIRE(check_node(schema_tree, {1, "b", SchemaTreeNode::Type::Obj}, 3));
-    REQUIRE(check_node(schema_tree, {3, "c", SchemaTreeNode::Type::Obj}, 4));
-    REQUIRE(check_node(schema_tree, {3, "d", SchemaTreeNode::Type::Int}, 5));
-    REQUIRE(check_node(schema_tree, {3, "d", SchemaTreeNode::Type::Bool}, 6));
-    REQUIRE(check_node(schema_tree, {4, "d", SchemaTreeNode::Type::UnstructuredArray}, 7));
-    REQUIRE(check_node(schema_tree, {4, "d", SchemaTreeNode::Type::Str}, 8));
+    for (SchemaTreeNode::id_t id_to_check{1}; id_to_check <= locators.size(); ++id_to_check) {
+        REQUIRE(check_node(schema_tree, locators[id_to_check - 1], id_to_check));
+    }
 
     schema_tree.revert();
 
-    REQUIRE(check_node(schema_tree, {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Obj}, 1));
-    REQUIRE(check_node(schema_tree, {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Int}, 2));
-    REQUIRE(check_node(schema_tree, {1, "b", SchemaTreeNode::Type::Obj}, 3));
-    REQUIRE(check_node(schema_tree, {3, "c", SchemaTreeNode::Type::Obj}, 4));
+    for (SchemaTreeNode::id_t id_to_insert{snapshot_idx + 1}; id_to_insert <= locators.size();
+         ++id_to_insert)
+    {
+        REQUIRE(insert_node(schema_tree, locators[id_to_insert - 1], id_to_insert));
+    }
 
-    REQUIRE(insert_node(schema_tree, {3, "d", SchemaTreeNode::Type::Int}, 5));
-    REQUIRE(insert_node(schema_tree, {3, "d", SchemaTreeNode::Type::Bool}, 6));
-    REQUIRE(insert_node(schema_tree, {4, "d", SchemaTreeNode::Type::UnstructuredArray}, 7));
-    REQUIRE(insert_node(schema_tree, {4, "d", SchemaTreeNode::Type::Str}, 8));
-
-    REQUIRE(check_node(schema_tree, {3, "d", SchemaTreeNode::Type::Int}, 5));
-    REQUIRE(check_node(schema_tree, {3, "d", SchemaTreeNode::Type::Bool}, 6));
-    REQUIRE(check_node(schema_tree, {4, "d", SchemaTreeNode::Type::UnstructuredArray}, 7));
-    REQUIRE(check_node(schema_tree, {4, "d", SchemaTreeNode::Type::Str}, 8));
+    for (SchemaTreeNode::id_t id_to_check{1}; id_to_check <= locators.size(); ++id_to_check) {
+        REQUIRE(check_node(schema_tree, locators[id_to_check - 1], id_to_check));
+    }
 }

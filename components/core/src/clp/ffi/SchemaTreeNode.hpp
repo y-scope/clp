@@ -1,7 +1,6 @@
 #ifndef CLP_FFI_SCHEMATREENODE_HPP
 #define CLP_FFI_SCHEMATREENODE_HPP
 
-#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -15,7 +14,7 @@ namespace clp::ffi {
 class SchemaTreeNode {
 public:
     // Types
-    using id_t = size_t;
+    using id_t = uint32_t;
 
     /**
      * Enum defining the possible node types.
@@ -65,12 +64,12 @@ public:
      * NOTE: This method doesn't check if a child with the given ID already exists.
      * @param child_id The child node's ID.
      */
-    auto append_new_child_id(id_t child_id) -> void { m_children_ids.push_back(child_id); }
+    auto append_new_child(id_t child_id) -> void { m_children_ids.push_back(child_id); }
 
     /**
      * Removes the last appended child ID (if any).
      */
-    auto remove_last_appended_child_id() -> void {
+    auto remove_last_appended_child() -> void {
         if (m_children_ids.empty()) {
             return;
         }
