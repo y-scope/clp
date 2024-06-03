@@ -9,9 +9,27 @@ namespace {
  * @param schema_tree
  * @param locator
  * @param expected_id
- * @return true if the node is successfully inserted with the expected node id; false otherwise.
+ * @return Whether the node is inserted successfully with the expected node id.
  */
 [[nodiscard]] auto insert_node(
+        clp::ffi::SchemaTree& schema_tree,
+        clp::ffi::SchemaTree::TreeNodeLocator locator,
+        clp::ffi::SchemaTreeNode::id_t expected_id
+) -> bool;
+
+/**
+ * @param schema_tree
+ * @param locator
+ * @param expected_id
+ * @return Whether the node exists and its id matches the expected id.
+ */
+[[nodiscard]] auto check_node(
+        clp::ffi::SchemaTree const& schema_tree,
+        clp::ffi::SchemaTree::TreeNodeLocator locator,
+        clp::ffi::SchemaTreeNode::id_t expected_id
+) -> bool;
+
+auto insert_node(
         clp::ffi::SchemaTree& schema_tree,
         clp::ffi::SchemaTree::TreeNodeLocator locator,
         clp::ffi::SchemaTreeNode::id_t expected_id
@@ -21,13 +39,7 @@ namespace {
            && expected_id == schema_tree.insert_node(locator);
 }
 
-/**
- * @param schema_tree
- * @param locator
- * @param expected_id
- * @return true if the node exists and its id is the same as the expected id; false otherwise.
- */
-[[nodiscard]] auto check_node(
+auto check_node(
         clp::ffi::SchemaTree const& schema_tree,
         clp::ffi::SchemaTree::TreeNodeLocator locator,
         clp::ffi::SchemaTreeNode::id_t expected_id

@@ -14,6 +14,7 @@ namespace clp::ffi {
  */
 class SchemaTreeNode {
 public:
+    // Types
     using id_t = size_t;
 
     /**
@@ -35,11 +36,11 @@ public:
               m_key_name{key_name.begin(), key_name.end()},
               m_type{type} {}
 
-    // Delete copy constructor and assignment
+    // Disable copy constructor/assignment operator
     SchemaTreeNode(SchemaTreeNode const&) = delete;
     auto operator=(SchemaTreeNode const&) -> SchemaTreeNode& = delete;
 
-    // Define default move constructor and assignment
+    // Define default move constructor/assignment operator
     SchemaTreeNode(SchemaTreeNode&&) = default;
     auto operator=(SchemaTreeNode&&) -> SchemaTreeNode& = default;
 

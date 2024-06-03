@@ -19,6 +19,7 @@ namespace clp::ffi {
  */
 class SchemaTree {
 public:
+    // Types
     class OperationFailed : public TraceableException {
     public:
         OperationFailed(
@@ -68,16 +69,17 @@ public:
         SchemaTreeNode::Type m_type;
     };
 
+    // Constants
     static constexpr SchemaTreeNode::id_t cRootId{0};
 
     // Constructors
     SchemaTree() { m_tree_nodes.emplace_back(cRootId, cRootId, "", SchemaTreeNode::Type::Obj); }
 
-    // Delete copy constructor and assignment
+    // Disable copy constructor/assignment operator
     SchemaTree(SchemaTree const&) = delete;
     auto operator=(SchemaTree const&) -> SchemaTree& = delete;
 
-    // Define default move constructor and assignment
+    // Define default move constructor/assignment operator
     SchemaTree(SchemaTree&&) = default;
     auto operator=(SchemaTree&&) -> SchemaTree& = default;
 
@@ -98,7 +100,7 @@ public:
      * Tries to get a node id with the provided locator if the node exists.
      * @param locator Locator of a unique tree node.
      * @param node_id Returns the node id if the node exists.
-     * @return true if the node exists, false otherwise.
+     * @return Whether the node exists.
      */
     [[nodiscard]] auto
     try_get_node_id(TreeNodeLocator const& locator, SchemaTreeNode::id_t& node_id) const -> bool;
