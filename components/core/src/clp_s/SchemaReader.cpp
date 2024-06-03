@@ -407,7 +407,7 @@ size_t SchemaReader::generate_structured_array_template(
                 case NodeType::Object: {
                     find_intersection_and_fix_brackets(
                             array_root,
-                            node.get_id(),
+                            global_column_id,
                             path_to_intersection
                     );
                     for (int j = 0; j < (node.get_depth() - depth); ++j) {
