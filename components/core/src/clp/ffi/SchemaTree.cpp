@@ -13,7 +13,7 @@ auto SchemaTree::get_node(SchemaTreeNode::id_t id) const -> SchemaTreeNode const
                 ErrorCode_OutOfBounds,
                 __FILE__,
                 __LINE__,
-                "The given tree node id is invalid: " + std::to_string(id)
+                "Invalid node ID: " + std::to_string(id)
         );
     }
     return m_tree_nodes[id];
@@ -41,7 +41,7 @@ auto SchemaTree::try_get_node_id(
 auto SchemaTree::insert_node(TreeNodeLocator const& locator) -> SchemaTreeNode::id_t {
     SchemaTreeNode::id_t node_id{};
     if (try_get_node_id(locator, node_id)) {
-        throw OperationFailed(ErrorCode_Failure, __FILE__, __LINE__, "Tree Node already exists.");
+        throw OperationFailed(ErrorCode_Failure, __FILE__, __LINE__, "Node already exists.");
     }
     node_id = m_tree_nodes.size();
     m_tree_nodes.emplace_back(
@@ -60,7 +60,7 @@ auto SchemaTree::revert() -> void {
                 ErrorCode_Failure,
                 __FILE__,
                 __LINE__,
-                "Snapshot was not taken before calling revert."
+                "No snapshot exists."
         );
     }
     while (m_tree_nodes.size() != m_snapshot_size) {

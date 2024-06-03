@@ -424,8 +424,8 @@ set(SOURCE_FILES_unitTest
         tests/LogSuppressor.hpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
-        tests/test-ffi_SchemaTree.cpp
         tests/test-encoding_methods.cpp
+        tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp

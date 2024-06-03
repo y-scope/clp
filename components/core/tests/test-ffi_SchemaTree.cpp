@@ -21,7 +21,7 @@ namespace {
  * @param schema_tree
  * @param locator
  * @param expected_id
- * @return Whether the node exists and its id matches the expected id.
+ * @return Whether the node exists and its ID matches the expected ID.
  */
 [[nodiscard]] auto check_node(
         clp::ffi::SchemaTree const& schema_tree,

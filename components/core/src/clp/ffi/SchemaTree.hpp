@@ -14,8 +14,60 @@
 
 namespace clp::ffi {
 /**
- * This class implements a schema tree, providing all necessary methods for upper-layer APIs through
- * FFI. Nodes are stored using a flattened vector.
+ * A tree representing the schema of a set of JSON (or any format with a dynamic structure) records.
+ * Each node in a SchemaTree has a key name and a value type, corresponding to the key name and
+ * value type of a key-value pair (kv-pair) in a record. A nested kv-pair is represented as a child
+ * node of the outer kv-pair. As a result, all leaf nodes represent primitive values while internal
+ * nodes represent non-primitive values.
+ *
+ * NOTE:
+ * - The tree is the representation of multiple record's schemas merged together, so technically, it
+ *   should be called a MergedSchemaTree; we use SchemaTree for simplicity.
+ * - The root node is special with key name "" and type `SchemaTreeNode::Type::Obj`. This means that
+ *   this SchemaTree implementation cannot represent records that are not objects.
+ * - This SchemaTree implementation does not represent arrays. Instead, arrays in a record can be
+ *   serialized as strings and represented using the type `SchemaTreeNode::Type::UnstructuredArray`.
+ *
+ * For example, consider the two records below.
+ *
+ * # Record 1
+ * {
+ *   "a": 0,
+ *   "b": {
+ *     "c": true
+ *   }
+ * }
+ *
+ * # Record 2
+ * {
+ *   "a": 0.0,
+ *   "d": {
+ *     "e": "E"
+ *   }
+ * }
+ *
+ * The schema trees for each record are below.
+ *
+ * # Record 1's schema tree
+ * <: Obj> --> <a: Int>
+ *         --> <b: Obj>   --> <c: Bool>
+ *
+ * # Record 2's schema tree
+ * <: Obj> --> <a: Float>
+ *         --> <d: Obj>   --> <e: Str>
+ *
+ * In the diagrams above, a node is represented by <KeyName: Type> and a parent-child relationship
+ * is represented using "-->".
+ *
+ * When the records' schema trees are merged together, they create the following SchemaTree:
+ *
+ * <: Obj> --> <a: Int>
+ *         --> <a: Float>
+ *         --> <b: Obj>   --> <c: Bool>
+ *         --> <d: Obj>   --> <e: Str>
+ *
+ * Notice that nodes with the same key name, type, and parents are merged together. Nodes that
+ * differ in just their key name (e.g., "a") remain unique.
  */
 class SchemaTree {
 public:
@@ -40,11 +92,9 @@ public:
     };
 
     /**
-     * When constructing the schema tree, we uniquely identify the location of a node being inserted
-     * to the tree by the unique triple of the parent id, the key name, and the node type. The
-     * reason why the triple is unique is because the combination of the key name and the node type
-     * should have no ambiguity for a parent node. This class stores such a triple and act as a
-     * unique identifier for a node in the schema tree.
+     * A triple---parent ID, key name, and node type---that uniquely identifies a node.
+     * NOTE: We use the term "Locator" to avoid terms like "Key" or "Identifier" that are already in
+     * use.
      */
     class TreeNodeLocator {
     public:
@@ -91,24 +141,23 @@ public:
 
     /**
      * @param id
-     * @return The tree node with the given id.
-     * @throw OperationFailed if the given id is not valid (i.e., out of bound).
+     * @return The tree node with the given ID.
+     * @throw OperationFailed if a node with the given ID doesn't exist in the tree.
      */
     [[nodiscard]] auto get_node(SchemaTreeNode::id_t id) const -> SchemaTreeNode const&;
 
     /**
-     * Tries to get a node id with the provided locator if the node exists.
-     * @param locator Locator of a unique tree node.
-     * @param node_id Returns the node id if the node exists.
+     * Tries to get the ID of a node corresponding to the given locator, if the node exists.
+     * @param locator
+     * @param node_id Returns the ID of the node if it exists.
      * @return Whether the node exists.
      */
     [[nodiscard]] auto
     try_get_node_id(TreeNodeLocator const& locator, SchemaTreeNode::id_t& node_id) const -> bool;
 
     /**
-     * Checks whether there exists a node with the given locator.
      * @param locator
-     * @return Whether the node exists.
+     * @return Whether there is a node that corresponds to the given locator.
      */
     [[nodiscard]] auto has_node(TreeNodeLocator const& locator) const -> bool {
         SchemaTreeNode::id_t node_id{};
@@ -116,26 +165,26 @@ public:
     }
 
     /**
-     * Inserts a new node to the given locator.
+     * Inserts a new node corresponding to the given locator.
      * @param locator
-     * @return The node id of the inserted node.
-     * @throw OperationFailed if the node with the given locator already exists.
+     * @return The ID of the inserted node.
+     * @throw OperationFailed if a node that corresponds to the given locator already exists.
      */
     [[maybe_unused]] auto insert_node(TreeNodeLocator const& locator) -> SchemaTreeNode::id_t;
 
     /**
-     * Takes a snapshot of the current schema tree for potential recovery on failure.
+     * Takes a snapshot of the current schema tree (to allow recovery on failure).
      */
     auto take_snapshot() -> void { m_snapshot_size.emplace(m_tree_nodes.size()); }
 
     /**
-     * Reverts the tree to the time when the snapshot was taken.
-     * @throw OperationFailed if the snapshot was not taken.
+     * Reverts the tree to the last snapshot.
+     * @throw OperationFailed if no snapshot exists.
      */
     auto revert() -> void;
 
     /**
-     * Resets the schema tree by removing all the tree nodes except root.
+     * Resets the schema tree by removing all nodes except the root.
      */
     auto reset() -> void {
         m_snapshot_size.reset();
@@ -144,7 +193,7 @@ public:
     }
 
 private:
-    std::optional<size_t> m_snapshot_size{std::nullopt};
+    std::optional<size_t> m_snapshot_size;
     std::vector<SchemaTreeNode> m_tree_nodes;
 };
 }  // namespace clp::ffi

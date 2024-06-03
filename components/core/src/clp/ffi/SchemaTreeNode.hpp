@@ -9,8 +9,8 @@
 
 namespace clp::ffi {
 /**
- * This class implements a node in the schema tree. It stores information of a tree node, including
- * the node type, key name, parent id, and ids of all the child nodes.
+ * A node in clp::ffi::SchemaTree. It stores the node's key name, type, parent's ID, and the IDs of
+ * all its children.
  */
 class SchemaTreeNode {
 public:
@@ -18,7 +18,7 @@ public:
     using id_t = size_t;
 
     /**
-     * Enum defining schema tree node types.
+     * Enum defining the possible node types.
      */
     enum class Type : uint8_t {
         Int = 0,
@@ -61,17 +61,14 @@ public:
     }
 
     /**
-     * Appends a child node id to the end of the children list.
-     * Note: the node id is the node index in the schema tree. It is impossible to check if the node
-     * added is unique in the children list. Therefore, this function does not check whether the
-     * node already exists. It is the caller's responsibility (schema tree) to ensure the node
-     * appended is unique.
-     * @param child_id The node id of the given child.
+     * Appends a child using its node ID.
+     * NOTE: This method doesn't check if a child with the given ID already exists.
+     * @param child_id The child node's ID.
      */
     auto append_new_child_id(id_t child_id) -> void { m_children_ids.push_back(child_id); }
 
     /**
-     * Removes the last appended child id from the children list.
+     * Removes the last appended child ID (if any).
      */
     auto remove_last_appended_child_id() -> void {
         if (m_children_ids.empty()) {
