@@ -3,7 +3,10 @@
 #include "Grep.hpp"
 
 #include <algorithm>
+#include <string>
+#include <utility>
 
+#include "../../Utils.hpp"
 #include "../../VariableEncoder.hpp"
 #include "EncodedVariableInterpreter.hpp"
 
@@ -401,21 +404,13 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
     return SubQueryMatchabilityResult::MayMatch;
 }
 
-bool Grep::process_raw_query(
+std::optional<Query> Grep::process_raw_query(
         std::shared_ptr<LogTypeDictionaryReader> log_dict,
-        std::shared_ptr<VariableDictionaryReader> var_dict, /*const Archive& archive,*/
-        string const& search_string, /*epochtime_t search_begin_ts, epochtime_t search_end_ts,*/
+        std::shared_ptr<VariableDictionaryReader> var_dict,
+        string const& search_string,
         bool ignore_case,
-        Query& query, /* compressor_frontend::lexers::ByteLexer& forward_lexer,
-                         compressor_frontend::lexers::ByteLexer& reverse_lexer,*/
-        bool add_wildcards,
-        bool use_heuristic
+        bool add_wildcards
 ) {
-    // Set properties which require no processing
-    // query.set_search_begin_timestamp(search_begin_ts);
-    // query.set_search_end_timestamp(search_end_ts);
-    query.set_ignore_case(ignore_case);
-
     // Add prefix and suffix '*' to make the search a sub-string match
     string processed_search_string;
     if (add_wildcards) {
@@ -428,7 +423,6 @@ bool Grep::process_raw_query(
 
     // Clean-up search string
     processed_search_string = StringUtils::clean_up_wildcard_search_string(processed_search_string);
-    query.set_search_string(processed_search_string);
 
     // Replace non-greedy wildcards with greedy wildcards since we currently have no support for
     // searching compressed files with non-greedy wildcards
@@ -441,17 +435,9 @@ bool Grep::process_raw_query(
     size_t begin_pos = 0;
     size_t end_pos = 0;
     bool is_var;
-    // FIXME: may want to use non-heuristic method of tokenizing query
-    // if (use_heuristic) {
     while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
         query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
     }
-    /*} else {
-        while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos,
-    is_var, forward_lexer, reverse_lexer)) { query_tokens.emplace_back(processed_search_string,
-    begin_pos, end_pos, is_var);
-        }
-    }*/
 
     // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since
     // we fall-back to decompression + wildcard matching for those.
@@ -471,11 +457,11 @@ bool Grep::process_raw_query(
     // - (token1 as logtype) (token2 as var)
     // - (token1 as var) (token2 as logtype)
     // - (token1 as var) (token2 as var)
-    SubQuery sub_query;
+    vector<SubQuery> sub_queries;
     string logtype;
     bool type_of_one_token_changed = true;
     while (type_of_one_token_changed) {
-        sub_query.clear();
+        SubQuery sub_query;
 
         // Compute logtypes and variables for query
         auto matchability = generate_logtypes_and_vars_for_subquery(
@@ -483,19 +469,16 @@ bool Grep::process_raw_query(
                 var_dict,
                 processed_search_string,
                 query_tokens,
-                query.get_ignore_case(),
+                ignore_case,
                 sub_query
         );
         switch (matchability) {
             case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                // Clear all sub-queries since they will be superceded by this sub-query
-                query.clear_sub_queries();
-
                 // Since other sub-queries will be superceded by this one, we can stop
                 // processing now
-                return true;
+                return Query{ignore_case, processed_search_string, {}};
             case SubQueryMatchabilityResult::MayMatch:
-                query.add_sub_query(sub_query);
+                sub_queries.push_back(std::move(sub_query));
                 break;
             case SubQueryMatchabilityResult::WontMatch:
             default:
@@ -513,7 +496,11 @@ bool Grep::process_raw_query(
         }
     }
 
-    return query.contains_sub_queries();
+    if (sub_queries.empty()) {
+        return std::nullopt;
+    }
+
+    return Query{ignore_case, processed_search_string, std::move(sub_queries)};
 }
 
 bool Grep::get_bounds_of_next_potential_var(
