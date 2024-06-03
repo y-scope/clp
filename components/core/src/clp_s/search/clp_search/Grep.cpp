@@ -434,7 +434,7 @@ std::optional<Query> Grep::process_raw_query(
     vector<QueryToken> query_tokens;
     size_t begin_pos = 0;
     size_t end_pos = 0;
-    bool is_var
+    bool is_var;
     while (get_bounds_of_next_potential_var(processed_search_string, begin_pos, end_pos, is_var)) {
         query_tokens.emplace_back(processed_search_string, begin_pos, end_pos, is_var);
     }
