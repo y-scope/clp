@@ -207,9 +207,9 @@ bool Archive::decompress_message_without_ts(
     decompressed_msg.clear();
 
     // Build original message content
-    logtype_dictionary_id_t const logtype_id = compressed_msg.get_logtype_id();
+    auto const logtype_id = compressed_msg.get_logtype_id();
     auto const& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
-    if (!EncodedVariableInterpreter::decode_variables_into_message(
+    if (false == EncodedVariableInterpreter::decode_variables_into_message(
                 logtype_entry,
                 m_var_dictionary,
                 compressed_msg.get_vars(),

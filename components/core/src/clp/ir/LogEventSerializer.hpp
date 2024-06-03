@@ -12,9 +12,9 @@
 
 namespace clp::ir {
 /**
- * Class for Serializing log events into a Zstandard compressed IR stream.
- * The serializer first  buffers the serialized data into an internal buffer,
- * and only flushes the buffered ir into the on disk file if flush or close is called
+ * Class for serializing log events into a Zstandard compressed IR stream. The serializer first
+ * buffers the serialized data into an internal buffer, and only flushes the buffered ir into the
+ * on-disk file when `flush` or `close` is called.
  */
 template <typename encoded_variable_t>
 class LogEventSerializer {
@@ -27,13 +27,13 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        [[nodiscard]] char const* what() const noexcept override {
+       [[nodiscard]] auto what() const noexcept -> char const* override {
             return "ir::LogEventSerializer operation failed";
         }
     };
 
     // Constructors
-    explicit LogEventSerializer() : m_num_log_events{0}, m_serialized_size{0}, m_is_open{false} {}
+    explicit LogEventSerializer() = default;
 
     // Delete copy constructor and assignment
     LogEventSerializer(LogEventSerializer const&) = delete;
@@ -50,7 +50,7 @@ public:
      * the IR and writes the preamble into it.
      * @param file_path
      */
-    auto open(std::string const& file_path) -> ErrorCode;
+    [[nodiscard]] auto open(std::string const& file_path) -> ErrorCode;
 
     /**
      * Creates a Zstandard compressed four bytes encoded IR on the disk, and writes the preamble to
@@ -78,14 +78,13 @@ public:
     }
 
     /**
-     * Gets the number of serialized log events
-     * @return
+     * @return Number of serialized log events.
      */
     [[nodiscard]] auto get_num_log_events() const -> size_t { return m_num_log_events; }
 
     /**
      * Serializes a log event and writes it to the end of the internal buffer
-     * @return True if the log event is serialized successfully, Otherwise false
+     * @return Whether the log event is successfully serialized.
      */
     [[nodiscard]] auto
     serialize_log_event(std::string_view message, epoch_time_ms_t timestamp) -> ErrorCode;
@@ -101,9 +100,9 @@ private:
     static constexpr std::string_view TIME_ZONE_ID = "";
 
     // Variables
-    size_t m_num_log_events;
-    size_t m_serialized_size;
-    bool m_is_open;
+    size_t m_num_log_events{0};
+    size_t m_serialized_size{0};
+    bool m_is_open{false};
     [[no_unique_address]] std::conditional_t<
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,

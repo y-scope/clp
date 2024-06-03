@@ -12,7 +12,7 @@ using std::string_view;
 namespace clp::ir {
 template <typename encoded_variable_t>
 LogEventSerializer<encoded_variable_t>::~LogEventSerializer() {
-    if (true == m_is_open) {
+    if (m_is_open) {
         SPDLOG_ERROR("Serializer is not closed before being destroyed - output maybe corrupted");
     }
 }
@@ -99,9 +99,12 @@ auto LogEventSerializer<encoded_variable_t>::close() -> void {
 template <typename encoded_variable_t>
 auto LogEventSerializer<encoded_variable_t>::flush() -> void {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
-    m_zstd_compressor.write(reinterpret_cast<char const*>(m_ir_buffer.data()), m_ir_buffer.size());
+    m_zstd_compressor.write(
+            size_checked_pointer_cast<char const>(m_ir_buffer.data()),
+            m_ir_buffer.size()
+    );
     m_serialized_size += m_ir_buffer.size();
     m_ir_buffer.clear();
 }
@@ -112,11 +115,11 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
         epoch_time_ms_t timestamp
 ) -> ErrorCode {
     if (false == m_is_open) {
-        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
     string logtype;
-    bool res;
+    bool res{};
     if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         res = clp::ffi::ir_stream::eight_byte_encoding::serialize_log_event(
                 timestamp,
@@ -125,7 +128,7 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
                 m_ir_buffer
         );
     } else {
-        auto timestamp_delta = timestamp - m_prev_msg_timestamp;
+        auto const timestamp_delta = timestamp - m_prev_msg_timestamp;
         m_prev_msg_timestamp = timestamp;
         res = clp::ffi::ir_stream::four_byte_encoding::serialize_log_event(
                 timestamp_delta,
@@ -143,8 +146,6 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
-template LogEventSerializer<eight_byte_encoded_variable_t>::LogEventSerializer();
-template LogEventSerializer<four_byte_encoded_variable_t>::LogEventSerializer();
 template LogEventSerializer<eight_byte_encoded_variable_t>::~LogEventSerializer();
 template LogEventSerializer<four_byte_encoded_variable_t>::~LogEventSerializer();
 template auto LogEventSerializer<four_byte_encoded_variable_t>::open(

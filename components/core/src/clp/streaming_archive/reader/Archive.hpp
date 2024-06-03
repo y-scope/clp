@@ -103,7 +103,7 @@ public:
      * Decompresses a given message from a given file without its original timestamp
      * @param compressed_msg
      * @param decompressed_msg
-     * @return true if message was successfully decompressed, false otherwise
+     * @return Whether the message was successfully decompressed
      */
     bool
     decompress_message_without_ts(Message const& compressed_msg, std::string& decompressed_msg);
