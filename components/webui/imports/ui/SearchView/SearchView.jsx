@@ -3,6 +3,7 @@ import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react";
@@ -96,6 +97,14 @@ const SearchView = () => {
         localLastSearchSignal,
     ]);
 
+    const isExpectingUpdates = useMemo(
+        () => (null !== searchJobId) && [
+            SEARCH_SIGNAL.REQ_QUERYING,
+            SEARCH_SIGNAL.RESP_QUERYING
+        ].includes(resultsMetadata.lastSignal),
+        [searchJobId, resultsMetadata.lastSignal]
+    );
+
     const searchResults = useTracker(() => {
         if (null === searchJobId) {
             return [];
@@ -103,7 +112,7 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
             searchJobId: searchJobId,
-            isExpectingUpdates: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
+            isExpectingUpdates: isExpectingUpdates,
         });
 
         // NOTE: Although we publish and subscribe using the name
@@ -157,7 +166,7 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.AggregationResultsCollectionName, {
             aggregationJobId: aggregationJobId,
-            isExpectingUpdates: SEARCH_SIGNAL.REQ_QUERYING === resultsMetadata.lastSignal,
+            isExpectingUpdates: isExpectingUpdates,
         });
         const collection = dbRef.current.getOrCreateCollection(aggregationJobId);
 

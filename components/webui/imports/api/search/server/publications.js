@@ -63,7 +63,8 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
 }) => {
     logger.debug(
         `Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`,
-        `searchJobId=${searchJobId}`
+        `searchJobId=${searchJobId}`,
+        `isExpectingUpdates=${isExpectingUpdates}`
     );
 
     const collection = searchJobCollectionsManager.getOrCreateCollection(searchJobId);
@@ -98,6 +99,12 @@ Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
     aggregationJobId,
     isExpectingUpdates,
 }) => {
+    logger.debug(
+        `Subscription '${Meteor.settings.public.AggregationResultsCollectionName}'`,
+        `aggregationJobId=${aggregationJobId}`,
+        `isExpectingUpdates=${isExpectingUpdates}`
+    );
+
     const collection = searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     const findOptions = {
         disableOplog: true,
