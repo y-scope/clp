@@ -20,6 +20,13 @@ import {searchJobCollectionsManager} from "./collections";
 const COLLECTION_POLL_INTERVAL_MILLIS = 250;
 
 /**
+ * The maximum value (2^31 - 1) that can be used as a polling interval in JavaScript.
+ * Reference: https://developer.mozilla.org/en-US/docs/Web/API/setTimeout#maximum_delay_value
+ */
+// eslint-disable-next-line no-magic-numbers
+const JS_MAX_DELAY_VALUE = (2 ** 31) - 1;
+
+/**
  * Publishes search results metadata for a specific job.
  *
  * @param {string} publicationName
@@ -46,14 +53,18 @@ Meteor.publish(Meteor.settings.public.SearchResultsMetadataCollectionName, ({sea
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.searchJobId
+ * @param {boolean} props.isExpectingUpdates Whether the subscriber
+ * expects that the collection will be updated.
  * @return {Mongo.Cursor} cursor that provides access to the search results.
  */
 Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
     searchJobId,
+    isExpectingUpdates,
 }) => {
     logger.debug(
         `Subscription '${Meteor.settings.public.SearchResultsCollectionName}'`,
-        `searchJobId=${searchJobId}`
+        `searchJobId=${searchJobId}`,
+        `isExpectingUpdates=${isExpectingUpdates}`
     );
 
     const collection = searchJobCollectionsManager.getOrCreateCollection(searchJobId);
@@ -66,7 +77,9 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
         ],
         limit: SEARCH_MAX_NUM_RESULTS,
         disableOplog: true,
-        pollingIntervalMs: COLLECTION_POLL_INTERVAL_MILLIS,
+        pollingIntervalMs: isExpectingUpdates ?
+            COLLECTION_POLL_INTERVAL_MILLIS :
+            JS_MAX_DELAY_VALUE,
     };
 
     return collection.find({}, findOptions);
@@ -78,15 +91,26 @@ Meteor.publish(Meteor.settings.public.SearchResultsCollectionName, ({
  * @param {string} publicationName
  * @param {object} props
  * @param {string} props.aggregationJobId
+ * @param {boolean} props.isExpectingUpdates Whether the subscriber
+ * expects that the collection will be updated.
  * @return {Mongo.Cursor} cursor that provides access to the aggregation results.
  */
 Meteor.publish(Meteor.settings.public.AggregationResultsCollectionName, ({
     aggregationJobId,
+    isExpectingUpdates,
 }) => {
+    logger.debug(
+        `Subscription '${Meteor.settings.public.AggregationResultsCollectionName}'`,
+        `aggregationJobId=${aggregationJobId}`,
+        `isExpectingUpdates=${isExpectingUpdates}`
+    );
+
     const collection = searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     const findOptions = {
         disableOplog: true,
-        pollingIntervalMs: COLLECTION_POLL_INTERVAL_MILLIS,
+        pollingIntervalMs: isExpectingUpdates ?
+            COLLECTION_POLL_INTERVAL_MILLIS :
+            JS_MAX_DELAY_VALUE,
     };
 
     return collection.find({}, findOptions);
