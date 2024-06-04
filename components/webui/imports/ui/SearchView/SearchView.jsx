@@ -151,7 +151,7 @@ const SearchView = () => {
         return resultsCollection.find({}, findOptions).fetch();
     }, [
         fieldToSortBy,
-        resultsMetadata.lastSignal,
+        isExpectingUpdates,
         searchJobId,
         visibleSearchResultsLimit,
     ]);
@@ -173,7 +173,7 @@ const SearchView = () => {
         return collection.find().fetch();
     }, [
         aggregationJobId,
-        resultsMetadata.lastSignal,
+        isExpectingUpdates,
     ]);
 
     // State transitions
