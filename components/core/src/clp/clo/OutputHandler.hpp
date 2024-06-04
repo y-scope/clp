@@ -14,6 +14,7 @@
 #include "../../reducer/Pipeline.hpp"
 #include "../Defs.h"
 #include "../streaming_archive/MetadataDB.hpp"
+#include "../streaming_archive/reader/Message.hpp"
 #include "../TraceableException.hpp"
 
 namespace clp::clo {
@@ -28,14 +29,18 @@ public:
     // Methods
     /**
      * Adds a query result to a batch or sends it to the destination.
-     * @param original_path The original path of the log event.
-     * @param message The content of the log event.
-     * @param timestamp The timestamp of the log event.
+     * @param original_path The original path of the file input log event belongs to.
+     * @param original_path The original id of the file input log event belongs to.
+     * @param encoded_message The encoded log event
+     * @param decompressed_message The content of the log event.
      * @return ErrorCode_Success if the result was added successfully, an error code otherwise.
      */
-    virtual ErrorCode
-    add_result(std::string const& original_path, std::string const& message, epochtime_t timestamp)
-            = 0;
+    virtual ErrorCode add_result(
+            std::string_view original_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
+    ) = 0;
 
     /**
      * Flushes any buffered output. Called once at the end of search.
@@ -82,15 +87,16 @@ public:
     // Methods inherited from Client
     /**
      * Sends a result to the network destination.
-     * @param original_path
-     * @param message
-     * @param timestamp
-     * @return Same as networking::try_send
+     * @param original_path The original path of the file input log event belongs to.
+     * @param original_path The original id of the file input log event belongs to.
+     * @param encoded_message The encoded log event
+     * @param message The content of the log event.
      */
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view original_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override;
 
     /**
@@ -114,13 +120,23 @@ public:
     // Types
     struct QueryResult {
         // Constructors
-        QueryResult(std::string original_path, std::string message, epochtime_t timestamp)
-                : original_path(std::move(original_path)),
-                  message(std::move(message)),
+        QueryResult(
+                std::string_view orig_file_path,
+                std::string_view orig_file_id,
+                size_t log_event_ix,
+                std::string_view decompressed_message,
+                epochtime_t timestamp
+        )
+                : orig_file_path(orig_file_path),
+                  orig_file_id(orig_file_id),
+                  log_event_ix(log_event_ix),
+                  decompressed_message(decompressed_message),
                   timestamp(timestamp) {}
 
-        std::string original_path;
-        std::string message;
+        std::string orig_file_path;
+        std::string orig_file_id;
+        int64_t log_event_ix;
+        std::string decompressed_message;
         epochtime_t timestamp;
     };
 
@@ -156,15 +172,17 @@ public:
     // Methods inherited from OutputHandler
     /**
      * Adds a result to the batch.
-     * @param original_path
-     * @param message
-     * @param timestamp
-     * @return ErrorCode_Success
+     * @param original_path The original path of the file input log event belongs to.
+     * @param original_path The original id of the file input log event belongs to.
+     * @param encoded_message The encoded log event
+     * @param message The content of the log event.
+     * @return
      */
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view original_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override;
 
     /**
@@ -218,15 +236,17 @@ public:
     // Methods inherited from OutputHandler
     /**
      * Adds a result.
-     * @param original_path
-     * @param message
-     * @param timestamp
-     * @return ErrorCode_Success
+     * @param original_path The original path of the file input log event belongs to.
+     * @param original_path The original id of the file input log event belongs to.
+     * @param encoded_message The encoded log event
+     * @param message The content of the log event.
+     * @return Errorcode
      */
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view original_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override;
 
     /**
@@ -254,11 +274,13 @@ public:
 
     // Methods inherited from OutputHandler
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view original_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override {
-        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+        int64_t bucket = (encoded_message.get_ts_in_milli() / m_count_by_time_bucket_size)
+                         * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
         return ErrorCode::ErrorCode_Success;
     }

@@ -1,6 +1,7 @@
 #include "OutputHandler.hpp"
 
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include <msgpack.hpp>
@@ -10,8 +11,12 @@
 #include "../../reducer/network_utils.hpp"
 #include "../networking/socket_utils.hpp"
 
+using clp::streaming_archive::reader::Message;
+using std::string;
+using std::string_view;
+
 namespace clp::clo {
-NetworkOutputHandler::NetworkOutputHandler(std::string const& host, int port) {
+NetworkOutputHandler::NetworkOutputHandler(string const& host, int port) {
     m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server");
@@ -20,14 +25,17 @@ NetworkOutputHandler::NetworkOutputHandler(std::string const& host, int port) {
 }
 
 ErrorCode NetworkOutputHandler::add_result(
-        std::string const& original_path,
-        std::string const& message,
-        epochtime_t timestamp
+        string_view orig_file_path,
+        string_view orig_file_id,
+        Message const& encoded_message,
+        string_view decompressed_message
 ) {
-    msgpack::type::tuple<std::string, epochtime_t, std::string> src(
-            original_path,
-            timestamp,
-            message
+    msgpack::type::tuple<string, string, size_t, epochtime_t, string> src(
+            orig_file_path,
+            orig_file_id,
+            encoded_message.get_log_event_ix(),
+            encoded_message.get_ts_in_milli(),
+            decompressed_message
     );
     msgpack::sbuffer m;
     msgpack::pack(m, src);
@@ -35,8 +43,8 @@ ErrorCode NetworkOutputHandler::add_result(
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
-        std::string const& uri,
-        std::string const& collection,
+        string const& uri,
+        string const& collection,
         uint64_t batch_size,
         uint64_t max_num_results
 )
@@ -53,15 +61,30 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
 }
 
 ErrorCode ResultsCacheOutputHandler::add_result(
-        std::string const& original_path,
-        std::string const& message,
-        epochtime_t timestamp
+        string_view orig_file_path,
+        string_view orig_file_id,
+        Message const& encoded_message,
+        string_view decompressed_message
 ) {
+    auto const timestamp = encoded_message.get_ts_in_milli();
+    auto const log_event_ix = encoded_message.get_log_event_ix();
     if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
+        m_latest_results.emplace(std::make_unique<QueryResult>(
+                orig_file_path,
+                orig_file_id,
+                log_event_ix,
+                decompressed_message,
+                timestamp
+        ));
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>(original_path, message, timestamp));
+        m_latest_results.emplace(std::make_unique<QueryResult>(
+                orig_file_path,
+                orig_file_id,
+                log_event_ix,
+                decompressed_message,
+                timestamp
+        ));
     }
 
     return ErrorCode_Success;
@@ -75,8 +98,13 @@ ErrorCode ResultsCacheOutputHandler::flush() {
 
         try {
             m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("original_path", std::move(result.original_path)),
-                    bsoncxx::builder::basic::kvp("message", std::move(result.message)),
+                    bsoncxx::builder::basic::kvp(
+                            "orig_file_path",
+                            std::move(result.orig_file_path)
+                    ),
+                    bsoncxx::builder::basic::kvp("orig_file_id", std::move(result.orig_file_id)),
+                    bsoncxx::builder::basic::kvp("log_event_ix", result.log_event_ix),
+                    bsoncxx::builder::basic::kvp("message", std::move(result.decompressed_message)),
                     bsoncxx::builder::basic::kvp("timestamp", result.timestamp)
             )));
             count++;
@@ -109,9 +137,10 @@ CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
 }
 
 ErrorCode CountOutputHandler::add_result(
-        [[maybe_unused]] std::string const& original_path,
-        [[maybe_unused]] std::string const& message,
-        [[maybe_unused]] epochtime_t timestamp
+        [[maybe_unused]] string_view orig_file_path,
+        [[maybe_unused]] string_view orig_file_id,
+        [[maybe_unused]] Message const& encoded_message,
+        [[maybe_unused]] string_view decompressed_message
 ) {
     m_pipeline.push_record(reducer::EmptyRecord{});
     return ErrorCode_Success;

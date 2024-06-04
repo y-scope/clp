@@ -126,8 +126,9 @@ static SearchFilesResult search_file(
         if (ErrorCode_Success
             != output_handler->add_result(
                     compressed_file.get_orig_path(),
-                    decompressed_message,
-                    compressed_message.get_ts_in_milli()
+                    compressed_file.get_orig_file_id_as_string(),
+                    compressed_message,
+                    decompressed_message
             ))
         {
             result = SearchFilesResult::ResultSendFailure;
