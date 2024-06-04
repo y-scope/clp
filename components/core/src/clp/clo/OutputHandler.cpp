@@ -1,8 +1,8 @@
 #include "OutputHandler.hpp"
 
 #include <memory>
+#include <string>
 #include <string_view>
-#include <vector>
 
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
@@ -73,8 +73,8 @@ ErrorCode ResultsCacheOutputHandler::add_result(
                 orig_file_path,
                 orig_file_id,
                 log_event_ix,
-                decompressed_message,
-                timestamp
+                timestamp,
+                decompressed_message
         ));
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
@@ -82,8 +82,8 @@ ErrorCode ResultsCacheOutputHandler::add_result(
                 orig_file_path,
                 orig_file_id,
                 log_event_ix,
-                decompressed_message,
-                timestamp
+                timestamp,
+                decompressed_message
         ));
     }
 
@@ -104,8 +104,8 @@ ErrorCode ResultsCacheOutputHandler::flush() {
                     ),
                     bsoncxx::builder::basic::kvp("orig_file_id", std::move(result.orig_file_id)),
                     bsoncxx::builder::basic::kvp("log_event_ix", result.log_event_ix),
-                    bsoncxx::builder::basic::kvp("message", std::move(result.decompressed_message)),
-                    bsoncxx::builder::basic::kvp("timestamp", result.timestamp)
+                    bsoncxx::builder::basic::kvp("timestamp", result.timestamp),
+                    bsoncxx::builder::basic::kvp("message", std::move(result.decompressed_message))
             )));
             count++;
 

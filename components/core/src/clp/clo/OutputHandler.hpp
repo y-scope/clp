@@ -5,6 +5,7 @@
 
 #include <queue>
 #include <string>
+#include <string_view>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
@@ -29,14 +30,14 @@ public:
     // Methods
     /**
      * Adds a query result to a batch or sends it to the destination.
-     * @param original_path The original path of the file input log event belongs to.
-     * @param original_path The original id of the file input log event belongs to.
-     * @param encoded_message The encoded log event
-     * @param decompressed_message The content of the log event.
+     * @param orig_file_path original path of the file that input log event belongs to
+     * @param orig_file_id original id of the file that input log event belongs to
+     * @param encoded_message encoded log event
+     * @param decompressed_message decompressed log event
      * @return ErrorCode_Success if the result was added successfully, an error code otherwise.
      */
     virtual ErrorCode add_result(
-            std::string_view original_path,
+            std::string_view orig_file_path,
             std::string_view orig_file_id,
             streaming_archive::reader::Message const& encoded_message,
             std::string_view decompressed_message
@@ -87,13 +88,14 @@ public:
     // Methods inherited from Client
     /**
      * Sends a result to the network destination.
-     * @param original_path The original path of the file input log event belongs to.
-     * @param original_path The original id of the file input log event belongs to.
-     * @param encoded_message The encoded log event
-     * @param message The content of the log event.
+     * @param orig_file_path original path of the file that input log event belongs to
+     * @param orig_file_id original id of the file that input log event belongs to
+     * @param encoded_message encoded log event
+     * @param decompressed_message decompressed log event
+     * @return Same as networking::try_send
      */
     ErrorCode add_result(
-            std::string_view original_path,
+            std::string_view orig_file_path,
             std::string_view orig_file_id,
             streaming_archive::reader::Message const& encoded_message,
             std::string_view decompressed_message
@@ -124,20 +126,20 @@ public:
                 std::string_view orig_file_path,
                 std::string_view orig_file_id,
                 size_t log_event_ix,
-                std::string_view decompressed_message,
-                epochtime_t timestamp
+                epochtime_t timestamp,
+                std::string_view decompressed_message
         )
                 : orig_file_path(orig_file_path),
                   orig_file_id(orig_file_id),
                   log_event_ix(log_event_ix),
-                  decompressed_message(decompressed_message),
-                  timestamp(timestamp) {}
+                  timestamp(timestamp),
+                  decompressed_message(decompressed_message) {}
 
         std::string orig_file_path;
         std::string orig_file_id;
         int64_t log_event_ix;
-        std::string decompressed_message;
         epochtime_t timestamp;
+        std::string decompressed_message;
     };
 
     struct QueryResultGreaterTimestampComparator {
@@ -172,14 +174,14 @@ public:
     // Methods inherited from OutputHandler
     /**
      * Adds a result to the batch.
-     * @param original_path The original path of the file input log event belongs to.
-     * @param original_path The original id of the file input log event belongs to.
-     * @param encoded_message The encoded log event
-     * @param message The content of the log event.
-     * @return
+     * @param orig_file_path original path of the file that input log event belongs to
+     * @param orig_file_id original id of the file that input log event belongs to
+     * @param encoded_message encoded log event
+     * @param decompressed_message decompressed log event
+     * @return ErrorCode_Success
      */
     ErrorCode add_result(
-            std::string_view original_path,
+            std::string_view orig_file_path,
             std::string_view orig_file_id,
             streaming_archive::reader::Message const& encoded_message,
             std::string_view decompressed_message
@@ -234,16 +236,8 @@ public:
     explicit CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
-    /**
-     * Adds a result.
-     * @param original_path The original path of the file input log event belongs to.
-     * @param original_path The original id of the file input log event belongs to.
-     * @param encoded_message The encoded log event
-     * @param message The content of the log event.
-     * @return Errorcode
-     */
     ErrorCode add_result(
-            std::string_view original_path,
+            std::string_view orig_file_path,
             std::string_view orig_file_id,
             streaming_archive::reader::Message const& encoded_message,
             std::string_view decompressed_message
@@ -274,7 +268,7 @@ public:
 
     // Methods inherited from OutputHandler
     ErrorCode add_result(
-            std::string_view original_path,
+            std::string_view orig_file_path,
             std::string_view orig_file_id,
             streaming_archive::reader::Message const& encoded_message,
             std::string_view decompressed_message
