@@ -305,6 +305,9 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
+        src/clp/ffi/SchemaTree.cpp
+        src/clp/ffi/SchemaTree.hpp
+        src/clp/ffi/SchemaTreeNode.hpp
         src/clp/ffi/search/CompositeWildcardToken.cpp
         src/clp/ffi/search/CompositeWildcardToken.hpp
         src/clp/ffi/search/ExactVariableToken.cpp
@@ -441,6 +444,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
