@@ -4,6 +4,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
+#include "../ir/Constant.hpp"
 #include "../ir/LogEventSerializer.hpp"
 #include "../ir/utils.hpp"
 
@@ -24,7 +25,7 @@ namespace {
  * @param end_message_ix
  * @return true if the IR is renamed and moved successfully. Otherwise false
  */
-bool rename_and_move_ir(
+bool rename_ir_file(
         boost::filesystem::path const& temp_ir_path,
         boost::filesystem::path const& output_directory,
         std::string const& file_orig_id,
@@ -32,7 +33,7 @@ bool rename_and_move_ir(
         size_t end_message_ix
 ) {
     std::string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
-                               + std::to_string(end_message_ix) + "." + ir::get_ir_extension_name();
+                               + std::to_string(end_message_ix) + "." + ir::cIrExtension;
 
     auto const renamed_ir_path = output_directory / ir_file_name;
     try {
@@ -47,6 +48,44 @@ bool rename_and_move_ir(
         return false;
     }
     return true;
+}
+
+/**
+ * Gets an approximated upper bound size of a given log message if it is encoded in IR format.
+ * The approximation is based on the following assumptions:
+ * 1. Dictionary variable lengths are all encoded using int32_t
+ * 2. Timestamp or timestamp delta is encoded using int64_t
+ * 3. Logtype length is encoded using int32_t
+ * 4. The size of encoded variable roughly equals to their plain text size.
+ * @param log_message
+ * @param num_encoded_vars
+ * @return the approximated ir size in bytes
+ */
+auto get_approximated_ir_size(std::string_view log_message, size_t num_encoded_vars) -> size_t {
+    constexpr size_t cLogtypeLengthSize = sizeof(int32_t);
+    constexpr size_t cTagSize = sizeof(char);
+    constexpr size_t cVarLengthSize = sizeof(int32_t);
+    constexpr size_t cTimestampSize = sizeof(int64_t);
+    constexpr size_t cPlaceHolderSize = sizeof(enum_to_underlying_type(ir::VariablePlaceholder()));
+
+    // sizeof(log type) + sizeof (dict vars) + sizeof(encoded_vars) ~= The size of log message
+    auto ir_size = log_message.size();
+
+    // Add the size of placeholders in the original log type
+    ir_size += num_encoded_vars * cPlaceHolderSize;
+
+    // Add the tags and encoding length bytes of log type
+    ir_size += cTagSize + cLogtypeLengthSize;
+
+    // Add the tags and encoding length bytes for dictionary variables
+    // Note here we overestimate the size by assuming that encoded float and int also have length
+    // encoding bytes
+    ir_size += (cTagSize + cVarLengthSize) * num_encoded_vars;
+
+    // Add the tags and encoding length bytes of log type
+    ir_size += cTagSize + cTimestampSize;
+
+    return ir_size;
 }
 }  // namespace
 
@@ -119,7 +158,7 @@ bool FileDecompressor::decompress_file(
     return true;
 }
 
-bool FileDecompressor::decompress_ir(
+bool FileDecompressor::decompress_to_ir(
         streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
         string const& output_dir,
         string const& temp_output_dir,
@@ -165,7 +204,7 @@ bool FileDecompressor::decompress_ir(
     }
 
     boost::filesystem::path temp_ir_path{temp_output_dir};
-    temp_ir_path /= m_encoded_file.get_id_as_string() + ".temp." + ir::get_ir_extension_name();
+    temp_ir_path /= m_encoded_file.get_id_as_string() + "." + ir::cIrExtension;
 
     auto const& file_orig_id = m_encoded_file.get_orig_file_id_as_string();
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();
@@ -187,22 +226,22 @@ bool FileDecompressor::decompress_ir(
             SPDLOG_ERROR("Failed to decompress message");
             return false;
         }
-        auto const message_size_as_ir = ir::get_approximated_ir_size(
+        auto const message_size_as_ir = get_approximated_ir_size(
                 m_decompressed_message,
                 m_encoded_message.get_vars().size()
         );
         if (message_size_as_ir + ir_serializer.get_serialized_size() > ir_target_size) {
             ir_serializer.close();
 
-            auto end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
+            auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
             if (false
-                == rename_and_move_ir(
-                        temp_ir_path,
-                        output_dir,
-                        file_orig_id,
-                        begin_message_ix,
-                        end_message_ix
-                ))
+                == rename_ir_file(
+                temp_ir_path,
+                output_dir,
+                file_orig_id,
+                begin_message_ix,
+                end_message_ix
+            ))
             {
                 return false;
             }
@@ -222,21 +261,22 @@ bool FileDecompressor::decompress_ir(
             );
             ErrorCode_Success != error_code)
         {
-            SPDLOG_ERROR("Failed to serialize log event: {}", m_decompressed_message.c_str());
+            SPDLOG_ERROR("Failed to serialize log event: {} with ts {}", m_decompressed_message.c_str(), m_encoded_message.get_ts_in_milli());
             return false;
         }
     }
     auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
     ir_serializer.close();
 
+    // Note we don't remove the temp_output_dir because we don't know if it exists before execution
     if (false
-        == rename_and_move_ir(
-                temp_ir_path,
-                output_dir,
-                file_orig_id,
-                begin_message_ix,
-                end_message_ix
-        ))
+        == rename_ir_file(
+        temp_ir_path,
+        output_dir,
+        file_orig_id,
+        begin_message_ix,
+        end_message_ix
+    ))
     {
         return false;
     }
