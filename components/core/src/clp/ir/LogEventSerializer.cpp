@@ -1,11 +1,15 @@
 #include "LogEventSerializer.hpp"
 
-#include <string_utils/string_utils.hpp>
+#include <string>
+#include <string_view>
+
+#include <spdlog/spdlog.h>
 
 #include "../ErrorCode.hpp"
 #include "../ffi/ir_stream/encoding_methods.hpp"
 #include "../ffi/ir_stream/protocol_constants.hpp"
-#include "spdlog_with_specializations.hpp"
+#include "../ir/types.hpp"
+#include "../type_utils.hpp"
 
 using std::string;
 using std::string_view;

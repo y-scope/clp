@@ -1,13 +1,18 @@
 #ifndef CLP_IR_LOGEVENTDESERIALIZER_HPP
 #define CLP_IR_LOGEVENTDESERIALIZER_HPP
 
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <vector>
+
 #include "../ErrorCode.hpp"
+#include "../FileWriter.hpp"
 #include "../streaming_compression/zstd/Compressor.hpp"
-#include "../TimestampPattern.hpp"
 #include "../TraceableException.hpp"
 #include "../type_utils.hpp"
-#include "../WriterInterface.hpp"
-#include "LogEvent.hpp"
 #include "types.hpp"
 
 namespace clp::ir {
@@ -88,9 +93,9 @@ private:
     // but IR metadata only supports a single pattern. CLP doesn't track files' time zone info
     // either. For now, the serializer uses a set of default values. The consumer of the IR should
     // decide what time pattern and time zone to use.
-    static constexpr std::string_view cTimestampPattern = "%Y-%m-%d %H:%M:%S,%3";
-    static constexpr std::string_view cTimestampPatternSyntax = "";
-    static constexpr std::string_view cTimezoneID = "UTC";
+    static constexpr std::string_view cTimestampPattern{"%Y-%m-%d %H:%M:%S,%3"};
+    static constexpr std::string_view cTimestampPatternSyntax{};
+    static constexpr std::string_view cTimezoneID = {"UTC"};
 
     // Variables
     size_t m_num_log_events{0};
