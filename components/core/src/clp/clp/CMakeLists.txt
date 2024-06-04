@@ -36,6 +36,7 @@ set(
         ../GlobalMySQLMetadataDB.hpp
         ../GlobalSQLiteMetadataDB.cpp
         ../GlobalSQLiteMetadataDB.hpp
+        ../ir/Constant.hpp
         ../ir/LogEvent.hpp
         ../ir/LogEventDeserializer.cpp
         ../ir/LogEventDeserializer.hpp
