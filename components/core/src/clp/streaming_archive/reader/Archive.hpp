@@ -100,7 +100,7 @@ public:
     decompress_message(File& file, Message const& compressed_msg, std::string& decompressed_msg);
 
     /**
-     * Decompresses a given message from a given file without its original timestamp
+     * Decompresses a given message from a given file without appending its original timestamp
      * @param compressed_msg
      * @param decompressed_msg
      * @return Whether the message was successfully decompressed

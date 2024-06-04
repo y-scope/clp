@@ -15,7 +15,7 @@ auto has_ir_stream_magic_number(std::string_view buf) -> bool {
 auto get_approximated_ir_size(std::string_view log_message, size_t num_encoded_vars) -> size_t {
     constexpr size_t cLogtypeLengthSize = sizeof(int32_t);
     constexpr size_t cTagSize = sizeof(char);
-    constexpr size_t cVarSize = sizeof(int32_t);
+    constexpr size_t cVarLengthSize = sizeof(int32_t);
     constexpr size_t cTimestampSize = sizeof(int64_t);
     constexpr size_t cPlaceHolderSize = sizeof(enum_to_underlying_type(VariablePlaceholder()));
 
@@ -31,7 +31,7 @@ auto get_approximated_ir_size(std::string_view log_message, size_t num_encoded_v
     // Add the tags and encoding length bytes for dictionary variables
     // Note here we overestimate the size by assuming that encoded float and int also have length
     // encoding bytes
-    ir_size += (cTagSize + cVarSize) * num_encoded_vars;
+    ir_size += (cTagSize + cVarLengthSize) * num_encoded_vars;
 
     // Add the tags and encoding length bytes of log type
     ir_size += cTagSize + cTimestampSize;

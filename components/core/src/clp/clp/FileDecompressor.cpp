@@ -173,7 +173,7 @@ bool FileDecompressor::decompress_ir(
     LogEventSerializer<four_byte_encoded_variable_t> ir_serializer;
     // Open output IR file
     if (auto const error_code
-        = ir_serializer.open(temp_ir_path.string(), m_encoded_file.get_begin_ts());
+        = ir_serializer.open(temp_ir_path.string());
         ErrorCode_Success != error_code)
     {
         return false;
@@ -209,7 +209,7 @@ bool FileDecompressor::decompress_ir(
             begin_message_ix = end_message_ix;
 
             if (auto const error_code
-                = ir_serializer.open(temp_ir_path.string(), m_encoded_message.get_ts_in_milli());
+                = ir_serializer.open(temp_ir_path.string());
                 ErrorCode_Success != error_code)
             {
                 return false;

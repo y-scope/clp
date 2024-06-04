@@ -21,8 +21,8 @@ constexpr char VersionRegex[] = "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)"
                                 "(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
                                 "(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$";
 
-constexpr char TimestampPatternKey[] = "TIMESTAMP_PATTERN";
-constexpr char TimestampPatternSyntaxKey[] = "TIMESTAMP_PATTERN_SYNTAX";
+constexpr char TimestampPatternKey[] = "cTimestampPattern";
+constexpr char TimestampPatternSyntaxKey[] = "cTimestampPatternSyntax";
 constexpr char TimeZoneIdKey[] = "TZ_ID";
 constexpr char ReferenceTimestampKey[] = "REFERENCE_TIMESTAMP";
 
