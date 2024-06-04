@@ -34,7 +34,7 @@ bool rename_and_move_ir(
     std::string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
                                + std::to_string(end_message_ix) + "." + ir::get_ir_extension_name();
 
-    auto renamed_ir_path = output_directory / ir_file_name;
+    auto const renamed_ir_path = output_directory / ir_file_name;
     try {
         boost::filesystem::rename(temp_ir_path, output_directory / ir_file_name);
     } catch (boost::filesystem::filesystem_error const& e) {
@@ -127,8 +127,9 @@ bool FileDecompressor::decompress_ir(
         size_t ir_target_size
 ) {
     // Open encoded file
-    auto error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
-    if (ErrorCode_Success != error_code) {
+    if (auto const error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
+        ErrorCode_Success != error_code)
+    {
         if (ErrorCode_errno == error_code) {
             SPDLOG_ERROR("Failed to open encoded file, errno={}", errno);
         } else {
@@ -138,8 +139,9 @@ bool FileDecompressor::decompress_ir(
     }
 
     // Generate output directory
-    error_code = create_directory_structure(output_dir, 0700);
-    if (ErrorCode_Success != error_code) {
+    if (auto const error_code = create_directory_structure(output_dir, 0700);
+        ErrorCode_Success != error_code)
+    {
         SPDLOG_ERROR(
                 "Failed to create directory structure {}, errno={}",
                 output_dir.c_str(),
@@ -150,8 +152,9 @@ bool FileDecompressor::decompress_ir(
 
     if (temp_output_dir != output_dir) {
         // Generate temporary output directory
-        error_code = create_directory_structure(temp_output_dir, 0700);
-        if (ErrorCode_Success != error_code) {
+        if (auto const error_code = create_directory_structure(temp_output_dir, 0700);
+            ErrorCode_Success != error_code)
+        {
             SPDLOG_ERROR(
                     "Failed to create directory structure {}, errno={}",
                     output_dir.c_str(),
@@ -169,14 +172,17 @@ bool FileDecompressor::decompress_ir(
 
     LogEventSerializer<four_byte_encoded_variable_t> ir_serializer;
     // Open output IR file
-    error_code = ir_serializer.open(temp_ir_path.string(), m_encoded_file.get_begin_ts());
-    if (ErrorCode_Success != error_code) {
+    if (auto const error_code
+        = ir_serializer.open(temp_ir_path.string(), m_encoded_file.get_begin_ts());
+        ErrorCode_Success != error_code)
+    {
         return false;
     }
 
     while (archive_reader.get_next_message(m_encoded_file, m_encoded_message)) {
-        if (!archive_reader
-                     .decompress_message_without_ts(m_encoded_message, m_decompressed_message))
+        if (false
+            == archive_reader
+                       .decompress_message_without_ts(m_encoded_message, m_decompressed_message))
         {
             SPDLOG_ERROR("Failed to decompress message");
             return false;
@@ -202,25 +208,25 @@ bool FileDecompressor::decompress_ir(
             }
             begin_message_ix = end_message_ix;
 
-            error_code = ir_serializer.open(
-                    temp_ir_path.string(),
-                    m_encoded_message.get_ts_in_milli()
-            );
-            if (ErrorCode_Success != error_code) {
+            if (auto const error_code
+                = ir_serializer.open(temp_ir_path.string(), m_encoded_message.get_ts_in_milli());
+                ErrorCode_Success != error_code)
+            {
                 return false;
             }
         }
 
-        error_code = ir_serializer.serialize_log_event(
-                m_decompressed_message,
-                m_encoded_message.get_ts_in_milli()
-        );
-        if (ErrorCode_Success != error_code) {
+        if (auto const error_code = ir_serializer.serialize_log_event(
+                    m_decompressed_message,
+                    m_encoded_message.get_ts_in_milli()
+            );
+            ErrorCode_Success != error_code)
+        {
             SPDLOG_ERROR("Failed to serialize log event: {}", m_decompressed_message.c_str());
             return false;
         }
     }
-    auto end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
+    auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
     ir_serializer.close();
 
     if (false
