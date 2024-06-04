@@ -10,12 +10,13 @@ namespace clp::streaming_archive::reader {
 class Message {
 public:
     // Methods
-    size_t get_message_number() const;
+    auto get_log_event_ix() const -> size_t;
+    auto get_ix_in_split() const -> size_t;
     logtype_dictionary_id_t get_logtype_id() const;
     std::vector<encoded_variable_t> const& get_vars() const;
     epochtime_t get_ts_in_milli() const;
 
-    void set_message_number(uint64_t message_number);
+    auto set_msg_ix(uint64_t split_begin_msg_ix, uint64_t msg_ix_in_split) -> void;
     void set_logtype_id(logtype_dictionary_id_t logtype_id);
     void add_var(encoded_variable_t var);
     void set_timestamp(epochtime_t timestamp);
@@ -26,7 +27,8 @@ private:
     friend class Archive;
 
     // Variables
-    size_t m_message_number;
+    size_t m_ix_in_split;
+    size_t m_log_event_ix;
     logtype_dictionary_id_t m_logtype_id;
     std::vector<encoded_variable_t> m_vars;
     epochtime_t m_timestamp;

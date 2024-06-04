@@ -191,7 +191,7 @@ bool Archive::decompress_message(
     // Determine which timestamp pattern to use
     auto const& timestamp_patterns = file.get_timestamp_patterns();
     if (!timestamp_patterns.empty()
-        && compressed_msg.get_message_number()
+        && compressed_msg.get_ix_in_split()
                    >= timestamp_patterns[file.get_current_ts_pattern_ix()].first)
     {
         while (true) {
@@ -201,7 +201,7 @@ bool Archive::decompress_message(
             }
             auto next_patt_start_message_num
                     = timestamp_patterns[file.get_current_ts_pattern_ix() + 1].first;
-            if (compressed_msg.get_message_number() < next_patt_start_message_num) {
+            if (compressed_msg.get_ix_in_split() < next_patt_start_message_num) {
                 // Not yet time for next timestamp pattern
                 break;
             }

@@ -1,8 +1,12 @@
 #include "Message.hpp"
 
 namespace clp::streaming_archive::reader {
-size_t Message::get_message_number() const {
-    return m_message_number;
+auto Message::get_log_event_ix() const -> size_t {
+    return m_log_event_ix;
+}
+
+auto Message::get_ix_in_split() const -> size_t {
+    return m_ix_in_split;
 }
 
 logtype_dictionary_id_t Message::get_logtype_id() const {
@@ -17,8 +21,9 @@ epochtime_t Message::get_ts_in_milli() const {
     return m_timestamp;
 }
 
-void Message::set_message_number(uint64_t message_number) {
-    m_message_number = message_number;
+auto Message::set_msg_ix(uint64_t split_begin_msg_ix, uint64_t msg_ix_in_split) -> void {
+    m_ix_in_split = msg_ix_in_split;
+    m_log_event_ix = msg_ix_in_split + split_begin_msg_ix;
 }
 
 void Message::set_logtype_id(logtype_dictionary_id_t logtype_id) {
