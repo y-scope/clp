@@ -97,13 +97,13 @@ const SearchView = () => {
         localLastSearchSignal,
     ]);
 
-    const isExpectingUpdates = useMemo(
-        () => (null !== searchJobId) && [
-            SEARCH_SIGNAL.REQ_QUERYING,
-            SEARCH_SIGNAL.RESP_QUERYING
-        ].includes(resultsMetadata.lastSignal),
-        [searchJobId, resultsMetadata.lastSignal]
-    );
+    const isExpectingUpdates = useMemo(() => (null !== searchJobId) && [
+        SEARCH_SIGNAL.REQ_QUERYING,
+        SEARCH_SIGNAL.RESP_QUERYING,
+    ].includes(resultsMetadata.lastSignal), [
+        searchJobId,
+        resultsMetadata.lastSignal,
+    ]);
 
     const searchResults = useTracker(() => {
         if (null === searchJobId) {
