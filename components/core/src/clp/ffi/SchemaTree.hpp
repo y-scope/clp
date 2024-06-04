@@ -141,7 +141,7 @@ public:
 
     /**
      * @param id
-     * @return The tree node with the given ID.
+     * @return The node with the given ID.
      * @throw OperationFailed if a node with the given ID doesn't exist in the tree.
      */
     [[nodiscard]] auto get_node(SchemaTreeNode::id_t id) const -> SchemaTreeNode const&;
@@ -149,8 +149,8 @@ public:
     /**
      * Tries to get the ID of a node corresponding to the given locator, if the node exists.
      * @param locator
-     * @return Tree node ID if the node exists.
-     * @return std::nullopt is the node doesn't exist.
+     * @return The node's ID if it exists.
+     * @return std::nullopt otherwise.
      */
     [[nodiscard]] auto try_get_node_id(NodeLocator const& locator
     ) const -> std::optional<SchemaTreeNode::id_t>;

@@ -15,7 +15,7 @@ namespace {
  * @param schema_tree
  * @param locator
  * @param expected_id
- * @return Whether the node is inserted successfully with the expected node id.
+ * @return Whether the node was inserted successfully with the expected ID.
  */
 [[nodiscard]] auto insert_node(
         SchemaTree& schema_tree,
@@ -55,7 +55,7 @@ auto check_node(
 }  // namespace
 
 TEST_CASE("ffi_schema_tree", "[ffi]") {
-    /**
+    /*
      * <0:root:Obj>
      *      |
      *      |------------> <1:a:Obj>

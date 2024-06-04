@@ -55,7 +55,7 @@ auto SchemaTree::insert_node(NodeLocator const& locator) -> SchemaTreeNode::id_t
                 ErrorCode_Failure,
                 __FILE__,
                 __LINE__,
-                "Parent node cannot have child."
+                "Non-object nodes cannot have children."
         );
     }
     parent_node.append_new_child(node_id);
