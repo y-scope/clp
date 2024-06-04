@@ -95,7 +95,7 @@ private:
     // decide what time pattern and time zone to use.
     static constexpr std::string_view cTimestampPattern{"%Y-%m-%d %H:%M:%S,%3"};
     static constexpr std::string_view cTimestampPatternSyntax{};
-    static constexpr std::string_view cTimezoneID = {"UTC"};
+    static constexpr std::string_view cTimezoneID{"UTC"};
 
     // Variables
     size_t m_num_log_events{0};
