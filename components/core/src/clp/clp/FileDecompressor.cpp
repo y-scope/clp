@@ -211,8 +211,7 @@ bool FileDecompressor::decompress_to_ir(
 
     LogEventSerializer<four_byte_encoded_variable_t> ir_serializer;
     // Open output IR file
-    if (auto const error_code
-        = ir_serializer.open(temp_ir_path.string());
+    if (auto const error_code = ir_serializer.open(temp_ir_path.string());
         ErrorCode_Success != error_code)
     {
         return false;
@@ -236,19 +235,18 @@ bool FileDecompressor::decompress_to_ir(
             auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
             if (false
                 == rename_ir_file(
-                temp_ir_path,
-                output_dir,
-                file_orig_id,
-                begin_message_ix,
-                end_message_ix
-            ))
+                        temp_ir_path,
+                        output_dir,
+                        file_orig_id,
+                        begin_message_ix,
+                        end_message_ix
+                ))
             {
                 return false;
             }
             begin_message_ix = end_message_ix;
 
-            if (auto const error_code
-                = ir_serializer.open(temp_ir_path.string());
+            if (auto const error_code = ir_serializer.open(temp_ir_path.string());
                 ErrorCode_Success != error_code)
             {
                 return false;
@@ -261,7 +259,11 @@ bool FileDecompressor::decompress_to_ir(
             );
             ErrorCode_Success != error_code)
         {
-            SPDLOG_ERROR("Failed to serialize log event: {} with ts {}", m_decompressed_message.c_str(), m_encoded_message.get_ts_in_milli());
+            SPDLOG_ERROR(
+                    "Failed to serialize log event: {} with ts {}",
+                    m_decompressed_message.c_str(),
+                    m_encoded_message.get_ts_in_milli()
+            );
             return false;
         }
     }
@@ -270,13 +272,7 @@ bool FileDecompressor::decompress_to_ir(
 
     // Note we don't remove the temp_output_dir because we don't know if it exists before execution
     if (false
-        == rename_ir_file(
-        temp_ir_path,
-        output_dir,
-        file_orig_id,
-        begin_message_ix,
-        end_message_ix
-    ))
+        == rename_ir_file(temp_ir_path, output_dir, file_orig_id, begin_message_ix, end_message_ix))
     {
         return false;
     }

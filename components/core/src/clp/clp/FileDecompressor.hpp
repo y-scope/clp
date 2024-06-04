@@ -25,11 +25,11 @@ public:
     );
 
     bool decompress_to_ir(
-        streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
-        std::string const& output_dir,
-        std::string const& temp_output_dir,
-        streaming_archive::reader::Archive& archive_reader,
-        size_t ir_target_size
+            streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
+            std::string const& output_dir,
+            std::string const& temp_output_dir,
+            streaming_archive::reader::Archive& archive_reader,
+            size_t ir_target_size
     );
 
 private:
