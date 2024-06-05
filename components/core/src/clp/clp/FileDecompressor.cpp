@@ -15,8 +15,8 @@ using std::string;
 namespace clp::clp {
 namespace {
 /**
- * Rename a temporary IR and move it to the output directory
- * The new name follows the following format
+ * Renames a temporary IR and moves it to the output directory.
+ * The new name follows the following format:
  * <FILE_ORIG_ID>_<begin_message_ix>_<end_message_ix>.clp.zst
  * @param temp_ir
  * @param output_directory
