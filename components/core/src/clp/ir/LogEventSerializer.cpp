@@ -83,6 +83,9 @@ auto LogEventSerializer<encoded_variable_t>::flush() -> void {
 
 template <typename encoded_variable_t>
 auto LogEventSerializer<encoded_variable_t>::close() -> void {
+    if (false == m_is_open) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
     m_ir_buffer.push_back(clp::ffi::ir_stream::cProtocol::Eof);
     flush();
     close_writer();
