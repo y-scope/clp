@@ -63,7 +63,7 @@ public:
     auto flush() -> void;
 
     /**
-     * Writes the EoF tag to the end of IR, flushes the data and closes the serializer
+     * Writes the EoF tag to the end of IR, flushes the data and closes the serializer.
      * @throw FileWriter::OperationFailed on failure
      */
     auto close() -> void;
@@ -78,7 +78,7 @@ public:
     [[nodiscard]] auto get_num_log_events() const -> size_t { return m_num_log_events; }
 
     /**
-     * Serializes a log event and writes it to the end of the internal buffer
+     * Serializes a log event into the internal buffer.
      * @return Whether the log event is successfully serialized.
      */
     [[nodiscard]] auto

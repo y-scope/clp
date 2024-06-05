@@ -23,7 +23,7 @@ namespace {
  * @param file_orig_id
  * @param begin_message_ix
  * @param end_message_ix
- * @return true if the IR is renamed and moved successfully. Otherwise false
+ * @return Whether the IR file is successfully renamed.
  */
 bool rename_ir_file(
         boost::filesystem::path const& temp_ir_path,
