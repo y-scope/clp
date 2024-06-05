@@ -257,11 +257,8 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
         // Get number of variables in logtype
         auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
         auto const num_vars = logtype_dictionary_entry.get_num_variables();
-        auto const vars_ix_end{m_variables_ix + num_vars};
-        if (vars_ix_end > m_num_variables) {
-            // Logtypes not in sync with variables, so stop search
-            return nullptr;
-        }
+
+        auto const vars_end_ix{m_variables_ix + num_vars};
         auto const timestamp{m_timestamps[m_msgs_ix]};
         if (false == query.timestamp_is_in_search_time_range(timestamp)) {
             continue;
@@ -271,13 +268,15 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
             if (false == sub_query->matches_logtype(logtype_id)) {
                 continue;
             }
+
             msg.clear_vars();
-            for (auto vars_ix{m_variables_ix}; vars_ix < vars_ix_end; ++vars_ix) {
+            for (auto vars_ix{m_variables_ix}; vars_ix < vars_end_ix; ++vars_ix) {
                 msg.add_var(m_variables[vars_ix]);
             }
             if (false == sub_query->matches_vars(msg.get_vars())) {
                 continue;
             }
+
             msg.set_logtype_id(logtype_id);
             msg.set_timestamp(timestamp);
             msg.set_message_number(m_msgs_ix);
