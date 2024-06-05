@@ -459,6 +459,8 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     error_msg = f"Unexpected msg_type: {msg.msg_type.name}"
                     raise NotImplementedError(error_msg)
 
+            # We set the status regardless of the job's previous status to handle the case where the
+            # job is cancelled (status = CANCELLING) while we're in this method.
             if set_job_status(db_conn, job_id, new_job_status):
                 if new_job_status == SearchJobStatus.SUCCEEDED:
                     logger.info(f"Completed job {job_id}.")
