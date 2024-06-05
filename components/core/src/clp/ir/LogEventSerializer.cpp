@@ -24,6 +24,10 @@ LogEventSerializer<encoded_variable_t>::~LogEventSerializer() {
 
 template <typename encoded_variable_t>
 auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> ErrorCode {
+    if (m_is_open) {
+        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+    }
+
     m_serialized_size = 0;
     m_num_log_events = 0;
     m_ir_buffer.clear();
@@ -116,7 +120,7 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
     if (false == res) {
         return ErrorCode_Failure;
     }
-    m_num_log_events += 1;
+    ++m_num_log_events;
     return ErrorCode_Success;
 }
 

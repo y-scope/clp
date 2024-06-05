@@ -33,7 +33,7 @@ bool rename_ir_file(
         size_t end_message_ix
 ) {
     std::string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
-                               + std::to_string(end_message_ix) + "." + ir::cIrExtension;
+                               + std::to_string(end_message_ix) + ir::cIrExtension;
 
     auto const renamed_ir_path = output_directory / ir_file_name;
     try {
@@ -166,7 +166,7 @@ bool FileDecompressor::decompress_to_ir(
     }
 
     boost::filesystem::path temp_ir_path{temp_output_dir};
-    temp_ir_path /= m_encoded_file.get_id_as_string() + "." + ir::cIrExtension;
+    temp_ir_path /= m_encoded_file.get_id_as_string() + ir::cIrExtension;
 
     auto const& file_orig_id = m_encoded_file.get_orig_file_id_as_string();
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();

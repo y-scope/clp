@@ -85,10 +85,7 @@ public:
     serialize_log_event(std::string_view message, epoch_time_ms_t timestamp) -> ErrorCode;
 
 private:
-    // Method
-    auto close_writer() -> void;
-
-    // Constant
+    // Constants
     // Note: In the current implementation, an encoded file could have multiple timestamp patterns
     // but IR metadata only supports a single pattern. CLP doesn't track files' time zone info
     // either. For now, the serializer uses a set of default values. The consumer of the IR should
@@ -96,6 +93,9 @@ private:
     static constexpr std::string_view cTimestampPattern{"%Y-%m-%d %H:%M:%S,%3"};
     static constexpr std::string_view cTimestampPatternSyntax{};
     static constexpr std::string_view cTimezoneID{"UTC"};
+
+    // Methods
+    auto close_writer() -> void;
 
     // Variables
     size_t m_num_log_events{0};
