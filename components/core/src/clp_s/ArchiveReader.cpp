@@ -232,7 +232,7 @@ SchemaReader& ArchiveReader::create_schema_reader(
             append_unordered_reader_columns(
                     m_schema_reader,
                     column_id,
-                    schema.get_view(i, 0),
+                    std::span<int32_t>(),
                     should_marshal_records
             );
             continue;
