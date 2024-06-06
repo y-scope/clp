@@ -18,6 +18,10 @@ namespace clp::clo {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
+    enum class Command : char {
+        Search = 's',
+        Extract = 'x',
+    };
     enum class OutputHandlerType : uint8_t {
         Network = 0,
         Reducer,
@@ -116,6 +120,9 @@ private:
     );
 
     void print_basic_usage() const override;
+
+    // Commands
+    Command m_command;
 
     // Search variables
     std::string m_archive_path;

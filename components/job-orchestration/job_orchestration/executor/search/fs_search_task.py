@@ -46,7 +46,7 @@ def make_command(
     results_collection: str,
 ):
     if StorageEngine.CLP == storage_engine:
-        command = [str(clp_home / "bin" / "clo"), str(archives_dir / archive_id)]
+        command = [str(clp_home / "bin" / "clo"), 's', str(archives_dir / archive_id)]
         if search_config.path_filter is not None:
             command.append("--file-path")
             command.append(search_config.path_filter)

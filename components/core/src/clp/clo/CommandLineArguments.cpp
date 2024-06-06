@@ -56,149 +56,27 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             );
     // clang-format on
 
-    // Define match controls
-    po::options_description options_match_control("Match Controls");
-    options_match_control.add_options()(
-            "tgt",
-            po::value<epochtime_t>()->value_name("TS"),
-            "Find messages with UNIX timestamp >  TS ms"
-    )(
-            "tge",
-            po::value<epochtime_t>()->value_name("TS"),
-            "Find messages with UNIX timestamp >= TS ms"
-    )(
-            "teq",
-            po::value<epochtime_t>()->value_name("TS"),
-            "Find messages with UNIX timestamp == TS ms"
-    )(
-            "tlt",
-            po::value<epochtime_t>()->value_name("TS"),
-            "Find messages with UNIX timestamp <  TS ms"
-    )(
-            "tle",
-            po::value<epochtime_t>()->value_name("TS"),
-            "Find messages with UNIX timestamp <= TS ms"
-    )(
-            "ignore-case,i",
-            po::bool_switch(&m_ignore_case),
-            "Ignore case distinctions in both WILDCARD STRING and the input files"
-    )(
-            "file-path",
-            po::value<string>(&m_file_path)->value_name("PATH"),
-            "Limit search to files with the path PATH"
+    po::options_description general_positional_options;
+    char command_input;
+    general_positional_options.add_options()("command", po::value<char>(&command_input))(
+        "command-args",
+        po::value<vector<string>>()
     );
-
-    po::options_description options_aggregation("Aggregation Options");
-    // clang-format off
-    options_aggregation.add_options()(
-            "count",
-            po::bool_switch(&m_do_count_results_aggregation),
-            "Count the number of results"
-    )(
-            "count-by-time",
-            po::value<int64_t>(&m_count_by_time_bucket_size)->value_name("SIZE"),
-            "Count the number of results in each time span of the given size (ms)"
-    );
-    // clang-format on
-
-    po::options_description options_network_output_handler("Network Output Handler Options");
-    // clang-format off
-    options_network_output_handler.add_options()(
-            "host",
-            po::value<string>(&m_network_dest_host)->value_name("HOST"),
-            "The host to send the results to"
-    )(
-            "port",
-            po::value<int>(&m_network_dest_port)->value_name("PORT"),
-            "The port to send the results to"
-    );
-    // clang-format on
-
-    po::options_description options_reducer_output_handler("Reducer Output Handler Options");
-    options_reducer_output_handler.add_options()(
-            "host",
-            po::value<string>(&m_reducer_host)->value_name("HOST"),
-            "Host the reducer is running on"
-    )(
-            "port",
-            po::value<int>(&m_reducer_port)->value_name("PORT"),
-            "Port the reducer is listening on"
-    )(
-            "job-id",
-            po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
-            "Job ID for the requested aggregation operation"
-    );
-
-    po::options_description options_results_cache_output_handler(
-            "Results Cache Output Handler Options"
-    );
-    // clang-format off
-    options_results_cache_output_handler.add_options()(
-            "uri",
-            po::value<string>(&m_mongodb_uri),
-            "MongoDB URI for the results cache"
-    )(
-            "collection",
-            po::value<string>(&m_mongodb_collection),
-            "MongoDB collection to output to"
-    )(
-            "batch-size,b",
-            po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
-            "The number of documents to insert into MongoDB per batch"
-    )(
-            "max-num-results,m",
-            po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
-                    default_value(m_max_num_results),
-            "The maximum number of results to output"
-    );
-    // clang-format on
-
-    // Define visible options
-    po::options_description visible_options;
-    visible_options.add(options_general);
-    visible_options.add(options_match_control);
-    visible_options.add(options_aggregation);
-    visible_options.add(options_network_output_handler);
-    visible_options.add(options_results_cache_output_handler);
-    visible_options.add(options_reducer_output_handler);
-
-    // Define hidden positional options (not shown in Boost's program options help message)
-    po::options_description hidden_positional_options;
-    string output_handler_name;
-    // clang-format off
-    hidden_positional_options.add_options()(
-            "archive-path",
-            po::value<string>(&m_archive_path)
-    )(
-            "wildcard-string",
-            po::value<string>(&m_search_string)
-    )(
-            "output-handler",
-            po::value<string>(&output_handler_name)
-    )(
-            "output-handler-args",
-            po::value<vector<string>>()
-    );
-    // clang-format on
-    po::positional_options_description positional_options_description;
-    positional_options_description.add("archive-path", 1);
-    positional_options_description.add("wildcard-string", 1);
-    positional_options_description.add("output-handler", 1);
-    positional_options_description.add("output-handler-args", -1);
+    po::positional_options_description general_positional_options_description;
+    general_positional_options_description.add("command", 1);
+    general_positional_options_description.add("command-args", -1);
 
     // Aggregate all options
     po::options_description all_options;
     all_options.add(options_general);
-    all_options.add(options_match_control);
-    all_options.add(options_aggregation);
-    all_options.add(hidden_positional_options);
+    all_options.add(general_positional_options);
 
     // Parse options
     try {
         // Parse options specified on the command line
         po::parsed_options parsed = po::command_line_parser(argc, argv)
                                             .options(all_options)
-                                            .positional(positional_options_description)
+                                            .positional(general_positional_options_description)
                                             .allow_unregistered()
                                             .run();
         po::variables_map parsed_command_line_options;
@@ -225,196 +103,385 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         notify(parsed_command_line_options);
 
-        constexpr char cNetworkOutputHandlerName[] = "network";
-        constexpr char cReducerOutputHandlerName[] = "reducer";
-        constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
-
-        // Handle --help
-        if (parsed_command_line_options.count("help")) {
-            if (argc > 2) {
-                SPDLOG_WARN("Ignoring all options besides --help.");
-            }
-
-            print_basic_usage();
-            cerr << "OUTPUT_HANDLER is one of:" << endl;
-            cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
-                 << " - Output to a network destination" << endl;
-            cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
-                 << " - Output to the results cache" << endl;
-            cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
-                 << " - Output to the reducer" << endl;
-            cerr << endl;
-
-            cerr << "Examples:" << endl;
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
-                    "a network destination"
-                 << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << static_cast<char const*>(cNetworkOutputHandlerName)
-                 << " --host localhost --port 18000" << endl;
-            cerr << endl;
-
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
-                    "by performing a count aggregation"
-                 << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << static_cast<char const*>(cReducerOutputHandlerName) << " --count"
-                 << " --host localhost --port 14009 --job-id 1" << endl;
-            cerr << endl;
-
-            cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
-                    R"( mongodb://127.0.0.1:27017/test "result" collection )"
-                 << endl;
-            cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                 << " " << static_cast<char const*>(cResultsCacheOutputHandlerName)
-                 << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
-            cerr << endl;
-
-            cerr << "Options can be specified on the command line or through a configuration file."
-                 << endl;
-            cerr << visible_options << endl;
-            return ParsingResult::InfoCommand;
-        }
-
         // Handle --version
         if (parsed_command_line_options.count("version")) {
-            cerr << static_cast<char const*>(cVersion) << endl;
+            cerr << static_cast<char const *>(cVersion) << endl;
             return ParsingResult::InfoCommand;
         }
 
-        // Validate archive path was specified
-        if (m_archive_path.empty()) {
-            throw invalid_argument("ARCHIVE_PATH not specified or empty.");
+        // Validate command
+        if (parsed_command_line_options.count("command") == 0) {
+            // Handle --help
+            if (parsed_command_line_options.count("help")) {
+                if (argc > 2) {
+                    SPDLOG_WARN("Ignoring all options besides --help.");
+                }
+
+                print_basic_usage();
+                cerr << "COMMAND is one of:" << endl;
+                cerr << "  s - search" << endl;
+                cerr << "  x - extract" << endl;
+                cerr << endl;
+                cerr << "Try " << get_program_name() << " s --help OR " << get_program_name()
+                     << " x --help for command-specific details." << endl;
+                cerr << endl;
+
+                cerr << "Options can be specified on the command line or through a configuration "
+                        "file."
+                     << endl;
+                po::options_description visible_options;
+                visible_options.add(options_general);
+                cerr << visible_options << endl;
+                return ParsingResult::InfoCommand;
+            }
+
+            throw invalid_argument("COMMAND not specified.");
+        }
+        switch (command_input) {
+            case (char)Command::Search:
+            case (char)Command::Extract:
+                m_command = (Command)command_input;
+                break;
+            default:
+                throw invalid_argument(string("Unknown action '") + command_input + "'");
         }
 
-        // Validate wildcard string
-        if (m_search_string.empty()) {
-            throw invalid_argument("Wildcard string not specified or empty.");
-        }
+        if (Command::Search == m_command) {
+            // Define match controls
+            po::options_description options_match_control("Match Controls");
+            options_match_control.add_options()(
+                "tgt",
+                po::value<epochtime_t>()->value_name("TS"),
+                "Find messages with UNIX timestamp >  TS ms"
+            )(
+                "tge",
+                po::value<epochtime_t>()->value_name("TS"),
+                "Find messages with UNIX timestamp >= TS ms"
+            )(
+                "teq",
+                po::value<epochtime_t>()->value_name("TS"),
+                "Find messages with UNIX timestamp == TS ms"
+            )(
+                "tlt",
+                po::value<epochtime_t>()->value_name("TS"),
+                "Find messages with UNIX timestamp <  TS ms"
+            )(
+                "tle",
+                po::value<epochtime_t>()->value_name("TS"),
+                "Find messages with UNIX timestamp <= TS ms"
+            )(
+                "ignore-case,i",
+                po::bool_switch(&m_ignore_case),
+                "Ignore case distinctions in both WILDCARD STRING and the input files"
+            )(
+                "file-path",
+                po::value<string>(&m_file_path)->value_name("PATH"),
+                "Limit search to files with the path PATH"
+            );
 
-        // Validate timestamp range and compute m_search_begin_ts and m_search_end_ts
-        if (parsed_command_line_options.count("teq")) {
-            if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
-                        + parsed_command_line_options.count("tlt")
-                        + parsed_command_line_options.count("tle")
-                > 0)
-            {
-                throw invalid_argument(
+            po::options_description options_aggregation("Aggregation Options");
+            // clang-format off
+            options_aggregation.add_options()(
+                "count",
+                po::bool_switch(&m_do_count_results_aggregation),
+                "Count the number of results"
+            )(
+                "count-by-time",
+                po::value<int64_t>(&m_count_by_time_bucket_size)->value_name("SIZE"),
+                "Count the number of results in each time span of the given size (ms)"
+            );
+            // clang-format on
+
+            po::options_description options_network_output_handler("Network Output Handler Options");
+            // clang-format off
+            options_network_output_handler.add_options()(
+                "host",
+                po::value<string>(&m_network_dest_host)->value_name("HOST"),
+                "The host to send the results to"
+            )(
+                "port",
+                po::value<int>(&m_network_dest_port)->value_name("PORT"),
+                "The port to send the results to"
+            );
+            // clang-format on
+
+            po::options_description options_reducer_output_handler("Reducer Output Handler Options");
+            options_reducer_output_handler.add_options()(
+                "host",
+                po::value<string>(&m_reducer_host)->value_name("HOST"),
+                "Host the reducer is running on"
+            )(
+                "port",
+                po::value<int>(&m_reducer_port)->value_name("PORT"),
+                "Port the reducer is listening on"
+            )(
+                "job-id",
+                po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
+                "Job ID for the requested aggregation operation"
+            );
+
+            po::options_description options_results_cache_output_handler(
+                "Results Cache Output Handler Options"
+            );
+            // clang-format off
+            options_results_cache_output_handler.add_options()(
+                "uri",
+                po::value<string>(&m_mongodb_uri),
+                "MongoDB URI for the results cache"
+            )(
+                "collection",
+                po::value<string>(&m_mongodb_collection),
+                "MongoDB collection to output to"
+            )(
+                "batch-size,b",
+                po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->default_value(m_batch_size),
+                "The number of documents to insert into MongoDB per batch"
+            )(
+                "max-num-results,m",
+                po::value<uint64_t>(&m_max_num_results)->value_name("NUM")->
+                    default_value(m_max_num_results),
+                "The maximum number of results to output"
+            );
+            // clang-format on
+
+            // Define visible options
+            po::options_description visible_options;
+            visible_options.add(options_general);
+            visible_options.add(options_match_control);
+            visible_options.add(options_aggregation);
+            visible_options.add(options_network_output_handler);
+            visible_options.add(options_results_cache_output_handler);
+            visible_options.add(options_reducer_output_handler);
+
+            // Define hidden positional options (not shown in Boost's program options help message)
+            po::options_description hidden_positional_options;
+            string output_handler_name;
+            // clang-format off
+            hidden_positional_options.add_options()(
+                "archive-path",
+                po::value<string>(&m_archive_path)
+            )(
+                "wildcard-string",
+                po::value<string>(&m_search_string)
+            )(
+                "output-handler",
+                po::value<string>(&output_handler_name)
+            )(
+                "output-handler-args",
+                po::value<vector<string>>()
+            );
+            // clang-format on
+            po::positional_options_description search_positional_options_description;
+            search_positional_options_description.add("archive-path", 1);
+            search_positional_options_description.add("wildcard-string", 1);
+            search_positional_options_description.add("output-handler", 1);
+            search_positional_options_description.add("output-handler-args", -1);
+
+            // Aggregate all options
+            po::options_description all_search_options;
+            all_search_options.add(options_match_control);
+            all_search_options.add(options_aggregation);
+            all_search_options.add(hidden_positional_options);
+
+            // Parse extraction options
+            vector<string> unrecognized_options
+                = po::collect_unrecognized(parsed.options, po::include_positional);
+            unrecognized_options.erase(unrecognized_options.begin());
+            po::store(
+                po::command_line_parser(unrecognized_options)
+                    .options(all_search_options)
+                    .positional(search_positional_options_description)
+                    .allow_unregistered()
+                    .run(),
+                parsed_command_line_options
+            );
+
+            notify(parsed_command_line_options);
+
+            constexpr char cNetworkOutputHandlerName[] = "network";
+            constexpr char cReducerOutputHandlerName[] = "reducer";
+            constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
+
+            // Handle --help
+            if (parsed_command_line_options.count("help")) {
+                if (argc > 2) {
+                    SPDLOG_WARN("Ignoring all options besides --help.");
+                }
+
+                print_basic_usage();
+                cerr << "OUTPUT_HANDLER is one of:" << endl;
+                cerr << "  " << static_cast<char const *>(cNetworkOutputHandlerName)
+                     << " - Output to a network destination" << endl;
+                cerr << "  " << static_cast<char const *>(cResultsCacheOutputHandlerName)
+                     << " - Output to the results cache" << endl;
+                cerr << "  " << static_cast<char const *>(cReducerOutputHandlerName)
+                     << " - Output to the reducer" << endl;
+                cerr << endl;
+
+                cerr << "Examples:" << endl;
+                cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
+                        "a network destination"
+                     << endl;
+                cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                     << " " << static_cast<char const *>(cNetworkOutputHandlerName)
+                     << " --host localhost --port 18000" << endl;
+                cerr << endl;
+
+                cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
+                        "by performing a count aggregation"
+                     << endl;
+                cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                     << " " << static_cast<char const *>(cReducerOutputHandlerName) << " --count"
+                     << " --host localhost --port 14009 --job-id 1" << endl;
+                cerr << endl;
+
+                cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
+                        R"( mongodb://127.0.0.1:27017/test "result" collection )"
+                     << endl;
+                cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+                     << " " << static_cast<char const *>(cResultsCacheOutputHandlerName)
+                     << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
+                cerr << endl;
+
+                cerr << "Options can be specified on the command line or through a configuration file."
+                     << endl;
+                cerr << visible_options << endl;
+                return ParsingResult::InfoCommand;
+            }
+
+            // Validate archive path was specified
+            if (m_archive_path.empty()) {
+                throw invalid_argument("ARCHIVE_PATH not specified or empty.");
+            }
+
+            // Validate wildcard string
+            if (m_search_string.empty()) {
+                throw invalid_argument("Wildcard string not specified or empty.");
+            }
+
+            // Validate timestamp range and compute m_search_begin_ts and m_search_end_ts
+            if (parsed_command_line_options.count("teq")) {
+                if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
+                    + parsed_command_line_options.count("tlt")
+                    + parsed_command_line_options.count("tle")
+                    > 0) {
+                    throw invalid_argument(
                         "--teq cannot be specified with any other timestamp filtering option."
-                );
-            }
+                    );
+                }
 
-            m_search_begin_ts = parsed_command_line_options["teq"].as<epochtime_t>();
-            m_search_end_ts = parsed_command_line_options["teq"].as<epochtime_t>();
-        } else {
-            if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
-                > 1)
-            {
-                throw invalid_argument("--tgt cannot be used with --tge.");
-            }
+                m_search_begin_ts = parsed_command_line_options["teq"].as<epochtime_t>();
+                m_search_end_ts = parsed_command_line_options["teq"].as<epochtime_t>();
+            } else {
+                if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
+                    > 1) {
+                    throw invalid_argument("--tgt cannot be used with --tge.");
+                }
 
-            // Set m_search_begin_ts
-            if (parsed_command_line_options.count("tgt")) {
-                m_search_begin_ts = parsed_command_line_options["tgt"].as<epochtime_t>() + 1;
-            } else if (parsed_command_line_options.count("tge")) {
-                m_search_begin_ts = parsed_command_line_options["tge"].as<epochtime_t>();
-            }
+                // Set m_search_begin_ts
+                if (parsed_command_line_options.count("tgt")) {
+                    m_search_begin_ts = parsed_command_line_options["tgt"].as<epochtime_t>() + 1;
+                } else if (parsed_command_line_options.count("tge")) {
+                    m_search_begin_ts = parsed_command_line_options["tge"].as<epochtime_t>();
+                }
 
-            if (parsed_command_line_options.count("tlt") + parsed_command_line_options.count("tle")
-                > 1)
-            {
-                throw invalid_argument("--tlt cannot be used with --tle.");
-            }
+                if (parsed_command_line_options.count("tlt") + parsed_command_line_options.count("tle")
+                    > 1) {
+                    throw invalid_argument("--tlt cannot be used with --tle.");
+                }
 
-            // Set m_search_end_ts
-            if (parsed_command_line_options.count("tlt")) {
-                m_search_end_ts = parsed_command_line_options["tlt"].as<epochtime_t>() - 1;
-            } else if (parsed_command_line_options.count("tle")) {
-                m_search_end_ts = parsed_command_line_options["tle"].as<epochtime_t>();
-            }
+                // Set m_search_end_ts
+                if (parsed_command_line_options.count("tlt")) {
+                    m_search_end_ts = parsed_command_line_options["tlt"].as<epochtime_t>() - 1;
+                } else if (parsed_command_line_options.count("tle")) {
+                    m_search_end_ts = parsed_command_line_options["tle"].as<epochtime_t>();
+                }
 
-            if (m_search_begin_ts > m_search_end_ts) {
-                throw invalid_argument(
+                if (m_search_begin_ts > m_search_end_ts) {
+                    throw invalid_argument(
                         "Timestamp range is invalid - begin timestamp is after end timestamp."
-                );
+                    );
+                }
             }
-        }
 
-        // Validate file-path
-        if (parsed_command_line_options.count("file-path") > 0 && m_file_path.empty()) {
-            throw invalid_argument("file-path cannot be an empty string.");
-        }
-
-        // Validate count by time bucket size
-        if (parsed_command_line_options.count("count-by-time") > 0) {
-            m_do_count_by_time_aggregation = true;
-            if (m_count_by_time_bucket_size <= 0) {
-                throw std::invalid_argument("Value for count-by-time must be greater than zero.");
+            // Validate file-path
+            if (parsed_command_line_options.count("file-path") > 0 && m_file_path.empty()) {
+                throw invalid_argument("file-path cannot be an empty string.");
             }
-        }
 
-        // Validate output-handler
-        if (parsed_command_line_options.count("output-handler") == 0) {
-            throw invalid_argument("OUTPUT_HANDLER not specified.");
-        }
-        if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
-            m_output_handler_type = OutputHandlerType::Network;
-        } else if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
-            m_output_handler_type = OutputHandlerType::Reducer;
-        } else if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name)
-        {
-            m_output_handler_type = OutputHandlerType::ResultsCache;
-        } else if (output_handler_name.empty()) {
-            throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
-        } else {
-            throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
-        }
+            // Validate count by time bucket size
+            if (parsed_command_line_options.count("count-by-time") > 0) {
+                m_do_count_by_time_aggregation = true;
+                if (m_count_by_time_bucket_size <= 0) {
+                    throw std::invalid_argument("Value for count-by-time must be greater than zero.");
+                }
+            }
 
-        switch (m_output_handler_type) {
-            case OutputHandlerType::Network:
-                parse_network_dest_output_handler_options(
+            // Validate output-handler
+            if (parsed_command_line_options.count("output-handler") == 0) {
+                throw invalid_argument("OUTPUT_HANDLER not specified.");
+            }
+            if (static_cast<char const *>(cNetworkOutputHandlerName) == output_handler_name) {
+                m_output_handler_type = OutputHandlerType::Network;
+            } else if (static_cast<char const *>(cReducerOutputHandlerName) == output_handler_name) {
+                m_output_handler_type = OutputHandlerType::Reducer;
+            } else if (static_cast<char const *>(cResultsCacheOutputHandlerName) == output_handler_name) {
+                m_output_handler_type = OutputHandlerType::ResultsCache;
+            } else if (output_handler_name.empty()) {
+                throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
+            } else {
+                throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
+            }
+
+            switch (m_output_handler_type) {
+                case OutputHandlerType::Network:
+                    parse_network_dest_output_handler_options(
                         options_network_output_handler,
                         parsed.options,
                         parsed_command_line_options
-                );
-                break;
-            case OutputHandlerType::Reducer:
-                parse_reducer_output_handler_options(
+                    );
+                    break;
+                case OutputHandlerType::Reducer:
+                    parse_reducer_output_handler_options(
                         options_reducer_output_handler,
                         parsed.options,
                         parsed_command_line_options
-                );
-                break;
-            case OutputHandlerType::ResultsCache:
-                parse_results_cache_output_handler_options(
+                    );
+                    break;
+                case OutputHandlerType::ResultsCache:
+                    parse_results_cache_output_handler_options(
                         options_results_cache_output_handler,
                         parsed.options,
                         parsed_command_line_options
-                );
-                break;
-            default:
-                throw invalid_argument(
+                    );
+                    break;
+                default:
+                    throw invalid_argument(
                         "Unhandled OutputHandlerType="
                         + std::to_string(enum_to_underlying_type(m_output_handler_type))
-                );
-        }
+                    );
+            }
 
-        bool aggregation_was_specified
+            bool aggregation_was_specified
                 = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
-        if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
-            throw invalid_argument(
+            if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
+                throw invalid_argument(
                     "Aggregations are only supported with the reducer output handler."
-            );
-        } else if ((false == aggregation_was_specified
-                    && OutputHandlerType::Reducer == m_output_handler_type))
-        {
-            throw invalid_argument("The reducer output handler currently only supports count and "
-                                   "count-by-time aggregations.");
-        }
+                );
+            } else if ((false == aggregation_was_specified
+                        && OutputHandlerType::Reducer == m_output_handler_type)) {
+                throw invalid_argument("The reducer output handler currently only supports count and "
+                                       "count-by-time aggregations.");
+            }
 
-        if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
-            throw std::invalid_argument(
+            if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
+                throw std::invalid_argument(
                     "The --count-by-time and --count options are mutually exclusive."
+                );
+            }
+        } else if (Command::Extract == m_command) {
+            throw invalid_argument(
+                "Unexpected yet"
             );
         }
     } catch (exception& e) {
