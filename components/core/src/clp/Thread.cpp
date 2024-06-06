@@ -22,8 +22,10 @@ Thread::~Thread() {
 
 void Thread::start() {
     try {
+        m_thread_running = true;
         m_thread = std::make_unique<std::thread>(&Thread::thread_entry_point, this);
     } catch (system_error& e) {
+        m_thread_running = false;
         SPDLOG_ERROR("Failed to start thread - {}", e.what());
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
@@ -43,7 +45,6 @@ void Thread::join() {
 }
 
 void Thread::thread_entry_point() {
-    m_thread_running = true;
     thread_method();
     m_thread_running = false;
 }

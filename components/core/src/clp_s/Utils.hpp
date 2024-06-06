@@ -149,6 +149,13 @@ public:
     static bool is_wildcard(char c);
 
     /**
+     * Checks if the given string has unescaped wildcards
+     * @param str
+     * @return true if the string has unescaped wildcards, false otherwise
+     */
+    static bool has_unescaped_wildcards(std::string const& str);
+
+    /**
      * Same as ``wildcard_match_unsafe_case_sensitive`` except this method
      * allows the caller to specify whether the match should be case sensitive.
      *

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../../ir/types.hpp"
+#include "../../time_types.hpp"
 #include "../encoding_methods.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -91,6 +92,13 @@ bool serialize_message(std::string_view message, std::string& logtype, std::vect
  */
 bool serialize_timestamp(ir::epoch_time_ms_t timestamp_delta, std::vector<int8_t>& ir_buf);
 }  // namespace four_byte_encoding
+
+/**
+ * Serializes the given UTC offset into the IR stream
+ * @param utc_offset
+ * @param ir_buf
+ */
+void serialize_utc_offset_change(UtcOffset utc_offset, std::vector<int8_t>& ir_buf);
 }  // namespace clp::ffi::ir_stream
 
 #endif  // CLP_FFI_IR_STREAM_ENCODING_METHODS_HPP

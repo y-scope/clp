@@ -3,6 +3,8 @@
 #ifndef CLP_S_SEARCH_CLP_SEARCH_GREP_HPP
 #define CLP_S_SEARCH_CLP_SEARCH_GREP_HPP
 
+#include <memory>
+#include <optional>
 #include <string>
 
 #include "../../Defs.hpp"
@@ -15,22 +17,19 @@ public:
     // Methods
     /**
      * Processes a raw user query into a Query
-     * @param archive
+     * @param log_dict
+     * @param var_dict
      * @param search_string
-     * @param search_begin_ts
-     * @param search_end_ts
      * @param ignore_case
-     * @param query
-     * @return true if query may match messages, false otherwise
+     * @param add_wildcards
+     * @return Query if it may match a message, std::nullopt otherwise
      */
-    static bool process_raw_query(
+    static std::optional<Query> process_raw_query(
             std::shared_ptr<LogTypeDictionaryReader> log_dict,
             std::shared_ptr<VariableDictionaryReader> var_dict,
             std::string const& search_string,
             bool ignore_case,
-            Query& query,
-            bool add_wildcards = true,
-            bool use_heuristic = true
+            bool add_wildcards = true
     );
 
     /**

@@ -3,6 +3,7 @@ import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react";
@@ -96,13 +97,22 @@ const SearchView = () => {
         localLastSearchSignal,
     ]);
 
+    const isExpectingUpdates = useMemo(() => (null !== searchJobId) && [
+        SEARCH_SIGNAL.REQ_QUERYING,
+        SEARCH_SIGNAL.RESP_QUERYING,
+    ].includes(resultsMetadata.lastSignal), [
+        searchJobId,
+        resultsMetadata.lastSignal,
+    ]);
+
     const searchResults = useTracker(() => {
         if (null === searchJobId) {
             return [];
         }
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
-            searchJobId,
+            searchJobId: searchJobId,
+            isExpectingUpdates: isExpectingUpdates,
         });
 
         // NOTE: Although we publish and subscribe using the name
@@ -140,8 +150,9 @@ const SearchView = () => {
 
         return resultsCollection.find({}, findOptions).fetch();
     }, [
-        searchJobId,
         fieldToSortBy,
+        isExpectingUpdates,
+        searchJobId,
         visibleSearchResultsLimit,
     ]);
 
@@ -155,11 +166,15 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.AggregationResultsCollectionName, {
             aggregationJobId: aggregationJobId,
+            isExpectingUpdates: isExpectingUpdates,
         });
         const collection = dbRef.current.getOrCreateCollection(aggregationJobId);
 
         return collection.find().fetch();
-    }, [aggregationJobId]);
+    }, [
+        aggregationJobId,
+        isExpectingUpdates,
+    ]);
 
     // State transitions
     useEffect(() => {

@@ -90,6 +90,21 @@ public:
      */
     virtual ArchiveIterator* get_archive_iterator_for_file_path(std::string const& path) = 0;
 
+    /**
+     * Gets the file split that corresponds to the given message index in an original file.
+     * @param file_orig_id
+     * @param message_ix
+     * @param archive_id Returns the ID of the archive containing the file split.
+     * @param file_split_id Returns the ID of the file split.
+     * @return Whether a matching file split was found.
+     */
+    virtual bool get_file_split(
+            std::string const& orig_file_id,
+            size_t message_ix,
+            std::string& archive_id,
+            std::string& file_split_id
+    ) = 0;
+
 protected:
     // Variables
     bool m_is_open;

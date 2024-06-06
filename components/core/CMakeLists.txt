@@ -137,6 +137,15 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
 endif()
 
+# Find and setup libcurl
+# By default, CURL does not provide static libraries
+find_package(CURL 7.68.0 REQUIRED)
+if(CURL_FOUND)
+    message(STATUS "Found CURL ${CURL_VERSION_STRING}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+endif()
+
 # Add log surgeon
 add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
@@ -270,6 +279,11 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/CurlDownloadHandler.cpp
+        src/clp/CurlDownloadHandler.hpp
+        src/clp/CurlEasyHandle.hpp
+        src/clp/CurlOperationFailed.hpp
+        src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
         src/clp/database_utils.hpp
         src/clp/Defs.h
@@ -291,6 +305,9 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
+        src/clp/ffi/SchemaTree.cpp
+        src/clp/ffi/SchemaTree.hpp
+        src/clp/ffi/SchemaTreeNode.hpp
         src/clp/ffi/search/CompositeWildcardToken.cpp
         src/clp/ffi/search/CompositeWildcardToken.hpp
         src/clp/ffi/search/ExactVariableToken.cpp
@@ -347,6 +364,8 @@ set(SOURCE_FILES_unitTest
         src/clp/MySQLParamBindings.hpp
         src/clp/MySQLPreparedStatement.cpp
         src/clp/MySQLPreparedStatement.hpp
+        src/clp/NetworkReader.cpp
+        src/clp/NetworkReader.hpp
         src/clp/PageAllocatedVector.hpp
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
@@ -401,9 +420,12 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Decompressor.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
+        src/clp/Thread.cpp
+        src/clp/Thread.hpp
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp
+        src/clp/time_types.hpp
         src/clp/type_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
@@ -422,12 +444,14 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
+        tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp
@@ -445,8 +469,9 @@ target_include_directories(unitTest
         )
 target_link_libraries(unitTest
         PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
         absl::flat_hash_map
+        Boost::filesystem Boost::iostreams Boost::program_options
+        ${CURL_LIBRARIES}
         fmt::fmt
         kql
         log_surgeon::log_surgeon
