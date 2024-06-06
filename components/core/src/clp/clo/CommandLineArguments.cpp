@@ -308,7 +308,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     SPDLOG_WARN("Ignoring all options besides --help.");
                 }
 
-                print_basic_usage();
+                print_search_basic_usage();
                 cerr << "OUTPUT_HANDLER is one of:" << endl;
                 cerr << "  " << static_cast<char const *>(cNetworkOutputHandlerName)
                      << " - Output to a network destination" << endl;
@@ -480,9 +480,152 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 );
             }
         } else if (Command::Extract == m_command) {
-            throw invalid_argument(
-                "Unexpected yet"
+            // Define IR decompression options
+            po::options_description options_ir_decompression("IR decompression");
+            options_ir_decompression.add_options()(
+                "temp-output-dir",
+                po::value<string>(&m_ir_temp_output_dir)->value_name("TEMP_OUTPUT_DIR"),
+                "Temporary output dir for IR"
+            )(
+                "threshold",
+                po::value<size_t>(&m_ir_threshold)->value_name("THRESHOLD"),
+                "ir size threshold"
             );
+            po::options_description options_results_cache_output_handler(
+                "Results Cache Output Handler Options"
+            );
+            // clang-format off
+            options_results_cache_output_handler.add_options()(
+                "uri",
+                po::value<string>(&m_mongodb_uri)->value_name("URI"),
+                "MongoDB URI for the results cache"
+            )(
+                "collection",
+                po::value<string>(&m_mongodb_collection)->value_name("COLLECTION"),
+                "MongoDB collection to output to"
+            )(
+                "output-dir",
+                po::value<string>(&m_ir_output_dir)->value_name("OUTPUT_DIR"),
+                "The output path of decompressed IR"
+            );
+
+            // Define visible options
+            po::options_description visible_options;
+            visible_options.add(options_general);
+            visible_options.add(options_ir_decompression);
+            visible_options.add(options_results_cache_output_handler);
+
+            // Define hidden positional options (not shown in Boost's program options help message)
+            po::options_description hidden_positional_options;
+            string output_handler_name;
+            // clang-format off
+            hidden_positional_options.add_options()(
+                "archive-path",
+                po::value<string>(&m_archive_path)
+            )(
+                "orig-file-id",
+                po::value<string>(&m_orig_file_id)
+            )(
+                "msg-ix",
+                po::value<size_t>(&m_ir_msg_ix)
+            )(
+                "output-handler",
+                po::value<string>(&output_handler_name)
+            )(
+                "output-handler-args",
+                po::value<vector<string>>()
+            );
+            // clang-format on
+            po::positional_options_description extract_positional_options_description;
+            extract_positional_options_description.add("archive-path", 1);
+            extract_positional_options_description.add("orig-file-id", 1);
+            extract_positional_options_description.add("msg-ix", 1);
+            extract_positional_options_description.add("output-handler", 1);
+            extract_positional_options_description.add("output-handler-args", -1);
+
+
+            // Aggregate all options
+            po::options_description all_search_options;
+            all_search_options.add(options_ir_decompression);
+            all_search_options.add(hidden_positional_options);
+
+            // Parse extraction options
+            vector<string> unrecognized_options
+                = po::collect_unrecognized(parsed.options, po::include_positional);
+            unrecognized_options.erase(unrecognized_options.begin());
+            po::store(
+                po::command_line_parser(unrecognized_options)
+                    .options(all_search_options)
+                    .positional(extract_positional_options_description)
+                    .allow_unregistered()
+                    .run(),
+                parsed_command_line_options
+            );
+
+            notify(parsed_command_line_options);
+            constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
+
+            // Handle --help
+            if (parsed_command_line_options.count("help")) {
+                if (argc > 2) {
+                    SPDLOG_WARN("Ignoring all options besides --help.");
+                }
+
+                print_extraction_basic_usage();
+                cerr << "OUTPUT_HANDLER is one of:" << endl;
+                cerr << "  " << static_cast<char const *>(cResultsCacheOutputHandlerName)
+                     << " - Output to the results cache" << endl;
+                cerr << endl;
+
+                cerr << "Examples Skipped" << endl;
+
+                cerr << "Options can be specified on the command line or through a configuration file."
+                     << endl;
+                cerr << visible_options << endl;
+                return ParsingResult::InfoCommand;
+            }
+
+            // Validate archive path was specified
+            if (m_archive_path.empty()) {
+                throw invalid_argument("ARCHIVE_PATH not specified or empty.");
+            }
+
+            // Validate wildcard string
+            if (m_orig_file_id.empty()) {
+                throw invalid_argument("ORIGINAL_FILE_ID not specified or empty.");
+            }
+
+            // Validate file-path
+            if (parsed_command_line_options.count("msg-ix") == 0) {
+                throw invalid_argument("MSG_IX not specified");
+            }
+
+            // Validate output-handler
+            if (parsed_command_line_options.count("output-handler") == 0) {
+                throw invalid_argument("OUTPUT_HANDLER not specified.");
+            }
+            if (static_cast<char const *>(cResultsCacheOutputHandlerName) == output_handler_name) {
+                m_output_handler_type = OutputHandlerType::ResultsCache;
+            } else if (output_handler_name.empty()) {
+                throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
+            } else {
+                throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
+            }
+
+            switch (m_output_handler_type) {
+                case OutputHandlerType::ResultsCache:
+                    parse_ir_results_cache_output_handler_options(
+                        options_results_cache_output_handler,
+                        parsed.options,
+                        parsed_command_line_options
+                    );
+                    break;
+                default:
+                    throw invalid_argument(
+                        "Unhandled OutputHandlerType="
+                        + std::to_string(enum_to_underlying_type(m_output_handler_type))
+                    );
+            }
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
@@ -577,8 +720,49 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
     }
 }
 
+void CommandLineArguments::parse_ir_results_cache_output_handler_options(
+    po::options_description const& options_description,
+    vector<po::option> const& options,
+    po::variables_map& parsed_options
+) {
+    parse_unrecognized_options(options_description, options, parsed_options);
+
+    // Validate mongodb uri was specified
+    if (parsed_options.count("uri") == 0) {
+        throw invalid_argument("uri must be specified.");
+    }
+    if (m_mongodb_uri.empty()) {
+        throw invalid_argument("uri cannot be an empty string.");
+    }
+
+    // Validate mongodb collection was specified
+    if (parsed_options.count("collection") == 0) {
+        throw invalid_argument("collection must be specified.");
+    }
+    if (m_mongodb_collection.empty()) {
+        throw invalid_argument("collection cannot be an empty string.");
+    }
+
+    // Validate output path was specified
+    if (parsed_options.count("output-dir") == 0) {
+        throw invalid_argument("output directory must be specified.");
+    }
+    if (m_ir_output_dir.empty()) {
+        throw invalid_argument("collection cannot be an empty string.");
+    }
+}
+
 void CommandLineArguments::print_basic_usage() const {
-    cerr << "Usage: " << get_program_name() << " [OPTIONS]"
+    cerr << "Usage: " << get_program_name() << " [OPTIONS] COMMAND [COMMAND ARGUMENTS]" << endl;
+}
+
+void CommandLineArguments::print_search_basic_usage() const {
+    cerr << "Usage: " << get_program_name() << " s [OPTIONS]"
          << R"( ARCHIVE_PATH "WILDCARD STRING" OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])" << endl;
+}
+
+void CommandLineArguments::print_extraction_basic_usage() const {
+    cerr << "Usage: " << get_program_name() << " x [OPTIONS]"
+         << R"( ARCHIVE_PATH ORIG_FILE_ID MSG_IX OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])" << endl;
 }
 }  // namespace clp::clo

@@ -40,6 +40,8 @@ public:
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
 
+    auto get_command() const -> Command { return m_command; }
+
     std::string const& get_archive_path() const { return m_archive_path; }
 
     bool ignore_case() const { return m_ignore_case; }
@@ -107,6 +109,19 @@ private:
     );
 
     /**
+     * Validates output options related to the Results Cache output handler for IR.
+     * @param options_description
+     * @param options Vector of options previously parsed by boost::program_options and which may
+     * contain options that have the unrecognized flag set
+     * @param parsed_options Returns any parsed options that were newly recognized
+     */
+    void parse_ir_results_cache_output_handler_options(
+        boost::program_options::options_description const& options_description,
+        std::vector<boost::program_options::option> const& options,
+        boost::program_options::variables_map& parsed_options
+    );
+
+    /**
      * Validates output options related to the Results Cache output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
@@ -120,9 +135,18 @@ private:
     );
 
     void print_basic_usage() const override;
+    void print_search_basic_usage() const;
+    void print_extraction_basic_usage() const;
 
     // Commands
     Command m_command;
+
+    // IR related variables
+    std::string m_ir_output_dir;
+    std::string m_ir_temp_output_dir;
+    std::string m_orig_file_id;
+    size_t m_ir_threshold {128 * 1024 * 1024};
+    size_t m_ir_msg_ix {0};
 
     // Search variables
     std::string m_archive_path;
