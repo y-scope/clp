@@ -225,7 +225,7 @@ SchemaReader& ArchiveReader::create_schema_reader(
             );
             i += length;
             continue;
-        } 
+        }
         if (i >= schema.get_num_ordered()) {
             // Length one unordered object that doesn't have a tag. This is only allowed when the
             // column id is the root of the unordered object, so we can pass it directly to
