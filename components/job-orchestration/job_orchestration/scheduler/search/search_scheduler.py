@@ -132,8 +132,8 @@ def set_job_or_task_status(
     db_conn,
     table_name: str,
     job_id: str,
-    status: SearchJobStatus,
-    prev_status: Optional[SearchJobStatus] = None,
+    status: SearchJobStatus | SearchTaskStatus,
+    prev_status: Optional[SearchJobStatus | SearchTaskStatus] = None,
     **kwargs,
 ) -> bool:
     """
