@@ -8,6 +8,7 @@
 #include <string_utils/string_utils.hpp>
 
 #include "FileReader.hpp"
+#include "spdlog_with_specializations.hpp"
 
 using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::convert_string_to_int;
@@ -314,9 +315,11 @@ SCENARIO("wildcard_match_unsafe_case_sensitive performance", "[wildcard performa
     }
     auto end_timestamp = high_resolution_clock::now();
 
-    cout << std::chrono::duration_cast<std::chrono::milliseconds>(end_timestamp - begin_timestamp)
+    SPDLOG_INFO(
+            "wildcard_match_unsafe_case_sensitive performance test took {} milliseconds.",
+            std::chrono::duration_cast<std::chrono::milliseconds>(end_timestamp - begin_timestamp)
                     .count()
-         << " milliseconds." << endl;
+    );
 }
 
 TEST_CASE("convert_string_to_int", "[convert_string_to_int]") {
