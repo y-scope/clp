@@ -89,7 +89,8 @@ public:
     bool get_next_message(File& file, Message& msg);
 
     /**
-     * Decompresses a given message from a given file with the original timestamp
+     * Decompresses the given message from the given file, including inserting and formatting its
+     * timestamp if necessary.
      * @param file
      * @param compressed_msg
      * @param decompressed_msg
@@ -100,7 +101,7 @@ public:
     decompress_message(File& file, Message const& compressed_msg, std::string& decompressed_msg);
 
     /**
-     * Decompresses a given message from a given file without appending its original timestamp
+     * Decompresses the given message without inserting its timestamp.
      * @param compressed_msg
      * @param decompressed_msg
      * @return Whether the message was successfully decompressed

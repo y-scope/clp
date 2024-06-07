@@ -33,12 +33,12 @@ public:
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "ir::LogEventSerializer operation failed";
+            return "clp::ir::LogEventSerializer operation failed";
         }
     };
 
     // Constructors
-    explicit LogEventSerializer() = default;
+    LogEventSerializer() = default;
 
     // Delete copy constructor and assignment
     LogEventSerializer(LogEventSerializer const&) = delete;
@@ -51,19 +51,19 @@ public:
     ~LogEventSerializer();
 
     /**
-     * Creates a Zstandard compressed IR on the disk, and writes the preamble to the IR.
+     * Creates a Zstandard-compressed IR file on disk, and writes the IR file's preamble.
      * @param file_path
      */
     [[nodiscard]] auto open(std::string const& file_path) -> ErrorCode;
 
     /**
-     * Flushes the buffered serialized data.
+     * Flushes any buffered data.
      * @throw FileWriter::OperationFailed on failure
      */
     auto flush() -> void;
 
     /**
-     * Writes the EoF tag to the end of IR, flushes the data and closes the serializer.
+     * Serializes the EoF tag, flushes the buffer, and closes the current IR stream.
      * @throw FileWriter::OperationFailed on failure
      */
     auto close() -> void;
@@ -78,18 +78,21 @@ public:
     [[nodiscard]] auto get_num_log_events() const -> size_t { return m_num_log_events; }
 
     /**
-     * Serializes a log event into the internal buffer.
-     * @return Whether the log event is successfully serialized.
+     * Serializes the given log event.
+     * @return Whether the log event was successfully serialized.
      */
     [[nodiscard]] auto
     serialize_log_event(std::string_view message, epoch_time_ms_t timestamp) -> ErrorCode;
 
 private:
     // Constants
-    // Note: In the current implementation, an encoded file could have multiple timestamp patterns
-    // but IR metadata only supports a single pattern. CLP doesn't track files' time zone info
-    // either. For now, the serializer uses a set of default values. The consumer of the IR should
-    // decide what time pattern and time zone to use.
+    // NOTE: IR files currently store the log's timestamp pattern and timezone ID. However:
+    // - files in CLP archives don't currently support encoding time zones;
+    // - IR files don't support multiple timestamp patterns whereas files in CLP archives do;
+    // - No consumers of IR files currently use these fields.
+    // Accordingly, we store a default timestamp pattern and timezone ID in the IR file's metadata,
+    // but it is really up to consumers of the IR file to use an appropriate timestamp pattern and
+    // timezone when rendering log events.
     static constexpr std::string_view cTimestampPattern{"%Y-%m-%d %H:%M:%S,%3"};
     static constexpr std::string_view cTimestampPatternSyntax{};
     static constexpr std::string_view cTimezoneID{"UTC"};
@@ -100,14 +103,17 @@ private:
     // Variables
     size_t m_num_log_events{0};
     size_t m_serialized_size{0};
-    bool m_is_open{false};
+
     [[no_unique_address]] std::conditional_t<
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,
             EmptyType> m_prev_msg_timestamp{};
+
     std::vector<int8_t> m_ir_buffer;
     FileWriter m_writer;
     streaming_compression::zstd::Compressor m_zstd_compressor;
+
+    bool m_is_open{false};
 };
 }  // namespace clp::ir
 
