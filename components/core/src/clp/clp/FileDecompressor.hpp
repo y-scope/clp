@@ -25,14 +25,14 @@ public:
             std::unordered_map<std::string, std::string>& temp_path_to_final_path
     );
 
-    template <typename OutputFunc>
-    bool decompress_to_ir(
-            streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
-            OutputFunc output_func,
-            std::string const& temp_output_dir,
-            streaming_archive::reader::Archive& archive_reader,
-            size_t ir_target_size
-    );
+    template <typename IrOutputHandler>
+    auto decompress_to_ir(
+        streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
+        streaming_archive::reader::Archive& archive_reader,
+        IrOutputHandler ir_output_handler,
+        std::string const& temp_output_dir,
+        size_t ir_target_size
+    ) -> bool;
 
 private:
     // Variables
