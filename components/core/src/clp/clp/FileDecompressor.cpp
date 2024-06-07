@@ -21,7 +21,7 @@ namespace {
  * <orig_file_id>_<begin_message_ix>_<end_message_ix>.clp.zst
  * @param temp_ir
  * @param output_directory
- * @param file_orig_id
+ * @param orig_file_id
  * @param begin_message_ix
  * @param end_message_ix
  * @return Whether the IR file is successfully renamed.
@@ -34,7 +34,7 @@ bool rename_ir_file(
         size_t end_message_ix
 ) {
     string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
-                               + std::to_string(end_message_ix) + ir::cIrExtension;
+                               + std::to_string(end_message_ix) + ir::cIrFileExtension;
 
     auto const renamed_ir_path = output_directory / ir_file_name;
     try {
@@ -167,7 +167,7 @@ bool FileDecompressor::decompress_to_ir(
     }
 
     boost::filesystem::path temp_ir_path{temp_output_dir};
-    temp_ir_path /= m_encoded_file.get_id_as_string() + ir::cIrExtension;
+    temp_ir_path /= m_encoded_file.get_id_as_string() + ir::cIrFileExtension;
 
     auto const& file_orig_id = m_encoded_file.get_orig_file_id_as_string();
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();
@@ -177,6 +177,7 @@ bool FileDecompressor::decompress_to_ir(
     if (auto const error_code = ir_serializer.open(temp_ir_path.string());
         ErrorCode_Success != error_code)
     {
+        SPDLOG_ERROR("Failed to serialize preamble");
         return false;
     }
 
@@ -213,12 +214,10 @@ bool FileDecompressor::decompress_to_ir(
             }
         }
 
-        if (auto const error_code = ir_serializer.serialize_log_event(
-                    m_decompressed_message,
-                    m_encoded_message.get_ts_in_milli()
-            );
-            ErrorCode_Success != error_code)
-        {
+        if (false == ir_serializer.serialize_log_event(
+                    m_encoded_message.get_ts_in_milli(),
+                    m_decompressed_message
+            )) {
             SPDLOG_ERROR(
                     "Failed to serialize log event: {} with ts {}",
                     m_decompressed_message.c_str(),

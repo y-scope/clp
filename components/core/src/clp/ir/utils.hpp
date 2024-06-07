@@ -3,8 +3,6 @@
 
 #include <string_view>
 
-#include "LogEvent.hpp"
-
 namespace clp::ir {
 /**
  * @param buf

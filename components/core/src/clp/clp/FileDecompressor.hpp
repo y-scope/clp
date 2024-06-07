@@ -2,6 +2,7 @@
 #define CLP_CLP_FILEDECOMPRESSOR_HPP
 
 #include <string>
+#include <cstddef>
 
 #include "../FileWriter.hpp"
 #include "../streaming_archive/MetadataDB.hpp"

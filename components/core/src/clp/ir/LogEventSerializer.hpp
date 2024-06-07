@@ -1,5 +1,5 @@
-#ifndef CLP_IR_LOGEVENTDESERIALIZER_HPP
-#define CLP_IR_LOGEVENTDESERIALIZER_HPP
+#ifndef CLP_IR_LOGEVENTSERIALIZER_HPP
+#define CLP_IR_LOGEVENTSERIALIZER_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -52,24 +52,28 @@ public:
 
     /**
      * Creates a Zstandard-compressed IR file on disk, and writes the IR file's preamble.
+     *
      * @param file_path
      */
     [[nodiscard]] auto open(std::string const& file_path) -> ErrorCode;
 
     /**
      * Flushes any buffered data.
-     * @throw FileWriter::OperationFailed on failure
+     * @throw ir::LogEventSerializer::OperationFailed on failure
      */
     auto flush() -> void;
 
     /**
      * Serializes the EoF tag, flushes the buffer, and closes the current IR stream.
-     * @throw FileWriter::OperationFailed on failure
+     * @throw ir::LogEventSerializer::OperationFailed on failure
      */
     auto close() -> void;
 
+    /**
+     * @return Size of serialized data in bytes
+     */
     [[nodiscard]] auto get_serialized_size() const -> size_t {
-        return m_ir_buffer.size() + m_serialized_size;
+        return m_ir_buf.size() + m_serialized_size;
     }
 
     /**
@@ -82,7 +86,7 @@ public:
      * @return Whether the log event was successfully serialized.
      */
     [[nodiscard]] auto
-    serialize_log_event(std::string_view message, epoch_time_ms_t timestamp) -> ErrorCode;
+    serialize_log_event(epoch_time_ms_t timestamp, std::string_view message) -> bool;
 
 private:
     // Constants
@@ -98,18 +102,21 @@ private:
     static constexpr std::string_view cTimezoneID{"UTC"};
 
     // Methods
+    /**
+     * Closes the member compressor and file writer in the proper order.
+     */
     auto close_writer() -> void;
 
     // Variables
     size_t m_num_log_events{0};
-    size_t m_serialized_size{0};
+    size_t m_serialized_size{0};  // Bytes
 
     [[no_unique_address]] std::conditional_t<
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,
-            EmptyType> m_prev_msg_timestamp{};
+            EmptyType> m_prev_event_timestamp{};
 
-    std::vector<int8_t> m_ir_buffer;
+    std::vector<int8_t> m_ir_buf;
     FileWriter m_writer;
     streaming_compression::zstd::Compressor m_zstd_compressor;
 
@@ -117,4 +124,4 @@ private:
 };
 }  // namespace clp::ir
 
-#endif  // CLP_IR_LOGEVENTDESERIALIZER_HPP
+#endif  // CLP_IR_LOGEVENTSERIALIZER_HPP

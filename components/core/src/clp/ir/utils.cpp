@@ -2,7 +2,6 @@
 
 #include "../BufferReader.hpp"
 #include "../ffi/ir_stream/decoding_methods.hpp"
-#include "types.hpp"
 
 namespace clp::ir {
 auto has_ir_stream_magic_number(std::string_view buf) -> bool {
