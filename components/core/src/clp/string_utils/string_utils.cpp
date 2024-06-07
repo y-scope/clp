@@ -39,8 +39,7 @@ inline bool advance_tame_to_next_match(
 ) {
     auto w = *wild_it;
     if ('?' != w) {
-        // No need to check for '*' since the caller ensures wild doesn't
-        // contain consecutive '*'
+        // No need to check for '*' since the caller ensures `wild` doesn't contain consecutive '*'
 
         // Handle escaped characters
         if ('\\' == w) {
@@ -208,8 +207,8 @@ bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
  * NOTE:
  * - Since the caller guarantees that there are no consecutive '*', we don't need to handle the
  *   case where a group in `wild` is empty.
- * - Since the caller guarantees that there every '\' is followed by a character, we can advance
- *   passed '\' without doing a subsequent bounds check.
+ * - Since the caller guarantees that every '\' is followed by a character, we can advance passed
+ *   '\' without doing a subsequent bounds check.
  * - The second part of this method could be rewritten in the following form:
  *
  *   ```
