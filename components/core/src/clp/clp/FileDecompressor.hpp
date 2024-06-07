@@ -1,8 +1,8 @@
 #ifndef CLP_CLP_FILEDECOMPRESSOR_HPP
 #define CLP_CLP_FILEDECOMPRESSOR_HPP
 
-#include <string>
 #include <cstddef>
+#include <string>
 
 #include "../FileWriter.hpp"
 #include "../streaming_archive/MetadataDB.hpp"

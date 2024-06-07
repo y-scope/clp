@@ -4,7 +4,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "../ir/Constant.hpp"
+#include "../ir/constants.hpp"
 #include "../ir/LogEventSerializer.hpp"
 #include "../ir/utils.hpp"
 
@@ -33,8 +33,10 @@ bool rename_ir_file(
         size_t begin_message_ix,
         size_t end_message_ix
 ) {
-    string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
-                               + std::to_string(end_message_ix) + ir::cIrFileExtension;
+    auto ir_file_name = file_orig_id + "_";
+    ir_file_name += std::to_string(begin_message_ix) + "_";
+    ir_file_name += std::to_string(end_message_ix) + "_";
+    ir_file_name += ir::cIrFileExtension;
 
     auto const renamed_ir_path = output_directory / ir_file_name;
     try {
@@ -167,7 +169,9 @@ bool FileDecompressor::decompress_to_ir(
     }
 
     boost::filesystem::path temp_ir_path{temp_output_dir};
-    temp_ir_path /= m_encoded_file.get_id_as_string() + ir::cIrFileExtension;
+    auto temp_ir_file = m_encoded_file.get_id_as_string();
+    temp_ir_file += ir::cIrFileExtension;
+    temp_ir_path /= temp_ir_file;
 
     auto const& file_orig_id = m_encoded_file.get_orig_file_id_as_string();
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();
@@ -214,10 +218,12 @@ bool FileDecompressor::decompress_to_ir(
             }
         }
 
-        if (false == ir_serializer.serialize_log_event(
+        if (false
+            == ir_serializer.serialize_log_event(
                     m_encoded_message.get_ts_in_milli(),
                     m_decompressed_message
-            )) {
+            ))
+        {
             SPDLOG_ERROR(
                     "Failed to serialize log event: {} with ts {}",
                     m_decompressed_message.c_str(),

@@ -52,10 +52,14 @@ public:
 
     /**
      * Creates a Zstandard-compressed IR file on disk, and writes the IR file's preamble.
-     *
      * @param file_path
+     * @return true on success, false if the preamble fails to serialize
+     * @throw FileWriter::OperationFailed if the FileWriter fails to open the file specified by
+     * file_path
+     * @throw streaming_compression::zstd::Compressor if Zstandard compressor fails to open
+     * @throw ir::LogEventSerializer::OperationFailed on failure
      */
-    [[nodiscard]] auto open(std::string const& file_path) -> ErrorCode;
+    [[nodiscard]] auto open(std::string const& file_path) -> bool;
 
     /**
      * Flushes any buffered data.

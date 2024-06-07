@@ -25,7 +25,7 @@ LogEventSerializer<encoded_variable_t>::~LogEventSerializer() {
 }
 
 template <typename encoded_variable_t>
-auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> ErrorCode {
+auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> bool {
     if (m_is_open) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
@@ -41,24 +41,24 @@ auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> Er
     if constexpr (std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>) {
         m_prev_event_timestamp = 0;
         res = ffi::ir_stream::four_byte_encoding::serialize_preamble(
-            cTimestampPattern,
-            cTimestampPatternSyntax,
-            cTimezoneID,
-            m_prev_event_timestamp,
-            m_ir_buf
+                cTimestampPattern,
+                cTimestampPatternSyntax,
+                cTimezoneID,
+                m_prev_event_timestamp,
+                m_ir_buf
         );
     } else {
         res = clp::ffi::ir_stream::eight_byte_encoding::serialize_preamble(
-            cTimestampPattern,
-            cTimestampPatternSyntax,
-            cTimezoneID,
-            m_ir_buf
+                cTimestampPattern,
+                cTimestampPatternSyntax,
+                cTimezoneID,
+                m_ir_buf
         );
     }
 
     if (false == res) {
         close_writer();
-        return ErrorCode_Failure;
+        return true;
     }
 
     m_is_open = true;
@@ -66,7 +66,7 @@ auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> Er
     // Flush the preamble
     flush();
 
-    return ErrorCode_Success;
+    return false;
 }
 
 template <typename encoded_variable_t>
@@ -75,8 +75,8 @@ auto LogEventSerializer<encoded_variable_t>::flush() -> void {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
     m_zstd_compressor.write(
-        size_checked_pointer_cast<char const>(m_ir_buf.data()),
-        m_ir_buf.size()
+            size_checked_pointer_cast<char const>(m_ir_buf.data()),
+            m_ir_buf.size()
     );
     m_serialized_size += m_ir_buf.size();
     m_ir_buf.clear();
@@ -106,19 +106,19 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
     bool res{};
     if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         res = clp::ffi::ir_stream::eight_byte_encoding::serialize_log_event(
-            timestamp,
-            message,
-            logtype,
-            m_ir_buf
+                timestamp,
+                message,
+                logtype,
+                m_ir_buf
         );
     } else {
         auto const timestamp_delta = timestamp - m_prev_event_timestamp;
         m_prev_event_timestamp = timestamp;
         res = clp::ffi::ir_stream::four_byte_encoding::serialize_log_event(
-            timestamp_delta,
-            message,
-            logtype,
-            m_ir_buf
+                timestamp_delta,
+                message,
+                logtype,
+                m_ir_buf
         );
     }
     if (false == res) {
@@ -139,9 +139,9 @@ auto LogEventSerializer<encoded_variable_t>::close_writer() -> void {
 template LogEventSerializer<eight_byte_encoded_variable_t>::~LogEventSerializer();
 template LogEventSerializer<four_byte_encoded_variable_t>::~LogEventSerializer();
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::open(string const& file_path
-) -> ErrorCode;
+) -> bool;
 template auto LogEventSerializer<four_byte_encoded_variable_t>::open(string const& file_path
-) -> ErrorCode;
+) -> bool;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<four_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::close() -> void;
