@@ -78,7 +78,6 @@ auto LogEventSerializer<encoded_variable_t>::flush() -> void {
             size_checked_pointer_cast<char const>(m_ir_buf.data()),
             m_ir_buf.size()
     );
-    m_serialized_size += m_ir_buf.size();
     m_ir_buf.clear();
 }
 
@@ -104,6 +103,7 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
 
     string logtype;
     bool res{};
+    auto const buf_size_before_serialization = m_ir_buf.size();
     if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
         res = clp::ffi::ir_stream::eight_byte_encoding::serialize_log_event(
                 timestamp,
@@ -124,6 +124,7 @@ auto LogEventSerializer<encoded_variable_t>::serialize_log_event(
     if (false == res) {
         return false;
     }
+    m_serialized_size += m_ir_buf.size() - buf_size_before_serialization;
     ++m_num_log_events;
     return true;
 }

@@ -76,9 +76,7 @@ public:
     /**
      * @return Size of serialized data in bytes
      */
-    [[nodiscard]] auto get_serialized_size() const -> size_t {
-        return m_ir_buf.size() + m_serialized_size;
-    }
+    [[nodiscard]] auto get_serialized_size() const -> size_t { return m_serialized_size; }
 
     /**
      * @return Number of serialized log events.
