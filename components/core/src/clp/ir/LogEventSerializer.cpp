@@ -58,7 +58,7 @@ auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> bo
 
     if (false == res) {
         close_writer();
-        return true;
+        return false;
     }
 
     m_is_open = true;
@@ -66,7 +66,7 @@ auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> bo
     // Flush the preamble
     flush();
 
-    return false;
+    return true;
 }
 
 template <typename encoded_variable_t>

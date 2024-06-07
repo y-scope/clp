@@ -178,9 +178,7 @@ bool FileDecompressor::decompress_to_ir(
 
     LogEventSerializer<four_byte_encoded_variable_t> ir_serializer;
     // Open output IR file
-    if (auto const error_code = ir_serializer.open(temp_ir_path.string());
-        ErrorCode_Success != error_code)
-    {
+    if (false == ir_serializer.open(temp_ir_path.string())) {
         SPDLOG_ERROR("Failed to serialize preamble");
         return false;
     }
@@ -211,9 +209,8 @@ bool FileDecompressor::decompress_to_ir(
             }
             begin_message_ix = end_message_ix;
 
-            if (auto const error_code = ir_serializer.open(temp_ir_path.string());
-                ErrorCode_Success != error_code)
-            {
+            if (false == ir_serializer.open(temp_ir_path.string())) {
+                SPDLOG_ERROR("Failed to serialize preamble");
                 return false;
             }
         }
