@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "../../Defs.hpp"
@@ -137,7 +138,7 @@ public:
      * @param vars
      * @return true if matched, false otherwise
      */
-    bool matches_vars(Span<int64_t> vars) const;
+    bool matches_vars(UnalignedMemSpan<int64_t> vars) const;
 
 private:
     // Variables
@@ -154,7 +155,11 @@ private:
 class Query {
 public:
     // Constructors
-    Query() : m_ignore_case(false), m_search_string_matches_all(true) {}
+    Query(bool ignore_case, std::string const& search_string, std::vector<SubQuery> sub_queries)
+            : m_ignore_case(ignore_case),
+              m_sub_queries(std::move(sub_queries)) {
+        set_search_string(search_string);
+    }
 
     void set_ignore_case(bool ignore_case) { m_ignore_case = ignore_case; }
 

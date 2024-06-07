@@ -17,14 +17,22 @@ size_t SchemaWriter::append_message(ParsedMessage& message) {
         count++;
     }
 
+    for (auto& i : message.get_unordered_content()) {
+        m_columns[count]->add_value(i, size);
+        total_size += size;
+        ++count;
+    }
+
     m_num_messages++;
     return total_size;
 }
 
-void SchemaWriter::store(ZstdCompressor& compressor) {
+size_t SchemaWriter::store(ZstdCompressor& compressor) {
+    size_t total_size = 0;
     for (auto& writer : m_columns) {
-        writer->store(compressor);
+        total_size += writer->store(compressor);
     }
+    return total_size;
 }
 
 SchemaWriter::~SchemaWriter() {

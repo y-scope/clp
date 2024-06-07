@@ -1,6 +1,8 @@
 #include "SchemaMatch.hpp"
 
 #include <algorithm>
+#include <queue>
+#include <tuple>
 #include <utility>
 
 #include "AndExpr.hpp"
@@ -71,13 +73,13 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                 // TODO: will have to decide how we wan't to handle multi-column expressions
                 // with unresolved descriptors
                 for (int32_t node_id : m_unresolved_descriptor_to_descriptor[column]) {
-                    auto node = m_tree->get_node(node_id);
+                    auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
                     while (node->get_id() != m_tree->get_root_node_id()) {
                         // may have to explicitly mark non-regex
                         descriptors.emplace_back(node->get_key_name());
-                        node = m_tree->get_node(node->get_parent_id());
+                        node = &m_tree->get_node(node->get_parent_id());
                     }
                     std::reverse(descriptors.begin(), descriptors.end());
                     auto resolved_column = ColumnDescriptor::create(descriptors);
@@ -95,8 +97,8 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
 bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     bool matched = false;
     if (column->is_pure_wildcard()) {
-        for (auto& node : m_tree->get_nodes()) {
-            if (column->matches_type(node_to_literal_type(node->get_type()))) {
+        for (auto const& node : m_tree->get_nodes()) {
+            if (column->matches_type(node_to_literal_type(node.get_type()))) {
                 // column_to_descriptor_[node->get_id()].insert(column);
                 //  At least some node matches; break
                 //  Don't use column_to_descriptor_ for pure wildcard columns anyway, so
@@ -109,92 +111,140 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
         return matched;
     }
 
-    auto root = m_tree->get_node(m_tree->get_root_node_id());
-    for (int32_t child_node_id : root->get_children_ids()) {
-        matched |= populate_column_mapping(column, column->descriptor_begin(), child_node_id);
+    // TODO: once we start supporting multi-rooted MPTs this (and anything that uses
+    // get_root_node_id, or assumes root node id is 0) will have to change
+    auto const& root = m_tree->get_node(m_tree->get_root_node_id());
+    for (int32_t child_node_id : root.get_children_ids()) {
+        matched |= populate_column_mapping(column, child_node_id);
     }
 
     return matched;
 }
 
-bool SchemaMatch::populate_column_mapping(
-        ColumnDescriptor* column,
-        DescriptorList::iterator it,
-        int32_t node_id,
-        bool wildcard_special_flag
-) {
-    if (it == column->descriptor_end()) {
-        return false;
+bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column, int32_t node_id) {
+    /**
+     * This function is the core of Column Resolution. The general idea is to walk down different
+     * branches of the mst while advancing an iterator over the column descriptor in step.
+     *
+     * There are a few notable edge cases we handle here namely
+     * 	1) wildcard tokens must be allowed to match any number of mst nodes including zero
+     * 	2) mst node entries with no name are automatically accepted, do not advance the token
+     * 	   iterator, and can be accepted in recursive descent even if the token iterator is at the
+     * 	   end
+     */
+    using state = std::tuple<int32_t, DescriptorList::iterator, int32_t>;
+    std::priority_queue<state, std::vector<state>, std::greater<state>> work_list;
+    std::set<std::pair<DescriptorList::iterator, int32_t>> visited_states;
+    auto it_start = column->descriptor_begin();
+    work_list.emplace(std::make_tuple(0, it_start, node_id));
+    // Allow matching a wildcard zero times
+    if (column->descriptor_end() != it_start && it_start->wildcard()) {
+        work_list.emplace(std::make_tuple(0, ++it_start, node_id));
     }
-
+    int32_t prev_level = 0;
     bool matched = false;
-    bool accepted = false, wildcard_accepted = false;
-    auto cur_node = m_tree->get_node(node_id);
-    DescriptorToken const& token = *it;
-    auto next = it;
-    next++;
+    while (false == work_list.empty()) {
+        auto& cur = work_list.top();
+        auto [cur_depth, cur_it, cur_node_id] = cur;
+        work_list.pop();
+        if (prev_level != cur_depth) {
+            prev_level = cur_depth;
+            visited_states.clear();
+        }
 
-    // accept current token
-    if (token.wildcard()) {
-        accepted = true;
-        wildcard_accepted = true;
-    } else if (cur_node->get_key_name() == token.get_token()) {
-        accepted = true;
-    }
+        // Make sure we haven't visited this state yet via different routes of resolving wildcards
+        auto cur_state = std::make_pair(cur_it, cur_node_id);
+        if (visited_states.count(cur_state) > 0) {
+            continue;
+        }
+        visited_states.emplace(cur_state);
 
-    if (accepted) {
-        // For array search, users need to specify the full path
-        if (cur_node->get_type() == NodeType::ARRAY && !column->is_unresolved_descriptor()) {
-            matched = true;
-            column->add_unresolved_tokens(next);
-            m_column_to_descriptor[node_id].insert(column);
-        } else if ((next == column->descriptor_end()
-                    && column->matches_type(node_to_literal_type(cur_node->get_type()))))
+        // Check if the current node is accepted
+        auto const& cur_node = m_tree->get_node(cur_node_id);
+        bool is_key_name_empty = cur_node.get_key_name().empty();
+        bool at_descriptor_list_end = cur_it == column->descriptor_end();
+        auto next_it = cur_it;
+        if (false == at_descriptor_list_end) {
+            ++next_it;
+        }
+        bool next_at_descriptor_list_end = next_it == column->descriptor_end();
+        bool wildcard_descriptor = false == at_descriptor_list_end && cur_it->wildcard();
+        bool accepted = false;
+
+        if (wildcard_descriptor) {
+            accepted = true;
+        } else if (is_key_name_empty) {
+            accepted = true;
+        } else if ((false == at_descriptor_list_end
+                    && cur_node.get_key_name() == cur_it->get_token()))
         {
-            // potentially match current node if accepted its token
+            accepted = true;
+        }
+
+        // Check if the current node is matched
+        if (false == accepted) {
+            continue;
+        }
+
+        // Currently we only allow fully resolved descriptors for precise array search
+        if (NodeType::UnstructuredArray == cur_node.get_type()
+            && false == column->is_unresolved_descriptor())
+        {
+            /**
+             * TODO: This doesn't work in general, but it had the same limitation in the previous
+             * implementation, so I will leave it broken for now.
+             *
+             * E.g. breaks for a query like `a.b.c:d` on the collection of objects
+             * {"a": [{"b": {"c": "d"}}]}
+             * {"a": {"b": [{"c": "d"}]}}
+             */
+            column->add_unresolved_tokens(next_it);
+            m_column_to_descriptor[cur_node_id].insert(column);
             matched = true;
+            continue;
+        } else if ((next_at_descriptor_list_end
+                    && column->matches_type(node_to_literal_type(cur_node.get_type()))))
+        {
             if (false == column->is_unresolved_descriptor()) {
-                m_column_to_descriptor[node_id].insert(column);
+                m_column_to_descriptor[cur_node_id].insert(column);
             } else {
-                m_unresolved_descriptor_to_descriptor[column].insert(node_id);
+                m_unresolved_descriptor_to_descriptor[column].insert(cur_node_id);
+            }
+            matched = true;
+            continue;
+        }
+
+        // Allow matching a wildcard zero times
+        if (false == next_at_descriptor_list_end && next_it->wildcard()) {
+            work_list.emplace(std::make_tuple(cur_depth, next_it, cur_node_id));
+        }
+
+        // Push nodes to the work list
+        for (int32_t child_node_id : cur_node.get_children_ids()) {
+            if (is_key_name_empty) {
+                // Don't advance the iterator when accepting an empty key
+                work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));
+            } else {
+                work_list.emplace(std::make_tuple(cur_depth + 1, next_it, child_node_id));
+                if (wildcard_descriptor) {
+                    // Allow matching a wildcard token multiple times
+                    work_list.emplace(std::make_tuple(cur_depth + 1, cur_it, child_node_id));
+                }
             }
         }
-    } else {
-        return matched;
     }
-
-    // handle wildcard match 0 case
-    bool wildcard_special_continue = (wildcard_special_flag || !wildcard_accepted)
-                                     && next != column->descriptor_end() && next->wildcard();
-    if (wildcard_special_continue) {
-        // have to allow matching current node again to honour
-        // 0 or more matches. Set the wildcard special flag to avoid matching
-        // the following case erroneously
-        // tok.*.tok
-        matched |= populate_column_mapping(column, next, node_id, true);
-    } else if (false == wildcard_special_flag && wildcard_accepted) {
-        matched |= populate_column_mapping(column, next, node_id);
-    }
-
-    // match against children
-    for (int32_t child_node_id : cur_node->get_children_ids()) {
-        if (wildcard_accepted && !wildcard_special_continue) {
-            matched |= populate_column_mapping(column, next, child_node_id);
-            matched |= populate_column_mapping(column, it, child_node_id);
-        } else if (false == wildcard_accepted) {
-            matched |= populate_column_mapping(column, next, child_node_id);
-        }
-    }
-
     return matched;
 }
 
 void SchemaMatch::populate_schema_mapping() {
-    // TODO: consider refactoring this now that schemas are std::set s
+    // TODO: consider refactoring this to take advantage of the ordered region of the schema
     for (auto& it : *m_schemas) {
         int32_t schema_id = it.first;
         for (int32_t column_id : it.second) {
-            if (m_tree->get_node(column_id)->get_type() == NodeType::ARRAY) {
+            if (Schema::schema_entry_is_unordered_object(column_id)) {
+                continue;
+            }
+            if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
                 m_array_schema_ids.insert(schema_id);
             }
             if (false == m_column_to_descriptor.count(column_id)) {
@@ -232,7 +282,7 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
             for (int32_t schema : common_schema) {
                 if (m_descriptor_to_schema[column].count(schema)) {
                     types |= node_to_literal_type(
-                            m_tree->get_node(m_descriptor_to_schema[column][schema])->get_type()
+                            m_tree->get_node(m_descriptor_to_schema[column][schema]).get_type()
                     );
                 }
             }
@@ -353,7 +403,10 @@ void SchemaMatch::split_expression_by_schema(
                         && 0 == m_array_search_schema_ids.count(schema_id)))
             {
                 for (auto column_id : (*m_schemas)[schema_id]) {
-                    if (m_tree->get_node(column_id)->get_type() == NodeType::ARRAY) {
+                    if (Schema::schema_entry_is_unordered_object(column_id)) {
+                        continue;
+                    }
+                    if (NodeType::UnstructuredArray == m_tree->get_node(column_id).get_type()) {
                         m_array_search_schema_ids.insert(schema_id);
                         break;
                     }
@@ -442,7 +495,7 @@ bool SchemaMatch::has_array_search(int32_t schema_id) {
 
 LiteralType SchemaMatch::get_literal_type_for_column(ColumnDescriptor* column, int32_t schema) {
     return node_to_literal_type(
-            m_tree->get_node(get_column_id_for_descriptor(column, schema))->get_type()
+            m_tree->get_node(get_column_id_for_descriptor(column, schema)).get_type()
     );
 }
 

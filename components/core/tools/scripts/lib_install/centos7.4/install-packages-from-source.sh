@@ -17,7 +17,10 @@ set -u
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 lib_install_scripts_dir=$script_dir/..
 
-# NOTE: cmake and boost must be installed first since the remaining packages depend on them
+# NOTE: The remaining installation scripts depend on curl, so we install it first.
+"$lib_install_scripts_dir"/install-curl.sh 8.8.0
+
+# NOTE: The remaining installation scripts depend on cmake and boost, so we install them beforehand.
 "$lib_install_scripts_dir"/install-cmake.sh 3.21.2
 "$lib_install_scripts_dir"/install-boost.sh 1.76.0
 

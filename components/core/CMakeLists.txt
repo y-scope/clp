@@ -63,9 +63,6 @@ else()
 endif()
 message(STATUS "Building using ${CLP_LIBS_STRING} libraries")
 
-# Add log surgeon
-add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
-
 # Link against c++fs if required by the compiler being used
 set(STD_FS_LIBS "")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -91,7 +88,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost REQUIRED iostreams program_options filesystem system)
+find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system)
 if(Boost_FOUND)
     message(STATUS "Found Boost ${Boost_VERSION}")
 else()
@@ -139,6 +136,18 @@ if(LibArchive_FOUND)
 else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
 endif()
+
+# Find and setup libcurl
+# By default, CURL does not provide static libraries
+find_package(CURL 7.68.0 REQUIRED)
+if(CURL_FOUND)
+    message(STATUS "Found CURL ${CURL_VERSION_STRING}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+endif()
+
+# Add log surgeon
+add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
 # Find and setup MariaDBClient library
 if(CLP_USE_STATIC_LIBS)
@@ -210,6 +219,46 @@ add_subdirectory(src/clp/make_dictionaries_readable)
 add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
+set(SOURCE_FILES_clp_s_unitTest
+    src/clp_s/search/AndExpr.cpp
+    src/clp_s/search/AndExpr.hpp
+    src/clp_s/search/BooleanLiteral.cpp
+    src/clp_s/search/BooleanLiteral.hpp
+    src/clp_s/search/clp_search/Query.cpp
+    src/clp_s/search/clp_search/Query.hpp
+    src/clp_s/search/ColumnDescriptor.cpp
+    src/clp_s/search/ColumnDescriptor.hpp
+    src/clp_s/search/DateLiteral.cpp
+    src/clp_s/search/DateLiteral.hpp
+    src/clp_s/search/EmptyExpr.cpp
+    src/clp_s/search/EmptyExpr.hpp
+    src/clp_s/search/Expression.cpp
+    src/clp_s/search/Expression.hpp
+    src/clp_s/search/FilterExpr.cpp
+    src/clp_s/search/FilterExpr.hpp
+    src/clp_s/search/FilterOperation.hpp
+    src/clp_s/search/Integral.cpp
+    src/clp_s/search/Integral.hpp
+    src/clp_s/search/Literal.hpp
+    src/clp_s/search/NullLiteral.cpp
+    src/clp_s/search/NullLiteral.hpp
+    src/clp_s/search/OrExpr.cpp
+    src/clp_s/search/OrExpr.hpp
+    src/clp_s/search/OrOfAndForm.cpp
+    src/clp_s/search/OrOfAndForm.hpp
+    src/clp_s/search/SearchUtils.cpp
+    src/clp_s/search/SearchUtils.hpp
+    src/clp_s/search/StringLiteral.cpp
+    src/clp_s/search/StringLiteral.hpp
+    src/clp_s/search/Transformation.hpp
+    src/clp_s/search/Value.hpp
+    src/clp_s/SchemaTree.hpp
+    src/clp_s/TimestampPattern.cpp
+    src/clp_s/TimestampPattern.hpp
+    src/clp_s/Utils.cpp
+    src/clp_s/Utils.hpp
+)
+
 set(SOURCE_FILES_unitTest
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
@@ -230,6 +279,11 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
+        src/clp/CurlDownloadHandler.cpp
+        src/clp/CurlDownloadHandler.hpp
+        src/clp/CurlEasyHandle.hpp
+        src/clp/CurlOperationFailed.hpp
+        src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
         src/clp/database_utils.hpp
         src/clp/Defs.h
@@ -251,6 +305,9 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
+        src/clp/ffi/SchemaTree.cpp
+        src/clp/ffi/SchemaTree.hpp
+        src/clp/ffi/SchemaTreeNode.hpp
         src/clp/ffi/search/CompositeWildcardToken.cpp
         src/clp/ffi/search/CompositeWildcardToken.hpp
         src/clp/ffi/search/ExactVariableToken.cpp
@@ -307,6 +364,8 @@ set(SOURCE_FILES_unitTest
         src/clp/MySQLParamBindings.hpp
         src/clp/MySQLPreparedStatement.cpp
         src/clp/MySQLPreparedStatement.hpp
+        src/clp/NetworkReader.cpp
+        src/clp/NetworkReader.hpp
         src/clp/PageAllocatedVector.hpp
         src/clp/ParsedMessage.cpp
         src/clp/ParsedMessage.hpp
@@ -361,9 +420,12 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Decompressor.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
+        src/clp/Thread.cpp
+        src/clp/Thread.hpp
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp
+        src/clp/time_types.hpp
         src/clp/type_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
@@ -378,32 +440,40 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
+        tests/LogSuppressor.hpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
+        tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
+        tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
         tests/test-Segment.cpp
+        tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
         )
-add_executable(unitTest ${SOURCE_FILES_unitTest})
+add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
         PRIVATE
         ${CMAKE_SOURCE_DIR}/submodules
         )
 target_link_libraries(unitTest
         PRIVATE
+        absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options
+        ${CURL_LIBRARIES}
         fmt::fmt
+        kql
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
@@ -415,5 +485,5 @@ target_link_libraries(unitTest
         ZStd::ZStd
         )
 target_compile_features(unitTest
-        PRIVATE cxx_std_17
+        PRIVATE cxx_std_20
         )

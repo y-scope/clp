@@ -163,8 +163,8 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         cancelling_jobs = fetch_cancelling_search_jobs(db_conn)
 
-        for job in cancelling_jobs:
-            job_id = job["job_id"]
+        for cancelling_job in cancelling_jobs:
+            job_id = str(cancelling_job["job_id"])
             if job_id in active_jobs:
                 job = active_jobs.pop(job_id)
                 cancel_job_except_reducer(job)
@@ -459,7 +459,9 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                     error_msg = f"Unexpected msg_type: {msg.msg_type.name}"
                     raise NotImplementedError(error_msg)
 
-            if set_job_status(db_conn, job_id, new_job_status, SearchJobStatus.RUNNING):
+            # We set the status regardless of the job's previous status to handle the case where the
+            # job is cancelled (status = CANCELLING) while we're in this method.
+            if set_job_status(db_conn, job_id, new_job_status):
                 if new_job_status == SearchJobStatus.SUCCEEDED:
                     logger.info(f"Completed job {job_id}.")
                 elif reducer_failed:
@@ -492,7 +494,7 @@ async def handle_jobs(
             db_conn_pool, results_cache_uri, num_archives_to_search_per_sub_job
         )
         if 0 == len(reducer_acquisition_tasks):
-            tasks.append(asyncio.sleep(jobs_poll_delay))
+            tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
         else:
             tasks.extend(reducer_acquisition_tasks)
 

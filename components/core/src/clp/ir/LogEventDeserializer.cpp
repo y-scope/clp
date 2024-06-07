@@ -6,12 +6,13 @@
 #include <string_utils/string_utils.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
+#include "../ffi/ir_stream/protocol_constants.hpp"
 #include "types.hpp"
 
 namespace clp::ir {
 template <typename encoded_variable_t>
-auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
+auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
     ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata;
     auto ir_error_code = ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata);
@@ -66,8 +67,31 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
 }
 
 template <typename encoded_variable_t>
-auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
+auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
+    // Process any packets before the log event
+    ffi::ir_stream::encoded_tag_t tag{};
+    while (true) {
+        auto ir_error_code = ffi::ir_stream::deserialize_tag(m_reader, tag);
+        if (ffi::ir_stream::IRErrorCode_Incomplete_IR == ir_error_code) {
+            return std::errc::result_out_of_range;
+        }
+
+        if (ffi::ir_stream::cProtocol::Eof == tag) {
+            return std::errc::no_message_available;
+        }
+
+        if (ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == tag) {
+            ir_error_code = ffi::ir_stream::deserialize_utc_offset_change(m_reader, m_utc_offset);
+            if (ffi::ir_stream::IRErrorCode_Incomplete_IR == ir_error_code) {
+                return std::errc::result_out_of_range;
+            }
+        } else {
+            // Packet must be a log event
+            break;
+        }
+    }
+
     epoch_time_ms_t timestamp_or_timestamp_delta{};
     std::string logtype;
     std::vector<std::string> dict_vars;
@@ -75,6 +99,7 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
 
     auto ir_error_code = ffi::ir_stream::deserialize_log_event(
             m_reader,
+            tag,
             logtype,
             encoded_vars,
             dict_vars,
@@ -82,8 +107,6 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     );
     if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
         switch (ir_error_code) {
-            case ffi::ir_stream::IRErrorCode_Eof:
-                return std::errc::no_message_available;
             case ffi::ir_stream::IRErrorCode_Incomplete_IR:
                 return std::errc::result_out_of_range;
             case ffi::ir_stream::IRErrorCode_Corrupted_IR:
@@ -100,7 +123,7 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
         timestamp = m_prev_msg_timestamp;
     }
 
-    return LogEvent<encoded_variable_t>{timestamp, logtype, dict_vars, encoded_vars};
+    return LogEvent<encoded_variable_t>{timestamp, m_utc_offset, logtype, dict_vars, encoded_vars};
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
@@ -109,8 +132,8 @@ template auto LogEventDeserializer<eight_byte_encoded_variable_t>::create(Reader
 ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::create(ReaderInterface& reader
 ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
-template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event()
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
-template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event()
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event(
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event(
+) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
 }  // namespace clp::ir

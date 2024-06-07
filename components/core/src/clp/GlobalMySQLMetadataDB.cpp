@@ -35,6 +35,7 @@ enum class FilesTableFieldIndexes : uint16_t {
     BeginTimestamp,
     EndTimestamp,
     NumUncompressedBytes,
+    BeginMessageIx,
     NumMessages,
     ArchiveId,
     Length,
@@ -42,7 +43,8 @@ enum class FilesTableFieldIndexes : uint16_t {
 
 namespace clp {
 void GlobalMySQLMetadataDB::ArchiveIterator::get_id(string& id) const {
-    m_db_iterator->get_field_as_string(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), id);
+    constexpr size_t cFirstColumnIx{0};
+    m_db_iterator->get_field_as_string(cFirstColumnIx, id);
 }
 
 void GlobalMySQLMetadataDB::open() {
@@ -133,6 +135,8 @@ void GlobalMySQLMetadataDB::open() {
             = streaming_archive::cMetadataDB::File::EndTimestamp;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
+    file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
+            = streaming_archive::cMetadataDB::File::BeginMessageIx;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)]
             = streaming_archive::cMetadataDB::File::NumMessages;
     file_field_names[enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId)]
@@ -308,6 +312,12 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
                 num_uncompressed_bytes
         );
 
+        auto begin_message_ix = file->get_begin_message_ix();
+        statement_bindings.bind_uint64(
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx),
+                begin_message_ix
+        );
+
         auto num_messages = file->get_num_messages();
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages),
@@ -343,6 +353,10 @@ void GlobalMySQLMetadataDB::update_metadata_for_files(
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes) + offset,
                 num_uncompressed_bytes
+        );
+        statement_bindings.bind_uint64(
+                enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + offset,
+                begin_message_ix
         );
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + offset,
@@ -439,5 +453,69 @@ GlobalMetadataDB::ArchiveIterator* GlobalMySQLMetadataDB::get_archive_iterator_f
     }
 
     return new ArchiveIterator(m_db.get_iterator());
+}
+
+bool GlobalMySQLMetadataDB::get_file_split(
+        string const& orig_file_id,
+        size_t message_ix,
+        string& archive_id,
+        string& file_split_id
+) {
+    auto statement_string = fmt::format(
+            "SELECT DISTINCT {}{}.{}, {}{}.{} FROM {}{} JOIN {}{} ON {}{}.{} = {}{}.{} "
+            "WHERE {}{}.{} = '{}' AND {} >= {}{}.{} AND {} < ({}{}.{} + {}{}.{}) "
+            "ORDER BY {} ASC, {} ASC",
+            m_table_prefix,
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::Archive::Id,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::Id,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::FilesTableName,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::ArchivesTableName,
+            streaming_archive::cMetadataDB::Archive::Id,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::ArchiveId,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::OrigFileId,
+            orig_file_id,
+            message_ix,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::BeginMessageIx,
+            message_ix,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::BeginMessageIx,
+            m_table_prefix,
+            streaming_archive::cMetadataDB::FilesTableName,
+            streaming_archive::cMetadataDB::File::NumMessages,
+            streaming_archive::cMetadataDB::Archive::CreatorId,
+            streaming_archive::cMetadataDB::Archive::CreationIx
+    );
+    SPDLOG_DEBUG("{}", statement_string);
+
+    if (false == m_db.execute_query(statement_string)) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+
+    auto db_iterator = m_db.get_iterator();
+
+    if (false == db_iterator.contains_element()) {
+        return false;
+    }
+
+    constexpr size_t cFirstColumnIx{0};
+    constexpr size_t cSecondColumnIx{1};
+    db_iterator.get_field_as_string(cFirstColumnIx, archive_id);
+    db_iterator.get_field_as_string(cSecondColumnIx, file_split_id);
+
+    return true;
 }
 }  // namespace clp

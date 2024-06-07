@@ -30,6 +30,13 @@ const computeHumanSize = (num) => {
     return `${Math.round(num)} B`;
 };
 
+/**
+ * Deselects all selections within the browser viewport.
+ */
+const deselectAll = () => {
+    window.getSelection().removeAllRanges();
+};
+
 
 /**
  * Removes wrapping quotes from the given string, if it's quoted, and unescapes quotes from within
@@ -107,6 +114,7 @@ const unquoteString = (
 
 export {
     computeHumanSize,
+    deselectAll,
     sleep,
     unquoteString,
 };

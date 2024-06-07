@@ -6,6 +6,7 @@
 #include <boost-outcome/include/boost/outcome/std_result.hpp>
 
 #include "../ReaderInterface.hpp"
+#include "../time_types.hpp"
 #include "../TimestampPattern.hpp"
 #include "../TraceableException.hpp"
 #include "../type_utils.hpp"
@@ -33,8 +34,8 @@ public:
      * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
      *   or uses an unsupported version
      */
-    static auto create(ReaderInterface& reader)
-            -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
+    static auto create(ReaderInterface& reader
+    ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
 
     // Delete copy constructor and assignment
     LogEventDeserializer(LogEventDeserializer const&) = delete;
@@ -51,15 +52,17 @@ public:
         return m_timestamp_pattern;
     }
 
+    [[nodiscard]] auto get_current_utc_offset() const -> UtcOffset { return m_utc_offset; }
+
     /**
      * Deserializes a log event from the stream
      * @return A result containing the log event or an error code indicating the failure:
      * - std::errc::no_message_available on reaching the end of the IR stream
      * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::result_out_of_range if the IR stream is corrupted
+     * - std::errc::protocol_error if the IR stream is corrupted
      */
-    [[nodiscard]] auto deserialize_log_event()
-            -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>>;
+    [[nodiscard]] auto deserialize_log_event(
+    ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>>;
 
 private:
     // Constructors
@@ -71,11 +74,11 @@ private:
 
     // Variables
     TimestampPattern m_timestamp_pattern{0, "%Y-%m-%dT%H:%M:%S.%3"};
+    UtcOffset m_utc_offset{0};
     [[no_unique_address]] std::conditional_t<
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,
-            EmptyType>
-            m_prev_msg_timestamp{};
+            EmptyType> m_prev_msg_timestamp{};
     ReaderInterface& m_reader;
 };
 }  // namespace clp::ir

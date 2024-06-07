@@ -18,8 +18,10 @@ AlignTrailingComments:
   Kind: "Never"
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
+AllowBreakBeforeNoexceptSpecifier: "OnlyWithParen"
 AllowShortBlocksOnASingleLine: "Always"
 AllowShortCaseLabelsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: true
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: "Inline"
 AllowShortIfStatementsOnASingleLine: "Never"
@@ -72,9 +74,8 @@ IncludeCategories:
   # NOTE: A header is grouped by first matching regex
   # Library headers. Update when adding new libraries.
   # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
-
-  - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|date|fmt|json|log_surgeon|mariadb|mongocxx\
-|msgpack|simdjson|spdlog|sqlite3|string_utils|yaml-cpp|zstd)"
+  - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|curl|date|fmt|json|log_surgeon|mariadb\
+|mongocxx|msgpack|simdjson|spdlog|sqlite3|string_utils|yaml-cpp|zstd)"
     Priority: 3
   # C system headers
   - Regex: "^<.+\\.h>"
@@ -146,16 +147,18 @@ SpaceBeforeParens: "ControlStatements"
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
 SpaceInEmptyBlock: false
-SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 2
 SpacesInAngles: false
-SpacesInConditionalStatement: false
 SpacesInContainerLiterals: false
-SpacesInCStyleCastParentheses: false
 SpacesInLineCommentPrefix:
   Minimum: 1
   Maximum: -1
-SpacesInParentheses: false
+SpacesInParens: "Custom"
+SpacesInParensOptions:
+  InConditionalStatements: false
+  InCStyleCasts: false
+  InEmptyParentheses: false
+  Other: false
 SpacesInSquareBrackets: false
 Standard: "Latest"
 TabWidth: 4

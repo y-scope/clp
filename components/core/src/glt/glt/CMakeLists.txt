@@ -175,7 +175,7 @@ set(
 )
 
 add_executable(glt ${GLT_SOURCES})
-target_compile_features(glt PRIVATE cxx_std_17)
+target_compile_features(glt PRIVATE cxx_std_20)
 target_include_directories(glt PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(glt
         PRIVATE

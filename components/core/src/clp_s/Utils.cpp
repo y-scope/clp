@@ -1,5 +1,6 @@
 #include "Utils.hpp"
 
+#include <boost/filesystem.hpp>
 #include <spdlog/spdlog.h>
 
 using std::string;
@@ -22,14 +23,14 @@ bool FileUtils::find_all_files(std::string const& path, std::vector<std::string>
         // Iterate directory
         boost::filesystem::recursive_directory_iterator iter(
                 path,
-                boost::filesystem::symlink_option::recurse
+                boost::filesystem::directory_options::follow_directory_symlink
         );
         boost::filesystem::recursive_directory_iterator end;
         for (; iter != end; ++iter) {
             // Check if current entry is an empty directory or a file
             if (boost::filesystem::is_directory(iter->path())) {
                 if (boost::filesystem::is_empty(iter->path())) {
-                    iter.no_push();
+                    iter.disable_recursion_pending();
                 }
             } else {
                 file_paths.push_back(iter->path().string());
@@ -166,6 +167,18 @@ bool StringUtils::is_wildcard(char c) {
     for (size_t i = 0; i < strlen(cWildcards); ++i) {
         if (cWildcards[i] == c) {
             return true;
+        }
+    }
+    return false;
+}
+
+bool StringUtils::has_unescaped_wildcards(std::string const& str) {
+    for (size_t i = 0; i < str.size(); ++i) {
+        if ('*' == str[i] || '?' == str[i]) {
+            return true;
+        }
+        if ('\\' == str[i]) {
+            ++i;
         }
     }
     return false;

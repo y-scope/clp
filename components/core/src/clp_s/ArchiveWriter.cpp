@@ -92,32 +92,36 @@ size_t ArchiveWriter::get_data_size() {
 
 void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const& schema) {
     for (int32_t id : schema) {
-        auto node = m_schema_tree.get_node(id);
-        switch (node->get_type()) {
-            case NodeType::INTEGER:
+        if (Schema::schema_entry_is_unordered_object(id)) {
+            continue;
+        }
+        auto const& node = m_schema_tree.get_node(id);
+        switch (node.get_type()) {
+            case NodeType::Integer:
                 writer->append_column(new Int64ColumnWriter(id));
                 break;
-            case NodeType::FLOAT:
+            case NodeType::Float:
                 writer->append_column(new FloatColumnWriter(id));
                 break;
-            case NodeType::CLPSTRING:
+            case NodeType::ClpString:
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;
-            case NodeType::VARSTRING:
+            case NodeType::VarString:
                 writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
                 break;
-            case NodeType::BOOLEAN:
+            case NodeType::Boolean:
                 writer->append_column(new BooleanColumnWriter(id));
                 break;
-            case NodeType::ARRAY:
+            case NodeType::UnstructuredArray:
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_array_dict));
                 break;
-            case NodeType::DATESTRING:
+            case NodeType::DateString:
                 writer->append_column(new DateStringColumnWriter(id));
                 break;
-            case NodeType::OBJECT:
-            case NodeType::NULLVALUE:
-            case NodeType::UNKNOWN:
+            case NodeType::StructuredArray:
+            case NodeType::Object:
+            case NodeType::NullValue:
+            case NodeType::Unknown:
                 break;
         }
     }
@@ -141,9 +145,11 @@ size_t ArchiveWriter::store_tables() {
         m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
 
         m_tables_compressor.open(m_tables_file_writer, m_compression_level);
-        i.second->store(m_tables_compressor);
+        size_t uncompressed_size = i.second->store(m_tables_compressor);
         m_tables_compressor.close();
         delete i.second;
+
+        m_table_metadata_compressor.write_numeric_value(uncompressed_size);
     }
     m_table_metadata_compressor.close();
 

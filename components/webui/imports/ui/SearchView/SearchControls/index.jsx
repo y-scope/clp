@@ -15,6 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
+import {CLP_STORAGE_ENGINES} from "/imports/api/constants";
 import {
     isOperationInProgress,
     isSearchSignalReq,
@@ -85,6 +86,11 @@ const SearchControls = ({
         onSubmitQuery();
     };
 
+    const queryPlaceholderText =
+        CLP_STORAGE_ENGINES.CLP === Meteor.settings.public.ClpStorageEngine ?
+            "Enter a wildcard query..." :
+            "Enter a KQL query...";
+
     return (
         <>
             <Form onSubmit={handleQuerySubmission}>
@@ -102,7 +108,7 @@ const SearchControls = ({
                             autoFocus={true}
                             className={"border-top-0 border-bottom-0"}
                             disabled={isInputDisabled}
-                            placeholder={"Enter your query..."}
+                            placeholder={queryPlaceholderText}
                             ref={inputRef}
                             type={"text"}
                             value={queryString}

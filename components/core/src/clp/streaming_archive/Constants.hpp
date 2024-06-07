@@ -38,6 +38,7 @@ constexpr char BeginTimestamp[] = "begin_timestamp";
 constexpr char EndTimestamp[] = "end_timestamp";
 constexpr char TimestampPatterns[] = "timestamp_patterns";
 constexpr char NumUncompressedBytes[] = "num_uncompressed_bytes";
+constexpr char BeginMessageIx[] = "begin_message_ix";
 constexpr char NumMessages[] = "num_messages";
 constexpr char NumVariables[] = "num_variables";
 constexpr char IsSplit[] = "is_split";

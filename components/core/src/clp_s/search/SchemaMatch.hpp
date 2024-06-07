@@ -88,17 +88,10 @@ private:
     /**
      * Populates the column mapping for a given column
      * @param column
-     * @param it
      * @param node_id
-     * @param wildcard_special_flag
      * @return true if matching is successful, false otherwise
      */
-    bool populate_column_mapping(
-            ColumnDescriptor* column,
-            DescriptorList::iterator it,
-            int32_t node_id,
-            bool wildcard_special_flag = false
-    );
+    bool populate_column_mapping(ColumnDescriptor* column, int32_t node_id);
 
     /**
      * Populates the column mapping for a given column

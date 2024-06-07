@@ -138,7 +138,8 @@ bool CompositeWildcardToken<encoded_variable_t>::generate_next_interpretation() 
  * - However, if one of the wildcards can match a delimiter, then the CompositeWildcardToken splits
  *   into two tokens at the delimiter.
  * - Finally, if a WildcardToken is delimited by a '*'-delimiter-wildcard, then the '*' should be
- *   included in the WildcardToken (see the generalization in README.md).
+ *   included in the WildcardToken (see the generalization in
+ *   <docs>/dev-guide/design-parsing-wildcard-queries).
  *
  * Algorithm:
  * - To implement this algorithm, we need to search the CompositeWildcardToken for every substring

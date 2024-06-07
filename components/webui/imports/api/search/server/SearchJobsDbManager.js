@@ -90,7 +90,9 @@ class SearchJobsDbManager {
         await this.#sqlDbConnPool.query(
             `UPDATE ${this.#searchJobsTableName}
              SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${SEARCH_JOB_STATUS.CANCELLING}
-             WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?`,
+             WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?
+             AND ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS}
+             IN (${SEARCH_JOB_STATUS.PENDING}, ${SEARCH_JOB_STATUS.RUNNING})`,
             jobId,
         );
     }

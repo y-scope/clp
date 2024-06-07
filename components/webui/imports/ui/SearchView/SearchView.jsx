@@ -3,6 +3,7 @@ import {Meteor} from "meteor/meteor";
 import {useTracker} from "meteor/react-meteor-data";
 import {
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react";
@@ -10,8 +11,6 @@ import {
 import {CLP_STORAGE_ENGINES} from "/imports/api/constants";
 import {SearchResultsMetadataCollection} from "/imports/api/search/collections";
 import {
-    MONGO_SORT_ORDER,
-    SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
 } from "/imports/api/search/constants";
@@ -21,6 +20,10 @@ import {
     expandTimeRangeToDurationMultiple,
 } from "/imports/utils/datetime";
 import {unquoteString} from "/imports/utils/misc";
+import {
+    MONGO_SORT_BY_ID,
+    MONGO_SORT_ORDER,
+} from "/imports/utils/mongo";
 
 import {LOCAL_STORAGE_KEYS} from "../constants";
 import SearchControls from "./SearchControls";
@@ -94,13 +97,22 @@ const SearchView = () => {
         localLastSearchSignal,
     ]);
 
+    const isExpectingUpdates = useMemo(() => (null !== searchJobId) && [
+        SEARCH_SIGNAL.REQ_QUERYING,
+        SEARCH_SIGNAL.RESP_QUERYING,
+    ].includes(resultsMetadata.lastSignal), [
+        searchJobId,
+        resultsMetadata.lastSignal,
+    ]);
+
     const searchResults = useTracker(() => {
         if (null === searchJobId) {
             return [];
         }
 
         Meteor.subscribe(Meteor.settings.public.SearchResultsCollectionName, {
-            searchJobId,
+            searchJobId: searchJobId,
+            isExpectingUpdates: isExpectingUpdates,
         });
 
         // NOTE: Although we publish and subscribe using the name
@@ -117,10 +129,7 @@ const SearchView = () => {
                     fieldToSortBy.name,
                     fieldToSortBy.direction,
                 ],
-                [
-                    SEARCH_RESULTS_FIELDS.ID,
-                    fieldToSortBy.direction,
-                ],
+                MONGO_SORT_BY_ID,
             ],
         };
 
@@ -129,11 +138,7 @@ const SearchView = () => {
             // otherwise the count would already be available in
             // `resultsMetadata.numTotalResults`
             resultsCollection.estimatedDocumentCount()
-                .then((count) => {
-                    setEstimatedNumResults(
-                        Math.min(count, SEARCH_MAX_NUM_RESULTS)
-                    );
-                })
+                .then(setEstimatedNumResults)
                 .catch((e) => {
                     console.log(
                         "Error occurred in " +
@@ -145,8 +150,9 @@ const SearchView = () => {
 
         return resultsCollection.find({}, findOptions).fetch();
     }, [
-        searchJobId,
         fieldToSortBy,
+        isExpectingUpdates,
+        searchJobId,
         visibleSearchResultsLimit,
     ]);
 
@@ -160,11 +166,15 @@ const SearchView = () => {
 
         Meteor.subscribe(Meteor.settings.public.AggregationResultsCollectionName, {
             aggregationJobId: aggregationJobId,
+            isExpectingUpdates: isExpectingUpdates,
         });
         const collection = dbRef.current.getOrCreateCollection(aggregationJobId);
 
         return collection.find().fetch();
-    }, [aggregationJobId]);
+    }, [
+        aggregationJobId,
+        isExpectingUpdates,
+    ]);
 
     // State transitions
     useEffect(() => {
@@ -296,16 +306,6 @@ const SearchView = () => {
         handleQuerySubmit(expandedTimeRange);
     };
 
-    // The number of results on the server is available in different variables at different times:
-    // - when the query ends, it will be in resultsMetadata.numTotalResults.
-    // - while the query is in progress, it will be in estimatedNumResults.
-    // - when the query starts, the other two variables will be null, so searchResults.length is the
-    //   best estimate.
-    const numResultsOnServer =
-        resultsMetadata.numTotalResults ||
-        estimatedNumResults ||
-        searchResults.length;
-
     return (
         <div className={"d-flex flex-column h-100"}>
             <div className={"flex-column"}>
@@ -329,9 +329,9 @@ const SearchView = () => {
             </div>
 
             {(null !== searchJobId) && <SearchResults
+                estimatedNumResults={estimatedNumResults}
                 fieldToSortBy={fieldToSortBy}
                 maxLinesPerResult={maxLinesPerResult}
-                numResultsOnServer={numResultsOnServer}
                 resultsMetadata={resultsMetadata}
                 searchJobId={searchJobId}
                 searchResults={searchResults}
