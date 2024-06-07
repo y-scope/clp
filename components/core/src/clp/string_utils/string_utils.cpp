@@ -50,8 +50,7 @@ inline bool advance_tame_to_next_match(
 
         // Advance `tame_it` until it matches `w`
         while (true) {
-            auto t = *tame_it;
-            if (t == w) {
+            if (*tame_it == w) {
                 break;
             }
             ++tame_it;
