@@ -14,7 +14,8 @@ Usage:
 * `archives-dir` is the directory that archives should be written to.
 * `input-path` is any new-line-delimited JSON (ndjson) log file or directory containing such files.
 * `options` allow you to specify things like which field should be considered as the log event's
-  timestamp (`--timestamp-key <field-path>`).
+  timestamp (`--timestamp-key <field-path>`), or whether to fully parse array entries and encode 
+  them into dedicated columns (`--structurize-arrays`).
   * For a complete list, run `./clp-s c --help`
 
 ### Examples
