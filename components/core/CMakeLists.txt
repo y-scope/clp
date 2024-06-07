@@ -274,6 +274,7 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/FileCompressor.hpp
         src/clp/clp/FileDecompressor.cpp
         src/clp/clp/FileDecompressor.hpp
+        src/clp/clp/FileDecompressor.inc
         src/clp/clp/FileToCompress.hpp
         src/clp/clp/IrDecompression.cpp
         src/clp/clp/IrDecompression.hpp

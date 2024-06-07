@@ -149,6 +149,7 @@ set(
         FileCompressor.hpp
         FileDecompressor.cpp
         FileDecompressor.hpp
+        FileDecompressor.inc
         IrDecompression.cpp
         IrDecompression.hpp
         run.cpp

@@ -25,9 +25,10 @@ public:
             std::unordered_map<std::string, std::string>& temp_path_to_final_path
     );
 
+    template <typename OutputFunc>
     bool decompress_to_ir(
             streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
-            std::string const& output_dir,
+            OutputFunc output_func,
             std::string const& temp_output_dir,
             streaming_archive::reader::Archive& archive_reader,
             size_t ir_target_size
@@ -41,5 +42,7 @@ private:
     std::string m_decompressed_message;
 };
 };  // namespace clp::clp
+
+#include "FileDecompressor.inc"
 
 #endif  // CLP_CLP_FILEDECOMPRESSOR_HPP
