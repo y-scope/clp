@@ -139,10 +139,10 @@ parent1: {parent2: {child: value}}
 ```
 
 :::{caution}
-CLP does not currently support queries for array kv-pairs where only part of the key is known with
-its default configuration. In other words, the key must either be a wildcard (`*`) or it must
-contain no wildcards. Archives compressed using the `--structurize-arrays` flag do not have this
-limitation.
+By default, CLP does not support queries for array kv-pairs where only part of the key is known. In
+other words, the key must either be a wildcard (`*`) or it must contain no wildcards.
+
+Archives compressed using the `--structurize-arrays` flag *do not* have this limitation.
 :::
 
 ### Complex queries
