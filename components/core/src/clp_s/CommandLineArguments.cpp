@@ -1,8 +1,10 @@
 #include "CommandLineArguments.hpp"
 
 #include <iostream>
+#include <iterator>
 
 #include <boost/program_options.hpp>
+#include <json/single_include/nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../clp/cli_utils.hpp"
@@ -54,6 +56,10 @@ bool read_paths_from_file(
         return false;
     }
     return true;
+}
+
+bool has_non_null_field(nlohmann::json const& json, std::string const& key) {
+    return json.count(key) > 0 && false == json[key].is_null();
 }
 }  // namespace
 
@@ -332,7 +338,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             std::string query;
 
             po::options_description search_options;
-            std::string output_handler_name;
+            bool stdin_extended_args{false};
             // clang-format off
             search_options.add_options()(
                     "archives-dir",
@@ -343,18 +349,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_query),
                     "Query to perform"
             )(
-                    "output-handler",
-                    po::value<std::string>(&output_handler_name)
-            )(
-                    "output-handler-args",
-                    po::value<std::vector<std::string>>()
+                    "stdin-extended-args",
+                    po::bool_switch(&stdin_extended_args),
+                    "Indicates extended search arguments passed via stdin"
             );
             // clang-format on
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("query", 1);
-            positional_options.add("output-handler", 1);
-            positional_options.add("output-handler-args", -1);
 
             po::options_description match_options("Match Controls");
             // clang-format off
@@ -378,75 +380,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(match_options);
 
-            po::options_description aggregation_options("Aggregation Options");
-            // clang-format off
-            aggregation_options.add_options()(
-                    "count",
-                    po::bool_switch(&m_do_count_results_aggregation),
-                    "Count the number of results"
-            )(
-                    "count-by-time",
-                    po::value<int64_t>(&m_count_by_time_bucket_size)->value_name("SIZE"),
-                    "Count the number of results in each time span of the given size (ms)"
-            );
-            // clang-format on
-            search_options.add(aggregation_options);
-
-            po::options_description network_output_handler_options("Network Output Handler Options"
-            );
-            // clang-format off
-            network_output_handler_options.add_options()(
-                    "host",
-                    po::value<std::string>(&m_network_dest_host)->value_name("HOST"),
-                    "Network destination host"
-            )(
-                    "port",
-                    po::value<int>(&m_network_dest_port)->value_name("PORT"),
-                    "Network destination port"
-            );
-            // clang-format on
-
-            po::options_description reducer_output_handler_options("Reducer Output Handler Options"
-            );
-            // clang-format off
-            reducer_output_handler_options.add_options()(
-                    "host",
-                    po::value<std::string>(&m_reducer_host)->value_name("HOST"),
-                    "Host the reducer is running on"
-            )(
-                    "port",
-                    po::value<int>(&m_reducer_port)->value_name("PORT"),
-                    "Port the reducer is listening on"
-            )(
-                    "job-id",
-                    po::value<reducer::job_id_t>(&m_job_id)->value_name("ID"),
-                    "Job ID for the requested aggregation operation"
-            );
-            // clang-format on
-
-            po::options_description results_cache_output_handler_options(
-                    "Results Cache Output Handler Options"
-            );
-            results_cache_output_handler_options.add_options()(
-                    "uri",
-                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
-                    "MongoDB URI for the results cache"
-            )(
-                    "collection",
-                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
-                    "MongoDB collection to output to"
-            )(
-                    "batch-size",
-                    po::value<uint64_t>(&m_batch_size)->value_name("SIZE")->
-                            default_value(m_batch_size),
-                    "The number of documents to insert into MongoDB per batch"
-            )(
-                    "max-num-results",
-                    po::value<uint64_t>(&m_max_num_results)->value_name("MAX")->
-                            default_value(m_max_num_results),
-                    "The maximum number of results to output"
-            );
-
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -459,24 +392,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::notify(parsed_command_line_options);
 
-            constexpr char cNetworkOutputHandlerName[] = "network";
-            constexpr char cReducerOutputHandlerName[] = "reducer";
-            constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
-            constexpr char cStdoutCacheOutputHandlerName[] = "stdout";
-
             if (parsed_command_line_options.count("help")) {
                 print_search_usage();
-                std::cerr << "OUTPUT_HANDLER is one of:" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cStdoutCacheOutputHandlerName)
-                          << " (default) - Output to stdout" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
-                          << " - Output to a network destination" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
-                          << " - Output to the results cache" << std::endl;
-                std::cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
-                          << " - Output to the reducer" << std::endl;
-                std::cerr << std::endl;
-
                 std::cerr << "Examples:" << std::endl;
                 std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
                              R"( "level: INFO" and output to stdout)"
@@ -485,44 +402,23 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                           << std::endl;
                 std::cerr << std::endl;
 
-                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
-                             R"( "level: INFO" and output to the results cache)"
-                          << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cResultsCacheOutputHandlerName
-                          << " --uri mongodb://127.0.0.1:27017/test"
-                             " --collection test"
-                          << std::endl;
-                std::cerr << std::endl;
-
-                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
-                             R"( "level: INFO" and output to a network destination)"
-                          << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cNetworkOutputHandlerName
-                          << " --host localhost"
-                             " --port 18000"
-                          << std::endl;
-                std::cerr << std::endl;
-
-                std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
-                             R"( "level: INFO" and output perform a count aggregation)"
-                          << std::endl;
-                std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cReducerOutputHandlerName << " --count"
-                          << " --host localhost"
-                          << " --port 14009"
-                          << " --job-id 1" << std::endl;
-
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(match_options);
-                visible_options.add(aggregation_options);
-                visible_options.add(network_output_handler_options);
-                visible_options.add(results_cache_output_handler_options);
-                visible_options.add(reducer_output_handler_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
+            }
+
+            if (stdin_extended_args) {
+                std::string msgpack_buffer{std::istreambuf_iterator<char>(std::cin), {}};
+                nlohmann::json extended_arguments = nlohmann::json::from_msgpack(
+                        msgpack_buffer.begin(),
+                        msgpack_buffer.end()
+                );
+                // Detecting duplicate arguments must happen before parsing the extended search
+                // arguments to properly detect boolean switch arguments passed on the command line.
+                detect_disallowed_duplicate_arguments(parsed_command_line_options);
+                parse_extended_search_arguments(extended_arguments);
             }
 
             if (m_archives_dir.empty()) {
@@ -548,80 +444,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         "Timestamp range is invalid - begin timestamp is after end timestamp."
                 );
             }
-
-            if (parsed_command_line_options.count("count-by-time") > 0) {
-                m_do_count_by_time_aggregation = true;
-                if (m_count_by_time_bucket_size <= 0) {
-                    throw std::invalid_argument("Value for count-by-time must be greater than zero."
-                    );
-                }
-            }
-
-            if (parsed_command_line_options.count("output-handler") > 0) {
-                if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
-                    m_output_handler_type = OutputHandlerType::Network;
-                } else if ((static_cast<char const*>(cReducerOutputHandlerName)
-                            == output_handler_name))
-                {
-                    m_output_handler_type = OutputHandlerType::Reducer;
-                } else if ((static_cast<char const*>(cResultsCacheOutputHandlerName)
-                            == output_handler_name))
-                {
-                    m_output_handler_type = OutputHandlerType::ResultsCache;
-                } else if ((static_cast<char const*>(cStdoutCacheOutputHandlerName)
-                            == output_handler_name))
-                {
-                    m_output_handler_type = OutputHandlerType::Stdout;
-                } else if (output_handler_name.empty()) {
-                    throw std::invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
-                } else {
-                    throw std::invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
-                }
-            }
-
-            if (OutputHandlerType::Network == m_output_handler_type) {
-                parse_network_dest_output_handler_options(
-                        network_output_handler_options,
-                        search_parsed.options,
-                        parsed_command_line_options
-                );
-            } else if (OutputHandlerType::Reducer == m_output_handler_type) {
-                parse_reducer_output_handler_options(
-                        reducer_output_handler_options,
-                        search_parsed.options,
-                        parsed_command_line_options
-                );
-            } else if (OutputHandlerType::ResultsCache == m_output_handler_type) {
-                parse_results_cache_output_handler_options(
-                        results_cache_output_handler_options,
-                        search_parsed.options,
-                        parsed_command_line_options
-                );
-            } else if (m_output_handler_type != OutputHandlerType::Stdout) {
-                throw std::invalid_argument(
-                        "Unhandled OutputHandlerType="
-                        + std::to_string(clp::enum_to_underlying_type(m_output_handler_type))
-                );
-            }
-
-            bool aggregation_was_specified
-                    = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
-            if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
-                throw std::invalid_argument(
-                        "Aggregations are only supported with the reducer output handler."
-                );
-            } else if ((false == aggregation_was_specified
-                        && OutputHandlerType::Reducer == m_output_handler_type))
-            {
-                throw std::invalid_argument("The reducer output handler currently only supports "
-                                            "count and count-by-time aggregations.");
-            }
-
-            if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
-                throw std::invalid_argument(
-                        "The --count-by-time and --count options are mutually exclusive."
-                );
-            }
         }
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
@@ -634,74 +456,180 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     return ParsingResult::Success;
 }
 
-void CommandLineArguments::parse_network_dest_output_handler_options(
-        po::options_description const& options_description,
-        std::vector<po::option> const& options,
-        po::variables_map& parsed_options
+void CommandLineArguments::detect_disallowed_duplicate_arguments(
+        boost::program_options::variables_map const& options
 ) {
-    clp::parse_unrecognized_options(options_description, options, parsed_options);
+    std::vector<std::string> const cPotentialDuplicateArgs{"tge", "tle", "query"};
+    for (auto arg : cPotentialDuplicateArgs) {
+        if (options.count(arg)) {
+            throw std::invalid_argument(
+                    "Argument " + arg + " can not be used in conjunction with stdin-extended-args"
+            );
+        }
+    }
 
-    if (parsed_options.count("host") == 0) {
+    std::vector<std::pair<bool const&, std::string>> const cPotentialDuplicateBooleanSwitches{
+            {m_ignore_case, "ignore-case"}
+    };
+    for (auto arg : cPotentialDuplicateBooleanSwitches) {
+        if (arg.first) {
+            throw std::invalid_argument(
+                    "Argument " + arg.second
+                    + " can not be used in conjunction with stdin-extended-args"
+            );
+        }
+    }
+}
+
+void CommandLineArguments::parse_extended_search_arguments(
+        nlohmann::json const& extended_search_arguments
+) {
+    constexpr char cQueryString[] = "query_string";
+    constexpr char cMaxNumResults[] = "max_num_results";
+    constexpr char cBeginTimestamp[] = "begin_timestamp";
+    constexpr char cEndTimestamp[] = "end_timestamp";
+    constexpr char cIgnoreCase[] = "ignore_case";
+    constexpr char cNetworkAddress[] = "network_address";
+    constexpr char cMongodbDestination[] = "mongodb_destination";
+    constexpr char cAggregationConfig[] = "aggregation_config";
+
+    if (has_non_null_field(extended_search_arguments, cQueryString)) {
+        m_query = extended_search_arguments[cQueryString];
+    }
+
+    if (has_non_null_field(extended_search_arguments, cMaxNumResults)) {
+        m_max_num_results = extended_search_arguments[cMaxNumResults];
+    }
+
+    if (has_non_null_field(extended_search_arguments, cBeginTimestamp)) {
+        m_search_begin_ts = extended_search_arguments[cBeginTimestamp];
+    }
+
+    if (has_non_null_field(extended_search_arguments, cEndTimestamp)) {
+        m_search_end_ts = extended_search_arguments[cEndTimestamp];
+    }
+
+    if (has_non_null_field(extended_search_arguments, cIgnoreCase)) {
+        m_ignore_case = extended_search_arguments[cIgnoreCase];
+    }
+
+    if (has_non_null_field(extended_search_arguments, cNetworkAddress)) {
+        parse_network_dest_output_handler_options(extended_search_arguments[cNetworkAddress]);
+    }
+
+    if (has_non_null_field(extended_search_arguments, cMongodbDestination)) {
+        parse_results_cache_output_handler_options(extended_search_arguments[cMongodbDestination]);
+    }
+
+    if (has_non_null_field(extended_search_arguments, cAggregationConfig)) {
+        parse_extended_aggregation_arguments(extended_search_arguments[cAggregationConfig]);
+    }
+
+    if (OutputHandlerType::Stdout == m_output_handler_type) {
+        throw std::invalid_argument(
+                "No output handler configuration was provided in the extended search arguments"
+        );
+    }
+}
+
+void CommandLineArguments::parse_extended_aggregation_arguments(
+        nlohmann::json const& extended_aggregation_arguments
+) {
+    constexpr char cJobId[] = "job_id";
+    constexpr char cReducerHost[] = "reducer_host";
+    constexpr char cReducerPort[] = "reducer_port";
+    constexpr char cDoCountAggregation[] = "do_count_aggregation";
+    constexpr char cCountByTimeBucketSize[] = "count_by_time_bucket_size";
+
+    if (OutputHandlerType::Stdout != m_output_handler_type) {
+        throw std::invalid_argument("multiple conflicting output handlers specified.");
+    }
+    m_output_handler_type = OutputHandlerType::Reducer;
+
+    if (false == has_non_null_field(extended_aggregation_arguments, cReducerHost)) {
         throw std::invalid_argument("host must be specified.");
     }
+    m_reducer_host = extended_aggregation_arguments[cReducerHost];
+    if (m_reducer_host.empty()) {
+        throw std::invalid_argument("host cannot be an empty string.");
+    }
+
+    if (false == has_non_null_field(extended_aggregation_arguments, cReducerPort)) {
+        throw std::invalid_argument("port must be specified.");
+    }
+    m_reducer_port = extended_aggregation_arguments[cReducerPort];
+    if (m_reducer_port <= 0) {
+        throw std::invalid_argument("port must be greater than zero.");
+    }
+
+    if (false == has_non_null_field(extended_aggregation_arguments, cJobId)) {
+        throw std::invalid_argument("job-id must be specified.");
+    }
+    m_job_id = extended_aggregation_arguments[cJobId];
+    if (m_job_id < 0) {
+        throw std::invalid_argument("job-id cannot be negative.");
+    }
+
+    if (has_non_null_field(extended_aggregation_arguments, cCountByTimeBucketSize)) {
+        m_do_count_by_time_aggregation = true;
+        m_count_by_time_bucket_size = extended_aggregation_arguments[cCountByTimeBucketSize];
+        if (m_count_by_time_bucket_size <= 0) {
+            throw std::invalid_argument("Value for count-by-time must be greater than zero.");
+        }
+    }
+
+    if (has_non_null_field(extended_aggregation_arguments, cDoCountAggregation)) {
+        m_do_count_results_aggregation = true;
+    }
+
+    if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
+        throw std::invalid_argument("The count-by-time and count options are mutually exclusive.");
+    } else if (false == m_do_count_by_time_aggregation && false == m_do_count_results_aggregation) {
+        throw std::invalid_argument(
+                "Aggregation was requested but no aggregation operation specified."
+        );
+    }
+}
+
+void CommandLineArguments::parse_network_dest_output_handler_options(nlohmann::json const& options
+) {
+    if (false == options.is_array() || 2 != options.size()) {
+        throw std::invalid_argument("invalid shape for Network output handler options.");
+    }
+    m_network_dest_host = options[0];
+    m_network_dest_port = options[1];
+
+    if (OutputHandlerType::Stdout != m_output_handler_type) {
+        throw std::invalid_argument("multiple conflicting output handlers specified.");
+    }
+    m_output_handler_type = OutputHandlerType::Network;
+
     if (m_network_dest_host.empty()) {
         throw std::invalid_argument("host cannot be an empty string.");
     }
 
-    if (parsed_options.count("port") == 0) {
-        throw std::invalid_argument("port must be specified.");
-    }
     if (m_network_dest_port <= 0) {
         throw std::invalid_argument("port must be greater than zero.");
     }
 }
 
-void CommandLineArguments::parse_reducer_output_handler_options(
-        po::options_description const& options_description,
-        std::vector<po::option> const& options,
-        po::variables_map& parsed_options
+void CommandLineArguments::parse_results_cache_output_handler_options(nlohmann::json const& options
 ) {
-    clp::parse_unrecognized_options(options_description, options, parsed_options);
+    if (false == options.is_array() || 2 != options.size()) {
+        throw std::invalid_argument("invalid shape for Results Cache output handler options.");
+    }
+    m_mongodb_uri = options[0];
+    m_mongodb_collection = options[1];
 
-    if (parsed_options.count("host") == 0) {
-        throw std::invalid_argument("host must be specified.");
+    if (OutputHandlerType::Stdout != m_output_handler_type) {
+        throw std::invalid_argument("multiple conflicting output handlers specified.");
     }
-    if (m_reducer_host.empty()) {
-        throw std::invalid_argument("host cannot be an empty string.");
-    }
+    m_output_handler_type = OutputHandlerType::ResultsCache;
 
-    if (parsed_options.count("port") == 0) {
-        throw std::invalid_argument("port must be specified.");
-    }
-    if (m_reducer_port <= 0) {
-        throw std::invalid_argument("port must be greater than zero.");
-    }
-
-    if (parsed_options.count("job-id") == 0) {
-        throw std::invalid_argument("job-id must be specified.");
-    }
-    if (m_job_id < 0) {
-        throw std::invalid_argument("job-id cannot be negative.");
-    }
-}
-
-void CommandLineArguments::parse_results_cache_output_handler_options(
-        po::options_description const& options_description,
-        std::vector<po::option> const& options,
-        po::variables_map& parsed_options
-) {
-    clp::parse_unrecognized_options(options_description, options, parsed_options);
-
-    if (parsed_options.count("uri") == 0) {
-        throw std::invalid_argument("uri must be specified.");
-    }
     if (m_mongodb_uri.empty()) {
         throw std::invalid_argument("uri cannot be an empty string.");
     }
 
-    if (parsed_options.count("collection") == 0) {
-        throw std::invalid_argument("collection must be specified.");
-    }
     if (m_mongodb_collection.empty()) {
         throw std::invalid_argument("collection cannot be an empty string.");
     }
