@@ -5,6 +5,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "../Defs.h"
 #include "../ErrorCode.hpp"
 #include "../ffi/ir_stream/encoding_methods.hpp"
 #include "../ffi/ir_stream/protocol_constants.hpp"
@@ -18,7 +19,8 @@ namespace clp::ir {
 template <typename encoded_variable_t>
 LogEventSerializer<encoded_variable_t>::~LogEventSerializer() {
     if (m_is_open) {
-        SPDLOG_ERROR("Serializer is not closed before being destroyed - output maybe corrupted");
+        SPDLOG_ERROR("clp::ir::LogEventSerializer not closed before being destroyed - output maybe "
+                     "corrupted.");
     }
 }
 
@@ -38,7 +40,7 @@ auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> Er
     bool res{};
     if constexpr (std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>) {
         m_prev_msg_timestamp = 0;
-        res = clp::ffi::ir_stream::four_byte_encoding::serialize_preamble(
+        res = ffi::ir_stream::four_byte_encoding::serialize_preamble(
                 cTimestampPattern,
                 cTimestampPatternSyntax,
                 cTimezoneID,
@@ -55,7 +57,6 @@ auto LogEventSerializer<encoded_variable_t>::open(string const& file_path) -> Er
     }
 
     if (false == res) {
-        SPDLOG_ERROR("Failed to serialize preamble");
         close_writer();
         return ErrorCode_Failure;
     }
@@ -141,10 +142,10 @@ template auto LogEventSerializer<eight_byte_encoded_variable_t>::open(string con
 ) -> ErrorCode;
 template auto LogEventSerializer<four_byte_encoded_variable_t>::open(string const& file_path
 ) -> ErrorCode;
-template auto LogEventSerializer<four_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::flush() -> void;
-template auto LogEventSerializer<four_byte_encoded_variable_t>::close() -> void;
+template auto LogEventSerializer<four_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::close() -> void;
+template auto LogEventSerializer<four_byte_encoded_variable_t>::close() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::serialize_log_event(
         string_view message,
         epoch_time_ms_t timestamp
@@ -153,6 +154,6 @@ template auto LogEventSerializer<four_byte_encoded_variable_t>::serialize_log_ev
         string_view message,
         epoch_time_ms_t timestamp
 ) -> ErrorCode;
-template auto LogEventSerializer<four_byte_encoded_variable_t>::close_writer() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::close_writer() -> void;
+template auto LogEventSerializer<four_byte_encoded_variable_t>::close_writer() -> void;
 }  // namespace clp::ir

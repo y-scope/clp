@@ -15,9 +15,10 @@ using std::string;
 namespace clp::clp {
 namespace {
 /**
- * Renames a temporary IR and moves it to the output directory.
- * The new name follows the following format:
- * <FILE_ORIG_ID>_<begin_message_ix>_<end_message_ix>.clp.zst
+ * Renames a temporary IR file and moves it to the output directory.
+ *
+ * The new name uses the following format:
+ * <orig_file_id>_<begin_message_ix>_<end_message_ix>.clp.zst
  * @param temp_ir
  * @param output_directory
  * @param file_orig_id
@@ -28,11 +29,11 @@ namespace {
 bool rename_ir_file(
         boost::filesystem::path const& temp_ir_path,
         boost::filesystem::path const& output_directory,
-        std::string const& file_orig_id,
+        string const& file_orig_id,
         size_t begin_message_ix,
         size_t end_message_ix
 ) {
-    std::string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
+    string ir_file_name = file_orig_id + "_" + std::to_string(begin_message_ix) + "_"
                                + std::to_string(end_message_ix) + ir::cIrExtension;
 
     auto const renamed_ir_path = output_directory / ir_file_name;
@@ -187,6 +188,7 @@ bool FileDecompressor::decompress_to_ir(
             SPDLOG_ERROR("Failed to decompress message");
             return false;
         }
+
         if (ir_serializer.get_serialized_size() >= ir_target_size) {
             ir_serializer.close();
 
@@ -228,14 +230,14 @@ bool FileDecompressor::decompress_to_ir(
     auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
     ir_serializer.close();
 
-    // Note we don't remove the temp_output_dir because we don't know if it exists before execution
+    // NOTE: We don't remove temp_output_dir because we don't know if it existed before this method
+    // was called.
     if (false
         == rename_ir_file(temp_ir_path, output_dir, file_orig_id, begin_message_ix, end_message_ix))
     {
         return false;
     }
 
-    // Close files
     archive_reader.close_file(m_encoded_file);
     return true;
 }

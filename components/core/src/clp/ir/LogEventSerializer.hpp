@@ -17,9 +17,9 @@
 
 namespace clp::ir {
 /**
- * Class for serializing log events into a Zstandard compressed IR stream. The serializer first
- * buffers the serialized data into an internal buffer, and only flushes the buffered ir into the
- * on-disk file when `flush` or `close` is called.
+ * Class for serializing log events into a Zstandard-compressed IR stream. The serializer first
+ * buffers the serialized data into an internal buffer, and only flushes the buffered IR to disk
+ * when `flush` or `close` is called.
  */
 template <typename encoded_variable_t>
 class LogEventSerializer {
