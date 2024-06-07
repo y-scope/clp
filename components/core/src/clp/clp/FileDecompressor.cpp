@@ -33,14 +33,14 @@ bool rename_ir_file(
         size_t begin_message_ix,
         size_t end_message_ix
 ) {
-    auto ir_file_name = file_orig_id + "_";
-    ir_file_name += std::to_string(begin_message_ix) + "_";
-    ir_file_name += std::to_string(end_message_ix) + "_";
+    auto ir_file_name = file_orig_id;
+    ir_file_name += "_" + std::to_string(begin_message_ix);
+    ir_file_name += "_" + std::to_string(end_message_ix);
     ir_file_name += ir::cIrFileExtension;
 
     auto const renamed_ir_path = output_directory / ir_file_name;
     try {
-        boost::filesystem::rename(temp_ir_path, output_directory / ir_file_name);
+        boost::filesystem::rename(temp_ir_path, renamed_ir_path);
     } catch (boost::filesystem::filesystem_error const& e) {
         SPDLOG_ERROR(
                 "Failed to rename from {} to {}. Error: {}",
@@ -161,7 +161,7 @@ bool FileDecompressor::decompress_to_ir(
         {
             SPDLOG_ERROR(
                     "Failed to create directory structure {}, errno={}",
-                    output_dir.c_str(),
+                    temp_output_dir.c_str(),
                     errno
             );
             return false;
