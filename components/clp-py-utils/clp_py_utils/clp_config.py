@@ -32,6 +32,7 @@ ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"
 
 SEARCH_JOBS_TABLE_NAME = "search_jobs"
+SEARCH_TASKS_TABLE_NAME = "search_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 

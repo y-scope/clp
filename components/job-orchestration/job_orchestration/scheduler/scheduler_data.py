@@ -3,7 +3,7 @@ import datetime
 from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
-from job_orchestration.scheduler.constants import CompressionTaskStatus
+from job_orchestration.scheduler.constants import CompressionTaskStatus, SearchTaskStatus
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.search.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
@@ -39,6 +39,9 @@ class SearchJob(BaseModel):
     id: str
     search_config: SearchConfig
     state: InternalJobState
+    start_time: Optional[datetime.datetime]
+    num_archives_to_search: int
+    num_archives_searched: int
     remaining_archives_for_search: List[Dict[str, Any]]
     current_sub_job_async_task_result: Optional[Any]
     reducer_acquisition_task: Optional[asyncio.Task]
@@ -49,5 +52,7 @@ class SearchJob(BaseModel):
 
 
 class SearchTaskResult(BaseModel):
-    success: bool
+    status: SearchTaskStatus
     task_id: str
+    duration: float
+    error_log_path: Optional[str]
