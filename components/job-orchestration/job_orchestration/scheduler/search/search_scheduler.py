@@ -150,7 +150,6 @@ def set_job_or_task_status(
     with the database.
     """
     field_set_expressions = [f"status={status}"]
-    field_set_expressions.extend([f'{k}="{v}"' for k, v in kwargs.items()])
     if SEARCH_JOBS_TABLE_NAME == table_name:
         id_col_name = "id"
         field_set_expressions.extend([f'{k}="{v}"' for k, v in kwargs.items()])
