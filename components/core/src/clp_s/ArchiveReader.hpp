@@ -149,13 +149,13 @@ private:
     /**
      * Appends columns for the entire schema of an unordered object.
      * @param reader
-     * @param unordered_object_type
+     * @param mst_subtree_root_node_id
      * @param schema_ids
      * @param should_marshal_records
      */
     void append_unordered_reader_columns(
             SchemaReader& reader,
-            NodeType unordered_object_type,
+            int32_t mst_subtree_root_node_id,
             std::span<int32_t> schema_ids,
             bool should_marshal_records
     );

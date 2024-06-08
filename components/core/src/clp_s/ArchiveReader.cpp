@@ -143,11 +143,10 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
 
 void ArchiveReader::append_unordered_reader_columns(
         SchemaReader& reader,
-        NodeType unordered_object_type,
+        int32_t mst_subtree_root_node_id,
         std::span<int32_t> schema_ids,
         bool should_marshal_records
 ) {
-    int32_t mst_subtree_root_node_id = INT32_MAX;
     size_t object_begin_pos = reader.get_column_size();
     for (int32_t column_id : schema_ids) {
         if (Schema::schema_entry_is_unordered_object(column_id)) {
@@ -155,13 +154,6 @@ void ArchiveReader::append_unordered_reader_columns(
         }
         BaseColumnReader* column_reader = nullptr;
         auto const& node = m_schema_tree->get_node(column_id);
-        if (INT32_MAX == mst_subtree_root_node_id) {
-            mst_subtree_root_node_id = m_schema_tree->find_matching_subtree_root_in_subtree(
-                    -1,
-                    column_id,
-                    unordered_object_type
-            );
-        }
         switch (node.get_type()) {
             case NodeType::Integer:
                 column_reader = new Int64ColumnReader(column_id);
@@ -214,18 +206,36 @@ SchemaReader& ArchiveReader::create_schema_reader(
             should_marshal_records
     );
     auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
-
     for (size_t i = 0; i < schema.size(); ++i) {
         int32_t column_id = schema[i];
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             size_t length = Schema::get_unordered_object_length(column_id);
+
+            auto sub_schema = schema.get_view(i + 1, length);
+            auto mst_subtree_root_node_id = m_schema_tree->find_matching_subtree_root_in_subtree(
+                    -1,
+                    SchemaReader::get_first_column_in_span(sub_schema),
+                    Schema::get_unordered_object_type(column_id)
+            );
             append_unordered_reader_columns(
                     m_schema_reader,
-                    Schema::get_unordered_object_type(column_id),
-                    schema.get_view(i + 1, length),
+                    mst_subtree_root_node_id,
+                    sub_schema,
                     should_marshal_records
             );
             i += length;
+            continue;
+        }
+        if (i >= schema.get_num_ordered()) {
+            // Length one unordered object that doesn't have a tag. This is only allowed when the
+            // column id is the root of the unordered object, so we can pass it directly to
+            // append_unordered_reader_columns.
+            append_unordered_reader_columns(
+                    m_schema_reader,
+                    column_id,
+                    std::span<int32_t>(),
+                    should_marshal_records
+            );
             continue;
         }
         BaseColumnReader* column_reader = append_reader_column(m_schema_reader, column_id);

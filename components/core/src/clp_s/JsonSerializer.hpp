@@ -23,7 +23,9 @@ public:
         AddStringValue,
         AddNullValue,
         BeginArray,
-        EndArray
+        EndArray,
+        BeginUnnamedObject,
+        BeginUnnamedArray,
     };
 
     static int64_t const cReservedLength = 4096;
@@ -76,11 +78,15 @@ public:
     void end_document() { m_json_string[m_json_string.size() - 1] = '}'; }
 
     void end_object() {
-        if (m_op_list[m_op_list_index - 2] != BeginObject) {
+        if (m_op_list[m_op_list_index - 2] != BeginObject
+            && m_op_list[m_op_list_index - 2] != BeginUnnamedObject)
+        {
             m_json_string.pop_back();
         }
         m_json_string += "},";
     }
+
+    void begin_array_document() { m_json_string += "["; }
 
     void begin_array() {
         append_key();
@@ -88,7 +94,9 @@ public:
     }
 
     void end_array() {
-        if (m_op_list[m_op_list_index - 2] != BeginArray) {
+        if (m_op_list[m_op_list_index - 2] != BeginArray
+            && m_op_list[m_op_list_index - 2] != BeginUnnamedArray)
+        {
             m_json_string.pop_back();
         }
         m_json_string += "],";

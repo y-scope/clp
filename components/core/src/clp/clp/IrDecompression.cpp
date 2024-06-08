@@ -66,12 +66,10 @@ bool decompress_ir(CommandLineArguments& command_line_args, string const& file_o
         archive_reader.open(archive_path.string());
         archive_reader.refresh_dictionaries();
 
-        auto ir_output_handler = [&](
-            boost::filesystem::path const& src_ir_path,
-            string const& file_orig_id,
-            size_t begin_message_ix,
-            size_t end_message_ix
-        ) {
+        auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
+                                     string const& file_orig_id,
+                                     size_t begin_message_ix,
+                                     size_t end_message_ix) {
             auto dest_ir_file_name = file_orig_id;
             dest_ir_file_name += "_" + std::to_string(begin_message_ix);
             dest_ir_file_name += "_" + std::to_string(end_message_ix);
@@ -79,13 +77,13 @@ bool decompress_ir(CommandLineArguments& command_line_args, string const& file_o
 
             auto const dest_ir_path = output_dir / dest_ir_file_name;
             try {
-                boost::filesystem::rename(src_ir_path , dest_ir_path);
+                boost::filesystem::rename(src_ir_path, dest_ir_path);
             } catch (boost::filesystem::filesystem_error const& e) {
                 SPDLOG_ERROR(
-                    "Failed to rename from {} to {}. Error: {}",
-                    src_ir_path.c_str(),
-                    dest_ir_path.c_str(),
-                    e.what()
+                        "Failed to rename from {} to {}. Error: {}",
+                        src_ir_path.c_str(),
+                        dest_ir_path.c_str(),
+                        e.what()
                 );
                 return false;
             }

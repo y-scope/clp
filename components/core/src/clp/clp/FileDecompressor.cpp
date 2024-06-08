@@ -6,7 +6,6 @@
 using std::string;
 
 namespace clp::clp {
-
 bool FileDecompressor::decompress_file(
         streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
         string const& output_dir,

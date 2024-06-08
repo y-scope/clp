@@ -53,23 +53,23 @@ public:
     /**
      * Creates a Zstandard-compressed IR file on disk, and writes the IR file's preamble.
      * @param file_path
-     * @return true on success, false if the preamble fails to serialize
+     * @return true on success, false if serializing the preamble fails
      * @throw FileWriter::OperationFailed if the FileWriter fails to open the file specified by
      * file_path
-     * @throw streaming_compression::zstd::Compressor if Zstandard compressor fails to open
-     * @throw ir::LogEventSerializer::OperationFailed on failure
+     * @throw streaming_compression::zstd::Compressor if the Zstandard compressor couldn't be opened
+     * @throw ir::LogEventSerializer::OperationFailed if an IR file is already open
      */
     [[nodiscard]] auto open(std::string const& file_path) -> bool;
 
     /**
      * Flushes any buffered data.
-     * @throw ir::LogEventSerializer::OperationFailed on failure
+     * @throw ir::LogEventSerializer::OperationFailed if no IR file is open
      */
     auto flush() -> void;
 
     /**
      * Serializes the EoF tag, flushes the buffer, and closes the current IR stream.
-     * @throw ir::LogEventSerializer::OperationFailed on failure
+     * @throw ir::LogEventSerializer::OperationFailed if no IR file is open
      */
     auto close() -> void;
 
