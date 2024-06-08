@@ -138,7 +138,7 @@ def set_job_or_task_status(
 ) -> bool:
     """
     Sets the status of the job or the tasks identified by `job_id` to `status`. If `prev_status` is
-    specified,the update is conditional on the job's current status matching `prev_status`. If
+    specified, the update is conditional on the job/task's current status matching `prev_status`. If
     `kwargs` are specified, the fields identified by the args are also updated.
     :param db_conn:
     :param table_name:
@@ -150,14 +150,19 @@ def set_job_or_task_status(
     with the database.
     """
     field_set_expressions = [f"status={status}"]
+    field_set_expressions.extend([f'{k}="{v}"' for k, v in kwargs.items()])
     if SEARCH_JOBS_TABLE_NAME == table_name:
+        id_col_name = "id"
         field_set_expressions.extend([f'{k}="{v}"' for k, v in kwargs.items()])
-        update = f'UPDATE {table_name} SET {", ".join(field_set_expressions)} WHERE id={job_id}'
     elif SEARCH_TASKS_TABLE_NAME == table_name:
+        id_col_name = "job_id"
         field_set_expressions.extend([f"{k}={v}" for k, v in kwargs.items()])
-        update = f'UPDATE {table_name} SET {", ".join(field_set_expressions)} WHERE job_id={job_id}'
     else:
         raise ValueError(f"Unsupported table name {table_name}")
+    update = (
+        f'UPDATE {table_name} SET {", ".join(field_set_expressions)} WHERE {id_col_name}={job_id}'
+    )
+
     if prev_status is not None:
         update += f" AND status={prev_status}"
 
