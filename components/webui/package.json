@@ -26,7 +26,7 @@
     "dayjs": "^1.11.10",
     "json5": "^2.2.3",
     "meteor-node-stubs": "^1.2.9",
-    "mysql2": "^3.9.1",
+    "mysql2": "^3.10.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.2",
     "react-chartjs-2": "^5.2.0",

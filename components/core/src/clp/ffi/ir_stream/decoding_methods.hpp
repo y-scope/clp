@@ -6,6 +6,7 @@
 
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
+#include "../../time_types.hpp"
 #include "../encoding_methods.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -56,9 +57,19 @@ private:
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
+ * Deserializes the tag for the next packet.
+ * @param reader
+ * @param tag Returns the tag of the next packet.
+ * @return IRErrorCode_Success on success
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ */
+[[nodiscard]] IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag);
+
+/**
  * Deserializes a log event from the given stream
  * @tparam encoded_variable_t
  * @param reader
+ * @param encoded_tag Tag of the next packet to read
  * @param logtype Returns the logtype
  * @param encoded_vars Returns the encoded variables
  * @param dict_vars Returns the dictionary variables
@@ -67,11 +78,11 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
- * @return IRErrorCode_Eof on reaching the end of the stream
  */
 template <typename encoded_variable_t>
 auto deserialize_log_event(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars,
@@ -150,6 +161,15 @@ IRErrorCode deserialize_preamble(
 );
 
 /**
+ * Deserializes a UTC offset change packet.
+ * @param reader
+ * @param utc_offset The deserialized UTC offset.
+ * @return IRErrorCode_Success on success
+ * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
+ */
+IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset);
+
+/**
  * Validates whether the given protocol version can be supported by the current build.
  * @param protocol_version
  * @return IRProtocolErrorCode_Supported if the protocol version is supported.
@@ -164,18 +184,19 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
 
 namespace eight_byte_encoding {
 /**
- * Deserializes the next log event from an eight-byte encoding IR stream.
+ * Deserializes the next log event from an eight-byte encoding IR stream and decodes the message.
  * @param reader
+ * @param encoded_tag
  * @param message Returns the deserialized message
  * @param timestamp Returns the deserialized timestamp
  * @return ErrorCode_Success on success
  * @return ErrorCode_Corrupted_IR if reader contains invalid IR
  * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
- * @return ErrorCode_End_of_IR if the IR ends
  */
 IRErrorCode deserialize_log_event(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp
 );
@@ -183,18 +204,19 @@ IRErrorCode deserialize_log_event(
 
 namespace four_byte_encoding {
 /**
- * Deserializes the next log event from a four-byte encoding IR stream.
+ * Deserializes the next log event from a four-byte encoding IR stream and decodes the message.
  * @param reader
+ * @param encoded_tag
  * @param message Returns the deserialized message
  * @param timestamp_delta Returns the deserialized timestamp delta
  * @return ErrorCode_Success on success
  * @return ErrorCode_Corrupted_IR if reader contains invalid IR
  * @return ErrorCode_Decode_Error if the log event cannot be properly deserialized
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
- * @return ErrorCode_End_of_IR if the IR ends
  */
 IRErrorCode deserialize_log_event(
         ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp_delta
 );

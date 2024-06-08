@@ -96,6 +96,7 @@ set(
         ../streaming_compression/zstd/Decompressor.hpp
         ../StringReader.cpp
         ../StringReader.hpp
+        ../time_types.hpp
         ../TimestampPattern.cpp
         ../TimestampPattern.hpp
         ../TraceableException.hpp
