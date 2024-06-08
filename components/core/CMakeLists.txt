@@ -335,9 +335,12 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/ir/constants.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp
+        src/clp/ir/LogEventSerializer.cpp
+        src/clp/ir/LogEventSerializer.hpp
         src/clp/ir/parsing.cpp
         src/clp/ir/parsing.hpp
         src/clp/ir/parsing.inc

@@ -168,23 +168,7 @@ bool Archive::decompress_message(
         Message const& compressed_msg,
         string& decompressed_msg
 ) {
-    decompressed_msg.clear();
-
-    // Build original message content
-    logtype_dictionary_id_t const logtype_id = compressed_msg.get_logtype_id();
-    auto const& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
-    if (!EncodedVariableInterpreter::decode_variables_into_message(
-                logtype_entry,
-                m_var_dictionary,
-                compressed_msg.get_vars(),
-                decompressed_msg
-        ))
-    {
-        SPDLOG_ERROR(
-                "streaming_archive::reader::Archive: Failed to decompress variables from "
-                "logtype id {}",
-                compressed_msg.get_logtype_id()
-        );
+    if (false == decompress_message_without_ts(compressed_msg, decompressed_msg)) {
         return false;
     }
 
@@ -211,6 +195,34 @@ bool Archive::decompress_message(
                 compressed_msg.get_ts_in_milli(),
                 decompressed_msg
         );
+    }
+
+    return true;
+}
+
+bool Archive::decompress_message_without_ts(
+        Message const& compressed_msg,
+        string& decompressed_msg
+) {
+    decompressed_msg.clear();
+
+    // Build original message content
+    auto const logtype_id = compressed_msg.get_logtype_id();
+    auto const& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
+    if (false
+        == EncodedVariableInterpreter::decode_variables_into_message(
+                logtype_entry,
+                m_var_dictionary,
+                compressed_msg.get_vars(),
+                decompressed_msg
+        ))
+    {
+        SPDLOG_ERROR(
+                "streaming_archive::reader::Archive: Failed to decompress variables from "
+                "logtype id {}",
+                compressed_msg.get_logtype_id()
+        );
+        return false;
     }
 
     return true;
