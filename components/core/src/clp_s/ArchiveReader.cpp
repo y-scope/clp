@@ -1,15 +1,23 @@
 #include "ArchiveReader.hpp"
 
+#include <filesystem>
+#include <string_view>
+
 #include "archive_constants.hpp"
 #include "ReaderUtils.hpp"
 
+using std::string_view;
+
 namespace clp_s {
-void ArchiveReader::open(std::string const& archive_path) {
+void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
-    m_archive_path = archive_path;
+    m_archive_id = archive_id;
+    std::filesystem::path archive_path{archives_dir};
+    archive_path /= m_archive_id;
+    m_archive_path = archive_path.string();
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(m_archive_path);
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(m_archive_path);

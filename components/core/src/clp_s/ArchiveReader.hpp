@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <span>
+#include <string_view>
 #include <utility>
 
 #include <boost/filesystem.hpp>
@@ -29,9 +30,10 @@ public:
 
     /**
      * Opens an archive for reading.
-     * @param archive_path
+     * @param archives_dir
+     * @param archive_id
      */
-    void open(std::string const& archive_path);
+    void open(std::string_view archives_dir, std::string_view archive_id);
 
     /**
      * Reads the dictionaries and metadata.
@@ -91,6 +93,8 @@ public:
      */
     SchemaReader&
     read_table(int32_t schema_id, bool should_extract_timestamp, bool should_marshal_records);
+
+    std::string_view get_archive_id() { return m_archive_id; }
 
     std::shared_ptr<VariableDictionaryReader> get_variable_dictionary() { return m_var_dict; }
 
@@ -162,7 +166,7 @@ private:
 
     bool m_is_open;
     std::string m_archive_path;
-
+    std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_array_dict;
