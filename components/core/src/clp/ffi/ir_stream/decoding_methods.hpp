@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../../ir/types.hpp"
+#include "../../ir/LogEvent.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../encoding_methods.hpp"
@@ -87,6 +88,19 @@ auto deserialize_log_event(
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<std::string>& dict_vars,
         ir::epoch_time_ms_t& timestamp_or_timestamp_delta
+) -> IRErrorCode;
+
+/**
+ * Deserializes a given log event
+ * @tparam encoded_variable_t
+ * @param log_event
+ * @param decoded_message
+ * @return TBD
+ */
+template <typename encoded_variable_t>
+auto deserialize_log_event(
+        ir::LogEvent<encoded_variable_t> const& log_event,
+        std::string& decoded_message
 ) -> IRErrorCode;
 
 /**
