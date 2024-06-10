@@ -179,12 +179,6 @@ public:
      */
     void read_from_file(streaming_compression::Decompressor& decompressor);
 
-    /**
-     * Generate a human readable version of value.
-     * @param decompressor
-     */
-    std::string get_human_readable_value() const;
-
 private:
     // Variables
     std::vector<size_t> m_placeholder_positions;

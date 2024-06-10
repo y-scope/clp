@@ -51,8 +51,6 @@ set(
         ../LibarchiveFileReader.hpp
         ../LibarchiveReader.cpp
         ../LibarchiveReader.hpp
-        ../LogSurgeonReader.cpp
-        ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
@@ -183,7 +181,6 @@ target_link_libraries(glt
         fmt::fmt
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
-        log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         ${STD_FS_LIBS}

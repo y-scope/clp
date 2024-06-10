@@ -11,8 +11,6 @@
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/ReaderParser.hpp>
 
 #include "../../ArrayBackedPosIntSet.hpp"
 #include "../../ErrorCode.hpp"
@@ -71,7 +69,6 @@ public:
     std::string m_path_for_compression;
     group_id_t m_group_id;
     size_t m_target_encoded_file_size;
-    std::string m_schema_file_path;
 
     // Constructors
     Archive()
@@ -144,13 +141,6 @@ public:
      */
     void
     write_msg(epochtime_t timestamp, std::string const& message, size_t num_uncompressed_bytes);
-
-    /**
-     * Encodes and writes a message to the given file using schema file
-     * @param log_event_view
-     * @throw FileWriter::OperationFailed if any write fails
-     */
-    void write_msg_using_schema(log_surgeon::LogEventView const& log_event_view);
 
     /**
      * Writes snapshot of archive to disk including metadata of all files and new dictionary

@@ -2,7 +2,6 @@
 
 #include <unordered_set>
 
-#include <log_surgeon/LogParser.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../Profiler.hpp"
@@ -64,14 +63,6 @@ int run(int argc, char const* argv[]) {
         if (false == obtain_input_paths(command_line_args, input_paths)) {
             return -1;
         }
-
-        /// TODO: make this not a unique_ptr and test performance difference
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
-        if (!command_line_args.get_use_heuristic()) {
-            std::string const& schema_file_path = command_line_args.get_schema_file_path();
-            reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
-        }
-        
         boost::filesystem::path path_prefix_to_remove(command_line_args.get_path_prefix_to_remove()
         );
 
@@ -112,9 +103,7 @@ int run(int argc, char const* argv[]) {
                     files_to_compress,
                     empty_directory_paths,
                     grouped_files_to_compress,
-                    command_line_args.get_target_encoded_file_size(),
-                    std::move(reader_parser),
-                    command_line_args.get_use_heuristic()
+                    command_line_args.get_target_encoded_file_size()
             );
         } catch (TraceableException& e) {
             ErrorCode error_code = e.get_error_code();

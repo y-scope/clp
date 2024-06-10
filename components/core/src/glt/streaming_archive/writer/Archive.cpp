@@ -11,8 +11,6 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <json/single_include/nlohmann/json.hpp>
-#include <log_surgeon/LogEvent.hpp>
-#include <log_surgeon/LogParser.hpp>
 
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"
@@ -23,7 +21,6 @@
 
 using glt::ir::eight_byte_encoded_variable_t;
 using glt::ir::four_byte_encoded_variable_t;
-using log_surgeon::LogEventView;
 using std::list;
 using std::make_unique;
 using std::string;
@@ -117,19 +114,6 @@ void Archive::open(UserConfig const& user_config) {
     m_target_segment_uncompressed_size = user_config.target_segment_uncompressed_size;
     m_next_segment_id = 0;
     m_compression_level = user_config.compression_level;
-
-    /// TODO: add schema file size to m_stable_size???
-    // Copy schema file into archive
-    if (!m_schema_file_path.empty()) {
-        const std::filesystem::path archive_schema_filesystem_path = archive_path / cSchemaFileName;
-        try {
-            const std::filesystem::path schema_filesystem_path = m_schema_file_path;
-            std::filesystem::copy(schema_filesystem_path, archive_schema_filesystem_path);
-        } catch (FileWriter::OperationFailed& e) {
-            SPDLOG_CRITICAL("Failed to copy schema file to archive: {}", archive_schema_filesystem_path.c_str());
-            throw;
-        }
-    }
 
     // Save metadata to disk
     auto metadata_file_path = archive_path / cMetadataFileName;
@@ -323,139 +307,6 @@ void Archive::write_msg(
     // Update segment indices
     m_logtype_ids_in_segment.insert(logtype_id);
     m_var_ids_in_segment.insert_all(var_ids);
-}
-
-void Archive::write_msg_using_schema(LogEventView const& log_view) {
-    epochtime_t timestamp = 0;
-    TimestampPattern* timestamp_pattern = nullptr;
-    auto const& log_output_buffer = log_view.get_log_output_buffer();
-    if (log_output_buffer->has_timestamp()) {
-        size_t start;
-        size_t end;
-        timestamp_pattern = (TimestampPattern*)TimestampPattern::search_known_ts_patterns(
-                log_output_buffer->get_mutable_token(0).to_string(),
-                timestamp,
-                start,
-                end
-        );
-        if (m_old_ts_pattern != timestamp_pattern) {
-            change_ts_pattern(timestamp_pattern);
-            m_old_ts_pattern = timestamp_pattern;
-        }
-    }
-    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
-        split_file_and_archive(
-                m_archive_user_config,
-                m_path_for_compression,
-                m_group_id,
-                timestamp_pattern,
-                *this
-        );
-    } else if (m_file->get_encoded_size_in_bytes() >= m_target_encoded_file_size) {
-        split_file(m_path_for_compression, m_group_id, timestamp_pattern, *this);
-    }
-    m_encoded_vars.clear();
-    m_var_ids.clear();
-    m_logtype_dict_entry.clear();
-    size_t num_uncompressed_bytes = 0;
-    // Timestamp is included in the uncompressed message size
-    uint32_t start_pos = log_output_buffer->get_token(0).m_start_pos;
-    if (timestamp_pattern == nullptr) {
-        start_pos = log_output_buffer->get_token(1).m_start_pos;
-    }
-    uint32_t end_pos = log_output_buffer->get_token(log_output_buffer->pos() - 1).m_end_pos;
-    if (start_pos <= end_pos) {
-        num_uncompressed_bytes = end_pos - start_pos;
-    } else {
-        num_uncompressed_bytes
-                = log_output_buffer->get_token(0).m_buffer_size - start_pos + end_pos;
-    }
-    for (uint32_t i = 1; i < log_output_buffer->pos(); i++) {
-        log_surgeon::Token& token = log_output_buffer->get_mutable_token(i);
-        int token_type = token.m_type_ids_ptr->at(0);
-        if (log_output_buffer->has_delimiters() && (timestamp_pattern != nullptr || i > 1)
-            && token_type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
-            && token_type != static_cast<int>(log_surgeon::SymbolID::TokenNewlineId))
-        {
-            m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
-            if (token.m_start_pos == token.m_buffer_size - 1) {
-                token.m_start_pos = 0;
-            } else {
-                token.m_start_pos++;
-            }
-        }
-        switch (token_type) {
-            case static_cast<int>(log_surgeon::SymbolID::TokenNewlineId):
-            case static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID): {
-                m_logtype_dict_entry.add_constant(token.to_string(), 0, token.get_length());
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolID::TokenIntId): {
-                encoded_variable_t encoded_var;
-                if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                        token.to_string(),
-                        encoded_var
-                ))
-                {
-                    variable_dictionary_id_t id;
-                    m_var_dict.add_entry(token.to_string(), id);
-                    encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                    m_logtype_dict_entry.add_dictionary_var();
-                } else {
-                    m_logtype_dict_entry.add_int_var();
-                }
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolID::TokenFloatId): {
-                encoded_variable_t encoded_var;
-                if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                        token.to_string(),
-                        encoded_var
-                ))
-                {
-                    variable_dictionary_id_t id;
-                    m_var_dict.add_entry(token.to_string(), id);
-                    encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                    m_logtype_dict_entry.add_dictionary_var();
-                } else {
-                    m_logtype_dict_entry.add_float_var();
-                }
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-            default: {
-                // Variable string looks like a dictionary variable, so encode it as so
-                encoded_variable_t encoded_var;
-                variable_dictionary_id_t id;
-                m_var_dict.add_entry(token.to_string(), id);
-                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                m_var_ids.push_back(id);
-
-                m_logtype_dict_entry.add_dictionary_var();
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-        }
-    }
-    if (!m_logtype_dict_entry.get_value().empty()) {
-        logtype_dictionary_id_t logtype_id;
-        m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
-        size_t offset = m_glt_segment.append_to_segment(logtype_id, timestamp, m_file_id, m_encoded_vars);
-        // Issue: the offset of var_segments is per file based. However, we still need to add the offset
-        // of segments. the offset of segment is not known because we don't know if the segment should
-        // be timestamped... Here for simplicity, we add the segment offset back when we close the file
-        m_file->write_encoded_msg(
-                timestamp,
-                logtype_id,
-                offset,
-                num_uncompressed_bytes,
-                m_encoded_vars.size()
-        );
-        // Update segment indices
-        m_logtype_ids_in_segment.insert(logtype_id);
-        m_var_ids_in_segment.insert_all(m_var_ids);
-    }
 }
 
 void Archive::write_dir_snapshot() {

@@ -294,13 +294,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     "progress",
                     po::bool_switch(&m_show_progress),
                     "Show progress during compression"
-            )(
-                    "schema-path",
-                    po::value<string>(&m_schema_file_path)
-                            ->value_name("FILE")
-                            ->default_value(m_schema_file_path),
-                    "Path to a schema file. If not specified, heuristics are used to determine "
-                    "dictionary variables. See README-Schema.md for details."
             );
 
             po::options_description all_compression_options;

@@ -2,16 +2,11 @@
 
 #include <algorithm>
 
-#include <log_surgeon/Constants.hpp>
-#include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/Schema.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
 #include "ir/types.hpp"
-#include "LogSurgeonReader.hpp"
-#include "ReaderInterface.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
 
@@ -23,19 +18,7 @@ using glt::ir::is_delim;
 using glt::streaming_archive::reader::Archive;
 using glt::streaming_archive::reader::File;
 using glt::streaming_archive::reader::Message;
-using log_surgeon::finite_automata::RegexDFA;
-using log_surgeon::finite_automata::RegexDFAByteState;
-using log_surgeon::finite_automata::RegexNFA;
-using log_surgeon::finite_automata::RegexNFAByteState;
-using log_surgeon::lexers::ByteLexer;
-using log_surgeon::ParserAST;
-using log_surgeon::SchemaAST;
-using log_surgeon::SchemaVarAST;
-using std::make_pair;
-using std::pair;
-using std::set;
 using std::string;
-using std::unique_ptr;
 using std::vector;
 
 namespace glt {
@@ -175,14 +158,15 @@ QueryToken::QueryToken(
             if (converts_to_int || converts_to_float) {
                 converts_to_non_dict_var = true;
             }
+
             if (!converts_to_non_dict_var) {
-                // GLT TODO
+                // Dictionary variable
                 // Actually this is incorrect, because it's possible user enters 23412*34 aiming to
-                // match 23412.34. we should consider the possibility that middle wildcard causes
-                // the converts_to_non_dict_var to be false.
+                // match 23412.34. This should be an ambigious type.
                 m_type = Type::DictionaryVar;
                 m_cannot_convert_to_non_dict_var = true;
             } else {
+                // GLT TODO: think about this carefully.
                 m_type = Type::Ambiguous;
                 m_possible_types.push_back(Type::IntVar);
                 m_possible_types.push_back(Type::FloatVar);
@@ -272,15 +256,6 @@ bool QueryToken::change_to_next_possible_type() {
         return false;
     }
 }
-
-/**
- * Wraps the tokens returned from the log_surgeon lexer, and stores the variable ids of the tokens
- * in a search query in a set. This allows for optimized search performance.
- */
-    class SearchToken : public log_surgeon::Token {
-    public:
-        std::set<int> m_type_ids_set;
-    };
 
 // Local prototypes
 /**
@@ -418,152 +393,6 @@ bool find_matching_message(
     return true;
 }
 
-void find_boundaries(
-        LogTypeDictionaryEntry const* logtype_entry,
-        vector<pair<string, bool>> const& tokens,
-        size_t& var_begin_ix,
-        size_t& var_end_ix
-) {
-    auto const& logtype_string = logtype_entry->get_value();
-    // left boundary is exclusive and right boundary are inclusive, meaning
-    // that logtype_string.substr[0, left_boundary) and logtype_string.substr[right_boundary, end)
-    // can be safely ignored.
-    // They are initialized assuming that the entire logtype can be safely ignored. So if the
-    // tokens doesn't contain variable. the behavior is consistent.
-    size_t left_boundary{logtype_string.length()};
-    size_t right_boundary{0};
-    // First, match the token from front to end.
-    size_t find_start_index{0};
-    bool tokens_contain_variable{false};
-    for (auto const& token : tokens) {
-        auto const& token_str = token.first;
-        bool contains_variable = token.second;
-        size_t found_index = logtype_string.find(token_str, find_start_index);
-        if (string::npos == found_index) {
-            printf("failed to find: [%s] from %s\n",
-                   token_str.c_str(),
-                   logtype_string.substr(find_start_index).c_str());
-            throw;
-        }
-        // the first time we see a token with variable, we know that
-        //  we don't care about the variables in the substr before this token in the logtype.
-        //  Technically, logtype_string.substr[0, token[begin_index])
-        //  (since token[begin_index] is the beginning of the token)
-        if (contains_variable) {
-            tokens_contain_variable = true;
-            left_boundary = found_index;
-            break;
-        }
-        // else, the token doesn't contain a variable
-        // we can proceed by skipping this token.
-        find_start_index = found_index + token_str.length();
-    }
-
-    // second, match the token from back
-    size_t rfind_end_index = logtype_string.length();
-    for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
-        auto const& token_str = it->first;
-        bool contains_var = it->second;
-
-        size_t rfound_index = logtype_string.rfind(token_str, rfind_end_index);
-        if (string::npos == rfound_index) {
-            printf("failed to find: [%s] from %s\n",
-                   token_str.c_str(),
-                   logtype_string.substr(0, rfind_end_index).c_str());
-            throw;
-        }
-
-        // the first time we see a token with variable, we know that
-        // we don't care about the variables in the substr after this token in the logtype.
-        // Technically, logtype_string.substr[rfound_index + len(token), end)
-        // since logtype_string[rfound_index] is the beginning of the token
-        if (contains_var) {
-            tokens_contain_variable = true;
-            right_boundary = rfound_index + token_str.length();
-            break;
-        }
-
-        // Note, rfind end index is inclusive. has to subtract by 1 so
-        // in the next rfind, we skip the token we have already seen.
-        rfind_end_index = rfound_index - 1;
-    }
-
-    // if we didn't find any variable, we can do an early return
-    if (false == tokens_contain_variable) {
-        var_begin_ix = logtype_entry->get_num_variables();
-        var_end_ix = 0;
-        return;
-    }
-
-    // Now we have the left boundary and right boundary, try to filter out the variables;
-    // var_begin_ix is an inclusive interval
-    auto const logtype_variable_num = logtype_entry->get_num_variables();
-    ir::VariablePlaceholder var_placeholder;
-    var_begin_ix = 0;
-    for (size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
-        size_t var_position = logtype_entry->get_variable_info(var_ix, var_placeholder);
-        if (var_position < left_boundary) {
-            // if the variable is within the left boundary, then it should be skipped.
-            var_begin_ix++;
-        } else {
-            // if the variable is not within the left boundary
-            break;
-        }
-    }
-
-    // For right boundary, var_end_ix is an exclusive interval
-    var_end_ix = logtype_variable_num;
-    for (size_t var_ix = 0; var_ix < logtype_variable_num; var_ix++) {
-        size_t reversed_ix = logtype_variable_num - 1 - var_ix;
-        size_t var_position = logtype_entry->get_variable_info(reversed_ix, var_placeholder);
-        if (var_position >= right_boundary) {
-            // if the variable is within the right boundary, then it should be skipped.
-            var_end_ix--;
-        } else {
-            // if the variable is not within the right boundary
-            break;
-        }
-    }
-
-    if (var_end_ix <= var_begin_ix) {
-        printf("tokens contain a variable, end index %lu is smaller and equal than begin index "
-               "%lu\n",
-               var_end_ix,
-               var_begin_ix);
-        throw;
-    }
-}
-
-template <typename EscapeDecoder>
-vector<pair<string, bool>>
-retokenization(std::string_view input_string, EscapeDecoder escape_decoder) {
-    vector<pair<string, bool>> retokenized_tokens;
-    size_t input_length = input_string.size();
-    string current_token;
-    bool contains_variable_placeholder = false;
-    for (size_t ix = 0; ix < input_length; ix++) {
-        auto const current_char = input_string.at(ix);
-        if (enum_to_underlying_type(ir::VariablePlaceholder::Escape) == current_char) {
-            escape_decoder(input_string, ix, current_token);
-            continue;
-        }
-
-        if (current_char != '*') {
-            current_token += current_char;
-            contains_variable_placeholder |= ir::is_variable_placeholder(current_char);
-        } else {
-            if (!current_token.empty()) {
-                retokenized_tokens.emplace_back(current_token, contains_variable_placeholder);
-                current_token.clear();
-            }
-        }
-    }
-    if (!current_token.empty()) {
-        retokenized_tokens.emplace_back(current_token, contains_variable_placeholder);
-    }
-    return retokenized_tokens;
-}
-
 SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         Archive const& archive,
         string& processed_search_string,
@@ -586,31 +415,6 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             logtype += escape_char;
         }
     };
-    auto escape_decoder
-            = [](std::string_view input_str, size_t& current_pos, string& token) -> void {
-        auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
-        // Note: we don't need to do a check, because the upstream should guarantee all
-        // escapes are followed by some characters
-        auto const next_char = input_str.at(current_pos + 1);
-        if (escape_char == next_char) {
-            // turn two consecutive escape into a single one.
-            token += escape_char;
-        } else if (is_wildcard(next_char)) {
-            // if it is an escape followed by a wildcard, we know no escape has been added.
-            // we also remove the original escape because it was purely for query
-            token += next_char;
-        } else if (ir::is_variable_placeholder(next_char)) {
-            // If we are at here, it means we are in the middle of processing a '\\\v' sequence
-            // in this case, since we removed only one escape from the previous '\\' sequence
-            // we need to remove another escape here.
-            token += next_char;
-        } else {
-            printf("Unexpected\n");
-            throw;
-        }
-        current_pos++;
-    };
-
     for (auto const& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
         ir::append_constant_to_logtype(
@@ -630,7 +434,6 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             // ambiguous tokens
             sub_query.mark_wildcard_match_required();
             if (!query_token.is_var()) {
-                // Must mean the token is text only, with * in it.
                 logtype += '*';
             } else {
                 logtype += '*';
@@ -669,15 +472,6 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
     if (possible_logtype_entries.empty()) {
         return SubQueryMatchabilityResult::WontMatch;
     }
-
-    // Find boundaries
-    auto const retokenized_tokens = retokenization(logtype, escape_decoder);
-    for (auto const& logtype_entry : possible_logtype_entries) {
-        size_t var_begin_index;
-        size_t var_end_index;
-        find_boundaries(logtype_entry, retokenized_tokens, var_begin_index, var_end_index);
-        sub_query.set_logtype_boundary(logtype_entry->get_id(), var_begin_index, var_end_index);
-    }
     sub_query.set_possible_logtypes(possible_logtype_entries);
 
     // Calculate the IDs of the segments that may contain results for the sub-query now that we've
@@ -693,10 +487,7 @@ std::optional<Query> Grep::process_raw_query(
         string const& search_string,
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
-        bool ignore_case,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer,
-        bool use_heuristic
+        bool ignore_case
 ) {
     // Add prefix and suffix '*' to make the search a sub-string match
     string processed_search_string = "*";
@@ -704,415 +495,90 @@ std::optional<Query> Grep::process_raw_query(
     processed_search_string += '*';
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
 
+    // Split search_string into tokens with wildcards
+    vector<QueryToken> query_tokens;
+    size_t begin_pos = 0;
+    size_t end_pos = 0;
+    bool is_var;
+    string search_string_for_sub_queries{processed_search_string};
+
+    // Replace '?' wildcards with '*' wildcards since we currently have no support for
+    // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
+    // message uses the original wildcards, so correctness will be maintained.
+    std::replace(
+            search_string_for_sub_queries.begin(),
+            search_string_for_sub_queries.end(),
+            '?',
+            '*'
+    );
+    // Clean-up in case any instances of "?*" or "*?" were changed into "**"
+    search_string_for_sub_queries = clean_up_wildcard_search_string(search_string_for_sub_queries);
+    while (get_bounds_of_next_potential_var(
+            search_string_for_sub_queries,
+            begin_pos,
+            end_pos,
+            is_var
+    ))
+    {
+        query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
+    }
+
+    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we
+    // fall-back to decompression + wildcard matching for those.
+    vector<QueryToken*> ambiguous_tokens;
+    for (auto& query_token : query_tokens) {
+        if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
+            ambiguous_tokens.push_back(&query_token);
+        }
+    }
+
+    // Generate a sub-query for each combination of ambiguous tokens
+    // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need
+    // to create:
+    // - (token1 as logtype) (token2 as logtype)
+    // - (token1 as logtype) (token2 as var)
+    // - (token1 as var) (token2 as logtype)
+    // - (token1 as var) (token2 as var)
     vector<SubQuery> sub_queries;
+    string logtype;
+    bool type_of_one_token_changed = true;
+    while (type_of_one_token_changed) {
+        SubQuery sub_query;
 
-    if (use_heuristic) {
-        // Split search_string into tokens with wildcards
-        vector<QueryToken> query_tokens;
-        size_t begin_pos = 0;
-        size_t end_pos = 0;
-        bool is_var;
-        string search_string_for_sub_queries{processed_search_string};
-
-        // Replace '?' wildcards with '*' wildcards since we currently have no support for
-        // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
-        // message uses the original wildcards, so correctness will be maintained.
-        std::replace(
-                search_string_for_sub_queries.begin(),
-                search_string_for_sub_queries.end(),
-                '?',
-                '*'
-        );
-        // Clean-up in case any instances of "?*" or "*?" were changed into "**"
-        search_string_for_sub_queries = clean_up_wildcard_search_string(
-                search_string_for_sub_queries);
-        while (get_bounds_of_next_potential_var(
+        // Compute logtypes and variables for query
+        auto matchability = generate_logtypes_and_vars_for_subquery(
+                archive,
                 search_string_for_sub_queries,
-                begin_pos,
-                end_pos,
-                is_var
-        )) {
-            query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
-        }
-
-        // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we
-        // fall-back to decompression + wildcard matching for those.
-        vector<QueryToken*> ambiguous_tokens;
-        for (auto& query_token : query_tokens) {
-            if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
-                ambiguous_tokens.push_back(&query_token);
-            }
-        }
-
-        // Generate a sub-query for each combination of ambiguous tokens
-        // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need
-        // to create:
-        // - (token1 as logtype) (token2 as logtype)
-        // - (token1 as logtype) (token2 as var)
-        // - (token1 as var) (token2 as logtype)
-        // - (token1 as var) (token2 as var)
-        string logtype;
-        bool type_of_one_token_changed = true;
-        while (type_of_one_token_changed) {
-            SubQuery sub_query;
-
-            // Compute logtypes and variables for query
-            auto matchability = generate_logtypes_and_vars_for_subquery(
-                    archive,
-                    search_string_for_sub_queries,
-                    query_tokens,
-                    ignore_case,
-                    sub_query
-            );
-            switch (matchability) {
-                case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                    // Since other sub-queries will be superceded by this one, we can stop processing
-                    // now
-                    return Query{
-                            search_begin_ts,
-                            search_end_ts,
-                            ignore_case,
-                            processed_search_string,
-                            {}
-                    };
-                case SubQueryMatchabilityResult::MayMatch:
-                    sub_queries.push_back(std::move(sub_query));
-                    break;
-                case SubQueryMatchabilityResult::WontMatch:
-                default:
-                    // Do nothing
-                    break;
-            }
-
-            // Update combination of ambiguous tokens
-            type_of_one_token_changed = false;
-            for (auto* ambiguous_token : ambiguous_tokens) {
-                if (ambiguous_token->change_to_next_possible_type()) {
-                    type_of_one_token_changed = true;
-                    break;
-                }
-            }
-        }
-    } else {
-        auto escape_handler
-                = [](std::string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
-                    auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
-                    auto const next_char_pos{char_to_escape_pos + 1};
-                    // NOTE: We don't want to add additional escapes for wildcards that have been escaped. E.g.,
-                    // the query "\\*" should remain unchanged.
-                    if (next_char_pos < constant.length() && false == is_wildcard(constant[next_char_pos])) {
-                        logtype += escape_char;
-                    } else if (ir::is_variable_placeholder(constant[char_to_escape_pos])) {
-                        logtype += escape_char;
-                        logtype += escape_char;
-                    }
+                query_tokens,
+                ignore_case,
+                sub_query
+        );
+        switch (matchability) {
+            case SubQueryMatchabilityResult::SupercedesAllSubQueries:
+                // Since other sub-queries will be superceded by this one, we can stop processing
+                // now
+                return Query{
+                        search_begin_ts,
+                        search_end_ts,
+                        ignore_case,
+                        processed_search_string,
+                        {}
                 };
-        auto escape_decoder
-                = [](std::string_view input_str, size_t& current_pos, string& token) -> void {
-                    auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
-                    // Note: we don't need to do a check, because the upstream should guarantee all
-                    // escapes are followed by some characters
-                    auto const next_char = input_str.at(current_pos + 1);
-                    if (escape_char == next_char) {
-                        // turn two consecutive escape into a single one.
-                        token += escape_char;
-                    } else if (is_wildcard(next_char)) {
-                        // if it is an escape followed by a wildcard, we know no escape has been added.
-                        // we also remove the original escape because it was purely for query
-                        token += next_char;
-                    } else if (ir::is_variable_placeholder(next_char)) {
-                        // If we are at here, it means we are in the middle of processing a '\\\v' sequence
-                        // in this case, since we removed only one escape from the previous '\\' sequence
-                        // we need to remove another escape here.
-                        token += next_char;
-                    } else {
-                        printf("Unexpected\n");
-                        throw;
-                    }
-                    current_pos++;
-                };
-    
-        // DFA search
-        static vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
-        static bool query_matrix_set = false;
-        for (uint32_t i = 0; i < processed_search_string.size() && query_matrix_set == false; i++) {
-            for (uint32_t j = 0; j <= i; j++) {
-                std::string current_string = processed_search_string.substr(j, i - j + 1);
-                std::vector<QueryLogtype> suffixes;
-                glt::SearchToken search_token;
-                if (current_string == "*") {
-                    suffixes.emplace_back('*', "*", false);
-                } else {
-                    // TODO: add this step to the documentation
-                    // add * if preceding and proceeding characters are *
-                    bool prev_star = j > 0 && processed_search_string[j - 1] == '*';
-                    bool next_star = i < processed_search_string.back() - 1 &&
-                                     processed_search_string[i + 1] == '*';
-                    if (prev_star) {
-                        current_string.insert(0, "*");
-                    }
-                    if (next_star) {
-                        current_string.push_back('*');
-                    }
-                    // TODO: add this step to the documentation too
-                    bool is_surrounded_by_delims = false;
-                    if ((j == 0 || current_string[0] == '*' ||
-                         forward_lexer.is_delimiter(processed_search_string[j - 1])) &&
-                        (i == processed_search_string.size() - 1 ||
-                         current_string.back() == '*' ||
-                         forward_lexer.is_delimiter(processed_search_string[i + 1]))) {
-                        is_surrounded_by_delims = true;
-                    }
-                    bool contains_wildcard = false;
-                    set<uint32_t> schema_types;
-                    // All variables must be surrounded by delimiters
-                    if (is_surrounded_by_delims) {
-                        StringReader string_reader;
-                        log_surgeon::ParserInputBuffer parser_input_buffer;
-                        ReaderInterfaceWrapper reader_wrapper(string_reader);
-                        std::string regex_search_string;
-                        bool contains_central_wildcard = false;
-                        uint32_t pos = 0;
-                        for (char const& c : current_string) {
-                            if (c == '*') {
-                                contains_wildcard = true;
-                                regex_search_string.push_back('.');
-                                if(pos > 0 && pos < current_string.size() - 1) {
-                                    contains_central_wildcard = true;
-                                }
-                            } else if (
-                                    log_surgeon::SchemaParser::get_special_regex_characters().find(
-                                            c) !=
-                                    log_surgeon::SchemaParser::get_special_regex_characters().end()) {
-                                regex_search_string.push_back('\\');
-                            }
-                            regex_search_string.push_back(c);
-                            pos++;
-                        }
-                        log_surgeon::NonTerminal::m_next_children_start = 0;
-                        log_surgeon::Schema schema2;
-                        // TODO: we don't always need to do a DFA intersect
-                        //       most of the time we can just use the forward
-                        //       and reverse lexers which is much much faster
-                        // TODO: NFA creation not optimized at all
-                        schema2.add_variable("search", regex_search_string, -1);
-                        RegexNFA<RegexNFAByteState> nfa;
-                        std::unique_ptr<SchemaAST> schema_ast = schema2.release_schema_ast_ptr();
-                        for (std::unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
-                            auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-                            ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
-                            rule.add_ast(&nfa);
-                        }
-                        // TODO: DFA creation isn't optimized for performance 
-                        //       at all
-                        // TODO: log-suregon code needs to be refactored to
-                        //       allow direct usage of DFA/NFA without lexer
-                        unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 =
-                                forward_lexer.nfa_to_dfa(nfa);
-                        unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 =
-                                forward_lexer.get_dfa();
-                        schema_types = dfa1->get_intersect(dfa2);
-                        // TODO: add this step to the documentation
-                        bool already_added_var = false;
-                        for (int id : schema_types) {
-                            auto& schema_type = forward_lexer.m_id_symbol[id];
-                            if (schema_type != "int" && schema_type != "float") {
-                                if (already_added_var) {
-                                    continue;
-                                }
-                                already_added_var = true;
-                            }
-                            bool start_star = current_string[0] == '*' && false == prev_star;
-                            bool end_star = current_string.back() == '*' && false == next_star;
-                            suffixes.emplace_back();
-                            QueryLogtype& suffix = suffixes.back();
-                            if (start_star) {
-                                suffix.insert('*', "*", false);
-                            }
-                            suffix.insert(id, current_string, contains_wildcard);
-                            if (end_star) {
-                                suffix.insert('*', "*", false);
-                            }
-                            // If no wildcard, only use the top priority type 
-                            if (false == contains_wildcard) {
-                                break;
-                            }
-                        }
-                    }
-                    // Non-guaranteed variables, are potentially static text
-                    if (schema_types.empty() || contains_wildcard ||
-                        is_surrounded_by_delims == false) {
-                        suffixes.emplace_back();
-                        auto& suffix = suffixes.back();
-                        uint32_t start_id = prev_star ? 1 : 0;
-                        uint32_t end_id = next_star ? current_string.size() - 1 :
-                                          current_string.size();
-                        for(uint32_t k = start_id; k < end_id; k++) {
-                            char const& c = current_string[k];
-                            std::string char_string({c});
-                            suffix.insert(c, char_string, false);
-                        }
-                    }
-                }
-                set<QueryLogtype>& new_queries = query_matrix[i];
-                if (j > 0) {
-                    for (QueryLogtype const& prefix : query_matrix[j - 1]) {
-                        for (QueryLogtype& suffix : suffixes) {
-                            QueryLogtype new_query = prefix;
-                            new_query.insert(suffix);
-                            new_queries.insert(new_query);
-                        }
-                    }
-                } else {
-                    // handles first column
-                    for (QueryLogtype& suffix : suffixes) {
-                        new_queries.insert(suffix);
-                    }
-                }
-            }
-        }
-        query_matrix_set = true;
-        uint32_t last_row = query_matrix.size() - 1;
-        /*
-        std::cout << "query_matrix" << std::endl;
-        for(QueryLogtype const& query_logtype : query_matrix[last_row]) {
-            for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-                auto& val = query_logtype.m_logtype[i];
-                auto& str = query_logtype.m_search_query[i];
-                if (std::holds_alternative<char>(val)) {
-                    std::cout << std::get<char>(val);
-                } else {
-                    std::cout << "<" << forward_lexer.m_id_symbol[std::get<int>(val)] << ">";
-                    std::cout << "(" << str << ")";
-                }
-            }
-            std::cout << " | ";
-        }
-        std::cout << std::endl;
-        std::cout << query_matrix[last_row].size() << std::endl;
-        */
-        for (QueryLogtype const& query_logtype: query_matrix[last_row]) {
-            SubQuery sub_query;
-            std::string logtype_string;
-            bool has_vars = true;
-            bool has_special = false;
-            for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-                auto const& value = query_logtype.m_logtype[i];
-                auto const& var_str = query_logtype.m_search_query[i];
-                auto const& is_special = query_logtype.m_is_special[i];
-                auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
-                if (std::holds_alternative<char>(value)) {
-                    logtype_string.push_back(std::get<char>(value));
-                } else {
-                    auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
-                    encoded_variable_t encoded_var;
-                    // Create a duplicate query that will treat a wildcard
-                    // int/float as an int/float encoded in a segment
-                    if (false == is_special && var_has_wildcard &&
-                        (schema_type == "int" || schema_type == "float")) {
-                        QueryLogtype new_query_logtype = query_logtype;
-                        new_query_logtype.m_is_special[i] = true;
-                        // TODO: this is kinda sketchy, but it'll work because 
-                        //       the < operator is defined in a way that will
-                        //       insert it after the current iterator
-                        query_matrix[last_row].insert(new_query_logtype);
-                    }
-                    if (is_special) {
-                        if (schema_type == "int") {
-                            LogTypeDictionaryEntry::add_int_var(logtype_string);
-                        } else if (schema_type == "float") {
-                            LogTypeDictionaryEntry::add_float_var(logtype_string);
-                        }
-                    } else if (schema_type == "int" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                                       var_str, encoded_var)) {
-                        LogTypeDictionaryEntry::add_int_var(logtype_string);
-                    } else if (schema_type == "float" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                                       var_str, encoded_var)) {
-                        LogTypeDictionaryEntry::add_float_var(logtype_string);
-                    } else {
-                        LogTypeDictionaryEntry::add_dict_var(logtype_string);
-                    }
-                }
-            }
-            std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
-            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype_string, ignore_case,
-                                                                                  possible_logtype_entries);
-            if(possible_logtype_entries.empty()) {
-                continue;
-            }
-            for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-                auto const& value = query_logtype.m_logtype[i];
-                auto const& var_str = query_logtype.m_search_query[i];
-                auto const& is_special = query_logtype.m_is_special[i];
-                auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
-                if (std::holds_alternative<int>(value)) {
-                    auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
-                    encoded_variable_t encoded_var;
-                    if (is_special) {
-                        sub_query.mark_wildcard_match_required();
-                    } else if (schema_type == "int" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                                       var_str, encoded_var)) {
-                        sub_query.add_non_dict_var(encoded_var);
-                    } else if (schema_type == "float" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                                       var_str, encoded_var)) {
-                        sub_query.add_non_dict_var(encoded_var);
-                    } else {
-                        auto& var_dict = archive.get_var_dictionary();
-                        if (var_has_wildcard) {
-                            // Find matches
-                            std::unordered_set<const VariableDictionaryEntry*> var_dict_entries;
-                            var_dict.get_entries_matching_wildcard_string(var_str, ignore_case,
-                                                                          var_dict_entries);
-                            if (var_dict_entries.empty()) {
-                                // Not in dictionary
-                                has_vars = false;
-                            } else {
-                                // Encode matches
-                                std::unordered_set<encoded_variable_t> encoded_vars;
-                                for (auto entry : var_dict_entries) {
-                                    encoded_vars.insert(
-                                            EncodedVariableInterpreter::encode_var_dict_id(
-                                                    entry->get_id()));
-                                }
-                                sub_query.add_imprecise_dict_var(encoded_vars, var_dict_entries);
-                            }
-                        } else {
-                            auto entry = var_dict.get_entry_matching_value(
-                                    var_str, ignore_case);
-                            if (nullptr == entry) {
-                                // Not in dictionary
-                                has_vars = false;
-                            } else {
-                                encoded_variable_t encoded_var = EncodedVariableInterpreter::encode_var_dict_id(
-                                        entry->get_id());
-                                sub_query.add_dict_var(encoded_var, entry);
-                            }
-                        }
-                    }
-                }
-            }
-            if(false == has_vars) {
-                continue;
-            }
-            if (false == possible_logtype_entries.empty()) {
-                //std::cout << logtype_string << std::endl;
-                // Find boundaries
-                auto const retokenized_tokens = retokenization(logtype_string, escape_decoder);
-                for (auto const& logtype_entry : possible_logtype_entries) {
-                    size_t var_begin_index;
-                    size_t var_end_index;
-                    find_boundaries(logtype_entry, retokenized_tokens, var_begin_index, var_end_index);
-                    sub_query.set_logtype_boundary(logtype_entry->get_id(), var_begin_index, var_end_index);
-                }
-                sub_query.set_possible_logtypes(possible_logtype_entries);
-
-                // Calculate the IDs of the segments that may contain results for the sub-query now that we've calculated the matching logtypes and variables
-                sub_query.calculate_ids_of_matching_segments();
+            case SubQueryMatchabilityResult::MayMatch:
                 sub_queries.push_back(std::move(sub_query));
+                break;
+            case SubQueryMatchabilityResult::WontMatch:
+            default:
+                // Do nothing
+                break;
+        }
+
+        // Update combination of ambiguous tokens
+        type_of_one_token_changed = false;
+        for (auto* ambiguous_token : ambiguous_tokens) {
+            if (ambiguous_token->change_to_next_possible_type()) {
+                type_of_one_token_changed = true;
+                break;
             }
         }
     }
@@ -1435,12 +901,7 @@ Grep::get_converted_logtype_query(Query const& query, size_t segment_id) {
         for (auto const& possible_logtype_entry : possible_log_entries) {
             // create one LogtypeQuery for each logtype
             logtype_dictionary_id_t possible_logtype_id = possible_logtype_entry->get_id();
-            auto const& boundary = sub_query->get_boundary_by_logtype_id(possible_logtype_id);
-            LogtypeQuery query_info(
-                    sub_query->get_vars(),
-                    sub_query->wildcard_match_required(),
-                    boundary
-            );
+            LogtypeQuery query_info(sub_query->get_vars(), sub_query->wildcard_match_required());
 
             // The boundary is a range like [left:right). note it's open on the right side
             auto const& containing_segments
@@ -1694,9 +1155,8 @@ size_t Grep::search_combined_table_and_output(
         compressed_msg.resize_var(num_vars);
         compressed_msg.set_logtype_id(logtype_id);
 
-        size_t var_begin_ix = num_vars;
-        size_t var_end_ix = 0;
-        get_union_of_bounds(queries_by_logtype, var_begin_ix, var_end_ix);
+        size_t left_boundary = 0;
+        size_t right_boundary = num_vars;
 
         bool required_wild_card;
         while (num_matches < limit) {
@@ -1706,8 +1166,8 @@ size_t Grep::search_combined_table_and_output(
                     compressed_msg,
                     required_wild_card,
                     query,
-                    var_begin_ix,
-                    var_end_ix
+                    left_boundary,
+                    right_boundary
             );
             if (found_matched == false) {
                 break;
@@ -1772,13 +1232,12 @@ size_t Grep::search_segment_optimized_and_output(
 
         auto num_vars = archive.get_logtype_dictionary().get_entry(logtype_id).get_num_variables();
 
-        size_t var_begin_ix = num_vars;
-        size_t var_end_ix = 0;
-        get_union_of_bounds(sub_queries, var_begin_ix, var_end_ix);
+        size_t left_boundary = 0;
+        size_t right_boundary = num_vars;
 
         // load timestamps and columns that fall into the ranges.
         logtype_table_manager.load_ts();
-        logtype_table_manager.load_partial_columns(var_begin_ix, var_end_ix);
+        logtype_table_manager.load_partial_columns(left_boundary, right_boundary);
 
         std::vector<size_t> matched_row_ix;
         std::vector<bool> wildcard_required;
@@ -1817,24 +1276,6 @@ size_t Grep::search_segment_optimized_and_output(
     }
 
     return num_matches;
-}
-
-// we use a simple assumption atm.
-// if subquery1 has range (a,b) and subquery2 has range (c,d).
-// then the range will be (min(a,c), max(b,d)), even if c > b.
-void Grep::get_union_of_bounds(
-        std::vector<LogtypeQuery> const& sub_queries,
-        size_t& var_begin_ix,
-        size_t& var_end_ix
-) {
-    for (auto const& subquery : sub_queries) {
-        // we use a simple assumption atm.
-        // if subquery1 has range [begin1, end1) and subquery2 has range [begin2, end2).
-        // then the range will be (min(begin1, begin2), max(end1, end2)).
-        // Note, this would cause some inefficiency if begin1 < end1 < begin2 < end2.
-        var_begin_ix = std::min(var_begin_ix, subquery.get_begin_ix());
-        var_end_ix = std::max(var_end_ix, subquery.get_end_ix());
-    }
 }
 
 }  // namespace glt
