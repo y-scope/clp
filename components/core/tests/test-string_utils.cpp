@@ -216,40 +216,51 @@ TEST_CASE("wildcard_match_unsafe_case_sensitive", "[wildcard]") {
     // possibilities---to generate this variety. For each wildcard string, we also generate one or
     // more strings that can be matched by the wildcard string.
 
-    // The template below is meant to test 1-3 groups of WildcardStringAlphabets separated by '*'.
+    // The template below is meant to test 1-2 groups of WildcardStringAlphabets separated by '*'.
     // The groups allow contiguous repeats of all possible alphabets except '*' since
     // `wildcard_match_unsafe_case_sensitive` doesn't accept such wildcard strings. Each alphabet in
     // the template may be empty except at least one in each group (so we don't unintentionally
     // create two contiguous '*'). Overall, this should cover all matching cases.
-    for (size_t i = 0; i < 3; ++i) {
-        vector<vector<WildcardStringAlphabet>> template_wildcard_str{{
-                WildcardStringAlphabet::Empty,
-                WildcardStringAlphabet::Asterisk,
-        }};
-        for (size_t j = 0; j <= i; ++j) {
-            template_wildcard_str.push_back({
-                    WildcardStringAlphabet::Empty,
-                    WildcardStringAlphabet::QuestionMark,
-                    WildcardStringAlphabet::EscapedAsterisk,
-                    WildcardStringAlphabet::EscapedQuestionMark,
-                    WildcardStringAlphabet::EscapedBackslash,
-                    WildcardStringAlphabet::AnyChar,
-            });
-            template_wildcard_str.push_back({
-                    WildcardStringAlphabet::QuestionMark,
-                    WildcardStringAlphabet::EscapedAsterisk,
-                    WildcardStringAlphabet::EscapedQuestionMark,
-                    WildcardStringAlphabet::EscapedBackslash,
-                    WildcardStringAlphabet::AnyChar,
-            });
-            template_wildcard_str.push_back({
-                    WildcardStringAlphabet::Empty,
-                    WildcardStringAlphabet::QuestionMark,
-                    WildcardStringAlphabet::EscapedAsterisk,
-                    WildcardStringAlphabet::EscapedQuestionMark,
-                    WildcardStringAlphabet::EscapedBackslash,
-                    WildcardStringAlphabet::AnyChar,
-            });
+    vector<WildcardStringAlphabet> const nullable_asterisk_template{
+            WildcardStringAlphabet::Empty,
+            WildcardStringAlphabet::Asterisk,
+    };
+    vector<WildcardStringAlphabet> const nullable_non_asterisk_template{
+            WildcardStringAlphabet::Empty,
+            WildcardStringAlphabet::QuestionMark,
+            WildcardStringAlphabet::EscapedAsterisk,
+            WildcardStringAlphabet::EscapedQuestionMark,
+            WildcardStringAlphabet::EscapedBackslash,
+            WildcardStringAlphabet::AnyChar,
+    };
+    vector<WildcardStringAlphabet> const non_asterisk_template{
+            WildcardStringAlphabet::QuestionMark,
+            WildcardStringAlphabet::EscapedAsterisk,
+            WildcardStringAlphabet::EscapedQuestionMark,
+            WildcardStringAlphabet::EscapedBackslash,
+            WildcardStringAlphabet::AnyChar,
+    };
+    vector<vector<WildcardStringAlphabet>> template_wildcard_str;
+    for (size_t i = 0; i < 2; ++i) {
+        if (0 == i) {
+            template_wildcard_str.emplace_back(nullable_asterisk_template);
+            template_wildcard_str.emplace_back(nullable_non_asterisk_template);
+            template_wildcard_str.emplace_back(non_asterisk_template);
+            template_wildcard_str.emplace_back(nullable_non_asterisk_template);
+            template_wildcard_str.push_back(nullable_asterisk_template);
+        } else {
+            // Insert "*<non-asterisk-group>" before the last asterisk
+            // NOTE: We insert in reverse since we're using the same iterator for all inserts
+            auto insert_pos_it = template_wildcard_str.end() - 1;
+            template_wildcard_str.insert(insert_pos_it, nullable_non_asterisk_template);
+            template_wildcard_str.insert(insert_pos_it, non_asterisk_template);
+            template_wildcard_str.insert(insert_pos_it, nullable_non_asterisk_template);
+            template_wildcard_str.insert(
+                    insert_pos_it,
+                    {
+                            WildcardStringAlphabet::Asterisk,
+                    }
+            );
         }
 
         vector<WildcardStringAlphabet> chosen_alphabets;
