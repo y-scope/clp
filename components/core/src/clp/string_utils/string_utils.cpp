@@ -38,8 +38,7 @@ inline bool advance_tame_to_next_match(
  * @param wild_end_it
  * @return Whether the match has reached the end of `tame` and `wild`.
  */
-bool is_end_of_wild(string_view::const_iterator wild_it, string_view::const_iterator wild_end_it
-);
+bool is_end_of_wild(string_view::const_iterator wild_it, string_view::const_iterator wild_end_it);
 
 inline bool advance_tame_to_next_match(
         string_view::const_iterator tame_end_it,
@@ -75,8 +74,7 @@ inline bool advance_tame_to_next_match(
     return true;
 }
 
-bool is_end_of_wild(string_view::const_iterator wild_it, string_view::const_iterator wild_end_it
-) {
+bool is_end_of_wild(string_view::const_iterator wild_it, string_view::const_iterator wild_end_it) {
     return (wild_end_it == wild_it) || (wild_end_it == wild_it + 1 && '*' == *wild_it);
 }
 }  // namespace
