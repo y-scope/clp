@@ -162,7 +162,7 @@ async def worker_connection_handler(reader: asyncio.StreamReader, writer: asynci
 
             # Print out any messages we can decode
             for unpacked in unpacker:
-                print(f"{unpacked[0]}: {unpacked[4]}", end="")
+                print(f"{unpacked[0]}: {unpacked[2]}", end="")
     except asyncio.CancelledError:
         return
     finally:
