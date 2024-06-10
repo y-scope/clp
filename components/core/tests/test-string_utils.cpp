@@ -307,7 +307,7 @@ TEST_CASE("wildcard_match_unsafe", "[wildcard]") {
 
 SCENARIO("wildcard_match_unsafe_case_sensitive performance", "[wildcard performance]") {
     auto const tests_dir = std::filesystem::path{__FILE__}.parent_path();
-    auto log_file_path = tests_dir / "test_network_reader_src" / "random.log";
+    auto const log_file_path = tests_dir / "test_network_reader_src" / "random.log";
 
     clp::FileReader file_reader;
     file_reader.open(log_file_path.string());
@@ -318,13 +318,13 @@ SCENARIO("wildcard_match_unsafe_case_sensitive performance", "[wildcard performa
     }
     file_reader.close();
 
-    auto begin_timestamp = high_resolution_clock::now();
+    auto const begin_timestamp = high_resolution_clock::now();
     for (size_t i = 0; i < 10'000; ++i) {
         for (auto const& tame : lines) {
             wildcard_match_unsafe_case_sensitive(tame, "*to*blk_1073742594_1770*");
         }
     }
-    auto end_timestamp = high_resolution_clock::now();
+    auto const end_timestamp = high_resolution_clock::now();
 
     SPDLOG_INFO(
             "wildcard_match_unsafe_case_sensitive performance test took {} milliseconds.",
