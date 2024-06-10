@@ -272,7 +272,7 @@ TEST_CASE("wildcard_match_unsafe_case_sensitive", "[wildcard]") {
     constexpr string_view wild{R"(*a?c*\?\*\?*x?z*)"};
     // Sanity-check that they match.
     REQUIRE(wildcard_match_unsafe_case_sensitive(tame, wild));
-    auto const tame_begin_it = tame.cbegin();
+    auto tame_begin_it = tame.cbegin();
     for (auto it = tame.cend() - 1; tame_begin_it != it; --it) {
         auto const tame_substr = string_view{tame_begin_it, it};
         INFO("tame: \"" << tame_substr << "\", wild: \"" << wild << "\"");
