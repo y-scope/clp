@@ -1,5 +1,7 @@
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
-#include <iostream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -14,10 +16,7 @@ using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::convert_string_to_int;
 using clp::string_utils::wildcard_match_unsafe;
 using clp::string_utils::wildcard_match_unsafe_case_sensitive;
-using std::chrono::duration;
 using std::chrono::high_resolution_clock;
-using std::cout;
-using std::endl;
 using std::span;
 using std::string;
 using std::string_view;
@@ -28,7 +27,7 @@ namespace {
  * All possible alphabets that could appear in a wildcard string. Note that the alphabets are
  * conceptual (e.g. EscapedAsterisk) rather than concrete (e.g. "\\*").
  */
-enum class WildcardStringAlphabet {
+enum class WildcardStringAlphabet : uint8_t {
     Empty = 0,
     AnyChar,
     Asterisk,
@@ -64,6 +63,7 @@ void generate_and_test_wildcard_str(
         string& wild
 );
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void generate_and_test_tame_str(
         span<WildcardStringAlphabet> chosen_alphabets,
         string_view wild,
@@ -76,9 +76,9 @@ void generate_and_test_tame_str(
         return;
     }
 
-    size_t const tame_size_before_modification = tame.size();
+    auto const tame_size_before_modification = tame.size();
     auto alphabet = chosen_alphabets.front();
-    auto next_chosen_alphabets = chosen_alphabets.subspan(1);
+    auto const next_chosen_alphabets = chosen_alphabets.subspan(1);
     switch (alphabet) {
         case WildcardStringAlphabet::Empty:
             generate_and_test_tame_str(next_chosen_alphabets, wild, tame);
@@ -118,6 +118,7 @@ void generate_and_test_tame_str(
     tame.resize(tame_size_before_modification);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void generate_and_test_wildcard_str(
         span<vector<WildcardStringAlphabet>> template_wildcard_str,
         vector<WildcardStringAlphabet>& chosen_alphabets,
@@ -130,9 +131,9 @@ void generate_and_test_wildcard_str(
         return;
     }
 
-    size_t const wild_size_before_modification = wild.size();
+    auto const wild_size_before_modification = wild.size();
 
-    auto const& test_alphabet = *template_wildcard_str.begin();
+    auto const& test_alphabet = template_wildcard_str.front();
     for (auto alphabet : test_alphabet) {
         switch (alphabet) {
             case WildcardStringAlphabet::Empty:
@@ -207,10 +208,6 @@ TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]"
 }
 
 TEST_CASE("wildcard_match_unsafe_case_sensitive", "[wildcard]") {
-    string tame1{"a?c"};
-    string wild1{"*a\\??*"};
-    REQUIRE(wildcard_match_unsafe_case_sensitive(tame1, wild1));
-
     // We want to test all varieties of wildcard strings and strings that can be matched by them.
     // We do this by using a kind of template wildcard string---where each character has a set of
     // possibilities---to generate this variety. For each wildcard string, we also generate one or
@@ -271,38 +268,41 @@ TEST_CASE("wildcard_match_unsafe_case_sensitive", "[wildcard]") {
     // We test non-matching cases using a tame string that matches a diverse wildcard string as
     // follows. We test that every substring (anchored at index 0) of tame doesn't match the
     // complete wildcard string.
-    string tame = "abcdef?*?ghixyz";
-    string wild = R"(*a?c*\?\*\?*x?z*)";
+    constexpr string_view tame{"abcdef?*?ghixyz"};
+    constexpr string_view wild{R"(*a?c*\?\*\?*x?z*)"};
     // Sanity-check that they match.
     REQUIRE(wildcard_match_unsafe_case_sensitive(tame, wild));
-    for (size_t i = 1; i < tame.size(); ++i) {
-        REQUIRE(false == wildcard_match_unsafe_case_sensitive(string_view{tame.data(), i}, wild));
+    auto const tame_begin_it = tame.cbegin();
+    for (auto it = tame.cend() - 1; tame_begin_it != it; --it) {
+        REQUIRE((
+                false == wildcard_match_unsafe_case_sensitive(string_view{tame_begin_it, it}, wild)
+        ));
     }
 }
 
 TEST_CASE("wildcard_match_unsafe", "[wildcard]") {
-    string tame{"0!2#4%6&8(aBcDeFgHiJkLmNoPqRsTuVwXyZ"};
+    constexpr string_view tame{"0!2#4%6&8(aBcDeFgHiJkLmNoPqRsTuVwXyZ"};
     string wild;
 
     wild = "0!2#4%6&8(AbCdEfGhIjKlMnOpQrStUvWxYz";
     REQUIRE(wildcard_match_unsafe(tame, wild, false));
-    REQUIRE(false == wildcard_match_unsafe(tame, wild, true));
+    REQUIRE((false == wildcard_match_unsafe(tame, wild, true)));
 
     wild = "0?2?4?6?8?A?C?E?G?I?K?M?O?Q?S?U?W?Y?";
     REQUIRE(wildcard_match_unsafe(tame, wild, false));
-    REQUIRE(false == wildcard_match_unsafe(tame, wild, true));
+    REQUIRE((false == wildcard_match_unsafe(tame, wild, true)));
 
     wild = "?!?#?%?&?(?b?d?f?h?j?l?n?p?r?t?v?x?z";
     REQUIRE(wildcard_match_unsafe(tame, wild, false));
-    REQUIRE(false == wildcard_match_unsafe(tame, wild, true));
+    REQUIRE((false == wildcard_match_unsafe(tame, wild, true)));
 
     wild = "*?b?d?f?h?j?l?n?p?r?t?v?x?z*";
     REQUIRE(wildcard_match_unsafe(tame, wild, false));
-    REQUIRE(false == wildcard_match_unsafe(tame, wild, true));
+    REQUIRE((false == wildcard_match_unsafe(tame, wild, true)));
 
     wild = "*?A?C?E?G?I?K?M?O?Q?S?U?W?Y?*";
     REQUIRE(wildcard_match_unsafe(tame, wild, false));
-    REQUIRE(false == wildcard_match_unsafe(tame, wild, true));
+    REQUIRE((false == wildcard_match_unsafe(tame, wild, true)));
 }
 
 SCENARIO("wildcard_match_unsafe_case_sensitive performance", "[wildcard performance]") {
