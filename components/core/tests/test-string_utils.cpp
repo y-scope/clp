@@ -274,9 +274,9 @@ TEST_CASE("wildcard_match_unsafe_case_sensitive", "[wildcard]") {
     REQUIRE(wildcard_match_unsafe_case_sensitive(tame, wild));
     auto const tame_begin_it = tame.cbegin();
     for (auto it = tame.cend() - 1; tame_begin_it != it; --it) {
-        REQUIRE((
-                false == wildcard_match_unsafe_case_sensitive(string_view{tame_begin_it, it}, wild)
-        ));
+        auto const tame_substr = string_view{tame_begin_it, it};
+        INFO("tame: \"" << tame_substr << "\", wild: \"" << wild << "\"");
+        REQUIRE((false == wildcard_match_unsafe_case_sensitive(tame_substr, wild)));
     }
 }
 
