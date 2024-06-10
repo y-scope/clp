@@ -22,13 +22,23 @@ namespace {
  * @param tame_it Returns `tame`'s updated iterator.
  * @param tame_bookmark_it Returns `tame`'s updated bookmark.
  * @param wild_it Returns `wild`'s updated iterator.
- * @return true on success, false if `tame` cannot match `wild`.
+ * @return Whether `tame` might be able to match `wild`.
  */
 inline bool advance_tame_to_next_match(
         string_view::const_iterator tame_end_it,
         string_view::const_iterator& tame_it,
         string_view::const_iterator& tame_bookmark_it,
         string_view::const_iterator& wild_it
+);
+
+/**
+ * Helper for `wildcard_match_unsafe_case_sensitive` to determine if the given iterator points to
+ * the end of `wild`, or the second-last character of `wild` if`wild` ends with a '*'.
+ * @param wild_it
+ * @param wild_end_it
+ * @return Whether the match has reached the end of `tame` and `wild`.
+ */
+bool is_end_of_wild(string_view::const_iterator wild_it, string_view::const_iterator wild_end_it
 );
 
 inline bool advance_tame_to_next_match(
@@ -63,6 +73,11 @@ inline bool advance_tame_to_next_match(
     tame_bookmark_it = tame_it;
 
     return true;
+}
+
+bool is_end_of_wild(string_view::const_iterator wild_it, string_view::const_iterator wild_end_it
+) {
+    return (wild_end_it == wild_it) || (wild_end_it == wild_it + 1 && '*' == *wild_it);
 }
 }  // namespace
 
@@ -204,6 +219,8 @@ bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
  * `wild`, the entire wildcard match fails.
  *
  * NOTE:
+ * - This method is on the critical path for searches in clg/clp-s/glt, so any modifications must be
+ *   benchmarked to ensure performance is not significantly affected.
  * - Since the caller guarantees that there are no consecutive '*', we don't need to handle the
  *   case where a group in `wild` is empty.
  * - Since the caller guarantees that every '\' is followed by a character, we can advance passed
@@ -226,13 +243,6 @@ bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensiti
  *   However, this form is ~2% slower.
  */
 bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
-    auto tame_it = tame.cbegin();
-    auto wild_it = wild.cbegin();
-    auto const tame_end_it = tame.cend();
-    auto const wild_end_it = wild.cend();
-    string_view::const_iterator tame_bookmark_it{};
-    string_view::const_iterator wild_bookmark_it{};
-
     // Handle `tame` or `wild` being empty
     if (wild.empty()) {
         return tame.empty();
@@ -240,6 +250,13 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
     if (tame.empty()) {
         return "*" == wild;
     }
+
+    auto tame_it = tame.cbegin();
+    auto wild_it = wild.cbegin();
+    auto const tame_end_it = tame.cend();
+    auto const wild_end_it = wild.cend();
+    string_view::const_iterator tame_bookmark_it{};
+    string_view::const_iterator wild_bookmark_it{};
 
     // Match `tame` against `wild` against until we reach the first '*' in `wild` or they no longer
     // match
@@ -266,10 +283,12 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
         ++wild_it;
 
         // Handle boundary conditions
+        // NOTE: The bodies of these if-blocks depend on the order of these conditions.
         if (tame_end_it == tame_it) {
-            return (wild_end_it == wild_it) || (wild_end_it == wild_it + 1 && '*' == *wild_it);
-        } else if (wild_end_it == wild_it) {
-            return tame_end_it == tame_it;
+            return is_end_of_wild(wild_it, wild_end_it);
+        }
+        if (wild_end_it == wild_it) {
+            return false;
         }
     }
 
@@ -318,13 +337,11 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
         ++wild_it;
 
         // Handle boundary conditions
+        // NOTE: The bodies of these if-blocks depend on the order of these conditions.
         if (tame_end_it == tame_it) {
-            return (wild_end_it == wild_it) || (wild_end_it == wild_it + 1 && '*' == *wild_it);
-        } else if (wild_end_it == wild_it) {
-            if (tame_end_it == tame_it) {
-                return true;
-            }
-
+            return is_end_of_wild(wild_it, wild_end_it);
+        }
+        if (wild_end_it == wild_it) {
             // Reset to bookmarks
             tame_it = tame_bookmark_it + 1;
             wild_it = wild_bookmark_it;
