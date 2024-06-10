@@ -1,6 +1,7 @@
 #ifndef CLP_CLP_FILEDECOMPRESSOR_HPP
 #define CLP_CLP_FILEDECOMPRESSOR_HPP
 
+#include <cstddef>
 #include <string>
 
 #include "../FileWriter.hpp"
@@ -22,6 +23,14 @@ public:
             std::string const& output_dir,
             streaming_archive::reader::Archive& archive_reader,
             std::unordered_map<std::string, std::string>& temp_path_to_final_path
+    );
+
+    bool decompress_to_ir(
+            streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
+            std::string const& output_dir,
+            std::string const& temp_output_dir,
+            streaming_archive::reader::Archive& archive_reader,
+            size_t ir_target_size
     );
 
 private:

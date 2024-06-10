@@ -72,12 +72,20 @@ void SchemaReader::generate_json_string() {
                 m_json_serializer.end_object();
                 break;
             }
+            case JsonSerializer::Op::BeginUnnamedObject: {
+                m_json_serializer.begin_document();
+                break;
+            }
             case JsonSerializer::Op::BeginArray: {
                 m_json_serializer.begin_array();
                 break;
             }
             case JsonSerializer::Op::EndArray: {
                 m_json_serializer.end_array();
+                break;
+            }
+            case JsonSerializer::Op::BeginUnnamedArray: {
+                m_json_serializer.begin_array_document();
                 break;
             }
             case JsonSerializer::Op::AddIntField: {
@@ -294,6 +302,244 @@ int32_t SchemaReader::get_first_column_in_span(std::span<int32_t> schema) {
     return -1;
 }
 
+void SchemaReader::find_intersection_and_fix_brackets(
+        int32_t cur_root,
+        int32_t next_root,
+        std::vector<int32_t>& path_to_intersection
+) {
+    auto const* cur_node = &m_global_schema_tree->get_node(cur_root);
+    auto const* next_node = &m_global_schema_tree->get_node(next_root);
+    while (cur_node->get_parent_id() != next_node->get_parent_id()) {
+        if (cur_node->get_depth() > next_node->get_depth()) {
+            cur_root = cur_node->get_parent_id();
+            cur_node = &m_global_schema_tree->get_node(cur_root);
+            m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+        } else if (cur_node->get_depth() < next_node->get_depth()) {
+            path_to_intersection.push_back(next_root);
+            next_root = next_node->get_parent_id();
+            next_node = &m_global_schema_tree->get_node(next_root);
+        } else {
+            cur_root = cur_node->get_parent_id();
+            cur_node = &m_global_schema_tree->get_node(cur_root);
+            m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+            path_to_intersection.push_back(next_root);
+            next_root = next_node->get_parent_id();
+            next_node = &m_global_schema_tree->get_node(next_root);
+        }
+    }
+
+    // The loop above ends when the parent of next node and cur node matches. When these two nodes
+    // have the same parent but are different nodes we need to close the last bracket for the
+    // previous node, and add the first key for next node.
+    if (cur_node != next_node) {
+        m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+        path_to_intersection.push_back(next_node->get_id());
+    }
+
+    for (auto it = path_to_intersection.rbegin(); it != path_to_intersection.rend(); ++it) {
+        auto const& node = m_global_schema_tree->get_node(*it);
+        bool no_name = true;
+        if (false == node.get_key_name().empty()) {
+            m_json_serializer.add_special_key(node.get_key_name());
+            no_name = false;
+        }
+        if (NodeType::Object == node.get_type()) {
+            m_json_serializer.add_op(
+                    no_name ? JsonSerializer::Op::BeginUnnamedObject
+                            : JsonSerializer::Op::BeginObject
+            );
+        } else if (NodeType::StructuredArray == node.get_type()) {
+            m_json_serializer.add_op(
+                    no_name ? JsonSerializer::Op::BeginUnnamedArray : JsonSerializer::Op::BeginArray
+            );
+        }
+    }
+    path_to_intersection.clear();
+}
+
+size_t SchemaReader::generate_structured_array_template(
+        int32_t array_root,
+        size_t column_start,
+        std::span<int32_t> schema
+) {
+    size_t column_idx = column_start;
+    std::vector<int32_t> path_to_intersection;
+    int32_t depth = m_global_schema_tree->get_node(array_root).get_depth();
+
+    for (size_t i = 0; i < schema.size(); ++i) {
+        int32_t global_column_id = schema[i];
+        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
+            auto type = Schema::get_unordered_object_type(global_column_id);
+            size_t length = Schema::get_unordered_object_length(global_column_id);
+            auto sub_object_schema = schema.subspan(i + 1, length);
+            if (NodeType::StructuredArray == type) {
+                int32_t sub_array_root
+                        = m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                                array_root,
+                                get_first_column_in_span(sub_object_schema),
+                                NodeType::StructuredArray
+                        );
+                m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedArray);
+                column_idx = generate_structured_array_template(
+                        sub_array_root,
+                        column_idx,
+                        sub_object_schema
+                );
+                m_json_serializer.add_op(JsonSerializer::Op::EndArray);
+            } else if (NodeType::Object == type) {
+                int32_t object_root = m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                        array_root,
+                        get_first_column_in_span(sub_object_schema),
+                        NodeType::Object
+                );
+                m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedObject);
+                column_idx = generate_structured_object_template(
+                        object_root,
+                        column_idx,
+                        sub_object_schema
+                );
+                m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+            }
+            i += length;
+        } else {
+            auto const& node = m_global_schema_tree->get_node(global_column_id);
+            switch (node.get_type()) {
+                case NodeType::Object: {
+                    find_intersection_and_fix_brackets(
+                            array_root,
+                            global_column_id,
+                            path_to_intersection
+                    );
+                    for (int j = 0; j < (node.get_depth() - depth); ++j) {
+                        m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+                    }
+                    break;
+                }
+                case NodeType::StructuredArray: {
+                    m_json_serializer.add_op(JsonSerializer::Op::BeginUnnamedArray);
+                    m_json_serializer.add_op(JsonSerializer::Op::EndArray);
+                    break;
+                }
+                case NodeType::Integer: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddIntValue);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::Float: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFloatValue);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::Boolean: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddBoolValue);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::ClpString:
+                case NodeType::VarString: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::NullValue: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddNullValue);
+                    break;
+                }
+                case NodeType::DateString:
+                case NodeType::UnstructuredArray:
+                case NodeType::Unknown:
+                    break;
+            }
+        }
+    }
+    return column_idx;
+}
+
+size_t SchemaReader::generate_structured_object_template(
+        int32_t object_root,
+        size_t column_start,
+        std::span<int32_t> schema
+) {
+    int32_t root = object_root;
+    size_t column_idx = column_start;
+    std::vector<int32_t> path_to_intersection;
+
+    for (size_t i = 0; i < schema.size(); ++i) {
+        int32_t global_column_id = schema[i];
+        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
+            // It should only be possible to encounter arrays inside of structured objects
+            size_t array_length = Schema::get_unordered_object_length(global_column_id);
+            auto array_schema = schema.subspan(i + 1, array_length);
+            // we can guarantee that the last array we hit on the path to object root must be the
+            // right one because otherwise we'd be inside the structured array generator
+            int32_t array_root = m_global_schema_tree->find_matching_subtree_root_in_subtree(
+                    object_root,
+                    get_first_column_in_span(array_schema),
+                    NodeType::StructuredArray
+            );
+
+            find_intersection_and_fix_brackets(root, array_root, path_to_intersection);
+            column_idx = generate_structured_array_template(array_root, column_idx, array_schema);
+            m_json_serializer.add_op(JsonSerializer::Op::EndArray);
+            i += array_length;
+            // root is parent of the array object since we close the array bracket above
+            auto const& node = m_global_schema_tree->get_node(array_root);
+            root = node.get_parent_id();
+        } else {
+            auto const& node = m_global_schema_tree->get_node(global_column_id);
+            int32_t next_root = node.get_parent_id();
+            find_intersection_and_fix_brackets(root, next_root, path_to_intersection);
+            root = next_root;
+            switch (node.get_type()) {
+                case NodeType::Object: {
+                    m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
+                    m_json_serializer.add_special_key(node.get_key_name());
+                    m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+                    break;
+                }
+                case NodeType::StructuredArray: {
+                    m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
+                    m_json_serializer.add_special_key(node.get_key_name());
+                    m_json_serializer.add_op(JsonSerializer::Op::EndArray);
+                    break;
+                }
+                case NodeType::Integer: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::Float: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::Boolean: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::ClpString:
+                case NodeType::VarString: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::NullValue: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddNullField);
+                    m_json_serializer.add_special_key(node.get_key_name());
+                    break;
+                }
+                case NodeType::DateString:
+                case NodeType::UnstructuredArray:
+                case NodeType::Unknown:
+                    break;
+            }
+        }
+    }
+    find_intersection_and_fix_brackets(root, object_root, path_to_intersection);
+    return column_idx;
+}
+
 void SchemaReader::initialize_serializer() {
     if (m_serializer_initialized) {
         return;
@@ -339,10 +585,18 @@ void SchemaReader::generate_json_template(int32_t id) {
                 break;
             }
             case NodeType::StructuredArray: {
-                // Note: Marshalling structured arrays is left intentionally stubbed out so that we
-                // can split up the PR for supporting structurized arrays.
                 m_json_serializer.add_op(JsonSerializer::Op::BeginArray);
                 m_json_serializer.add_special_key(key);
+                auto structured_it = m_global_id_to_unordered_object.find(child_global_id);
+                if (m_global_id_to_unordered_object.end() != structured_it) {
+                    size_t column_start = structured_it->second.first;
+                    std::span<int32_t> structured_schema = structured_it->second.second;
+                    generate_structured_array_template(
+                            child_global_id,
+                            column_start,
+                            structured_schema
+                    );
+                }
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }

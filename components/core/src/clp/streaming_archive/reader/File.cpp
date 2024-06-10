@@ -258,37 +258,30 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
         auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
         auto const num_vars = logtype_dictionary_entry.get_num_variables();
 
-        for (auto sub_query : query.get_relevant_sub_queries()) {
-            // Check if logtype matches search
-            if (sub_query->matches_logtype(logtype_id)) {
-                // Check if timestamp matches
-                auto timestamp = m_timestamps[m_msgs_ix];
-                if (query.timestamp_is_in_search_time_range(timestamp)) {
-                    // Get variables
-                    if (m_variables_ix + num_vars > m_num_variables) {
-                        // Logtypes not in sync with variables, so stop search
-                        return nullptr;
-                    }
+        auto const vars_end_ix{m_variables_ix + num_vars};
+        auto const timestamp{m_timestamps[m_msgs_ix]};
+        if (false == query.timestamp_is_in_search_time_range(timestamp)) {
+            continue;
+        }
 
-                    msg.clear_vars();
-                    auto vars_ix = m_variables_ix;
-                    for (size_t i = 0; i < num_vars; ++i) {
-                        auto var = m_variables[vars_ix];
-                        ++vars_ix;
-                        msg.add_var(var);
-                    }
-
-                    // Check if variables match
-                    if (sub_query->matches_vars(msg.get_vars())) {
-                        // Message matches completely, so set remaining properties
-                        msg.set_logtype_id(logtype_id);
-                        msg.set_timestamp(timestamp);
-                        msg.set_msg_ix(m_begin_message_ix, m_msgs_ix);
-                        matching_sub_query = sub_query;
-                        break;
-                    }
-                }
+        for (auto const* sub_query : query.get_relevant_sub_queries()) {
+            if (false == sub_query->matches_logtype(logtype_id)) {
+                continue;
             }
+
+            msg.clear_vars();
+            for (auto vars_ix{m_variables_ix}; vars_ix < vars_end_ix; ++vars_ix) {
+                msg.add_var(m_variables[vars_ix]);
+            }
+            if (false == sub_query->matches_vars(msg.get_vars())) {
+                continue;
+            }
+
+            msg.set_logtype_id(logtype_id);
+            msg.set_timestamp(timestamp);
+            msg.set_msg_ix(m_begin_message_ix, m_msgs_ix);
+            matching_sub_query = sub_query;
+            break;
         }
 
         // Advance indices
