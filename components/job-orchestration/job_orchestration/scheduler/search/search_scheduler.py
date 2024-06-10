@@ -13,6 +13,8 @@ cleared from the cache. Unfortunately, these effects will require manual interve
 TODO Address this limitation.
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import contextlib
