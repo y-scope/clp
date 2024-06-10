@@ -39,6 +39,11 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
+class OutputDestination(BaseModel):
+    type: typing.Literal["network", "mongodb", "reducer"]
+    params: typing.List[typing.Any]
+
+
 class SearchConfig(BaseModel):
     query_string: str
     max_num_results: int
@@ -47,15 +52,5 @@ class SearchConfig(BaseModel):
     end_timestamp: typing.Optional[int] = None
     ignore_case: bool = False
     path_filter: typing.Optional[str] = None
-    # Tuple of (host, port)
-    network_address: typing.Optional[typing.Tuple[str, int]] = None
-    # Tuple of (mongodb uri, mongodb collection)
-    mongodb_destination: typing.Optional[typing.Tuple[str, str]] = None
+    output_destination: typing.Optional[OutputDestination] = None
     aggregation_config: typing.Optional[AggregationConfig] = None
-
-    @validator("network_address")
-    def validate_network_address(cls, field):
-        if field is not None and (field[1] < 1 or field[1] > 65535):
-            raise ValueError("Port must be in the range [1, 65535]")
-
-        return field

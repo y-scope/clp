@@ -33,7 +33,7 @@ from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.search.fs_search_task import search
 from job_orchestration.scheduler.constants import SearchJobStatus
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import OutputDestination, SearchConfig
 from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, SearchTaskResult
 from job_orchestration.scheduler.search.reducer_handler import (
     handle_reducer_connection,
@@ -276,8 +276,10 @@ async def acquire_reducer_for_job(job: SearchJob):
             raise
 
     job.reducer_handler_msg_queues = reducer_handler_msg_queues
-    job.search_config.aggregation_config.reducer_host = reducer_host
-    job.search_config.aggregation_config.reducer_port = reducer_port
+    job.search_config.output_destination = OutputDestination(
+        type="reducer",
+        params=[reducer_host, reducer_port],
+    )
     job.state = InternalJobState.WAITING_FOR_DISPATCH
     job.reducer_acquisition_task = None
 
@@ -316,8 +318,13 @@ def handle_pending_search_jobs(
             # destination following the convention that the job ID is the collection ID. The
             # submitter of the job can't do this itself because it does not know the job ID
             # beforehand.
-            if search_config.network_address is None and search_config.aggregation_config is None:
-                search_config.mongodb_destination = (results_cache_uri, str(job_id))
+            if (
+                search_config.output_destination is None
+                and search_config.aggregation_config is None
+            ):
+                search_config.output_destination = OutputDestination(
+                    type="mongodb", params=[results_cache_uri, str(job_id)]
+                )
 
             new_search_job = SearchJob(
                 id=job_id,
@@ -341,7 +348,7 @@ def handle_pending_search_jobs(
             job_id = job.id
 
             if (
-                job.search_config.network_address is None
+                job.search_config.output_destination.type != "network"
                 and len(job.remaining_archives_for_search) > num_archives_to_search_per_sub_job
             ):
                 archives_for_search = job.remaining_archives_for_search[
