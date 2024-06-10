@@ -153,8 +153,7 @@ void CommandLineArguments::parse_extended_search_arguments(
     constexpr char cEndTimestamp[] = "end_timestamp";
     constexpr char cIgnoreCase[] = "ignore_case";
     constexpr char cPathFilter[] = "path_filter";
-    constexpr char cNetworkAddress[] = "network_address";
-    constexpr char cMongodbDestination[] = "mongodb_destination";
+    constexpr char cOutputDestination[] = "output_destination";
     constexpr char cAggregationConfig[] = "aggregation_config";
 
     if (has_non_null_field(extended_search_arguments, cQueryString)) {
@@ -184,22 +183,14 @@ void CommandLineArguments::parse_extended_search_arguments(
         }
     }
 
-    if (has_non_null_field(extended_search_arguments, cNetworkAddress)) {
-        parse_network_dest_output_handler_options(extended_search_arguments[cNetworkAddress]);
-    }
-
-    if (has_non_null_field(extended_search_arguments, cMongodbDestination)) {
-        parse_results_cache_output_handler_options(extended_search_arguments[cMongodbDestination]);
+    if (has_non_null_field(extended_search_arguments, cOutputDestination)) {
+        parse_output_destination_arguments(extended_search_arguments[cOutputDestination]);
+    } else {
+        throw std::invalid_argument("missing output destination.");
     }
 
     if (has_non_null_field(extended_search_arguments, cAggregationConfig)) {
         parse_extended_aggregation_arguments(extended_search_arguments[cAggregationConfig]);
-    }
-
-    if (OutputHandlerType::None == m_output_handler_type) {
-        throw std::invalid_argument(
-                "No output handler configuration was provided in the extended search arguments"
-        );
     }
 }
 
@@ -207,30 +198,11 @@ void CommandLineArguments::parse_extended_aggregation_arguments(
         nlohmann::json const& extended_aggregation_arguments
 ) {
     constexpr char cJobId[] = "job_id";
-    constexpr char cReducerHost[] = "reducer_host";
-    constexpr char cReducerPort[] = "reducer_port";
     constexpr char cDoCountAggregation[] = "do_count_aggregation";
     constexpr char cCountByTimeBucketSize[] = "count_by_time_bucket_size";
 
-    if (OutputHandlerType::None != m_output_handler_type) {
-        throw std::invalid_argument("multiple conflicting output handlers specified.");
-    }
-    m_output_handler_type = OutputHandlerType::Reducer;
-
-    if (false == has_non_null_field(extended_aggregation_arguments, cReducerHost)) {
-        throw std::invalid_argument("host must be specified.");
-    }
-    m_reducer_host = extended_aggregation_arguments[cReducerHost];
-    if (m_reducer_host.empty()) {
-        throw std::invalid_argument("host cannot be an empty string.");
-    }
-
-    if (false == has_non_null_field(extended_aggregation_arguments, cReducerPort)) {
-        throw std::invalid_argument("port must be specified.");
-    }
-    m_reducer_port = extended_aggregation_arguments[cReducerPort];
-    if (m_reducer_port <= 0) {
-        throw std::invalid_argument("port must be greater than zero.");
+    if (OutputHandlerType::Reducer != m_output_handler_type) {
+        throw std::invalid_argument("aggregation specified, but output handler is not reducer.");
     }
 
     if (false == has_non_null_field(extended_aggregation_arguments, cJobId)) {
@@ -262,17 +234,9 @@ void CommandLineArguments::parse_extended_aggregation_arguments(
     }
 }
 
-void CommandLineArguments::parse_network_dest_output_handler_options(nlohmann::json const& options
-) {
-    if (false == options.is_array() || 2 != options.size()) {
-        throw std::invalid_argument("invalid shape for Network output handler options.");
-    }
-    m_network_dest_host = options[0];
-    m_network_dest_port = options[1];
-
-    if (OutputHandlerType::None != m_output_handler_type) {
-        throw std::invalid_argument("multiple conflicting output handlers specified.");
-    }
+void CommandLineArguments::parse_network_dest_output_handler_options(nlohmann::json const& params) {
+    m_network_dest_host = params[0];
+    m_network_dest_port = params[1];
     m_output_handler_type = OutputHandlerType::Network;
 
     if (m_network_dest_host.empty()) {
@@ -284,17 +248,10 @@ void CommandLineArguments::parse_network_dest_output_handler_options(nlohmann::j
     }
 }
 
-void CommandLineArguments::parse_results_cache_output_handler_options(nlohmann::json const& options
+void CommandLineArguments::parse_results_cache_output_handler_options(nlohmann::json const& params
 ) {
-    if (false == options.is_array() || 2 != options.size()) {
-        throw std::invalid_argument("invalid shape for Results Cache output handler options.");
-    }
-    m_mongodb_uri = options[0];
-    m_mongodb_collection = options[1];
-
-    if (OutputHandlerType::None != m_output_handler_type) {
-        throw std::invalid_argument("multiple conflicting output handlers specified.");
-    }
+    m_mongodb_uri = params[0];
+    m_mongodb_collection = params[1];
     m_output_handler_type = OutputHandlerType::ResultsCache;
 
     if (m_mongodb_uri.empty()) {
@@ -311,6 +268,66 @@ void CommandLineArguments::parse_results_cache_output_handler_options(nlohmann::
 
     if (0 == m_max_num_results) {
         throw std::invalid_argument("max-num-results cannot be 0.");
+    }
+}
+
+void CommandLineArguments::parse_reducer_output_handler_options(nlohmann::json const& params) {
+    m_reducer_host = params[0];
+    m_reducer_port = params[1];
+    m_output_handler_type = OutputHandlerType::Reducer;
+
+    if (m_reducer_host.empty()) {
+        throw std::invalid_argument("host cannot be an empty string.");
+    }
+
+    if (m_reducer_port <= 0) {
+        throw std::invalid_argument("port must be greater than zero.");
+    }
+}
+
+void CommandLineArguments::parse_output_destination_arguments(
+        nlohmann::json const& output_destination
+) {
+    constexpr char cOutputDestinationType[] = "type";
+    constexpr char cOutputDestinationParams[] = "params";
+    constexpr char cNetworkDestination[] = "network";
+    constexpr char cMongodbDestination[] = "mongodb";
+    constexpr char cReducerDestination[] = "reducer";
+
+    if (false == has_non_null_field(output_destination, cOutputDestinationType)) {
+        throw std::invalid_argument("output destination is missing type.");
+    }
+
+    if (false == has_non_null_field(output_destination, cOutputDestinationParams)) {
+        throw std::invalid_argument("output destination is missing parameters.");
+    }
+
+    if (false == output_destination[cOutputDestinationParams].is_array()) {
+        throw std::invalid_argument("output destination params should be an array.");
+    }
+
+    auto& destination_type = output_destination[cOutputDestinationType];
+    auto& params = output_destination[cOutputDestinationParams];
+    if (cNetworkDestination == destination_type) {
+        constexpr size_t cNumNetworkParams = 2;
+        if (cNumNetworkParams != params.size()) {
+            throw std::invalid_argument("network output destination expects two parameters.");
+        }
+        parse_network_dest_output_handler_options(params);
+    } else if (cMongodbDestination == destination_type) {
+        constexpr size_t cNumMongodbParams = 2;
+        if (cNumMongodbParams != params.size()) {
+            throw std::invalid_argument("mongodb output destination expects two parameters.");
+        }
+        parse_results_cache_output_handler_options(params);
+    } else if (cReducerDestination == destination_type) {
+        constexpr size_t cNumReducerParams = 2;
+        if (cNumReducerParams != params.size()) {
+            throw std::invalid_argument("reducer output destination expects two parameters.");
+        }
+        parse_reducer_output_handler_options(params);
+    } else {
+        throw std::invalid_argument("unexpected output destination: " + destination_type.dump());
     }
 }
 

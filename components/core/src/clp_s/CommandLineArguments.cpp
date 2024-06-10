@@ -486,7 +486,6 @@ void CommandLineArguments::parse_extended_search_arguments(
     constexpr char cEndTimestamp[] = "end_timestamp";
     constexpr char cIgnoreCase[] = "ignore_case";
     constexpr char cOutputDestination[] = "output_destination";
-    constexpr char cMongodbDestination[] = "mongodb_destination";
     constexpr char cAggregationConfig[] = "aggregation_config";
 
     if (has_non_null_field(extended_search_arguments, cQueryString)) {

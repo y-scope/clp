@@ -88,13 +88,24 @@ private:
      * Validates output options related to the Network Destination output handler.
      * @param options
      */
-    void parse_network_dest_output_handler_options(nlohmann::json const& options);
+    void parse_network_dest_output_handler_options(nlohmann::json const& params);
 
     /**
      * Validates output options related to the Results Cache output handler.
      * @param options
      */
-    void parse_results_cache_output_handler_options(nlohmann::json const& options);
+    void parse_results_cache_output_handler_options(nlohmann::json const& params);
+
+    /**
+     * Validates output options related to the Reducer output handler.
+     * @param options
+     */
+    void parse_reducer_output_handler_options(nlohmann::json const& params);
+
+    /**
+     * Validate arguments related to the output destination for this job.
+     */
+    void parse_output_destination_arguments(nlohmann::json const& output_destination);
 
     /**
      * Validates the extended arguments to search passed by the package.

@@ -142,6 +142,9 @@ private:
     void detect_disallowed_duplicate_arguments(boost::program_options::variables_map const& options
     );
 
+    /**
+     * Validate arguments related to the output destination for this job.
+     */
     void parse_output_destination_arguments(nlohmann::json const& output_destination);
 
     void print_basic_usage() const;
