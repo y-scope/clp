@@ -111,10 +111,10 @@ TEMPLATE_TEST_CASE(
     auto result = LogEventDeserializer<TestType>::create(ir_reader);
     REQUIRE(false == result.has_error());
 
-    auto* deserializer_inst = &result.value();
+    auto deserializer_inst = std::move(result.value());
 
     // Deserialize and compare the first log event
-    auto deserialized_result = deserializer_inst->deserialize_log_event();
+    auto deserialized_result = deserializer_inst.deserialize_log_event();
     REQUIRE(false == deserialized_result.has_error());
     auto deserialized_log_event = deserialized_result.value();
     REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
@@ -126,7 +126,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE(deserialized_log_event.get_timestamp() == first_ts);
 
     // Deserialize and compare the second log event
-    deserialized_result = deserializer_inst->deserialize_log_event();
+    deserialized_result = deserializer_inst.deserialize_log_event();
     REQUIRE(false == deserialized_result.has_error());
     deserialized_log_event = deserialized_result.value();
     decoded_message.clear();
@@ -138,7 +138,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE(decoded_message == second_log_event);
     REQUIRE(deserialized_log_event.get_timestamp() == second_ts);
 
-    // Try decoding unexisting message
-    deserialized_result = deserializer_inst->deserialize_log_event();
+    // Try decoding non-existing message
+    deserialized_result = deserializer_inst.deserialize_log_event();
     REQUIRE(true == deserialized_result.has_error());
 }
