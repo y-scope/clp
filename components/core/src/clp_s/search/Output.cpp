@@ -85,15 +85,15 @@ bool Output::filter() {
 
         auto& reader = m_archive_reader->read_table(
                 schema_id,
-                m_output_handler->should_output_timestamp(),
+                m_output_handler->should_output_metadata(),
                 m_should_marshal_records
         );
         reader.initialize_filter(this);
 
-        if (m_output_handler->should_output_timestamp()) {
+        if (m_output_handler->should_output_metadata()) {
             epochtime_t timestamp;
             while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
-                m_output_handler->write(message, timestamp);
+                m_output_handler->write(message, timestamp, m_archive_reader->get_archive_id());
             }
         } else {
             while (reader.get_next_message(message, this)) {

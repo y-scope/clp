@@ -5,8 +5,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <iostream>
 #include <queue>
 #include <string>
+#include <string_view>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
@@ -28,8 +30,8 @@ namespace clp_s::search {
 class OutputHandler {
 public:
     // Constructors
-    explicit OutputHandler(bool should_output_timestamp, bool should_marshal_records)
-            : m_should_output_timestamp(should_output_timestamp),
+    explicit OutputHandler(bool should_output_metadata, bool should_marshal_records)
+            : m_should_output_metadata(should_output_metadata),
               m_should_marshal_records(should_marshal_records) {};
 
     // Destructor
@@ -41,13 +43,14 @@ public:
      * @param message The message in the log event.
      * @param timestamp The timestamp of the log event.
      */
-    virtual void write(std::string const& message, epochtime_t timestamp) = 0;
+    virtual void write(std::string_view message, epochtime_t timestamp, std::string_view archive_id)
+            = 0;
 
     /**
      * Writes a message to the output handler.
      * @param message The message to write.
      */
-    virtual void write(std::string const& message) = 0;
+    virtual void write(std::string_view message) = 0;
 
     /**
      * Flushes the output handler after each table that gets searched.
@@ -61,12 +64,12 @@ public:
      */
     virtual ErrorCode finish() { return ErrorCode::ErrorCodeSuccess; }
 
-    [[nodiscard]] bool should_output_timestamp() const { return m_should_output_timestamp; }
+    [[nodiscard]] bool should_output_metadata() const { return m_should_output_metadata; }
 
     [[nodiscard]] bool should_marshal_records() const { return m_should_marshal_records; }
 
 private:
-    bool m_should_output_timestamp;
+    bool m_should_output_metadata;
     bool m_should_marshal_records;
 };
 
@@ -76,15 +79,16 @@ private:
 class StandardOutputHandler : public OutputHandler {
 public:
     // Constructors
-    explicit StandardOutputHandler(bool should_output_timestamp = false)
-            : OutputHandler(should_output_timestamp, true) {}
+    explicit StandardOutputHandler(bool should_output_metadata = false)
+            : OutputHandler(should_output_metadata, true) {}
 
     // Methods inherited from OutputHandler
-    void write(std::string const& message, epochtime_t timestamp) override {
-        printf("%" EPOCHTIME_T_PRINTF_FMT " %s", timestamp, message.c_str());
+    void
+    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
+        std::cout << archive_id << ": " << timestamp << " " << message;
     }
 
-    void write(std::string const& message) override { printf("%s", message.c_str()); }
+    void write(std::string_view message) override { std::cout << message; }
 };
 
 /**
@@ -104,7 +108,7 @@ public:
     explicit NetworkOutputHandler(
             std::string const& host,
             int port,
-            bool should_output_timestamp = false
+            bool should_output_metadata = false
     );
 
     // Destructor
@@ -115,9 +119,10 @@ public:
     }
 
     // Methods inherited from OutputHandler
-    void write(std::string const& message, epochtime_t timestamp) override;
+    void
+    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override;
 
-    void write(std::string const& message) override;
+    void write(std::string_view message) override { write(message, 0, ""); }
 
 private:
     std::string m_host;
@@ -133,14 +138,21 @@ public:
     // Types
     struct QueryResult {
         // Constructors
-        QueryResult(std::string original_path, std::string message, epochtime_t timestamp)
-                : original_path(std::move(original_path)),
-                  message(std::move(message)),
-                  timestamp(timestamp) {}
+        QueryResult(
+                std::string_view original_path,
+                std::string_view message,
+                epochtime_t timestamp,
+                std::string_view archive_id
+        )
+                : original_path(original_path),
+                  message(message),
+                  timestamp(timestamp),
+                  archive_id(archive_id) {}
 
         std::string original_path;
         std::string message;
         epochtime_t timestamp;
+        std::string archive_id;
     };
 
     struct QueryResultGreaterTimestampComparator {
@@ -165,7 +177,7 @@ public:
             std::string const& collection,
             uint64_t batch_size,
             uint64_t max_num_results,
-            bool should_output_timestamp = true
+            bool should_output_metadata = true
     );
 
     // Methods inherited from OutputHandler
@@ -176,9 +188,10 @@ public:
      */
     ErrorCode flush() override;
 
-    void write(std::string const& message, epochtime_t timestamp) override;
+    void
+    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override;
 
-    void write(std::string const& message) override { write(message, 0); }
+    void write(std::string_view message) override { write(message, 0, ""); }
 
 private:
     mongocxx::client m_client;
@@ -202,9 +215,10 @@ public:
     CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
-    void write(std::string const& message, epochtime_t timestamp) override {}
+    void
+    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {}
 
-    void write(std::string const& message) override;
+    void write(std::string_view message) override;
 
     /**
      * Flushes the count.
@@ -231,12 +245,13 @@ public:
               m_count_by_time_bucket_size{count_by_time_bucket_size} {}
 
     // Methods inherited from OutputHandler
-    void write(std::string const& message, epochtime_t timestamp) override {
+    void
+    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
         int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
     }
 
-    void write(std::string const& message) override {}
+    void write(std::string_view message) override {}
 
     /**
      * Flushes the counts.

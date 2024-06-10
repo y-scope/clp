@@ -1,6 +1,8 @@
 #include "OutputHandler.hpp"
 
 #include <sstream>
+#include <string>
+#include <string_view>
 
 #include <spdlog/spdlog.h>
 
@@ -9,9 +11,12 @@
 #include "../../reducer/network_utils.hpp"
 #include "../../reducer/Record.hpp"
 
+using std::string;
+using std::string_view;
+
 namespace clp_s::search {
 NetworkOutputHandler::NetworkOutputHandler(
-        std::string const& host,
+        string const& host,
         int port,
         bool should_output_timestamp
 )
@@ -23,18 +28,13 @@ NetworkOutputHandler::NetworkOutputHandler(
     }
 }
 
-void NetworkOutputHandler::write(std::string const& message, epochtime_t timestamp) {
-    msgpack::type::tuple<std::string, epochtime_t, std::string> src("", timestamp, message);
-    msgpack::sbuffer m;
-    msgpack::pack(m, src);
-
-    if (-1 == send(m_socket_fd, m.data(), m.size(), 0)) {
-        throw OperationFailed(ErrorCode::ErrorCodeFailureNetwork, __FILE__, __LINE__);
-    }
-}
-
-void NetworkOutputHandler::write(std::string const& message) {
-    msgpack::type::tuple<std::string, epochtime_t, std::string> src("", 0, message);
+void NetworkOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id
+) {
+    msgpack::type::tuple<string_view, epochtime_t, string_view, string_view>
+            src("", timestamp, message, archive_id);
     msgpack::sbuffer m;
     msgpack::pack(m, src);
 
@@ -44,8 +44,8 @@ void NetworkOutputHandler::write(std::string const& message) {
 }
 
 ResultsCacheOutputHandler::ResultsCacheOutputHandler(
-        std::string const& uri,
-        std::string const& collection,
+        string const& uri,
+        string const& collection,
         uint64_t batch_size,
         uint64_t max_num_results,
         bool should_output_timestamp
@@ -73,7 +73,8 @@ ErrorCode ResultsCacheOutputHandler::flush() {
             m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp("original_path", std::move(result.original_path)),
                     bsoncxx::builder::basic::kvp("message", std::move(result.message)),
-                    bsoncxx::builder::basic::kvp("timestamp", result.timestamp)
+                    bsoncxx::builder::basic::kvp("timestamp", result.timestamp),
+                    bsoncxx::builder::basic::kvp("archive_id", std::move(result.archive_id))
             )));
             count++;
 
@@ -98,12 +99,16 @@ ErrorCode ResultsCacheOutputHandler::flush() {
     return ErrorCode::ErrorCodeSuccess;
 }
 
-void ResultsCacheOutputHandler::write(std::string const& message, epochtime_t timestamp) {
+void ResultsCacheOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id
+) {
     if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>("", message, timestamp));
+        m_latest_results.emplace(std::make_unique<QueryResult>("", message, timestamp, archive_id));
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>("", message, timestamp));
+        m_latest_results.emplace(std::make_unique<QueryResult>("", message, timestamp, archive_id));
     }
 }
 
@@ -114,7 +119,7 @@ CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
 }
 
-void CountOutputHandler::write(std::string const& message) {
+void CountOutputHandler::write(string_view message) {
     m_pipeline.push_record(reducer::EmptyRecord{});
 }
 
