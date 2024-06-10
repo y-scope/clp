@@ -33,7 +33,7 @@ void NetworkOutputHandler::write(
         epochtime_t timestamp,
         string_view archive_id
 ) {
-    msgpack::type::tuple<string_view, epochtime_t, string_view, string_view>
+    msgpack::type::tuple<string, epochtime_t, string, string>
             src("", timestamp, message, archive_id);
     msgpack::sbuffer m;
     msgpack::pack(m, src);
