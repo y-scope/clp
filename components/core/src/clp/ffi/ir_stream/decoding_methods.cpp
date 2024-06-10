@@ -412,10 +412,8 @@ auto deserialize_log_event(
 }
 
 template <typename encoded_variable_t>
-auto deserialize_log_event(
-        LogEvent<encoded_variable_t> const& log_event,
-        string& decoded_message
-) -> IRErrorCode {
+auto deserialize_log_event(LogEvent<encoded_variable_t> const& log_event, string& decoded_message)
+        -> IRErrorCode {
     auto constant_handler = [&](string const& value, size_t begin_pos, size_t length) {
         decoded_message.append(value, begin_pos, length);
     };
@@ -605,12 +603,12 @@ template auto deserialize_log_event<eight_byte_encoded_variable_t>(
 ) -> IRErrorCode;
 
 template auto deserialize_log_event<eight_byte_encoded_variable_t>(
-    LogEvent<eight_byte_encoded_variable_t> const& log_event,
-    string& decoded_message
+        LogEvent<eight_byte_encoded_variable_t> const& log_event,
+        string& decoded_message
 ) -> IRErrorCode;
 
 template auto deserialize_log_event<four_byte_encoded_variable_t>(
-    LogEvent<four_byte_encoded_variable_t> const& log_event,
-    string& decoded_message
+        LogEvent<four_byte_encoded_variable_t> const& log_event,
+        string& decoded_message
 ) -> IRErrorCode;
 }  // namespace clp::ffi::ir_stream

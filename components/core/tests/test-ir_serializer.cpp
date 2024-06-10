@@ -118,10 +118,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE(false == deserialized_result.has_error());
     auto deserialized_log_event = deserialized_result.value();
     REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event(
-                    deserialized_log_event,
-                    decoded_message
-            ));
+            == deserialize_log_event(deserialized_log_event, decoded_message));
     REQUIRE(decoded_message == first_log_event);
     REQUIRE(deserialized_log_event.get_timestamp() == first_ts);
 
@@ -131,10 +128,7 @@ TEMPLATE_TEST_CASE(
     deserialized_log_event = deserialized_result.value();
     decoded_message.clear();
     REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event(
-                    deserialized_log_event,
-                    decoded_message
-            ));
+            == deserialize_log_event(deserialized_log_event, decoded_message));
     REQUIRE(decoded_message == second_log_event);
     REQUIRE(deserialized_log_event.get_timestamp() == second_ts);
 
