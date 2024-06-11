@@ -145,9 +145,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 cerr << "  x - extract" << endl;
                 cerr << "  i - extract IR" << endl;
                 cerr << endl;
-                cerr << "Try " << get_program_name() << " c --help OR "
-                     << get_program_name() << " x --help OR "
-                     << get_program_name() << " i --help for command-specific details." << endl;
+                cerr << "Try " << get_program_name() << " c --help OR " << get_program_name()
+                     << " x --help OR " << get_program_name()
+                     << " i --help for command-specific details." << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
