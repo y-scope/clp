@@ -91,11 +91,12 @@ auto deserialize_log_event(
 ) -> IRErrorCode;
 
 /**
- * Deserializes a given log event
+ * Deserializes a log event from the given LogEvent object
  * @tparam encoded_variable_t
  * @param log_event
  * @param decoded_message
- * @return TBD
+ * @return IRErrorCode_Success on success
+ * @return IRErrorCode_Decode_Error if the log_event is invalid
  */
 template <typename encoded_variable_t>
 auto deserialize_log_event(

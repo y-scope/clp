@@ -9,11 +9,9 @@
 #include "../src/clp/streaming_compression/zstd/Decompressor.hpp"
 #include "../src/clp/Utils.hpp"
 
-using clp::enum_to_underlying_type;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
 using std::string;
-using std::string_view;
 using std::vector;
 
 using clp::ffi::ir_stream::deserialize_log_event;
@@ -47,6 +45,10 @@ bool match_encoding_type(bool is_four_bytes_encoding) {
 }
 }  // namespace
 
+/*
+ * The test case only covers four byte encoding because decompressor
+ * does not support eight bytes encoding yet.
+ */
 TEMPLATE_TEST_CASE(
         "Serialize log events",
         "[ir][serialize-log-event]",
@@ -76,7 +78,7 @@ TEMPLATE_TEST_CASE(
     first_log_event += " and a small float " + var_strs[var_ix++];
     first_log_event += "\n";
 
-    string second_log_event = "here is first string with a medium float " + var_strs[var_ix++];
+    string second_log_event = "here is second string with a medium float " + var_strs[var_ix++];
     epoch_time_ms_t second_ts
             = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     second_log_event += " and a weird float " + var_strs[var_ix++];
@@ -90,14 +92,13 @@ TEMPLATE_TEST_CASE(
 
     auto ir_test_file = ir_serializer_dir_path + "test";
     ir_test_file += cIrFileExtension;
-    REQUIRE(serializer.open(ir_test_file));
 
-    // Serialize log events
+    REQUIRE(serializer.open(ir_test_file));
+    // Test serializing log events
     REQUIRE(serializer.serialize_log_event(first_ts, first_log_event));
     REQUIRE(serializer.serialize_log_event(second_ts, second_log_event));
     serializer.close();
 
-    // Test decoding
     Decompressor ir_reader;
     ir_reader.open(ir_test_file);
 
@@ -106,31 +107,37 @@ TEMPLATE_TEST_CASE(
             == clp::ffi::ir_stream::get_encoding_type(ir_reader, uses_four_byte_encoding));
     REQUIRE(true == uses_four_byte_encoding);
 
-    string decoded_message{};
-
     auto result = LogEventDeserializer<TestType>::create(ir_reader);
     REQUIRE(false == result.has_error());
-
     auto deserializer_inst = std::move(result.value());
 
-    // Deserialize and compare the first log event
+    string decoded_message{};
+    // Deserialize the first log event from the IR
     auto deserialized_result = deserializer_inst.deserialize_log_event();
     REQUIRE(false == deserialized_result.has_error());
-    auto deserialized_log_event = deserialized_result.value();
-    REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event(deserialized_log_event, decoded_message));
-    REQUIRE(decoded_message == first_log_event);
-    REQUIRE(deserialized_log_event.get_timestamp() == first_ts);
 
-    // Deserialize and compare the second log event
+    // Deserialize the log event
+    auto log_event = deserialized_result.value();
+    REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
+            == deserialize_log_event(log_event, decoded_message));
+
+    // Compare decoded message and timestamp
+    REQUIRE(decoded_message == first_log_event);
+    REQUIRE(log_event.get_timestamp() == first_ts);
+
+    // Deserialize the second log event from the IR
     deserialized_result = deserializer_inst.deserialize_log_event();
     REQUIRE(false == deserialized_result.has_error());
-    deserialized_log_event = deserialized_result.value();
+
+    // Deserialize the log event
+    log_event = deserialized_result.value();
     decoded_message.clear();
     REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event(deserialized_log_event, decoded_message));
+            == deserialize_log_event(log_event, decoded_message));
+
+    // Compare decoded message and timestamp
     REQUIRE(decoded_message == second_log_event);
-    REQUIRE(deserialized_log_event.get_timestamp() == second_ts);
+    REQUIRE(log_event.get_timestamp() == second_ts);
 
     // Try decoding non-existing message
     deserialized_result = deserializer_inst.deserialize_log_event();
