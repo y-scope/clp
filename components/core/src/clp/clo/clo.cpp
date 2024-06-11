@@ -24,6 +24,7 @@ using clp::CommandLineArgumentsBase;
 using clp::clp::FileDecompressor;
 using clp::epochtime_t;
 using clp::ErrorCode;
+using clp::ErrorCode_BadParam_DB_URI;
 using clp::ErrorCode_errno;
 using clp::ErrorCode_Success;
 using clp::ErrorCode_FileExists;
@@ -330,7 +331,6 @@ static bool decompress_to_ir(
             return false;
         }
 
-
         Archive archive_reader;
         archive_reader.open(archive_path.string());
         archive_reader.refresh_dictionaries();
@@ -346,6 +346,21 @@ static bool decompress_to_ir(
                     archive_path.string()
             );
             return false;
+        }
+
+        mongocxx::client client;
+        mongocxx::collection collection;
+        std::vector<bsoncxx::document::value> results;
+
+        try {
+            auto const mongo_uri_string = command_line_args.get_mongodb_uri();
+            auto mongo_uri = mongocxx::uri(mongo_uri_string);
+            std::cout << mongo_uri.database() << std::endl;
+            client = mongocxx::client(mongo_uri);
+            collection = client[mongo_uri.database()][command_line_args.get_mongodb_collection()];
+        } catch (mongocxx::exception const& e) {
+            SPDLOG_ERROR("ERROR IN URI");
+            throw;
         }
 
         auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
@@ -369,6 +384,12 @@ static bool decompress_to_ir(
                 );
                 return false;
             }
+            results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("ir_path", dest_ir_path.string()),
+                    bsoncxx::builder::basic::kvp("orig_file_id", orig_file_id),
+                    bsoncxx::builder::basic::kvp("begin_msg_ix", int64_t(begin_message_ix)),
+                    bsoncxx::builder::basic::kvp("end_msg_ix", int64_t(end_message_ix))
+            )));
             return true;
         };
 
@@ -385,6 +406,11 @@ static bool decompress_to_ir(
             ))
         {
             return false;
+        }
+
+        if (false == results.empty()) {
+            collection.insert_many(results);
+            results.clear();
         }
 
         file_metadata_ix_ptr.reset(nullptr);

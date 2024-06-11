@@ -591,10 +591,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 throw invalid_argument("FILE_SPLIT_ID not specified or empty.");
             }
 
-            if (m_ir_temp_output_dir.empty()) {
-                m_ir_temp_output_dir = m_ir_output_dir;
-            }
-
             // Validate output-handler
             if (parsed_command_line_options.count("output-handler") == 0) {
                 throw invalid_argument("OUTPUT_HANDLER not specified.");
@@ -620,6 +616,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                         "Unhandled OutputHandlerType="
                         + std::to_string(enum_to_underlying_type(m_output_handler_type))
                     );
+            }
+            if (m_ir_temp_output_dir.empty()) {
+                m_ir_temp_output_dir = m_ir_output_dir;
             }
         }
     } catch (exception& e) {
@@ -744,6 +743,9 @@ void CommandLineArguments::parse_ir_results_cache_output_handler_options(
     }
     if (m_ir_output_dir.empty()) {
         throw invalid_argument("collection cannot be an empty string.");
+    }
+    if (m_ir_output_dir.back() != '/') {
+        m_ir_output_dir += '/';
     }
 }
 
