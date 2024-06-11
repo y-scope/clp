@@ -108,6 +108,12 @@ set(
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
+        ../clp/FileDecompressor.hpp
+        ../clp/FileDecompressor.cpp
+        ../ir/LogEventSerializer.cpp
+        ../ir/LogEventSerializer.hpp
+        ../ffi/ir_stream/encoding_methods.cpp
+        ../ffi/ir_stream/encoding_methods.hpp
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp

@@ -487,9 +487,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 po::value<string>(&m_ir_temp_output_dir)->value_name("TEMP_OUTPUT_DIR"),
                 "Temporary output dir for IR"
             )(
-                "threshold",
-                po::value<size_t>(&m_ir_threshold)->value_name("THRESHOLD"),
-                "ir size threshold"
+                "target-size",
+                po::value<size_t>(&m_ir_target_size)->value_name("TARGET_SIZE"),
+                "target ir size"
             );
             po::options_description options_results_cache_output_handler(
                 "Results Cache Output Handler Options"
@@ -523,11 +523,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 "archive-path",
                 po::value<string>(&m_archive_path)
             )(
-                "orig-file-id",
-                po::value<string>(&m_orig_file_id)
-            )(
-                "msg-ix",
-                po::value<size_t>(&m_ir_msg_ix)
+                "file-split-id",
+                po::value<string>(&m_file_split_id)
             )(
                 "output-handler",
                 po::value<string>(&output_handler_name)
@@ -538,8 +535,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             // clang-format on
             po::positional_options_description extract_positional_options_description;
             extract_positional_options_description.add("archive-path", 1);
-            extract_positional_options_description.add("orig-file-id", 1);
-            extract_positional_options_description.add("msg-ix", 1);
+            extract_positional_options_description.add("file-split-id", 1);
             extract_positional_options_description.add("output-handler", 1);
             extract_positional_options_description.add("output-handler-args", -1);
 
@@ -591,13 +587,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
 
             // Validate wildcard string
-            if (m_orig_file_id.empty()) {
-                throw invalid_argument("ORIGINAL_FILE_ID not specified or empty.");
+            if (m_file_split_id.empty()) {
+                throw invalid_argument("FILE_SPLIT_ID not specified or empty.");
             }
 
-            // Validate file-path
-            if (parsed_command_line_options.count("msg-ix") == 0) {
-                throw invalid_argument("MSG_IX not specified");
+            if (m_ir_temp_output_dir.empty()) {
+                m_ir_temp_output_dir = m_ir_output_dir;
             }
 
             // Validate output-handler
@@ -763,6 +758,6 @@ void CommandLineArguments::print_search_basic_usage() const {
 
 void CommandLineArguments::print_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " x [OPTIONS]"
-         << R"( ARCHIVE_PATH ORIG_FILE_ID MSG_IX OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])" << endl;
+         << R"( ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])" << endl;
 }
 }  // namespace clp::clo

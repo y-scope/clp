@@ -44,6 +44,16 @@ public:
 
     std::string const& get_archive_path() const { return m_archive_path; }
 
+    // extraction arguments
+    std::string const& get_file_split_id() const { return m_file_split_id; }
+
+    std::string const& get_ir_output_dir() const { return m_ir_output_dir; }
+
+    std::string const& get_ir_temp_output_dir() const { return m_ir_temp_output_dir; }
+
+    size_t get_ir_target_size() const { return m_ir_target_size; }
+
+    // Search arguments
     bool ignore_case() const { return m_ignore_case; }
 
     std::string const& get_search_string() const { return m_search_string; }
@@ -144,9 +154,8 @@ private:
     // IR related variables
     std::string m_ir_output_dir;
     std::string m_ir_temp_output_dir;
-    std::string m_orig_file_id;
-    size_t m_ir_threshold {128 * 1024 * 1024};
-    size_t m_ir_msg_ix {0};
+    std::string m_file_split_id;
+    size_t m_ir_target_size {128 * 1024 * 1024};
 
     // Search variables
     std::string m_archive_path;

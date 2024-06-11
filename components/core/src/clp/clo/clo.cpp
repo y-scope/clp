@@ -6,6 +6,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../../reducer/network_utils.hpp"
+#include "../clp/FileDecompressor.hpp"
 #include "../Defs.h"
 #include "../Grep.hpp"
 #include "../Profiler.hpp"
@@ -20,10 +21,12 @@ using clp::clo::NetworkOutputHandler;
 using clp::clo::OutputHandler;
 using clp::clo::ResultsCacheOutputHandler;
 using clp::CommandLineArgumentsBase;
+using clp::clp::FileDecompressor;
 using clp::epochtime_t;
 using clp::ErrorCode;
 using clp::ErrorCode_errno;
 using clp::ErrorCode_Success;
+using clp::ErrorCode_FileExists;
 using clp::Grep;
 using clp::load_lexer_from_file;
 using clp::Query;
@@ -89,6 +92,17 @@ static bool search_archive(
         CommandLineArguments const& command_line_args,
         boost::filesystem::path const& archive_path,
         std::unique_ptr<OutputHandler> output_handler
+);
+
+/**
+ * Searches an archive with the given path
+ * @param command_line_args
+ * @param archive_path
+ * @param output_handler
+ * @return true on success, false otherwise
+ */
+static bool decompress_to_ir(
+        CommandLineArguments const& command_line_args
 );
 
 static SearchFilesResult search_file(
@@ -276,6 +290,130 @@ static bool search_archive(
     return true;
 }
 
+// temporarily put it here
+static ErrorCode create_directory(string const& path, mode_t mode, bool exist_ok) {
+    int retval = mkdir(path.c_str(), mode);
+    if (0 != retval) {
+        if (EEXIST != errno) {
+            return ErrorCode_errno;
+        } else if (false == exist_ok) {
+            return ErrorCode_FileExists;
+        }
+    }
+    return ErrorCode_Success;
+}
+
+static bool decompress_to_ir(
+        CommandLineArguments const& command_line_args
+) {
+    auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
+    if (false == boost::filesystem::exists(archive_path)) {
+        SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
+        return false;
+    }
+    auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
+    if (false == boost::filesystem::exists(archive_metadata_file)) {
+        SPDLOG_ERROR(
+                "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
+                archive_metadata_file.c_str(),
+                archive_path.c_str()
+        );
+        return false;
+    }
+
+    try {
+        // Create output directory in case it doesn't exist
+        auto output_dir = boost::filesystem::path(command_line_args.get_ir_output_dir());
+        if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
+            ErrorCode_Success != error_code) {
+            SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
+            return false;
+        }
+
+
+        Archive archive_reader;
+        archive_reader.open(archive_path.string());
+        archive_reader.refresh_dictionaries();
+
+        auto const file_split_id = command_line_args.get_file_split_id();
+
+        // Decompress the split
+        auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
+        if (false == file_metadata_ix_ptr->has_next()) {
+            SPDLOG_ERROR(
+                    "File split doesn't exist {} in the archive {}",
+                    file_split_id,
+                    archive_path.string()
+            );
+            return false;
+        }
+
+        auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
+                                     string const& orig_file_id,
+                                     size_t begin_message_ix,
+                                     size_t end_message_ix) {
+            auto dest_ir_file_name = orig_file_id;
+            dest_ir_file_name += "_" + std::to_string(begin_message_ix);
+            dest_ir_file_name += "_" + std::to_string(end_message_ix);
+            dest_ir_file_name += ".clp.zst";
+
+            auto const dest_ir_path = output_dir / dest_ir_file_name;
+            try {
+                boost::filesystem::rename(src_ir_path, dest_ir_path);
+            } catch (boost::filesystem::filesystem_error const& e) {
+                SPDLOG_ERROR(
+                        "Failed to rename from {} to {}. Error: {}",
+                        src_ir_path.c_str(),
+                        dest_ir_path.c_str(),
+                        e.what()
+                );
+                return false;
+            }
+            return true;
+        };
+
+
+        FileDecompressor file_decompressor;
+        // Decompress file
+        if (false
+            == file_decompressor.decompress_to_ir(
+                    archive_reader,
+                    *file_metadata_ix_ptr,
+                    command_line_args.get_ir_target_size(),
+                    command_line_args.get_ir_temp_output_dir(),
+                    ir_output_handler
+            ))
+        {
+            return false;
+        }
+
+        file_metadata_ix_ptr.reset(nullptr);
+
+        archive_reader.close();
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
+        } else {
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
+        }
+        return false;
+    }
+    return true;
+}
+
 int main(int argc, char const* argv[]) {
     // Program-wide initialization
     try {
@@ -308,15 +446,15 @@ int main(int argc, char const* argv[]) {
             switch (command_line_args.get_output_handler_type()) {
                 case CommandLineArguments::OutputHandlerType::Network:
                     output_handler = std::make_unique<NetworkOutputHandler>(
-                        command_line_args.get_network_dest_host(),
-                        command_line_args.get_network_dest_port()
+                            command_line_args.get_network_dest_host(),
+                            command_line_args.get_network_dest_port()
                     );
                     break;
                 case CommandLineArguments::OutputHandlerType::Reducer: {
                     auto reducer_socket_fd = reducer::connect_to_reducer(
-                        command_line_args.get_reducer_host(),
-                        command_line_args.get_reducer_port(),
-                        command_line_args.get_job_id()
+                            command_line_args.get_reducer_host(),
+                            command_line_args.get_reducer_port(),
+                            command_line_args.get_job_id()
                     );
                     if (-1 == reducer_socket_fd) {
                         SPDLOG_ERROR("Failed to connect to reducer");
@@ -327,8 +465,8 @@ int main(int argc, char const* argv[]) {
                         output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
                     } else if (command_line_args.do_count_by_time_aggregation()) {
                         output_handler = std::make_unique<CountByTimeOutputHandler>(
-                            reducer_socket_fd,
-                            command_line_args.get_count_by_time_bucket_size()
+                                reducer_socket_fd,
+                                command_line_args.get_count_by_time_bucket_size()
                         );
                     } else {
                         SPDLOG_ERROR("Unhandled aggregation type.");
@@ -339,17 +477,17 @@ int main(int argc, char const* argv[]) {
                 }
                 case CommandLineArguments::OutputHandlerType::ResultsCache:
                     output_handler = std::make_unique<ResultsCacheOutputHandler>(
-                        command_line_args.get_mongodb_uri(),
-                        command_line_args.get_mongodb_collection(),
-                        command_line_args.get_batch_size(),
-                        command_line_args.get_max_num_results()
+                            command_line_args.get_mongodb_uri(),
+                            command_line_args.get_mongodb_collection(),
+                            command_line_args.get_batch_size(),
+                            command_line_args.get_max_num_results()
                     );
                     break;
                 default:
                     SPDLOG_ERROR("Unhandled OutputHandlerType.");
                     return -1;
             }
-        } catch (clp::TraceableException &e) {
+        } catch (clp::TraceableException& e) {
             SPDLOG_ERROR("Failed to create output handler - {}", e.what());
             return -1;
         }
@@ -358,33 +496,38 @@ int main(int argc, char const* argv[]) {
 
         int return_value = 0;
         try {
-            if (false == search_archive(command_line_args, archive_path, std::move(output_handler))) {
+            if (false == search_archive(command_line_args, archive_path, std::move(output_handler)))
+            {
                 return_value = -1;
             }
-        } catch (TraceableException &e) {
+        } catch (TraceableException& e) {
             auto error_code = e.get_error_code();
             if (ErrorCode_errno == error_code) {
                 SPDLOG_ERROR(
-                    "Search failed: {}:{} {}, errno={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    errno
+                        "Search failed: {}:{} {}, errno={}",
+                        e.get_filename(),
+                        e.get_line_number(),
+                        e.what(),
+                        errno
                 );
             } else {
                 SPDLOG_ERROR(
-                    "Search failed: {}:{} {}, error_code={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    error_code
+                        "Search failed: {}:{} {}, error_code={}",
+                        e.get_filename(),
+                        e.get_line_number(),
+                        e.what(),
+                        error_code
                 );
             }
             return_value = -1;
         }
         return return_value;
     } else {  // CommandLineArguments::Command::Extract == command
-        SPDLOG_ERROR("Not supported yet");
-        return -1;
+        int return_value = 0;
+        if (false == decompress_to_ir(command_line_args))
+        {
+            return_value = -1;
+        }
+        return return_value;
     }
 }
