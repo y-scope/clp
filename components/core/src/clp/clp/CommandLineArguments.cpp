@@ -163,7 +163,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         switch (command_input) {
             case (char)Command::Compress:
             case (char)Command::Extract:
-            case (char)Command::IR:
+            case (char)Command::ExtractIr:
                 m_command = (Command)command_input;
                 break;
             default:
@@ -224,7 +224,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (m_archives_dir.empty()) {
                 throw invalid_argument("ARCHIVES_DIR cannot be empty.");
             }
-        } else if (Command::IR == m_command) {
+        } else if (Command::ExtractIr == m_command) {
             // Define ir decompression hidden positional options
             po::options_description ir_positional_options;
             // clang-format off
@@ -241,14 +241,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::options_description options_ir("IR decompression Options");
             options_ir.add_options()(
                     "msg-ix",
-                    po::value<size_t>(&m_ir_msg_ix)->value_name("MSG_IX")->default_value(0),
+                    po::value<size_t>(&m_ir_msg_ix)->value_name("MSG_IX")->default_value(m_ir_msg_ix),
                     "Target log event index that decompressed IR must include"
             );
             options_ir.add_options()(
                     "target-size",
                     po::value<size_t>(&m_ir_target_size)
                             ->value_name("TARGET_SIZE")
-                            ->default_value(128 * 1024 * 1024),
+                            ->default_value(m_ir_target_size),
                     "Target size (B) for the IR chunk before a new chunk is created"
             );
             options_ir.add_options()(
@@ -298,6 +298,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             if (m_orig_file_id.empty()) {
                 throw invalid_argument("ORIG_FILE_ID cannot be empty.");
+            }
+
+            if (m_output_dir.empty()) {
+                throw invalid_argument("OUTPUT_DIR cannot be empty.");
             }
 
             if (m_ir_temp_output_dir.empty()) {

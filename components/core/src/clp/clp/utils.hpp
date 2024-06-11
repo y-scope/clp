@@ -6,11 +6,23 @@
 #include <boost/filesystem/path.hpp>
 
 #include "../GlobalMetadataDBConfig.hpp"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
+#include "../GlobalMetadataDB.hpp"
 #include "FileToCompress.hpp"
 
 namespace clp::clp {
+// Types
+class ClpOperationFailed : public TraceableException {
+public:
+    // Constructors
+    ClpOperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+            : TraceableException(error_code, filename, line_number) {}
+
+    // Methods
+    char const* what() const noexcept override {
+        return "CLP operation failed";
+    }
+};
+// Methods
 /**
  * Recursively finds all files and empty directories at the given path
  * @param path_prefix_to_remove

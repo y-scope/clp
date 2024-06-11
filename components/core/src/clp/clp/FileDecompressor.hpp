@@ -27,11 +27,11 @@ public:
 
     template <typename IrOutputHandler>
     auto decompress_to_ir(
-            streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
             streaming_archive::reader::Archive& archive_reader,
-            IrOutputHandler ir_output_handler,
+            streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
+            size_t ir_target_size,
             std::string const& temp_output_dir,
-            size_t ir_target_size
+            IrOutputHandler ir_output_handler
     ) -> bool;
 
 private:

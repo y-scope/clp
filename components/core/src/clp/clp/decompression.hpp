@@ -17,6 +17,13 @@ bool decompress(
         CommandLineArguments& command_line_args,
         std::unordered_set<std::string> const& files_to_decompress
 );
+/**
+ * Decompresses a file split from an archive into one or more IR chunks in the the given directory.
+ * @param command_line_args
+ * @param file_orig_id
+ * @return Whether decompression was successful.
+ */
+bool decompress_to_ir(CommandLineArguments& command_line_args);
 }  // namespace clp::clp
 
 #endif  // CLP_CLP_DECOMPRESSION_HPP

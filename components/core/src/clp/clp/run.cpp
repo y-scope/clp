@@ -11,7 +11,6 @@
 #include "CommandLineArguments.hpp"
 #include "compression.hpp"
 #include "decompression.hpp"
-#include "IrDecompression.hpp"
 #include "utils.hpp"
 
 using std::string;
@@ -147,10 +146,11 @@ int run(int argc, char const* argv[]) {
             }
         }
     } else {  // CommandLineArguments::Command::IR == command
-        if (false == decompress_ir(command_line_args, command_line_args.get_orig_file_id())) {
+        if (false == decompress_to_ir(command_line_args)) {
             return -1;
         }
     }
+
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Compression)
 

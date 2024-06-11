@@ -1,11 +1,12 @@
 #include "utils.hpp"
 
-#include <iostream>
-
+#include <memory>
 #include <boost/filesystem.hpp>
 
 #include "../ErrorCode.hpp"
 #include "../spdlog_with_specializations.hpp"
+#include "../GlobalMySQLMetadataDB.hpp"
+#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Utils.hpp"
 
 using std::string;
@@ -205,16 +206,13 @@ std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
         GlobalMetadataDBConfig const& global_metadata_db_config,
         boost::filesystem::path const& archives_dir
 ) {
-    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
     switch (global_metadata_db_config.get_metadata_db_type()) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path = archives_dir / streaming_archive::cMetadataDBFileName;
-            global_metadata_db
-                    = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
-            break;
+            auto global_metadata_db_path = archives_dir / static_cast<char const*>(streaming_archive::cMetadataDBFileName);
+            return std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(
+            return std::make_unique<GlobalMySQLMetadataDB>(
                     global_metadata_db_config.get_metadata_db_host(),
                     global_metadata_db_config.get_metadata_db_port(),
                     global_metadata_db_config.get_metadata_db_username(),
@@ -222,9 +220,8 @@ std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
                     global_metadata_db_config.get_metadata_db_name(),
                     global_metadata_db_config.get_metadata_table_prefix()
             );
-            break;
+        default:
+            throw ClpOperationFailed(ErrorCode_Unsupported , __FILENAME__, __LINE__);
     }
-
-    return global_metadata_db;
 }
 }  // namespace clp::clp

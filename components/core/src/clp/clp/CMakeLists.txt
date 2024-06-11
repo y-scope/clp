@@ -151,8 +151,6 @@ set(
         FileDecompressor.cpp
         FileDecompressor.hpp
         FileDecompressor.inc
-        IrDecompression.cpp
-        IrDecompression.hpp
         run.cpp
         run.hpp
         utils.cpp

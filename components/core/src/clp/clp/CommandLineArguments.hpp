@@ -16,7 +16,7 @@ public:
     enum class Command : char {
         Compress = 'c',
         Extract = 'x',
-        IR = 'i'
+        ExtractIr = 'i'
     };
 
     // Constructors
@@ -88,8 +88,8 @@ private:
     std::string m_path_list_path;
     std::string m_path_prefix_to_remove;
     std::string m_orig_file_id;
-    size_t m_ir_msg_ix;
-    size_t m_ir_target_size;
+    size_t m_ir_msg_ix{0};
+    size_t m_ir_target_size{128 * 1024 * 1024};
     bool m_sort_input_files;
     std::string m_ir_temp_output_dir;
     std::string m_output_dir;

@@ -12,11 +12,11 @@
 namespace clp::clp {
 template <typename IrOutputHandler>
 auto FileDecompressor::decompress_to_ir(
-        streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
         streaming_archive::reader::Archive& archive_reader,
-        IrOutputHandler ir_output_handler,
+        streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
+        size_t ir_target_size,
         std::string const& temp_output_dir,
-        size_t ir_target_size
+        IrOutputHandler ir_output_handler
 ) -> bool {
     // Open encoded file
     if (auto const error_code = archive_reader.open_file(m_encoded_file, file_metadata_ix);
