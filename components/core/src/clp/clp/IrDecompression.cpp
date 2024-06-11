@@ -94,13 +94,14 @@ bool decompress_ir(CommandLineArguments& command_line_args, string const& file_o
         auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
         if (false == file_metadata_ix_ptr->has_next()) {
             SPDLOG_ERROR(
-                    "File split doesn't exist {} in the archive {}",
+                    "File split doesn't exist {} in archive {}",
                     file_split_id,
                     archive_id
             );
             return false;
         }
-        // Decompress file
+
+        // Decompress file split
         if (false
             == file_decompressor.decompress_to_ir(
                     *file_metadata_ix_ptr,
@@ -118,7 +119,6 @@ bool decompress_ir(CommandLineArguments& command_line_args, string const& file_o
         archive_reader.close();
 
         global_metadata_db->close();
-
     } catch (TraceableException& e) {
         error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {

@@ -66,16 +66,15 @@ bool remove_prefix_and_clean_up_path(
 bool validate_paths_exist(std::vector<std::string> const& paths);
 
 /**
- * Loads the global metadata database
+ * Chooses and initializes the relevant global metadata DB class based on the given config.
  * @param global_metadata_db_config
- * @archives_dir
- * @return a unique pointer to the GlobalMetadataDB instance
+ * @param archives_dir
+ * @return The relevant global metadata DB class.
  */
 std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
         GlobalMetadataDBConfig const& global_metadata_db_config,
         boost::filesystem::path const& archives_dir
 );
-
 }  // namespace clp::clp
 
 #endif  // CLP_CLP_UTILS_HPP

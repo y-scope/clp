@@ -54,6 +54,7 @@ int run(int argc, char const* argv[]) {
             return -1;
         }
     }
+
     auto command = command_line_args.get_command();
     if (CommandLineArguments::Command::Compress == command
         || CommandLineArguments::Command::Extract == command)
@@ -146,7 +147,7 @@ int run(int argc, char const* argv[]) {
             }
         }
     } else {  // CommandLineArguments::Command::IR == command
-        if (!decompress_ir(command_line_args, command_line_args.get_orig_file_id())) {
+        if (false == decompress_ir(command_line_args, command_line_args.get_orig_file_id())) {
             return -1;
         }
     }

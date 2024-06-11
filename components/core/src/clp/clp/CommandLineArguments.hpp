@@ -37,9 +37,9 @@ public:
 
     std::string const& get_path_prefix_to_remove() const { return m_path_prefix_to_remove; }
 
-    std::string const& get_output_dir() const { return m_output_dir; }
-
     std::string const& get_ir_temp_output_dir() const { return m_ir_temp_output_dir; }
+
+    std::string const& get_output_dir() const { return m_output_dir; }
 
     std::string const& get_schema_file_path() const { return m_schema_file_path; }
 
@@ -83,6 +83,7 @@ private:
     void print_compression_basic_usage() const;
     void print_extraction_basic_usage() const;
     void print_ir_basic_usage() const;
+
     // Variables
     std::string m_path_list_path;
     std::string m_path_prefix_to_remove;

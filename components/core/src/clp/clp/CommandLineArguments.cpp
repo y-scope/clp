@@ -292,12 +292,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 return ParsingResult::InfoCommand;
             }
 
-            // Validate archive path is not empty
             if (m_archives_dir.empty()) {
                 throw invalid_argument("ARCHIVES_DIR cannot be empty.");
             }
 
-            // Validate file id is not empty
             if (m_orig_file_id.empty()) {
                 throw invalid_argument("ORIG_FILE_ID cannot be empty.");
             }
@@ -305,7 +303,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (m_ir_temp_output_dir.empty()) {
                 m_ir_temp_output_dir = m_output_dir;
             }
-
         } else if (Command::Compress == m_command) {
             // Define compression hidden positional options
             po::options_description compression_positional_options;
