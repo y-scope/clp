@@ -25,7 +25,7 @@ jobs:
       ubuntu_focal_image_changed: "${{steps.filter.outputs.ubuntu_focal_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -34,7 +34,7 @@ jobs:
         shell: "bash"
 
       - name: "Filter relevant changes"
-        uses: "dorny/paths-filter@v2"
+        uses: "dorny/paths-filter@v3"
         id: "filter"
         with:
           base: "main"
@@ -53,7 +53,7 @@ jobs:
     needs: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -74,7 +74,7 @@ jobs:
     needs: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 

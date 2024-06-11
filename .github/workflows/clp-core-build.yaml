@@ -35,7 +35,7 @@ jobs:
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -44,7 +44,7 @@ jobs:
         shell: "bash"
 
       - name: "Filter relevant changes"
-        uses: "dorny/paths-filter@v2"
+        uses: "dorny/paths-filter@v3"
         id: "filter"
         with:
           # Consider changes between the current commit and `main`
@@ -91,7 +91,7 @@ jobs:
     needs: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -116,7 +116,7 @@ jobs:
     needs: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -141,7 +141,7 @@ jobs:
     needs: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -171,7 +171,7 @@ jobs:
       - "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -199,7 +199,7 @@ jobs:
       - "ubuntu-focal-deps-image"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -228,7 +228,7 @@ jobs:
       - "ubuntu-jammy-deps-image"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
@@ -261,7 +261,7 @@ jobs:
       OS_NAME: "ubuntu-focal"
       TMP_OUTPUT_DIR: "/tmp"
     steps:
-      - uses: "actions/checkout@v3"
+      - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
 
