@@ -29,6 +29,21 @@ public:
             std::unordered_map<std::string, std::string>& temp_path_to_final_path
     );
 
+    /**
+     * Decompresses the given file split into one or multiple IR chunks.
+     * The method creates a new IR chunk when the current IR chunk exceeds ir_target_size.
+     *
+     * Note: The decompressed IR chunks are first written to the temp_output_dir.
+     * Caller must provide an ir_output_handler which will handle where and how
+     * the IR chunk shall be finally outputted.
+     * @tparam IrOutputHandler　
+     * @param archive_reader
+     * @param file_metadata_ix
+     * @param ir_target_size target size of each IR chunk
+     * @param temp_output_dir directory to store temporary IR chunks
+     * @param ir_output_handler function handling the final output
+     * @return Whether decompression was successful
+     */
     template <typename IrOutputHandler>
     auto decompress_to_ir(
             streaming_archive::reader::Archive& archive_reader,
