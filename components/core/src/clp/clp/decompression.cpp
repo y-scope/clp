@@ -303,11 +303,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
 
         auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
         if (false == file_metadata_ix_ptr->has_next()) {
-            SPDLOG_ERROR(
-                    "File split doesn't exist {} in archive {}",
-                    file_split_id,
-                    archive_id
-            );
+            SPDLOG_ERROR("File split doesn't exist {} in archive {}", file_split_id, archive_id);
             return false;
         }
 

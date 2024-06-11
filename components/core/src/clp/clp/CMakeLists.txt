@@ -150,7 +150,6 @@ set(
         FileCompressor.hpp
         FileDecompressor.cpp
         FileDecompressor.hpp
-        FileDecompressor.inc
         run.cpp
         run.hpp
         utils.cpp

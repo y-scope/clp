@@ -5,8 +5,8 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "../GlobalMetadataDBConfig.hpp"
 #include "../GlobalMetadataDB.hpp"
+#include "../GlobalMetadataDBConfig.hpp"
 #include "FileToCompress.hpp"
 
 namespace clp::clp {
@@ -18,10 +18,9 @@ public:
             : TraceableException(error_code, filename, line_number) {}
 
     // Methods
-    char const* what() const noexcept override {
-        return "CLP operation failed";
-    }
+    char const* what() const noexcept override { return "CLP operation failed"; }
 };
+
 // Methods
 /**
  * Recursively finds all files and empty directories at the given path

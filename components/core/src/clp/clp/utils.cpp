@@ -1,12 +1,13 @@
 #include "utils.hpp"
 
 #include <memory>
+
 #include <boost/filesystem.hpp>
 
 #include "../ErrorCode.hpp"
-#include "../spdlog_with_specializations.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 
 using std::string;
@@ -208,7 +209,9 @@ std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
 ) {
     switch (global_metadata_db_config.get_metadata_db_type()) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path = archives_dir / static_cast<char const*>(streaming_archive::cMetadataDBFileName);
+            auto global_metadata_db_path
+                    = archives_dir
+                      / static_cast<char const*>(streaming_archive::cMetadataDBFileName);
             return std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
@@ -221,7 +224,7 @@ std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
                     global_metadata_db_config.get_metadata_table_prefix()
             );
         default:
-            throw ClpOperationFailed(ErrorCode_Unsupported , __FILENAME__, __LINE__);
+            throw ClpOperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
     }
 }
 }  // namespace clp::clp

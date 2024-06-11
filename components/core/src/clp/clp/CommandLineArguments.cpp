@@ -143,9 +143,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 cerr << "COMMAND is one of:" << endl;
                 cerr << "  c - compress" << endl;
                 cerr << "  x - extract" << endl;
+                cerr << "  i - extract IR" << endl;
                 cerr << endl;
-                cerr << "Try " << get_program_name() << " c --help OR " << get_program_name()
-                     << " x --help for command-specific details." << endl;
+                cerr << "Try " << get_program_name() << " c --help OR "
+                     << get_program_name() << " x --help OR "
+                     << get_program_name() << " i --help for command-specific details." << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
@@ -241,7 +243,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             po::options_description options_ir("IR decompression Options");
             options_ir.add_options()(
                     "msg-ix",
-                    po::value<size_t>(&m_ir_msg_ix)->value_name("MSG_IX")->default_value(m_ir_msg_ix),
+                    po::value<size_t>(&m_ir_msg_ix)
+                            ->value_name("MSG_IX")
+                            ->default_value(m_ir_msg_ix),
                     "Target log event index that decompressed IR must include"
             );
             options_ir.add_options()(
@@ -282,12 +286,13 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 cerr << "Examples:" << endl;
                 cerr << "  # Decompress file with id ORIG_FILE_ID to IR " << endl;
-                cerr << "  " << get_program_name() << " i archives-dir output-dir ORIG_FILE_ID>"
+                cerr << "  " << get_program_name() << " i archives-dir output-dir orig-file-id"
                      << endl;
                 cerr << endl;
 
                 po::options_description visible_options;
                 visible_options.add(options_general);
+                visible_options.add(all_ir_options);
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
             }
