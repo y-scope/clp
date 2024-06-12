@@ -11,7 +11,7 @@ class Message {
 public:
     // Methods
     auto get_log_event_ix() const -> size_t;
-    auto get_ix_in_split() const -> size_t;
+    auto get_ix_in_file_split() const -> size_t;
     logtype_dictionary_id_t get_logtype_id() const;
     std::vector<encoded_variable_t> const& get_vars() const;
     epochtime_t get_ts_in_milli() const;

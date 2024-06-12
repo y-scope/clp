@@ -5,7 +5,7 @@ auto Message::get_log_event_ix() const -> size_t {
     return m_log_event_ix;
 }
 
-auto Message::get_ix_in_split() const -> size_t {
+auto Message::get_ix_in_file_split() const -> size_t {
     return m_ix_in_file_split;
 }
 
