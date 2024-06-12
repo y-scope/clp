@@ -20,7 +20,7 @@ public:
     // Types
     enum class Command : char {
         Search = 's',
-        Extract = 'x',
+        ExtractIr = 'i',
     };
     enum class OutputHandlerType : uint8_t {
         Network = 0,
@@ -126,9 +126,9 @@ private:
      * @param parsed_options Returns any parsed options that were newly recognized
      */
     void parse_ir_results_cache_output_handler_options(
-        boost::program_options::options_description const& options_description,
-        std::vector<boost::program_options::option> const& options,
-        boost::program_options::variables_map& parsed_options
+            boost::program_options::options_description const& options_description,
+            std::vector<boost::program_options::option> const& options,
+            boost::program_options::variables_map& parsed_options
     );
 
     /**
@@ -155,7 +155,7 @@ private:
     std::string m_ir_output_dir;
     std::string m_ir_temp_output_dir;
     std::string m_file_split_id;
-    size_t m_ir_target_size {128 * 1024 * 1024};
+    size_t m_ir_target_size{128 * 1024 * 1024};
 
     // Search variables
     std::string m_archive_path;

@@ -9,26 +9,32 @@
 #include "../clp/FileDecompressor.hpp"
 #include "../Defs.h"
 #include "../Grep.hpp"
+#include "../ir/constants.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
+#include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "OutputHandler.hpp"
+#include "utils.hpp"
 
+using clp::clo::CloOperationFailed;
 using clp::clo::CommandLineArguments;
 using clp::clo::CountByTimeOutputHandler;
 using clp::clo::CountOutputHandler;
 using clp::clo::NetworkOutputHandler;
 using clp::clo::OutputHandler;
 using clp::clo::ResultsCacheOutputHandler;
-using clp::CommandLineArgumentsBase;
 using clp::clp::FileDecompressor;
+using clp::CommandLineArgumentsBase;
+using clp::create_directory;
 using clp::epochtime_t;
 using clp::ErrorCode;
 using clp::ErrorCode_BadParam_DB_URI;
 using clp::ErrorCode_errno;
-using clp::ErrorCode_Success;
 using clp::ErrorCode_FileExists;
+using clp::ErrorCode_Success;
 using clp::Grep;
+using clp::ir::cIrFileExtension;
 using clp::load_lexer_from_file;
 using clp::Query;
 using clp::streaming_archive::MetadataDB;
@@ -95,16 +101,7 @@ static bool search_archive(
         std::unique_ptr<OutputHandler> output_handler
 );
 
-/**
- * Searches an archive with the given path
- * @param command_line_args
- * @param archive_path
- * @param output_handler
- * @return true on success, false otherwise
- */
-static bool decompress_to_ir(
-        CommandLineArguments const& command_line_args
-);
+static bool decompress_to_ir(CommandLineArguments const& command_line_args);
 
 static SearchFilesResult search_file(
         Query& query,
@@ -291,22 +288,7 @@ static bool search_archive(
     return true;
 }
 
-// temporarily put it here
-static ErrorCode create_directory(string const& path, mode_t mode, bool exist_ok) {
-    int retval = mkdir(path.c_str(), mode);
-    if (0 != retval) {
-        if (EEXIST != errno) {
-            return ErrorCode_errno;
-        } else if (false == exist_ok) {
-            return ErrorCode_FileExists;
-        }
-    }
-    return ErrorCode_Success;
-}
-
-static bool decompress_to_ir(
-        CommandLineArguments const& command_line_args
-) {
+static bool decompress_to_ir(CommandLineArguments const& command_line_args) {
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
     if (false == boost::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
@@ -326,8 +308,13 @@ static bool decompress_to_ir(
         // Create output directory in case it doesn't exist
         auto output_dir = boost::filesystem::path(command_line_args.get_ir_output_dir());
         if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
-            ErrorCode_Success != error_code) {
-            SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
+            ErrorCode_Success != error_code)
+        {
+            SPDLOG_ERROR(
+                    "Failed to create {} - {}",
+                    output_dir.parent_path().c_str(),
+                    strerror(errno)
+            );
             return false;
         }
 
@@ -335,9 +322,7 @@ static bool decompress_to_ir(
         archive_reader.open(archive_path.string());
         archive_reader.refresh_dictionaries();
 
-        auto const file_split_id = command_line_args.get_file_split_id();
-
-        // Decompress the split
+        auto const& file_split_id = command_line_args.get_file_split_id();
         auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
         if (false == file_metadata_ix_ptr->has_next()) {
             SPDLOG_ERROR(
@@ -353,14 +338,11 @@ static bool decompress_to_ir(
         std::vector<bsoncxx::document::value> results;
 
         try {
-            auto const mongo_uri_string = command_line_args.get_mongodb_uri();
-            auto mongo_uri = mongocxx::uri(mongo_uri_string);
-            std::cout << mongo_uri.database() << std::endl;
+            auto mongo_uri = mongocxx::uri(command_line_args.get_mongodb_uri());
             client = mongocxx::client(mongo_uri);
             collection = client[mongo_uri.database()][command_line_args.get_mongodb_collection()];
         } catch (mongocxx::exception const& e) {
-            SPDLOG_ERROR("ERROR IN URI");
-            throw;
+            throw CloOperationFailed(ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
         }
 
         auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
@@ -370,7 +352,7 @@ static bool decompress_to_ir(
             auto dest_ir_file_name = orig_file_id;
             dest_ir_file_name += "_" + std::to_string(begin_message_ix);
             dest_ir_file_name += "_" + std::to_string(end_message_ix);
-            dest_ir_file_name += ".clp.zst";
+            dest_ir_file_name += cIrFileExtension;
 
             auto const dest_ir_path = output_dir / dest_ir_file_name;
             try {
@@ -392,7 +374,6 @@ static bool decompress_to_ir(
             )));
             return true;
         };
-
 
         FileDecompressor file_decompressor;
         // Decompress file
@@ -465,6 +446,7 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
+    // globally initialize mongocxx
     mongocxx::instance mongocxx_instance{};
     if (CommandLineArguments::Command::Search == command_line_args.get_command()) {
         std::unique_ptr<OutputHandler> output_handler;
@@ -550,8 +532,7 @@ int main(int argc, char const* argv[]) {
         return return_value;
     } else {  // CommandLineArguments::Command::Extract == command
         int return_value = 0;
-        if (false == decompress_to_ir(command_line_args))
-        {
+        if (false == decompress_to_ir(command_line_args)) {
             return_value = -1;
         }
         return return_value;

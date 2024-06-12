@@ -119,6 +119,7 @@ set(
         CommandLineArguments.hpp
         OutputHandler.cpp
         OutputHandler.hpp
+        utils.hpp
 )
 
 set(

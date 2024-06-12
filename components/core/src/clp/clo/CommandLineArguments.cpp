@@ -59,8 +59,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     po::options_description general_positional_options;
     char command_input;
     general_positional_options.add_options()("command", po::value<char>(&command_input))(
-        "command-args",
-        po::value<vector<string>>()
+            "command-args",
+            po::value<vector<string>>()
     );
     po::positional_options_description general_positional_options_description;
     general_positional_options_description.add("command", 1);
@@ -105,7 +105,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         // Handle --version
         if (parsed_command_line_options.count("version")) {
-            cerr << static_cast<char const *>(cVersion) << endl;
+            cerr << static_cast<char const*>(cVersion) << endl;
             return ParsingResult::InfoCommand;
         }
 
@@ -120,10 +120,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 print_basic_usage();
                 cerr << "COMMAND is one of:" << endl;
                 cerr << "  s - search" << endl;
-                cerr << "  x - extract" << endl;
+                cerr << "  i - extract IR" << endl;
                 cerr << endl;
                 cerr << "Try " << get_program_name() << " s --help OR " << get_program_name()
-                     << " x --help for command-specific details." << endl;
+                     << " i --help for command-specific details." << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
@@ -139,7 +139,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         }
         switch (command_input) {
             case (char)Command::Search:
-            case (char)Command::Extract:
+            case (char)Command::ExtractIr:
                 m_command = (Command)command_input;
                 break;
             default:
@@ -192,7 +192,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             );
             // clang-format on
 
-            po::options_description options_network_output_handler("Network Output Handler Options");
+            po::options_description options_network_output_handler("Network Output Handler Options"
+            );
             // clang-format off
             options_network_output_handler.add_options()(
                 "host",
@@ -205,7 +206,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             );
             // clang-format on
 
-            po::options_description options_reducer_output_handler("Reducer Output Handler Options");
+            po::options_description options_reducer_output_handler("Reducer Output Handler Options"
+            );
             options_reducer_output_handler.add_options()(
                 "host",
                 po::value<string>(&m_reducer_host)->value_name("HOST"),
@@ -221,7 +223,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             );
 
             po::options_description options_results_cache_output_handler(
-                "Results Cache Output Handler Options"
+                    "Results Cache Output Handler Options"
             );
             // clang-format off
             options_results_cache_output_handler.add_options()(
@@ -285,15 +287,15 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             // Parse extraction options
             vector<string> unrecognized_options
-                = po::collect_unrecognized(parsed.options, po::include_positional);
+                    = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
             po::store(
-                po::command_line_parser(unrecognized_options)
-                    .options(all_search_options)
-                    .positional(search_positional_options_description)
-                    .allow_unregistered()
-                    .run(),
-                parsed_command_line_options
+                    po::command_line_parser(unrecognized_options)
+                            .options(all_search_options)
+                            .positional(search_positional_options_description)
+                            .allow_unregistered()
+                            .run(),
+                    parsed_command_line_options
             );
 
             notify(parsed_command_line_options);
@@ -310,11 +312,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 print_search_basic_usage();
                 cerr << "OUTPUT_HANDLER is one of:" << endl;
-                cerr << "  " << static_cast<char const *>(cNetworkOutputHandlerName)
+                cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
                      << " - Output to a network destination" << endl;
-                cerr << "  " << static_cast<char const *>(cResultsCacheOutputHandlerName)
+                cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
                      << " - Output to the results cache" << endl;
-                cerr << "  " << static_cast<char const *>(cReducerOutputHandlerName)
+                cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
                      << " - Output to the reducer" << endl;
                 cerr << endl;
 
@@ -323,7 +325,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                         "a network destination"
                      << endl;
                 cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                     << " " << static_cast<char const *>(cNetworkOutputHandlerName)
+                     << " " << static_cast<char const*>(cNetworkOutputHandlerName)
                      << " --host localhost --port 18000" << endl;
                 cerr << endl;
 
@@ -331,7 +333,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                         "by performing a count aggregation"
                      << endl;
                 cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                     << " " << static_cast<char const *>(cReducerOutputHandlerName) << " --count"
+                     << " " << static_cast<char const*>(cReducerOutputHandlerName) << " --count"
                      << " --host localhost --port 14009 --job-id 1" << endl;
                 cerr << endl;
 
@@ -339,11 +341,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                         R"( mongodb://127.0.0.1:27017/test "result" collection )"
                      << endl;
                 cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-                     << " " << static_cast<char const *>(cResultsCacheOutputHandlerName)
+                     << " " << static_cast<char const*>(cResultsCacheOutputHandlerName)
                      << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
                 cerr << endl;
 
-                cerr << "Options can be specified on the command line or through a configuration file."
+                cerr << "Options can be specified on the command line or through a configuration "
+                        "file."
                      << endl;
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
@@ -361,20 +364,24 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             // Validate timestamp range and compute m_search_begin_ts and m_search_end_ts
             if (parsed_command_line_options.count("teq")) {
-                if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
-                    + parsed_command_line_options.count("tlt")
-                    + parsed_command_line_options.count("tle")
-                    > 0) {
+                if (parsed_command_line_options.count("tgt")
+                            + parsed_command_line_options.count("tge")
+                            + parsed_command_line_options.count("tlt")
+                            + parsed_command_line_options.count("tle")
+                    > 0)
+                {
                     throw invalid_argument(
-                        "--teq cannot be specified with any other timestamp filtering option."
+                            "--teq cannot be specified with any other timestamp filtering option."
                     );
                 }
 
                 m_search_begin_ts = parsed_command_line_options["teq"].as<epochtime_t>();
                 m_search_end_ts = parsed_command_line_options["teq"].as<epochtime_t>();
             } else {
-                if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
-                    > 1) {
+                if (parsed_command_line_options.count("tgt")
+                            + parsed_command_line_options.count("tge")
+                    > 1)
+                {
                     throw invalid_argument("--tgt cannot be used with --tge.");
                 }
 
@@ -385,8 +392,10 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     m_search_begin_ts = parsed_command_line_options["tge"].as<epochtime_t>();
                 }
 
-                if (parsed_command_line_options.count("tlt") + parsed_command_line_options.count("tle")
-                    > 1) {
+                if (parsed_command_line_options.count("tlt")
+                            + parsed_command_line_options.count("tle")
+                    > 1)
+                {
                     throw invalid_argument("--tlt cannot be used with --tle.");
                 }
 
@@ -399,7 +408,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 if (m_search_begin_ts > m_search_end_ts) {
                     throw invalid_argument(
-                        "Timestamp range is invalid - begin timestamp is after end timestamp."
+                            "Timestamp range is invalid - begin timestamp is after end timestamp."
                     );
                 }
             }
@@ -413,7 +422,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (parsed_command_line_options.count("count-by-time") > 0) {
                 m_do_count_by_time_aggregation = true;
                 if (m_count_by_time_bucket_size <= 0) {
-                    throw std::invalid_argument("Value for count-by-time must be greater than zero.");
+                    throw std::invalid_argument("Value for count-by-time must be greater than zero."
+                    );
                 }
             }
 
@@ -421,11 +431,13 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (parsed_command_line_options.count("output-handler") == 0) {
                 throw invalid_argument("OUTPUT_HANDLER not specified.");
             }
-            if (static_cast<char const *>(cNetworkOutputHandlerName) == output_handler_name) {
+            if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
                 m_output_handler_type = OutputHandlerType::Network;
-            } else if (static_cast<char const *>(cReducerOutputHandlerName) == output_handler_name) {
+            } else if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
                 m_output_handler_type = OutputHandlerType::Reducer;
-            } else if (static_cast<char const *>(cResultsCacheOutputHandlerName) == output_handler_name) {
+            } else if (static_cast<char const*>(cResultsCacheOutputHandlerName)
+                       == output_handler_name)
+            {
                 m_output_handler_type = OutputHandlerType::ResultsCache;
             } else if (output_handler_name.empty()) {
                 throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
@@ -436,63 +448,63 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             switch (m_output_handler_type) {
                 case OutputHandlerType::Network:
                     parse_network_dest_output_handler_options(
-                        options_network_output_handler,
-                        parsed.options,
-                        parsed_command_line_options
+                            options_network_output_handler,
+                            parsed.options,
+                            parsed_command_line_options
                     );
                     break;
                 case OutputHandlerType::Reducer:
                     parse_reducer_output_handler_options(
-                        options_reducer_output_handler,
-                        parsed.options,
-                        parsed_command_line_options
+                            options_reducer_output_handler,
+                            parsed.options,
+                            parsed_command_line_options
                     );
                     break;
                 case OutputHandlerType::ResultsCache:
                     parse_results_cache_output_handler_options(
-                        options_results_cache_output_handler,
-                        parsed.options,
-                        parsed_command_line_options
+                            options_results_cache_output_handler,
+                            parsed.options,
+                            parsed_command_line_options
                     );
                     break;
                 default:
                     throw invalid_argument(
-                        "Unhandled OutputHandlerType="
-                        + std::to_string(enum_to_underlying_type(m_output_handler_type))
+                            "Unhandled OutputHandlerType="
+                            + std::to_string(enum_to_underlying_type(m_output_handler_type))
                     );
             }
 
             bool aggregation_was_specified
-                = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
+                    = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
             if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
                 throw invalid_argument(
-                    "Aggregations are only supported with the reducer output handler."
+                        "Aggregations are only supported with the reducer output handler."
                 );
             } else if ((false == aggregation_was_specified
-                        && OutputHandlerType::Reducer == m_output_handler_type)) {
-                throw invalid_argument("The reducer output handler currently only supports count and "
-                                       "count-by-time aggregations.");
+                        && OutputHandlerType::Reducer == m_output_handler_type))
+            {
+                throw invalid_argument(
+                        "The reducer output handler currently only supports count and "
+                        "count-by-time aggregations."
+                );
             }
 
             if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {
                 throw std::invalid_argument(
-                    "The --count-by-time and --count options are mutually exclusive."
+                        "The --count-by-time and --count options are mutually exclusive."
                 );
             }
-        } else if (Command::Extract == m_command) {
+        } else if (Command::ExtractIr == m_command) {
             // Define IR decompression options
             po::options_description options_ir_decompression("IR decompression");
-            options_ir_decompression.add_options()(
-                "temp-output-dir",
-                po::value<string>(&m_ir_temp_output_dir)->value_name("TEMP_OUTPUT_DIR"),
-                "Temporary output dir for IR"
-            )(
-                "target-size",
-                po::value<size_t>(&m_ir_target_size)->value_name("TARGET_SIZE"),
-                "target ir size"
-            );
+            options_ir_decompression
+                    .add_options()("temp-output-dir", po::value<string>(&m_ir_temp_output_dir)->value_name("TEMP_OUTPUT_DIR"), "Temporary output dir for IR")(
+                            "target-size",
+                            po::value<size_t>(&m_ir_target_size)->value_name("TARGET_SIZE"),
+                            "target ir size"
+                    );
             po::options_description options_results_cache_output_handler(
-                "Results Cache Output Handler Options"
+                    "Results Cache Output Handler Options"
             );
             // clang-format off
             options_results_cache_output_handler.add_options()(
@@ -539,7 +551,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             extract_positional_options_description.add("output-handler", 1);
             extract_positional_options_description.add("output-handler-args", -1);
 
-
             // Aggregate all options
             po::options_description all_search_options;
             all_search_options.add(options_ir_decompression);
@@ -547,15 +558,15 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             // Parse extraction options
             vector<string> unrecognized_options
-                = po::collect_unrecognized(parsed.options, po::include_positional);
+                    = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
             po::store(
-                po::command_line_parser(unrecognized_options)
-                    .options(all_search_options)
-                    .positional(extract_positional_options_description)
-                    .allow_unregistered()
-                    .run(),
-                parsed_command_line_options
+                    po::command_line_parser(unrecognized_options)
+                            .options(all_search_options)
+                            .positional(extract_positional_options_description)
+                            .allow_unregistered()
+                            .run(),
+                    parsed_command_line_options
             );
 
             notify(parsed_command_line_options);
@@ -569,13 +580,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 print_extraction_basic_usage();
                 cerr << "OUTPUT_HANDLER is one of:" << endl;
-                cerr << "  " << static_cast<char const *>(cResultsCacheOutputHandlerName)
+                cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
                      << " - Output to the results cache" << endl;
                 cerr << endl;
 
                 cerr << "Examples Skipped" << endl;
 
-                cerr << "Options can be specified on the command line or through a configuration file."
+                cerr << "Options can be specified on the command line or through a configuration "
+                        "file."
                      << endl;
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
@@ -595,7 +607,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (parsed_command_line_options.count("output-handler") == 0) {
                 throw invalid_argument("OUTPUT_HANDLER not specified.");
             }
-            if (static_cast<char const *>(cResultsCacheOutputHandlerName) == output_handler_name) {
+            if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name) {
                 m_output_handler_type = OutputHandlerType::ResultsCache;
             } else if (output_handler_name.empty()) {
                 throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
@@ -606,15 +618,15 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             switch (m_output_handler_type) {
                 case OutputHandlerType::ResultsCache:
                     parse_ir_results_cache_output_handler_options(
-                        options_results_cache_output_handler,
-                        parsed.options,
-                        parsed_command_line_options
+                            options_results_cache_output_handler,
+                            parsed.options,
+                            parsed_command_line_options
                     );
                     break;
                 default:
                     throw invalid_argument(
-                        "Unhandled OutputHandlerType="
-                        + std::to_string(enum_to_underlying_type(m_output_handler_type))
+                            "Unhandled OutputHandlerType="
+                            + std::to_string(enum_to_underlying_type(m_output_handler_type))
                     );
             }
             if (m_ir_temp_output_dir.empty()) {
@@ -715,9 +727,9 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
 }
 
 void CommandLineArguments::parse_ir_results_cache_output_handler_options(
-    po::options_description const& options_description,
-    vector<po::option> const& options,
-    po::variables_map& parsed_options
+        po::options_description const& options_description,
+        vector<po::option> const& options,
+        po::variables_map& parsed_options
 ) {
     parse_unrecognized_options(options_description, options, parsed_options);
 
