@@ -33,8 +33,9 @@ void NetworkOutputHandler::write(
         epochtime_t timestamp,
         string_view archive_id
 ) {
-    msgpack::type::tuple<epochtime_t, string, string, string>
-            src(timestamp, message, "", archive_id);
+    static constexpr string_view cOrigFilePathPlaceholder{""};
+    msgpack::type::tuple<epochtime_t, string, string, string> const
+            src(timestamp, message, cOrigFilePathPlaceholder, archive_id);
     msgpack::sbuffer m;
     msgpack::pack(m, src);
 
