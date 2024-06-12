@@ -140,10 +140,13 @@ int run(int argc, char const* argv[]) {
         if (false == decompress(command_line_args, files_to_decompress)) {
             return -1;
         }
-    } else {  // CommandLineArguments::Command::IR == command
+    } else if (CommandLineArguments::Command::ExtractIr == command) {
         if (false == decompress_to_ir(command_line_args)) {
             return -1;
         }
+    } else {
+        SPDLOG_ERROR("Command {} not implemented.", command);
+        return -1;
     }
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();

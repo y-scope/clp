@@ -35,19 +35,19 @@ public:
     );
 
     /**
-     * Decompresses the given file split into one or multiple IR chunks.
-     * The method creates a new IR chunk when the current IR chunk exceeds ir_target_size.
+     * Decompresses the given file split into one or more IR files (chunks). The method creates a
+     * new IR chunk when the current IR chunk exceeds ir_target_size.
      *
-     * Note: The decompressed IR chunks are first written to the temp_output_dir.
-     * Caller must provide an ir_output_handler which will handle where and how
-     * the IR chunk shall be finally outputted.
-     * @tparam IrOutputHandler　
+     * @tparam IrOutputHandler Method to handle IR chunks output by this method.
+     * Signature: (boost::filesystem::path const& ir_file_path, string const& orig_file_id,
+     * size_t begin_message_ix, size_t end_message_ix) -> bool;
+     * The method returns whether it succeeded.
      * @param archive_reader
      * @param file_metadata_ix
-     * @param ir_target_size target size of each IR chunk
-     * @param temp_output_dir directory to store temporary IR chunks
-     * @param ir_output_handler function handling the final output
-     * @return Whether decompression was successful
+     * @param ir_target_size Target size of each IR chunk. NOTE: This is not a hard limit.
+     * @param temp_output_dir Directory to write IR chunks to
+     * @param ir_output_handler
+     * @return Whether decompression was successful.
      */
     template <typename IrOutputHandler>
     auto decompress_to_ir(

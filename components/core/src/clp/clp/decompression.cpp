@@ -321,8 +321,6 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
         file_metadata_ix_ptr.reset(nullptr);
 
         archive_reader.close();
-
-        global_metadata_db->close();
     } catch (TraceableException& e) {
         error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
