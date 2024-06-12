@@ -304,12 +304,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 throw invalid_argument("ARCHIVES_DIR cannot be empty.");
             }
 
-            if (m_orig_file_id.empty()) {
-                throw invalid_argument("ORIG_FILE_ID cannot be empty.");
-            }
-
             if (m_output_dir.empty()) {
                 throw invalid_argument("OUTPUT_DIR cannot be empty.");
+            }
+
+            if (m_orig_file_id.empty()) {
+                throw invalid_argument("ORIG_FILE_ID cannot be empty.");
             }
 
             if (m_ir_temp_output_dir.empty()) {
