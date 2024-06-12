@@ -35,6 +35,7 @@ public:
      * @param encoded_message The encoded result.
      * @param decompressed_message The decompressed result.
      * @return ErrorCode_Success if the result was added successfully, or an error code if specified
+     * by the derived class.
      */
     virtual ErrorCode add_result(
             std::string_view orig_file_path,
