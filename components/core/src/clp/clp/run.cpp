@@ -145,7 +145,7 @@ int run(int argc, char const* argv[]) {
             return -1;
         }
     } else {
-        SPDLOG_ERROR("Command {} not implemented.", command);
+        SPDLOG_ERROR("Command {} not implemented.", enum_to_underlying_type(command));
         return -1;
     }
 
