@@ -40,7 +40,7 @@ public:
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
 
-    auto get_command() const -> Command { return m_command; }
+    [[nodiscard]] auto get_command() const -> Command { return m_command; }
 
     [[nodiscard]] auto get_archive_path() const -> std::string const& { return m_archive_path; }
 

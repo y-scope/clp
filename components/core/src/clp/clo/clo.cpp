@@ -57,6 +57,156 @@ enum class SearchFilesResult {
     Success
 };
 
+namespace {
+/**
+ * Extract the IR specified by the user arguments.
+ * The function writes the extracted IR to the local file storage and inserts metadata into the mongodb collection,
+ * specified by the input URI and Collection
+ * @param command_line_args
+ * @return Whether the IR was successfully extracted
+ */
+bool extract_ir(CommandLineArguments const& command_line_args) {
+    auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
+    if (false == boost::filesystem::exists(archive_path)) {
+        SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
+        return false;
+    }
+    auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
+    if (false == boost::filesystem::exists(archive_metadata_file)) {
+        SPDLOG_ERROR(
+                "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
+                archive_metadata_file.c_str(),
+                archive_path.c_str()
+        );
+        return false;
+    }
+
+    try {
+        // Create output directory in case it doesn't exist
+        auto output_dir = boost::filesystem::path(command_line_args.get_ir_output_dir());
+        if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
+                ErrorCode_Success != error_code)
+        {
+            SPDLOG_ERROR(
+                    "Failed to create {} - {}",
+                    output_dir.parent_path().c_str(),
+                    strerror(errno)
+            );
+            return false;
+        }
+
+        Archive archive_reader;
+        archive_reader.open(archive_path.string());
+        archive_reader.refresh_dictionaries();
+
+        auto const& file_split_id = command_line_args.get_file_split_id();
+        auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
+        if (false == file_metadata_ix_ptr->has_next()) {
+            SPDLOG_ERROR(
+                    "File split doesn't exist {} in the archive {}",
+                    file_split_id,
+                    archive_path.string()
+            );
+            return false;
+        }
+
+        mongocxx::client client;
+        mongocxx::collection collection;
+        std::vector<bsoncxx::document::value> results;
+
+        try {
+            auto mongo_uri = mongocxx::uri(command_line_args.get_ir_mongodb_uri());
+            client = mongocxx::client(mongo_uri);
+            collection
+                    = client[mongo_uri.database()][command_line_args.get_ir_mongodb_collection()];
+        } catch (mongocxx::exception const& e) {
+            throw CloOperationFailed(ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
+        }
+
+        auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
+                                     string const& orig_file_id,
+                                     size_t begin_message_ix,
+                                     size_t end_message_ix,
+                                     bool is_last_ir_chunk) {
+            auto dest_ir_file_name = orig_file_id;
+            dest_ir_file_name += "_" + std::to_string(begin_message_ix);
+            dest_ir_file_name += "_" + std::to_string(end_message_ix);
+            dest_ir_file_name += cIrFileExtension;
+
+            auto const dest_ir_path = output_dir / dest_ir_file_name;
+            try {
+                boost::filesystem::rename(src_ir_path, dest_ir_path);
+            } catch (boost::filesystem::filesystem_error const& e) {
+                SPDLOG_ERROR(
+                        "Failed to rename from {} to {}. Error: {}",
+                        src_ir_path.c_str(),
+                        dest_ir_path.c_str(),
+                        e.what()
+                );
+                return false;
+            }
+            results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("ir_path", dest_ir_path.string()),
+                    bsoncxx::builder::basic::kvp("orig_file_id", orig_file_id),
+                    bsoncxx::builder::basic::kvp("begin_msg_ix", int64_t(begin_message_ix)),
+                    bsoncxx::builder::basic::kvp("end_msg_ix", int64_t(end_message_ix)),
+                    bsoncxx::builder::basic::kvp("is_last_ir_chunk", is_last_ir_chunk)
+            )));
+            return true;
+        };
+
+        FileDecompressor file_decompressor;
+        // Decompress file
+        if (false
+            == file_decompressor.decompress_to_ir(
+                archive_reader,
+                *file_metadata_ix_ptr,
+                command_line_args.get_ir_target_size(),
+                command_line_args.get_ir_temp_output_dir(),
+                ir_output_handler
+        ))
+        {
+            return false;
+        }
+
+        // Write the metadata into the mongodb
+        try {
+            if (false == results.empty()) {
+                collection.insert_many(results);
+                results.clear();
+            }
+        } catch (mongocxx::exception const& e) {
+            return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
+        }
+
+        file_metadata_ix_ptr.reset(nullptr);
+
+        archive_reader.close();
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR(
+                    "IR extraction failed: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
+        } else {
+            SPDLOG_ERROR(
+                    "IR extraction failed: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
+        }
+        return false;
+    }
+    return true;
+}
+}  // namespace
+
 /**
  * Searches a file referenced by a given database cursor
  * @param query
@@ -100,8 +250,6 @@ static bool search_archive(
         boost::filesystem::path const& archive_path,
         std::unique_ptr<OutputHandler> output_handler
 );
-
-static bool decompress_to_ir(CommandLineArguments const& command_line_args);
 
 static SearchFilesResult search_file(
         Query& query,
@@ -288,142 +436,6 @@ static bool search_archive(
     return true;
 }
 
-static bool decompress_to_ir(CommandLineArguments const& command_line_args) {
-    auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
-    if (false == boost::filesystem::exists(archive_path)) {
-        SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
-        return false;
-    }
-    auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
-    if (false == boost::filesystem::exists(archive_metadata_file)) {
-        SPDLOG_ERROR(
-                "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
-                archive_metadata_file.c_str(),
-                archive_path.c_str()
-        );
-        return false;
-    }
-
-    try {
-        // Create output directory in case it doesn't exist
-        auto output_dir = boost::filesystem::path(command_line_args.get_ir_output_dir());
-        if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
-            ErrorCode_Success != error_code)
-        {
-            SPDLOG_ERROR(
-                    "Failed to create {} - {}",
-                    output_dir.parent_path().c_str(),
-                    strerror(errno)
-            );
-            return false;
-        }
-
-        Archive archive_reader;
-        archive_reader.open(archive_path.string());
-        archive_reader.refresh_dictionaries();
-
-        auto const& file_split_id = command_line_args.get_file_split_id();
-        auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
-        if (false == file_metadata_ix_ptr->has_next()) {
-            SPDLOG_ERROR(
-                    "File split doesn't exist {} in the archive {}",
-                    file_split_id,
-                    archive_path.string()
-            );
-            return false;
-        }
-
-        mongocxx::client client;
-        mongocxx::collection collection;
-        std::vector<bsoncxx::document::value> results;
-
-        try {
-            auto mongo_uri = mongocxx::uri(command_line_args.get_ir_mongodb_uri());
-            client = mongocxx::client(mongo_uri);
-            collection
-                    = client[mongo_uri.database()][command_line_args.get_ir_mongodb_collection()];
-        } catch (mongocxx::exception const& e) {
-            throw CloOperationFailed(ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
-        }
-
-        auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
-                                     string const& orig_file_id,
-                                     size_t begin_message_ix,
-                                     size_t end_message_ix,
-                                     bool is_last_ir_chunk) {
-            auto dest_ir_file_name = orig_file_id;
-            dest_ir_file_name += "_" + std::to_string(begin_message_ix);
-            dest_ir_file_name += "_" + std::to_string(end_message_ix);
-            dest_ir_file_name += cIrFileExtension;
-
-            auto const dest_ir_path = output_dir / dest_ir_file_name;
-            try {
-                boost::filesystem::rename(src_ir_path, dest_ir_path);
-            } catch (boost::filesystem::filesystem_error const& e) {
-                SPDLOG_ERROR(
-                        "Failed to rename from {} to {}. Error: {}",
-                        src_ir_path.c_str(),
-                        dest_ir_path.c_str(),
-                        e.what()
-                );
-                return false;
-            }
-            results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("ir_path", dest_ir_path.string()),
-                    bsoncxx::builder::basic::kvp("orig_file_id", orig_file_id),
-                    bsoncxx::builder::basic::kvp("begin_msg_ix", int64_t(begin_message_ix)),
-                    bsoncxx::builder::basic::kvp("end_msg_ix", int64_t(end_message_ix)),
-                    bsoncxx::builder::basic::kvp("is_last_ir_chunk", is_last_ir_chunk)
-            )));
-            return true;
-        };
-
-        FileDecompressor file_decompressor;
-        // Decompress file
-        if (false
-            == file_decompressor.decompress_to_ir(
-                    archive_reader,
-                    *file_metadata_ix_ptr,
-                    command_line_args.get_ir_target_size(),
-                    command_line_args.get_ir_temp_output_dir(),
-                    ir_output_handler
-            ))
-        {
-            return false;
-        }
-
-        if (false == results.empty()) {
-            collection.insert_many(results);
-            results.clear();
-        }
-
-        file_metadata_ix_ptr.reset(nullptr);
-
-        archive_reader.close();
-    } catch (TraceableException& e) {
-        auto error_code = e.get_error_code();
-        if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR(
-                    "Search failed: {}:{} {}, errno={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    errno
-            );
-        } else {
-            SPDLOG_ERROR(
-                    "Search failed: {}:{} {}, error_code={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    error_code
-            );
-        }
-        return false;
-    }
-    return true;
-}
-
 int main(int argc, char const* argv[]) {
     // Program-wide initialization
     try {
@@ -451,7 +463,8 @@ int main(int argc, char const* argv[]) {
 
     // globally initialize mongocxx
     mongocxx::instance mongocxx_instance{};
-    if (CommandLineArguments::Command::Search == command_line_args.get_command()) {
+    auto const& command = command_line_args.get_command();
+    if (CommandLineArguments::Command::Search == command) {
         std::unique_ptr<OutputHandler> output_handler;
         try {
             switch (command_line_args.get_output_handler_type()) {
@@ -533,11 +546,14 @@ int main(int argc, char const* argv[]) {
             return_value = -1;
         }
         return return_value;
-    } else {  // CommandLineArguments::Command::Extract == command
-        int return_value = 0;
-        if (false == decompress_to_ir(command_line_args)) {
-            return_value = -1;
+    } else if (CommandLineArguments::Command::ExtractIr == command) {
+        if (false == extract_ir(command_line_args)) {
+            return -1;
         }
-        return return_value;
+    } else {
+        SPDLOG_ERROR("Command {} not implemented.", clp::enum_to_underlying_type(command));
+        return -1;
     }
+
+    return 0;
 }
