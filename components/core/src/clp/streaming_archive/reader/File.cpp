@@ -236,7 +236,7 @@ bool File::find_message_in_time_range(
             // Set remaining message properties
             msg.set_logtype_id(logtype_id);
             msg.set_timestamp(timestamp);
-            msg.set_message_number(m_msgs_ix);
+            msg.set_msg_ix(m_begin_message_ix, m_msgs_ix);
 
             found_msg = true;
         }
@@ -279,7 +279,7 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
 
             msg.set_logtype_id(logtype_id);
             msg.set_timestamp(timestamp);
-            msg.set_message_number(m_msgs_ix);
+            msg.set_msg_ix(m_begin_message_ix, m_msgs_ix);
             matching_sub_query = sub_query;
             break;
         }
@@ -298,7 +298,7 @@ bool File::get_next_message(Message& msg) {
     }
 
     // Get message number
-    msg.set_message_number(m_msgs_ix);
+    msg.set_msg_ix(m_begin_message_ix, m_msgs_ix);
 
     // Get timestamp
     msg.set_timestamp(m_timestamps[m_msgs_ix]);

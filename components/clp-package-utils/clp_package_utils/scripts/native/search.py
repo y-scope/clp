@@ -160,9 +160,9 @@ async def worker_connection_handler(reader: asyncio.StreamReader, writer: asynci
                 return
             unpacker.feed(buf)
 
-            # Print out any messages we can decode
+            # Print out any messages we can decode in the form of ORIG_PATH: MSG
             for unpacked in unpacker:
-                print(f"{unpacked[0]}: {unpacked[2]}", end="")
+                print(f"{unpacked[2]}: {unpacked[1]}", end="")
     except asyncio.CancelledError:
         return
     finally:

@@ -24,7 +24,7 @@ NetworkOutputHandler::NetworkOutputHandler(
 }
 
 void NetworkOutputHandler::write(std::string const& message, epochtime_t timestamp) {
-    msgpack::type::tuple<std::string, epochtime_t, std::string> src("", timestamp, message);
+    msgpack::type::tuple<epochtime_t, std::string, std::string> src(timestamp, message, "");
     msgpack::sbuffer m;
     msgpack::pack(m, src);
 
@@ -34,7 +34,7 @@ void NetworkOutputHandler::write(std::string const& message, epochtime_t timesta
 }
 
 void NetworkOutputHandler::write(std::string const& message) {
-    msgpack::type::tuple<std::string, epochtime_t, std::string> src("", 0, message);
+    msgpack::type::tuple<epochtime_t, std::string, std::string> src(0, message, "");
     msgpack::sbuffer m;
     msgpack::pack(m, src);
 
