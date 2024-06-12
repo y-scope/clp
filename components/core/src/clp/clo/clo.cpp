@@ -338,9 +338,10 @@ static bool decompress_to_ir(CommandLineArguments const& command_line_args) {
         std::vector<bsoncxx::document::value> results;
 
         try {
-            auto mongo_uri = mongocxx::uri(command_line_args.get_mongodb_uri());
+            auto mongo_uri = mongocxx::uri(command_line_args.get_ir_mongodb_uri());
             client = mongocxx::client(mongo_uri);
-            collection = client[mongo_uri.database()][command_line_args.get_mongodb_collection()];
+            collection
+                    = client[mongo_uri.database()][command_line_args.get_ir_mongodb_collection()];
         } catch (mongocxx::exception const& e) {
             throw CloOperationFailed(ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
         }
@@ -348,7 +349,8 @@ static bool decompress_to_ir(CommandLineArguments const& command_line_args) {
         auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
-                                     size_t end_message_ix) {
+                                     size_t end_message_ix,
+                                     bool is_last_ir_chunk) {
             auto dest_ir_file_name = orig_file_id;
             dest_ir_file_name += "_" + std::to_string(begin_message_ix);
             dest_ir_file_name += "_" + std::to_string(end_message_ix);
@@ -370,7 +372,8 @@ static bool decompress_to_ir(CommandLineArguments const& command_line_args) {
                     bsoncxx::builder::basic::kvp("ir_path", dest_ir_path.string()),
                     bsoncxx::builder::basic::kvp("orig_file_id", orig_file_id),
                     bsoncxx::builder::basic::kvp("begin_msg_ix", int64_t(begin_message_ix)),
-                    bsoncxx::builder::basic::kvp("end_msg_ix", int64_t(end_message_ix))
+                    bsoncxx::builder::basic::kvp("end_msg_ix", int64_t(end_message_ix)),
+                    bsoncxx::builder::basic::kvp("is_last_ir_chunk", is_last_ir_chunk)
             )));
             return true;
         };

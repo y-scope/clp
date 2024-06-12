@@ -40,7 +40,7 @@ public:
      *
      * @tparam IrOutputHandler Function to handle the resulting IR chunks.
      * Signature: (boost::filesystem::path const& ir_file_path, string const& orig_file_id,
-     * size_t begin_message_ix, size_t end_message_ix) -> bool;
+     * size_t begin_message_ix, size_t end_message_ix, bool is_last_ir_chunk) -> bool;
      * The function returns whether it succeeded.
      * @param archive_reader
      * @param file_metadata_ix
@@ -132,7 +132,8 @@ auto FileDecompressor::decompress_to_ir(
                         ir_output_path,
                         file_orig_id,
                         begin_message_ix,
-                        end_message_ix
+                        end_message_ix,
+                        false
                 ))
             {
                 return false;
@@ -162,7 +163,8 @@ auto FileDecompressor::decompress_to_ir(
     auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
     ir_serializer.close();
 
-    if (false == ir_output_handler(ir_output_path, file_orig_id, begin_message_ix, end_message_ix))
+    if (false
+        == ir_output_handler(ir_output_path, file_orig_id, begin_message_ix, end_message_ix, true))
     {
         return false;
     }

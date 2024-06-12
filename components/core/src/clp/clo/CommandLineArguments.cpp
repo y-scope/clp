@@ -496,36 +496,18 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
         } else if (Command::ExtractIr == m_command) {
             // Define IR decompression options
-            po::options_description options_ir_decompression("IR decompression");
+            po::options_description options_ir_decompression("IR extraction");
             options_ir_decompression
                     .add_options()("temp-output-dir", po::value<string>(&m_ir_temp_output_dir)->value_name("TEMP_OUTPUT_DIR"), "Temporary output dir for IR")(
                             "target-size",
                             po::value<size_t>(&m_ir_target_size)->value_name("TARGET_SIZE"),
                             "target ir size"
                     );
-            po::options_description options_results_cache_output_handler(
-                    "Results Cache Output Handler Options"
-            );
-            // clang-format off
-            options_results_cache_output_handler.add_options()(
-                "uri",
-                po::value<string>(&m_mongodb_uri)->value_name("URI"),
-                "MongoDB URI for the results cache"
-            )(
-                "collection",
-                po::value<string>(&m_mongodb_collection)->value_name("COLLECTION"),
-                "MongoDB collection to output to"
-            )(
-                "output-dir",
-                po::value<string>(&m_ir_output_dir)->value_name("OUTPUT_DIR"),
-                "The output path of decompressed IR"
-            );
 
             // Define visible options
             po::options_description visible_options;
             visible_options.add(options_general);
             visible_options.add(options_ir_decompression);
-            visible_options.add(options_results_cache_output_handler);
 
             // Define hidden positional options (not shown in Boost's program options help message)
             po::options_description hidden_positional_options;
@@ -538,18 +520,25 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 "file-split-id",
                 po::value<string>(&m_file_split_id)
             )(
-                "output-handler",
-                po::value<string>(&output_handler_name)
+                "output-dir",
+                po::value<string>(&m_ir_output_dir)->value_name("OUTPUT_DIR"),
+                "The output path of decompressed IR"
             )(
-                "output-handler-args",
-                po::value<vector<string>>()
+                "uri",
+                po::value<string>(&m_ir_mongodb_uri)->value_name("URI"),
+                "MongoDB URI for the results cache"
+            )(
+                "collection",
+                po::value<string>(&m_ir_mongodb_collection)->value_name("COLLECTION"),
+                "MongoDB collection to output to"
             );
             // clang-format on
             po::positional_options_description extract_positional_options_description;
             extract_positional_options_description.add("archive-path", 1);
             extract_positional_options_description.add("file-split-id", 1);
-            extract_positional_options_description.add("output-handler", 1);
-            extract_positional_options_description.add("output-handler-args", -1);
+            extract_positional_options_description.add("output-dir", 1);
+            extract_positional_options_description.add("uri", 1);
+            extract_positional_options_description.add("collection", 1);
 
             // Aggregate all options
             po::options_description all_search_options;
@@ -564,13 +553,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::command_line_parser(unrecognized_options)
                             .options(all_search_options)
                             .positional(extract_positional_options_description)
-                            .allow_unregistered()
                             .run(),
                     parsed_command_line_options
             );
 
             notify(parsed_command_line_options);
-            constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
 
             // Handle --help
             if (parsed_command_line_options.count("help")) {
@@ -579,10 +566,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 }
 
                 print_extraction_basic_usage();
-                cerr << "OUTPUT_HANDLER is one of:" << endl;
-                cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
-                     << " - Output to the results cache" << endl;
-                cerr << endl;
 
                 cerr << "Examples Skipped" << endl;
 
@@ -593,42 +576,31 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 return ParsingResult::InfoCommand;
             }
 
-            // Validate archive path was specified
+            // Validate input arguments
             if (m_archive_path.empty()) {
                 throw invalid_argument("ARCHIVE_PATH not specified or empty.");
             }
 
-            // Validate wildcard string
             if (m_file_split_id.empty()) {
                 throw invalid_argument("FILE_SPLIT_ID not specified or empty.");
             }
 
-            // Validate output-handler
-            if (parsed_command_line_options.count("output-handler") == 0) {
-                throw invalid_argument("OUTPUT_HANDLER not specified.");
-            }
-            if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name) {
-                m_output_handler_type = OutputHandlerType::ResultsCache;
-            } else if (output_handler_name.empty()) {
-                throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
-            } else {
-                throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
+            if (m_ir_output_dir.empty()) {
+                throw invalid_argument("OUTPUT_DIR not specified or empty.");
             }
 
-            switch (m_output_handler_type) {
-                case OutputHandlerType::ResultsCache:
-                    parse_ir_results_cache_output_handler_options(
-                            options_results_cache_output_handler,
-                            parsed.options,
-                            parsed_command_line_options
-                    );
-                    break;
-                default:
-                    throw invalid_argument(
-                            "Unhandled OutputHandlerType="
-                            + std::to_string(enum_to_underlying_type(m_output_handler_type))
-                    );
+            if (m_ir_mongodb_uri.empty()) {
+                throw invalid_argument("URI not specified or empty.");
             }
+
+            if (m_ir_mongodb_collection.empty()) {
+                throw invalid_argument("COLLECTION not specified or empty.");
+            }
+
+            if ('/' != m_ir_output_dir.back()) {
+                m_ir_output_dir += '/';
+            }
+
             if (m_ir_temp_output_dir.empty()) {
                 m_ir_temp_output_dir = m_ir_output_dir;
             }
@@ -726,41 +698,6 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
     }
 }
 
-void CommandLineArguments::parse_ir_results_cache_output_handler_options(
-        po::options_description const& options_description,
-        vector<po::option> const& options,
-        po::variables_map& parsed_options
-) {
-    parse_unrecognized_options(options_description, options, parsed_options);
-
-    // Validate mongodb uri was specified
-    if (parsed_options.count("uri") == 0) {
-        throw invalid_argument("uri must be specified.");
-    }
-    if (m_mongodb_uri.empty()) {
-        throw invalid_argument("uri cannot be an empty string.");
-    }
-
-    // Validate mongodb collection was specified
-    if (parsed_options.count("collection") == 0) {
-        throw invalid_argument("collection must be specified.");
-    }
-    if (m_mongodb_collection.empty()) {
-        throw invalid_argument("collection cannot be an empty string.");
-    }
-
-    // Validate output path was specified
-    if (parsed_options.count("output-dir") == 0) {
-        throw invalid_argument("output directory must be specified.");
-    }
-    if (m_ir_output_dir.empty()) {
-        throw invalid_argument("collection cannot be an empty string.");
-    }
-    if (m_ir_output_dir.back() != '/') {
-        m_ir_output_dir += '/';
-    }
-}
-
 void CommandLineArguments::print_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " [OPTIONS] COMMAND [COMMAND ARGUMENTS]" << endl;
 }
@@ -772,6 +709,6 @@ void CommandLineArguments::print_search_basic_usage() const {
 
 void CommandLineArguments::print_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " x [OPTIONS]"
-         << R"( ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])" << endl;
+         << R"( ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR URI COLLECTION)" << endl;
 }
 }  // namespace clp::clo

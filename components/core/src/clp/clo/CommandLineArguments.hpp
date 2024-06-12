@@ -42,14 +42,22 @@ public:
 
     auto get_command() const -> Command { return m_command; }
 
-    std::string const& get_archive_path() const { return m_archive_path; }
+    [[nodiscard]] auto get_archive_path() const -> std::string const& { return m_archive_path; }
 
-    // extraction arguments
-    std::string const& get_file_split_id() const { return m_file_split_id; }
+    // IR extraction arguments
+    [[nodiscard]] auto get_file_split_id() const -> std::string const& { return m_file_split_id; }
 
-    std::string const& get_ir_output_dir() const { return m_ir_output_dir; }
+    [[nodiscard]] auto get_ir_output_dir() const -> std::string const& { return m_ir_output_dir; }
 
-    std::string const& get_ir_temp_output_dir() const { return m_ir_temp_output_dir; }
+    [[nodiscard]] auto get_ir_temp_output_dir() const -> std::string const& {
+        return m_ir_temp_output_dir;
+    }
+
+    [[nodiscard]] auto get_ir_mongodb_uri() const -> std::string const& { return m_ir_mongodb_uri; }
+
+    [[nodiscard]] auto get_ir_mongodb_collection() const -> std::string const& {
+        return m_ir_mongodb_collection;
+    }
 
     size_t get_ir_target_size() const { return m_ir_target_size; }
 
@@ -119,19 +127,6 @@ private:
     );
 
     /**
-     * Validates output options related to the Results Cache output handler for IR.
-     * @param options_description
-     * @param options Vector of options previously parsed by boost::program_options and which may
-     * contain options that have the unrecognized flag set
-     * @param parsed_options Returns any parsed options that were newly recognized
-     */
-    void parse_ir_results_cache_output_handler_options(
-            boost::program_options::options_description const& options_description,
-            std::vector<boost::program_options::option> const& options,
-            boost::program_options::variables_map& parsed_options
-    );
-
-    /**
      * Validates output options related to the Results Cache output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
@@ -151,14 +146,18 @@ private:
     // Commands
     Command m_command;
 
-    // IR related variables
+    // Archive
+    std::string m_archive_path;
+
+    // Variables for IR extraction
     std::string m_ir_output_dir;
     std::string m_ir_temp_output_dir;
     std::string m_file_split_id;
-    size_t m_ir_target_size{128 * 1024 * 1024};
+    std::string m_ir_mongodb_uri;
+    std::string m_ir_mongodb_collection;
+    size_t m_ir_target_size{128ULL * 1024 * 1024};
 
-    // Search variables
-    std::string m_archive_path;
+    // Variables for search
     bool m_ignore_case;
     std::string m_search_string;
     std::string m_file_path;
