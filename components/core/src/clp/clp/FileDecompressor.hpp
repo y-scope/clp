@@ -35,17 +35,17 @@ public:
     );
 
     /**
-     * Decompresses the given file split into one or more IR files (chunks). The method creates a
+     * Decompresses the given file split into one or more IR files (chunks). The function creates a
      * new IR chunk when the current IR chunk exceeds ir_target_size.
      *
-     * @tparam IrOutputHandler Method to handle IR chunks output by this method.
+     * @tparam IrOutputHandler Function to handle the resulting IR chunks.
      * Signature: (boost::filesystem::path const& ir_file_path, string const& orig_file_id,
      * size_t begin_message_ix, size_t end_message_ix) -> bool;
-     * The method returns whether it succeeded.
+     * The function returns whether it succeeded.
      * @param archive_reader
      * @param file_metadata_ix
      * @param ir_target_size Target size of each IR chunk. NOTE: This is not a hard limit.
-     * @param temp_output_dir Directory to write IR chunks to
+     * @param output_dir Directory to write IR chunks to
      * @param ir_output_handler
      * @return Whether decompression was successful.
      */
@@ -54,7 +54,7 @@ public:
             streaming_archive::reader::Archive& archive_reader,
             streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
             size_t ir_target_size,
-            std::string const& temp_output_dir,
+            std::string const& output_dir,
             IrOutputHandler ir_output_handler
     ) -> bool;
 
@@ -72,7 +72,7 @@ auto FileDecompressor::decompress_to_ir(
         streaming_archive::reader::Archive& archive_reader,
         streaming_archive::MetadataDB::FileIterator const& file_metadata_ix,
         size_t ir_target_size,
-        std::string const& temp_output_dir,
+        std::string const& output_dir,
         IrOutputHandler ir_output_handler
 ) -> bool {
     // Open encoded file
@@ -87,29 +87,29 @@ auto FileDecompressor::decompress_to_ir(
         return false;
     }
 
-    // Generate temporary output directory
-    if (auto const error_code = create_directory_structure(temp_output_dir, 0700);
+    // Generate output directory
+    if (auto const error_code = create_directory_structure(output_dir, 0700);
         ErrorCode_Success != error_code)
     {
         SPDLOG_ERROR(
                 "Failed to create directory structure {}, errno={}",
-                temp_output_dir.c_str(),
+                output_dir.c_str(),
                 errno
         );
         return false;
     }
 
-    boost::filesystem::path temp_ir_path{temp_output_dir};
-    auto temp_ir_file = m_encoded_file.get_id_as_string();
-    temp_ir_file += ir::cIrFileExtension;
-    temp_ir_path /= temp_ir_file;
+    boost::filesystem::path ir_output_path{output_dir};
+    auto ir_file_name = m_encoded_file.get_id_as_string();
+    ir_file_name += ir::cIrFileExtension;
+    ir_output_path /= ir_file_name;
 
     auto const& file_orig_id = m_encoded_file.get_orig_file_id_as_string();
     auto begin_message_ix = m_encoded_file.get_begin_message_ix();
 
     ir::LogEventSerializer<ir::four_byte_encoded_variable_t> ir_serializer;
     // Open output IR file
-    if (false == ir_serializer.open(temp_ir_path.string())) {
+    if (false == ir_serializer.open(ir_output_path.string())) {
         SPDLOG_ERROR("Failed to serialize preamble");
         return false;
     }
@@ -128,13 +128,18 @@ auto FileDecompressor::decompress_to_ir(
 
             auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
             if (false
-                == ir_output_handler(temp_ir_path, file_orig_id, begin_message_ix, end_message_ix))
+                == ir_output_handler(
+                        ir_output_path,
+                        file_orig_id,
+                        begin_message_ix,
+                        end_message_ix
+                ))
             {
                 return false;
             }
             begin_message_ix = end_message_ix;
 
-            if (false == ir_serializer.open(temp_ir_path.string())) {
+            if (false == ir_serializer.open(ir_output_path.string())) {
                 SPDLOG_ERROR("Failed to serialize preamble");
                 return false;
             }
@@ -157,9 +162,8 @@ auto FileDecompressor::decompress_to_ir(
     auto const end_message_ix = begin_message_ix + ir_serializer.get_num_log_events();
     ir_serializer.close();
 
-    // NOTE: We don't remove temp_output_dir because we don't know if it existed before this method
-    // was called.
-    if (false == ir_output_handler(temp_ir_path, file_orig_id, begin_message_ix, end_message_ix)) {
+    if (false == ir_output_handler(ir_output_path, file_orig_id, begin_message_ix, end_message_ix))
+    {
         return false;
     }
 
