@@ -30,7 +30,7 @@ ErrorCode NetworkOutputHandler::add_result(
         Message const& encoded_message,
         string_view decompressed_message
 ) {
-    msgpack::type::tuple<string, epochtime_t, string, string, size_t> src(
+    msgpack::type::tuple<string, epochtime_t, string, string, uint64_t> src(
             orig_file_path,
             encoded_message.get_ts_in_milli(),
             decompressed_message,

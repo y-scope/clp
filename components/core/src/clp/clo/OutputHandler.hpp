@@ -30,11 +30,11 @@ public:
     // Methods
     /**
      * Adds a query result to a batch or sends it to the destination.
-     * @param orig_file_path original path of the file that input log event belongs to
-     * @param orig_file_id original id of the file that input log event belongs to
-     * @param encoded_message encoded log event
-     * @param decompressed_message decompressed log event
-     * @return ErrorCode_Success if the result was added successfully, an error code otherwise.
+     * @param orig_file_path Path of the original file that contains the result.
+     * @param orig_file_id ID of the original file that contains the result.
+     * @param encoded_message The encoded result.
+     * @param decompressed_message The decompressed result.
+     * @return ErrorCode_Success if the result was added successfully, or an error code if specified
      */
     virtual ErrorCode add_result(
             std::string_view orig_file_path,
@@ -88,10 +88,10 @@ public:
     // Methods inherited from Client
     /**
      * Sends a result to the network destination.
-     * @param orig_file_path original path of the file that input log event belongs to
-     * @param orig_file_id original id of the file that input log event belongs to
-     * @param encoded_message encoded log event
-     * @param decompressed_message decompressed log event
+     * @param orig_file_path Path of the original file that contains the result.
+     * @param orig_file_id ID of the original file that contains the result.
+     * @param encoded_message The encoded result.
+     * @param decompressed_message The decompressed result.
      * @return Same as networking::try_send
      */
     ErrorCode add_result(
@@ -172,14 +172,6 @@ public:
     );
 
     // Methods inherited from OutputHandler
-    /**
-     * Adds a result to the batch.
-     * @param orig_file_path original path of the file that input log event belongs to
-     * @param orig_file_id original id of the file that input log event belongs to
-     * @param encoded_message encoded log event
-     * @param decompressed_message decompressed log event
-     * @return ErrorCode_Success
-     */
     ErrorCode add_result(
             std::string_view orig_file_path,
             std::string_view orig_file_id,

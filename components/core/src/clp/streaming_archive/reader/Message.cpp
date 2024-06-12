@@ -6,7 +6,7 @@ auto Message::get_log_event_ix() const -> size_t {
 }
 
 auto Message::get_ix_in_split() const -> size_t {
-    return m_ix_in_split;
+    return m_ix_in_file_split;
 }
 
 logtype_dictionary_id_t Message::get_logtype_id() const {
@@ -21,9 +21,9 @@ epochtime_t Message::get_ts_in_milli() const {
     return m_timestamp;
 }
 
-auto Message::set_msg_ix(uint64_t split_begin_msg_ix, uint64_t msg_ix_in_split) -> void {
-    m_ix_in_split = msg_ix_in_split;
-    m_log_event_ix = msg_ix_in_split + split_begin_msg_ix;
+auto Message::set_msg_ix(uint64_t file_split_begin_msg_ix, uint64_t msg_ix_in_file_split) -> void {
+    m_ix_in_file_split = msg_ix_in_file_split;
+    m_log_event_ix = m_ix_in_file_split + file_split_begin_msg_ix;
 }
 
 void Message::set_logtype_id(logtype_dictionary_id_t logtype_id) {
