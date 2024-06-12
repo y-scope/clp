@@ -1,6 +1,7 @@
 #ifndef CLP_CLP_FILEDECOMPRESSOR_HPP
 #define CLP_CLP_FILEDECOMPRESSOR_HPP
 
+#include <cerrno>
 #include <cstddef>
 #include <string>
 
@@ -9,10 +10,14 @@
 #include "../FileWriter.hpp"
 #include "../ir/constants.hpp"
 #include "../ir/LogEventSerializer.hpp"
+#include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/MetadataDB.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
 #include "../streaming_archive/reader/File.hpp"
 #include "../streaming_archive/reader/Message.hpp"
+#include "ErrorCode.hpp"
+#include "ir/types.hpp"
+#include "Utils.hpp"
 
 namespace clp::clp {
 /**

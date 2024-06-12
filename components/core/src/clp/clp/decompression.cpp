@@ -14,6 +14,7 @@
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
 #include "FileDecompressor.hpp"
+#include "ir/constants.hpp"
 #include "utils.hpp"
 
 using std::cerr;
@@ -234,7 +235,7 @@ bool decompress(
 }
 
 bool decompress_to_ir(CommandLineArguments& command_line_args) {
-    ErrorCode error_code;
+    ErrorCode error_code{};
 
     // Create output directory in case it doesn't exist
     auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
@@ -249,14 +250,9 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
         auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
         auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
 
-        streaming_archive::reader::Archive archive_reader;
-
-        FileDecompressor file_decompressor;
-
+        global_metadata_db->open();
         string archive_id;
         string file_split_id;
-
-        global_metadata_db->open();
         if (false
             == global_metadata_db->get_file_split(
                     command_line_args.get_orig_file_id(),
@@ -273,9 +269,16 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
         }
         global_metadata_db->close();
 
+        streaming_archive::reader::Archive archive_reader;
         auto archive_path = archives_dir / archive_id;
         archive_reader.open(archive_path.string());
         archive_reader.refresh_dictionaries();
+
+        auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
+        if (false == file_metadata_ix_ptr->has_next()) {
+            SPDLOG_ERROR("File split doesn't exist {} in archive {}", file_split_id, archive_id);
+            return false;
+        }
 
         auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
                                      string const& orig_file_id,
@@ -301,13 +304,8 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
             return true;
         };
 
-        auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
-        if (false == file_metadata_ix_ptr->has_next()) {
-            SPDLOG_ERROR("File split doesn't exist {} in archive {}", file_split_id, archive_id);
-            return false;
-        }
-
         // Decompress file split
+        FileDecompressor file_decompressor;
         if (false
             == file_decompressor.decompress_to_ir(
                     archive_reader,

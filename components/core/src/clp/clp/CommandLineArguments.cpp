@@ -227,7 +227,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 throw invalid_argument("ARCHIVES_DIR cannot be empty.");
             }
         } else if (Command::ExtractIr == m_command) {
-            // Define ir decompression hidden positional options
+            // Define IR extraction hidden positional options
             po::options_description ir_positional_options;
             // clang-format off
             ir_positional_options.add_options()
@@ -240,33 +240,34 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             ir_positional_options_description.add("output-dir", 1);
             ir_positional_options_description.add("orig-file-id", 1);
 
-            po::options_description options_ir("IR decompression Options");
+            po::options_description options_ir("IR extraction Options");
             options_ir.add_options()(
                     "msg-ix",
                     po::value<size_t>(&m_ir_msg_ix)
-                            ->value_name("MSG_IX")
+                            ->value_name("INDEX")
                             ->default_value(m_ir_msg_ix),
-                    "Target log event index that decompressed IR must include"
+                    "Index of log event that decompressed IR chunks must include"
             );
             options_ir.add_options()(
                     "target-size",
                     po::value<size_t>(&m_ir_target_size)
-                            ->value_name("TARGET_SIZE")
+                            ->value_name("SIZE")
                             ->default_value(m_ir_target_size),
-                    "Target size (B) for the IR chunk before a new chunk is created"
+                    "Target size (B) for each IR chunk before a new chunk is created"
             );
             options_ir.add_options()(
                     "temp-output-dir",
                     po::value<string>(&m_ir_temp_output_dir)
-                            ->value_name("TEMP_OUTPUT_DIR")
+                            ->value_name("DIR")
                             ->default_value(m_ir_temp_output_dir),
-                    "Temporary output directory for IR chunks"
+                    "Temporary output directory for IR chunks while they're being written"
             );
+
             po::options_description all_ir_options;
             all_ir_options.add(ir_positional_options);
             all_ir_options.add(options_ir);
 
-            // Parse ir decompression options
+            // Parse IR extraction options
             vector<string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -285,9 +286,11 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 print_ir_basic_usage();
 
                 cerr << "Examples:" << endl;
-                cerr << "  # Decompress file with id ORIG_FILE_ID to IR " << endl;
-                cerr << "  " << get_program_name() << " i archives-dir output-dir orig-file-id"
+                cerr << "  # Extract (original) file with ID 8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4"
+                        " as IR"
                      << endl;
+                cerr << "  " << get_program_name()
+                     << " i archives-dir output-dir 8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4" << endl;
                 cerr << endl;
 
                 po::options_description visible_options;

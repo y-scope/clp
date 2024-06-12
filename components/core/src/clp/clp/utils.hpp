@@ -1,13 +1,16 @@
 #ifndef CLP_CLP_UTILS_HPP
 #define CLP_CLP_UTILS_HPP
 
+#include <memory>
 #include <string>
 
 #include <boost/filesystem/path.hpp>
 
 #include "../GlobalMetadataDB.hpp"
 #include "../GlobalMetadataDBConfig.hpp"
+#include "ErrorCode.hpp"
 #include "FileToCompress.hpp"
+#include "TraceableException.hpp"
 
 namespace clp::clp {
 // Types
@@ -18,7 +21,7 @@ public:
             : TraceableException(error_code, filename, line_number) {}
 
     // Methods
-    char const* what() const noexcept override { return "CLP operation failed"; }
+    [[nodiscard]] char const* what() const noexcept override { return "CLP operation failed"; }
 };
 
 // Methods
