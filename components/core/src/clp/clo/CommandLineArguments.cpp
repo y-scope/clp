@@ -496,18 +496,18 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             }
         } else if (Command::ExtractIr == m_command) {
             // Define IR decompression options
-            po::options_description options_ir_decompression("IR extraction");
-            options_ir_decompression
-                    .add_options()("temp-output-dir", po::value<string>(&m_ir_temp_output_dir)->value_name("TEMP_OUTPUT_DIR"), "Temporary output dir for IR")(
+            po::options_description options_ir_extraction("IR Extraction options");
+            options_ir_extraction
+                    .add_options()("temp-output-dir", po::value<string>(&m_ir_temp_output_dir)->value_name("DIR"), "Temporary output directory for IR chunks while they're being written")(
                             "target-size",
-                            po::value<size_t>(&m_ir_target_size)->value_name("TARGET_SIZE"),
-                            "target ir size"
+                            po::value<size_t>(&m_ir_target_size)->value_name("SIZE"),
+                            "Target size (B) for each IR chunk before a new chunk is created"
                     );
 
             // Define visible options
             po::options_description visible_options;
             visible_options.add(options_general);
-            visible_options.add(options_ir_decompression);
+            visible_options.add(options_ir_extraction);
 
             // Define hidden positional options (not shown in Boost's program options help message)
             po::options_description hidden_positional_options;
@@ -521,28 +521,25 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 po::value<string>(&m_file_split_id)
             )(
                 "output-dir",
-                po::value<string>(&m_ir_output_dir)->value_name("OUTPUT_DIR"),
-                "The output path of decompressed IR"
+                po::value<string>(&m_ir_output_dir)
             )(
-                "uri",
-                po::value<string>(&m_ir_mongodb_uri)->value_name("URI"),
-                "MongoDB URI for the results cache"
+                "mongodb-uri",
+                po::value<string>(&m_ir_mongodb_uri)
             )(
-                "collection",
-                po::value<string>(&m_ir_mongodb_collection)->value_name("COLLECTION"),
-                "MongoDB collection to output to"
+                "mongodb-collection",
+                po::value<string>(&m_ir_mongodb_collection)
             );
             // clang-format on
             po::positional_options_description extract_positional_options_description;
             extract_positional_options_description.add("archive-path", 1);
             extract_positional_options_description.add("file-split-id", 1);
             extract_positional_options_description.add("output-dir", 1);
-            extract_positional_options_description.add("uri", 1);
-            extract_positional_options_description.add("collection", 1);
+            extract_positional_options_description.add("mongodb-uri", 1);
+            extract_positional_options_description.add("mongodb-collection", 1);
 
             // Aggregate all options
             po::options_description all_search_options;
-            all_search_options.add(options_ir_decompression);
+            all_search_options.add(options_ir_extraction);
             all_search_options.add(hidden_positional_options);
 
             // Parse extraction options
@@ -566,8 +563,16 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 }
 
                 print_extraction_basic_usage();
-
-                cerr << "Examples Skipped" << endl;
+                cerr << "Examples:" << endl;
+                cerr << R"(  # Extract file (split) with ID "8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4" as IR into )"
+                        R"(OUTPUT_DIR from ARCHIVE_PARH, and send the metadata to mongodb://127.0.0.1:27017/test )"
+                        R"("result" collection)"
+                     << endl;
+                cerr << "  " << get_program_name()
+                     << " i ARCHIVE_PATH 8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4 OUTPUT_DIR "
+                        "mongodb://127.0.0.1:27017/test result"
+                     << endl;
+                cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
                         "file."
@@ -709,6 +714,6 @@ void CommandLineArguments::print_search_basic_usage() const {
 
 void CommandLineArguments::print_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " x [OPTIONS]"
-         << R"( ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR URI COLLECTION)" << endl;
+         << R"( ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR MONGODB_URI MONGODB_COLLECTION)" << endl;
 }
 }  // namespace clp::clo

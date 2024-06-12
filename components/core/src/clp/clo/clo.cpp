@@ -60,8 +60,8 @@ enum class SearchFilesResult {
 namespace {
 /**
  * Extract the IR specified by the user arguments.
- * The function writes the extracted IR to the local file storage and inserts metadata into the mongodb collection,
- * specified by the input URI and Collection
+ * The function writes the extracted IR to the local file storage and sends the metadata to the
+ * mongodb collection specified by the input uri and collection
  * @param command_line_args
  * @return Whether the IR was successfully extracted
  */
@@ -85,7 +85,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         // Create output directory in case it doesn't exist
         auto output_dir = boost::filesystem::path(command_line_args.get_ir_output_dir());
         if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
-                ErrorCode_Success != error_code)
+            ErrorCode_Success != error_code)
         {
             SPDLOG_ERROR(
                     "Failed to create {} - {}",
@@ -159,12 +159,12 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         // Decompress file
         if (false
             == file_decompressor.decompress_to_ir(
-                archive_reader,
-                *file_metadata_ix_ptr,
-                command_line_args.get_ir_target_size(),
-                command_line_args.get_ir_temp_output_dir(),
-                ir_output_handler
-        ))
+                    archive_reader,
+                    *file_metadata_ix_ptr,
+                    command_line_args.get_ir_target_size(),
+                    command_line_args.get_ir_temp_output_dir(),
+                    ir_output_handler
+            ))
         {
             return false;
         }
