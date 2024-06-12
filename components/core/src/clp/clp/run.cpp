@@ -54,7 +54,8 @@ int run(int argc, char const* argv[]) {
         }
     }
 
-    if (CommandLineArguments::Command::Compress == command_line_args.get_command()) {
+    auto command = command_line_args.get_command();
+    if (CommandLineArguments::Command::Compress == command) {
         /// TODO: make this not a unique_ptr and test performance difference
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser;
         if (!command_line_args.get_use_heuristic()) {
@@ -134,11 +135,18 @@ int run(int argc, char const* argv[]) {
         if (!compression_successful) {
             return -1;
         }
-    } else {  // CommandLineArguments::Command::Extract == command
+    } else if (CommandLineArguments::Command::Extract == command) {
         unordered_set<string> files_to_decompress(input_paths.cbegin(), input_paths.cend());
-        if (!decompress(command_line_args, files_to_decompress)) {
+        if (false == decompress(command_line_args, files_to_decompress)) {
             return -1;
         }
+    } else if (CommandLineArguments::Command::ExtractIr == command) {
+        if (false == decompress_to_ir(command_line_args)) {
+            return -1;
+        }
+    } else {
+        SPDLOG_ERROR("Command {} not implemented.", enum_to_underlying_type(command));
+        return -1;
     }
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();

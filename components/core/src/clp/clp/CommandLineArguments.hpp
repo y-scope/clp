@@ -16,6 +16,7 @@ public:
     enum class Command : char {
         Compress = 'c',
         Extract = 'x',
+        ExtractIr = 'i'
     };
 
     // Constructors
@@ -35,6 +36,8 @@ public:
     std::string const& get_path_list_path() const { return m_path_list_path; }
 
     std::string const& get_path_prefix_to_remove() const { return m_path_prefix_to_remove; }
+
+    std::string const& get_ir_temp_output_dir() const { return m_ir_temp_output_dir; }
 
     std::string const& get_output_dir() const { return m_output_dir; }
 
@@ -66,6 +69,12 @@ public:
 
     std::vector<std::string> const& get_input_paths() const { return m_input_paths; }
 
+    std::string const& get_orig_file_id() const { return m_orig_file_id; }
+
+    size_t get_ir_msg_ix() const { return m_ir_msg_ix; }
+
+    size_t get_ir_target_size() const { return m_ir_target_size; }
+
     GlobalMetadataDBConfig const& get_metadata_db_config() const { return m_metadata_db_config; }
 
 private:
@@ -73,11 +82,16 @@ private:
     void print_basic_usage() const override;
     void print_compression_basic_usage() const;
     void print_extraction_basic_usage() const;
+    void print_ir_basic_usage() const;
 
     // Variables
     std::string m_path_list_path;
     std::string m_path_prefix_to_remove;
+    std::string m_orig_file_id;
+    size_t m_ir_msg_ix{0};
+    size_t m_ir_target_size{128ULL * 1024 * 1024};
     bool m_sort_input_files;
+    std::string m_ir_temp_output_dir;
     std::string m_output_dir;
     std::string m_schema_file_path;
     bool m_show_progress;
