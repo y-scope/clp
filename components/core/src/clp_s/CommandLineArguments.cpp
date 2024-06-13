@@ -286,6 +286,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             extraction_options.add(input_options);
 
+            po::options_description decompression_options("Decompression Options");
+            decompression_options.add_options()(
+                    "ordered",
+                    po::bool_switch(&m_ordered_decompression),
+                    "Enable in-order decompression for this archive"
+            );
+            extraction_options.add(decompression_options);
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("output-dir", 1);
@@ -316,6 +324,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(input_options);
+                visible_options.add(decompression_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }

@@ -185,6 +185,11 @@ public:
      */
     static int32_t get_first_column_in_span(std::span<int32_t> schema);
 
+    /**
+     * @return the timestamp found in the row pointed to by m_cur_message
+     */
+    epochtime_t get_next_timestamp() { return m_get_timestamp(); }
+
 private:
     /**
      * Merges the current local schema tree with the section of the global schema tree corresponding

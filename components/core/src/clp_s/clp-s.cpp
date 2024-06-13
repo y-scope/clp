@@ -271,6 +271,7 @@ int main(int argc, char const* argv[]) {
 
         clp_s::JsonConstructorOption option;
         option.output_dir = command_line_arguments.get_output_dir();
+        option.ordered = command_line_arguments.get_ordered_decompression();
         try {
             auto const& archive_id = command_line_arguments.get_archive_id();
             if (false == archive_id.empty()) {

@@ -9,6 +9,7 @@
 #include "ColumnReader.hpp"
 #include "DictionaryReader.hpp"
 #include "ErrorCode.hpp"
+#include "FileWriter.hpp"
 #include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
 #include "TraceableException.hpp"
@@ -17,6 +18,7 @@ namespace clp_s {
 struct JsonConstructorOption {
     std::string archives_dir;
     std::string output_dir;
+    bool ordered;
 };
 
 class JsonConstructor {
@@ -49,8 +51,11 @@ public:
     void store();
 
 private:
+    void construct_in_order(FileWriter& writer);
+
     std::string m_archives_dir;
     std::string m_output_dir;
+    bool m_ordered{false};
 
     std::unique_ptr<ArchiveReader> m_archive_reader;
 };
