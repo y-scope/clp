@@ -289,14 +289,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             vector<string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
-            po::store(
-                    po::command_line_parser(unrecognized_options)
-                            .options(all_search_options)
-                            .positional(search_positional_options_description)
-                            .allow_unregistered()
-                            .run(),
-                    parsed_command_line_options
-            );
+            parsed = po::command_line_parser(unrecognized_options)
+                             .options(all_search_options)
+                             .positional(search_positional_options_description)
+                             .allow_unregistered()
+                             .run();
+            po::store(parsed, parsed_command_line_options);
 
             notify(parsed_command_line_options);
 
@@ -538,9 +536,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             extract_positional_options_description.add("mongodb-collection", 1);
 
             // Aggregate all options
-            po::options_description all_search_options;
-            all_search_options.add(options_ir_extraction);
-            all_search_options.add(hidden_positional_options);
+            po::options_description all_extract_options;
+            all_extract_options.add(options_ir_extraction);
+            all_extract_options.add(hidden_positional_options);
 
             // Parse extraction options
             vector<string> unrecognized_options
@@ -548,7 +546,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             unrecognized_options.erase(unrecognized_options.begin());
             po::store(
                     po::command_line_parser(unrecognized_options)
-                            .options(all_search_options)
+                            .options(all_extract_options)
                             .positional(extract_positional_options_description)
                             .run(),
                     parsed_command_line_options
@@ -647,6 +645,7 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         vector<po::option> const& options,
         po::variables_map& parsed_options
 ) {
+    std::cout << "here1" << std::endl;
     parse_unrecognized_options(options_description, options, parsed_options);
 
     if (parsed_options.count("host") == 0) {
@@ -676,6 +675,7 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
         vector<po::option> const& options,
         po::variables_map& parsed_options
 ) {
+    std::cout << "here2" << std::endl;
     parse_unrecognized_options(options_description, options, parsed_options);
 
     // Validate mongodb uri was specified
