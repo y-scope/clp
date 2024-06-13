@@ -65,6 +65,7 @@ bool Output::filter() {
     populate_string_queries(top_level_expr);
 
     std::string message;
+    auto const& archive_id = m_archive_reader->get_archive_id();
     for (int32_t schema_id : matched_schemas) {
         m_expr_clp_query.clear();
         m_expr_var_match_map.clear();
@@ -93,7 +94,7 @@ bool Output::filter() {
         if (m_output_handler->should_output_metadata()) {
             epochtime_t timestamp;
             while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
-                m_output_handler->write(message, timestamp, m_archive_reader->get_archive_id());
+                m_output_handler->write(message, timestamp, archive_id);
             }
         } else {
             while (reader.get_next_message(message, this)) {
