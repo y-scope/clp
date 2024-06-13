@@ -165,7 +165,6 @@ private:
     );
 
     bool m_is_open;
-    std::string m_archive_path;
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
     std::shared_ptr<LogTypeDictionaryReader> m_log_dict;

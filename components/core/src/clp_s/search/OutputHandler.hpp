@@ -42,6 +42,7 @@ public:
      * Writes a log event to the output handler.
      * @param message The message in the log event.
      * @param timestamp The timestamp of the log event.
+     * @param archive_id The id of the archive containing the log event
      */
     virtual void write(std::string_view message, epochtime_t timestamp, std::string_view archive_id)
             = 0;

@@ -106,10 +106,14 @@ void ResultsCacheOutputHandler::write(
         string_view archive_id
 ) {
     if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>(string_view{}, message, timestamp, archive_id));
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(string_view{}, message, timestamp, archive_id)
+        );
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>(string_view{}, message, timestamp, archive_id));
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(string_view{}, message, timestamp, archive_id)
+        );
     }
 }
 
