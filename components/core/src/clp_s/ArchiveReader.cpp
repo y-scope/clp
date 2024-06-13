@@ -112,17 +112,18 @@ SchemaReader& ArchiveReader::read_table(
 std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::load_all_tables() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
-    std::vector<std::shared_ptr<SchemaReader>> readers{m_id_to_table_metadata.size(), nullptr};
-    auto rit = readers.begin();
-    for (auto& [id, table_metadata] : m_id_to_table_metadata) {
-        rit->reset(new SchemaReader());
-        create_schema_reader(**rit, id, true, true);
+    std::vector<std::shared_ptr<SchemaReader>> readers;
+    readers.reserve(m_id_to_table_metadata.size());
+    for (const auto& [id, table_metadata] : m_id_to_table_metadata) {
+        auto schema_reader = std::make_shared<SchemaReader>();
+        create_schema_reader(*schema_reader, id, true, true);
 
         m_tables_file_reader.try_seek_from_begin(table_metadata.offset);
         m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
-        (*rit)->load(m_tables_decompressor, table_metadata.uncompressed_size);
+        schema_reader->load(m_tables_decompressor, table_metadata.uncompressed_size);
         m_tables_decompressor.close_for_reuse();
-        ++rit;
+
+        readers.push_back(std::move(schema_reader));
     }
     return readers;
 }
