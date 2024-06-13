@@ -247,7 +247,7 @@ public:
 
     // Methods inherited from OutputHandler
     void
-     std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
+    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
         int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
     }
