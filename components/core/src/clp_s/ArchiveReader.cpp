@@ -92,7 +92,7 @@ SchemaReader& ArchiveReader::read_table(
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
     }
 
-    create_schema_reader(
+    initialize_schema_reader(
             m_schema_reader,
             schema_id,
             should_extract_timestamp,
@@ -109,14 +109,14 @@ SchemaReader& ArchiveReader::read_table(
     return m_schema_reader;
 }
 
-std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::load_all_tables() {
+std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::read_all_tables() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     std::vector<std::shared_ptr<SchemaReader>> readers;
     readers.reserve(m_id_to_table_metadata.size());
     for (auto const& [id, table_metadata] : m_id_to_table_metadata) {
         auto schema_reader = std::make_shared<SchemaReader>();
-        create_schema_reader(*schema_reader, id, true, true);
+        initialize_schema_reader(*schema_reader, id, true, true);
 
         m_tables_file_reader.try_seek_from_begin(table_metadata.offset);
         m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
@@ -218,7 +218,7 @@ void ArchiveReader::append_unordered_reader_columns(
     }
 }
 
-void ArchiveReader::create_schema_reader(
+void ArchiveReader::initialize_schema_reader(
         SchemaReader& reader,
         int32_t schema_id,
         bool should_extract_timestamp,

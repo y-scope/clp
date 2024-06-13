@@ -51,6 +51,11 @@ public:
     void store();
 
 private:
+    /**
+     * Reads all of the tables from m_archive_reader and writes all of the records
+     * they contain to writer in timestamp order.
+     * @param writer
+     */
     void construct_in_order(FileWriter& writer);
 
     std::string m_archives_dir;

@@ -60,7 +60,7 @@ void JsonConstructor::store() {
 
 void JsonConstructor::construct_in_order(FileWriter& writer) {
     std::string buffer;
-    auto tables = m_archive_reader->load_all_tables();
+    auto tables = m_archive_reader->read_all_tables();
     using ReaderPointer = std::shared_ptr<SchemaReader>;
     auto cmp = [](ReaderPointer& left, ReaderPointer& right) {
         return left->get_next_timestamp() > right->get_next_timestamp();

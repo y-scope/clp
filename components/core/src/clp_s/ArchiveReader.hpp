@@ -96,7 +96,7 @@ public:
      * Loads all of the tables in the archive and returns SchemaReaders for them.
      * @return the schema readers for every table in the archive
      */
-    std::vector<std::shared_ptr<SchemaReader>> load_all_tables();
+    std::vector<std::shared_ptr<SchemaReader>> read_all_tables();
 
     std::shared_ptr<VariableDictionaryReader> get_variable_dictionary() { return m_var_dict; }
 
@@ -137,7 +137,7 @@ private:
      * @param should_extract_timestamp
      * @param should_marshal_records
      */
-    void create_schema_reader(
+    void initialize_schema_reader(
             SchemaReader& reader,
             int32_t schema_id,
             bool should_extract_timestamp,

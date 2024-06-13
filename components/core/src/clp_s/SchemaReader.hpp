@@ -190,6 +190,9 @@ public:
      */
     epochtime_t get_next_timestamp() const { return m_get_timestamp(); }
 
+    /**
+     * @return true if all records in this table have been iterated over, false otherwise
+     */
     bool done() const { return m_cur_message >= m_num_messages; }
 
 private:
