@@ -182,6 +182,8 @@ void TimestampPattern::init() {
     patterns.emplace_back(4, "%a %b %e %H:%M:%S %Y");
     // E.g. Sun Jan  1 15:50:45 2015
     patterns.emplace_back(0, "%a %b %e %H:%M:%S %Y");
+    // E.g. +0800 1970-01-01 08:00:00.235
+    patterns.emplace_back(0, "z %Y-%m-%d %H:%M:%S.%3");
 
     // TODO These patterns are imprecise and will prevent searching by timestamp; but for now, it's
     // no worse than not parsing a timestamp E.g. Jan 21 11:56:42
