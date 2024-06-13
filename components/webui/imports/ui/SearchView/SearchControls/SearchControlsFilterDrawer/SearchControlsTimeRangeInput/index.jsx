@@ -8,7 +8,9 @@ import Row from "react-bootstrap/Row";
 import {
     computeTimeRange,
     convertLocalDateToSameUtcDatetime,
-    convertUtcDatetimeToSameLocalDate, TIME_RANGE_PRESET_LABEL, TIME_UNIT,
+    convertUtcDatetimeToSameLocalDate,
+    TIME_RANGE_PRESET_LABEL,
+    TIME_UNIT,
 } from "/imports/utils/datetime";
 
 import SearchControlsFilterLabel from "../SearchControlsFilterLabel";

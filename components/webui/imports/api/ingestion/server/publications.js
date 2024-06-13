@@ -4,10 +4,13 @@ import {logger} from "/imports/utils/logger";
 import {MONGO_SORT_BY_ID} from "/imports/utils/mongo";
 
 import {
-    CompressionJobsCollection, STATS_COLLECTION_ID, StatsCollection,
+    CompressionJobsCollection,
+    STATS_COLLECTION_ID,
+    StatsCollection,
 } from "../collections";
 import {
-    COMPRESSION_JOB_WAITING_STATES, COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
+    COMPRESSION_JOB_WAITING_STATES,
+    COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
 } from "../constants";
 import CompressionDbManager from "./CompressionDbManager";
 import StatsDbManager from "./StatsDbManager";

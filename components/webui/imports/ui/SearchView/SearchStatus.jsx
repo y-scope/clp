@@ -9,7 +9,8 @@ import {faExclamationCircle} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {
-    isSearchSignalQuerying, SEARCH_SIGNAL,
+    isSearchSignalQuerying,
+    SEARCH_SIGNAL,
 } from "/imports/api/search/constants";
 
 import "./SearchStatus.scss";

@@ -4,12 +4,15 @@ import Table from "react-bootstrap/Table";
 import dayjs from "dayjs";
 
 import {
-    faSort, faSortDown, faSortUp,
+    faSort,
+    faSortDown,
+    faSortUp,
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
 import {
-    MONGO_SORT_ORDER, SEARCH_RESULTS_FIELDS,
+    MONGO_SORT_ORDER,
+    SEARCH_RESULTS_FIELDS,
 } from "/imports/api/search/constants";
 import {DATETIME_FORMAT_TEMPLATE} from "/imports/utils/datetime";
 
