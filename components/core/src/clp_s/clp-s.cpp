@@ -344,6 +344,7 @@ int main(int argc, char const* argv[]) {
                     // Skip non-directories
                     continue;
                 }
+
                 auto const archive_id = entry.path().filename().string();
                 archive_reader->open(archives_dir, archive_id);
                 if (false

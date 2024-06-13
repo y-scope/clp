@@ -122,7 +122,7 @@ public:
     void
     write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override;
 
-    void write(std::string_view message) override { write(message, 0, ""); }
+    void write(std::string_view message) override { write(message, 0, {}); }
 
 private:
     std::string m_host;
@@ -191,7 +191,7 @@ public:
     void
     write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override;
 
-    void write(std::string_view message) override { write(message, 0, ""); }
+    void write(std::string_view message) override { write(message, 0, {}); }
 
 private:
     mongocxx::client m_client;
