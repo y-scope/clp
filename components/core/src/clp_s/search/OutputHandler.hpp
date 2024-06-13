@@ -42,7 +42,7 @@ public:
      * Writes a log event to the output handler.
      * @param message The message in the log event.
      * @param timestamp The timestamp of the log event.
-     * @param archive_id The id of the archive containing the log event
+     * @param archive_id The archive containing the log event.
      */
     virtual void write(std::string_view message, epochtime_t timestamp, std::string_view archive_id)
             = 0;
@@ -247,7 +247,7 @@ public:
 
     // Methods inherited from OutputHandler
     void
-    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
+     std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
         int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
     }
