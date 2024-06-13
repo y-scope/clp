@@ -188,7 +188,9 @@ public:
     /**
      * @return the timestamp found in the row pointed to by m_cur_message
      */
-    epochtime_t get_next_timestamp() { return m_get_timestamp(); }
+    epochtime_t get_next_timestamp() const { return m_get_timestamp(); }
+
+    bool done() const { return m_cur_message >= m_num_messages; }
 
 private:
     /**

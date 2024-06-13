@@ -66,10 +66,14 @@ void JsonConstructor::construct_in_order(FileWriter& writer) {
         return left->get_next_timestamp() > right->get_next_timestamp();
     };
     std::priority_queue record_queue(tables.begin(), tables.end(), cmp);
+    // Clear tables vector so that memory gets deallocated after we have marshalled all records for
+    // a given table
+    tables.clear();
     while (false == record_queue.empty()) {
         ReaderPointer next = record_queue.top();
         record_queue.pop();
-        if (next->get_next_message(buffer)) {
+        next->get_next_message(buffer);
+        if (false == next->done()) {
             record_queue.emplace(std::move(next));
         }
         writer.write(buffer.c_str(), buffer.length());
