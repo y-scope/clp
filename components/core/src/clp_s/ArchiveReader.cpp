@@ -114,7 +114,7 @@ std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::load_all_tables() {
 
     std::vector<std::shared_ptr<SchemaReader>> readers;
     readers.reserve(m_id_to_table_metadata.size());
-    for (const auto& [id, table_metadata] : m_id_to_table_metadata) {
+    for (auto const& [id, table_metadata] : m_id_to_table_metadata) {
         auto schema_reader = std::make_shared<SchemaReader>();
         create_schema_reader(*schema_reader, id, true, true);
 
