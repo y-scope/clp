@@ -9,6 +9,7 @@
 #include "ColumnReader.hpp"
 #include "DictionaryReader.hpp"
 #include "ErrorCode.hpp"
+#include "FileWriter.hpp"
 #include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
 #include "TraceableException.hpp"
@@ -18,6 +19,7 @@ struct JsonConstructorOption {
     std::string archives_dir;
     std::string archive_id;
     std::string output_dir;
+    bool ordered;
 };
 
 class JsonConstructor {
@@ -50,9 +52,17 @@ public:
     void store();
 
 private:
+    /**
+     * Reads all of the tables from m_archive_reader and writes all of the records
+     * they contain to writer in timestamp order.
+     * @param writer
+     */
+    void construct_in_order(FileWriter& writer);
+
     std::string m_archives_dir;
     std::string m_archive_id;
     std::string m_output_dir;
+    bool m_ordered{false};
 
     std::unique_ptr<ArchiveReader> m_archive_reader;
 };

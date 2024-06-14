@@ -104,6 +104,8 @@ public:
 
     bool get_structurize_arrays() const { return m_structurize_arrays; }
 
+    bool get_ordered_decompression() const { return m_ordered_decompression; }
+
 private:
     // Methods
     /**
@@ -167,6 +169,7 @@ private:
     bool m_print_archive_stats{false};
     size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
     bool m_structurize_arrays{false};
+    bool m_ordered_decompression{false};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
