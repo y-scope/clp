@@ -258,7 +258,7 @@ static SearchFilesResult search_file(
         std::unique_ptr<OutputHandler>& output_handler
 ) {
     File compressed_file;
-    Message compressed_message;
+    Message encoded_message;
     string decompressed_message;
 
     ErrorCode error_code = archive.open_file(compressed_file, file_metadata_ix);
@@ -279,15 +279,16 @@ static SearchFilesResult search_file(
             query,
             archive,
             compressed_file,
-            compressed_message,
+            encoded_message,
             decompressed_message
     ))
     {
         if (ErrorCode_Success
             != output_handler->add_result(
                     compressed_file.get_orig_path(),
-                    decompressed_message,
-                    compressed_message.get_ts_in_milli()
+                    compressed_file.get_orig_file_id_as_string(),
+                    encoded_message,
+                    decompressed_message
             ))
         {
             result = SearchFilesResult::ResultSendFailure;
