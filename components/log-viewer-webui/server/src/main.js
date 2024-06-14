@@ -24,8 +24,7 @@ const parseEnvVars = () => {
 
     // Check for mandatory environment variables
     for (const [key, value] of Object.entries(envVars)) {
-        // eslint-disable-next-line no-undefined
-        if (undefined === value) {
+        if ("undefined" === typeof value) {
             throw new Error(`Environment variable ${key} must be defined.`);
         }
     }
@@ -52,7 +51,7 @@ const main = async () => {
 
     try {
         const envVars = parseEnvVars();
-        await server.listen({host: envVars.HOST, port: parseInt(envVars.PORT, 10)});
+        await server.listen({host: envVars.HOST, port: Number(envVars.PORT)});
     } catch (e) {
         server.log.error(e);
         process.exit(1);
