@@ -15,7 +15,8 @@ namespace clp_s {
 JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
         : m_output_dir(option.output_dir),
           m_archives_dir(option.archives_dir),
-          m_ordered{option.ordered} {
+          m_ordered{option.ordered},
+          m_archive_id(option.archive_id) {
     std::error_code error_code;
     if (false == std::filesystem::create_directory(option.output_dir, error_code) && error_code) {
         throw OperationFailed(
@@ -30,12 +31,14 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
         );
     }
 
-    if (false == std::filesystem::is_directory(m_archives_dir)) {
+    std::filesystem::path archive_path{m_archives_dir};
+    archive_path /= m_archive_id;
+    if (false == std::filesystem::is_directory(archive_path)) {
         throw OperationFailed(
                 ErrorCodeFailure,
                 __FILENAME__,
                 __LINE__,
-                fmt::format("'{}' is not a directory", m_archives_dir)
+                fmt::format("'{}' is not a directory", archive_path.c_str())
         );
     }
 }
@@ -46,7 +49,7 @@ void JsonConstructor::store() {
     writer.open(m_output_dir + "/original", FileWriter::OpenMode::CreateIfNonexistentForAppending);
 
     m_archive_reader = std::make_unique<ArchiveReader>();
-    m_archive_reader->open(m_archives_dir);
+    m_archive_reader->open(m_archives_dir, m_archive_id);
     m_archive_reader->read_dictionaries_and_metadata();
     if (false == m_ordered) {
         m_archive_reader->store(writer);
