@@ -290,7 +290,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             decompression_options.add_options()(
                     "ordered",
                     po::bool_switch(&m_ordered_decompression),
-                    "Enable in-order decompression by timestamp for this archive"
+                    "Enable decompression in ascending timestamp order for this archive"
             );
             extraction_options.add(decompression_options);
 
