@@ -1,26 +1,34 @@
 #include "ArchiveReader.hpp"
 
+#include <filesystem>
+#include <string_view>
+
 #include "archive_constants.hpp"
 #include "ReaderUtils.hpp"
 
+using std::string_view;
+
 namespace clp_s {
-void ArchiveReader::open(std::string const& archive_path) {
+void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
-    m_archive_path = archive_path;
+    m_archive_id = archive_id;
+    std::filesystem::path archive_path{archives_dir};
+    archive_path /= m_archive_id;
+    auto const archive_path_str = archive_path.string();
 
-    m_var_dict = ReaderUtils::get_variable_dictionary_reader(m_archive_path);
-    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(m_archive_path);
-    m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
-    m_timestamp_dict = ReaderUtils::get_timestamp_dictionary_reader(m_archive_path);
+    m_var_dict = ReaderUtils::get_variable_dictionary_reader(archive_path_str);
+    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(archive_path_str);
+    m_array_dict = ReaderUtils::get_array_dictionary_reader(archive_path_str);
+    m_timestamp_dict = ReaderUtils::get_timestamp_dictionary_reader(archive_path_str);
 
-    m_schema_tree = ReaderUtils::read_schema_tree(m_archive_path);
-    m_schema_map = ReaderUtils::read_schemas(m_archive_path);
+    m_schema_tree = ReaderUtils::read_schema_tree(archive_path_str);
+    m_schema_map = ReaderUtils::read_schemas(archive_path_str);
 
-    m_tables_file_reader.open(m_archive_path + constants::cArchiveTablesFile);
-    m_table_metadata_file_reader.open(m_archive_path + constants::cArchiveTableMetadataFile);
+    m_tables_file_reader.open(archive_path_str + constants::cArchiveTablesFile);
+    m_table_metadata_file_reader.open(archive_path_str + constants::cArchiveTableMetadataFile);
 }
 
 void ArchiveReader::read_metadata() {
