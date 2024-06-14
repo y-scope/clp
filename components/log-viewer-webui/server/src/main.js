@@ -8,7 +8,7 @@ import app from "./app.js";
  * Parses environment variables into config values for the application.
  *
  * @return {{PORT: string, HOST: string}}
- * @throws {Error} if any required environment variables is undefined.
+ * @throws {Error} if any required environment variable is undefined.
  */
 const parseEnvVars = () => {
     dotenv.config({
