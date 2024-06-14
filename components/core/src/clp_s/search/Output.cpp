@@ -65,7 +65,7 @@ bool Output::filter() {
     populate_string_queries(top_level_expr);
 
     std::string message;
-    auto const& archive_id = m_archive_reader->get_archive_id();
+    auto const archive_id = m_archive_reader->get_archive_id();
     for (int32_t schema_id : matched_schemas) {
         m_expr_clp_query.clear();
         m_expr_var_match_map.clear();

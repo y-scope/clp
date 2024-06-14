@@ -17,7 +17,7 @@ void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
     m_archive_id = archive_id;
     std::filesystem::path archive_path{archives_dir};
     archive_path /= m_archive_id;
-    auto const& archive_path_str = archive_path.string();
+    auto const archive_path_str = archive_path.string();
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(archive_path_str);
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(archive_path_str);
