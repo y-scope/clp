@@ -1,0 +1,32 @@
+{
+  "name": "log-viewer-server",
+  "version": "0.1.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "NODE_ENV=development nodemon src/main.js",
+    "lint:check": "npx eslint --no-eslintrc --config package.json src",
+    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src",
+    "start": "NODE_ENV=production node src/main.js",
+    "test": "tap"
+  },
+  "author": "YScope Inc. <dev@yscope.com>",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.0",
+    "http-status-codes": "^2.3.0",
+    "pino-pretty": "^11.2.1"
+  },
+  "devDependencies": {
+    "eslint-config-yscope": "latest",
+    "nodemon": "^3.1.3",
+    "tap": "^19.2.5"
+  },
+  "eslintConfig": {
+    "extends": [
+      "yscope/common"
+    ]
+  }
+}
