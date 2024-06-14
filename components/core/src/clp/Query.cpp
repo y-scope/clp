@@ -1,7 +1,5 @@
 #include "Query.hpp"
 
-#include <iostream>
-
 using std::set;
 using std::string;
 using std::unordered_set;
@@ -173,36 +171,6 @@ bool SubQuery::matches_vars(std::vector<encoded_variable_t> const& vars) const {
     }
     return (num_possible_vars == possible_vars_ix);
 }
-
-/*
-auto SubQuery::print () const -> void {
-    std::cout << m_possible_logtype_entries.size() << std::endl;
-    std::cout << m_possible_logtype_ids.size() << std::endl;
-    std::cout << m_ids_of_matching_segments.size() << std::endl;
-    std::cout << m_vars.size() << std::endl;
-    std::cout << m_wildcard_match_required << std::endl;
-    
-    for (auto const& var : m_vars) {
-        if(var.is_precise_var()) {
-            std::cout << var.get_var_dict_entry()->get_value() << std::endl;
-        } else {
-            for(auto const& var_dict_entry : var.get_possible_var_dict_entries()) {
-                std::cout << var_dict_entry->get_value() << std::endl;
-            }
-        }
-    }
-    
-    for (auto const& logtype_entry : m_possible_logtype_entries) {
-        std::cout << logtype_entry->get_value() << std::endl;
-    }
-    
-    std::unordered_set<const LogTypeDictionaryEntry*> m_possible_logtype_entries;
-    std::unordered_set<logtype_dictionary_id_t> m_possible_logtype_ids;
-    std::set<segment_id_t> m_ids_of_matching_segments;
-    std::vector<QueryVar> m_vars;
-    bool m_wildcard_match_required;
-}
-*/
 
 Query::Query(
         epochtime_t search_begin_timestamp,

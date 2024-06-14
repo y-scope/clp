@@ -6,7 +6,6 @@
 #include <log_surgeon/Lexer.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
-// Project headers
 #include "../Defs.h"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
@@ -544,7 +543,7 @@ int main(int argc, char const* argv[]) {
             break;
     }
     global_metadata_db->open();
-    
+
     // TODO: if performance is too slow, can make this more efficient by only diffing files with the
     // same checksum
     uint32_t const max_map_schema_length = 100'000;

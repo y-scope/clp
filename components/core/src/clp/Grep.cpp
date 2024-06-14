@@ -16,7 +16,6 @@
 #include "LogSurgeonReader.hpp"
 #include "StringReader.hpp"
 #include "Utils.hpp"
-#include "Stopwatch.hpp"
 
 using clp::ir::is_delim;
 using clp::streaming_archive::reader::Archive;
@@ -285,7 +284,6 @@ public:
  * @param ignore_case
  * @param sub_query
  * @param logtype
- * @param use_heuristic
  * @return true if this token might match a message, false otherwise
  */
 bool process_var_token(
@@ -293,8 +291,7 @@ bool process_var_token(
         Archive const& archive,
         bool ignore_case,
         SubQuery& sub_query,
-        string& logtype,
-        bool use_heuristic
+        string& logtype
 );
 
 /**
@@ -320,7 +317,6 @@ bool find_matching_message(
  * @param query_tokens
  * @param ignore_case
  * @param sub_query
- * @param use_heuristic
  * @return SubQueryMatchabilityResult::SupercedesAllSubQueries
  * @return SubQueryMatchabilityResult::WontMatch
  * @return SubQueryMatchabilityResult::MayMatch
@@ -330,8 +326,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         string& processed_search_string,
         vector<QueryToken>& query_tokens,
         bool ignore_case,
-        SubQuery& sub_query,
-        bool use_heuristic
+        SubQuery& sub_query
 );
 
 bool process_var_token(
@@ -500,7 +495,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
         // Logtype will match all messages
         return SubQueryMatchabilityResult::SupercedesAllSubQueries;
     }
-    // std::cout << logtype << std::endl;
+
     // Find matching logtypes
     std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
     archive.get_logtype_dictionary()
@@ -625,7 +620,7 @@ std::optional<Query> Grep::process_raw_query(
         // DFA search
         static vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
         static bool query_matrix_set = false;
-        for (uint32_t i = 0; i < processed_search_string.size() && query_matrix_set == false; i++) {
+        for (uint32_t i = 0; i < processed_search_string.size() && false == query_matrix_set; i++) {
             for (uint32_t j = 0; j <= i; j++) {
                 std::string current_string = processed_search_string.substr(j, i - j + 1);
                 std::vector<QueryLogtype> suffixes;
@@ -633,8 +628,7 @@ std::optional<Query> Grep::process_raw_query(
                 if (current_string == "*") {
                     suffixes.emplace_back('*', "*", false);
                 } else {
-                    // TODO: add this step to the documentation
-                    // add * if preceding and proceeding characters are *
+                    // Add * if preceding and proceeding characters are *
                     bool prev_star = j > 0 && processed_search_string[j - 1] == '*';
                     bool next_star = i < processed_search_string.back() - 1 &&
                                      processed_search_string[i + 1] == '*';
@@ -644,7 +638,6 @@ std::optional<Query> Grep::process_raw_query(
                     if (next_star) {
                         current_string.push_back('*');
                     }
-                    // TODO: add this step to the documentation too
                     bool is_surrounded_by_delims = false;
                     if ((j == 0 || current_string[0] == '*' ||
                          forward_lexer.is_delimiter(processed_search_string[j - 1])) &&
@@ -657,9 +650,7 @@ std::optional<Query> Grep::process_raw_query(
                     set<uint32_t> schema_types;
                     // All variables must be surrounded by delimiters
                     if (is_surrounded_by_delims) {
-                        StringReader string_reader;
                         log_surgeon::ParserInputBuffer parser_input_buffer;
-                        ReaderInterfaceWrapper reader_wrapper(string_reader);
                         std::string regex_search_string;
                         bool contains_central_wildcard = false;
                         uint32_t pos = 0;
@@ -695,14 +686,13 @@ std::optional<Query> Grep::process_raw_query(
                         }
                         // TODO: DFA creation isn't optimized for performance 
                         //       at all
-                        // TODO: log-suregon code needs to be refactored to
+                        // TODO: log-surgeon code needs to be refactored to
                         //       allow direct usage of DFA/NFA without lexer
                         unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 =
                                 forward_lexer.nfa_to_dfa(nfa);
                         unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 =
                                 forward_lexer.get_dfa();
                         schema_types = dfa1->get_intersect(dfa2);
-                        // TODO: add this step to the documentation
                         bool already_added_var = false;
                         for (int id : schema_types) {
                             auto& schema_type = forward_lexer.m_id_symbol[id];
@@ -717,11 +707,11 @@ std::optional<Query> Grep::process_raw_query(
                             suffixes.emplace_back();
                             QueryLogtype& suffix = suffixes.back();
                             if (start_star) {
-                                suffix.insert('*', "*", false);
+                                suffix.append_value('*', "*", false);
                             }
-                            suffix.insert(id, current_string, contains_wildcard);
+                            suffix.append_value(id, current_string, contains_wildcard);
                             if (end_star) {
-                                suffix.insert('*', "*", false);
+                                suffix.append_value('*', "*", false);
                             }
                             // If no wildcard, only use the top priority type 
                             if (false == contains_wildcard) {
@@ -740,7 +730,7 @@ std::optional<Query> Grep::process_raw_query(
                         for(uint32_t k = start_id; k < end_id; k++) {
                             char const& c = current_string[k];
                             std::string char_string({c});
-                            suffix.insert(c, char_string, false);
+                            suffix.append_value(c, char_string, false);
                         }
                     }
                 }
@@ -749,7 +739,7 @@ std::optional<Query> Grep::process_raw_query(
                     for (QueryLogtype const& prefix : query_matrix[j - 1]) {
                         for (QueryLogtype& suffix : suffixes) {
                             QueryLogtype new_query = prefix;
-                            new_query.insert(suffix);
+                            new_query.append_logtype(suffix);
                             new_queries.insert(new_query);
                         }
                     }
@@ -763,24 +753,6 @@ std::optional<Query> Grep::process_raw_query(
         }
         query_matrix_set = true;
         uint32_t last_row = query_matrix.size() - 1;
-        /*
-        std::cout << "query_matrix" << std::endl;
-        for(QueryLogtype const& query_logtype : query_matrix[last_row]) {
-            for(uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-                auto& val = query_logtype.m_logtype[i];
-                auto& str = query_logtype.m_search_query[i];
-                if (std::holds_alternative<char>(val)) {
-                    std::cout << std::get<char>(val);
-                } else {
-                    std::cout << "<" << forward_lexer.m_id_symbol[std::get<int>(val)] << ">";
-                    std::cout << "(" << str << ")";
-                }
-            }
-            std::cout << " | ";
-        }
-        std::cout << std::endl;
-        std::cout << query_matrix[last_row].size() << std::endl;
-        */
         for (QueryLogtype const& query_logtype: query_matrix[last_row]) {
             SubQuery sub_query;
             std::string logtype_string;
@@ -789,7 +761,7 @@ std::optional<Query> Grep::process_raw_query(
             for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
                 auto const& value = query_logtype.m_logtype[i];
                 auto const& var_str = query_logtype.m_search_query[i];
-                auto const& is_special = query_logtype.m_is_special[i];
+                auto const& is_special = query_logtype.m_is_potentially_in_dict[i];
                 auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
                 if (std::holds_alternative<char>(value)) {
                     logtype_string.push_back(std::get<char>(value));
@@ -801,7 +773,7 @@ std::optional<Query> Grep::process_raw_query(
                     if (false == is_special && var_has_wildcard &&
                         (schema_type == "int" || schema_type == "float")) {
                         QueryLogtype new_query_logtype = query_logtype;
-                        new_query_logtype.m_is_special[i] = true;
+                        new_query_logtype.m_is_potentially_in_dict[i] = true;
                         // TODO: this is kinda sketchy, but it'll work because 
                         //       the < operator is defined in a way that will
                         //       insert it after the current iterator
@@ -835,7 +807,7 @@ std::optional<Query> Grep::process_raw_query(
             for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
                 auto const& value = query_logtype.m_logtype[i];
                 auto const& var_str = query_logtype.m_search_query[i];
-                auto const& is_special = query_logtype.m_is_special[i];
+                auto const& is_special = query_logtype.m_is_potentially_in_dict[i];
                 auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
                 if (std::holds_alternative<int>(value)) {
                     auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];

@@ -14,40 +14,67 @@
 
 namespace clp {
 
+/**
+ * Represents a logtype that would match the given search query. The logtype is a sequence
+ * containing values, where each value is either a static character or an integers representing
+ * a variable type id. Also indicates if an integer/float variable is potentially in the dictionary
+ * to handle cases containing wildcards. Note: long float and integers that cannot be encoded do not
+ * fall under this case, as they are not potentially, but definitely in the dictionary, so will be
+ * searched for in the dictionary regardless.
+ */
 class QueryLogtype {
 public:
     std::vector<std::variant<char, int>> m_logtype;
     std::vector<std::string> m_search_query;
-    std::vector<bool> m_is_special;
+    std::vector<bool> m_is_potentially_in_dict;
     std::vector<bool> m_var_has_wildcard;
 
-    auto insert (QueryLogtype& query_logtype) -> void {
-        m_logtype.insert(m_logtype.end(), query_logtype.m_logtype.begin(),
-                         query_logtype.m_logtype.end());
-        m_search_query.insert(m_search_query.end(), query_logtype.m_search_query.begin(),
-                              query_logtype.m_search_query.end());
-        m_is_special.insert(m_is_special.end(), query_logtype.m_is_special.begin(),
-                            query_logtype.m_is_special.end());
+    /**
+     * Append a logtype to the current logtype.
+     * @param suffix 
+     */
+    auto append_logtype (QueryLogtype& suffix) -> void {
+        m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(),
+                         suffix.m_logtype.end());
+        m_search_query.insert(m_search_query.end(), suffix.m_search_query.begin(),
+                              suffix.m_search_query.end());
+        m_is_potentially_in_dict.insert(m_is_potentially_in_dict.end(), suffix.m_is_potentially_in_dict.begin(),
+                            suffix.m_is_potentially_in_dict.end());
         m_var_has_wildcard.insert(m_var_has_wildcard.end(),
-                                  query_logtype.m_var_has_wildcard.begin(),
-                                  query_logtype.m_var_has_wildcard.end());
+                                  suffix.m_var_has_wildcard.begin(),
+                                  suffix.m_var_has_wildcard.end());
     }
 
-    auto insert (std::variant<char, int> const& val, std::string const& string,
+    /**
+     * Append a single value to the current logtype.
+     * @param val 
+     * @param string 
+     * @param var_contains_wildcard 
+     */
+    auto append_value (std::variant<char, int> const& val, std::string const& string,
                  bool var_contains_wildcard) -> void {
         m_var_has_wildcard.push_back(var_contains_wildcard);
         m_logtype.push_back(val);
         m_search_query.push_back(string);
-        m_is_special.push_back(false);
+        m_is_potentially_in_dict.push_back(false);
     }
 
     QueryLogtype (std::variant<char, int> const& val, std::string const& string,
                   bool var_contains_wildcard) {
-        insert(val, string, var_contains_wildcard);
+        append_value(val, string, var_contains_wildcard);
     }
 
     QueryLogtype () = default;
 
+    /**
+     * @param rhs 
+     * @return true if the current logtype is shorter than rhs, false if the current logtype 
+     * is longer. If equally long, true if the current logtype is lexicographically smaller than
+     * rhs, false if bigger. If the logtypes are identical, true if the current search query is 
+     * lexicographically smaller than rhs, false if bigger. If the search queries are identical,
+     * true if the first mismatch in special character locations is a non-special character for the
+     * current logtype, false otherwise. 
+     */
     bool operator<(const QueryLogtype &rhs) const{
         if(m_logtype.size() < rhs.m_logtype.size()) {
             return true;
@@ -68,10 +95,10 @@ public:
                 return false;
             }
         }
-        for(uint32_t i = 0; i < m_is_special.size(); i++) {
-            if(m_is_special[i] < rhs.m_is_special[i]) {
+        for(uint32_t i = 0; i < m_is_potentially_in_dict.size(); i++) {
+            if(m_is_potentially_in_dict[i] < rhs.m_is_potentially_in_dict[i]) {
                 return true;
-            } else if(m_is_special[i] > rhs.m_is_special[i]) {
+            } else if(m_is_potentially_in_dict[i] > rhs.m_is_potentially_in_dict[i]) {
                 return false;
             }
         }

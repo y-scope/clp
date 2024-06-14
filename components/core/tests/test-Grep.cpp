@@ -1,7 +1,6 @@
 #include <string>
 
 #include <Catch2/single_include/catch2/catch.hpp>
-
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
@@ -33,7 +32,6 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     str = "";
     begin_pos = string::npos;
     end_pos = string::npos;
-
     REQUIRE(Grep::get_bounds_of_next_potential_var(
                     str,
                     begin_pos,
@@ -43,13 +41,11 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     reverse_lexer
             )
             == false);
-
 
     // Empty string
     str = "";
     begin_pos = 0;
     end_pos = 0;
-
     REQUIRE(Grep::get_bounds_of_next_potential_var(
                     str,
                     begin_pos,
@@ -60,12 +56,10 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
             )
             == false);
 
-
     // No tokens
     str = "=";
     begin_pos = 0;
     end_pos = 0;
-
     REQUIRE(Grep::get_bounds_of_next_potential_var(
                     str,
                     begin_pos,
@@ -168,7 +162,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == true);
     REQUIRE("-abc-" == str.substr(begin_pos, end_pos - begin_pos));
     REQUIRE(true == is_var);
-    
+
     REQUIRE(Grep::get_bounds_of_next_potential_var(
                     str,
                     begin_pos,
@@ -178,7 +172,6 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     reverse_lexer
             )
             == false);
-
     REQUIRE(str.length() == begin_pos);
 
     // With wildcards
