@@ -63,6 +63,7 @@ contributing-linting
 :hidden:
 
 components-core/index
+components-log-viewer-webui
 components-webui
 :::
 
