@@ -11,6 +11,30 @@ set -u
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 root_dir="${script_dir}/../.."
 
+# Parses and prints grep matches in a format relevant to the current environment.
+# Arguments:
+#   $1: Zero-terminated grep matches to parse and print
+parse_and_print_matches () {
+    matches="$1"
+    while IFS= read -r match; do
+        if [ -n "${GITHUB_ACTIONS+x}" ]; then
+            # Print a GitHub Actions notice
+            awk_cmd='{'
+            # Print the filename, line number, title, and start the message with the first token
+            # of the match
+            awk_cmd+='printf "::notice file={%s},line={%s},title={Bad docs link}::{%s", $1, $2, $3'
+            # Print remaining tokens of the match
+            awk_cmd+='; for (i = 4; i <= NF; i++) {printf ":%s", $i}'
+            # End the message field of the notice
+            awk_cmd+='; printf "}\n"'
+            awk_cmd+='}'
+            echo "$match" | awk --field-separator ':' "$awk_cmd"
+        else
+            echo "$match"
+        fi
+    done <<< "$matches"
+}
+
 # Grep for a pattern in all tracked files in the repo (except this script).
 # Arguments:
 #   $1: The pattern to search for
@@ -29,11 +53,10 @@ grep_tracked_files () {
             continue
         fi
 
-        set +e
-        if grep --extended-regexp --line-number --with-filename "$pattern" "$path" ; then
+        if matches=$(grep --extended-regexp --line-number --with-filename "$pattern" "$path") ; then
+            parse_and_print_matches "$matches"
             found_matches=0
         fi
-        set -e
     done < <(git ls-files --cached --exclude-standard -z "$dir_to_search")
 
     return $found_matches
