@@ -16,7 +16,7 @@ A quick start guide for setting up a CLP cluster, compressing your logs, and sea
 :::
 
 :::{grid-item-card}
-:link: core-overview.md
+:link: core-overview
 Core
 ^^^
 Docs about CLP's core component for compressing, decompressing, and searching logs.
