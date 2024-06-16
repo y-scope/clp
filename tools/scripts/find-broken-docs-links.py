@@ -102,9 +102,7 @@ def _parse_and_print_match(match: str, error_msg: str):
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
         print(f"::error file={file},line={line},title={error_msg}::")
-        # TODO
-        print("Got here.")
-        print("Got here 2.", file=sys.stderr)
+        print(f"  error file={file},line={line},title={error_msg}::")
     else:
         print(error_msg, file=sys.stderr)
         print(match, file=sys.stderr)
