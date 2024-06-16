@@ -98,7 +98,7 @@ def _parse_and_print_match(match: str, error_msg: str):
     :param match: The match to parse and print.
     :param error_msg: Error message if the pattern is found.
     """
-    if "GITHUB_ACTIONS" in os.environ:
+    if not "GITHUB_ACTIONS" in os.environ:
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
         print(f"::error file={file},line={line},title={error_msg}::")
