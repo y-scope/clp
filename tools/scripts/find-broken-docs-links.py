@@ -35,6 +35,7 @@ def main(argv):
 def _get_repo_root() -> Path:
     path_str = subprocess.check_output(
         ["git", "rev-parse", "--show-toplevel"],
+        cwd=Path(__file__).parent,
         text=True
     )
     return Path(path_str.strip())
@@ -99,7 +100,7 @@ def _parse_and_print_match(match: str, error_msg: str):
     """
     if "GITHUB_ACTIONS" in os.environ:
         # Print a GitHub Actions error annotation
-        file, line, _ = match.split(':', 2)
+        file, line, _ = match.split(":", 2)
         print(f"::error file={file},line={line},title={error_msg}::")
     else:
         print(error_msg, file=sys.stderr)
