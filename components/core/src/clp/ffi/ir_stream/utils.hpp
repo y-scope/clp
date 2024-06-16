@@ -14,7 +14,7 @@ namespace clp::ffi::ir_stream {
  * Serializes the given metadata into the IR stream.
  * @param metadata
  * @param ir_buf
- * @return Whether the serialization succeeded.
+ * @return Whether serialization succeeded.
  */
 [[nodiscard]] auto
 serialize_metadata(nlohmann::json& metadata, std::vector<int8_t>& ir_buf) -> bool;
