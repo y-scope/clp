@@ -304,6 +304,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
+        src/clp/ffi/ir_stream/utils.cpp
+        src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
