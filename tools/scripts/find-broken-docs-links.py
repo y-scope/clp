@@ -101,7 +101,8 @@ def _parse_and_print_match(match: str, error_msg: str):
     if os.getenv("CI") == "true":
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
-        print(f"::error file={file},line={line},title={error_msg}::")
+        # print(f"::error file={file},line={line},title={error_msg}::")
+        print("::error file=app.js,line=1,col=5,endColumn=7::Missing semicolon")
     else:
         print(error_msg, file=sys.stderr)
         print(match, file=sys.stderr)
