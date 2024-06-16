@@ -18,15 +18,15 @@ parse_and_print_matches () {
     matches="$1"
     while IFS= read -r match; do
         if [ -n "${GITHUB_ACTIONS+x}" ]; then
-            # Print a GitHub Actions notice
+            # Print a GitHub Actions error annotation
             awk_cmd='{'
             # Print the filename, line number, title, and start the message with the first token
             # of the match
-            awk_cmd+='printf "::notice file={%s},line={%s},title={Bad docs link}::{%s", $1, $2, $3'
+            awk_cmd+='printf "::error file=%s,line=%s,title=Bad docs link::%s", $1, $2, $3'
             # Print remaining tokens of the match
             awk_cmd+='; for (i = 4; i <= NF; i++) {printf ":%s", $i}'
-            # End the message field of the notice
-            awk_cmd+='; printf "}\n"'
+            # End the annotation
+            awk_cmd+='; printf "\n"'
             awk_cmd+='}'
             echo "$match" | awk --field-separator ':' "$awk_cmd"
         else
