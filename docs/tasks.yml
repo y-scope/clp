@@ -34,7 +34,7 @@ tasks:
       # Call `clean` before building since `sphinx-build --write-all --fresh-env` isn't always
       # equivalent to building from scratch.
       - task: "clean"
-      - "cd '{{.ROOT_DIR}}' && tools/scripts/find-broken-doc-links.sh"
+      - "python3 '{{.ROOT_DIR}}/tools/scripts/find-broken-docs-links.py'"
       - |-
         . "{{.G_DOCS_VENV_DIR}}/bin/activate"
         sphinx-build \
