@@ -458,6 +458,7 @@ set(SOURCE_FILES_unitTest
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
+        tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp

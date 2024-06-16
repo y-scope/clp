@@ -49,7 +49,7 @@ public:
     // NOLINTNEXTLINE(performance-enum-size)
     enum class Mode : int {
         ReadOnly = O_RDONLY,
-        WriteOnly = O_WRONLY
+        CreateForWrite = O_WRONLY | O_CREAT | O_TRUNC,
     };
 
     // Constructors
