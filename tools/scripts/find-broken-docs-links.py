@@ -13,7 +13,7 @@ def main(argv):
             r"https://docs\.yscope\.com/.+\.md",
             repo_root,
             repo_root,
-            "https://docs.yscope.com links cannot have \".md\" suffixes."
+            "docs.yscope.com links cannot have \".md\" suffixes."
     ):
         found_violation = True
 
@@ -22,7 +22,7 @@ def main(argv):
             r":link:[[:space:]]*.+\.md",
             repo_root,
             repo_root / "docs",
-            "sphinx :link: attributes cannot have \".md\" suffixes"
+            "sphinx link attributes cannot have \".md\" suffixes"
     ):
         found_violation = True
 
@@ -102,7 +102,6 @@ def _parse_and_print_match(match: str, error_msg: str):
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
         print(f"::error file={file},line={line},title={error_msg}::")
-        print(f"  error file={file},line={line},title={error_msg}::")
     else:
         print(error_msg, file=sys.stderr)
         print(match, file=sys.stderr)
