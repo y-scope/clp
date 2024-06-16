@@ -25,6 +25,8 @@ set(
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../FileDescriptor.cpp
+        ../FileDescriptor.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
@@ -60,6 +62,8 @@ set(
         ../LogTypeDictionaryWriter.cpp
         ../LogTypeDictionaryWriter.hpp
         ../math_utils.hpp
+        ../MemoryMappedFileView.cpp
+        ../MemoryMappedFileView.hpp
         ../MessageParser.cpp
         ../MessageParser.hpp
         ../MySQLDB.cpp

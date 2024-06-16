@@ -322,6 +322,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/FileDescriptor.cpp
+        src/clp/FileDescriptor.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -359,6 +361,8 @@ set(SOURCE_FILES_unitTest
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
         src/clp/math_utils.hpp
+        src/clp/MemoryMappedFileView.cpp
+        src/clp/MemoryMappedFileView.hpp
         src/clp/MessageParser.cpp
         src/clp/MessageParser.hpp
         src/clp/MySQLDB.cpp

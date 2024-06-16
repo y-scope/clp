@@ -4,6 +4,8 @@ set(
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
+        ../FileDescriptor.cpp
+        ../FileDescriptor.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
@@ -13,6 +15,8 @@ set(
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
+        ../MemoryMappedFileView.cpp
+        ../MemoryMappedFileView.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../ReaderInterface.cpp

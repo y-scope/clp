@@ -1,6 +1,7 @@
 #include <string>
 
 #include <boost/filesystem.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <zstd.h>
 

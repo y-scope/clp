@@ -2,9 +2,8 @@
 
 #include <algorithm>
 
-#include <boost/filesystem.hpp>
-
 #include "../../Defs.h"
+#include "../../MemoryMappedFileView.hpp"
 #include "../../spdlog_with_specializations.hpp"
 
 namespace clp::streaming_compression::zstd {
@@ -182,10 +181,7 @@ void Decompressor::open(FileReader& file_reader, size_t file_read_buffer_capacit
 void Decompressor::close() {
     switch (m_input_type) {
         case InputType::MemoryMappedCompressedFile:
-            if (m_memory_mapped_compressed_file.is_open()) {
-                // An existing file is memory mapped by the decompressor
-                m_memory_mapped_compressed_file.close();
-            }
+            m_memory_mapped_file.reset();
             break;
         case InputType::File:
             m_file_read_buffer.reset();
@@ -211,38 +207,11 @@ ErrorCode Decompressor::open(std::string const& compressed_file_path) {
 
     // Create memory mapping for compressed_file_path, use boost read only
     // memory mapped file
-    boost::system::error_code boost_error_code;
-    size_t compressed_file_size
-            = boost::filesystem::file_size(compressed_file_path, boost_error_code);
-    if (boost_error_code) {
-        SPDLOG_ERROR(
-                "streaming_compression::zstd::Decompressor: Unable to obtain file size for "
-                "'{}' - {}.",
-                compressed_file_path.c_str(),
-                boost_error_code.message().c_str()
-        );
-        return ErrorCode_Failure;
-    }
-
-    boost::iostreams::mapped_file_params memory_map_params;
-    memory_map_params.path = compressed_file_path;
-    memory_map_params.flags = boost::iostreams::mapped_file::readonly;
-    memory_map_params.length = compressed_file_size;
-    // Try to map it to the same memory location as previous memory mapped
-    // file
-    memory_map_params.hint = m_memory_mapped_compressed_file.data();
-    m_memory_mapped_compressed_file.open(memory_map_params);
-    if (!m_memory_mapped_compressed_file.is_open()) {
-        SPDLOG_ERROR(
-                "streaming_compression::zstd::Decompressor: Unable to memory map the "
-                "compressed file with path: {}",
-                compressed_file_path.c_str()
-        );
-        return ErrorCode_Failure;
-    }
+    m_memory_mapped_file = std::make_unique<MemoryMappedFileView>(compressed_file_path);
+    auto const file_view{m_memory_mapped_file->get_view()};
 
     // Configure input stream
-    m_compressed_stream_block = {m_memory_mapped_compressed_file.data(), compressed_file_size, 0};
+    m_compressed_stream_block = {file_view.data(), file_view.size(), 0};
 
     reset_stream();
 
