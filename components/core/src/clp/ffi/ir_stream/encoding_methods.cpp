@@ -5,8 +5,8 @@
 #include "../../ir/parsing.hpp"
 #include "../../ir/types.hpp"
 #include "../../time_types.hpp"
-#include "byteswap.hpp"
 #include "protocol_constants.hpp"
+#include "utils.hpp"
 
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
@@ -18,29 +18,12 @@ using std::vector;
 namespace clp::ffi::ir_stream {
 // Local function prototypes
 /**
- * Serializes the given integer into the IR stream
- * @tparam integer_t
- * @param value
- * @param ir_buf
- */
-template <typename integer_t>
-static void serialize_int(integer_t value, vector<int8_t>& ir_buf);
-
-/**
  * Serializes the given logtype into the IR stream
  * @param logtype
  * @param ir_buf
  * @return true on success, false otherwise
  */
 static bool serialize_logtype(string_view logtype, vector<int8_t>& ir_buf);
-
-/**
- * Serializes the given metadata into the IR stream
- * @param metadata
- * @param ir_buf
- * @return true on success, false otherwise
- */
-static bool serialize_metadata(nlohmann::json& metadata, vector<int8_t>& ir_buf);
 
 /**
  * Adds the basic metadata fields to the given JSON object
@@ -90,21 +73,6 @@ private:
     vector<int8_t>& m_ir_buf;
 };
 
-template <typename integer_t>
-static void serialize_int(integer_t value, vector<int8_t>& ir_buf) {
-    integer_t value_big_endian;
-    static_assert(sizeof(integer_t) == 2 || sizeof(integer_t) == 4 || sizeof(integer_t) == 8);
-    if constexpr (sizeof(value) == 2) {
-        value_big_endian = bswap_16(value);
-    } else if constexpr (sizeof(value) == 4) {
-        value_big_endian = bswap_32(value);
-    } else if constexpr (sizeof(value) == 8) {
-        value_big_endian = bswap_64(value);
-    }
-    auto data = reinterpret_cast<int8_t*>(&value_big_endian);
-    ir_buf.insert(ir_buf.end(), data, data + sizeof(value));
-}
-
 static bool serialize_logtype(string_view logtype, vector<int8_t>& ir_buf) {
     auto length = logtype.length();
     if (length <= UINT8_MAX) {
@@ -121,27 +89,6 @@ static bool serialize_logtype(string_view logtype, vector<int8_t>& ir_buf) {
         return false;
     }
     ir_buf.insert(ir_buf.cend(), logtype.cbegin(), logtype.cend());
-    return true;
-}
-
-static bool serialize_metadata(nlohmann::json& metadata, vector<int8_t>& ir_buf) {
-    ir_buf.push_back(cProtocol::Metadata::EncodingJson);
-
-    auto metadata_serialized
-            = metadata.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
-    auto metadata_serialized_length = metadata_serialized.length();
-    if (metadata_serialized_length <= UINT8_MAX) {
-        ir_buf.push_back(cProtocol::Metadata::LengthUByte);
-        ir_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(metadata_serialized_length)));
-    } else if (metadata_serialized_length <= UINT16_MAX) {
-        ir_buf.push_back(cProtocol::Metadata::LengthUShort);
-        serialize_int(static_cast<uint16_t>(metadata_serialized_length), ir_buf);
-    } else {
-        // Can't encode metadata longer than 64 KiB
-        return false;
-    }
-    ir_buf.insert(ir_buf.cend(), metadata_serialized.cbegin(), metadata_serialized.cend());
-
     return true;
 }
 
