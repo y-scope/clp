@@ -10,9 +10,6 @@ concurrency:
   # Cancel in-progress jobs for efficiency
   cancel-in-progress: true
 
-env:
-  PYTHONUNBUFFERED: "1"
-
 jobs:
   build:
     strategy:
