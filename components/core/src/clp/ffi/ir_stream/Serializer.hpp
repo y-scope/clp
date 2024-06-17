@@ -16,9 +16,10 @@ namespace clp::ffi::ir_stream {
  * necessary internal data structure to track serialization states. It also provides APIs to
  * serialize log events into IR format, as well as APIs to access the serialized IR bytes.
  * Notice that this class is designed to provide serialization functionalities only. The upper-level
- * caller should be responsible to write the serialized bytes into IO streams properly. In addition,
- * it doesn't provide a call to terminate the IR stream. The upper-level caller should decide when
- * to terminate the stream by append `clp::ffi::ir_stream::cProtocol::Eof` at the end of the stream.
+ * caller should be responsible for writing the serialized bytes into IO streams properly. In
+ * addition, it doesn't provide a call to terminate the IR stream. The upper-level caller should
+ * decide when to terminate the stream by append `clp::ffi::ir_stream::cProtocol::Eof` at the end of
+ * the stream.
  * @tparam encoded_variable_t Type of encoded variables in the serialized IR stream.
  */
 template <typename encoded_variable_t>
