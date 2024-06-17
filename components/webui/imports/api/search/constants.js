@@ -61,7 +61,7 @@ const isOperationInProgress = (s) => (
 let enumSearchJobStatus;
 /**
  * Enum of job statuses, matching the `SearchJobStatus` class in
- * `job_orchestration.search_scheduler.constants`.
+ * `job_orchestration.query_scheduler.constants`.
  *
  * @enum {number}
  */
