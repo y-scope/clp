@@ -17,11 +17,17 @@ FileDescriptor::FileDescriptor(
         OpenMode open_mode,
         CloseFailureCallback close_failure_callback
 )
-        : m_fd{(0 != (enum_to_underlying_type(open_mode) & O_CREAT))
-                       ? open(path.data(), enum_to_underlying_type(open_mode), S_IRWXU)
-                       : open(path.data(), enum_to_underlying_type(open_mode))},
-          m_open_mode{open_mode},
+        : m_open_mode{open_mode},
           m_close_failure_callback{close_failure_callback} {
+    // For newly created files, we enable writing for the owner and reading for everyone.
+    // Callers can change the created file's permissions as necessary.
+    constexpr auto cNewFilePermission{S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH};
+    auto const flag{enum_to_underlying_type(open_mode)};
+    if (0 != (flag & O_CREAT)) {
+        m_fd = open(path.data(), flag, cNewFilePermission);
+    } else {
+        m_fd = open(path.data(), flag);
+    }
     if (-1 == m_fd) {
         throw OperationFailed(
                 ErrorCode_errno,

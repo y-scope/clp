@@ -44,7 +44,7 @@ public:
     };
 
     /**
-     * A C++ wrapper for Unix oflag that describes the open open_mode.
+     * A C++ wrapper for Unix oflag that describes the open mode.
      */
     // NOLINTNEXTLINE(performance-enum-size)
     enum class OpenMode : int {
