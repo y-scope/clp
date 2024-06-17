@@ -15,8 +15,8 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    SEARCH_SCHEDULER_COMPONENT_NAME,
-    SEARCH_WORKER_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 )
 
@@ -88,9 +88,9 @@ def main(argv):
     component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
-    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(QUERY_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
-    component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
+    component_args_parser.add_parser(QUERY_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -111,13 +111,13 @@ def main(argv):
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
         if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            COMPRESSION_WORKER_COMPONENT_NAME,
-            QUEUE_COMPONENT_NAME,
-            SEARCH_SCHEDULER_COMPONENT_NAME,
-            SEARCH_WORKER_COMPONENT_NAME,
+                ALL_TARGET_NAME,
+                CONTROLLER_TARGET_NAME,
+                COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                COMPRESSION_WORKER_COMPONENT_NAME,
+                QUEUE_COMPONENT_NAME,
+                QUERY_SCHEDULER_COMPONENT_NAME,
+                QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_queue_credentials_file(clp_config, clp_home, False)
     except:
@@ -146,14 +146,14 @@ def main(argv):
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
-        if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
-            container_name = f"clp-{SEARCH_WORKER_COMPONENT_NAME}-{instance_id}"
+        if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
+            container_name = f"clp-{QUERY_WORKER_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             container_name = f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
-            container_name = f"clp-{SEARCH_SCHEDULER_COMPONENT_NAME}-{instance_id}"
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
+            container_name = f"clp-{QUERY_SCHEDULER_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"

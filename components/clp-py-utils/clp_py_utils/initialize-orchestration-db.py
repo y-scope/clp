@@ -7,8 +7,8 @@ from contextlib import closing
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,
-    SearchJobStatus,
-    SearchTaskStatus,
+    QueryJobStatus,
+    QueryTaskStatus,
 )
 from sql_adapter import SQL_Adapter
 
@@ -16,8 +16,8 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
-    SEARCH_JOBS_TABLE_NAME,
-    SEARCH_TASKS_TABLE_NAME,
+    QUERY_JOBS_TABLE_NAME,
+    QUERY_TASKS_TABLE_NAME,
 )
 from clp_py_utils.core import read_yaml_config_file
 
@@ -94,15 +94,15 @@ def main(argv):
 
             scheduling_db_cursor.execute(
                 f"""
-                CREATE TABLE IF NOT EXISTS `{SEARCH_JOBS_TABLE_NAME}` (
+                CREATE TABLE IF NOT EXISTS `{QUERY_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
-                    `status` INT NOT NULL DEFAULT '{SearchJobStatus.PENDING}',
+                    `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `num_tasks` INT NOT NULL DEFAULT '0',
                     `num_tasks_completed` INT NOT NULL DEFAULT '0',
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
-                    `search_config` VARBINARY(60000) NOT NULL,
+                    `job_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
@@ -111,9 +111,9 @@ def main(argv):
 
             scheduling_db_cursor.execute(
                 f"""
-                CREATE TABLE IF NOT EXISTS `{SEARCH_TASKS_TABLE_NAME}` (
+                CREATE TABLE IF NOT EXISTS `{QUERY_TASKS_TABLE_NAME}` (
                     `id` BIGINT NOT NULL AUTO_INCREMENT,
-                    `status` INT NOT NULL DEFAULT '{SearchTaskStatus.PENDING}',
+                    `status` INT NOT NULL DEFAULT '{QueryTaskStatus.PENDING}',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,
@@ -124,7 +124,7 @@ def main(argv):
                     INDEX `TASK_STATUS` (`status`) USING BTREE,
                     INDEX `TASK_START_TIME` (`start_time`) USING BTREE,
                     CONSTRAINT `search_tasks` FOREIGN KEY (`job_id`) 
-                    REFERENCES `search_jobs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    REFERENCES `query_jobs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC
                 """
             )

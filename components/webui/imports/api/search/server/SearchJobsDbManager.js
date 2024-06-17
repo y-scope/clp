@@ -21,7 +21,7 @@ const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
 const SEARCH_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
     ID: "id",
     STATUS: "status",
-    SEARCH_CONFIG: "search_config",
+    JOB_CONFIG: "job_config",
 });
 
 /**

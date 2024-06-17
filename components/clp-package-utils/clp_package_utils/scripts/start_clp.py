@@ -25,9 +25,9 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    SEARCH_JOBS_TABLE_NAME,
-    SEARCH_SCHEDULER_COMPONENT_NAME,
-    SEARCH_WORKER_COMPONENT_NAME,
+    QUERY_JOBS_TABLE_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
@@ -416,15 +416,15 @@ def start_compression_scheduler(
     )
 
 
-def start_search_scheduler(
+def start_query_scheduler(
     instance_id: str,
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
 ):
-    module_name = "job_orchestration.scheduler.search.search_scheduler"
+    module_name = "job_orchestration.scheduler.query.query_scheduler"
     generic_start_scheduler(
-        SEARCH_SCHEDULER_COMPONENT_NAME,
+        QUERY_SCHEDULER_COMPONENT_NAME,
         module_name,
         instance_id,
         clp_config,
@@ -474,10 +474,10 @@ def generic_start_scheduler(
         "-e", (
             f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
             f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
-            f"{container_clp_config.redis.search_backend_database}"
+            f"{container_clp_config.redis.query_backend_database}"
         ),
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
-        "-e", f"CLP_LOGGING_LEVEL={clp_config.search_scheduler.logging_level}",
+        "-e", f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
         "-u", f"{os.getuid()}:{os.getgid()}",
         "--mount", str(mounts.clp_home),
     ]
@@ -529,24 +529,24 @@ def start_compression_worker(
     )
 
 
-def start_search_worker(
+def start_query_worker(
     instance_id: str,
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     num_cpus: int,
     mounts: CLPDockerMounts,
 ):
-    celery_method = "job_orchestration.executor.search"
-    celery_route = f"{QueueName.SEARCH}"
+    celery_method = "job_orchestration.executor.query"
+    celery_route = f"{QueueName.QUERY}"
     generic_start_worker(
-        SEARCH_WORKER_COMPONENT_NAME,
+        QUERY_WORKER_COMPONENT_NAME,
         instance_id,
         clp_config,
-        clp_config.search_worker,
+        clp_config.query_worker,
         container_clp_config,
         celery_method,
         celery_route,
-        clp_config.redis.search_backend_database,
+        clp_config.redis.query_backend_database,
         num_cpus,
         mounts,
     )
@@ -696,7 +696,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
             "SqlDbClpArchivesTableName": f"{CLP_METADATA_TABLE_PREFIX}archives",
             "SqlDbClpFilesTableName": f"{CLP_METADATA_TABLE_PREFIX}files",
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "SqlDbSearchJobsTableName": SEARCH_JOBS_TABLE_NAME,
+            "SqlDbSearchJobsTableName": QUERY_JOBS_TABLE_NAME,
         },
         "public": {
             "ClpStorageEngine": clp_config.package.storage_engine,
@@ -839,11 +839,11 @@ def main(argv):
     component_args_parser.add_parser(REDIS_COMPONENT_NAME)
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
-    component_args_parser.add_parser(SEARCH_SCHEDULER_COMPONENT_NAME)
+    component_args_parser.add_parser(QUERY_SCHEDULER_COMPONENT_NAME)
     compression_worker_parser = component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     add_num_workers_argument(compression_worker_parser)
-    search_worker_parser = component_args_parser.add_parser(SEARCH_WORKER_COMPONENT_NAME)
-    add_num_workers_argument(search_worker_parser)
+    query_worker_parser = component_args_parser.add_parser(QUERY_WORKER_COMPONENT_NAME)
+    add_num_workers_argument(query_worker_parser)
     reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
@@ -870,32 +870,32 @@ def main(argv):
 
         # Validate and load necessary credentials
         if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            DB_COMPONENT_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            SEARCH_SCHEDULER_COMPONENT_NAME,
-            WEBUI_COMPONENT_NAME,
+                ALL_TARGET_NAME,
+                CONTROLLER_TARGET_NAME,
+                DB_COMPONENT_NAME,
+                COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                QUERY_SCHEDULER_COMPONENT_NAME,
+                WEBUI_COMPONENT_NAME,
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            QUEUE_COMPONENT_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            SEARCH_SCHEDULER_COMPONENT_NAME,
-            COMPRESSION_WORKER_COMPONENT_NAME,
-            SEARCH_WORKER_COMPONENT_NAME,
+                ALL_TARGET_NAME,
+                CONTROLLER_TARGET_NAME,
+                QUEUE_COMPONENT_NAME,
+                COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                QUERY_SCHEDULER_COMPONENT_NAME,
+                COMPRESSION_WORKER_COMPONENT_NAME,
+                QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_queue_credentials_file(clp_config, clp_home, True)
         if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            REDIS_COMPONENT_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            SEARCH_SCHEDULER_COMPONENT_NAME,
-            COMPRESSION_WORKER_COMPONENT_NAME,
-            SEARCH_WORKER_COMPONENT_NAME,
+                ALL_TARGET_NAME,
+                CONTROLLER_TARGET_NAME,
+                REDIS_COMPONENT_NAME,
+                COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                QUERY_SCHEDULER_COMPONENT_NAME,
+                COMPRESSION_WORKER_COMPONENT_NAME,
+                QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
 
@@ -906,9 +906,9 @@ def main(argv):
         return -1
 
     if target in (
-        COMPRESSION_WORKER_COMPONENT_NAME,
-        REDUCER_COMPONENT_NAME,
-        SEARCH_WORKER_COMPONENT_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            REDUCER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
     ):
         num_workers = parsed_args.num_workers
     else:
@@ -951,14 +951,14 @@ def main(argv):
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
         ):
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, SEARCH_SCHEDULER_COMPONENT_NAME):
-            start_search_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
+            start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_workers, mounts
             )
-        if target in (ALL_TARGET_NAME, SEARCH_WORKER_COMPONENT_NAME):
-            start_search_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
+        if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
+            start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
