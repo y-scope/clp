@@ -13,7 +13,7 @@
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
-#  port: 4001
+#  port: 3306
 #  name: "clp-db"
 #
 #compression_scheduler:
@@ -22,7 +22,7 @@
 #
 #query_scheduler:
 #  host: "localhost"
-#  port: 7001
+#  port: 7000
 #  jobs_poll_delay: 0.1  # seconds
 #  num_archives_to_search_per_sub_job: 16
 #  logging_level: "INFO"
