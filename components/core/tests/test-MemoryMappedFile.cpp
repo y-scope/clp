@@ -11,9 +11,9 @@
 
 namespace {
 /**
- * Reads content from a reader interface till end of file reached.
+ * Reads all content from a reader.
  * @param reader
- * @return Content read from the given reader.
+ * @return The content.
  */
 [[nodiscard]] auto read_content(clp::ReaderInterface& reader) -> std::vector<char>;
 

@@ -25,7 +25,7 @@ FileDescriptor::FileDescriptor(
                 ErrorCode_errno,
                 __FILE__,
                 __LINE__,
-                "Failed to open file descriptor in path: " + std::string{path}
+                "Failed to open file descriptor for path: " + std::string{path}
         );
     }
 }

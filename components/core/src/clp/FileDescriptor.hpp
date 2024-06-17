@@ -13,7 +13,7 @@
 
 namespace clp {
 /**
- * A class to wrap C style file descriptor.
+ * Wrapper for a UNIX file descriptor.
  */
 class FileDescriptor {
 public:

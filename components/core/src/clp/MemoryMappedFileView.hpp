@@ -39,7 +39,7 @@ public:
     /**
      * @param path The path of the file to map.
      */
-    MemoryMappedFileView(std::string_view path);
+    explicit MemoryMappedFileView(std::string_view path);
 
     // Destructor
     ~MemoryMappedFileView();
@@ -51,7 +51,7 @@ public:
     auto operator=(MemoryMappedFileView&&) -> MemoryMappedFileView& = delete;
 
     /**
-     * @return A view to the mapped file in memory.
+     * @return A view of the mapped file in memory.
      */
     [[nodiscard]] auto get_view() const -> std::span<char> {
         return std::span<char>{static_cast<char*>(m_data), m_buf_size};
