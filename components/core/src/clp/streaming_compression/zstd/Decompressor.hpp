@@ -7,7 +7,7 @@
 #include <zstd.h>
 
 #include "../../FileReader.hpp"
-#include "../../MemoryMappedFileView.hpp"
+#include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 
@@ -125,7 +125,7 @@ private:
     // Compressed stream variables
     ZSTD_DStream* m_decompression_stream;
 
-    std::unique_ptr<MemoryMappedFileView> m_memory_mapped_file;
+    std::unique_ptr<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
     FileReader* m_file_reader;
     size_t m_file_reader_initial_pos;
     std::unique_ptr<char[]> m_file_read_buffer;

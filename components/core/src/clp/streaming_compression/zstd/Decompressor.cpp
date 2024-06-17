@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "../../Defs.h"
-#include "../../MemoryMappedFileView.hpp"
+#include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../spdlog_with_specializations.hpp"
 
 namespace clp::streaming_compression::zstd {
@@ -205,9 +205,8 @@ ErrorCode Decompressor::open(std::string const& compressed_file_path) {
     }
     m_input_type = InputType::MemoryMappedCompressedFile;
 
-    // Create memory mapping for compressed_file_path, use boost read only
-    // memory mapped file
-    m_memory_mapped_file = std::make_unique<MemoryMappedFileView>(compressed_file_path);
+    // Create read-only memory mapping for compressed_file_path
+    m_memory_mapped_file = std::make_unique<ReadOnlyMemoryMappedFile>(compressed_file_path);
     auto const file_view{m_memory_mapped_file->get_view()};
 
     // Configure input stream

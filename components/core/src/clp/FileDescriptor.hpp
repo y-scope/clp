@@ -44,23 +44,18 @@ public:
     };
 
     /**
-     * A C++ wrapper for Unix oflag that describes the operation mode.
+     * A C++ wrapper for Unix oflag that describes the open open_mode.
      */
     // NOLINTNEXTLINE(performance-enum-size)
-    enum class Mode : int {
+    enum class OpenMode : int {
         ReadOnly = O_RDONLY,
         CreateForWrite = O_WRONLY | O_CREAT | O_TRUNC,
     };
 
     // Constructors
-    /**
-     * @param path
-     * @param mode
-     * @param close_failure_callback
-     */
     FileDescriptor(
             std::string_view path,
-            Mode mode,
+            OpenMode open_mode,
             CloseFailureCallback close_failure_callback = nullptr
     );
 
@@ -84,13 +79,13 @@ public:
     [[nodiscard]] auto get_size() const -> size_t;
 
     /**
-     * @return The operation mode.
+     * @return The operation open_mode.
      */
-    [[nodiscard]] auto get_mode() const -> Mode { return m_mode; }
+    [[nodiscard]] auto get_open_mode() const -> OpenMode { return m_open_mode; }
 
 private:
     int m_fd{-1};
-    Mode m_mode;
+    OpenMode m_open_mode;
     CloseFailureCallback m_close_failure_callback{nullptr};
 };
 }  // namespace clp

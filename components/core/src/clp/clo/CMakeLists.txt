@@ -38,8 +38,6 @@ set(
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
-        ../MemoryMappedFileView.cpp
-        ../MemoryMappedFileView.hpp
         ../networking/socket_utils.cpp
         ../networking/socket_utils.hpp
         ../networking/SocketOperationFailed.hpp
@@ -53,6 +51,8 @@ set(
         ../Query.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
+        ../ReadOnlyMemoryMappedFile.cpp
+        ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
         ../SQLiteDB.cpp
         ../SQLiteDB.hpp

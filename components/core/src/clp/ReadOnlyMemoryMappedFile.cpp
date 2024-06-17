@@ -1,4 +1,4 @@
-#include "MemoryMappedFileView.hpp"
+#include "ReadOnlyMemoryMappedFile.hpp"
 
 #include <sys/mman.h>
 
@@ -9,8 +9,8 @@
 #include "FileDescriptor.hpp"
 
 namespace clp {
-MemoryMappedFileView::MemoryMappedFileView(std::string_view path) {
-    FileDescriptor const fd{path, FileDescriptor::Mode::ReadOnly};
+ReadOnlyMemoryMappedFile::ReadOnlyMemoryMappedFile(std::string_view path) {
+    FileDescriptor const fd{path, FileDescriptor::OpenMode::ReadOnly};
     auto const file_size{fd.get_size()};
     if (0 == file_size) {
         // `mmap` doesn't allow mapping an empty file, so we don't need to call it.
@@ -29,7 +29,7 @@ MemoryMappedFileView::MemoryMappedFileView(std::string_view path) {
     m_buf_size = file_size;
 }
 
-MemoryMappedFileView::~MemoryMappedFileView() {
+ReadOnlyMemoryMappedFile::~ReadOnlyMemoryMappedFile() {
     if (0 == m_buf_size) {
         // We don't call `mmap` for empty files, so we don't need to call `munmap`.
         return;

@@ -64,8 +64,6 @@ set(
         ../LogTypeDictionaryWriter.cpp
         ../LogTypeDictionaryWriter.hpp
         ../math_utils.hpp
-        ../MemoryMappedFileView.cpp
-        ../MemoryMappedFileView.hpp
         ../MessageParser.cpp
         ../MessageParser.hpp
         ../MySQLDB.cpp
@@ -84,6 +82,8 @@ set(
         ../Query.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
+        ../ReadOnlyMemoryMappedFile.cpp
+        ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
         ../SQLiteDB.cpp
         ../SQLiteDB.hpp

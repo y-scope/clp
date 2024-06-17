@@ -1,5 +1,5 @@
-#ifndef CLP_MEMORYMAPPEDFILEVIEW_HPP
-#define CLP_MEMORYMAPPEDFILEVIEW_HPP
+#ifndef CLP_READONLYMEMORYMAPPEDFILE_HPP
+#define CLP_READONLYMEMORYMAPPEDFILE_HPP
 
 #include <cstddef>
 #include <span>
@@ -15,7 +15,7 @@ namespace clp {
  * A class for mapping a read-only file into memory. It maintains the memory buffer created by the
  * underlying `mmap` system call and provides methods to get a view of the memory buffer.
  */
-class MemoryMappedFileView {
+class ReadOnlyMemoryMappedFile {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -39,16 +39,16 @@ public:
     /**
      * @param path The path of the file to map.
      */
-    explicit MemoryMappedFileView(std::string_view path);
+    explicit ReadOnlyMemoryMappedFile(std::string_view path);
 
     // Destructor
-    ~MemoryMappedFileView();
+    ~ReadOnlyMemoryMappedFile();
 
     // Disable copy/move constructors/assignment operators
-    MemoryMappedFileView(MemoryMappedFileView const&) = delete;
-    MemoryMappedFileView(MemoryMappedFileView&&) = delete;
-    auto operator=(MemoryMappedFileView const&) -> MemoryMappedFileView& = delete;
-    auto operator=(MemoryMappedFileView&&) -> MemoryMappedFileView& = delete;
+    ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile const&) = delete;
+    ReadOnlyMemoryMappedFile(ReadOnlyMemoryMappedFile&&) = delete;
+    auto operator=(ReadOnlyMemoryMappedFile const&) -> ReadOnlyMemoryMappedFile& = delete;
+    auto operator=(ReadOnlyMemoryMappedFile&&) -> ReadOnlyMemoryMappedFile& = delete;
 
     /**
      * @return A view of the mapped file in memory.

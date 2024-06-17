@@ -363,8 +363,6 @@ set(SOURCE_FILES_unitTest
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
         src/clp/math_utils.hpp
-        src/clp/MemoryMappedFileView.cpp
-        src/clp/MemoryMappedFileView.hpp
         src/clp/MessageParser.cpp
         src/clp/MessageParser.hpp
         src/clp/MySQLDB.cpp
@@ -385,6 +383,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Query.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
+        src/clp/ReadOnlyMemoryMappedFile.cpp
+        src/clp/ReadOnlyMemoryMappedFile.hpp
         src/clp/spdlog_with_specializations.hpp
         src/clp/SQLiteDB.cpp
         src/clp/SQLiteDB.hpp

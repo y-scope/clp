@@ -15,12 +15,12 @@ set(
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
         ../LogTypeDictionaryReader.hpp
-        ../MemoryMappedFileView.cpp
-        ../MemoryMappedFileView.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
+        ../ReadOnlyMemoryMappedFile.cpp
+        ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
         ../streaming_compression/Decompressor.hpp
         ../streaming_compression/passthrough/Decompressor.cpp

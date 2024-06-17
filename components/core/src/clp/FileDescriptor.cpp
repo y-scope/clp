@@ -14,11 +14,13 @@
 namespace clp {
 FileDescriptor::FileDescriptor(
         std::string_view path,
-        Mode mode,
+        OpenMode open_mode,
         CloseFailureCallback close_failure_callback
 )
-        : m_fd{open(path.data(), enum_to_underlying_type(mode))},
-          m_mode{mode},
+        : m_fd{(0 != (enum_to_underlying_type(open_mode) & O_CREAT))
+                       ? open(path.data(), enum_to_underlying_type(open_mode), S_IRWXU)
+                       : open(path.data(), enum_to_underlying_type(open_mode))},
+          m_open_mode{open_mode},
           m_close_failure_callback{close_failure_callback} {
     if (-1 == m_fd) {
         throw OperationFailed(
