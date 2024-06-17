@@ -24,7 +24,7 @@ ErrorCode StringReader::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
     if (nullptr == buf) {
         return ErrorCode_BadParam;
     }
-    
+
     if (m_pos == m_input_string.size()) {
         return ErrorCode_EndOfFile;
     }
