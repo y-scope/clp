@@ -31,80 +31,92 @@ public:
 
     /**
      * Append a logtype to the current logtype.
-     * @param suffix 
+     * @param suffix
      */
-    auto append_logtype (QueryLogtype& suffix) -> void {
-        m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(),
-                         suffix.m_logtype.end());
-        m_search_query.insert(m_search_query.end(), suffix.m_search_query.begin(),
-                              suffix.m_search_query.end());
-        m_is_potentially_in_dict.insert(m_is_potentially_in_dict.end(), suffix.m_is_potentially_in_dict.begin(),
-                            suffix.m_is_potentially_in_dict.end());
-        m_var_has_wildcard.insert(m_var_has_wildcard.end(),
-                                  suffix.m_var_has_wildcard.begin(),
-                                  suffix.m_var_has_wildcard.end());
+    auto append_logtype(QueryLogtype& suffix) -> void {
+        m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
+        m_search_query.insert(
+                m_search_query.end(),
+                suffix.m_search_query.begin(),
+                suffix.m_search_query.end()
+        );
+        m_is_potentially_in_dict.insert(
+                m_is_potentially_in_dict.end(),
+                suffix.m_is_potentially_in_dict.begin(),
+                suffix.m_is_potentially_in_dict.end()
+        );
+        m_var_has_wildcard.insert(
+                m_var_has_wildcard.end(),
+                suffix.m_var_has_wildcard.begin(),
+                suffix.m_var_has_wildcard.end()
+        );
     }
 
     /**
      * Append a single value to the current logtype.
-     * @param val 
-     * @param string 
-     * @param var_contains_wildcard 
+     * @param val
+     * @param string
+     * @param var_contains_wildcard
      */
-    auto append_value (std::variant<char, int> const& val, std::string const& string,
-                 bool var_contains_wildcard) -> void {
+    auto append_value(
+            std::variant<char, int> const& val,
+            std::string const& string,
+            bool var_contains_wildcard
+    ) -> void {
         m_var_has_wildcard.push_back(var_contains_wildcard);
         m_logtype.push_back(val);
         m_search_query.push_back(string);
         m_is_potentially_in_dict.push_back(false);
     }
 
-    QueryLogtype (std::variant<char, int> const& val, std::string const& string,
-                  bool var_contains_wildcard) {
+    QueryLogtype(
+            std::variant<char, int> const& val,
+            std::string const& string,
+            bool var_contains_wildcard
+    ) {
         append_value(val, string, var_contains_wildcard);
     }
 
-    QueryLogtype () = default;
+    QueryLogtype() = default;
 
     /**
-     * @param rhs 
-     * @return true if the current logtype is shorter than rhs, false if the current logtype 
+     * @param rhs
+     * @return true if the current logtype is shorter than rhs, false if the current logtype
      * is longer. If equally long, true if the current logtype is lexicographically smaller than
-     * rhs, false if bigger. If the logtypes are identical, true if the current search query is 
+     * rhs, false if bigger. If the logtypes are identical, true if the current search query is
      * lexicographically smaller than rhs, false if bigger. If the search queries are identical,
      * true if the first mismatch in special character locations is a non-special character for the
-     * current logtype, false otherwise. 
+     * current logtype, false otherwise.
      */
-    bool operator<(const QueryLogtype &rhs) const{
-        if(m_logtype.size() < rhs.m_logtype.size()) {
+    bool operator<(QueryLogtype const& rhs) const {
+        if (m_logtype.size() < rhs.m_logtype.size()) {
             return true;
         } else if (m_logtype.size() > rhs.m_logtype.size()) {
             return false;
         }
-        for(uint32_t i = 0; i < m_logtype.size(); i++) {
-            if(m_logtype[i] < rhs.m_logtype[i]) {
+        for (uint32_t i = 0; i < m_logtype.size(); i++) {
+            if (m_logtype[i] < rhs.m_logtype[i]) {
                 return true;
-            } else if(m_logtype[i] > rhs.m_logtype[i]) {
+            } else if (m_logtype[i] > rhs.m_logtype[i]) {
                 return false;
             }
         }
-        for(uint32_t i = 0; i < m_search_query.size(); i++) {
-            if(m_search_query[i] < rhs.m_search_query[i]) {
+        for (uint32_t i = 0; i < m_search_query.size(); i++) {
+            if (m_search_query[i] < rhs.m_search_query[i]) {
                 return true;
-            } else if(m_search_query[i] > rhs.m_search_query[i]) {
+            } else if (m_search_query[i] > rhs.m_search_query[i]) {
                 return false;
             }
         }
-        for(uint32_t i = 0; i < m_is_potentially_in_dict.size(); i++) {
-            if(m_is_potentially_in_dict[i] < rhs.m_is_potentially_in_dict[i]) {
+        for (uint32_t i = 0; i < m_is_potentially_in_dict.size(); i++) {
+            if (m_is_potentially_in_dict[i] < rhs.m_is_potentially_in_dict[i]) {
                 return true;
-            } else if(m_is_potentially_in_dict[i] > rhs.m_is_potentially_in_dict[i]) {
+            } else if (m_is_potentially_in_dict[i] > rhs.m_is_potentially_in_dict[i]) {
                 return false;
             }
         }
         return false;
     }
-
 };
 
 /**
