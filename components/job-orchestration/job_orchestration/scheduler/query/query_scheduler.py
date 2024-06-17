@@ -650,7 +650,7 @@ async def main(argv: List[str]) -> int:
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Setup logging to file
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "search_scheduler.log"
+    log_file = Path(os.getenv("CLP_LOGS_DIR")) / "query_scheduler.log"
     logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
     logging_file_handler.setFormatter(get_logging_formatter())
     logger.addHandler(logging_file_handler)
@@ -697,7 +697,7 @@ async def main(argv: List[str]) -> int:
             f"Connected to archive database"
             f" {clp_config.database.host}:{clp_config.database.port}."
         )
-        logger.info("Search scheduler started.")
+        logger.info("Query scheduler started.")
         batch_size = clp_config.query_scheduler.num_archives_to_search_per_sub_job
         job_handler = asyncio.create_task(
             handle_jobs(
