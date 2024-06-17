@@ -39,6 +39,7 @@ class QueryJob(BaseModel):
     id: str
     state: InternalJobState
     start_time: Optional[datetime.datetime]
+    current_sub_job_async_task_result: Optional[Any]
 
 
 class SearchJob(QueryJob):
@@ -46,7 +47,6 @@ class SearchJob(QueryJob):
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: List[Dict[str, Any]]
-    current_sub_job_async_task_result: Optional[Any]
     reducer_acquisition_task: Optional[asyncio.Task]
     reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
 
