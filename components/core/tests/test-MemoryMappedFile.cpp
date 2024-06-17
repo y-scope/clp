@@ -26,7 +26,7 @@ auto read_content(clp::ReaderInterface& reader) -> std::vector<char> {
     std::vector<char> buf;
     for (bool has_more_content{true}; has_more_content;) {
         size_t num_bytes_read{};
-        has_more_content = reader.read(read_buf.data(), cBufferSize, num_bytes_read);
+        has_more_content = reader.read(read_buf.data(), read_buf.size(), num_bytes_read);
         buf.insert(buf.cend(), read_buf.cbegin(), read_buf.cbegin() + num_bytes_read);
     }
     return buf;
