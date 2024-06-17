@@ -20,7 +20,7 @@
 #  jobs_poll_delay: 0.1  # seconds
 #  logging_level: "INFO"
 #
-#search_scheduler:
+#query_scheduler:
 #  host: "localhost"
 #  port: 7000
 #  jobs_poll_delay: 0.1  # seconds
@@ -51,7 +51,7 @@
 #compression_worker:
 #  logging_level: "INFO"
 #
-#search_worker:
+#query_worker:
 #  logging_level: "INFO"
 #
 #webui:
