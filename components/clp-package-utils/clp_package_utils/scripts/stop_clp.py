@@ -11,12 +11,12 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    QUERY_SCHEDULER_COMPONENT_NAME,
-    QUERY_WORKER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 )
 
@@ -111,13 +111,13 @@ def main(argv):
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
         if target in (
-                ALL_TARGET_NAME,
-                CONTROLLER_TARGET_NAME,
-                COMPRESSION_SCHEDULER_COMPONENT_NAME,
-                COMPRESSION_WORKER_COMPONENT_NAME,
-                QUEUE_COMPONENT_NAME,
-                QUERY_SCHEDULER_COMPONENT_NAME,
-                QUERY_WORKER_COMPONENT_NAME,
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            QUEUE_COMPONENT_NAME,
+            QUERY_SCHEDULER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_queue_credentials_file(clp_config, clp_home, False)
     except:

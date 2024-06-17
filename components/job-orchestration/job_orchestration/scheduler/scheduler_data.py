@@ -34,10 +34,12 @@ class InternalJobState(Enum):
     WAITING_FOR_DISPATCH = auto()
     RUNNING = auto()
 
+
 class QueryJob(BaseModel):
     id: str
     state: InternalJobState
     start_time: Optional[datetime.datetime]
+
 
 class SearchJob(QueryJob):
     search_config: SearchConfig

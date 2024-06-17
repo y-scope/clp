@@ -13,7 +13,7 @@ from contextlib import closing
 
 import msgpack
 import pymongo
-from clp_py_utils.clp_config import Database, ResultsCache, QUERY_JOBS_TABLE_NAME
+from clp_py_utils.clp_config import Database, QUERY_JOBS_TABLE_NAME, ResultsCache
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig

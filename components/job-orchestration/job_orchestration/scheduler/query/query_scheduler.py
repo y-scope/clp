@@ -42,13 +42,13 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryTaskStatus
 from job_orchestration.scheduler.job_config import SearchConfig
-from job_orchestration.scheduler.scheduler_data import InternalJobState, SearchJob, QueryTaskResult
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
     ReducerHandlerMessageQueues,
     ReducerHandlerMessageType,
 )
+from job_orchestration.scheduler.scheduler_data import InternalJobState, QueryTaskResult, SearchJob
 from pydantic import ValidationError
 
 # Setup logging
