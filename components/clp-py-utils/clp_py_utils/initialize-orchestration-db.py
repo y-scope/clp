@@ -86,8 +86,9 @@ def main(argv):
                     INDEX `job_id` (`job_id`) USING BTREE,
                     INDEX `TASK_STATUS` (`status`) USING BTREE,
                     INDEX `TASK_START_TIME` (`start_time`) USING BTREE,
-                    CONSTRAINT `compression_tasks` FOREIGN KEY (`job_id`) 
-                    REFERENCES `compression_jobs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    CONSTRAINT `{COMPRESSION_TASKS_TABLE_NAME}` FOREIGN KEY (`job_id`) 
+                    REFERENCES `{COMPRESSION_JOBS_TABLE_NAME}` (`id`)
+                    ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
@@ -123,8 +124,9 @@ def main(argv):
                     INDEX `job_id` (`job_id`) USING BTREE,
                     INDEX `TASK_STATUS` (`status`) USING BTREE,
                     INDEX `TASK_START_TIME` (`start_time`) USING BTREE,
-                    CONSTRAINT `search_tasks` FOREIGN KEY (`job_id`) 
-                    REFERENCES `query_jobs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    CONSTRAINT `{QUERY_TASKS_TABLE_NAME}` FOREIGN KEY (`job_id`) 
+                    REFERENCES `{QUERY_JOBS_TABLE_NAME}` (`id`)
+                    ON UPDATE NO ACTION ON DELETE NO ACTION
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
