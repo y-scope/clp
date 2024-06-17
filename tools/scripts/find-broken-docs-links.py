@@ -6,6 +6,8 @@ from pathlib import Path
 
 def main(argv):
     repo_root = _get_repo_root()
+    os.chdir(repo_root)
+
     found_violation = False
 
     # Check for https://docs.yscope.com links with ".md" suffixes
@@ -101,8 +103,8 @@ def _parse_and_print_match(match: str, error_msg: str):
     if os.getenv("CI") == "true":
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
-        # print(f"::error file={file},line={line},title={error_msg}::")
-        print("::error file=app.js,line=1,title=abc 123::")
+        print(f"::error file={file},line={line},title={error_msg}::")
+        print(f"error file={file},line={line},title={error_msg}::")
     else:
         print(error_msg, file=sys.stderr)
         print(match, file=sys.stderr)
