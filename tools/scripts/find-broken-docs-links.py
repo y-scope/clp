@@ -6,7 +6,6 @@ from pathlib import Path
 
 def main(argv):
     repo_root = _get_repo_root()
-    os.chdir(repo_root)
 
     found_violation = False
 
@@ -15,7 +14,7 @@ def main(argv):
             r"https://docs\.yscope\.com/.+\.md",
             repo_root,
             repo_root,
-            "docs.yscope.com links cannot have \".md\" suffixes."
+            "https://docs.yscope.com links cannot have \".md\" suffixes."
     ):
         found_violation = True
 
@@ -24,7 +23,7 @@ def main(argv):
             r":link:[[:space:]]*.+\.md",
             repo_root,
             repo_root / "docs",
-            "sphinx link attributes cannot have \".md\" suffixes"
+            "sphinx :link: attributes cannot have \".md\" suffixes"
     ):
         found_violation = True
 
@@ -103,12 +102,7 @@ def _parse_and_print_match(match: str, error_msg: str):
     if os.getenv("CI") == "true":
         # Print a GitHub Actions error annotation
         file, line, _ = match.split(":", 2)
-        print(f"::error file=app.js,line=1,title=Title::Missing semicolon")
-        print(f"::error file={file},line=1,title=Title::Missing semicolon")
-        print(f"::error file=app.js,line={line},title=Title::Missing semicolon")
-        print(f"::error file=app.js,line=1,title={error_msg}::Missing semicolon")
-        print(f"::error file=app.js,line=1,title=Title::")
-        print(f"error file={Path(file).name},line={line},title={error_msg}::")
+        print(f"::error file={file},line={line}::{error_msg}")
     else:
         print(error_msg, file=sys.stderr)
         print(match, file=sys.stderr)
