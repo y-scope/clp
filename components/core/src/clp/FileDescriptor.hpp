@@ -79,7 +79,7 @@ public:
     [[nodiscard]] auto get_size() const -> size_t;
 
     /**
-     * @return The operation open_mode.
+     * @return The open mode.
      */
     [[nodiscard]] auto get_open_mode() const -> OpenMode { return m_open_mode; }
 
