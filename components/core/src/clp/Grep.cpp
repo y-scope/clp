@@ -7,7 +7,6 @@
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>
-
 #include <string_utils/string_utils.hpp>
 
 #include "EncodedVariableInterpreter.hpp"
@@ -528,7 +527,7 @@ std::optional<Query> Grep::process_raw_query(
     processed_search_string += search_string;
     processed_search_string += '*';
     processed_search_string = clean_up_wildcard_search_string(processed_search_string);
-    
+
     vector<SubQuery> sub_queries;
     if (use_heuristic) {
         // Split search_string into tokens with wildcards
@@ -558,8 +557,8 @@ std::optional<Query> Grep::process_raw_query(
         {
             query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
         }
-        // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we
-        // fall-back to decompression + wildcard matching for those.
+        // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since
+        // we fall-back to decompression + wildcard matching for those.
         vector<QueryToken*> ambiguous_tokens;
         for (auto& query_token : query_tokens) {
             if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
@@ -568,8 +567,8 @@ std::optional<Query> Grep::process_raw_query(
         }
 
         // Generate a sub-query for each combination of ambiguous tokens
-        // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need
-        // to create:
+        // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we
+        // need to create:
         // - (token1 as logtype) (token2 as logtype)
         // - (token1 as logtype) (token2 as var)
         // - (token1 as var) (token2 as logtype)
@@ -589,8 +588,8 @@ std::optional<Query> Grep::process_raw_query(
             );
             switch (matchability) {
                 case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                    // Since other sub-queries will be superceded by this one, we can stop processing
-                    // now
+                    // Since other sub-queries will be superceded by this one, we can stop
+                    // processing now
                     return Query{
                             search_begin_ts,
                             search_end_ts,
@@ -630,8 +629,8 @@ std::optional<Query> Grep::process_raw_query(
                 } else {
                     // Add * if preceding and proceeding characters are *
                     bool prev_star = j > 0 && processed_search_string[j - 1] == '*';
-                    bool next_star = i < processed_search_string.back() - 1 &&
-                                     processed_search_string[i + 1] == '*';
+                    bool next_star = i < processed_search_string.back() - 1
+                                     && processed_search_string[i + 1] == '*';
                     if (prev_star) {
                         current_string.insert(0, "*");
                     }
@@ -639,11 +638,11 @@ std::optional<Query> Grep::process_raw_query(
                         current_string.push_back('*');
                     }
                     bool is_surrounded_by_delims = false;
-                    if ((j == 0 || current_string[0] == '*' ||
-                         forward_lexer.is_delimiter(processed_search_string[j - 1])) &&
-                        (i == processed_search_string.size() - 1 ||
-                         current_string.back() == '*' ||
-                         forward_lexer.is_delimiter(processed_search_string[i + 1]))) {
+                    if ((j == 0 || current_string[0] == '*'
+                         || forward_lexer.is_delimiter(processed_search_string[j - 1]))
+                        && (i == processed_search_string.size() - 1 || current_string.back() == '*'
+                            || forward_lexer.is_delimiter(processed_search_string[i + 1])))
+                    {
                         is_surrounded_by_delims = true;
                     }
                     bool contains_wildcard = false;
@@ -658,13 +657,14 @@ std::optional<Query> Grep::process_raw_query(
                             if (c == '*') {
                                 contains_wildcard = true;
                                 regex_search_string.push_back('.');
-                                if(pos > 0 && pos < current_string.size() - 1) {
+                                if (pos > 0 && pos < current_string.size() - 1) {
                                     contains_central_wildcard = true;
                                 }
-                            } else if (
-                                    log_surgeon::SchemaParser::get_special_regex_characters().find(
-                                            c) !=
-                                    log_surgeon::SchemaParser::get_special_regex_characters().end()) {
+                            } else if (log_surgeon::SchemaParser::get_special_regex_characters()
+                                               .find(c)
+                                       != log_surgeon::SchemaParser::get_special_regex_characters()
+                                                  .end())
+                            {
                                 regex_search_string.push_back('\\');
                             }
                             regex_search_string.push_back(c);
@@ -679,19 +679,21 @@ std::optional<Query> Grep::process_raw_query(
                         schema2.add_variable("search", regex_search_string, -1);
                         RegexNFA<RegexNFAByteState> nfa;
                         std::unique_ptr<SchemaAST> schema_ast = schema2.release_schema_ast_ptr();
-                        for (std::unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
+                        for (std::unique_ptr<ParserAST> const& parser_ast :
+                             schema_ast->m_schema_vars)
+                        {
                             auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
                             ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
                             rule.add_ast(&nfa);
                         }
-                        // TODO: DFA creation isn't optimized for performance 
+                        // TODO: DFA creation isn't optimized for performance
                         //       at all
                         // TODO: log-surgeon code needs to be refactored to
                         //       allow direct usage of DFA/NFA without lexer
-                        unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 =
-                                forward_lexer.nfa_to_dfa(nfa);
-                        unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 =
-                                forward_lexer.get_dfa();
+                        unique_ptr<RegexDFA<RegexDFAByteState>> dfa2
+                                = forward_lexer.nfa_to_dfa(nfa);
+                        unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1
+                                = forward_lexer.get_dfa();
                         schema_types = dfa1->get_intersect(dfa2);
                         bool already_added_var = false;
                         for (int id : schema_types) {
@@ -713,21 +715,22 @@ std::optional<Query> Grep::process_raw_query(
                             if (end_star) {
                                 suffix.append_value('*', "*", false);
                             }
-                            // If no wildcard, only use the top priority type 
+                            // If no wildcard, only use the top priority type
                             if (false == contains_wildcard) {
                                 break;
                             }
                         }
                     }
                     // Non-guaranteed variables, are potentially static text
-                    if (schema_types.empty() || contains_wildcard ||
-                        is_surrounded_by_delims == false) {
+                    if (schema_types.empty() || contains_wildcard
+                        || is_surrounded_by_delims == false)
+                    {
                         suffixes.emplace_back();
                         auto& suffix = suffixes.back();
                         uint32_t start_id = prev_star ? 1 : 0;
-                        uint32_t end_id = next_star ? current_string.size() - 1 :
-                                          current_string.size();
-                        for(uint32_t k = start_id; k < end_id; k++) {
+                        uint32_t end_id
+                                = next_star ? current_string.size() - 1 : current_string.size();
+                        for (uint32_t k = start_id; k < end_id; k++) {
                             char const& c = current_string[k];
                             std::string char_string({c});
                             suffix.append_value(c, char_string, false);
@@ -753,7 +756,7 @@ std::optional<Query> Grep::process_raw_query(
         }
         query_matrix_set = true;
         uint32_t last_row = query_matrix.size() - 1;
-        for (QueryLogtype const& query_logtype: query_matrix[last_row]) {
+        for (QueryLogtype const& query_logtype : query_matrix[last_row]) {
             SubQuery sub_query;
             std::string logtype_string;
             bool has_vars = true;
@@ -770,11 +773,12 @@ std::optional<Query> Grep::process_raw_query(
                     encoded_variable_t encoded_var;
                     // Create a duplicate query that will treat a wildcard
                     // int/float as an int/float encoded in a segment
-                    if (false == is_special && var_has_wildcard &&
-                        (schema_type == "int" || schema_type == "float")) {
+                    if (false == is_special && var_has_wildcard
+                        && (schema_type == "int" || schema_type == "float"))
+                    {
                         QueryLogtype new_query_logtype = query_logtype;
                         new_query_logtype.m_is_potentially_in_dict[i] = true;
-                        // TODO: this is kinda sketchy, but it'll work because 
+                        // TODO: this is kinda sketchy, but it'll work because
                         //       the < operator is defined in a way that will
                         //       insert it after the current iterator
                         query_matrix[last_row].insert(new_query_logtype);
@@ -785,23 +789,34 @@ std::optional<Query> Grep::process_raw_query(
                         } else if (schema_type == "float") {
                             LogTypeDictionaryEntry::add_float_var(logtype_string);
                         }
-                    } else if (schema_type == "int" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                                       var_str, encoded_var)) {
+                    } else if (schema_type == "int"
+                               && EncodedVariableInterpreter::
+                                       convert_string_to_representable_integer_var(
+                                               var_str,
+                                               encoded_var
+                                       ))
+                    {
                         LogTypeDictionaryEntry::add_int_var(logtype_string);
-                    } else if (schema_type == "float" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                                       var_str, encoded_var)) {
+                    } else if (schema_type == "float"
+                               && EncodedVariableInterpreter::
+                                       convert_string_to_representable_float_var(
+                                               var_str,
+                                               encoded_var
+                                       ))
+                    {
                         LogTypeDictionaryEntry::add_float_var(logtype_string);
                     } else {
                         LogTypeDictionaryEntry::add_dict_var(logtype_string);
                     }
                 }
             }
-            std::unordered_set<const LogTypeDictionaryEntry*> possible_logtype_entries;
-            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(logtype_string, ignore_case,
-                                                                                  possible_logtype_entries);
-            if(possible_logtype_entries.empty()) {
+            std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
+            archive.get_logtype_dictionary().get_entries_matching_wildcard_string(
+                    logtype_string,
+                    ignore_case,
+                    possible_logtype_entries
+            );
+            if (possible_logtype_entries.empty()) {
                 continue;
             }
             for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
@@ -814,21 +829,32 @@ std::optional<Query> Grep::process_raw_query(
                     encoded_variable_t encoded_var;
                     if (is_special) {
                         sub_query.mark_wildcard_match_required();
-                    } else if (schema_type == "int" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                                       var_str, encoded_var)) {
+                    } else if (schema_type == "int"
+                               && EncodedVariableInterpreter::
+                                       convert_string_to_representable_integer_var(
+                                               var_str,
+                                               encoded_var
+                                       ))
+                    {
                         sub_query.add_non_dict_var(encoded_var);
-                    } else if (schema_type == "float" &&
-                               EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                                       var_str, encoded_var)) {
+                    } else if (schema_type == "float"
+                               && EncodedVariableInterpreter::
+                                       convert_string_to_representable_float_var(
+                                               var_str,
+                                               encoded_var
+                                       ))
+                    {
                         sub_query.add_non_dict_var(encoded_var);
                     } else {
                         auto& var_dict = archive.get_var_dictionary();
                         if (var_has_wildcard) {
                             // Find matches
-                            std::unordered_set<const VariableDictionaryEntry*> var_dict_entries;
-                            var_dict.get_entries_matching_wildcard_string(var_str, ignore_case,
-                                                                          var_dict_entries);
+                            std::unordered_set<VariableDictionaryEntry const*> var_dict_entries;
+                            var_dict.get_entries_matching_wildcard_string(
+                                    var_str,
+                                    ignore_case,
+                                    var_dict_entries
+                            );
                             if (var_dict_entries.empty()) {
                                 // Not in dictionary
                                 has_vars = false;
@@ -838,33 +864,37 @@ std::optional<Query> Grep::process_raw_query(
                                 for (auto entry : var_dict_entries) {
                                     encoded_vars.insert(
                                             EncodedVariableInterpreter::encode_var_dict_id(
-                                                    entry->get_id()));
+                                                    entry->get_id()
+                                            )
+                                    );
                                 }
                                 sub_query.add_imprecise_dict_var(encoded_vars, var_dict_entries);
                             }
                         } else {
-                            auto entry = var_dict.get_entry_matching_value(
-                                    var_str, ignore_case);
+                            auto entry = var_dict.get_entry_matching_value(var_str, ignore_case);
                             if (nullptr == entry) {
                                 // Not in dictionary
                                 has_vars = false;
                             } else {
-                                encoded_variable_t encoded_var = EncodedVariableInterpreter::encode_var_dict_id(
-                                        entry->get_id());
+                                encoded_variable_t encoded_var
+                                        = EncodedVariableInterpreter::encode_var_dict_id(
+                                                entry->get_id()
+                                        );
                                 sub_query.add_dict_var(encoded_var, entry);
                             }
                         }
                     }
                 }
             }
-            if(false == has_vars) {
+            if (false == has_vars) {
                 continue;
             }
             if (false == possible_logtype_entries.empty()) {
-                //std::cout << logtype_string << std::endl;
+                // std::cout << logtype_string << std::endl;
                 sub_query.set_possible_logtypes(possible_logtype_entries);
 
-                // Calculate the IDs of the segments that may contain results for the sub-query now that we've calculated the matching logtypes and variables
+                // Calculate the IDs of the segments that may contain results for the sub-query now
+                // that we've calculated the matching logtypes and variables
                 sub_query.calculate_ids_of_matching_segments();
                 sub_queries.push_back(std::move(sub_query));
             }
@@ -1003,7 +1033,7 @@ bool Grep::get_bounds_of_next_potential_var(
 
     return (value_length != begin_pos);
 }
-        
+
 bool Grep::get_bounds_of_next_potential_var(
         string const& value,
         size_t& begin_pos,
