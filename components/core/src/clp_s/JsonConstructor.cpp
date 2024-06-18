@@ -86,7 +86,11 @@ void JsonConstructor::construct_in_order() {
         std::string new_file_name = std::string(src_path) + "_" + std::to_string(first_timestamp)
                                     + "_" + std::to_string(last_timestamp) + ".jsonl";
         auto new_file_path = std::filesystem::path(new_file_name);
-        std::filesystem::rename(src_path, new_file_path);
+        std::error_code ec;
+        std::filesystem::rename(src_path, new_file_path, ec);
+        if (ec) {
+            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
+        }
 
         if (open_new_writer) {
             writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
@@ -119,7 +123,11 @@ void JsonConstructor::construct_in_order() {
         finish_chunk(false);
     } else {
         writer.close();
-        std::filesystem::remove(src_path);
+        std::error_code ec;
+        std::filesystem::remove(src_path, ec);
+        if (ec) {
+            throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
+        }
     }
 }
 }  // namespace clp_s
