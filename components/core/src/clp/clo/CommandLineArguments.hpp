@@ -102,6 +102,24 @@ public:
 private:
     // Methods
     /**
+     *
+     */
+    auto parse_search_arguments(
+            boost::program_options::options_description const& options_general,
+            boost::program_options::variables_map& parsed_command_line_options,
+            std::vector<boost::program_options::option> const& options,
+            int argc
+    ) -> CommandLineArgumentsBase::ParsingResult;
+    /**
+     *
+     */
+    auto parse_ir_extraction_arguments(
+            boost::program_options::options_description const& options_general,
+            boost::program_options::variables_map& parsed_command_line_options,
+            std::vector<boost::program_options::option> const& options,
+            int argc
+    ) -> CommandLineArgumentsBase::ParsingResult;
+    /**
      * Validates output options related to the Network Destination output handler.
      * @param options_description
      * @param options Vector of options previously parsed by boost::program_options and which may
