@@ -22,17 +22,17 @@ REDIS_COMPONENT_NAME = "redis"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
-SEARCH_SCHEDULER_COMPONENT_NAME = "search_scheduler"
+QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
-SEARCH_WORKER_COMPONENT_NAME = "search_worker"
+QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 
 # Target names
 ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"
 
-SEARCH_JOBS_TABLE_NAME = "search_jobs"
-SEARCH_TASKS_TABLE_NAME = "search_tasks"
+QUERY_JOBS_TABLE_NAME = "query_jobs"
+QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
@@ -163,7 +163,7 @@ class CompressionScheduler(BaseModel):
         return field
 
 
-class SearchScheduler(BaseModel):
+class QueryScheduler(BaseModel):
     host = "localhost"
     port = 7000
     jobs_poll_delay: float = 0.1  # seconds
@@ -197,7 +197,7 @@ class CompressionWorker(BaseModel):
         return field
 
 
-class SearchWorker(BaseModel):
+class QueryWorker(BaseModel):
     logging_level: str = "INFO"
 
     @validator("logging_level")
@@ -209,7 +209,7 @@ class SearchWorker(BaseModel):
 class Redis(BaseModel):
     host: str = "localhost"
     port: int = 6379
-    search_backend_database: int = 0
+    query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
     password: typing.Optional[str]
@@ -361,9 +361,9 @@ class CLPConfig(BaseModel):
     reducer: Reducer() = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
-    search_scheduler: SearchScheduler = SearchScheduler()
+    query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
-    search_worker: SearchWorker = SearchWorker()
+    query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 

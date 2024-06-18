@@ -30,12 +30,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             "scheduler-host",
             po::value<std::string>(&m_scheduler_host)
                 ->default_value(m_scheduler_host),
-            "Host the search scheduler is running on"
+            "Host the query scheduler is running on"
         )(
             "scheduler-port",
             po::value<int>(&m_scheduler_port)
                 ->default_value(m_scheduler_port),
-            "Port the search scheduler is listening on"
+            "Port the query scheduler is listening on"
         )(
             "mongodb-uri",
             po::value<std::string>(&m_mongodb_uri)

@@ -3,9 +3,9 @@ import datetime
 from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
-from job_orchestration.scheduler.constants import CompressionTaskStatus, SearchTaskStatus
+from job_orchestration.scheduler.constants import CompressionTaskStatus, QueryTaskStatus
 from job_orchestration.scheduler.job_config import SearchConfig
-from job_orchestration.scheduler.search.reducer_handler import ReducerHandlerMessageQueues
+from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
 
 
@@ -35,15 +35,18 @@ class InternalJobState(Enum):
     RUNNING = auto()
 
 
-class SearchJob(BaseModel):
+class QueryJob(BaseModel):
     id: str
-    search_config: SearchConfig
     state: InternalJobState
     start_time: Optional[datetime.datetime]
+    current_sub_job_async_task_result: Optional[Any]
+
+
+class SearchJob(QueryJob):
+    search_config: SearchConfig
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: List[Dict[str, Any]]
-    current_sub_job_async_task_result: Optional[Any]
     reducer_acquisition_task: Optional[asyncio.Task]
     reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
 
@@ -51,8 +54,8 @@ class SearchJob(BaseModel):
         arbitrary_types_allowed = True
 
 
-class SearchTaskResult(BaseModel):
-    status: SearchTaskStatus
+class QueryTaskResult(BaseModel):
+    status: QueryTaskStatus
     task_id: str
     duration: float
     error_log_path: Optional[str]

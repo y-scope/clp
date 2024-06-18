@@ -89,7 +89,7 @@ bool ServerContext::register_with_scheduler(
     try {
         boost::asio::connect(m_scheduler_socket, endpoints);
     } catch (boost::system::system_error& error) {
-        SPDLOG_ERROR("Failed to connect to search scheduler - {}", error.what());
+        SPDLOG_ERROR("Failed to connect to query scheduler - {}", error.what());
         return false;
     }
 
@@ -120,12 +120,12 @@ bool ServerContext::register_with_scheduler(
     return true;
 }
 
-bool ServerContext::ack_search_scheduler() {
+bool ServerContext::ack_query_scheduler() {
     boost::system::error_code e;
     char const scheduler_response = 'y';
     boost::asio::write(m_scheduler_socket, boost::asio::buffer(&scheduler_response, 1), e);
     if (e) {
-        SPDLOG_ERROR("Failed to notify search scheduler - {}", e.message());
+        SPDLOG_ERROR("Failed to notify query scheduler - {}", e.message());
         return false;
     }
     return true;
@@ -253,7 +253,7 @@ bool ServerContext::try_finalize_results() {
         return false;
     }
 
-    // Notify the search scheduler that the results have been pushed
-    return ack_search_scheduler();
+    // Notify the query scheduler that the results have been pushed
+    return ack_query_scheduler();
 }
 }  // namespace reducer

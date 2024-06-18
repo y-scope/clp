@@ -13,9 +13,9 @@ from contextlib import closing
 
 import msgpack
 import pymongo
-from clp_py_utils.clp_config import Database, ResultsCache, SEARCH_JOBS_TABLE_NAME
+from clp_py_utils.clp_config import Database, QUERY_JOBS_TABLE_NAME, ResultsCache
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.scheduler.constants import SearchJobStatus
+from job_orchestration.scheduler.constants import QueryJobStatus
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig
 
 from clp_package_utils.general import (
@@ -111,7 +111,7 @@ def create_and_monitor_job_in_db(
     ) as db_cursor:
         # Create job
         db_cursor.execute(
-            f"INSERT INTO `{SEARCH_JOBS_TABLE_NAME}` (`search_config`) VALUES (%s)",
+            f"INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`) VALUES (%s)",
             (msgpack.packb(search_config.dict()),),
         )
         db_conn.commit()
@@ -120,16 +120,16 @@ def create_and_monitor_job_in_db(
         # Wait for the job to be marked complete
         while True:
             db_cursor.execute(
-                f"SELECT `status` FROM `{SEARCH_JOBS_TABLE_NAME}` WHERE `id` = {job_id}"
+                f"SELECT `status` FROM `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = {job_id}"
             )
             # There will only ever be one row since it's impossible to have more than one job with
             # the same ID
             new_status = db_cursor.fetchall()[0]["status"]
             db_conn.commit()
             if new_status in (
-                SearchJobStatus.SUCCEEDED,
-                SearchJobStatus.FAILED,
-                SearchJobStatus.CANCELLED,
+                QueryJobStatus.SUCCEEDED,
+                QueryJobStatus.FAILED,
+                QueryJobStatus.CANCELLED,
             ):
                 break
 
