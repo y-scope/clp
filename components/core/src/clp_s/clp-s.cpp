@@ -273,6 +273,8 @@ int main(int argc, char const* argv[]) {
         option.output_dir = command_line_arguments.get_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.archives_dir = archives_dir;
+        option.ordered_chunk_split_threshold
+                = command_line_arguments.get_ordered_chunk_split_threshold();
         try {
             auto const& archive_id = command_line_arguments.get_archive_id();
             if (false == archive_id.empty()) {

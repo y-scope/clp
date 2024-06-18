@@ -287,11 +287,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             extraction_options.add(input_options);
 
             po::options_description decompression_options("Decompression Options");
-            decompression_options.add_options()(
-                    "ordered",
-                    po::bool_switch(&m_ordered_decompression),
-                    "Enable decompression in ascending timestamp order for this archive"
-            );
+            decompression_options
+                    .add_options()("ordered", po::bool_switch(&m_ordered_decompression), "Enable decompression in ascending timestamp order for this archive")(
+                            "ordered-chunk-split-threshold",
+                            po::value<size_t>(&m_ordered_chunk_split_threshold)
+                                    ->default_value(m_ordered_chunk_split_threshold),
+                            "Number of records to include in each output chunk when decompressing "
+                            "records in order"
+                    );
             extraction_options.add(decompression_options);
 
             po::positional_options_description positional_options;
@@ -335,6 +338,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_output_dir.empty()) {
                 throw std::invalid_argument("No output directory specified");
+            }
+
+            if (0 != m_ordered_chunk_split_threshold && false == m_ordered_decompression) {
+                throw std::invalid_argument(
+                        "ordered-chunk-split-threshold must be used with ordered argument"
+                );
             }
         } else if ((char)Command::Search == command_input) {
             std::string archives_dir;
