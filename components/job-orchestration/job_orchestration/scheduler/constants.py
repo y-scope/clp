@@ -67,3 +67,13 @@ class QueryTaskStatus(IntEnum):
 
     def to_str(self) -> str:
         return str(self.name)
+
+class QueryJobType(IntEnum):
+    SEARCH = 0
+    EXTRACT_IR = auto()
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def to_str(self) -> str:
+        return str(self.name)

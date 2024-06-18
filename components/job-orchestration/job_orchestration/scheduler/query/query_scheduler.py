@@ -40,7 +40,7 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.fs_search_task import search
-from job_orchestration.scheduler.constants import QueryJobStatus, QueryTaskStatus
+from job_orchestration.scheduler.constants import QueryJobStatus, QueryTaskStatus, QueryJobType
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
@@ -102,7 +102,8 @@ def fetch_new_search_jobs(db_conn) -> list:
         db_cursor.execute(
             f"""
             SELECT {QUERY_JOBS_TABLE_NAME}.id as job_id,
-            {QUERY_JOBS_TABLE_NAME}.job_config
+            {QUERY_JOBS_TABLE_NAME}.job_config,
+            {QUERY_JOBS_TABLE_NAME}.type
             FROM {QUERY_JOBS_TABLE_NAME}
             WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.PENDING}
             """
@@ -370,55 +371,62 @@ def handle_pending_search_jobs(
 
     reducer_acquisition_tasks = []
 
-    pending_jobs = [
-        job for job in active_jobs.values() if InternalJobState.WAITING_FOR_DISPATCH == job.state
+    pending_search_jobs = [
+        job for job in active_jobs.values() if InternalJobState.WAITING_FOR_DISPATCH == job.state and QueryJobType.SEARCH == job.type
     ]
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         for job in fetch_new_search_jobs(db_conn):
             job_id = str(job["job_id"])
+            job_type = job["type"]
+            job_config = job["job_config"]
 
-            # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
-            if job_id in active_jobs:
-                continue
+            if QueryJobType.SEARCH == job_type:
+                # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
+                if job_id in active_jobs:
+                    continue
 
-            search_config = SearchConfig.parse_obj(msgpack.unpackb(job["job_config"]))
-            archives_for_search = get_archives_for_search(db_conn, search_config)
-            if len(archives_for_search) == 0:
-                if set_job_or_task_status(
-                    db_conn,
-                    QUERY_JOBS_TABLE_NAME,
-                    job_id,
-                    QueryJobStatus.SUCCEEDED,
-                    QueryJobStatus.PENDING,
-                    start_time=datetime.datetime.now(),
-                    num_tasks=0,
-                    duration=0,
-                ):
-                    logger.info(f"No matching archives, skipping job {job['job_id']}.")
-                continue
+                search_config = SearchConfig.parse_obj(msgpack.unpackb(job_config))
+                archives_for_search = get_archives_for_search(db_conn, search_config)
+                if len(archives_for_search) == 0:
+                    if set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.SUCCEEDED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
+                    ):
+                        logger.info(f"No matching archives, skipping job {job_id}.")
+                    continue
 
-            new_search_job = SearchJob(
-                id=job_id,
-                search_config=search_config,
-                state=InternalJobState.WAITING_FOR_DISPATCH,
-                num_archives_to_search=len(archives_for_search),
-                num_archives_searched=0,
-                remaining_archives_for_search=archives_for_search,
-            )
-
-            if search_config.aggregation_config is not None:
-                new_search_job.search_config.aggregation_config.job_id = job["job_id"]
-                new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
-                new_search_job.reducer_acquisition_task = asyncio.create_task(
-                    acquire_reducer_for_job(new_search_job)
+                new_search_job = SearchJob(
+                    id=job_id,
+                    search_config=search_config,
+                    state=InternalJobState.WAITING_FOR_DISPATCH,
+                    num_archives_to_search=len(archives_for_search),
+                    num_archives_searched=0,
+                    remaining_archives_for_search=archives_for_search,
                 )
-                reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
-            else:
-                pending_jobs.append(new_search_job)
-            active_jobs[job_id] = new_search_job
 
-        for job in pending_jobs:
+                if search_config.aggregation_config is not None:
+                    new_search_job.search_config.aggregation_config.job_id = int(job_id)
+                    new_search_job.state = InternalJobState.WAITING_FOR_REDUCER
+                    new_search_job.reducer_acquisition_task = asyncio.create_task(
+                        acquire_reducer_for_job(new_search_job)
+                    )
+                    reducer_acquisition_tasks.append(new_search_job.reducer_acquisition_task)
+                else:
+                    pending_search_jobs.append(new_search_job)
+                active_jobs[job_id] = new_search_job
+
+            else:
+                logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
+                continue
+
+        for job in pending_search_jobs:
             job_id = job.id
 
             if (

@@ -3,10 +3,10 @@ import datetime
 from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
-from job_orchestration.scheduler.constants import CompressionTaskStatus, QueryTaskStatus
+from job_orchestration.scheduler.constants import CompressionTaskStatus, QueryTaskStatus, QueryJobType
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Field
 
 
 class CompressionJob(BaseModel):
@@ -37,10 +37,17 @@ class InternalJobState(Enum):
 
 class QueryJob(BaseModel):
     id: str
+    type: QueryJobType
     state: InternalJobState
     start_time: Optional[datetime.datetime]
     current_sub_job_async_task_result: Optional[Any]
 
+    @validator("type")
+    def valid_type(cls, field):
+        supported_job = [QueryJobType.SEARCH, QueryJobType.EXTRACT_IR]
+        if field not in supported_job:
+            raise ValueError(f'must be one of the following {"|".join(supported_job)}')
+        return field
 
 class SearchJob(QueryJob):
     search_config: SearchConfig
@@ -49,6 +56,8 @@ class SearchJob(QueryJob):
     remaining_archives_for_search: List[Dict[str, Any]]
     reducer_acquisition_task: Optional[asyncio.Task]
     reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
+
+    type: QueryJobType = Field(default=QueryJobType.SEARCH, const=True)
 
     class Config:  # To allow asyncio.Task and asyncio.Queue
         arbitrary_types_allowed = True
