@@ -20,7 +20,7 @@ namespace clp::streaming_archive::reader {
 class Segment {
 public:
     // Constructor
-    Segment() : m_segment_path({}){};
+    Segment() : m_segment_path({}) {};
 
     // Destructor
     ~Segment();
