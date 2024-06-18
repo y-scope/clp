@@ -696,7 +696,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
             "SqlDbClpArchivesTableName": f"{CLP_METADATA_TABLE_PREFIX}archives",
             "SqlDbClpFilesTableName": f"{CLP_METADATA_TABLE_PREFIX}files",
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "SqlDbSearchJobsTableName": QUERY_JOBS_TABLE_NAME,
+            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
         },
         "public": {
             "ClpStorageEngine": clp_config.package.storage_engine,

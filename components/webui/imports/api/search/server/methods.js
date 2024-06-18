@@ -9,24 +9,24 @@ import {
 } from "../constants";
 import {ERROR_NAME_COLLECTION_DROPPED} from "../SearchJobCollectionsManager";
 import {searchJobCollectionsManager} from "./collections";
-import SearchJobsDbManager from "./SearchJobsDbManager";
+import QueryJobsDbManager from "./QueryJobsDbManager";
 
 
 /**
- * @type {SearchJobsDbManager|null}
+ * @type {QueryJobsDbManager|null}
  */
-let searchJobsDbManager = null;
+let queryJobsDbManager = null;
 
 /**
- * Initializes the SearchJobsDbManager.
+ * Initializes the QueryJobsDbManager.
  *
  * @param {import("mysql2/promise").Pool} sqlDbConnPool
  * @param {object} tableNames
- * @param {string} tableNames.searchJobsTableName
+ * @param {string} tableNames.queryJobsTableName
  * @throws {Error} on error.
  */
-const initSearchJobsDbManager = (sqlDbConnPool, {searchJobsTableName}) => {
-    searchJobsDbManager = new SearchJobsDbManager(sqlDbConnPool, {searchJobsTableName});
+const initQueryJobsDbManager = (sqlDbConnPool, {queryJobsTableName}) => {
+    queryJobsDbManager = new QueryJobsDbManager(sqlDbConnPool, {queryJobsTableName});
 };
 
 /**
@@ -67,8 +67,8 @@ const updateSearchSignalWhenJobsFinish = async ({
 }) => {
     let errorMsg;
     try {
-        await searchJobsDbManager.awaitJobCompletion(searchJobId);
-        await searchJobsDbManager.awaitJobCompletion(aggregationJobId);
+        await queryJobsDbManager.awaitJobCompletion(searchJobId);
+        await queryJobsDbManager.awaitJobCompletion(aggregationJobId);
     } catch (e) {
         errorMsg = e.message;
     }
@@ -169,9 +169,9 @@ Meteor.methods({
         let searchJobId;
         let aggregationJobId;
         try {
-            searchJobId = await searchJobsDbManager.submitSearchJob(args);
+            searchJobId = await queryJobsDbManager.submitSearchJob(args);
             aggregationJobId =
-                await searchJobsDbManager.submitAggregationJob(args, timeRangeBucketSizeMillis);
+                await queryJobsDbManager.submitAggregationJob(args, timeRangeBucketSizeMillis);
         } catch (e) {
             const errorMsg = "Unable to submit search/aggregation job to the SQL database.";
             logger.error(errorMsg, e.toString());
@@ -241,8 +241,8 @@ Meteor.methods({
             `aggregationJobId=${aggregationJobId}`);
 
         try {
-            await searchJobsDbManager.submitQueryCancellation(searchJobId);
-            await searchJobsDbManager.submitQueryCancellation(aggregationJobId);
+            await queryJobsDbManager.submitQueryCancellation(searchJobId);
+            await queryJobsDbManager.submitQueryCancellation(aggregationJobId);
             updateSearchResultsMeta({
                 jobId: searchJobId,
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
@@ -260,4 +260,4 @@ Meteor.methods({
     },
 });
 
-export {initSearchJobsDbManager};
+export {initQueryJobsDbManager};
