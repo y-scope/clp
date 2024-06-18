@@ -48,6 +48,8 @@ public:
     // IR extraction arguments
     [[nodiscard]] auto get_file_split_id() const -> std::string const& { return m_file_split_id; }
 
+    size_t get_ir_target_size() const { return m_ir_target_size; }
+
     [[nodiscard]] auto get_ir_output_dir() const -> std::string const& { return m_ir_output_dir; }
 
     [[nodiscard]] auto get_ir_temp_output_dir() const -> std::string const& {
@@ -59,8 +61,6 @@ public:
     [[nodiscard]] auto get_ir_mongodb_collection() const -> std::string const& {
         return m_ir_mongodb_collection;
     }
-
-    size_t get_ir_target_size() const { return m_ir_target_size; }
 
     // Search arguments
     bool ignore_case() const { return m_ignore_case; }
@@ -142,21 +142,18 @@ private:
 
     void print_basic_usage() const override;
     void print_search_basic_usage() const;
-    void print_extraction_basic_usage() const;
+    void print_ir_extraction_basic_usage() const;
 
-    // Commands
     Command m_command;
-
-    // Archive
     std::string m_archive_path;
 
     // Variables for IR extraction
+    std::string m_file_split_id;
+    size_t m_ir_target_size{128ULL * 1024 * 1024};
     std::string m_ir_output_dir;
     std::string m_ir_temp_output_dir;
-    std::string m_file_split_id;
     std::string m_ir_mongodb_uri;
     std::string m_ir_mongodb_collection;
-    size_t m_ir_target_size{128ULL * 1024 * 1024};
 
     // Variables for search
     bool m_ignore_case;

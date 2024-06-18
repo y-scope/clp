@@ -15,9 +15,7 @@
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "OutputHandler.hpp"
-#include "utils.hpp"
 
-using clp::clo::CloOperationFailed;
 using clp::clo::CommandLineArguments;
 using clp::clo::CountByTimeOutputHandler;
 using clp::clo::CountOutputHandler;
@@ -65,13 +63,13 @@ namespace {
  * @return Whether the file split was successfully extracted.
  */
 bool extract_ir(CommandLineArguments const& command_line_args) {
-    auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
-    if (false == boost::filesystem::exists(archive_path)) {
+    auto const archive_path {std::filesystem::path(command_line_args.get_archive_path())};
+    if (false == std::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' doesn't exist.", archive_path.c_str());
         return false;
     }
     auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
-    if (false == boost::filesystem::exists(archive_metadata_file)) {
+    if (false == std::filesystem::exists(archive_metadata_file)) {
         SPDLOG_ERROR(
                 "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
                 archive_metadata_file.c_str(),
@@ -82,7 +80,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
 
     try {
         // Create output directory in case it doesn't exist
-        auto output_dir = boost::filesystem::path(command_line_args.get_ir_output_dir());
+        auto const output_dir {boost::filesystem::path(command_line_args.get_ir_output_dir())};
         if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
             ErrorCode_Success != error_code)
         {
@@ -114,7 +112,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         std::vector<bsoncxx::document::value> results;
 
         try {
-            auto mongo_uri = mongocxx::uri(command_line_args.get_ir_mongodb_uri());
+            auto const mongo_uri {mongocxx::uri(command_line_args.get_ir_mongodb_uri())};
             client = mongocxx::client(mongo_uri);
             collection
                     = client[mongo_uri.database()][command_line_args.get_ir_mongodb_collection()];
@@ -156,7 +154,6 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         };
 
         FileDecompressor file_decompressor;
-        // Decompress file
         if (false
             == file_decompressor.decompress_to_ir(
                     archive_reader,
@@ -176,7 +173,8 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 results.clear();
             }
         } catch (mongocxx::exception const& e) {
-            return ErrorCode::ErrorCode_Failure_DB_Bulk_Write;
+            SPDLOG_ERROR("Failed to insert results into results cache - {}", e.what());
+            return false;
         }
 
         file_metadata_ix_ptr.reset(nullptr);

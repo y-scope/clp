@@ -119,11 +119,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
                 print_basic_usage();
                 cerr << "COMMAND is one of:" << endl;
-                cerr << "  s - search" << endl;
-                cerr << "  i - extract IR" << endl;
+                cerr << " " << enum_to_underlying_type(Command::Search) << " - search" << endl;
+                cerr << " " << enum_to_underlying_type(Command::ExtractIr) << " - extract IR" << endl;
                 cerr << endl;
-                cerr << "Try " << get_program_name() << " s --help OR " << get_program_name()
-                     << " i --help for command-specific details." << endl;
+                cerr << "Try " << get_program_name() << " " << enum_to_underlying_type(Command::Search)
+                     << " --help OR " << get_program_name() << " " << enum_to_underlying_type(Command::ExtractIr)
+                     << " --help for command-specific details." << endl;
                 cerr << endl;
 
                 cerr << "Options can be specified on the command line or through a configuration "
@@ -560,7 +561,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     SPDLOG_WARN("Ignoring all options besides --help.");
                 }
 
-                print_extraction_basic_usage();
+                print_ir_extraction_basic_usage();
                 cerr << "Examples:" << endl;
                 cerr << R"(  # Extract file (split) with ID "8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4" as IR into )"
                         R"(OUTPUT_DIR from ARCHIVE_PARH, and send the metadata to mongodb://127.0.0.1:27017/test )"
@@ -645,7 +646,6 @@ void CommandLineArguments::parse_reducer_output_handler_options(
         vector<po::option> const& options,
         po::variables_map& parsed_options
 ) {
-    std::cout << "here1" << std::endl;
     parse_unrecognized_options(options_description, options, parsed_options);
 
     if (parsed_options.count("host") == 0) {
@@ -712,7 +712,7 @@ void CommandLineArguments::print_search_basic_usage() const {
          << endl;
 }
 
-void CommandLineArguments::print_extraction_basic_usage() const {
+void CommandLineArguments::print_ir_extraction_basic_usage() const {
     cerr << "Usage: " << get_program_name() << " " << enum_to_underlying_type(Command::ExtractIr)
          << R"( [OPTIONS] ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR MONGODB_URI MONGODB_COLLECTION)"
          << endl;
