@@ -120,10 +120,12 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 print_basic_usage();
                 cerr << "COMMAND is one of:" << endl;
                 cerr << " " << enum_to_underlying_type(Command::Search) << " - search" << endl;
-                cerr << " " << enum_to_underlying_type(Command::ExtractIr) << " - extract IR" << endl;
+                cerr << " " << enum_to_underlying_type(Command::ExtractIr) << " - extract IR"
+                     << endl;
                 cerr << endl;
-                cerr << "Try " << get_program_name() << " " << enum_to_underlying_type(Command::Search)
-                     << " --help OR " << get_program_name() << " " << enum_to_underlying_type(Command::ExtractIr)
+                cerr << "Try " << get_program_name() << " "
+                     << enum_to_underlying_type(Command::Search) << " --help OR "
+                     << get_program_name() << " " << enum_to_underlying_type(Command::ExtractIr)
                      << " --help for command-specific details." << endl;
                 cerr << endl;
 
@@ -149,17 +151,17 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         if (Command::Search == m_command) {
             return parse_search_arguments(
-                options_general,
-                parsed_command_line_options,
-                parsed.options,
-                argc
+                    options_general,
+                    parsed_command_line_options,
+                    parsed.options,
+                    argc
             );
         } else if (Command::ExtractIr == m_command) {
             return parse_ir_extraction_arguments(
-                options_general,
-                parsed_command_line_options,
-                parsed.options,
-                argc
+                    options_general,
+                    parsed_command_line_options,
+                    parsed.options,
+                    argc
             );
         }
     } catch (exception& e) {
@@ -226,7 +228,7 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     all_extract_options.add(hidden_positional_options);
 
     // Parse extraction options
-    vector<string> extraction_options {po::collect_unrecognized(options, po::include_positional)};
+    vector<string> extraction_options{po::collect_unrecognized(options, po::include_positional)};
     // Erase the command from the beginning
     extraction_options.erase(extraction_options.begin());
     po::store(
@@ -345,8 +347,7 @@ auto CommandLineArguments::parse_search_arguments(
     );
     // clang-format on
 
-    po::options_description options_network_output_handler("Network Output Handler Options"
-    );
+    po::options_description options_network_output_handler("Network Output Handler Options");
     // clang-format off
     options_network_output_handler.add_options()(
             "host",
@@ -359,8 +360,7 @@ auto CommandLineArguments::parse_search_arguments(
     );
     // clang-format on
 
-    po::options_description options_reducer_output_handler("Reducer Output Handler Options"
-    );
+    po::options_description options_reducer_output_handler("Reducer Output Handler Options");
     options_reducer_output_handler.add_options()(
             "host",
             po::value<string>(&m_reducer_host)->value_name("HOST"),
@@ -439,13 +439,13 @@ auto CommandLineArguments::parse_search_arguments(
     all_search_options.add(hidden_positional_options);
 
     // Parse options
-    vector<string> search_options {po::collect_unrecognized(options, po::include_positional)};
+    vector<string> search_options{po::collect_unrecognized(options, po::include_positional)};
     search_options.erase(search_options.begin());
-    po::parsed_options parsed {po::command_line_parser(search_options)
-            .options(all_search_options)
-            .positional(search_positional_options_description)
-            .allow_unregistered()
-            .run()};
+    po::parsed_options parsed{po::command_line_parser(search_options)
+                                      .options(all_search_options)
+                                      .positional(search_positional_options_description)
+                                      .allow_unregistered()
+                                      .run()};
     po::store(parsed, parsed_command_line_options);
 
     notify(parsed_command_line_options);
@@ -514,10 +514,9 @@ auto CommandLineArguments::parse_search_arguments(
 
     // Validate timestamp range and compute m_search_begin_ts and m_search_end_ts
     if (parsed_command_line_options.count("teq")) {
-        if (parsed_command_line_options.count("tgt")
-            + parsed_command_line_options.count("tge")
-            + parsed_command_line_options.count("tlt")
-            + parsed_command_line_options.count("tle")
+        if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
+                    + parsed_command_line_options.count("tlt")
+                    + parsed_command_line_options.count("tle")
             > 0)
         {
             throw invalid_argument(
@@ -528,9 +527,7 @@ auto CommandLineArguments::parse_search_arguments(
         m_search_begin_ts = parsed_command_line_options["teq"].as<epochtime_t>();
         m_search_end_ts = parsed_command_line_options["teq"].as<epochtime_t>();
     } else {
-        if (parsed_command_line_options.count("tgt")
-            + parsed_command_line_options.count("tge")
-            > 1)
+        if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge") > 1)
         {
             throw invalid_argument("--tgt cannot be used with --tge.");
         }
@@ -542,9 +539,7 @@ auto CommandLineArguments::parse_search_arguments(
             m_search_begin_ts = parsed_command_line_options["tge"].as<epochtime_t>();
         }
 
-        if (parsed_command_line_options.count("tlt")
-            + parsed_command_line_options.count("tle")
-            > 1)
+        if (parsed_command_line_options.count("tlt") + parsed_command_line_options.count("tle") > 1)
         {
             throw invalid_argument("--tlt cannot be used with --tle.");
         }
@@ -572,8 +567,7 @@ auto CommandLineArguments::parse_search_arguments(
     if (parsed_command_line_options.count("count-by-time") > 0) {
         m_do_count_by_time_aggregation = true;
         if (m_count_by_time_bucket_size <= 0) {
-            throw std::invalid_argument("Value for count-by-time must be greater than zero."
-            );
+            throw std::invalid_argument("Value for count-by-time must be greater than zero.");
         }
     }
 
@@ -585,9 +579,7 @@ auto CommandLineArguments::parse_search_arguments(
         m_output_handler_type = OutputHandlerType::Network;
     } else if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
         m_output_handler_type = OutputHandlerType::Reducer;
-    } else if (static_cast<char const*>(cResultsCacheOutputHandlerName)
-               == output_handler_name)
-    {
+    } else if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name) {
         m_output_handler_type = OutputHandlerType::ResultsCache;
     } else if (output_handler_name.empty()) {
         throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
@@ -627,16 +619,12 @@ auto CommandLineArguments::parse_search_arguments(
     bool aggregation_was_specified
             = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
     if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
-        throw invalid_argument(
-                "Aggregations are only supported with the reducer output handler."
-        );
+        throw invalid_argument("Aggregations are only supported with the reducer output handler.");
     } else if ((false == aggregation_was_specified
                 && OutputHandlerType::Reducer == m_output_handler_type))
     {
-        throw invalid_argument(
-                "The reducer output handler currently only supports count and "
-                "count-by-time aggregations."
-        );
+        throw invalid_argument("The reducer output handler currently only supports count and "
+                               "count-by-time aggregations.");
     }
 
     if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {

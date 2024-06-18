@@ -55,7 +55,139 @@ enum class SearchFilesResult {
     Success
 };
 
+/**
+ * Searches a file referenced by a given database cursor
+ * @param query
+ * @param archive
+ * @param file_metadata_ix
+ * @param output_handler
+ * @return SearchFilesResult::OpenFailure on failure to open a compressed file
+ * @return SearchFilesResult::ResultSendFailure on failure to send a result
+ * @return SearchFilesResult::Success otherwise
+ */
+static SearchFilesResult search_file(
+        Query& query,
+        Archive& archive,
+        MetadataDB::FileIterator& file_metadata_ix,
+        std::unique_ptr<OutputHandler>& output_handler
+);
+/**
+ * Searches all files referenced by a given database cursor
+ * @param query
+ * @param archive
+ * @param file_metadata_ix
+ * @param output_handler
+ * @param segments_to_search
+ */
+static void search_files(
+        Query& query,
+        Archive& archive,
+        MetadataDB::FileIterator& file_metadata_ix,
+        std::unique_ptr<OutputHandler>& output_handler,
+        std::set<clp::segment_id_t> const& segments_to_search
+);
+/**
+ * Searches an archive with the given path
+ * @param command_line_args
+ * @param archive_path
+ * @param output_handler
+ * @return true on success, false otherwise
+ */
+static bool search_archive(
+        CommandLineArguments const& command_line_args,
+        boost::filesystem::path const& archive_path,
+        std::unique_ptr<OutputHandler> output_handler
+);
+
 namespace {
+/**
+ * Searches and outputs the matching log events with a specific output handler
+ * @param command_line_args
+ * @return Whether search was successful.
+ */
+bool search(CommandLineArguments const& command_line_args) {
+    std::unique_ptr<OutputHandler> output_handler;
+    try {
+        switch (command_line_args.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::Network:
+                output_handler = std::make_unique<NetworkOutputHandler>(
+                        command_line_args.get_network_dest_host(),
+                        command_line_args.get_network_dest_port()
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Reducer: {
+                auto reducer_socket_fd = reducer::connect_to_reducer(
+                        command_line_args.get_reducer_host(),
+                        command_line_args.get_reducer_port(),
+                        command_line_args.get_job_id()
+                );
+                if (-1 == reducer_socket_fd) {
+                    SPDLOG_ERROR("Failed to connect to reducer");
+                    return false;
+                }
+
+                if (command_line_args.do_count_results_aggregation()) {
+                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else if (command_line_args.do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            command_line_args.get_count_by_time_bucket_size()
+                    );
+                } else {
+                    SPDLOG_ERROR("Unhandled aggregation type.");
+                    return false;
+                }
+
+                break;
+            }
+            case CommandLineArguments::OutputHandlerType::ResultsCache:
+                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                        command_line_args.get_mongodb_uri(),
+                        command_line_args.get_mongodb_collection(),
+                        command_line_args.get_batch_size(),
+                        command_line_args.get_max_num_results()
+                );
+                break;
+            default:
+                SPDLOG_ERROR("Unhandled OutputHandlerType.");
+                return false;
+        }
+    } catch (clp::TraceableException& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return false;
+    }
+
+    auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
+
+    int return_value = 0;
+    try {
+        if (false == search_archive(command_line_args, archive_path, std::move(output_handler))) {
+            return_value = false;
+        }
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
+        } else {
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
+        }
+        return_value = false;
+    }
+    return return_value;
+}
+
 /**
  * Extracts a file split as IR chunks, writing them to the local filesystem and writing their
  * metadata to the results cache.
@@ -63,7 +195,7 @@ namespace {
  * @return Whether the file split was successfully extracted.
  */
 bool extract_ir(CommandLineArguments const& command_line_args) {
-    auto const archive_path {std::filesystem::path(command_line_args.get_archive_path())};
+    auto const archive_path{std::filesystem::path(command_line_args.get_archive_path())};
     if (false == std::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' doesn't exist.", archive_path.c_str());
         return false;
@@ -80,7 +212,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
 
     try {
         // Create output directory in case it doesn't exist
-        auto const output_dir {boost::filesystem::path(command_line_args.get_ir_output_dir())};
+        auto const output_dir{boost::filesystem::path(command_line_args.get_ir_output_dir())};
         if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
             ErrorCode_Success != error_code)
         {
@@ -112,8 +244,8 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         std::vector<bsoncxx::document::value> results;
 
         try {
-            auto const mongo_uri {mongocxx::uri(command_line_args.get_ir_mongodb_uri())};
-            client = mongocxx::client(mongo_uri);
+            auto const mongo_uri{mongocxx::uri(command_line_args.get_ir_mongodb_uri())};
+            client = mongocxx::client{mongo_uri};
             collection
                     = client[mongo_uri.database()][command_line_args.get_ir_mongodb_collection()];
         } catch (mongocxx::exception const& e) {
@@ -204,50 +336,6 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
     return true;
 }
 }  // namespace
-
-/**
- * Searches a file referenced by a given database cursor
- * @param query
- * @param archive
- * @param file_metadata_ix
- * @param output_handler
- * @return SearchFilesResult::OpenFailure on failure to open a compressed file
- * @return SearchFilesResult::ResultSendFailure on failure to send a result
- * @return SearchFilesResult::Success otherwise
- */
-static SearchFilesResult search_file(
-        Query& query,
-        Archive& archive,
-        MetadataDB::FileIterator& file_metadata_ix,
-        std::unique_ptr<OutputHandler>& output_handler
-);
-/**
- * Searches all files referenced by a given database cursor
- * @param query
- * @param archive
- * @param file_metadata_ix
- * @param output_handler
- * @param segments_to_search
- */
-static void search_files(
-        Query& query,
-        Archive& archive,
-        MetadataDB::FileIterator& file_metadata_ix,
-        std::unique_ptr<OutputHandler>& output_handler,
-        std::set<clp::segment_id_t> const& segments_to_search
-);
-/**
- * Searches an archive with the given path
- * @param command_line_args
- * @param archive_path
- * @param output_handler
- * @return true on success, false otherwise
- */
-static bool search_archive(
-        CommandLineArguments const& command_line_args,
-        boost::filesystem::path const& archive_path,
-        std::unique_ptr<OutputHandler> output_handler
-);
 
 static SearchFilesResult search_file(
         Query& query,
@@ -464,87 +552,9 @@ int main(int argc, char const* argv[]) {
     mongocxx::instance mongocxx_instance{};
     auto const& command = command_line_args.get_command();
     if (CommandLineArguments::Command::Search == command) {
-        std::unique_ptr<OutputHandler> output_handler;
-        try {
-            switch (command_line_args.get_output_handler_type()) {
-                case CommandLineArguments::OutputHandlerType::Network:
-                    output_handler = std::make_unique<NetworkOutputHandler>(
-                            command_line_args.get_network_dest_host(),
-                            command_line_args.get_network_dest_port()
-                    );
-                    break;
-                case CommandLineArguments::OutputHandlerType::Reducer: {
-                    auto reducer_socket_fd = reducer::connect_to_reducer(
-                            command_line_args.get_reducer_host(),
-                            command_line_args.get_reducer_port(),
-                            command_line_args.get_job_id()
-                    );
-                    if (-1 == reducer_socket_fd) {
-                        SPDLOG_ERROR("Failed to connect to reducer");
-                        return -1;
-                    }
-
-                    if (command_line_args.do_count_results_aggregation()) {
-                        output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
-                    } else if (command_line_args.do_count_by_time_aggregation()) {
-                        output_handler = std::make_unique<CountByTimeOutputHandler>(
-                                reducer_socket_fd,
-                                command_line_args.get_count_by_time_bucket_size()
-                        );
-                    } else {
-                        SPDLOG_ERROR("Unhandled aggregation type.");
-                        return -1;
-                    }
-
-                    break;
-                }
-                case CommandLineArguments::OutputHandlerType::ResultsCache:
-                    output_handler = std::make_unique<ResultsCacheOutputHandler>(
-                            command_line_args.get_mongodb_uri(),
-                            command_line_args.get_mongodb_collection(),
-                            command_line_args.get_batch_size(),
-                            command_line_args.get_max_num_results()
-                    );
-                    break;
-                default:
-                    SPDLOG_ERROR("Unhandled OutputHandlerType.");
-                    return -1;
-            }
-        } catch (clp::TraceableException& e) {
-            SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        if (false == search(command_line_args)) {
             return -1;
         }
-
-        auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
-
-        int return_value = 0;
-        try {
-            if (false == search_archive(command_line_args, archive_path, std::move(output_handler)))
-            {
-                return_value = -1;
-            }
-        } catch (TraceableException& e) {
-            auto error_code = e.get_error_code();
-            if (ErrorCode_errno == error_code) {
-                SPDLOG_ERROR(
-                        "Search failed: {}:{} {}, errno={}",
-                        e.get_filename(),
-                        e.get_line_number(),
-                        e.what(),
-                        errno
-                );
-            } else {
-                SPDLOG_ERROR(
-                        "Search failed: {}:{} {}, error_code={}",
-                        e.get_filename(),
-                        e.get_line_number(),
-                        e.what(),
-                        error_code
-                );
-            }
-            return_value = -1;
-        }
-        return return_value;
     } else if (CommandLineArguments::Command::ExtractIr == command) {
         if (false == extract_ir(command_line_args)) {
             return -1;
