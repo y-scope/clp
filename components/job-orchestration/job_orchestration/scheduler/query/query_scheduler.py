@@ -1,5 +1,5 @@
 """
-A scheduler for scheduling search jobs in the CLP package.
+A scheduler for scheduling query jobs in the CLP package.
 
 NOTE: This scheduler currently only has partial handling for failures of the database. Specifically,
 in the event that the database is unreachable, the scheduler will continue running as if reads from
@@ -644,7 +644,7 @@ async def handle_jobs(
 async def main(argv: List[str]) -> int:
     global reducer_connection_queue
 
-    args_parser = argparse.ArgumentParser(description="Wait for and run search jobs.")
+    args_parser = argparse.ArgumentParser(description="Wait for and run query jobs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
 
     parsed_args = args_parser.parse_args(argv[1:])
