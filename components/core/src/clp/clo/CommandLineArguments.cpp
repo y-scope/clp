@@ -285,7 +285,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             all_search_options.add(options_aggregation);
             all_search_options.add(hidden_positional_options);
 
-            // Parse extraction options
+            // Parse options
             vector<string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -493,8 +493,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 );
             }
         } else if (Command::ExtractIr == m_command) {
-            // Define IR decompression options
-            po::options_description options_ir_extraction("IR Extraction options");
+            // Define IR extraction options
+            po::options_description options_ir_extraction("IR extraction options");
             options_ir_extraction
                     .add_options()("temp-output-dir", po::value<string>(&m_ir_temp_output_dir)->value_name("DIR"), "Temporary output directory for IR chunks while they're being written")(
                             "target-size",
@@ -675,7 +675,6 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
         vector<po::option> const& options,
         po::variables_map& parsed_options
 ) {
-    std::cout << "here2" << std::endl;
     parse_unrecognized_options(options_description, options, parsed_options);
 
     // Validate mongodb uri was specified
@@ -708,12 +707,14 @@ void CommandLineArguments::print_basic_usage() const {
 }
 
 void CommandLineArguments::print_search_basic_usage() const {
-    cerr << "Usage: " << get_program_name() << " s [OPTIONS]"
-         << R"( ARCHIVE_PATH "WILDCARD STRING" OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])" << endl;
+    cerr << "Usage: " << get_program_name() << " " << enum_to_underlying_type(Command::Search)
+         << R"( [OPTIONS] ARCHIVE_PATH "WILDCARD STRING" OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS])"
+         << endl;
 }
 
 void CommandLineArguments::print_extraction_basic_usage() const {
-    cerr << "Usage: " << get_program_name() << " x [OPTIONS]"
-         << R"( ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR MONGODB_URI MONGODB_COLLECTION)" << endl;
+    cerr << "Usage: " << get_program_name() << " " << enum_to_underlying_type(Command::ExtractIr)
+         << R"( [OPTIONS] ARCHIVE_PATH FILE_SPLIT_ID OUTPUT_DIR MONGODB_URI MONGODB_COLLECTION)"
+         << endl;
 }
 }  // namespace clp::clo

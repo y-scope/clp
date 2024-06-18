@@ -5,7 +5,6 @@
 #include "TraceableException.hpp"
 
 namespace clp::clo {
-// Types
 class CloOperationFailed : public TraceableException {
 public:
     // Constructors

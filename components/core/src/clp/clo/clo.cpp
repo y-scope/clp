@@ -59,16 +59,15 @@ enum class SearchFilesResult {
 
 namespace {
 /**
- * Extract the IR specified by the user arguments.
- * The function writes the extracted IR to the local file storage and sends the metadata to the
- * mongodb collection specified by the input uri and collection
+ * Extracts a file split as IR chunks, writing them to the local filesystem and writing their
+ * metadata to the results cache.
  * @param command_line_args
- * @return Whether the IR was successfully extracted
+ * @return Whether the file split was successfully extracted.
  */
 bool extract_ir(CommandLineArguments const& command_line_args) {
     auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
     if (false == boost::filesystem::exists(archive_path)) {
-        SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
+        SPDLOG_ERROR("Archive '{}' doesn't exist.", archive_path.c_str());
         return false;
     }
     auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
@@ -120,7 +119,8 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             collection
                     = client[mongo_uri.database()][command_line_args.get_ir_mongodb_collection()];
         } catch (mongocxx::exception const& e) {
-            throw CloOperationFailed(ErrorCode_BadParam_DB_URI, __FILE__, __LINE__);
+            SPDLOG_ERROR("Failed to connect to results cache - {}", e.what());
+            return false;
         }
 
         auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
@@ -146,7 +146,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 return false;
             }
             results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("ir_path", dest_ir_path.string()),
+                    bsoncxx::builder::basic::kvp("path", dest_ir_path.string()),
                     bsoncxx::builder::basic::kvp("orig_file_id", orig_file_id),
                     bsoncxx::builder::basic::kvp("begin_msg_ix", int64_t(begin_message_ix)),
                     bsoncxx::builder::basic::kvp("end_msg_ix", int64_t(end_message_ix)),
@@ -169,7 +169,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             return false;
         }
 
-        // Write the metadata into the mongodb
+        // Write the metadata into the results cache
         try {
             if (false == results.empty()) {
                 collection.insert_many(results);
@@ -462,7 +462,7 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
-    // globally initialize mongocxx
+    // mongocxx static init
     mongocxx::instance mongocxx_instance{};
     auto const& command = command_line_args.get_command();
     if (CommandLineArguments::Command::Search == command) {

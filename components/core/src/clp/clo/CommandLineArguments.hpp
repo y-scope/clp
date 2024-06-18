@@ -22,6 +22,7 @@ public:
         Search = 's',
         ExtractIr = 'i',
     };
+
     enum class OutputHandlerType : uint8_t {
         Network = 0,
         Reducer,
