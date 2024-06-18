@@ -108,7 +108,7 @@ void JsonConstructor::construct_in_order() {
         num_records_marshalled += 1;
 
         if (0 != m_ordered_chunk_split_threshold
-            && num_records_marshalled > m_ordered_chunk_split_threshold)
+            && num_records_marshalled >= m_ordered_chunk_split_threshold)
         {
             finish_chunk(true);
             num_records_marshalled = 0;
