@@ -67,7 +67,7 @@ Meteor.startup(async () => {
         clpArchivesTableName: Meteor.settings.private.SqlDbClpArchivesTableName,
         clpFilesTableName: Meteor.settings.private.SqlDbClpFilesTableName,
         compressionJobsTableName: Meteor.settings.private.SqlDbCompressionJobsTableName,
-        searchJobsTableName: Meteor.settings.private.SqlDbSearchJobsTableName,
+        queryJobsTableName: Meteor.settings.private.SqlDbQueryJobsTableName,
     });
 });
 

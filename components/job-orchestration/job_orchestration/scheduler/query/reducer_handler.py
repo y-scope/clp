@@ -53,7 +53,7 @@ class _ReducerHandlerWaitState(Enum):
 
     JOB_CONFIG = enum.auto()
     JOB_CONFIG_ACK = enum.auto()
-    SEARCH_WORKERS_DONE = enum.auto()
+    QUERY_WORKERS_DONE = enum.auto()
     REDUCER_DONE = enum.auto()
 
 
@@ -179,8 +179,8 @@ async def handle_reducer_connection(
                 await msg_queues.put_to_listeners(msg)
 
                 recv_reducer_msg_task = asyncio.create_task(reader.readexactly(1))
-                current_wait_state = _ReducerHandlerWaitState.SEARCH_WORKERS_DONE
-            elif _ReducerHandlerWaitState.SEARCH_WORKERS_DONE == current_wait_state:
+                current_wait_state = _ReducerHandlerWaitState.QUERY_WORKERS_DONE
+            elif _ReducerHandlerWaitState.QUERY_WORKERS_DONE == current_wait_state:
                 if recv_reducer_msg_task in done:
                     await _handle_unexpected_msg_from_reducer(current_wait_state, msg_queues)
                     return
@@ -195,7 +195,7 @@ async def handle_reducer_connection(
                     )
                     return
 
-                # Tell the reducer the search workers are done
+                # Tell the reducer the query workers are done
                 await _send_msg_to_reducer(msgpack.packb({"done": True}), writer)
 
                 recv_listener_msg_task = asyncio.create_task(msg_queues.get_from_listeners())
