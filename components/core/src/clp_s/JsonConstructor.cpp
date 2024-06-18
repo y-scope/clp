@@ -64,8 +64,6 @@ void JsonConstructor::store() {
 }
 
 void JsonConstructor::construct_in_order() {
-    FileWriter writer;
-    auto src_path = std::filesystem::path(m_output_dir) / m_archive_id;
     std::string buffer;
     auto tables = m_archive_reader->read_all_tables();
     using ReaderPointer = std::shared_ptr<SchemaReader>;
@@ -77,9 +75,24 @@ void JsonConstructor::construct_in_order() {
     // a given table
     tables.clear();
 
-    epochtime_t first_timestamp{0}, last_timestamp = {0};
-    size_t num_records_marshalled = 0;
+    epochtime_t first_timestamp{0}, last_timestamp{0};
+    size_t num_records_marshalled{0};
+    auto src_path = std::filesystem::path(m_output_dir) / m_archive_id;
+    FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
+
+    auto finish_chunk = [&](bool open_new_writer) {
+        writer.close();
+        std::string new_file_name = std::string(src_path) + "_" + std::to_string(first_timestamp)
+                                    + "_" + std::to_string(last_timestamp) + ".jsonl";
+        auto new_file_path = std::filesystem::path(new_file_name);
+        std::filesystem::rename(src_path, new_file_path);
+
+        if (open_new_writer) {
+            writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
+        }
+    };
+
     while (false == record_queue.empty()) {
         ReaderPointer next = record_queue.top();
         record_queue.pop();
@@ -97,23 +110,15 @@ void JsonConstructor::construct_in_order() {
         if (0 != m_ordered_chunk_split_threshold
             && num_records_marshalled > m_ordered_chunk_split_threshold)
         {
-            writer.close();
-            std::string new_file_name = std::string(src_path) + "_"
-                                        + std::to_string(first_timestamp) + "_"
-                                        + std::to_string(last_timestamp) + ".jsonl";
-            auto new_file_path = std::filesystem::path(new_file_name);
-            std::filesystem::rename(src_path, new_file_path);
-            writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
+            finish_chunk(true);
             num_records_marshalled = 0;
         }
     }
-    writer.close();
+
     if (num_records_marshalled > 0) {
-        std::string new_file_name = std::string(src_path) + "_" + std::to_string(first_timestamp)
-                                    + "_" + std::to_string(last_timestamp) + ".jsonl";
-        auto new_file_path = std::filesystem::path(new_file_name);
-        std::filesystem::rename(src_path, new_file_path);
+        finish_chunk(false);
     } else {
+        writer.close();
         std::filesystem::remove(src_path);
     }
 }
