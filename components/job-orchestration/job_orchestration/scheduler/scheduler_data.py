@@ -35,7 +35,6 @@ class CompressionTaskResult(BaseModel):
 
 
 class InternalJobState(Enum):
-    PENDING = auto()
     WAITING_FOR_REDUCER = auto()
     WAITING_FOR_DISPATCH = auto()
     RUNNING = auto()

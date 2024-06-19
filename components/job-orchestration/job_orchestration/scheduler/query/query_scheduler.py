@@ -365,7 +365,7 @@ async def acquire_reducer_for_job(job: SearchJob):
     logger.info(f"Got reducer for job {job.id} at {reducer_host}:{reducer_port}")
 
 
-def handle_pending_search_jobs(
+def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
@@ -648,7 +648,7 @@ async def handle_jobs(
 
     tasks = [handle_updating_task]
     while True:
-        reducer_acquisition_tasks = handle_pending_search_jobs(
+        reducer_acquisition_tasks = handle_pending_query_jobs(
             db_conn_pool,
             clp_metadata_db_conn_params,
             results_cache_uri,
