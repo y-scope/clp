@@ -13,7 +13,7 @@ from clp_py_utils.clp_config import Database, QUERY_TASKS_TABLE_NAME, StorageEng
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
-from job_orchestration.scheduler.job_config import ExtractConfig
+from job_orchestration.scheduler.job_config import ExtractIrConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 from .utils import update_query_task_metadata
 
@@ -45,7 +45,7 @@ def extract_ir(
 
     logger.info(f"Started extract IR task for job {job_id}")
 
-    extract_ir_config = ExtractConfig.parse_obj(job_config_obj)
+    extract_ir_config = ExtractIrConfig.parse_obj(job_config_obj)
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()

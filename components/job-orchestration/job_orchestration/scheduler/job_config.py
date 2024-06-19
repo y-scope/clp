@@ -43,7 +43,7 @@ class AggregationConfig(BaseModel):
 class QueryConfig(BaseModel, ABC): ...
 
 
-class ExtractConfig(QueryConfig):
+class ExtractIrConfig(QueryConfig):
     orig_file_id: str
     msg_ix: int
     file_split_id: typing.Optional[str] = None
