@@ -15,26 +15,9 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
-
+from .utils import update_query_task_metadata
 # Setup logging
 logger = get_task_logger(__name__)
-
-
-def update_search_task_metadata(
-    db_cursor,
-    task_id: int,
-    kv_pairs: Dict[str, Any],
-):
-    if not kv_pairs or len(kv_pairs) == 0:
-        raise ValueError("No key-value pairs provided to update search task metadata")
-
-    query = f"""
-        UPDATE {QUERY_TASKS_TABLE_NAME}
-        SET {', '.join([f'{k}="{v}"' for k, v in kv_pairs.items()])}
-        WHERE id = {task_id}
-    """
-    db_cursor.execute(query)
-
 
 def make_command(
     storage_engine: str,
@@ -155,7 +138,7 @@ def search(
             error_message = f"Error creating search command: {e}"
             logger.error(error_message)
 
-            update_search_task_metadata(
+            update_query_task_metadata(
                 db_cursor,
                 task_id,
                 dict(status=QueryTaskStatus.FAILED, duration=0, start_time=start_time),
@@ -171,7 +154,7 @@ def search(
                 error_log_path=str(clo_log_path),
             ).dict()
 
-        update_search_task_metadata(
+        update_query_task_metadata(
             db_cursor, task_id, dict(status=search_status, start_time=start_time)
         )
         db_conn.commit()
@@ -219,7 +202,7 @@ def search(
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        update_search_task_metadata(
+        update_query_task_metadata(
             db_cursor, task_id, dict(status=search_status, start_time=start_time, duration=duration)
         )
         db_conn.commit()
