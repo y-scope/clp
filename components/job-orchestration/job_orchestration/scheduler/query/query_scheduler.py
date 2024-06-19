@@ -618,7 +618,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             if returned_results is None:
                 continue
             job_type = job.type()
-            if QueryJobType.SEARCH == job.type():
+            if QueryJobType.SEARCH == job_type:
                 search_job: SearchJob = job
                 await handle_returned_search_job(
                     db_conn, search_job, returned_results, results_cache_uri
