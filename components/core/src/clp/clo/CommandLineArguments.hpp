@@ -102,7 +102,14 @@ public:
 private:
     // Methods
     /**
-     *
+     * Parses arguments for search command
+     * @param options_general
+     * @param parsed_command_line_options
+     * @param options
+     * @param argc
+     * @return ParsingResult::Success if arguments are parsed without error
+     * ParsingResult::InfoCommand if --help is specified
+     * @throw invalid_argument if invalid arguments are provided
      */
     auto parse_search_arguments(
             boost::program_options::options_description const& options_general,
@@ -110,8 +117,16 @@ private:
             std::vector<boost::program_options::option> const& options,
             int argc
     ) -> CommandLineArgumentsBase::ParsingResult;
+
     /**
-     *
+     * Parses arguments for IR extraction command
+     * @param options_general
+     * @param parsed_command_line_options
+     * @param options
+     * @param argc
+     * @return ParsingResult::Success if arguments are parsed without error
+     * ParsingResult::InfoCommand if --help is specified
+     * @throw invalid_argument if invalid arguments are provided
      */
     auto parse_ir_extraction_arguments(
             boost::program_options::options_description const& options_general,
@@ -119,6 +134,7 @@ private:
             std::vector<boost::program_options::option> const& options,
             int argc
     ) -> CommandLineArgumentsBase::ParsingResult;
+
     /**
      * Validates output options related to the Network Destination output handler.
      * @param options_description

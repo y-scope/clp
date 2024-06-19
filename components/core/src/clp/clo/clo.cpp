@@ -101,7 +101,7 @@ static bool search_archive(
 
 namespace {
 /**
- * Searches and outputs the matching log events with a specific output handler
+ * Searches and outputs the matching log events with the specified output handler
  * @param command_line_args
  * @return Whether search was successful.
  */
