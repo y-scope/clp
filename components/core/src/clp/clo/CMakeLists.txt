@@ -116,6 +116,8 @@ set(
         ../clp/FileDecompressor.hpp
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/utils.cpp
+        ../ffi/ir_stream/utils.hpp
         ../ir/LogEventSerializer.cpp
         ../ir/LogEventSerializer.hpp
         clo.cpp
