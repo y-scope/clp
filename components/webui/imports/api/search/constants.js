@@ -56,20 +56,6 @@ const isOperationInProgress = (s) => (
     (true === isSearchSignalReq(s)) ||
     (true === isSearchSignalQuerying(s))
 );
-/* eslint-disable sort-keys */
-let enumQueryType;
-/**
- * Enum of job type, matching the `QueryJobType` class in
- * `job_orchestration.query_scheduler.constants`.
- *
- * @enum {number}
- */
-const QUERY_JOB_TYPE = Object.freeze({
-    SEARCH: (enumQueryType = 0),
-    EXTRACT_IR: ++enumQueryType,
-
-});
-/* eslint-enable sort-keys */
 
 /* eslint-disable sort-keys */
 let enumQueryJobStatus;
@@ -94,6 +80,20 @@ const QUERY_JOB_STATUS_WAITING_STATES = [
     QUERY_JOB_STATUS.RUNNING,
     QUERY_JOB_STATUS.CANCELLING,
 ];
+
+/* eslint-disable sort-keys */
+let enumQueryType;
+/**
+ * Enum of job type, matching the `QueryJobType` class in
+ * `job_orchestration.query_scheduler.constants`.
+ *
+ * @enum {number}
+ */
+const QUERY_JOB_TYPE = Object.freeze({
+    SEARCH: (enumQueryType = 0),
+    EXTRACT_IR: ++enumQueryType,
+});
+/* eslint-enable sort-keys */
 
 /**
  * Enum of Mongo Collection sort orders.
@@ -128,6 +128,7 @@ export {
     MONGO_SORT_ORDER,
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
+    QUERY_JOB_TYPE,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,

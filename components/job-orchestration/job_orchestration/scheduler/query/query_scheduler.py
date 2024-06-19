@@ -93,9 +93,9 @@ async def release_reducer_for_job(job: SearchJob):
 @exception_default_value(default=[])
 def fetch_new_query_jobs(db_conn) -> list:
     """
-    Fetches search jobs with status=PENDING from the database.
+    Fetches query jobs with status=PENDING from the database.
     :param db_conn:
-    :return: The pending search jobs on success. An empty list if an exception occurs while
+    :return: The pending query jobs on success. An empty list if an exception occurs while
     interacting with the database.
     """
     with contextlib.closing(db_conn.cursor(dictionary=True)) as db_cursor:
@@ -112,7 +112,7 @@ def fetch_new_query_jobs(db_conn) -> list:
 
 
 @exception_default_value(default=[])
-def fetch_cancelling_query_jobs(db_conn) -> list:
+def fetch_cancelling_search_jobs(db_conn) -> list:
     """
     Fetches search jobs with status=CANCELLING from the database.
     :param db_conn:
@@ -125,6 +125,7 @@ def fetch_cancelling_query_jobs(db_conn) -> list:
             SELECT {QUERY_JOBS_TABLE_NAME}.id as job_id
             FROM {QUERY_JOBS_TABLE_NAME}
             WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.CANCELLING}
+            AND {QUERY_JOBS_TABLE_NAME}.type={QueryJobType.SEARCH}
             """
         )
         return db_cursor.fetchall()
@@ -175,63 +176,52 @@ def set_job_or_task_status(
     return rval
 
 
-async def handle_cancelling_query_jobs(db_conn_pool) -> None:
+async def handle_cancelling_search_jobs(db_conn_pool) -> None:
     global active_jobs
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
-        cancelling_jobs = fetch_cancelling_query_jobs(db_conn)
+        cancelling_jobs = fetch_cancelling_search_jobs(db_conn)
+
         for cancelling_job in cancelling_jobs:
             job_id = str(cancelling_job["job_id"])
-            job_type = job.type()
-            if QueryJobType.SEARCH == job_type:
-                if job_id in active_jobs:
-                    job = active_jobs.pop(job_id)
-                    cancel_job_except_reducer(job)
-                    # Perform any async tasks last so that it's easier to reason about synchronization
-                    # issues between concurrent tasks
-                    await release_reducer_for_job(job)
-                else:
-                    continue
-
-                set_job_or_task_status(
-                    db_conn,
-                    QUERY_TASKS_TABLE_NAME,
-                    job_id,
-                    QueryTaskStatus.CANCELLED,
-                    QueryTaskStatus.PENDING,
-                    duration=0,
-                )
-
-                set_job_or_task_status(
-                    db_conn,
-                    QUERY_TASKS_TABLE_NAME,
-                    job_id,
-                    QueryTaskStatus.CANCELLED,
-                    QueryTaskStatus.RUNNING,
-                    duration="TIMESTAMPDIFF(MICROSECOND, start_time, NOW())/1000000.0",
-                )
-
-                if set_job_or_task_status(
-                    db_conn,
-                    QUERY_JOBS_TABLE_NAME,
-                    job_id,
-                    QueryJobStatus.CANCELLED,
-                    QueryJobStatus.CANCELLING,
-                    duration=(datetime.datetime.now() - job.start_time).total_seconds(),
-                ):
-                    logger.info(f"Cancelled job {job_id}.")
-                else:
-                    logger.error(f"Failed to cancel job {job_id}.")
+            if job_id in active_jobs:
+                job = active_jobs.pop(job_id)
+                cancel_job_except_reducer(job)
+                # Perform any async tasks last so that it's easier to reason about synchronization
+                # issues between concurrent tasks
+                await release_reducer_for_job(job)
             else:
-                logger.error(f"Unexpected job type: {job_type} for cancellation, marking job {job_id} as failed.")
-                if not set_job_or_task_status(
-                    db_conn,
-                    QUERY_JOBS_TABLE_NAME,
-                    job_id,
-                    QueryJobStatus.FAILED,
-                    duration=(datetime.datetime.now() - job.start_time).total_seconds(),
-                ):
-                    logger.error(f"Failed to mark job {job_id} as failed.")
+                continue
+
+            set_job_or_task_status(
+                db_conn,
+                QUERY_TASKS_TABLE_NAME,
+                job_id,
+                QueryTaskStatus.CANCELLED,
+                QueryTaskStatus.PENDING,
+                duration=0,
+            )
+
+            set_job_or_task_status(
+                db_conn,
+                QUERY_TASKS_TABLE_NAME,
+                job_id,
+                QueryTaskStatus.CANCELLED,
+                QueryTaskStatus.RUNNING,
+                duration="TIMESTAMPDIFF(MICROSECOND, start_time, NOW())/1000000.0",
+            )
+
+            if set_job_or_task_status(
+                db_conn,
+                QUERY_JOBS_TABLE_NAME,
+                job_id,
+                QueryJobStatus.CANCELLED,
+                QueryJobStatus.CANCELLING,
+                duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+            ):
+                logger.info(f"Cancelled job {job_id}.")
+            else:
+                logger.error(f"Failed to cancel job {job_id}.")
 
 
 
@@ -643,7 +633,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):
     while True:
-        await handle_cancelling_query_jobs(db_conn_pool)
+        await handle_cancelling_search_jobs(db_conn_pool)
         await check_job_status_and_update_db(db_conn_pool, results_cache_uri)
         await asyncio.sleep(jobs_poll_delay)
 
