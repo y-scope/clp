@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import typing
+from abc import ABC
 
 from pydantic import BaseModel, validator
-from abc import ABC
+
 
 class PathsToCompress(BaseModel):
     file_paths: typing.List[str]
@@ -39,8 +40,7 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class QueryConfig(BaseModel, ABC):
-    ...
+class QueryConfig(BaseModel, ABC): ...
 
 
 class ExtractConfig(QueryConfig):

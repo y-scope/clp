@@ -24,7 +24,7 @@ import os
 import pathlib
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 import celery
 import msgpack
@@ -40,15 +40,21 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.fs_search_task import search
-from job_orchestration.scheduler.constants import QueryJobStatus, QueryTaskStatus, QueryJobType
-from job_orchestration.scheduler.job_config import SearchConfig, ExtractConfig
+from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
+from job_orchestration.scheduler.job_config import ExtractConfig, SearchConfig
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
     ReducerHandlerMessageQueues,
     ReducerHandlerMessageType,
 )
-from job_orchestration.scheduler.scheduler_data import InternalJobState, QueryTaskResult, SearchJob, QueryJob, ExtractJob
+from job_orchestration.scheduler.scheduler_data import (
+    ExtractJob,
+    InternalJobState,
+    QueryJob,
+    QueryTaskResult,
+    SearchJob,
+)
 from pydantic import ValidationError
 
 # Setup logging
@@ -224,7 +230,6 @@ async def handle_cancelling_search_jobs(db_conn_pool) -> None:
                 logger.error(f"Failed to cancel job {job_id}.")
 
 
-
 def insert_query_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[int]:
     task_ids = []
     with contextlib.closing(db_conn.cursor()) as cursor:
@@ -371,7 +376,9 @@ def handle_pending_search_jobs(
     reducer_acquisition_tasks = []
 
     pending_search_jobs = [
-        job for job in active_jobs.values() if InternalJobState.WAITING_FOR_DISPATCH == job.state and QueryJobType.SEARCH == job.type
+        job
+        for job in active_jobs.values()
+        if InternalJobState.WAITING_FOR_DISPATCH == job.state and job.type() == QueryJobType.SEARCH
     ]
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
@@ -440,9 +447,7 @@ def handle_pending_search_jobs(
                 archives_for_search = job.remaining_archives_for_search
                 job.remaining_archives_for_search = []
 
-            archive_ids_for_search = [
-                archive["archive_id"] for archive in archives_for_search
-            ]
+            archive_ids_for_search = [archive["archive_id"] for archive in archives_for_search]
 
             dispatch_query_job(
                 db_conn, job, archive_ids_for_search, clp_metadata_db_conn_params, results_cache_uri
@@ -497,10 +502,7 @@ def found_max_num_latest_results(
 
 
 async def handle_returned_search_job(
-    db_conn,
-    job: SearchJob,
-    task_results: Optional[Any],
-    results_cache_uri: str
+    db_conn, job: SearchJob, task_results: Optional[Any], results_cache_uri: str
 ) -> None:
     global active_jobs
 
@@ -532,10 +534,10 @@ async def handle_returned_search_job(
         # Check if we've reached max results
         elif False == is_reducer_job and max_num_results > 0:
             if found_max_num_latest_results(
-                    results_cache_uri,
-                    job_id,
-                    max_num_results,
-                    job.remaining_archives_for_search[0]["end_timestamp"],
+                results_cache_uri,
+                job_id,
+                max_num_results,
+                job.remaining_archives_for_search[0]["end_timestamp"],
             ):
                 new_job_status = QueryJobStatus.SUCCEEDED
     if new_job_status == QueryJobStatus.RUNNING:
@@ -569,12 +571,12 @@ async def handle_returned_search_job(
     # We set the status regardless of the job's previous status to handle the case where the
     # job is cancelled (status = CANCELLING) while we're in this method.
     if set_job_or_task_status(
-            db_conn,
-            QUERY_JOBS_TABLE_NAME,
-            job_id,
-            new_job_status,
-            num_tasks_completed=job.num_archives_searched,
-            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        db_conn,
+        QUERY_JOBS_TABLE_NAME,
+        job_id,
+        new_job_status,
+        num_tasks_completed=job.num_archives_searched,
+        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
     ):
         if new_job_status == QueryJobStatus.SUCCEEDED:
             logger.info(f"Completed job {job_id}.")
@@ -620,15 +622,10 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             if QueryJobType.SEARCH == job.type():
                 search_job: SearchJob = job
                 await handle_returned_search_job(
-                    db_conn,
-                    search_job,
-                    returned_results,
-                    results_cache_uri
+                    db_conn, search_job, returned_results, results_cache_uri
                 )
             else:
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
-
-
 
 
 async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_delay: float):

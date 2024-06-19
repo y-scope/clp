@@ -1,13 +1,18 @@
 import asyncio
 import datetime
+from abc import ABC, abstractmethod
 from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
-from job_orchestration.scheduler.constants import CompressionTaskStatus, QueryTaskStatus, QueryJobType
-from job_orchestration.scheduler.job_config import SearchConfig, QueryConfig, ExtractConfig
+from job_orchestration.scheduler.constants import (
+    CompressionTaskStatus,
+    QueryJobType,
+    QueryTaskStatus,
+)
+from job_orchestration.scheduler.job_config import ExtractConfig, QueryConfig, SearchConfig
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
-from pydantic import BaseModel, validator, Field
-from abc import ABC, abstractmethod
+from pydantic import BaseModel, Field, validator
+
 
 class CompressionJob(BaseModel):
     id: int
@@ -43,12 +48,10 @@ class QueryJob(BaseModel, ABC):
     current_sub_job_async_task_result: Optional[Any]
 
     @abstractmethod
-    def type(self) -> QueryJobType:
-        ...
+    def type(self) -> QueryJobType: ...
 
     @abstractmethod
-    def job_config(self) -> QueryConfig:
-        ...
+    def job_config(self) -> QueryConfig: ...
 
 
 class ExtractJob(QueryJob):

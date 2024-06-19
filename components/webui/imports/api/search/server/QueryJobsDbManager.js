@@ -56,7 +56,8 @@ class QueryJobsDbManager {
             `INSERT INTO ${this.#queryJobsTableName}
                  (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG}, ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
              VALUES (?, ?)`,
-            [Buffer.from(msgpack.encode(searchConfig)), QUERY_JOB_TYPE.SEARCH],
+            [Buffer.from(msgpack.encode(searchConfig)),
+                QUERY_JOB_TYPE.SEARCH],
         );
 
         return queryInsertResults.insertId;
