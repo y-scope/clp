@@ -168,7 +168,7 @@ def search(
                 task_id=task_id,
                 status=QueryTaskStatus.FAILED,
                 duration=0,
-                error_log_path=clo_log_path,
+                error_log_path=str(clo_log_path),
             ).dict()
 
         update_search_task_metadata(
@@ -231,6 +231,6 @@ def search(
     )
 
     if QueryTaskStatus.FAILED == search_status:
-        search_task_result.error_log_path = clo_log_path
+        search_task_result.error_log_path = str(clo_log_path)
 
     return search_task_result.dict()

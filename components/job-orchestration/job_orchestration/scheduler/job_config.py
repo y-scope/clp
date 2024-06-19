@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 
 from pydantic import BaseModel, validator
-
+from abc import ABC
 
 class PathsToCompress(BaseModel):
     file_paths: typing.List[str]
@@ -39,7 +39,18 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class SearchConfig(BaseModel):
+class QueryConfig(BaseModel, ABC):
+    ...
+
+
+class ExtractConfig(QueryConfig):
+    orig_file_id: str
+    msg_ix: int
+    file_split_id: typing.Optional[str] = None
+    target_size: typing.Optional[int] = None
+
+
+class SearchConfig(QueryConfig):
     query_string: str
     max_num_results: int
     tags: typing.Optional[typing.List[str]] = None

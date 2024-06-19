@@ -5,6 +5,7 @@ import {sleep} from "/imports/utils/misc";
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
+    QUERY_JOB_TYPE,
 } from "../constants";
 
 
@@ -21,6 +22,7 @@ const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
 const QUERY_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
     ID: "id",
     STATUS: "status",
+    TYPE: "type",
     JOB_CONFIG: "job_config",
 });
 
@@ -52,9 +54,9 @@ class QueryJobsDbManager {
     async submitSearchJob (searchConfig) {
         const [queryInsertResults] = await this.#sqlDbConnPool.query(
             `INSERT INTO ${this.#queryJobsTableName}
-                 (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG})
-             VALUES (?)`,
-            [Buffer.from(msgpack.encode(searchConfig))],
+                 (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG}, ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
+             VALUES (?, ?)`,
+            [Buffer.from(msgpack.encode(searchConfig)), QUERY_JOB_TYPE.SEARCH],
         );
 
         return queryInsertResults.insertId;

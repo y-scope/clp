@@ -4,10 +4,10 @@ from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus, QueryTaskStatus, QueryJobType
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import SearchConfig, QueryConfig, ExtractConfig
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator, Field
-
+from abc import ABC, abstractmethod
 
 class CompressionJob(BaseModel):
     id: int
@@ -30,24 +30,37 @@ class CompressionTaskResult(BaseModel):
 
 
 class InternalJobState(Enum):
+    PENDING = auto()
     WAITING_FOR_REDUCER = auto()
     WAITING_FOR_DISPATCH = auto()
     RUNNING = auto()
 
 
-class QueryJob(BaseModel):
+class QueryJob(BaseModel, ABC):
     id: str
-    type: QueryJobType
     state: InternalJobState
     start_time: Optional[datetime.datetime]
     current_sub_job_async_task_result: Optional[Any]
 
-    @validator("type")
-    def valid_type(cls, field):
-        supported_job = [QueryJobType.SEARCH, QueryJobType.EXTRACT_IR]
-        if field not in supported_job:
-            raise ValueError(f'must be one of the following {"|".join(supported_job)}')
-        return field
+    @abstractmethod
+    def type(self) -> QueryJobType:
+        ...
+
+    @abstractmethod
+    def job_config(self) -> QueryConfig:
+        ...
+
+
+class ExtractJob(QueryJob):
+    extract_config: ExtractConfig
+    archive_id: str
+
+    def type(self) -> QueryJobType:
+        return QueryJobType.EXTRACT_IR
+
+    def job_config(self) -> QueryConfig:
+        return self.extract_config
+
 
 class SearchJob(QueryJob):
     search_config: SearchConfig
@@ -57,7 +70,11 @@ class SearchJob(QueryJob):
     reducer_acquisition_task: Optional[asyncio.Task]
     reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
 
-    type: QueryJobType = Field(default=QueryJobType.SEARCH, const=True)
+    def type(self) -> QueryJobType:
+        return QueryJobType.SEARCH
+
+    def job_config(self) -> QueryConfig:
+        return self.search_config
 
     class Config:  # To allow asyncio.Task and asyncio.Queue
         arbitrary_types_allowed = True
