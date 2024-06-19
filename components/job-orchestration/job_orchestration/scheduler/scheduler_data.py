@@ -9,7 +9,7 @@ from job_orchestration.scheduler.constants import (
     QueryJobType,
     QueryTaskStatus,
 )
-from job_orchestration.scheduler.job_config import ExtractConfig, QueryConfig, SearchConfig
+from job_orchestration.scheduler.job_config import QueryConfig, SearchConfig
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
 
@@ -51,17 +51,6 @@ class QueryJob(BaseModel, ABC):
 
     @abstractmethod
     def job_config(self) -> QueryConfig: ...
-
-
-class ExtractJob(QueryJob):
-    extract_config: ExtractConfig
-    archive_id: str
-
-    def type(self) -> QueryJobType:
-        return QueryJobType.EXTRACT_IR
-
-    def job_config(self) -> QueryConfig:
-        return self.extract_config
 
 
 class SearchJob(QueryJob):
