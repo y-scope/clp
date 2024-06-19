@@ -11,7 +11,7 @@ from job_orchestration.scheduler.constants import (
 )
 from job_orchestration.scheduler.job_config import ExtractConfig, QueryConfig, SearchConfig
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, validator
 
 
 class CompressionJob(BaseModel):

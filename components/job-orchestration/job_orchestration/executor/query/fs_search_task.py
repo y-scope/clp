@@ -113,7 +113,7 @@ def search(
     self: Task,
     job_id: str,
     task_id: int,
-    search_config_obj: dict,
+    job_config_obj: dict,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
@@ -133,7 +133,7 @@ def search(
 
     logger.info(f"Started task for job {job_id}")
 
-    search_config = SearchConfig.parse_obj(search_config_obj)
+    search_config = SearchConfig.parse_obj(job_config_obj)
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
