@@ -212,7 +212,7 @@ void SchedulerUpdateListenerTask::operator()(
         }
 
         // Synchronously notify the scheduler that the reducer is ready
-        if (false == m_server_ctx->ack_search_scheduler()) {
+        if (false == m_server_ctx->ack_query_scheduler()) {
             m_server_ctx->set_status(ServerStatus::RecoverableFailure);
             m_server_ctx->stop_event_loop();
             return;

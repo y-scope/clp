@@ -25,6 +25,10 @@ set(
         ../ffi/ir_stream/decoding_methods.inc
         ../ffi/ir_stream/encoding_methods.cpp
         ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/utils.cpp
+        ../ffi/ir_stream/utils.hpp
+        ../FileDescriptor.cpp
+        ../FileDescriptor.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
@@ -78,6 +82,8 @@ set(
         ../Query.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
+        ../ReadOnlyMemoryMappedFile.cpp
+        ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
         ../SQLiteDB.cpp
         ../SQLiteDB.hpp

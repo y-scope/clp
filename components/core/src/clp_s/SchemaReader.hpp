@@ -185,6 +185,16 @@ public:
      */
     static int32_t get_first_column_in_span(std::span<int32_t> schema);
 
+    /**
+     * @return the timestamp found in the row pointed to by m_cur_message
+     */
+    epochtime_t get_next_timestamp() const { return m_get_timestamp(); }
+
+    /**
+     * @return true if all records in this table have been iterated over, false otherwise
+     */
+    bool done() const { return m_cur_message >= m_num_messages; }
+
 private:
     /**
      * Merges the current local schema tree with the section of the global schema tree corresponding

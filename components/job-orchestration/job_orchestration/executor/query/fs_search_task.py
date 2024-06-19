@@ -9,12 +9,12 @@ from typing import Any, Dict
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import Database, SEARCH_TASKS_TABLE_NAME, StorageEngine
+from clp_py_utils.clp_config import Database, QUERY_TASKS_TABLE_NAME, StorageEngine
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.search.celery import app
+from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
-from job_orchestration.scheduler.scheduler_data import SearchTaskResult, SearchTaskStatus
+from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -29,7 +29,7 @@ def update_search_task_metadata(
         raise ValueError("No key-value pairs provided to update search task metadata")
 
     query = f"""
-        UPDATE {SEARCH_TASKS_TABLE_NAME}
+        UPDATE {QUERY_TASKS_TABLE_NAME}
         SET {', '.join([f'{k}="{v}"' for k, v in kv_pairs.items()])}
         WHERE id = {task_id}
     """
@@ -137,7 +137,7 @@ def search(
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
-    search_status = SearchTaskStatus.RUNNING
+    search_status = QueryTaskStatus.RUNNING
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
@@ -158,15 +158,15 @@ def search(
             update_search_task_metadata(
                 db_cursor,
                 task_id,
-                dict(status=SearchTaskStatus.FAILED, duration=0, start_time=start_time),
+                dict(status=QueryTaskStatus.FAILED, duration=0, start_time=start_time),
             )
             db_conn.commit()
             clo_log_file.write(error_message)
             clo_log_file.close()
 
-            return SearchTaskResult(
+            return QueryTaskResult(
                 task_id=task_id,
-                status=SearchTaskStatus.FAILED,
+                status=QueryTaskStatus.FAILED,
                 duration=0,
                 error_log_path=clo_log_path,
             ).dict()
@@ -206,10 +206,10 @@ def search(
     search_proc.communicate()
     return_code = search_proc.returncode
     if 0 != return_code:
-        search_status = SearchTaskStatus.FAILED
+        search_status = QueryTaskStatus.FAILED
         logger.error(f"Failed search task for job {job_id} - return_code={return_code}")
     else:
-        search_status = SearchTaskStatus.SUCCEEDED
+        search_status = QueryTaskStatus.SUCCEEDED
         logger.info(f"Search task completed for job {job_id}")
 
     # Close log files
@@ -224,13 +224,13 @@ def search(
         )
         db_conn.commit()
 
-    search_task_result = SearchTaskResult(
+    search_task_result = QueryTaskResult(
         status=search_status,
         task_id=task_id,
         duration=duration,
     )
 
-    if SearchTaskStatus.FAILED == search_status:
+    if QueryTaskStatus.FAILED == search_status:
         search_task_result.error_log_path = clo_log_path
 
     return search_task_result.dict()

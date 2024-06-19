@@ -304,6 +304,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
+        src/clp/ffi/ir_stream/utils.cpp
+        src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
@@ -322,6 +324,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/FileDescriptor.cpp
+        src/clp/FileDescriptor.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -379,6 +383,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Query.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
+        src/clp/ReadOnlyMemoryMappedFile.cpp
+        src/clp/ReadOnlyMemoryMappedFile.hpp
         src/clp/spdlog_with_specializations.hpp
         src/clp/SQLiteDB.cpp
         src/clp/SQLiteDB.hpp
@@ -454,6 +460,7 @@ set(SOURCE_FILES_unitTest
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
+        tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
