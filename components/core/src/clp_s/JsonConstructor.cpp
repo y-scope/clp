@@ -75,15 +75,16 @@ void JsonConstructor::construct_in_order() {
     // a given table
     tables.clear();
 
-    epochtime_t first_timestamp{0}, last_timestamp{0};
+    epochtime_t first_timestamp{0};
+    epochtime_t last_timestamp{0};
     size_t num_records_marshalled{0};
     auto src_path = std::filesystem::path(m_output_dir) / m_archive_id;
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
-    auto finish_chunk = [&](bool open_new_writer) {
+    auto finalize_chunk = [&](bool open_new_writer) {
         writer.close();
-        std::string new_file_name = std::string(src_path) + "_" + std::to_string(first_timestamp)
+        std::string new_file_name = src_path.string() + "_" + std::to_string(first_timestamp)
                                     + "_" + std::to_string(last_timestamp) + ".jsonl";
         auto new_file_path = std::filesystem::path(new_file_name);
         std::error_code ec;

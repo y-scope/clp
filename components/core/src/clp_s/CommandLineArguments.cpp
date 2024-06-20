@@ -296,11 +296,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "ordered-chunk-split-threshold",
                     po::value<size_t>(&m_ordered_chunk_split_threshold)
                             ->default_value(m_ordered_chunk_split_threshold),
-                    "Number of records to include in each output chunk when decompressing records "
+                    "Number of records to include in each output file when decompressing records "
                     "in order"
             );
-            //clang-format on
-
+            // clang-format on
             extraction_options.add(decompression_options);
 
             po::positional_options_description positional_options;
