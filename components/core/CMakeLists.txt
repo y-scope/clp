@@ -324,6 +324,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/ffi/utils.cpp
+        src/clp/ffi/utils.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
         src/clp/FileReader.cpp
@@ -471,7 +473,10 @@ set(SOURCE_FILES_unitTest
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
-        )
+        src/clp/ffi/utils.hpp
+        src/clp/ffi/utils.cpp
+        tests/test-ffi_utils.cpp
+)
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
         PRIVATE
