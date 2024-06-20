@@ -167,7 +167,7 @@ bool search(CommandLineArguments const& command_line_args) {
     auto const archive_path{std::filesystem::path(command_line_args.get_archive_path())};
 
     try {
-         return search_archive(command_line_args, archive_path, std::move(output_handler));
+        return search_archive(command_line_args, archive_path, std::move(output_handler));
     } catch (TraceableException& e) {
         auto error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
