@@ -123,6 +123,7 @@ set(
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
+        constants.hpp
         OutputHandler.cpp
         OutputHandler.hpp
 )

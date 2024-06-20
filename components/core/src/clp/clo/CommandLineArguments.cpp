@@ -449,9 +449,9 @@ auto CommandLineArguments::parse_search_arguments(
 
     notify(parsed_command_line_options);
 
-    constexpr string_view cNetworkOutputHandlerName = "network";
-    constexpr string_view cReducerOutputHandlerName = "reducer";
-    constexpr string_view cResultsCacheOutputHandlerName = "results-cache";
+    constexpr string_view cNetworkOutputHandlerName{"network"};
+    constexpr string_view cReducerOutputHandlerName{"reducer"};
+    constexpr string_view cResultsCacheOutputHandlerName{"results-cache"};
 
     // Handle --help
     if (0 != parsed_command_line_options.count("help")) {

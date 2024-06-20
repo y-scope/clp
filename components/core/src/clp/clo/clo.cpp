@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <string>
 
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -13,11 +14,17 @@
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
 #include "CommandLineArguments.hpp"
+#include "constants.hpp"
 #include "OutputHandler.hpp"
 
 using clp::clo::CommandLineArguments;
 using clp::clo::CountByTimeOutputHandler;
 using clp::clo::CountOutputHandler;
+using clp::clo::cResultsCache::cOrigFileId;
+using clp::clo::cResultsCache::IrOutput::cBeginMsgIx;
+using clp::clo::cResultsCache::IrOutput::cEndMsgIx;
+using clp::clo::cResultsCache::IrOutput::cIsLastIrChunk;
+using clp::clo::cResultsCache::IrOutput::cPath;
 using clp::clo::NetworkOutputHandler;
 using clp::clo::OutputHandler;
 using clp::clo::ResultsCacheOutputHandler;
@@ -275,17 +282,14 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 return false;
             }
             results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("path", dest_ir_path.string()),
-                    bsoncxx::builder::basic::kvp("orig_file_id", orig_file_id),
+                    bsoncxx::builder::basic::kvp(cPath, dest_ir_path.string()),
+                    bsoncxx::builder::basic::kvp(cOrigFileId, orig_file_id),
                     bsoncxx::builder::basic::kvp(
-                            "begin_msg_ix",
+                            cBeginMsgIx,
                             static_cast<int64_t>(begin_message_ix)
                     ),
-                    bsoncxx::builder::basic::kvp(
-                            "end_msg_ix",
-                            static_cast<int64_t>(end_message_ix)
-                    ),
-                    bsoncxx::builder::basic::kvp("is_last_ir_chunk", is_last_ir_chunk)
+                    bsoncxx::builder::basic::kvp(cEndMsgIx, static_cast<int64_t>(end_message_ix)),
+                    bsoncxx::builder::basic::kvp(cIsLastIrChunk, is_last_ir_chunk)
             )));
             return true;
         };
