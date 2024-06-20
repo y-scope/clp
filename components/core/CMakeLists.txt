@@ -473,8 +473,6 @@ set(SOURCE_FILES_unitTest
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
-        src/clp/ffi/utils.hpp
-        src/clp/ffi/utils.cpp
         tests/test-ffi_utils.cpp
 )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
