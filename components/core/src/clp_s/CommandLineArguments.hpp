@@ -106,7 +106,7 @@ public:
 
     bool get_ordered_decompression() const { return m_ordered_decompression; }
 
-    size_t get_ordered_chunk_split_threshold() const { return m_ordered_chunk_split_threshold; }
+    size_t get_ordered_chunk_size() const { return m_ordered_chunk_size; }
 
 private:
     // Methods

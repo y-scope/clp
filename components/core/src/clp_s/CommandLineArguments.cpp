@@ -294,10 +294,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Enable decompression in ascending timestamp order for this archive"
             )(
                     "ordered-chunk-split-threshold",
-                    po::value<size_t>(&m_ordered_chunk_split_threshold)
-                            ->default_value(m_ordered_chunk_split_threshold),
+                    po::value<size_t>(&m_ordered_chunk_size)
+                            ->default_value(m_ordered_chunk_size),
                     "Number of records to include in each output file when decompressing records "
-                    "in order"
+                    "in ascending timestamp order"
             );
             // clang-format on
             extraction_options.add(decompression_options);
@@ -345,7 +345,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (0 != m_ordered_chunk_split_threshold && false == m_ordered_decompression) {
+            if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
                 throw std::invalid_argument(
                         "ordered-chunk-split-threshold must be used with ordered argument"
                 );

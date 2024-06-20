@@ -17,7 +17,7 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option)
           m_archives_dir(option.archives_dir),
           m_ordered{option.ordered},
           m_archive_id(option.archive_id),
-          m_ordered_chunk_split_threshold(option.ordered_chunk_split_threshold) {
+          m_ordered_chunk_size(option.ordered_chunk_size) {
     std::error_code error_code;
     if (false == std::filesystem::create_directory(option.output_dir, error_code) && error_code) {
         throw OperationFailed(
@@ -84,8 +84,8 @@ void JsonConstructor::construct_in_order() {
 
     auto finalize_chunk = [&](bool open_new_writer) {
         writer.close();
-        std::string new_file_name = src_path.string() + "_" + std::to_string(first_timestamp)
-                                    + "_" + std::to_string(last_timestamp) + ".jsonl";
+        std::string new_file_name = src_path.string() + "_" + std::to_string(first_timestamp) + "_"
+                                    + std::to_string(last_timestamp) + ".jsonl";
         auto new_file_path = std::filesystem::path(new_file_name);
         std::error_code ec;
         std::filesystem::rename(src_path, new_file_path, ec);
@@ -112,16 +112,14 @@ void JsonConstructor::construct_in_order() {
         writer.write(buffer.c_str(), buffer.length());
         num_records_marshalled += 1;
 
-        if (0 != m_ordered_chunk_split_threshold
-            && num_records_marshalled >= m_ordered_chunk_split_threshold)
-        {
-            finish_chunk(true);
+        if (0 != m_ordered_chunk_size && num_records_marshalled >= m_ordered_chunk_size) {
+            finalize_chunk(true);
             num_records_marshalled = 0;
         }
     }
 
     if (num_records_marshalled > 0) {
-        finish_chunk(false);
+        finalize_chunk(false);
     } else {
         writer.close();
         std::error_code ec;

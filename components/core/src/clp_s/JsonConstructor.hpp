@@ -20,7 +20,7 @@ struct JsonConstructorOption {
     std::string archive_id;
     std::string output_dir;
     bool ordered;
-    size_t ordered_chunk_split_threshold;
+    size_t ordered_chunk_size;
 };
 
 class JsonConstructor {
@@ -63,7 +63,7 @@ private:
     std::string m_archive_id;
     std::string m_output_dir;
     bool m_ordered{false};
-    size_t m_ordered_chunk_split_threshold{0};
+    size_t m_ordered_chunk_size{0};
 
     std::unique_ptr<ArchiveReader> m_archive_reader;
 };
