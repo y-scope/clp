@@ -134,7 +134,7 @@ auto update_code_point(uint32_t code_point, uint8_t continuation_byte) -> uint32
 }
 }  // namespace
 
-auto escape_utf8_string(string_view raw) -> std::optional<string> {
+auto validate_and_escape_utf8_string(string_view raw) -> std::optional<string> {
     string_view::const_iterator bookmark_it{};
     size_t encoding_length{};
     enum class State : uint8_t {

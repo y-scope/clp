@@ -12,7 +12,7 @@
 
 #include "../src/clp/ffi/utils.hpp"
 
-using clp::ffi::escape_utf8_string;
+using clp::ffi::validate_and_escape_utf8_string;
 
 namespace {
 /**
@@ -35,12 +35,12 @@ TEST_CASE("escape_utf8_string_basic", "[ffi][utils]") {
     std::optional<std::string> actual;
 
     // Test empty string
-    actual = escape_utf8_string(test_str);
+    actual = validate_and_escape_utf8_string(test_str);
     REQUIRE((actual.has_value() && actual.value() == get_expected_escaped_string(test_str)));
 
     // Test string that has nothing to escape
     test_str = "This string has nothing to escape :)";
-    actual = escape_utf8_string(test_str);
+    actual = validate_and_escape_utf8_string(test_str);
     REQUIRE((actual.has_value() && actual.value() == get_expected_escaped_string(test_str)));
 
     // Test string with all single byte UTF8 characters, which include all characters we escape
@@ -51,7 +51,7 @@ TEST_CASE("escape_utf8_string_basic", "[ffi][utils]") {
     // Shuffle characters randomly, ensure control characters are not grouped together.
     // NOLINTNEXTLINE(cert-msc32-c, cert-msc51-cpp)
     std::shuffle(test_str.begin(), test_str.end(), std::default_random_engine{});
-    actual = escape_utf8_string(test_str);
+    actual = validate_and_escape_utf8_string(test_str);
     REQUIRE((actual.has_value() && actual.value() == get_expected_escaped_string(test_str)));
 
     // Test valid UTF8 chars with continuation bytes
@@ -68,9 +68,8 @@ TEST_CASE("escape_utf8_string_basic", "[ffi][utils]") {
     for (auto const& str : valid_utf8) {
         test_str.append(str);
     }
-    actual = escape_utf8_string(test_str);
+    actual = validate_and_escape_utf8_string(test_str);
     REQUIRE((actual.has_value() && actual.value() == get_expected_escaped_string(test_str)));
-
 }
 
 TEST_CASE("escape_utf8_string_with_continuation", "[ffi][utils]") {
@@ -91,54 +90,54 @@ TEST_CASE("escape_utf8_string_with_continuation", "[ffi][utils]") {
     );
 
     test_str = valid_code_point_lower_bound;
-    actual = escape_utf8_string(test_str);
+    actual = validate_and_escape_utf8_string(test_str);
     REQUIRE((actual.has_value() && actual.value() == get_expected_escaped_string(test_str)));
 
     test_str = valid_code_point_upper_bound;
-    actual = escape_utf8_string(test_str);
+    actual = validate_and_escape_utf8_string(test_str);
     REQUIRE((actual.has_value() && actual.value() == get_expected_escaped_string(test_str)));
 
     // Test invalid code point: 0x7F (only need one byte)
     test_str = "\xC1\xBF";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     test_str = "\xE0\x81\xBF";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     test_str = "\xF0\x81\x81\xBF";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     // Test invalid code point: 0x73 (only need one byte)
     test_str = "\xC1\xB3";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     test_str = "\xE0\x81\xB3";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     test_str = "\xF0\x81\x81\xB3";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     // Test invalid code point: 0x7FF (only need 2 bytes)
     test_str = "\xE0\x9F\xBF";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     test_str = "\xF0\x80\x9F\xBF";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     // Test invalid code point: 0x7F3 (only need 2 bytes)
     test_str = "\xE0\x9F\xB3";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     test_str = "\xF0\x80\x9F\xB3";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     // Test invalid code point: 0xFFFF (only need 3 bytes)
     test_str = "\xF0\x8F\xBF\xBF";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     // Test invalid code point: 0xFFF3 (only need 3 bytes)
     test_str = "\xF0\x8F\xBF\xB3";
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     // Test incomplete continuation bytes
     std::string_view::const_iterator const it_begin{valid_code_point_lower_bound.cbegin()};
@@ -148,21 +147,27 @@ TEST_CASE("escape_utf8_string_with_continuation", "[ffi][utils]") {
          --it_end)
     {
         std::string const incomplete_byte_sequence{it_begin, it_end};
-        REQUIRE((false == escape_utf8_string(valid + incomplete_byte_sequence).has_value()));
-        REQUIRE((false == escape_utf8_string(incomplete_byte_sequence + valid).has_value()));
+        REQUIRE(
+                (false
+                 == validate_and_escape_utf8_string(valid + incomplete_byte_sequence).has_value())
+        );
+        REQUIRE(
+                (false
+                 == validate_and_escape_utf8_string(incomplete_byte_sequence + valid).has_value())
+        );
     }
 
     // Test invalid header byte
     test_str = valid_code_point_lower_bound;
     constexpr char cInvalidHeaderByte{'\xFF'};
     test_str.front() = cInvalidHeaderByte;
-    REQUIRE((false == escape_utf8_string(test_str).has_value()));
+    REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
 
     // Test invalid continuation bytes
     for (size_t idx{1}; idx < valid_code_point_lower_bound.size(); ++idx) {
         test_str = valid_code_point_lower_bound;
         constexpr uint8_t cInvalidateMask{0x40};
         test_str.at(idx) |= cInvalidateMask;
-        REQUIRE((false == escape_utf8_string(test_str).has_value()));
+        REQUIRE((false == validate_and_escape_utf8_string(test_str).has_value()));
     }
 }
