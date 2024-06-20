@@ -49,6 +49,7 @@ using clp::TraceableException;
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::runtime_error;
 using std::string;
 using std::to_string;
 using std::unique_ptr;
@@ -165,11 +166,8 @@ bool search(CommandLineArguments const& command_line_args) {
 
     auto const archive_path{std::filesystem::path(command_line_args.get_archive_path())};
 
-    int return_value = 0;
     try {
-        if (false == search_archive(command_line_args, archive_path, std::move(output_handler))) {
-            return_value = false;
-        }
+         return search_archive(command_line_args, archive_path, std::move(output_handler));
     } catch (TraceableException& e) {
         auto error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
@@ -189,9 +187,9 @@ bool search(CommandLineArguments const& command_line_args) {
                     error_code
             );
         }
-        return_value = false;
+        return false;
     }
-    return return_value;
+    throw runtime_error("Unexpected control flow");
 }
 
 /**
