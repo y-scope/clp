@@ -1,7 +1,6 @@
 #include <iostream>
 #include <memory>
 
-#include <boost/filesystem.hpp>
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
@@ -95,7 +94,7 @@ static void search_files(
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        boost::filesystem::path const& archive_path,
+        std::filesystem::path const& archive_path,
         std::unique_ptr<OutputHandler> output_handler
 );
 
@@ -116,7 +115,7 @@ bool search(CommandLineArguments const& command_line_args) {
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Reducer: {
-                auto reducer_socket_fd = reducer::connect_to_reducer(
+                auto const reducer_socket_fd = reducer::connect_to_reducer(
                         command_line_args.get_reducer_host(),
                         command_line_args.get_reducer_port(),
                         command_line_args.get_job_id()
@@ -157,7 +156,7 @@ bool search(CommandLineArguments const& command_line_args) {
         return false;
     }
 
-    auto const archive_path = boost::filesystem::path(command_line_args.get_archive_path());
+    auto const archive_path{std::filesystem::path(command_line_args.get_archive_path())};
 
     int return_value = 0;
     try {
@@ -200,7 +199,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         SPDLOG_ERROR("Archive '{}' doesn't exist.", archive_path.c_str());
         return false;
     }
-    auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
+    auto const archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
     if (false == std::filesystem::exists(archive_metadata_file)) {
         SPDLOG_ERROR(
                 "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
@@ -212,8 +211,8 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
 
     try {
         // Create output directory in case it doesn't exist
-        auto const output_dir{boost::filesystem::path(command_line_args.get_ir_output_dir())};
-        if (auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
+        auto const output_dir{std::filesystem::path(command_line_args.get_ir_output_dir())};
+        if (auto const error_code = create_directory(output_dir.parent_path().string(), 0700, true);
             ErrorCode_Success != error_code)
         {
             SPDLOG_ERROR(
@@ -253,7 +252,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             return false;
         }
 
-        auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
+        auto ir_output_handler = [&](std::filesystem::path const& src_ir_path,
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
                                      size_t end_message_ix,
@@ -265,8 +264,8 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
 
             auto const dest_ir_path = output_dir / dest_ir_file_name;
             try {
-                boost::filesystem::rename(src_ir_path, dest_ir_path);
-            } catch (boost::filesystem::filesystem_error const& e) {
+                std::filesystem::rename(src_ir_path, dest_ir_path);
+            } catch (std::filesystem::filesystem_error const& e) {
                 SPDLOG_ERROR(
                         "Failed to rename from {} to {}. Error: {}",
                         src_ir_path.c_str(),
@@ -278,8 +277,14 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp("path", dest_ir_path.string()),
                     bsoncxx::builder::basic::kvp("orig_file_id", orig_file_id),
-                    bsoncxx::builder::basic::kvp("begin_msg_ix", int64_t(begin_message_ix)),
-                    bsoncxx::builder::basic::kvp("end_msg_ix", int64_t(end_message_ix)),
+                    bsoncxx::builder::basic::kvp(
+                            "begin_msg_ix",
+                            static_cast<int64_t>(begin_message_ix)
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            "end_msg_ix",
+                            static_cast<int64_t>(end_message_ix)
+                    ),
                     bsoncxx::builder::basic::kvp("is_last_ir_chunk", is_last_ir_chunk)
             )));
             return true;
@@ -430,15 +435,15 @@ void search_files(
 
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        boost::filesystem::path const& archive_path,
+        std::filesystem::path const& archive_path,
         std::unique_ptr<OutputHandler> output_handler
 ) {
-    if (false == boost::filesystem::exists(archive_path)) {
+    if (false == std::filesystem::exists(archive_path)) {
         SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
         return false;
     }
     auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
-    if (false == boost::filesystem::exists(archive_metadata_file)) {
+    if (false == std::filesystem::exists(archive_metadata_file)) {
         SPDLOG_ERROR(
                 "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
                 archive_metadata_file.c_str(),
@@ -451,7 +456,7 @@ static bool search_archive(
     auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
     unique_ptr<log_surgeon::lexers::ByteLexer> forward_lexer, reverse_lexer;
     bool use_heuristic = true;
-    if (boost::filesystem::exists(schema_file_path)) {
+    if (std::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
         // Create forward lexer
         forward_lexer.reset(new log_surgeon::lexers::ByteLexer());

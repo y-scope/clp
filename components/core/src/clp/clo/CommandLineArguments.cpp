@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/program_options.hpp>
@@ -17,7 +18,9 @@ using std::cerr;
 using std::endl;
 using std::exception;
 using std::invalid_argument;
+using std::runtime_error;
 using std::string;
+using std::string_view;
 using std::vector;
 
 namespace clp::clo {
@@ -57,7 +60,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     // clang-format on
 
     po::options_description general_positional_options;
-    char command_input;
+    char command_input{};
     general_positional_options.add_options()("command", po::value<char>(&command_input))(
             "command-args",
             po::value<vector<string>>()
@@ -84,7 +87,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         // Handle config-file manually since Boost won't set it until we call notify, and we can't
         // call notify until we parse the config file
-        if (parsed_command_line_options.count("config-file")) {
+        if (0 != parsed_command_line_options.count("config-file")) {
             config_file_path = parsed_command_line_options["config-file"].as<string>();
         }
 
@@ -104,7 +107,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         notify(parsed_command_line_options);
 
         // Handle --version
-        if (parsed_command_line_options.count("version")) {
+        if (0 != parsed_command_line_options.count("version")) {
             cerr << static_cast<char const*>(cVersion) << endl;
             return ParsingResult::InfoCommand;
         }
@@ -112,7 +115,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         // Validate command
         if (parsed_command_line_options.count("command") == 0) {
             // Handle --help
-            if (parsed_command_line_options.count("help")) {
+            if (0 != parsed_command_line_options.count("help")) {
                 if (argc > 2) {
                     SPDLOG_WARN("Ignoring all options besides --help.");
                 }
@@ -141,28 +144,24 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             throw invalid_argument("COMMAND not specified.");
         }
         switch (command_input) {
-            case (char)Command::Search:
-            case (char)Command::ExtractIr:
+            case enum_to_underlying_type(Command::Search):
+                m_command = static_cast<Command>(command_input);
+                return parse_search_arguments(
+                        options_general,
+                        parsed_command_line_options,
+                        parsed.options,
+                        argc
+                );
+            case enum_to_underlying_type(Command::ExtractIr):
                 m_command = (Command)command_input;
-                break;
+                return parse_ir_extraction_arguments(
+                        options_general,
+                        parsed_command_line_options,
+                        parsed.options,
+                        argc
+                );
             default:
                 throw invalid_argument(string("Unknown action '") + command_input + "'");
-        }
-
-        if (Command::Search == m_command) {
-            return parse_search_arguments(
-                    options_general,
-                    parsed_command_line_options,
-                    parsed.options,
-                    argc
-            );
-        } else if (Command::ExtractIr == m_command) {
-            return parse_ir_extraction_arguments(
-                    options_general,
-                    parsed_command_line_options,
-                    parsed.options,
-                    argc
-            );
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
@@ -171,7 +170,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         return ParsingResult::Failure;
     }
 
-    return ParsingResult::Success;
+    throw runtime_error("Unexpected control flow");
 }
 
 auto CommandLineArguments::parse_ir_extraction_arguments(
@@ -228,7 +227,7 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     all_extract_options.add(hidden_positional_options);
 
     // Parse extraction options
-    vector<string> extraction_options{po::collect_unrecognized(options, po::include_positional)};
+    auto extraction_options{po::collect_unrecognized(options, po::include_positional)};
     // Erase the command from the beginning
     extraction_options.erase(extraction_options.begin());
     po::store(
@@ -241,7 +240,7 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     notify(parsed_command_line_options);
 
     // Handle --help
-    if (parsed_command_line_options.count("help")) {
+    if (0 != parsed_command_line_options.count("help")) {
         if (argc > 3) {
             SPDLOG_WARN("Ignoring all options besides --help.");
         }
@@ -439,7 +438,7 @@ auto CommandLineArguments::parse_search_arguments(
     all_search_options.add(hidden_positional_options);
 
     // Parse options
-    vector<string> search_options{po::collect_unrecognized(options, po::include_positional)};
+    auto search_options{po::collect_unrecognized(options, po::include_positional)};
     search_options.erase(search_options.begin());
     po::parsed_options parsed{po::command_line_parser(search_options)
                                       .options(all_search_options)
@@ -450,24 +449,21 @@ auto CommandLineArguments::parse_search_arguments(
 
     notify(parsed_command_line_options);
 
-    constexpr char cNetworkOutputHandlerName[] = "network";
-    constexpr char cReducerOutputHandlerName[] = "reducer";
-    constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
+    constexpr string_view cNetworkOutputHandlerName = "network";
+    constexpr string_view cReducerOutputHandlerName = "reducer";
+    constexpr string_view cResultsCacheOutputHandlerName = "results-cache";
 
     // Handle --help
-    if (parsed_command_line_options.count("help")) {
+    if (0 != parsed_command_line_options.count("help")) {
         if (argc > 3) {
             SPDLOG_WARN("Ignoring all options besides --help.");
         }
 
         print_search_basic_usage();
         cerr << "OUTPUT_HANDLER is one of:" << endl;
-        cerr << "  " << static_cast<char const*>(cNetworkOutputHandlerName)
-             << " - Output to a network destination" << endl;
-        cerr << "  " << static_cast<char const*>(cResultsCacheOutputHandlerName)
-             << " - Output to the results cache" << endl;
-        cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
-             << " - Output to the reducer" << endl;
+        cerr << "  " << cNetworkOutputHandlerName << " - Output to a network destination" << endl;
+        cerr << "  " << cResultsCacheOutputHandlerName << " - Output to the results cache" << endl;
+        cerr << "  " << cReducerOutputHandlerName << " - Output to the reducer" << endl;
         cerr << endl;
 
         cerr << "Examples:" << endl;
@@ -475,15 +471,14 @@ auto CommandLineArguments::parse_search_arguments(
                 "a network destination"
              << endl;
         cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-             << " " << static_cast<char const*>(cNetworkOutputHandlerName)
-             << " --host localhost --port 18000" << endl;
+             << " " << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
         cerr << endl;
 
         cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
                 "by performing a count aggregation"
              << endl;
         cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-             << " " << static_cast<char const*>(cReducerOutputHandlerName) << " --count"
+             << " " << cReducerOutputHandlerName << " --count"
              << " --host localhost --port 14009 --job-id 1" << endl;
         cerr << endl;
 
@@ -491,7 +486,7 @@ auto CommandLineArguments::parse_search_arguments(
                 R"( mongodb://127.0.0.1:27017/test "result" collection )"
              << endl;
         cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-             << " " << static_cast<char const*>(cResultsCacheOutputHandlerName)
+             << " " << cResultsCacheOutputHandlerName
              << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
         cerr << endl;
 
@@ -513,7 +508,7 @@ auto CommandLineArguments::parse_search_arguments(
     }
 
     // Validate timestamp range and compute m_search_begin_ts and m_search_end_ts
-    if (parsed_command_line_options.count("teq")) {
+    if (0 != parsed_command_line_options.count("teq")) {
         if (parsed_command_line_options.count("tgt") + parsed_command_line_options.count("tge")
                     + parsed_command_line_options.count("tlt")
                     + parsed_command_line_options.count("tle")
@@ -533,9 +528,9 @@ auto CommandLineArguments::parse_search_arguments(
         }
 
         // Set m_search_begin_ts
-        if (parsed_command_line_options.count("tgt")) {
+        if (0 != parsed_command_line_options.count("tgt")) {
             m_search_begin_ts = parsed_command_line_options["tgt"].as<epochtime_t>() + 1;
-        } else if (parsed_command_line_options.count("tge")) {
+        } else if (0 != parsed_command_line_options.count("tge")) {
             m_search_begin_ts = parsed_command_line_options["tge"].as<epochtime_t>();
         }
 
@@ -545,9 +540,9 @@ auto CommandLineArguments::parse_search_arguments(
         }
 
         // Set m_search_end_ts
-        if (parsed_command_line_options.count("tlt")) {
+        if (0 != parsed_command_line_options.count("tlt")) {
             m_search_end_ts = parsed_command_line_options["tlt"].as<epochtime_t>() - 1;
-        } else if (parsed_command_line_options.count("tle")) {
+        } else if (0 != parsed_command_line_options.count("tle")) {
             m_search_end_ts = parsed_command_line_options["tle"].as<epochtime_t>();
         }
 
@@ -575,53 +570,39 @@ auto CommandLineArguments::parse_search_arguments(
     if (parsed_command_line_options.count("output-handler") == 0) {
         throw invalid_argument("OUTPUT_HANDLER not specified.");
     }
-    if (static_cast<char const*>(cNetworkOutputHandlerName) == output_handler_name) {
+    if (cNetworkOutputHandlerName == output_handler_name) {
         m_output_handler_type = OutputHandlerType::Network;
-    } else if (static_cast<char const*>(cReducerOutputHandlerName) == output_handler_name) {
+        parse_network_dest_output_handler_options(
+                options_network_output_handler,
+                parsed.options,
+                parsed_command_line_options
+        );
+    } else if (cReducerOutputHandlerName == output_handler_name) {
         m_output_handler_type = OutputHandlerType::Reducer;
-    } else if (static_cast<char const*>(cResultsCacheOutputHandlerName) == output_handler_name) {
+        parse_reducer_output_handler_options(
+                options_reducer_output_handler,
+                parsed.options,
+                parsed_command_line_options
+        );
+    } else if (cResultsCacheOutputHandlerName == output_handler_name) {
         m_output_handler_type = OutputHandlerType::ResultsCache;
+        parse_results_cache_output_handler_options(
+                options_results_cache_output_handler,
+                parsed.options,
+                parsed_command_line_options
+        );
     } else if (output_handler_name.empty()) {
         throw invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
     } else {
         throw invalid_argument("Unknown OUTPUT_HANDLER: " + output_handler_name);
     }
 
-    switch (m_output_handler_type) {
-        case OutputHandlerType::Network:
-            parse_network_dest_output_handler_options(
-                    options_network_output_handler,
-                    parsed.options,
-                    parsed_command_line_options
-            );
-            break;
-        case OutputHandlerType::Reducer:
-            parse_reducer_output_handler_options(
-                    options_reducer_output_handler,
-                    parsed.options,
-                    parsed_command_line_options
-            );
-            break;
-        case OutputHandlerType::ResultsCache:
-            parse_results_cache_output_handler_options(
-                    options_results_cache_output_handler,
-                    parsed.options,
-                    parsed_command_line_options
-            );
-            break;
-        default:
-            throw invalid_argument(
-                    "Unhandled OutputHandlerType="
-                    + std::to_string(enum_to_underlying_type(m_output_handler_type))
-            );
-    }
-
-    bool aggregation_was_specified
+    bool const aggregation_was_specified
             = m_do_count_by_time_aggregation || m_do_count_results_aggregation;
     if (aggregation_was_specified && OutputHandlerType::Reducer != m_output_handler_type) {
         throw invalid_argument("Aggregations are only supported with the reducer output handler.");
-    } else if ((false == aggregation_was_specified
-                && OutputHandlerType::Reducer == m_output_handler_type))
+    }
+    if ((false == aggregation_was_specified && OutputHandlerType::Reducer == m_output_handler_type))
     {
         throw invalid_argument("The reducer output handler currently only supports count and "
                                "count-by-time aggregations.");

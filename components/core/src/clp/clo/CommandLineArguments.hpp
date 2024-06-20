@@ -43,7 +43,7 @@ public:
 
     [[nodiscard]] auto get_command() const -> Command { return m_command; }
 
-    [[nodiscard]] auto get_archive_path() const -> std::string const& { return m_archive_path; }
+    [[nodiscard]] auto get_archive_path() const -> std::string_view { return m_archive_path; }
 
     // IR extraction arguments
     [[nodiscard]] auto get_file_split_id() const -> std::string const& { return m_file_split_id; }
@@ -111,7 +111,7 @@ private:
      * ParsingResult::InfoCommand if --help is specified
      * @throw invalid_argument if invalid arguments are provided
      */
-    auto parse_search_arguments(
+    [[nodiscard]] auto parse_search_arguments(
             boost::program_options::options_description const& options_general,
             boost::program_options::variables_map& parsed_command_line_options,
             std::vector<boost::program_options::option> const& options,
@@ -128,7 +128,7 @@ private:
      * ParsingResult::InfoCommand if --help is specified
      * @throw invalid_argument if invalid arguments are provided
      */
-    auto parse_ir_extraction_arguments(
+    [[nodiscard]] auto parse_ir_extraction_arguments(
             boost::program_options::options_description const& options_general,
             boost::program_options::variables_map& parsed_command_line_options,
             std::vector<boost::program_options::option> const& options,

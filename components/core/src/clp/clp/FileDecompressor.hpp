@@ -3,9 +3,8 @@
 
 #include <cerrno>
 #include <cstddef>
+#include <filesystem>
 #include <string>
-
-#include <boost/filesystem.hpp>
 
 #include "../FileWriter.hpp"
 #include "../ir/constants.hpp"
@@ -39,7 +38,7 @@ public:
      * new IR chunk when the current IR chunk exceeds ir_target_size.
      *
      * @tparam IrOutputHandler Function to handle the resulting IR chunks.
-     * Signature: (boost::filesystem::path const& ir_file_path, string const& orig_file_id,
+     * Signature: (std::filesystem::path const& ir_file_path, string const& orig_file_id,
      * size_t begin_message_ix, size_t end_message_ix, bool is_last_ir_chunk) -> bool;
      * The function returns whether it succeeded.
      * @param archive_reader
@@ -99,7 +98,7 @@ auto FileDecompressor::decompress_to_ir(
         return false;
     }
 
-    boost::filesystem::path ir_output_path{output_dir};
+    std::filesystem::path ir_output_path{output_dir};
     auto ir_file_name = m_encoded_file.get_id_as_string();
     ir_file_name += ir::cIrFileExtension;
     ir_output_path /= ir_file_name;
