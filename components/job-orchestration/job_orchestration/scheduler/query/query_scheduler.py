@@ -39,8 +39,8 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.executor.query.extract_ir_task import extract_ir
+from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
 from job_orchestration.scheduler.job_config import ExtractIrConfig, SearchConfig
 from job_orchestration.scheduler.query.reducer_handler import (
@@ -511,18 +511,20 @@ def handle_pending_query_jobs(
 
             elif QueryJobType.EXTRACT_IR == job_type:
                 extract_ir_config = ExtractIrConfig.parse_obj(msgpack.unpackb(job_config))
-                archive_id = get_archive_and_update_config_for_extraction(db_conn, extract_ir_config)
+                archive_id = get_archive_and_update_config_for_extraction(
+                    db_conn, extract_ir_config
+                )
                 if not archive_id:
                     logger.error(f"Failed to get archive for extraction")
                     if not set_job_or_task_status(
-                            db_conn,
-                            QUERY_JOBS_TABLE_NAME,
-                            job_id,
-                            QueryJobStatus.FAILED,
-                            QueryJobStatus.PENDING,
-                            start_time=datetime.datetime.now(),
-                            num_tasks=0,
-                            duration=0,
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
                     ):
                         logger.error(f"Failed to set job: {job_id} as failed")
                     continue
@@ -531,7 +533,7 @@ def handle_pending_query_jobs(
                     id=job_id,
                     archive_id=archive_id,
                     extract_ir_config=extract_ir_config,
-                    state=InternalJobState.WAITING_FOR_DISPATCH
+                    state=InternalJobState.WAITING_FOR_DISPATCH,
                 )
                 target_archive = [new_extract_ir_job.archive_id]
 
@@ -541,12 +543,10 @@ def handle_pending_query_jobs(
                     target_archive,
                     clp_metadata_db_conn_params,
                     results_cache_uri,
-                    1
+                    1,
                 )
                 active_jobs[new_extract_ir_job.id] = new_extract_ir_job
-                logger.info(
-                    f"Dispatched IR extraction job {job_id} on archive: {archive_id}"
-                )
+                logger.info(f"Dispatched IR extraction job {job_id} on archive: {archive_id}")
 
             else:
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
@@ -576,7 +576,7 @@ def handle_pending_query_jobs(
                 archive_ids_for_search,
                 clp_metadata_db_conn_params,
                 results_cache_uri,
-                job.num_archives_to_search
+                job.num_archives_to_search,
             )
             logger.info(
                 f"Dispatched job {job_id} with {len(archive_ids_for_search)} archives to search."
@@ -786,9 +786,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 )
             elif QueryJobType.EXTRACT_IR == job_type:
                 extract_ir_job: ExtractIrJob = job
-                await handle_returned_extract_ir_job(
-                    db_conn, extract_ir_job, returned_results
-                )
+                await handle_returned_extract_ir_job(db_conn, extract_ir_job, returned_results)
             else:
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
 

@@ -9,15 +9,18 @@ from typing import Any, Dict
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import Database, QUERY_TASKS_TABLE_NAME, StorageEngine
+from clp_py_utils.clp_config import Database, StorageEngine
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
-from .utils import update_query_task_metadata, get_logger_file_path
+
+from .utils import get_logger_file_path, get_task_results, update_query_task_metadata
+
 # Setup logging
 logger = get_task_logger(__name__)
+
 
 def make_command(
     storage_engine: str,
@@ -118,45 +121,41 @@ def search(
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
-    search_status: QueryTaskStatus
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
-        try:
-            search_command = make_command(
-                storage_engine=clp_storage_engine,
-                clp_home=clp_home,
-                archives_dir=archive_directory,
-                archive_id=archive_id,
-                search_config=search_config,
-                results_cache_uri=results_cache_uri,
-                results_collection=job_id,
-            )
-        except ValueError as e:
-            error_message = f"Error creating search command: {e}"
-            logger.error(error_message)
-
-            update_query_task_metadata(
-                db_cursor,
-                task_id,
-                dict(status=QueryTaskStatus.FAILED, duration=0, start_time=start_time),
-            )
-            db_conn.commit()
-            clo_log_file.write(error_message)
-            clo_log_file.close()
-
-            return QueryTaskResult(
-                task_id=task_id,
-                status=QueryTaskStatus.FAILED,
-                duration=0,
-                error_log_path=str(clo_log_path),
-            ).dict()
-
-        search_status = QueryTaskStatus.RUNNING
-        update_query_task_metadata(
-            db_cursor, task_id, dict(status=search_status, start_time=start_time)
+    job_status: QueryTaskStatus
+    try:
+        search_command = make_command(
+            storage_engine=clp_storage_engine,
+            clp_home=clp_home,
+            archives_dir=archive_directory,
+            archive_id=archive_id,
+            search_config=search_config,
+            results_cache_uri=results_cache_uri,
+            results_collection=job_id,
         )
-        db_conn.commit()
+    except ValueError as e:
+        error_message = f"Error creating search command: {e}"
+        logger.error(error_message)
+        clo_log_file.write(error_message)
+
+        job_status = QueryTaskStatus.FAILED
+        update_query_task_metadata(
+            sql_adapter,
+            task_id,
+            dict(status=job_status, duration=0, start_time=start_time),
+        )
+
+        clo_log_file.close()
+        return QueryTaskResult(
+            task_id=task_id,
+            status=job_status,
+            duration=0,
+            error_log_path=str(clo_log_path),
+        ).dict()
+
+    search_status = QueryTaskStatus.RUNNING
+    update_query_task_metadata(
+        sql_adapter, task_id, dict(status=search_status, start_time=start_time)
+    )
 
     logger.info(f'Running: {" ".join(search_command)}')
     search_proc = subprocess.Popen(
@@ -188,31 +187,17 @@ def search(
     search_proc.communicate()
     return_code = search_proc.returncode
     if 0 != return_code:
-        search_status = QueryTaskStatus.FAILED
+        job_status = QueryTaskStatus.FAILED
         logger.error(f"Failed search task for job {job_id} - return_code={return_code}")
     else:
-        search_status = QueryTaskStatus.SUCCEEDED
+        job_status = QueryTaskStatus.SUCCEEDED
         logger.info(f"Search task completed for job {job_id}")
 
-    # Close log files
     clo_log_file.close()
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
-        update_query_task_metadata(
-            db_cursor, task_id, dict(status=search_status, start_time=start_time, duration=duration)
-        )
-        db_conn.commit()
-
-    search_task_result = QueryTaskResult(
-        status=search_status,
-        task_id=task_id,
-        duration=duration,
+    update_query_task_metadata(
+        sql_adapter, task_id, dict(status=job_status, start_time=start_time, duration=duration)
     )
 
-    if QueryTaskStatus.FAILED == search_status:
-        search_task_result.error_log_path = str(clo_log_path)
-
-    return search_task_result.dict()
+    return get_task_results(task_id, job_status, duration, clo_log_path)
