@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -96,22 +97,36 @@ static void search_files(
 /**
  * Searches an archive with the given path
  * @param command_line_args
- * @param archive_path
  * @param output_handler
  * @return true on success, false otherwise
  */
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        std::filesystem::path const& archive_path,
         std::unique_ptr<OutputHandler> output_handler
 );
 
 namespace {
 /**
- * Searches and outputs the matching log events with the specified output handler
+ * Performs a searches acccording to the given arguments.
  * @param command_line_args
- * @return Whether search was successful.
+ * @return Whether the search was successful.
  */
+bool search(CommandLineArguments const& command_line_args);
+
+/**
+ * Extracts a file split as IR chunks, writing them to the local filesystem and writing their
+ * metadata to the results cache.
+ * @param command_line_args
+ * @return Whether the file split was successfully extracted.
+ */
+bool extract_ir(CommandLineArguments const& command_line_args);
+
+/**
+ * @param archive_path
+ * @return Whether the given path exists and contains an archive metadata file.
+ */
+bool validate_archive_path(std::filesystem::path const& archive_path);
+
 bool search(CommandLineArguments const& command_line_args) {
     std::unique_ptr<OutputHandler> output_handler;
     try {
@@ -164,10 +179,8 @@ bool search(CommandLineArguments const& command_line_args) {
         return false;
     }
 
-    auto const archive_path{std::filesystem::path(command_line_args.get_archive_path())};
-
     try {
-        return search_archive(command_line_args, archive_path, std::move(output_handler));
+        return search_archive(command_line_args, std::move(output_handler));
     } catch (TraceableException& e) {
         auto error_code = e.get_error_code();
         if (ErrorCode_errno == error_code) {
@@ -189,40 +202,23 @@ bool search(CommandLineArguments const& command_line_args) {
         }
         return false;
     }
-    throw runtime_error("Unexpected control flow");
 }
 
-/**
- * Extracts a file split as IR chunks, writing them to the local filesystem and writing their
- * metadata to the results cache.
- * @param command_line_args
- * @return Whether the file split was successfully extracted.
- */
 bool extract_ir(CommandLineArguments const& command_line_args) {
-    auto const archive_path{std::filesystem::path(command_line_args.get_archive_path())};
-    if (false == std::filesystem::exists(archive_path)) {
-        SPDLOG_ERROR("Archive '{}' doesn't exist.", archive_path.c_str());
-        return false;
-    }
-    auto const archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
-    if (false == std::filesystem::exists(archive_metadata_file)) {
-        SPDLOG_ERROR(
-                "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
-                archive_metadata_file.c_str(),
-                archive_path.c_str()
-        );
+    std::filesystem::path const archive_path{command_line_args.get_archive_path()};
+    if (false == validate_archive_path(archive_path)) {
         return false;
     }
 
     try {
         // Create output directory in case it doesn't exist
-        auto const output_dir{std::filesystem::path(command_line_args.get_ir_output_dir())};
+        std::filesystem::path const output_dir{command_line_args.get_ir_output_dir()};
         if (auto const error_code = create_directory(output_dir.parent_path().string(), 0700, true);
             ErrorCode_Success != error_code)
         {
             SPDLOG_ERROR(
                     "Failed to create {} - {}",
-                    output_dir.parent_path().c_str(),
+                    output_dir.parent_path().string(),
                     strerror(errno)
             );
             return false;
@@ -236,7 +232,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
         if (false == file_metadata_ix_ptr->has_next()) {
             SPDLOG_ERROR(
-                    "File split doesn't exist {} in the archive {}",
+                    "File split '{}' doesn't exist in archive '{}'",
                     file_split_id,
                     archive_path.string()
             );
@@ -245,7 +241,6 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
 
         mongocxx::client client;
         mongocxx::collection collection;
-        std::vector<bsoncxx::document::value> results;
 
         try {
             auto const mongo_uri{mongocxx::uri(command_line_args.get_ir_mongodb_uri())};
@@ -257,6 +252,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             return false;
         }
 
+        std::vector<bsoncxx::document::value> results;
         auto ir_output_handler = [&](std::filesystem::path const& src_ir_path,
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
@@ -272,9 +268,9 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 std::filesystem::rename(src_ir_path, dest_ir_path);
             } catch (std::filesystem::filesystem_error const& e) {
                 SPDLOG_ERROR(
-                        "Failed to rename from {} to {}. Error: {}",
-                        src_ir_path.c_str(),
-                        dest_ir_path.c_str(),
+                        "Failed to rename '{}' to '{}' - {}",
+                        src_ir_path.string(),
+                        dest_ir_path.string(),
                         e.what()
                 );
                 return false;
@@ -306,14 +302,14 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
         }
 
         // Write the metadata into the results cache
-        try {
-            if (false == results.empty()) {
+        if (false == results.empty()) {
+            try {
                 collection.insert_many(results);
-                results.clear();
+            } catch (mongocxx::exception const& e) {
+                SPDLOG_ERROR("Failed to insert results into results cache - {}", e.what());
+                return false;
             }
-        } catch (mongocxx::exception const& e) {
-            SPDLOG_ERROR("Failed to insert results into results cache - {}", e.what());
-            return false;
+            results.clear();
         }
 
         file_metadata_ix_ptr.reset(nullptr);
@@ -338,6 +334,24 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                     error_code
             );
         }
+        return false;
+    }
+
+    return true;
+}
+
+bool validate_archive_path(std::filesystem::path const& archive_path) {
+    if (false == std::filesystem::exists(archive_path)) {
+        SPDLOG_ERROR("Archive '{}' doesn't exist.", archive_path.string());
+        return false;
+    }
+    auto const archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
+    if (false == std::filesystem::exists(archive_metadata_file)) {
+        SPDLOG_ERROR(
+                "Archive metadata file '{}' doesn't exist. '{}' may not be an archive.",
+                archive_metadata_file.string(),
+                archive_path.string()
+        );
         return false;
     }
     return true;
@@ -437,20 +451,10 @@ void search_files(
 
 static bool search_archive(
         CommandLineArguments const& command_line_args,
-        std::filesystem::path const& archive_path,
         std::unique_ptr<OutputHandler> output_handler
 ) {
-    if (false == std::filesystem::exists(archive_path)) {
-        SPDLOG_ERROR("Archive '{}' does not exist.", archive_path.c_str());
-        return false;
-    }
-    auto archive_metadata_file = archive_path / clp::streaming_archive::cMetadataFileName;
-    if (false == std::filesystem::exists(archive_metadata_file)) {
-        SPDLOG_ERROR(
-                "Archive metadata file '{}' does not exist. '{}' may not be an archive.",
-                archive_metadata_file.c_str(),
-                archive_path.c_str()
-        );
+    std::filesystem::path const archive_path{command_line_args.get_archive_path()};
+    if (false == validate_archive_path(archive_path)) {
         return false;
     }
 
