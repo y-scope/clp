@@ -18,7 +18,6 @@ using std::cerr;
 using std::endl;
 using std::exception;
 using std::invalid_argument;
-using std::runtime_error;
 using std::string;
 using std::string_view;
 using std::vector;
@@ -153,7 +152,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                         argc
                 );
             case enum_to_underlying_type(Command::ExtractIr):
-                m_command = (Command)command_input;
+                m_command = static_cast<Command>(command_input);
                 return parse_ir_extraction_arguments(
                         options_general,
                         parsed_command_line_options,
@@ -161,7 +160,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                         argc
                 );
             default:
-                throw invalid_argument(string("Unknown action '") + command_input + "'");
+                throw invalid_argument(string("Unknown command '") + command_input + "'");
         }
     } catch (exception& e) {
         SPDLOG_ERROR("{}", e.what());
@@ -169,8 +168,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         cerr << "Try " << get_program_name() << " --help for detailed usage instructions" << endl;
         return ParsingResult::Failure;
     }
-
-    throw runtime_error("Unexpected control flow");
 }
 
 auto CommandLineArguments::parse_ir_extraction_arguments(
@@ -180,13 +177,19 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
         int argc
 ) -> CommandLineArgumentsBase::ParsingResult {
     // Define IR extraction options
-    po::options_description options_ir_extraction("IR extraction options");
+    po::options_description options_ir_extraction("IR Extraction Options");
+    // clang-format off
     options_ir_extraction
-            .add_options()("temp-output-dir", po::value<string>(&m_ir_temp_output_dir)->value_name("DIR"), "Temporary output directory for IR chunks while they're being written")(
+            .add_options()(
+                    "temp-output-dir",
+                    po::value<string>(&m_ir_temp_output_dir)->value_name("DIR"),
+                    "Temporary output directory for IR chunks while they're being written"
+            )(
                     "target-size",
                     po::value<size_t>(&m_ir_target_size)->value_name("SIZE"),
                     "Target size (B) for each IR chunk before a new chunk is created"
             );
+    // clang-format on
 
     // Define visible options
     po::options_description visible_options;
@@ -195,7 +198,6 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
 
     // Define hidden positional options (not shown in Boost's program options help message)
     po::options_description hidden_positional_options;
-    string output_handler_name;
     // clang-format off
     hidden_positional_options.add_options()(
             "archive-path",
@@ -214,17 +216,17 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
             po::value<string>(&m_ir_mongodb_collection)
     );
     // clang-format on
-    po::positional_options_description extract_positional_options_description;
-    extract_positional_options_description.add("archive-path", 1);
-    extract_positional_options_description.add("file-split-id", 1);
-    extract_positional_options_description.add("output-dir", 1);
-    extract_positional_options_description.add("mongodb-uri", 1);
-    extract_positional_options_description.add("mongodb-collection", 1);
+    po::positional_options_description positional_options_description;
+    positional_options_description.add("archive-path", 1);
+    positional_options_description.add("file-split-id", 1);
+    positional_options_description.add("output-dir", 1);
+    positional_options_description.add("mongodb-uri", 1);
+    positional_options_description.add("mongodb-collection", 1);
 
     // Aggregate all options
-    po::options_description all_extract_options;
-    all_extract_options.add(options_ir_extraction);
-    all_extract_options.add(hidden_positional_options);
+    po::options_description all_options;
+    all_options.add(options_ir_extraction);
+    all_options.add(hidden_positional_options);
 
     // Parse extraction options
     auto extraction_options{po::collect_unrecognized(options, po::include_positional)};
@@ -232,8 +234,8 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     extraction_options.erase(extraction_options.begin());
     po::store(
             po::command_line_parser(extraction_options)
-                    .options(all_extract_options)
-                    .positional(extract_positional_options_description)
+                    .options(all_options)
+                    .positional(positional_options_description)
                     .run(),
             parsed_command_line_options
     );
@@ -247,10 +249,11 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
 
         print_ir_extraction_basic_usage();
         cerr << "Examples:" << endl;
-        cerr << R"(  # Extract file (split) with ID "8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4" as IR into )"
-                R"(OUTPUT_DIR from ARCHIVE_PARH, and send the metadata to mongodb://127.0.0.1:27017/test )"
-                R"("result" collection)"
+        cerr << R"(  # Extract file (split) with ID "8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4" from)"
              << endl;
+        cerr << R"(  # ARCHIVE_PATH as IR into OUTPUT_DIR from ARCHIVE_PATH, and send the metadata)"
+             << endl;
+        cerr << R"(  # to mongodb://127.0.0.1:27017/test result collection)" << endl;
         cerr << "  " << get_program_name()
              << " i ARCHIVE_PATH 8cf8d8f2-bf3f-42a2-90b2-6bc4ed0a36b4 OUTPUT_DIR "
                 "mongodb://127.0.0.1:27017/test result"
@@ -283,10 +286,6 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
 
     if (m_ir_mongodb_collection.empty()) {
         throw invalid_argument("COLLECTION not specified or empty.");
-    }
-
-    if ('/' != m_ir_output_dir.back()) {
-        m_ir_output_dir += '/';
     }
 
     if (m_ir_temp_output_dir.empty()) {
@@ -425,26 +424,26 @@ auto CommandLineArguments::parse_search_arguments(
             po::value<vector<string>>()
     );
     // clang-format on
-    po::positional_options_description search_positional_options_description;
-    search_positional_options_description.add("archive-path", 1);
-    search_positional_options_description.add("wildcard-string", 1);
-    search_positional_options_description.add("output-handler", 1);
-    search_positional_options_description.add("output-handler-args", -1);
+    po::positional_options_description positional_options_description;
+    positional_options_description.add("archive-path", 1);
+    positional_options_description.add("wildcard-string", 1);
+    positional_options_description.add("output-handler", 1);
+    positional_options_description.add("output-handler-args", -1);
 
     // Aggregate all options
-    po::options_description all_search_options;
-    all_search_options.add(options_match_control);
-    all_search_options.add(options_aggregation);
-    all_search_options.add(hidden_positional_options);
+    po::options_description all_options;
+    all_options.add(options_match_control);
+    all_options.add(options_aggregation);
+    all_options.add(hidden_positional_options);
 
     // Parse options
     auto search_options{po::collect_unrecognized(options, po::include_positional)};
     search_options.erase(search_options.begin());
-    po::parsed_options parsed{po::command_line_parser(search_options)
-                                      .options(all_search_options)
-                                      .positional(search_positional_options_description)
-                                      .allow_unregistered()
-                                      .run()};
+    auto parsed{po::command_line_parser(search_options)
+                        .options(all_options)
+                        .positional(positional_options_description)
+                        .allow_unregistered()
+                        .run()};
     po::store(parsed, parsed_command_line_options);
 
     notify(parsed_command_line_options);
@@ -470,28 +469,27 @@ auto CommandLineArguments::parse_search_arguments(
         cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
                 "a network destination"
              << endl;
-        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-             << " " << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
+        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
+             << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
         cerr << endl;
 
         cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
                 "by performing a count aggregation"
              << endl;
-        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-             << " " << cReducerOutputHandlerName << " --count"
+        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
+             << cReducerOutputHandlerName << " --count"
              << " --host localhost --port 14009 --job-id 1" << endl;
         cerr << endl;
 
         cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
                 R"( mongodb://127.0.0.1:27017/test "result" collection )"
              << endl;
-        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
-             << " " << cResultsCacheOutputHandlerName
+        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
+             << cResultsCacheOutputHandlerName
              << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
         cerr << endl;
 
-        cerr << "Options can be specified on the command line or through a configuration "
-                "file."
+        cerr << "Options can be specified on the command line or through a configuration file."
              << endl;
         cerr << visible_options << endl;
         return ParsingResult::InfoCommand;

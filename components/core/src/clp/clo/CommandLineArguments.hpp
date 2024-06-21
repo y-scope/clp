@@ -1,8 +1,10 @@
 #ifndef CLP_CLO_COMMANDLINEARGUMENTS_HPP
 #define CLP_CLO_COMMANDLINEARGUMENTS_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/asio.hpp>
@@ -48,7 +50,7 @@ public:
     // IR extraction arguments
     [[nodiscard]] auto get_file_split_id() const -> std::string const& { return m_file_split_id; }
 
-    size_t get_ir_target_size() const { return m_ir_target_size; }
+    [[nodiscard]] size_t get_ir_target_size() const { return m_ir_target_size; }
 
     [[nodiscard]] auto get_ir_output_dir() const -> std::string const& { return m_ir_output_dir; }
 
@@ -102,13 +104,13 @@ public:
 private:
     // Methods
     /**
-     * Parses arguments for search command
+     * Parses arguments for the search command
      * @param options_general
      * @param parsed_command_line_options
      * @param options
      * @param argc
-     * @return ParsingResult::Success if arguments are parsed without error
-     * ParsingResult::InfoCommand if --help is specified
+     * @return ParsingResult::Success if arguments were parsed without error
+     * @return ParsingResult::InfoCommand if `--help` was specified
      * @throw invalid_argument if invalid arguments are provided
      */
     [[nodiscard]] auto parse_search_arguments(
@@ -119,13 +121,13 @@ private:
     ) -> CommandLineArgumentsBase::ParsingResult;
 
     /**
-     * Parses arguments for IR extraction command
+     * Parses arguments for the IR extraction command
      * @param options_general
      * @param parsed_command_line_options
      * @param options
      * @param argc
-     * @return ParsingResult::Success if arguments are parsed without error
-     * ParsingResult::InfoCommand if --help is specified
+     * @return ParsingResult::Success if arguments were parsed without error
+     * @return ParsingResult::InfoCommand if `--help` was specified
      * @throw invalid_argument if invalid arguments are provided
      */
     [[nodiscard]] auto parse_ir_extraction_arguments(
