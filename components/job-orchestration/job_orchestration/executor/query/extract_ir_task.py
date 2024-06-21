@@ -1,9 +1,6 @@
 import datetime
 import os
-import signal
 import subprocess
-import sys
-from contextlib import closing
 from pathlib import Path
 from typing import Any, Dict
 
