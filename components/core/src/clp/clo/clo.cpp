@@ -131,12 +131,12 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
     try {
         // Create output directory in case it doesn't exist
         std::filesystem::path const output_dir{command_line_args.get_ir_output_dir()};
-        if (auto const error_code = create_directory(output_dir.parent_path().string(), 0700, true);
+        if (auto const error_code = create_directory(output_dir.string(), 0700, true);
             ErrorCode_Success != error_code)
         {
             SPDLOG_ERROR(
                     "Failed to create {} - {}",
-                    output_dir.parent_path().string(),
+                    output_dir.string(),
                     strerror(errno)
             );
             return false;

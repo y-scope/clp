@@ -30,9 +30,9 @@ bool decompress(
 
     // Create output directory in case it doesn't exist
     auto output_dir = std::filesystem::path(command_line_args.get_output_dir());
-    error_code = create_directory(output_dir.parent_path().string(), 0700, true);
+    error_code = create_directory(output_dir.string(), 0700, true);
     if (ErrorCode_Success != error_code) {
-        SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
+        SPDLOG_ERROR("Failed to create {} - {}", output_dir.c_str(), strerror(errno));
         return false;
     }
 
