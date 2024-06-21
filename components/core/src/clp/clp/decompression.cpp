@@ -236,7 +236,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
     ErrorCode error_code{};
 
     // Create output directory in case it doesn't exist
-    auto output_dir = std::filesystem::path(command_line_args.get_output_dir());
+    std::filesystem::path output_dir{command_line_args.get_output_dir()};
     error_code = create_directory(output_dir.parent_path().string(), 0700, true);
     if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
@@ -244,7 +244,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
     }
 
     try {
-        auto archives_dir = std::filesystem::path(command_line_args.get_archives_dir());
+        std::filesystem::path archives_dir{command_line_args.get_archives_dir()};
         auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
         auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
 
