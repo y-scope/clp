@@ -38,7 +38,7 @@ LibarchiveFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_
     while (true) {
         // Read a data block if necessary
         if (nullptr == m_data_block) {
-            auto error_code = read_next_data_block();
+            auto error_code = read_next_nonempty_data_block();
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile == error_code && num_bytes_read > 0) {
                     return ErrorCode_Success;
@@ -111,7 +111,7 @@ ErrorCode LibarchiveFileReader::try_read_to_delimiter(
     while (true) {
         // Read a data block if necessary
         if (nullptr == m_data_block) {
-            auto error_code = read_next_data_block();
+            auto error_code = read_next_nonempty_data_block();
             if (ErrorCode_Success != error_code) {
                 if (ErrorCode_EndOfFile == error_code && str.length() > original_str_length) {
                     // NOTE: At this point, we haven't found delim, so return directly without
@@ -206,7 +206,7 @@ void LibarchiveFileReader::close() {
     m_pos_in_file = 0;
 }
 
-ErrorCode LibarchiveFileReader::try_load_data_block() {
+ErrorCode LibarchiveFileReader::try_load_nonempty_data_block() {
     if (nullptr == m_archive) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -217,10 +217,12 @@ ErrorCode LibarchiveFileReader::try_load_data_block() {
     if (m_data_block != nullptr) {
         return ErrorCode_Success;
     }
-    return read_next_data_block();
+    return read_next_nonempty_data_block();
 }
 
-void LibarchiveFileReader::peek_buffered_data(char const*& buf, size_t& buf_size) const {
+auto LibarchiveFileReader::peek_buffered_data() const -> std::span<char const> {
+    char const* buf{nullptr};
+    size_t buf_size{};
     if (nullptr == m_archive) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -245,21 +247,25 @@ void LibarchiveFileReader::peek_buffered_data(char const*& buf, size_t& buf_size
         buf_size = m_data_block_length - m_pos_in_data_block;
         buf = static_cast<char const*>(m_data_block);
     }
+    return {buf, buf_size};
 }
 
-ErrorCode LibarchiveFileReader::read_next_data_block() {
-    auto return_value = archive_read_data_block(
-            m_archive,
-            &m_data_block,
-            &m_data_block_length,
-            &m_data_block_pos_in_file
-    );
-    if (ARCHIVE_OK != return_value) {
-        m_data_block = nullptr;
-        if (ARCHIVE_EOF == return_value) {
-            m_reached_eof = true;
-            return ErrorCode_EndOfFile;
-        } else {
+ErrorCode LibarchiveFileReader::read_next_nonempty_data_block() {
+    m_data_block_length = 0;
+    m_pos_in_data_block = 0;
+    while (0 == m_data_block_length) {
+        auto return_value = archive_read_data_block(
+                m_archive,
+                &m_data_block,
+                &m_data_block_length,
+                &m_data_block_pos_in_file
+        );
+        if (ARCHIVE_OK != return_value) {
+            m_data_block = nullptr;
+            if (ARCHIVE_EOF == return_value) {
+                m_reached_eof = true;
+                return ErrorCode_EndOfFile;
+            }
             SPDLOG_DEBUG(
                     "Failed to read data block from libarchive - {}",
                     archive_error_string(m_archive)
@@ -267,8 +273,6 @@ ErrorCode LibarchiveFileReader::read_next_data_block() {
             return ErrorCode_Failure;
         }
     }
-
-    m_pos_in_data_block = 0;
 
     return ErrorCode_Success;
 }

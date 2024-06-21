@@ -2,6 +2,7 @@
 #define CLP_LIBARCHIVEFILEREADER_HPP
 
 #include <array>
+#include <span>
 #include <string>
 
 #include <archive.h>
@@ -30,13 +31,7 @@ public:
     };
 
     // Constructors
-    LibarchiveFileReader()
-            : m_archive(nullptr),
-              m_archive_entry(nullptr),
-              m_data_block(nullptr),
-              m_reached_eof(false),
-              m_data_block_pos_in_file(0),
-              m_pos_in_file(0) {}
+    LibarchiveFileReader() = default;
 
     // Methods implementing the ReaderInterface
     /**
@@ -89,43 +84,42 @@ public:
     void close();
 
     /**
-     * Tries to the load a data block from the file if none is loaded
+     * Tries to the load a nonempty data block from the file if none is loaded
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_load_data_block();
+    [[nodiscard]] ErrorCode try_load_nonempty_data_block();
 
     /**
      * Peeks the remaining buffered content without advancing the read head.
      *
      * NOTE: Any subsequent read or seek operations may invalidate the returned buffer.
-     * @param buf Returns a pointer to any buffered data
-     * @param buf_size Returns the number of bytes in the buffer
+     * @return The view of the buffered data
      */
-    void peek_buffered_data(char const*& buf, size_t& buf_size) const;
+    [[nodiscard]] auto peek_buffered_data() const -> std::span<char const>;
 
 private:
     // Methods
     /**
-     * Reads next data block from the archive
+     * Reads next nonempty data block from the archive
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    ErrorCode read_next_data_block();
+    ErrorCode read_next_nonempty_data_block();
 
     // Variables
-    struct archive* m_archive;
+    struct archive* m_archive{nullptr};
 
-    struct archive_entry* m_archive_entry;
-    la_int64_t m_data_block_pos_in_file;
-    void const* m_data_block;
-    size_t m_data_block_length;
-    la_int64_t m_pos_in_data_block;
-    bool m_reached_eof;
+    struct archive_entry* m_archive_entry{nullptr};
+    la_int64_t m_data_block_pos_in_file{0};
+    void const* m_data_block{nullptr};
+    size_t m_data_block_length{0};
+    la_int64_t m_pos_in_data_block{0};
+    bool m_reached_eof{false};
 
-    size_t m_pos_in_file;
+    size_t m_pos_in_file{0};
 
     // Nulls for peek
     std::array<char, 4096> m_nulls_for_peek{0};
