@@ -107,13 +107,6 @@ static bool search_archive(
 
 namespace {
 /**
- * Performs a searches acccording to the given arguments.
- * @param command_line_args
- * @return Whether the search was successful.
- */
-bool search(CommandLineArguments const& command_line_args);
-
-/**
  * Extracts a file split as IR chunks, writing them to the local filesystem and writing their
  * metadata to the results cache.
  * @param command_line_args
@@ -122,87 +115,17 @@ bool search(CommandLineArguments const& command_line_args);
 bool extract_ir(CommandLineArguments const& command_line_args);
 
 /**
+ * Performs a searches acccording to the given arguments.
+ * @param command_line_args
+ * @return Whether the search was successful.
+ */
+bool search(CommandLineArguments const& command_line_args);
+
+/**
  * @param archive_path
  * @return Whether the given path exists and contains an archive metadata file.
  */
 bool validate_archive_path(std::filesystem::path const& archive_path);
-
-bool search(CommandLineArguments const& command_line_args) {
-    std::unique_ptr<OutputHandler> output_handler;
-    try {
-        switch (command_line_args.get_output_handler_type()) {
-            case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<NetworkOutputHandler>(
-                        command_line_args.get_network_dest_host(),
-                        command_line_args.get_network_dest_port()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Reducer: {
-                auto const reducer_socket_fd = reducer::connect_to_reducer(
-                        command_line_args.get_reducer_host(),
-                        command_line_args.get_reducer_port(),
-                        command_line_args.get_job_id()
-                );
-                if (-1 == reducer_socket_fd) {
-                    SPDLOG_ERROR("Failed to connect to reducer");
-                    return false;
-                }
-
-                if (command_line_args.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
-                } else if (command_line_args.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<CountByTimeOutputHandler>(
-                            reducer_socket_fd,
-                            command_line_args.get_count_by_time_bucket_size()
-                    );
-                } else {
-                    SPDLOG_ERROR("Unhandled aggregation type.");
-                    return false;
-                }
-
-                break;
-            }
-            case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<ResultsCacheOutputHandler>(
-                        command_line_args.get_mongodb_uri(),
-                        command_line_args.get_mongodb_collection(),
-                        command_line_args.get_batch_size(),
-                        command_line_args.get_max_num_results()
-                );
-                break;
-            default:
-                SPDLOG_ERROR("Unhandled OutputHandlerType.");
-                return false;
-        }
-    } catch (clp::TraceableException& e) {
-        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
-        return false;
-    }
-
-    try {
-        return search_archive(command_line_args, std::move(output_handler));
-    } catch (TraceableException& e) {
-        auto error_code = e.get_error_code();
-        if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR(
-                    "Search failed: {}:{} {}, errno={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    errno
-            );
-        } else {
-            SPDLOG_ERROR(
-                    "Search failed: {}:{} {}, error_code={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    error_code
-            );
-        }
-        return false;
-    }
-}
 
 bool extract_ir(CommandLineArguments const& command_line_args) {
     std::filesystem::path const archive_path{command_line_args.get_archive_path()};
@@ -338,6 +261,83 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
     }
 
     return true;
+}
+
+bool search(CommandLineArguments const& command_line_args) {
+    std::unique_ptr<OutputHandler> output_handler;
+    try {
+        switch (command_line_args.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::Network:
+                output_handler = std::make_unique<NetworkOutputHandler>(
+                        command_line_args.get_network_dest_host(),
+                        command_line_args.get_network_dest_port()
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Reducer: {
+                auto const reducer_socket_fd = reducer::connect_to_reducer(
+                        command_line_args.get_reducer_host(),
+                        command_line_args.get_reducer_port(),
+                        command_line_args.get_job_id()
+                );
+                if (-1 == reducer_socket_fd) {
+                    SPDLOG_ERROR("Failed to connect to reducer");
+                    return false;
+                }
+
+                if (command_line_args.do_count_results_aggregation()) {
+                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                } else if (command_line_args.do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            command_line_args.get_count_by_time_bucket_size()
+                    );
+                } else {
+                    SPDLOG_ERROR("Unhandled aggregation type.");
+                    return false;
+                }
+
+                break;
+            }
+            case CommandLineArguments::OutputHandlerType::ResultsCache:
+                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                        command_line_args.get_mongodb_uri(),
+                        command_line_args.get_mongodb_collection(),
+                        command_line_args.get_batch_size(),
+                        command_line_args.get_max_num_results()
+                );
+                break;
+            default:
+                SPDLOG_ERROR("Unhandled OutputHandlerType.");
+                return false;
+        }
+    } catch (clp::TraceableException& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return false;
+    }
+
+    try {
+        return search_archive(command_line_args, std::move(output_handler));
+    } catch (TraceableException& e) {
+        auto error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
+        } else {
+            SPDLOG_ERROR(
+                    "Search failed: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
+        }
+        return false;
+    }
 }
 
 bool validate_archive_path(std::filesystem::path const& archive_path) {
