@@ -8,8 +8,8 @@ import socket
 import subprocess
 import sys
 import time
-import typing
 import uuid
+from typing import Any, Dict, List, Optional
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -526,6 +526,8 @@ def start_compression_worker(
         clp_config.redis.compression_backend_database,
         num_cpus,
         mounts,
+        None,
+        None,
     )
 
 
@@ -538,6 +540,10 @@ def start_query_worker(
 ):
     celery_method = "job_orchestration.executor.query"
     celery_route = f"{QueueName.QUERY}"
+
+    query_worker_mount = [mounts.ir_output_dir]
+    query_worker_env = {"CLP_IR_OUTPUT_DIR": container_clp_config.ir_output.directory}
+
     generic_start_worker(
         QUERY_WORKER_COMPONENT_NAME,
         instance_id,
@@ -549,6 +555,8 @@ def start_query_worker(
         clp_config.redis.query_backend_database,
         num_cpus,
         mounts,
+        query_worker_env,
+        query_worker_mount,
     )
 
 
@@ -563,6 +571,8 @@ def generic_start_worker(
     redis_database: int,
     num_cpus: int,
     mounts: CLPDockerMounts,
+    worker_specific_env: Dict[str, Any],
+    worker_specific_mount: List[Optional[DockerMount]],
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -589,6 +599,7 @@ def generic_start_worker(
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
         "--log-driver", "local",
+        "-u", f"{os.getuid()}:{os.getgid()}",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
             f"BROKER_URL=amqp://"
@@ -607,21 +618,28 @@ def generic_start_worker(
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
         "-e", f"CLP_IR_COLLECTION={clp_config.results_cache.ir_collection_name}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
-        "--mount", str(mounts.clp_home),
     ]
+    if worker_specific_env:
+        for env_name, env_value in worker_specific_env.items():
+            container_start_cmd.append("-e")
+            container_start_cmd.append(f"{env_name}={env_value}")
+
     # fmt: on
     necessary_mounts = [
+        mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
         mounts.archives_output_dir,
-        mounts.ir_output_dir,
         mounts.input_logs_dir,
     ]
+    if worker_specific_mount:
+        necessary_mounts.extend(worker_specific_mount)
+
     for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))
+        if not mount:
+            raise ValueError(f"Required mount configuration is empty: {necessary_mounts}")
+        container_start_cmd.append("--mount")
+        container_start_cmd.append(str(mount))
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
@@ -649,8 +667,8 @@ def generic_start_worker(
 
 def update_meteor_settings(
     parent_key_prefix: str,
-    settings: typing.Dict[str, typing.Any],
-    updates: typing.Dict[str, typing.Any],
+    settings: Dict[str, Any],
+    updates: Dict[str, Any],
 ):
     """
     Recursively updates the given Meteor settings object with the values from `updates`.
