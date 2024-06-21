@@ -21,11 +21,6 @@
 using clp::clo::CommandLineArguments;
 using clp::clo::CountByTimeOutputHandler;
 using clp::clo::CountOutputHandler;
-using clp::clo::cResultsCache::cOrigFileId;
-using clp::clo::cResultsCache::IrOutput::cBeginMsgIx;
-using clp::clo::cResultsCache::IrOutput::cEndMsgIx;
-using clp::clo::cResultsCache::IrOutput::cIsLastIrChunk;
-using clp::clo::cResultsCache::IrOutput::cPath;
 using clp::clo::NetworkOutputHandler;
 using clp::clo::OutputHandler;
 using clp::clo::ResultsCacheOutputHandler;
@@ -199,14 +194,26 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 return false;
             }
             results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(cPath, dest_ir_path.string()),
-                    bsoncxx::builder::basic::kvp(cOrigFileId, orig_file_id),
                     bsoncxx::builder::basic::kvp(
-                            cBeginMsgIx,
+                            clp::clo::cResultsCacheKeys::IrOutput::Path,
+                            dest_ir_path.string()
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            clp::clo::cResultsCacheKeys::OrigFileId,
+                            orig_file_id
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,
                             static_cast<int64_t>(begin_message_ix)
                     ),
-                    bsoncxx::builder::basic::kvp(cEndMsgIx, static_cast<int64_t>(end_message_ix)),
-                    bsoncxx::builder::basic::kvp(cIsLastIrChunk, is_last_ir_chunk)
+                    bsoncxx::builder::basic::kvp(
+                            clp::clo::cResultsCacheKeys::IrOutput::EndMsgIx,
+                            static_cast<int64_t>(end_message_ix)
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            clp::clo::cResultsCacheKeys::IrOutput::IsLastIrChunk,
+                            is_last_ir_chunk
+                    )
             )));
             return true;
         };

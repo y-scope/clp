@@ -100,23 +100,23 @@ ErrorCode ResultsCacheOutputHandler::flush() {
         try {
             m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp(
-                            cResultsCache::cOrigFileId,
+                            cResultsCacheKeys::OrigFileId,
                             std::move(result.orig_file_id)
                     ),
                     bsoncxx::builder::basic::kvp(
-                            cResultsCache::SearchOutput::cOrigFilePath,
+                            cResultsCacheKeys::SearchOutput::OrigFilePath,
                             std::move(result.orig_file_path)
                     ),
                     bsoncxx::builder::basic::kvp(
-                            cResultsCache::SearchOutput::cLogEventIx,
+                            cResultsCacheKeys::SearchOutput::LogEventIx,
                             result.log_event_ix
                     ),
                     bsoncxx::builder::basic::kvp(
-                            cResultsCache::SearchOutput::cTimestamp,
+                            cResultsCacheKeys::SearchOutput::Timestamp,
                             result.timestamp
                     ),
                     bsoncxx::builder::basic::kvp(
-                            cResultsCache::SearchOutput::cMessage,
+                            cResultsCacheKeys::SearchOutput::Message,
                             std::move(result.decompressed_message)
                     )
             )));
