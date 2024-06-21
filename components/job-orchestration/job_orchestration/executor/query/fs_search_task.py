@@ -16,7 +16,7 @@ from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
-from .utils import get_logger_file_path, get_task_results, update_query_task_metadata
+from .utils import get_logger_file_path, generate_final_task_results, update_query_task_metadata
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -121,9 +121,9 @@ def search(
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
-    job_status: QueryTaskStatus
+    task_status: QueryTaskStatus
     try:
-        search_command = make_command(
+        task_command = make_command(
             storage_engine=clp_storage_engine,
             clp_home=clp_home,
             archives_dir=archive_directory,
@@ -137,17 +137,17 @@ def search(
         logger.error(error_message)
         clo_log_file.write(error_message)
 
-        job_status = QueryTaskStatus.FAILED
+        task_status = QueryTaskStatus.FAILED
         update_query_task_metadata(
             sql_adapter,
             task_id,
-            dict(status=job_status, duration=0, start_time=start_time),
+            dict(status=task_status, duration=0, start_time=start_time),
         )
 
         clo_log_file.close()
         return QueryTaskResult(
             task_id=task_id,
-            status=job_status,
+            status=task_status,
             duration=0,
             error_log_path=str(clo_log_path),
         ).dict()
@@ -157,9 +157,9 @@ def search(
         sql_adapter, task_id, dict(status=search_status, start_time=start_time)
     )
 
-    logger.info(f'Running: {" ".join(search_command)}')
+    logger.info(f'Running: {" ".join(task_command)}')
     search_proc = subprocess.Popen(
-        search_command,
+        task_command,
         preexec_fn=os.setpgrp,
         close_fds=True,
         stdout=clo_log_file,
@@ -187,17 +187,17 @@ def search(
     search_proc.communicate()
     return_code = search_proc.returncode
     if 0 != return_code:
-        job_status = QueryTaskStatus.FAILED
+        task_status = QueryTaskStatus.FAILED
         logger.error(f"Failed search task for job {job_id} - return_code={return_code}")
     else:
-        job_status = QueryTaskStatus.SUCCEEDED
+        task_status = QueryTaskStatus.SUCCEEDED
         logger.info(f"Search task completed for job {job_id}")
 
     clo_log_file.close()
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(
-        sql_adapter, task_id, dict(status=job_status, start_time=start_time, duration=duration)
+        sql_adapter, task_id, dict(status=task_status, start_time=start_time, duration=duration)
     )
 
-    return get_task_results(task_id, job_status, duration, clo_log_path)
+    return generate_final_task_results(task_id, task_status, duration, clo_log_path)

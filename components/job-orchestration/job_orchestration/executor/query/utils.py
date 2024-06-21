@@ -13,10 +13,9 @@ def get_logger_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
     return worker_logs_dir / f"{task_id}-clo.log"
 
 
-def get_task_results(
+def generate_final_task_results(
     task_id: int, job_status: QueryTaskStatus, duration: float, clo_log_path: Path
 ) -> Dict[Any, Any]:
-
     task_result = QueryTaskResult(
         status=job_status,
         task_id=task_id,

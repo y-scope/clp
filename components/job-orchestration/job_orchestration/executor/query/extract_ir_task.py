@@ -16,7 +16,7 @@ from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import ExtractIrConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
-from .utils import get_logger_file_path, get_task_results, update_query_task_metadata
+from .utils import get_logger_file_path, generate_final_task_results, update_query_task_metadata
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -77,15 +77,15 @@ def extract_ir(
     clo_log_path = get_logger_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
-    logger.info(f"Started extract IR task for job {job_id}")
+    logger.info(f"Started IR extraction task for job {job_id}")
 
     extract_ir_config = ExtractIrConfig.parse_obj(job_config_obj)
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
-    job_status: QueryTaskStatus
+    task_status: QueryTaskStatus
     try:
-        extract_ir_command = make_command(
+        task_command = make_command(
             storage_engine=clp_storage_engine,
             clp_home=clp_home,
             archives_dir=archive_directory,
@@ -96,54 +96,55 @@ def extract_ir(
             results_collection=ir_collection,
         )
     except ValueError as e:
-        error_message = f"Error creating extract command: {e}"
+        error_message = f"Error creating IR extraction command: {e}"
         logger.error(error_message)
         clo_log_file.write(error_message)
 
-        job_status = QueryTaskStatus.FAILED
+        task_status = QueryTaskStatus.FAILED
         update_query_task_metadata(
             sql_adapter,
             task_id,
-            dict(status=job_status, duration=0, start_time=start_time),
+            dict(status=task_status, duration=0, start_time=start_time),
         )
         clo_log_file.write(error_message)
 
         clo_log_file.close()
         return QueryTaskResult(
             task_id=task_id,
-            status=job_status,
+            status=task_status,
             duration=0,
             error_log_path=str(clo_log_path),
         ).dict()
 
-    job_status = QueryTaskStatus.RUNNING
-    update_query_task_metadata(sql_adapter, task_id, dict(status=job_status, start_time=start_time))
+    task_status = QueryTaskStatus.RUNNING
+    update_query_task_metadata(sql_adapter, task_id, dict(status=task_status, start_time=start_time))
 
-    logger.info(f'Running: {" ".join(extract_ir_command)}')
+    logger.info(f'Running: {" ".join(task_command)}')
     extract_proc = subprocess.Popen(
-        extract_ir_command,
+        task_command,
         preexec_fn=os.setpgrp,
         close_fds=True,
         stdout=clo_log_file,
         stderr=clo_log_file,
     )
 
+    logger.info("Waiting for IR extraction to finish")
     # communicate is equivalent to wait in this case, but avoids deadlocks if we switch to piping
     # stdout/stderr in the future.
     extract_proc.communicate()
     return_code = extract_proc.returncode
     if 0 != return_code:
-        job_status = QueryTaskStatus.FAILED
-        logger.error(f"Failed extraction task for job {job_id} - return_code={return_code}")
+        task_status = QueryTaskStatus.FAILED
+        logger.error(f"Failed IR extraction task for job {job_id} - return_code={return_code}")
     else:
-        job_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"Extraction task completed for job {job_id}")
+        task_status = QueryTaskStatus.SUCCEEDED
+        logger.info(f"IR extraction task completed for job {job_id}")
 
     clo_log_file.close()
     duration = (datetime.datetime.now() - start_time).total_seconds()
 
     update_query_task_metadata(
-        sql_adapter, task_id, dict(status=job_status, start_time=start_time, duration=duration)
+        sql_adapter, task_id, dict(status=task_status, start_time=start_time, duration=duration)
     )
 
-    return get_task_results(task_id, job_status, duration, clo_log_path)
+    return generate_final_task_results(task_id, task_status, duration, clo_log_path)
