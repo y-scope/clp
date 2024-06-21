@@ -15,7 +15,7 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import SearchConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
-from .utils import update_query_task_metadata
+from .utils import update_query_task_metadata, get_logger_file_path
 # Setup logging
 logger = get_task_logger(__name__)
 
@@ -29,7 +29,7 @@ def make_command(
     results_collection: str,
 ):
     if StorageEngine.CLP == storage_engine:
-        command = [str(clp_home / "bin" / "clo"), str(archives_dir / archive_id)]
+        command = [str(clp_home / "bin" / "clo"), "s", str(archives_dir / archive_id)]
         if search_config.path_filter is not None:
             command.append("--file-path")
             command.append(search_config.path_filter)
@@ -108,10 +108,8 @@ def search(
     clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
 
     # Setup logging to file
-    worker_logs_dir = clp_logs_dir / job_id
-    worker_logs_dir.mkdir(exist_ok=True, parents=True)
     set_logging_level(logger, clp_logging_level)
-    clo_log_path = worker_logs_dir / f"{task_id}-clo.log"
+    clo_log_path = get_logger_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
     logger.info(f"Started task for job {job_id}")
@@ -120,7 +118,7 @@ def search(
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
-    search_status = QueryTaskStatus.RUNNING
+    search_status: QueryTaskStatus
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
@@ -154,6 +152,7 @@ def search(
                 error_log_path=str(clo_log_path),
             ).dict()
 
+        search_status = QueryTaskStatus.RUNNING
         update_query_task_metadata(
             db_cursor, task_id, dict(status=search_status, start_time=start_time)
         )

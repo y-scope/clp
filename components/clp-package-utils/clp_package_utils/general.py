@@ -69,6 +69,7 @@ class CLPDockerMounts:
         self.data_dir: typing.Optional[DockerMount] = None
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
+        self.ir_output_dir: typing.Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -222,6 +223,19 @@ def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
             DockerMountType.BIND,
             clp_config.archive_output.directory,
             container_clp_config.archive_output.directory,
+        )
+
+    container_clp_config.ir_output.directory = pathlib.Path("/") / "mnt" / "ir-output"
+    if not is_path_already_mounted(
+        clp_home,
+        CONTAINER_CLP_HOME,
+        clp_config.ir_output.directory,
+        container_clp_config.ir_output.directory,
+    ):
+        docker_mounts.ir_output_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.ir_output.directory,
+            container_clp_config.ir_output.directory,
         )
 
     return container_clp_config, docker_mounts

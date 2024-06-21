@@ -578,6 +578,7 @@ def generic_start_worker(
 
     # Create necessary directories
     clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
+    clp_config.ir_output.directory.mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
@@ -601,9 +602,11 @@ def generic_start_worker(
         "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
         "-e", f"CLP_DATA_DIR={container_clp_config.data_directory}",
         "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}",
+        "-e", f"CLP_IR_OUTPUT_DIR={container_clp_config.ir_output.directory}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
+        "-e", f"CLP_IR_COLLECTION={clp_config.results_cache.ir_collection_name}",
         "-u", f"{os.getuid()}:{os.getgid()}",
         "--mount", str(mounts.clp_home),
     ]
@@ -612,6 +615,7 @@ def generic_start_worker(
         mounts.data_dir,
         mounts.logs_dir,
         mounts.archives_output_dir,
+        mounts.ir_output_dir,
         mounts.input_logs_dir,
     ]
     for mount in necessary_mounts:

@@ -255,6 +255,7 @@ class ResultsCache(BaseModel):
     host: str = "localhost"
     port: int = 27017
     db_name: str = "clp-search"
+    ir_collection_name: str = "clp-ir"
 
     @validator("host")
     def validate_host(cls, field):
@@ -266,6 +267,12 @@ class ResultsCache(BaseModel):
     def validate_db_name(cls, field):
         if "" == field:
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
+        return field
+
+    @validator("ir_collection_name")
+    def validate_ir_collection_name(cls, field):
+        if "" == field:
+            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.ir_collection_name cannot be empty.")
         return field
 
     def get_uri(self):
@@ -309,6 +316,25 @@ class ArchiveOutput(BaseModel):
     def validate_target_segment_size(cls, field):
         if field <= 0:
             raise ValueError("target_segment_size must be greater than 0")
+        return field
+
+    def make_config_paths_absolute(self, clp_home: pathlib.Path):
+        self.directory = make_config_path_absolute(clp_home, self.directory)
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        # Turn directory (pathlib.Path) into a primitive string
+        d["directory"] = str(d["directory"])
+        return d
+
+
+class IrOutput(BaseModel):
+    directory: pathlib.Path = pathlib.Path("var") / "data" / "ir"
+
+    @validator("directory")
+    def validate_directory(cls, field):
+        if "" == field:
+            raise ValueError("directory can not be empty")
         return field
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
@@ -368,6 +394,7 @@ class CLPConfig(BaseModel):
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
+    ir_output: IrOutput = IrOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
@@ -377,6 +404,7 @@ class CLPConfig(BaseModel):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
+        self.ir_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
@@ -463,6 +491,7 @@ class CLPConfig(BaseModel):
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
+        d["ir_output"] = self.ir_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
         d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)

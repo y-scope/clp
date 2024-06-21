@@ -15,10 +15,40 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import ExtractIrConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
-from .utils import update_query_task_metadata
+from .utils import update_query_task_metadata, get_logger_file_path
 
 # Setup logging
 logger = get_task_logger(__name__)
+
+def make_command(
+    storage_engine: str,
+    clp_home: Path,
+    archives_dir: Path,
+    ir_output_dir: Path,
+    archive_id: str,
+    extract_ir_config: ExtractIrConfig,
+    results_cache_uri: str,
+    results_collection: str,
+):
+    if StorageEngine.CLP == storage_engine:
+        if not extract_ir_config.file_split_id:
+            raise ValueError(f"file_split_id not supplied")
+        command = [
+            str(clp_home / "bin" / "clo"),
+            "i",
+            str(archives_dir / archive_id),
+            extract_ir_config.file_split_id,
+            str(ir_output_dir),
+            results_cache_uri,
+            results_collection
+        ]
+        if extract_ir_config.target_size is not None:
+            command.append("--target-size")
+            command.append(extract_ir_config.target_size)
+    else:
+        raise ValueError(f"Unsupported storage engine {storage_engine}")
+
+    return command
 
 @app.task(bind=True)
 def extract_ir(
@@ -32,15 +62,16 @@ def extract_ir(
 ) -> Dict[str, Any]:
     clp_home = Path(os.getenv("CLP_HOME"))
     archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
+    ir_directory = Path(os.getenv("CLP_IR_OUTPUT_DIR"))
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
     clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
 
+    ir_collection = str(os.getenv("CLP_IR_COLLECTION"))
+
     # Setup logging to file
-    worker_logs_dir = clp_logs_dir / job_id
-    worker_logs_dir.mkdir(exist_ok=True, parents=True)
     set_logging_level(logger, clp_logging_level)
-    clo_log_path = worker_logs_dir / f"{task_id}-clo.log"
+    clo_log_path = get_logger_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
     logger.info(f"Started extract IR task for job {job_id}")
@@ -49,20 +80,67 @@ def extract_ir(
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
-    search_status = QueryTaskStatus.RUNNING
+    job_status: QueryTaskStatus
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
+        try:
+            extract_ir_command = make_command(
+                storage_engine=clp_storage_engine,
+                clp_home=clp_home,
+                archives_dir=archive_directory,
+                ir_output_dir=ir_directory,
+                archive_id=archive_id,
+                extract_ir_config=extract_ir_config,
+                results_cache_uri=results_cache_uri,
+                results_collection=ir_collection,
+            )
+        except ValueError as e:
+            error_message = f"Error creating extract command: {e}"
+            logger.error(error_message)
+            job_status = QueryTaskStatus.FAILED
+            update_query_task_metadata(
+                db_cursor,
+                task_id,
+                dict(status=job_status, duration=0, start_time=start_time),
+            )
+            db_conn.commit()
+            clo_log_file.write(error_message)
+            clo_log_file.close()
+
+            return QueryTaskResult(
+                task_id=task_id,
+                status=job_status,
+                duration=0,
+                error_log_path=str(clo_log_path),
+            ).dict()
+
+        job_status = QueryTaskStatus.RUNNING
         update_query_task_metadata(
-            db_cursor, task_id, dict(status=search_status, start_time=start_time)
+            db_cursor, task_id, dict(status=job_status, start_time=start_time)
         )
         db_conn.commit()
 
-    logger.info(f'Running Placeholder task for job {job_id}')
-    logger.info(f'Arguments: split_id: {extract_ir_config.file_split_id}, msg_ix: {extract_ir_config.msg_ix}')
+    logger.info(f'Running: {" ".join(extract_ir_command)}')
+    extract_proc = subprocess.Popen(
+        extract_ir_command,
+        preexec_fn=os.setpgrp,
+        close_fds=True,
+        stdout=clo_log_file,
+        stderr=clo_log_file,
+    )
 
-    # Mark job succeed
-    search_status = QueryTaskStatus.SUCCEEDED
+    logger.info("Waiting for extraction to finish")
+    # communicate is equivalent to wait in this case, but avoids deadlocks if we switch to piping
+    # stdout/stderr in the future.
+    extract_proc.communicate()
+    return_code = extract_proc.returncode
+    if 0 != return_code:
+        job_status = QueryTaskStatus.FAILED
+        logger.error(f"Failed extraction task for job {job_id} - return_code={return_code}")
+    else:
+        job_status = QueryTaskStatus.SUCCEEDED
+        logger.info(f"Extraction task completed for job {job_id}")
 
     # Close log files
     clo_log_file.close()
@@ -72,17 +150,17 @@ def extract_ir(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
         update_query_task_metadata(
-            db_cursor, task_id, dict(status=search_status, start_time=start_time, duration=duration)
+            db_cursor, task_id, dict(status=job_status, start_time=start_time, duration=duration)
         )
         db_conn.commit()
 
     extract_ir_task_result = QueryTaskResult(
-        status=search_status,
+        status=job_status,
         task_id=task_id,
         duration=duration,
     )
 
-    if QueryTaskStatus.FAILED == search_status:
+    if QueryTaskStatus.FAILED == job_status:
         extract_ir_task_result.error_log_path = str(clo_log_path)
-    logger.info(f'Finished Placeholder task for job {job_id}')
+
     return extract_ir_task_result.dict()
