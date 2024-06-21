@@ -89,7 +89,7 @@ public:
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    [[nodiscard]] ErrorCode try_load_nonempty_data_block();
+    [[nodiscard]] auto try_load_nonempty_data_block() -> ErrorCode;
 
     /**
      * Peeks the remaining buffered content without advancing the read head.
@@ -107,7 +107,7 @@ private:
      * @return ErrorCode_Failure on failure
      * @return ErrorCode_Success on success
      */
-    ErrorCode read_next_nonempty_data_block();
+    [[nodiscard]] auto read_next_nonempty_data_block() -> ErrorCode;
 
     // Variables
     struct archive* m_archive{nullptr};

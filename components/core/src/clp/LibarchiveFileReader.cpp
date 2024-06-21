@@ -206,7 +206,7 @@ void LibarchiveFileReader::close() {
     m_pos_in_file = 0;
 }
 
-ErrorCode LibarchiveFileReader::try_load_nonempty_data_block() {
+auto LibarchiveFileReader::try_load_nonempty_data_block() -> ErrorCode {
     if (nullptr == m_archive) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -250,7 +250,7 @@ auto LibarchiveFileReader::peek_buffered_data() const -> std::span<char const> {
     return {buf, buf_size};
 }
 
-ErrorCode LibarchiveFileReader::read_next_nonempty_data_block() {
+auto LibarchiveFileReader::read_next_nonempty_data_block() -> ErrorCode {
     m_data_block_length = 0;
     m_pos_in_data_block = 0;
     while (0 == m_data_block_length) {
