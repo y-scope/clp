@@ -542,7 +542,10 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mount = [mounts.ir_output_dir]
-    query_worker_env = {"CLP_IR_OUTPUT_DIR": container_clp_config.ir_output.directory}
+    query_worker_env = {
+        "CLP_IR_OUTPUT_DIR": container_clp_config.ir_output.directory,
+        "CLP_IR_COLLECTION": clp_config.results_cache.ir_collection_name
+    }
 
     generic_start_worker(
         QUERY_WORKER_COMPONENT_NAME,
@@ -613,11 +616,9 @@ def generic_start_worker(
         "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
         "-e", f"CLP_DATA_DIR={container_clp_config.data_directory}",
         "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}",
-        "-e", f"CLP_IR_OUTPUT_DIR={container_clp_config.ir_output.directory}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
-        "-e", f"CLP_IR_COLLECTION={clp_config.results_cache.ir_collection_name}",
     ]
     if worker_specific_env:
         for env_name, env_value in worker_specific_env.items():
