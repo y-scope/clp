@@ -103,7 +103,6 @@ def extract_ir(
             task_id,
             dict(status=task_status, duration=0, start_time=start_time),
         )
-        clo_log_file.write(error_message)
 
         clo_log_file.close()
         return QueryTaskResult(
@@ -132,10 +131,10 @@ def extract_ir(
     return_code = extract_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
-        logger.error(f"Failed IR extraction task for job {job_id} - return_code={return_code}")
+        logger.error(f"IR extraction task {task_id} failed for job {job_id} - return_code={return_code}")
     else:
         task_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"IR extraction task completed for job {job_id}")
+        logger.info(f"IR extraction task {task_id} completed for job {job_id}")
 
     clo_log_file.close()
     duration = (datetime.datetime.now() - start_time).total_seconds()

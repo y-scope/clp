@@ -187,10 +187,10 @@ def search(
     return_code = search_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
-        logger.error(f"Failed search task for job {job_id} - return_code={return_code}")
+        logger.error(f"Search task {task_id} failed for job {job_id} - return_code={return_code}")
     else:
         task_status = QueryTaskStatus.SUCCEEDED
-        logger.info(f"Search task completed for job {job_id}")
+        logger.info(f"Search task {task_id} completed for job {job_id}")
 
     clo_log_file.close()
     duration = (datetime.datetime.now() - start_time).total_seconds()
