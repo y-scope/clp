@@ -469,23 +469,23 @@ auto CommandLineArguments::parse_search_arguments(
         cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to )"
                 "a network destination"
              << endl;
-        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
-             << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
+        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+             << " " << cNetworkOutputHandlerName << " --host localhost --port 18000" << endl;
         cerr << endl;
 
         cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and output the results )"
                 "by performing a count aggregation"
              << endl;
-        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
-             << cReducerOutputHandlerName << " --count"
+        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+             << " " << cReducerOutputHandlerName << " --count"
              << " --host localhost --port 14009 --job-id 1" << endl;
         cerr << endl;
 
         cerr << R"(  # Search ARCHIVE_PATH for " ERROR " and send results to)"
                 R"( mongodb://127.0.0.1:27017/test "result" collection )"
              << endl;
-        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")" << " "
-             << cResultsCacheOutputHandlerName
+        cerr << "  " << get_program_name() << R"( ARCHIVE_PATH " ERROR ")"
+             << " " << cResultsCacheOutputHandlerName
              << R"( --uri mongodb://127.0.0.1:27017/test --collection result)" << endl;
         cerr << endl;
 
