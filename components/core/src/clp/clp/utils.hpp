@@ -1,6 +1,7 @@
 #ifndef CLP_CLP_UTILS_HPP
 #define CLP_CLP_UTILS_HPP
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -87,7 +88,7 @@ bool validate_paths_exist(std::vector<std::string> const& paths);
  */
 std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
         GlobalMetadataDBConfig const& global_metadata_db_config,
-        boost::filesystem::path const& archives_dir
+        std::filesystem::path const& archives_dir
 );
 }  // namespace clp::clp
 

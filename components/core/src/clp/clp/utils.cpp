@@ -1,5 +1,6 @@
 #include "utils.hpp"
 
+#include <filesystem>
 #include <memory>
 
 #include <boost/filesystem.hpp>
@@ -207,7 +208,7 @@ bool validate_paths_exist(vector<string> const& paths) {
 
 std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
         GlobalMetadataDBConfig const& global_metadata_db_config,
-        boost::filesystem::path const& archives_dir
+        std::filesystem::path const& archives_dir
 ) {
     switch (global_metadata_db_config.get_metadata_db_type()) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {

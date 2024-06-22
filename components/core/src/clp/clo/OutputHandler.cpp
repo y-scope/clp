@@ -10,6 +10,7 @@
 #include "../../reducer/CountOperator.hpp"
 #include "../../reducer/network_utils.hpp"
 #include "../networking/socket_utils.hpp"
+#include "constants.hpp"
 
 using clp::streaming_archive::reader::Message;
 using std::string;
@@ -99,13 +100,25 @@ ErrorCode ResultsCacheOutputHandler::flush() {
         try {
             m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp(
-                            "orig_file_path",
+                            cResultsCacheKeys::OrigFileId,
+                            std::move(result.orig_file_id)
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            cResultsCacheKeys::SearchOutput::OrigFilePath,
                             std::move(result.orig_file_path)
                     ),
-                    bsoncxx::builder::basic::kvp("orig_file_id", std::move(result.orig_file_id)),
-                    bsoncxx::builder::basic::kvp("log_event_ix", result.log_event_ix),
-                    bsoncxx::builder::basic::kvp("timestamp", result.timestamp),
-                    bsoncxx::builder::basic::kvp("message", std::move(result.decompressed_message))
+                    bsoncxx::builder::basic::kvp(
+                            cResultsCacheKeys::SearchOutput::LogEventIx,
+                            result.log_event_ix
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            cResultsCacheKeys::SearchOutput::Timestamp,
+                            result.timestamp
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            cResultsCacheKeys::SearchOutput::Message,
+                            std::move(result.decompressed_message)
+                    )
             )));
             count++;
 
