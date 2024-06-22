@@ -118,7 +118,8 @@ template <typename encoded_variable_t>
 [[nodiscard]] auto get_current_ts() -> epoch_time_ms_t;
 
 /**
- * Flushes and cleans the serialized IR bytes into the given byte buffer.
+ * Flushes and clears serialized data from the serializer's underlying IR buffer into the given byte
+ * buffer.
  * @tparam encoded_variable_t
  * @param serializer
  * @param byte_buf
@@ -232,7 +233,7 @@ auto get_current_ts() -> epoch_time_ms_t {
 template <typename encoded_variable_t>
 auto flush_and_clean_serializer_buffer(
         Serializer<encoded_variable_t>& serializer,
-        std::vector<int8_t>& byte_buf
+        vector<int8_t>& byte_buf
 ) -> void {
     auto const view{serializer.get_ir_buf_view()};
     byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
@@ -889,9 +890,8 @@ TEMPLATE_TEST_CASE(
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
-    // This is a unit test for IR v2 serializer. At this moment, we do not have the deserializer
-    // implemented yet. Therefore, we can only test whether the preamble packet is serialized as
-    // expected.
+    // This is a unit test for the kv-pair IR serializer. Currently, we haven't yet implemented a
+    // deserializer, so we can only test whether the preamble packet is serialized correctly.
     vector<int8_t> ir_buf;
 
     auto result{Serializer<TestType>::create()};
@@ -921,14 +921,14 @@ TEMPLATE_TEST_CASE(
         REQUIRE((false == is_four_byte_encoding));
     }
 
-    encoded_tag_t metadata_type;
+    encoded_tag_t metadata_type{};
     vector<int8_t> metadata_bytes;
     REQUIRE(
             (IRErrorCode::IRErrorCode_Success
              == deserialize_preamble(buffer_reader, metadata_type, metadata_bytes))
     );
     REQUIRE((clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type));
-    string_view metadata_view{
+    string_view const metadata_view{
             size_checked_pointer_cast<char const>(metadata_bytes.data()),
             metadata_bytes.size()
     };

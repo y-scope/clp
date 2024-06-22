@@ -12,14 +12,19 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * A template class for serializing log events into CLP IR format. This class maintains all the
- * necessary internal data structure to track serialization states. It also provides APIs to
- * serialize log events into IR format, as well as APIs to access the serialized IR bytes.
- * Notice that this class is designed to provide serialization functionalities only. The upper-level
- * caller should be responsible for writing the serialized bytes into IO streams properly. In
- * addition, it doesn't provide a call to terminate the IR stream. The upper-level caller should
- * decide when to terminate the stream by append `clp::ffi::ir_stream::cProtocol::Eof` at the end of
- * the stream.
+ * A work-in-progress class for serializing log events into the kv-pair IR format.
+ *
+ * This class:
+ * - maintains all necessary internal data structures to track serialization state;
+ * - provides APIs to serialize log events into the IR format; and
+ * - provides APIs to access the serialized IR bytes.
+ *
+ * NOTE:
+ * - This class is designed only to provide serialization functionalities. Callers are responsible
+ *   for writing the serialized bytes into I/O streams.
+ * - This class doesn't provide an API to terminate the IR stream. Callers should
+ *   terminate the stream by flushing this class' IR buffer to the I/O stream and then writing
+ *   `clp::ffi::ir_stream::cProtocol::Eof` to the I/O stream.
  * @tparam encoded_variable_t Type of encoded variables in the serialized IR stream.
  */
 template <typename encoded_variable_t>
@@ -31,9 +36,9 @@ public:
 
     // Factory functions
     /**
-     * Creates an IR serializer and serialize the preamble at the beginning of the stream.
+     * Creates an IR serializer and serializes the stream's preamble.
      * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::protocol_error if failed to serialize the preamble.
+     * - std::errc::protocol_error on failure to serialize the preamble.
      */
     [[nodiscard]] static auto create(
     ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
@@ -51,7 +56,7 @@ public:
 
     // Methods
     /**
-     * @return A view to the underlying IR buffer which contains the serialized IR bytes.
+     * @return A view of the underlying IR buffer which contains the serialized IR bytes.
      */
     [[nodiscard]] auto get_ir_buf_view() const -> BufferView {
         return {m_ir_buf.data(), m_ir_buf.size()};
@@ -68,8 +73,8 @@ public:
     [[nodiscard]] auto get_curr_utc_offset() const -> UtcOffset { return m_curr_utc_offset; }
 
     /**
-     * Changes the UTC offset and serializes the UTC offset change packet into the underlying IR
-     * buffer if the given UTC offset is different with the current UTC offset.
+     * Changes the UTC offset and serializes a UTC offset change packet, if the given UTC offset is
+     * different than the current UTC offset.
      * @param utc_offset
      */
     auto change_utc_offset(UtcOffset utc_offset) -> void;
