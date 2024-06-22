@@ -148,8 +148,7 @@ auto validate_and_escape_utf8_string(string_view raw) -> std::optional<string> {
     escaped.reserve(raw.size() + (raw.size() >> 2));
 
     uint32_t code_point{};
-    auto validate_encoding_length_and_set_state
-            = [&encoding_length, &state, &code_point](uint8_t byte) -> bool {
+    auto validate_encoding_length_and_set_state = [&](uint8_t byte) -> bool {
         constexpr uint8_t cThreeByteContinuationMask{0xF8};  // 0b1111_1xxx
         constexpr uint8_t cValidThreeByteContinuation{0xF0};  // 0b1111_0xxx
         constexpr uint8_t cTwoByteContinuationMask{0xF0};  // 0b1111_xxxx
