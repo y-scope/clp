@@ -1,8 +1,10 @@
 #ifndef CLP_CLO_COMMANDLINEARGUMENTS_HPP
 #define CLP_CLO_COMMANDLINEARGUMENTS_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/asio.hpp>
@@ -18,6 +20,11 @@ namespace clp::clo {
 class CommandLineArguments : public CommandLineArgumentsBase {
 public:
     // Types
+    enum class Command : char {
+        Search = 's',
+        ExtractIr = 'i',
+    };
+
     enum class OutputHandlerType : uint8_t {
         Network = 0,
         Reducer,
@@ -36,8 +43,28 @@ public:
     // Methods
     ParsingResult parse_arguments(int argc, char const* argv[]) override;
 
-    std::string const& get_archive_path() const { return m_archive_path; }
+    [[nodiscard]] auto get_command() const -> Command { return m_command; }
 
+    [[nodiscard]] auto get_archive_path() const -> std::string_view { return m_archive_path; }
+
+    // IR extraction arguments
+    [[nodiscard]] auto get_file_split_id() const -> std::string const& { return m_file_split_id; }
+
+    [[nodiscard]] size_t get_ir_target_size() const { return m_ir_target_size; }
+
+    [[nodiscard]] auto get_ir_output_dir() const -> std::string const& { return m_ir_output_dir; }
+
+    [[nodiscard]] auto get_ir_temp_output_dir() const -> std::string const& {
+        return m_ir_temp_output_dir;
+    }
+
+    [[nodiscard]] auto get_ir_mongodb_uri() const -> std::string const& { return m_ir_mongodb_uri; }
+
+    [[nodiscard]] auto get_ir_mongodb_collection() const -> std::string const& {
+        return m_ir_mongodb_collection;
+    }
+
+    // Search arguments
     bool ignore_case() const { return m_ignore_case; }
 
     std::string const& get_search_string() const { return m_search_string; }
@@ -76,6 +103,40 @@ public:
 
 private:
     // Methods
+    /**
+     * Parses arguments for the search command
+     * @param options_general
+     * @param parsed_command_line_options
+     * @param options
+     * @param argc
+     * @return ParsingResult::Success if arguments were parsed without error
+     * @return ParsingResult::InfoCommand if `--help` was specified
+     * @throw invalid_argument if invalid arguments are provided
+     */
+    [[nodiscard]] auto parse_search_arguments(
+            boost::program_options::options_description const& options_general,
+            boost::program_options::variables_map& parsed_command_line_options,
+            std::vector<boost::program_options::option> const& options,
+            int argc
+    ) -> CommandLineArgumentsBase::ParsingResult;
+
+    /**
+     * Parses arguments for the IR extraction command
+     * @param options_general
+     * @param parsed_command_line_options
+     * @param options
+     * @param argc
+     * @return ParsingResult::Success if arguments were parsed without error
+     * @return ParsingResult::InfoCommand if `--help` was specified
+     * @throw invalid_argument if invalid arguments are provided
+     */
+    [[nodiscard]] auto parse_ir_extraction_arguments(
+            boost::program_options::options_description const& options_general,
+            boost::program_options::variables_map& parsed_command_line_options,
+            std::vector<boost::program_options::option> const& options,
+            int argc
+    ) -> CommandLineArgumentsBase::ParsingResult;
+
     /**
      * Validates output options related to the Network Destination output handler.
      * @param options_description
@@ -116,9 +177,21 @@ private:
     );
 
     void print_basic_usage() const override;
+    void print_search_basic_usage() const;
+    void print_ir_extraction_basic_usage() const;
 
-    // Search variables
+    Command m_command;
     std::string m_archive_path;
+
+    // Variables for IR extraction
+    std::string m_file_split_id;
+    size_t m_ir_target_size{128ULL * 1024 * 1024};
+    std::string m_ir_output_dir;
+    std::string m_ir_temp_output_dir;
+    std::string m_ir_mongodb_uri;
+    std::string m_ir_mongodb_collection;
+
+    // Variables for search
     bool m_ignore_case;
     std::string m_search_string;
     std::string m_file_path;
