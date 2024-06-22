@@ -48,7 +48,7 @@ auto Serializer<encoded_variable_t>::create(
         return std::errc::protocol_error;
     }
 
-    return std::move(serializer);
+    return serializer;
 }
 
 template <typename encoded_variable_t>

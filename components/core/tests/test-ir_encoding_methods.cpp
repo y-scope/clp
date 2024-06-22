@@ -1,10 +1,12 @@
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../src/clp/BufferReader.hpp"
+#include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
@@ -125,7 +127,7 @@ template <typename encoded_variable_t>
  * @param byte_buf
  */
 template <typename encoded_variable_t>
-auto flush_and_clean_serializer_buffer(
+auto flush_and_clear_serializer_buffer(
         Serializer<encoded_variable_t>& serializer,
         std::vector<int8_t>& byte_buf
 ) -> void;
@@ -231,7 +233,7 @@ auto get_current_ts() -> epoch_time_ms_t {
 }
 
 template <typename encoded_variable_t>
-auto flush_and_clean_serializer_buffer(
+auto flush_and_clear_serializer_buffer(
         Serializer<encoded_variable_t>& serializer,
         vector<int8_t>& byte_buf
 ) -> void {
@@ -898,12 +900,12 @@ TEMPLATE_TEST_CASE(
     REQUIRE((false == result.has_error()));
 
     auto& serializer{result.value()};
-    flush_and_clean_serializer_buffer(serializer, ir_buf);
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
     REQUIRE(serializer.get_ir_buf_view().empty());
 
     constexpr UtcOffset cBeijingUtcOffset{8 * 60 * 60 * 1000};
     serializer.change_utc_offset(cBeijingUtcOffset);
-    flush_and_clean_serializer_buffer(serializer, ir_buf);
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
     REQUIRE(serializer.get_ir_buf_view().empty());
 
     ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
@@ -961,4 +963,11 @@ TEMPLATE_TEST_CASE(
 
     REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
     REQUIRE((clp::ffi::ir_stream::cProtocol::Eof == encoded_tag));
+
+    char eof{};
+    size_t num_bytes_read{};
+    REQUIRE(
+            (clp::ErrorCode_EndOfFile == buffer_reader.try_read(&eof, 1, num_bytes_read)
+             && 0 == num_bytes_read)
+    );
 }
