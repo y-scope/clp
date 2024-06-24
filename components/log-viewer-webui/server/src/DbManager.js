@@ -8,13 +8,12 @@ import msgpack from "@msgpack/msgpack";
 class DbManager {
     constructor(app, dbConfig) {
         this.app = app;
-        this.dbConfig = dbConfig;
-        this.initMySql();
-        this.initMongo();
+        this.queryJobsTableName = dbConfig.mysqlQueryJobsTableName;
+        this.initMySql(dbConfig);
+        this.initMongo(dbConfig);
     }
 
-    initMySql() {
-        const {dbConfig} = this;
+    initMySql(dbConfig) {
         this.app.register(fastifyMysql, {
             promise: true,
             connectionString: `mysql://${dbConfig.mysqlDbUser}:${dbConfig.mysqlDbPassword}@` +
@@ -27,8 +26,7 @@ class DbManager {
         });
     }
 
-    initMongo() {
-        const {dbConfig} = this;
+    initMongo(dbConfig) {
         this.app.register(fastifyMongo, {
             forceClose: true,
             url: `mongodb://${dbConfig.mongoDbHost}:${dbConfig.mongoDbPort}/${dbConfig.mongoDbName}`,
@@ -43,7 +41,7 @@ class DbManager {
     async insertDecompressionJob(jobConfig) {
         try {
                     return await this.mysqlConnection.query(
-            `INSERT INTO ${this.dbConfig.mysqlQueryJobsTableName} (id, job_config)
+            `INSERT INTO ${this.queryJobsTableName} (id, job_config)
              VALUES (?, ?)`,
             [1,
                 Buffer.from(msgpack.encode(jobConfig))]
@@ -58,7 +56,7 @@ class DbManager {
     async getDecompressionJob(jobId) {
         const [results] = await this.mysqlConnection.query(
             `SELECT job_config
-             FROM ${this.dbConfig.mysqlQueryJobsTableName}
+             FROM ${this.queryJobsTableName}
              WHERE id = ?`,
             [jobId],
         );
