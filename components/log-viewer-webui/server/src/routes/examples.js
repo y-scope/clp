@@ -6,14 +6,6 @@
  * @return {Promise<void>}
  */
 const routes = async (fastify, options) => {
-    fastify.get("/examples/get/:name", async (req, resp) => {
-        return {msg: `Hello, ${req.params.name}!`};
-    });
-
-    fastify.post("/examples/post", async (req, resp) => {
-        return {msg: `Goodbye, ${req.body.name}!`};
-    });
-
     fastify.get("/decompression_job/:jobId", async (req, resp) => {
         const result = await fastify.dbManager.getDecompressionJob(req.params.jobId);
         resp.send(result);

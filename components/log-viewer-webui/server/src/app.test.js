@@ -19,22 +19,6 @@ test("Tests the example routes", async (t) => {
     t.teardown(() => server.close());
 
     let resp = await server.inject({
-        method: "GET",
-        url: "/examples/get/Alice",
-    });
-
-    t.equal(resp.statusCode, httpStatusCodes.OK);
-    t.match(JSON.parse(resp.body), {msg: String});
-
-    resp = await server.inject({
-        method: "POST",
-        url: "/examples/post",
-        payload: {name: "Bob"},
-    });
-    t.equal(resp.statusCode, httpStatusCodes.OK);
-    t.match(JSON.parse(resp.body), {msg: String});
-
-    resp = await server.inject({
         method: "POST",
         url: "/decompression_job",
         payload: {
