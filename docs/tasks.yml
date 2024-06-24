@@ -25,7 +25,7 @@ tasks:
     dir: "{{.TASKFILE_DIR}}"
     deps:
       - ":init"
-      - task: ":validate-checksum"
+      - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
@@ -43,7 +43,7 @@ tasks:
           --builder html \
           src "{{.OUTPUT_DIR}}"
       # This command must be last
-      - task: ":compute-checksum"
+      - task: ":utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
@@ -63,18 +63,18 @@ tasks:
       REQUIREMENTS_FILE: "docs/requirements.txt"
     deps:
       - ":init"
-      - task: ":validate-checksum"
+      - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
-      - task: ":create-venv"
+      - task: ":utils:create-venv"
         vars:
           LABEL: "docs"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           REQUIREMENTS_FILE: "{{.REQUIREMENTS_FILE}}"
       # This command must be last
-      - task: ":compute-checksum"
+      - task: ":utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
@@ -91,7 +91,7 @@ tasks:
       OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
     deps:
       - ":init"
-      - task: ":validate-checksum"
+      - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
@@ -99,7 +99,7 @@ tasks:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
       # This command must be last
-      - task: ":compute-checksum"
+      - task: ":utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
