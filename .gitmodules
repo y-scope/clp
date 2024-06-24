@@ -23,3 +23,6 @@
 [submodule "components/core/submodules/abseil-cpp"]
 	path = components/core/submodules/abseil-cpp
 	url = https://github.com/abseil/abseil-cpp.git
+[submodule "tools/yscope-dev-utils"]
+	path = tools/yscope-dev-utils
+	url = https://github.com/y-scope/yscope-dev-utils.git
