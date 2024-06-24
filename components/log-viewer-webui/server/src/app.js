@@ -19,15 +19,15 @@ const app = async (options = {}) => {
     await server.register(exampleRoutes);
     await server.register(DbManager, {
         mysqlConfig: {
-            host: "localhost",
-            database: "mydb",
+            host: "127.0.0.1",
+            database: "clp-db",
             user: options.dbUser,
             password: options.dbPass,
             port: 3306,
             queryJobsTableName: "query_jobs",
         },
         mongoConfig: {
-            host: "localhost",
+            host: "127.0.0.1",
             port: 27017,
             database: "clp-search",
             statsCollectionName: "stats",
