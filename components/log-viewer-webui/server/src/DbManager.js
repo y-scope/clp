@@ -43,7 +43,7 @@ class DbManager {
     async insertDecompressionJob(jobConfig) {
         try {
                     return await this.mysqlConnection.query(
-            `INSERT INTO ${this.dbConfig.queryJobsTableName} (id, job_config)
+            `INSERT INTO ${this.dbConfig.mysqlQueryJobsTableName} (id, job_config)
              VALUES (?, ?)`,
             [1,
                 Buffer.from(msgpack.encode(jobConfig))]
@@ -58,7 +58,7 @@ class DbManager {
     async getDecompressionJob(jobId) {
         const [results] = await this.mysqlConnection.query(
             `SELECT job_config
-             FROM ${this.dbConfig.queryJobsTableName}
+             FROM ${this.dbConfig.mysqlQueryJobsTableName}
              WHERE id = ?`,
             [jobId],
         );
