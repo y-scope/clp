@@ -10,7 +10,7 @@ from clp_py_utils.clp_config import Database, StorageEngine
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
-from job_orchestration.scheduler.job_config import ExtractIrConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 from .utils import get_logger_file_path, generate_final_task_results, update_query_task_metadata
@@ -25,7 +25,7 @@ def make_command(
     archives_dir: Path,
     ir_output_dir: Path,
     archive_id: str,
-    extract_ir_config: ExtractIrConfig,
+    extract_ir_config: ExtractIrJobConfig,
     results_cache_uri: str,
     results_collection: str,
 ):
@@ -76,7 +76,7 @@ def extract_ir(
 
     logger.info(f"Started IR extraction task for job {job_id}")
 
-    extract_ir_config = ExtractIrConfig.parse_obj(job_config_obj)
+    extract_ir_config = ExtractIrJobConfig.parse_obj(job_config_obj)
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()

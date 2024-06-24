@@ -42,7 +42,7 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.extract_ir_task import extract_ir
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
-from job_orchestration.scheduler.job_config import ExtractIrConfig, SearchConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, SearchJobConfig
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
@@ -132,7 +132,7 @@ def fetch_cancelling_search_jobs(db_conn) -> list:
             SELECT {QUERY_JOBS_TABLE_NAME}.id as job_id
             FROM {QUERY_JOBS_TABLE_NAME}
             WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.CANCELLING}
-            AND {QUERY_JOBS_TABLE_NAME}.type={QueryJobType.SEARCH}
+            AND {QUERY_JOBS_TABLE_NAME}.type={QueryJobType.SEARCH_OR_AGGREGATION}
             """
         )
         return db_cursor.fetchall()
@@ -250,7 +250,7 @@ def insert_query_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[
 @exception_default_value(default=[])
 def get_archives_for_search(
     db_conn,
-    search_config: SearchConfig,
+    search_config: SearchJobConfig,
 ):
     query = f"""SELECT id as archive_id, end_timestamp 
             FROM {CLP_METADATA_TABLE_PREFIX}archives
@@ -281,7 +281,7 @@ def get_archives_for_search(
 
 def get_archive_and_update_config_for_extraction(
     db_conn,
-    extract_ir_config: ExtractIrConfig,
+    extract_ir_config: ExtractIrJobConfig,
 ) -> Optional[str]:
 
     orig_file_id = extract_ir_config.orig_file_id
@@ -329,8 +329,8 @@ def get_task_group_for_job(
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
 ):
-    job_config_obj = job.job_config().dict()
-    if job.type() == QueryJobType.SEARCH:
+    job_config_obj = job.get_config().dict()
+    if job.type() == QueryJobType.SEARCH_OR_AGGREGATION:
         return celery.group(
             search.s(
                 job_id=job.id,
@@ -459,7 +459,8 @@ def handle_pending_query_jobs(
     pending_search_jobs = [
         job
         for job in active_jobs.values()
-        if InternalJobState.WAITING_FOR_DISPATCH == job.state and job.type() == QueryJobType.SEARCH
+        if InternalJobState.WAITING_FOR_DISPATCH == job.state
+        and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
@@ -468,12 +469,12 @@ def handle_pending_query_jobs(
             job_type = job["type"]
             job_config = job["job_config"]
 
-            if QueryJobType.SEARCH == job_type:
+            if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
                 if job_id in active_jobs:
                     continue
 
-                search_config = SearchConfig.parse_obj(msgpack.unpackb(job_config))
+                search_config = SearchJobConfig.parse_obj(msgpack.unpackb(job_config))
                 archives_for_search = get_archives_for_search(db_conn, search_config)
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
@@ -510,7 +511,7 @@ def handle_pending_query_jobs(
                 active_jobs[job_id] = new_search_job
 
             elif QueryJobType.EXTRACT_IR == job_type:
-                extract_ir_config = ExtractIrConfig.parse_obj(msgpack.unpackb(job_config))
+                extract_ir_config = ExtractIrJobConfig.parse_obj(msgpack.unpackb(job_config))
                 archive_id = get_archive_and_update_config_for_extraction(
                     db_conn, extract_ir_config
                 )
@@ -549,6 +550,9 @@ def handle_pending_query_jobs(
                 logger.info(f"Dispatched IR extraction job {job_id} on archive: {archive_id}")
 
             else:
+                # NOTE: We're skipping the job for this iteration, but its status will remain
+                # unchanged. So this log will print again in the next iteration unless the user
+                # cancels the job.
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
                 continue
 
@@ -616,7 +620,7 @@ def found_max_num_latest_results(
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
 
 
-async def handle_returned_search_job(
+async def handle_finished_search_job(
     db_conn, job: SearchJob, task_results: Optional[Any], results_cache_uri: str
 ) -> None:
     global active_jobs
@@ -702,7 +706,7 @@ async def handle_returned_search_job(
     del active_jobs[job_id]
 
 
-async def handle_returned_extract_ir_job(
+async def handle_finished_extract_ir_job(
     db_conn, job: SearchJob, task_results: Optional[Any]
 ) -> None:
     global active_jobs
@@ -760,7 +764,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             except Exception as e:
                 logger.error(f"Job `{job_id}` failed: {e}.")
                 # Clean up
-                if QueryJobType.SEARCH == job.type():
+                if QueryJobType.SEARCH_OR_AGGREGATION == job.get_type():
                     if job.reducer_handler_msg_queues is not None:
                         msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                         await job.reducer_handler_msg_queues.put_to_handler(msg)
@@ -778,15 +782,15 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
 
             if returned_results is None:
                 continue
-            job_type = job.type()
-            if QueryJobType.SEARCH == job_type:
+            job_type = job.get_type()
+            if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 search_job: SearchJob = job
-                await handle_returned_search_job(
+                await handle_finished_search_job(
                     db_conn, search_job, returned_results, results_cache_uri
                 )
             elif QueryJobType.EXTRACT_IR == job_type:
                 extract_ir_job: ExtractIrJob = job
-                await handle_returned_extract_ir_job(db_conn, extract_ir_job, returned_results)
+                await handle_finished_extract_ir_job(db_conn, extract_ir_job, returned_results)
             else:
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
 

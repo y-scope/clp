@@ -90,7 +90,7 @@ let enumQueryType;
  * @enum {number}
  */
 const QUERY_JOB_TYPE = Object.freeze({
-    SEARCH: (enumQueryType = 0),
+    SEARCH_OR_AGGREGATION: (enumQueryType = 0),
     EXTRACT_IR: ++enumQueryType,
 });
 /* eslint-enable sort-keys */

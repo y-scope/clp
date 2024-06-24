@@ -166,7 +166,7 @@ tasks:
     deps:
       - ":init"
       - ":webui-node-modules"
-      - task: ":validate-checksum"
+      - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
@@ -180,7 +180,7 @@ tasks:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "PATH='{{.G_LINTER_NODEJS_BIN_DIR}}':$PATH npm update"
       # This command must be last
-      - task: ":compute-checksum"
+      - task: ":utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
@@ -199,18 +199,18 @@ tasks:
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     deps:
       - ":init"
-      - task: ":validate-checksum"
+      - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
-      - task: ":create-venv"
+      - task: ":utils:create-venv"
         vars:
           LABEL: "lint"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           REQUIREMENTS_FILE: "lint-requirements.txt"
       # This command must be last
-      - task: ":compute-checksum"
+      - task: ":utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"

@@ -9,7 +9,7 @@ from job_orchestration.scheduler.constants import (
     QueryJobType,
     QueryTaskStatus,
 )
-from job_orchestration.scheduler.job_config import ExtractIrConfig, QueryConfig, SearchConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, QueryJobConfig, SearchJobConfig
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
 
@@ -47,35 +47,35 @@ class QueryJob(BaseModel, ABC):
     current_sub_job_async_task_result: Optional[Any]
 
     @abstractmethod
-    def type(self) -> QueryJobType: ...
+    def get_type(self) -> QueryJobType: ...
 
     @abstractmethod
-    def job_config(self) -> QueryConfig: ...
+    def get_config(self) -> QueryConfig: ...
 
 
 class ExtractIrJob(QueryJob):
-    extract_ir_config: ExtractIrConfig
+    extract_ir_config: ExtractIrJobConfig
     archive_id: str
 
-    def type(self) -> QueryJobType:
+    def get_type(self) -> QueryJobType:
         return QueryJobType.EXTRACT_IR
 
-    def job_config(self) -> QueryConfig:
+    def get_config(self) -> QueryJobConfig:
         return self.extract_ir_config
 
 
 class SearchJob(QueryJob):
-    search_config: SearchConfig
+    search_config: SearchJobConfig
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: List[Dict[str, Any]]
     reducer_acquisition_task: Optional[asyncio.Task]
     reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
 
-    def type(self) -> QueryJobType:
-        return QueryJobType.SEARCH
+    def get_type(self) -> QueryJobType:
+        return QueryJobType.SEARCH_OR_AGGREGATION
 
-    def job_config(self) -> QueryConfig:
+    def get_config(self) -> QueryJobConfig:
         return self.search_config
 
     class Config:  # To allow asyncio.Task and asyncio.Queue

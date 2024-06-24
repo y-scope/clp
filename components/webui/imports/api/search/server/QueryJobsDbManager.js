@@ -54,10 +54,11 @@ class QueryJobsDbManager {
     async submitSearchJob (searchConfig) {
         const [queryInsertResults] = await this.#sqlDbConnPool.query(
             `INSERT INTO ${this.#queryJobsTableName}
-                 (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG}, ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
+                 (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG}, 
+                  ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
              VALUES (?, ?)`,
             [Buffer.from(msgpack.encode(searchConfig)),
-                QUERY_JOB_TYPE.SEARCH],
+                QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION],
         );
 
         return queryInsertResults.insertId;

@@ -1,14 +1,17 @@
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../src/clp/BufferReader.hpp"
+#include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/clp/ffi/ir_stream/Serializer.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/time_types.hpp"
@@ -30,6 +33,7 @@ using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
 using clp::ffi::ir_stream::IRErrorCode;
 using clp::ffi::ir_stream::serialize_utc_offset_change;
+using clp::ffi::ir_stream::Serializer;
 using clp::ffi::ir_stream::validate_protocol_version;
 using clp::ffi::wildcard_query_matches_any_encoded_var;
 using clp::ir::eight_byte_encoded_variable_t;
@@ -114,6 +118,19 @@ template <typename encoded_variable_t>
  * @return The current UNIX epoch timestamp in milliseconds.
  */
 [[nodiscard]] auto get_current_ts() -> epoch_time_ms_t;
+
+/**
+ * Flushes and clears serialized data from the serializer's underlying IR buffer into the given byte
+ * buffer.
+ * @tparam encoded_variable_t
+ * @param serializer
+ * @param byte_buf
+ */
+template <typename encoded_variable_t>
+auto flush_and_clear_serializer_buffer(
+        Serializer<encoded_variable_t>& serializer,
+        std::vector<int8_t>& byte_buf
+) -> void;
 
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
@@ -213,6 +230,16 @@ auto create_test_log_events() -> vector<UnstructuredLogEvent> {
 
 auto get_current_ts() -> epoch_time_ms_t {
     return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+template <typename encoded_variable_t>
+auto flush_and_clear_serializer_buffer(
+        Serializer<encoded_variable_t>& serializer,
+        vector<int8_t>& byte_buf
+) -> void {
+    auto const view{serializer.get_ir_buf_view()};
+    byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
+    serializer.clear_ir_buf();
 }
 }  // namespace
 
@@ -857,4 +884,90 @@ TEMPLATE_TEST_CASE(
     auto result = log_event_deserializer.deserialize_log_event();
     REQUIRE(result.has_error());
     REQUIRE(std::errc::no_message_available == result.error());
+}
+
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_Serializer_creation",
+        "[clp][ffi][ir_stream][Serializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    // This is a unit test for the kv-pair IR serializer. Currently, we haven't yet implemented a
+    // deserializer, so we can only test whether the preamble packet is serialized correctly.
+    vector<int8_t> ir_buf;
+
+    auto result{Serializer<TestType>::create()};
+    REQUIRE((false == result.has_error()));
+
+    auto& serializer{result.value()};
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+    REQUIRE(serializer.get_ir_buf_view().empty());
+
+    constexpr UtcOffset cBeijingUtcOffset{8 * 60 * 60 * 1000};
+    serializer.change_utc_offset(cBeijingUtcOffset);
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+    REQUIRE(serializer.get_ir_buf_view().empty());
+
+    ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
+
+    BufferReader buffer_reader{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
+
+    bool is_four_byte_encoding{};
+    REQUIRE(
+            (IRErrorCode::IRErrorCode_Success
+             == get_encoding_type(buffer_reader, is_four_byte_encoding))
+    );
+    if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
+        REQUIRE(is_four_byte_encoding);
+    } else {
+        REQUIRE((false == is_four_byte_encoding));
+    }
+
+    encoded_tag_t metadata_type{};
+    vector<int8_t> metadata_bytes;
+    REQUIRE(
+            (IRErrorCode::IRErrorCode_Success
+             == deserialize_preamble(buffer_reader, metadata_type, metadata_bytes))
+    );
+    REQUIRE((clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type));
+    string_view const metadata_view{
+            size_checked_pointer_cast<char const>(metadata_bytes.data()),
+            metadata_bytes.size()
+    };
+    nlohmann::json const metadata = nlohmann::json::parse(metadata_view);
+
+    nlohmann::json expected_metadata;
+    expected_metadata.emplace(
+            clp::ffi::ir_stream::cProtocol::Metadata::VersionKey,
+            clp::ffi::ir_stream::cProtocol::Metadata::BetaVersionValue
+    );
+    expected_metadata.emplace(
+            clp::ffi::ir_stream::cProtocol::Metadata::VariablesSchemaIdKey,
+            clp::ffi::cVariablesSchemaVersion
+    );
+    expected_metadata.emplace(
+            clp::ffi::ir_stream::cProtocol::Metadata::VariableEncodingMethodsIdKey,
+            clp::ffi::cVariableEncodingMethodsVersion
+    );
+    REQUIRE((expected_metadata == metadata));
+
+    encoded_tag_t encoded_tag{};
+    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    REQUIRE((clp::ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == encoded_tag));
+    UtcOffset utc_offset_change{0};
+    REQUIRE(
+            (IRErrorCode::IRErrorCode_Success
+             == deserialize_utc_offset_change(buffer_reader, utc_offset_change))
+    );
+    REQUIRE((cBeijingUtcOffset == utc_offset_change));
+
+    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    REQUIRE((clp::ffi::ir_stream::cProtocol::Eof == encoded_tag));
+
+    char eof{};
+    size_t num_bytes_read{};
+    REQUIRE(
+            (clp::ErrorCode_EndOfFile == buffer_reader.try_read(&eof, 1, num_bytes_read)
+             && 0 == num_bytes_read)
+    );
 }
