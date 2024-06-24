@@ -41,7 +41,7 @@ from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
@@ -130,7 +130,7 @@ def fetch_cancelling_search_jobs(db_conn) -> list:
             SELECT {QUERY_JOBS_TABLE_NAME}.id as job_id
             FROM {QUERY_JOBS_TABLE_NAME}
             WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.CANCELLING}
-            AND {QUERY_JOBS_TABLE_NAME}.type={QueryJobType.SEARCH}
+            AND {QUERY_JOBS_TABLE_NAME}.type={QueryJobType.SEARCH_OR_AGGREGATION}
             """
         )
         return db_cursor.fetchall()
@@ -248,7 +248,7 @@ def insert_query_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[
 @exception_default_value(default=[])
 def get_archives_for_search(
     db_conn,
-    search_config: SearchConfig,
+    search_config: SearchJobConfig,
 ):
     query = f"""SELECT id as archive_id, end_timestamp 
             FROM {CLP_METADATA_TABLE_PREFIX}archives
@@ -284,7 +284,7 @@ def get_task_group_for_job(
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
 ):
-    job_config_obj = job.job_config().dict()
+    job_config_obj = job.get_config().dict()
     return celery.group(
         search.s(
             job_id=job.id,
@@ -377,7 +377,8 @@ def handle_pending_query_jobs(
     pending_search_jobs = [
         job
         for job in active_jobs.values()
-        if InternalJobState.WAITING_FOR_DISPATCH == job.state and job.type() == QueryJobType.SEARCH
+        if InternalJobState.WAITING_FOR_DISPATCH == job.state
+        and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
@@ -386,12 +387,12 @@ def handle_pending_query_jobs(
             job_type = job["type"]
             job_config = job["job_config"]
 
-            if QueryJobType.SEARCH == job_type:
+            if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
                 if job_id in active_jobs:
                     continue
 
-                search_config = SearchConfig.parse_obj(msgpack.unpackb(job_config))
+                search_config = SearchJobConfig.parse_obj(msgpack.unpackb(job_config))
                 archives_for_search = get_archives_for_search(db_conn, search_config)
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
@@ -599,7 +600,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             except Exception as e:
                 logger.error(f"Job `{job_id}` failed: {e}.")
                 # Clean up
-                if QueryJobType.SEARCH == job.type():
+                if QueryJobType.SEARCH_OR_AGGREGATION == job.get_type():
                     if job.reducer_handler_msg_queues is not None:
                         msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                         await job.reducer_handler_msg_queues.put_to_handler(msg)
@@ -617,8 +618,8 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
 
             if returned_results is None:
                 continue
-            job_type = job.type()
-            if QueryJobType.SEARCH == job_type:
+            job_type = job.get_type()
+            if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 search_job: SearchJob = job
                 await handle_returned_search_job(
                     db_conn, search_job, returned_results, results_cache_uri

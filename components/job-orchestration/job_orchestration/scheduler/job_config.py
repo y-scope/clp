@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import typing
-from abc import ABC
 
 from pydantic import BaseModel, validator
 
@@ -40,10 +39,10 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class QueryConfig(BaseModel, ABC): ...
+class QueryJobConfig(BaseModel): ...
 
 
-class SearchConfig(QueryConfig):
+class SearchJobConfig(QueryJobConfig):
     query_string: str
     max_num_results: int
     tags: typing.Optional[typing.List[str]] = None

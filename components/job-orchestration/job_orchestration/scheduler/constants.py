@@ -70,7 +70,7 @@ class QueryTaskStatus(IntEnum):
 
 
 class QueryJobType(IntEnum):
-    SEARCH = 0
+    SEARCH_OR_AGGREGATION = 0
 
     def __str__(self) -> str:
         return str(self.value)
