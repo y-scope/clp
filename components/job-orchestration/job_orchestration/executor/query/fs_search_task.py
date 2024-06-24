@@ -13,7 +13,7 @@ from clp_py_utils.clp_config import Database, QUERY_TASKS_TABLE_NAME, StorageEng
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 # Setup logging
@@ -41,7 +41,7 @@ def make_command(
     clp_home: Path,
     archives_dir: Path,
     archive_id: str,
-    search_config: SearchConfig,
+    search_config: SearchJobConfig,
     results_cache_uri: str,
     results_collection: str,
 ):
@@ -113,7 +113,7 @@ def search(
     self: Task,
     job_id: str,
     task_id: int,
-    search_config_obj: dict,
+    job_config_obj: dict,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
@@ -133,7 +133,7 @@ def search(
 
     logger.info(f"Started task for job {job_id}")
 
-    search_config = SearchConfig.parse_obj(search_config_obj)
+    search_config = SearchJobConfig.parse_obj(job_config_obj)
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     start_time = datetime.datetime.now()
@@ -168,7 +168,7 @@ def search(
                 task_id=task_id,
                 status=QueryTaskStatus.FAILED,
                 duration=0,
-                error_log_path=clo_log_path,
+                error_log_path=str(clo_log_path),
             ).dict()
 
         update_search_task_metadata(
@@ -231,6 +231,6 @@ def search(
     )
 
     if QueryTaskStatus.FAILED == search_status:
-        search_task_result.error_log_path = clo_log_path
+        search_task_result.error_log_path = str(clo_log_path)
 
     return search_task_result.dict()

@@ -1,10 +1,15 @@
 import asyncio
 import datetime
+from abc import ABC, abstractmethod
 from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
-from job_orchestration.scheduler.constants import CompressionTaskStatus, QueryTaskStatus
-from job_orchestration.scheduler.job_config import SearchConfig
+from job_orchestration.scheduler.constants import (
+    CompressionTaskStatus,
+    QueryJobType,
+    QueryTaskStatus,
+)
+from job_orchestration.scheduler.job_config import QueryJobConfig, SearchJobConfig
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
 from pydantic import BaseModel, validator
 
@@ -35,20 +40,32 @@ class InternalJobState(Enum):
     RUNNING = auto()
 
 
-class QueryJob(BaseModel):
+class QueryJob(BaseModel, ABC):
     id: str
     state: InternalJobState
     start_time: Optional[datetime.datetime]
     current_sub_job_async_task_result: Optional[Any]
 
+    @abstractmethod
+    def get_type(self) -> QueryJobType: ...
+
+    @abstractmethod
+    def get_config(self) -> QueryJobConfig: ...
+
 
 class SearchJob(QueryJob):
-    search_config: SearchConfig
+    search_config: SearchJobConfig
     num_archives_to_search: int
     num_archives_searched: int
     remaining_archives_for_search: List[Dict[str, Any]]
     reducer_acquisition_task: Optional[asyncio.Task]
     reducer_handler_msg_queues: Optional[ReducerHandlerMessageQueues]
+
+    def get_type(self) -> QueryJobType:
+        return QueryJobType.SEARCH_OR_AGGREGATION
+
+    def get_config(self) -> QueryJobConfig:
+        return self.search_config
 
     class Config:  # To allow asyncio.Task and asyncio.Queue
         arbitrary_types_allowed = True

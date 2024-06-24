@@ -97,6 +97,7 @@ def main(argv):
                 f"""
                 CREATE TABLE IF NOT EXISTS `{QUERY_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
+                    `type` INT NOT NULL,
                     `status` INT NOT NULL DEFAULT '{QueryJobStatus.PENDING}',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `num_tasks` INT NOT NULL DEFAULT '0',

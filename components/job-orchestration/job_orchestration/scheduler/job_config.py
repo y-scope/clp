@@ -39,7 +39,10 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class SearchConfig(BaseModel):
+class QueryJobConfig(BaseModel): ...
+
+
+class SearchJobConfig(QueryJobConfig):
     query_string: str
     max_num_results: int
     tags: typing.Optional[typing.List[str]] = None
