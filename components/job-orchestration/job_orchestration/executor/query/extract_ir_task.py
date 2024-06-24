@@ -13,7 +13,7 @@ from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
-from .utils import get_logger_file_path, generate_final_task_results, update_query_task_metadata
+from .utils import generate_final_task_results, get_logger_file_path, update_query_task_metadata
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -113,7 +113,9 @@ def extract_ir(
         ).dict()
 
     task_status = QueryTaskStatus.RUNNING
-    update_query_task_metadata(sql_adapter, task_id, dict(status=task_status, start_time=start_time))
+    update_query_task_metadata(
+        sql_adapter, task_id, dict(status=task_status, start_time=start_time)
+    )
 
     logger.info(f'Running: {" ".join(task_command)}')
     extract_proc = subprocess.Popen(
@@ -131,7 +133,9 @@ def extract_ir(
     return_code = extract_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
-        logger.error(f"IR extraction task {task_id} failed for job {job_id} - return_code={return_code}")
+        logger.error(
+            f"IR extraction task {task_id} failed for job {job_id} - return_code={return_code}"
+        )
     else:
         task_status = QueryTaskStatus.SUCCEEDED
         logger.info(f"IR extraction task {task_id} completed for job {job_id}")

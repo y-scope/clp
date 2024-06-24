@@ -15,7 +15,7 @@ from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
-from .utils import get_logger_file_path, generate_final_task_results, update_query_task_metadata
+from .utils import generate_final_task_results, get_logger_file_path, update_query_task_metadata
 
 # Setup logging
 logger = get_task_logger(__name__)

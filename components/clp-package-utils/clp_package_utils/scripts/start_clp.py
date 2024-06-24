@@ -544,7 +544,7 @@ def start_query_worker(
     query_worker_mount = [mounts.ir_output_dir]
     query_worker_env = {
         "CLP_IR_OUTPUT_DIR": container_clp_config.ir_output.directory,
-        "CLP_IR_COLLECTION": clp_config.results_cache.ir_collection_name
+        "CLP_IR_COLLECTION": clp_config.results_cache.ir_collection_name,
     }
 
     generic_start_worker(

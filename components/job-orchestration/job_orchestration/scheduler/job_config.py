@@ -41,6 +41,7 @@ class AggregationConfig(BaseModel):
 
 class QueryJobConfig(BaseModel): ...
 
+
 class ExtractIrJobConfig(QueryJobConfig):
     orig_file_id: str
     msg_ix: int
