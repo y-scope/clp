@@ -501,7 +501,7 @@ def found_max_num_latest_results(
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
 
 
-async def handle_returned_search_job(
+async def handle_finished_search_job(
     db_conn, job: SearchJob, task_results: Optional[Any], results_cache_uri: str
 ) -> None:
     global active_jobs
@@ -621,7 +621,7 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             job_type = job.get_type()
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 search_job: SearchJob = job
-                await handle_returned_search_job(
+                await handle_finished_search_job(
                     db_conn, search_job, returned_results, results_cache_uri
                 )
             else:
