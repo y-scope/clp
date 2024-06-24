@@ -10,7 +10,7 @@
 namespace clp::ffi {
 /**
  * Validates whether the given string is UTF-8 encoded, and escapes any characters to generate to
- * make the string human readable.
+ * make the string compatible with JSON specification.
  * @param raw The raw string to escape.
  * @return The escaped string on success.
  * @return std::nullopt if the string contains none-UTF8 encoded byte sequence.
