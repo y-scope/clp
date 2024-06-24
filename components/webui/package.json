@@ -42,9 +42,6 @@
     "jsdoc": "^4.0.2"
   },
   "eslintConfig": {
-    "extends": [
-      "yscope/meteor"
-    ]
   },
   "meteor": {
     "mainModule": {

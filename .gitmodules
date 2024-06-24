@@ -23,3 +23,6 @@
 [submodule "components/core/submodules/abseil-cpp"]
 	path = components/core/submodules/abseil-cpp
 	url = https://github.com/abseil/abseil-cpp.git
+[submodule "components/webui/log-viewer/client"]
+	path = components/webui/log-viewer/client
+	url = https://github.com/y-scope/yscope-log-viewer.git
