@@ -18,16 +18,20 @@ const app = async (options = {}) => {
     const server = fastify(options.fastifyOptions);
     await server.register(exampleRoutes);
     await server.register(DbManager, {
-        mysqlDbHost: "localhost",
-        mysqlDbName: "clp-db",
-        mysqlDbPassword: options.dbPass,
-        mysqlDbPort: 3306,
-        mysqlDbUser: options.dbUser,
-        mysqlQueryJobsTableName: "query_jobs",
-        mongoStatsCollectionName: "stats",
-        mongoDbHost: "localhost",
-        mongoDbName: "clp-search",
-        mongoDbPort: 27017,
+        mysqlConfig: {
+            host: "localhost",
+            database: "mydb",
+            user: options.dbUser,
+            password: options.dbPass,
+            port: 3306,
+            queryJobsTableName: "query_jobs",
+        },
+        mongoConfig: {
+            host: "localhost",
+            port: 27017,
+            database: "clp-search",
+            statsCollectionName: "stats",
+        },
     });
 
     return server;

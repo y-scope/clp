@@ -8,16 +8,17 @@ import msgpack from "@msgpack/msgpack";
 class DbManager {
     constructor(app, dbConfig) {
         this.app = app;
-        this.queryJobsTableName = dbConfig.mysqlQueryJobsTableName;
-        this.initMySql(dbConfig);
-        this.initMongo(dbConfig);
+        this.queryJobsTableName = dbConfig.mysqlConfig.queryJobsTableName;
+        this.initMySql(dbConfig.mysqlConfig);
+        this.initMongo(dbConfig.mongoConfig);
     }
 
-    initMySql(dbConfig) {
+    initMySql(config) {
+       console.log(`mysql://${config.user}:${config.password}@${config.host}:` + `${config.port}/${config.database}`)
         this.app.register(fastifyMysql, {
             promise: true,
-            connectionString: `mysql://${dbConfig.mysqlDbUser}:${dbConfig.mysqlDbPassword}@` +
-                `${dbConfig.mysqlDbHost}:${dbConfig.mysqlDbPort}/${dbConfig.mysqlDbName}`,
+            connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
+                `${config.port}/${config.database}`,
         }).after(async (err) => {
             if (err) {
                 throw err;
@@ -26,26 +27,26 @@ class DbManager {
         });
     }
 
-    initMongo(dbConfig) {
+    initMongo(config) {
         this.app.register(fastifyMongo, {
             forceClose: true,
-            url: `mongodb://${dbConfig.mongoDbHost}:${dbConfig.mongoDbPort}/${dbConfig.mongoDbName}`,
+            url: `mongodb://${config.host}:${config.port}/${config.database}`,
         }).after(err => {
             if (err) {
                 throw err;
             }
-            this.mongoStatsCollection = this.app.mongo.db.collection(dbConfig.mongoStatsCollectionName);
+            this.mongoStatsCollection = this.app.mongo.db.collection(config.statsCollectionName);
         });
     }
 
     async insertDecompressionJob(jobConfig) {
         try {
-                    return await this.mysqlConnection.query(
-            `INSERT INTO ${this.queryJobsTableName} (id, job_config)
-             VALUES (?, ?)`,
-            [1,
-                Buffer.from(msgpack.encode(jobConfig))]
-        );
+            return await this.mysqlConnection.query(
+                `INSERT INTO ${this.queryJobsTableName} (id, job_config)
+                 VALUES (?, ?)`,
+                [1,
+                    Buffer.from(msgpack.encode(jobConfig))]
+            );
         } catch (e) {
             console.error(e);
             return null;
