@@ -330,7 +330,8 @@ def get_task_group_for_job(
     results_cache_uri: str,
 ):
     job_config_obj = job.get_config().dict()
-    if job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION:
+    job_type = job.get_type()
+    if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
         return celery.group(
             search.s(
                 job_id=job.id,
@@ -342,7 +343,7 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
-    if job.get_type() == QueryJobType.EXTRACT_IR:
+    elif QueryJobType.EXTRACT_IR == job_type:
         return celery.group(
             extract_ir.s(
                 job_id=job.id,
@@ -354,6 +355,10 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
+    else:
+        error_msg = f"Unexpected job type: {job_type}"
+        logger.error(error_msg)
+        raise NotImplementedError(error_msg)
 
 
 def dispatch_query_job(
