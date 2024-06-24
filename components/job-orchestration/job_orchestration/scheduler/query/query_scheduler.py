@@ -428,6 +428,9 @@ def handle_pending_query_jobs(
                     pending_search_jobs.append(new_search_job)
                 active_jobs[job_id] = new_search_job
             else:
+                # NOTE: We're skipping the job for this iteration, but its status will remain
+                # unchanged. So this log will print again in the next iteration unless the user
+                # cancels the job.
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
                 continue
 
