@@ -7,7 +7,6 @@
 [submodule "components/core/submodules/json"]
 	path = components/core/submodules/json
 	url = https://github.com/nlohmann/json.git
-	shallow = true
 [submodule "components/core/submodules/yaml-cpp"]
 	path = components/core/submodules/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
