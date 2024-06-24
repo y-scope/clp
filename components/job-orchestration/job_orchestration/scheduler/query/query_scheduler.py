@@ -330,7 +330,7 @@ def get_task_group_for_job(
     results_cache_uri: str,
 ):
     job_config_obj = job.get_config().dict()
-    if job.type() == QueryJobType.SEARCH_OR_AGGREGATION:
+    if job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION:
         return celery.group(
             search.s(
                 job_id=job.id,
@@ -342,7 +342,7 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
-    if job.type() == QueryJobType.EXTRACT_IR:
+    if job.get_type() == QueryJobType.EXTRACT_IR:
         return celery.group(
             extract_ir.s(
                 job_id=job.id,
