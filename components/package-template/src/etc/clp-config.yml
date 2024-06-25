@@ -82,6 +82,10 @@
 #ir_output:
 #  directory: "var/data/ir"
 #
+#  # How large each IR chunk should be before being
+#  # split into a new IR chunk
+#  target_uncompressed_size: 134217728  # 128 MB
+#
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
 #data_directory: "var/data"

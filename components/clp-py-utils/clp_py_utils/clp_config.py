@@ -330,11 +330,18 @@ class ArchiveOutput(BaseModel):
 
 class IrOutput(BaseModel):
     directory: pathlib.Path = pathlib.Path("var") / "data" / "ir"
+    target_uncompressed_size: int = 128 * 1024 * 1024
 
     @validator("directory")
     def validate_directory(cls, field):
         if "" == field:
             raise ValueError("directory can not be empty")
+        return field
+
+    @validator("target_uncompressed_size")
+    def validate_target_uncompressed_size(cls, field):
+        if field <= 0:
+            raise ValueError("target_uncompressed_size must be greater than 0")
         return field
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):

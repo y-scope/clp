@@ -602,7 +602,6 @@ def generic_start_worker(
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
         "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
             f"BROKER_URL=amqp://"
@@ -619,6 +618,7 @@ def generic_start_worker(
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     if worker_specific_env:
         for env_name, env_value in worker_specific_env.items():
