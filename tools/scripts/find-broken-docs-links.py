@@ -11,10 +11,10 @@ def main(argv):
 
     # Check for https://docs.yscope.com links with ".md" suffixes
     if _check_tracked_files(
-            r"https://docs\.yscope\.com/.+\.md",
+            r"docs\.yscope\.com/.+\.md",
             repo_root,
             repo_root,
-            "https://docs.yscope.com links cannot have \".md\" suffixes."
+            "docs.yscope.com links cannot have \".md\" suffixes."
     ):
         found_violation = True
 
