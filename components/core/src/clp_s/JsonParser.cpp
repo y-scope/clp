@@ -35,7 +35,6 @@ JsonParser::JsonParser(JsonParserOption const& option)
     archive_writer_option.archives_dir = m_archives_dir;
     archive_writer_option.id = m_generator();
     archive_writer_option.compression_level = option.compression_level;
-    archive_writer_option.print_archive_stats = option.print_archive_stats;
     archive_writer_option.print_archive_stats = m_print_archive_stats;
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
