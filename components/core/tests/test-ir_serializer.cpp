@@ -1,3 +1,8 @@
+#include <chrono>
+#include <filesystem>
+#include <string>
+#include <vector>
+
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/clp/ErrorCode.hpp"
@@ -31,7 +36,7 @@ using clp::streaming_compression::zstd::Decompressor;
 
 namespace {
 template <typename encoded_variable_t>
-bool match_encoding_type(bool is_four_bytes_encoding) {
+auto match_encoding_type(bool is_four_bytes_encoding) -> bool {
     static_assert(
             (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
             || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -54,7 +59,6 @@ TEMPLATE_TEST_CASE(
         "[ir][serialize-log-event]",
         four_byte_encoded_variable_t
 ) {
-    string message;
     LogEventSerializer<TestType> serializer;
 
     // Test encoding with serializer
@@ -68,29 +72,25 @@ TEMPLATE_TEST_CASE(
                "-00.00",
                "bin/python2.7.3",
                "abc123"};
-    size_t var_ix = 0;
+    size_t var_ix{0};
 
     string first_log_event = "here is first string with a small int " + var_strs[var_ix++];
-    epoch_time_ms_t first_ts
+    auto const first_ts
             = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     first_log_event += " and a medium int " + var_strs[var_ix++];
     first_log_event += " and a very large int " + var_strs[var_ix++];
     first_log_event += " and a small float " + var_strs[var_ix++];
     first_log_event += "\n";
 
-    string second_log_event = "here is second string with a medium float " + var_strs[var_ix++];
-    epoch_time_ms_t second_ts
+    auto second_log_event = "here is second string with a medium float " + var_strs[var_ix++];
+    auto const second_ts
             = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     second_log_event += " and a weird float " + var_strs[var_ix++];
     second_log_event += " and a string with numbers " + var_strs[var_ix++];
     second_log_event += " and another string with numbers " + var_strs[var_ix++];
     second_log_event += "\n";
 
-    // Create directory for serialized ir output
-    string const ir_serializer_dir_path = "unit-test-ir_serializer/";
-    REQUIRE(ErrorCode_Success == clp::create_directory_structure(ir_serializer_dir_path, 0700));
-
-    auto ir_test_file = ir_serializer_dir_path + "test";
+    string ir_test_file = "ir_serializer_test";
     ir_test_file += cIrFileExtension;
 
     REQUIRE(serializer.open(ir_test_file));
@@ -142,4 +142,6 @@ TEMPLATE_TEST_CASE(
     // Try decoding non-existing message
     deserialized_result = deserializer_inst.deserialize_log_event();
     REQUIRE(true == deserialized_result.has_error());
+
+    std::filesystem::remove(ir_test_file);
 }
