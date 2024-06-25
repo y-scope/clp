@@ -287,11 +287,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             extraction_options.add(input_options);
 
             po::options_description decompression_options("Decompression Options");
+            // clang-format off
             decompression_options.add_options()(
                     "ordered",
                     po::bool_switch(&m_ordered_decompression),
                     "Enable decompression in ascending timestamp order for this archive"
+            )(
+                    "ordered-chunk-size",
+                    po::value<size_t>(&m_ordered_chunk_size)
+                            ->default_value(m_ordered_chunk_size),
+                    "Number of records to include in each output file when decompressing records "
+                    "in ascending timestamp order"
             );
+            // clang-format on
             extraction_options.add(decompression_options);
 
             po::positional_options_description positional_options;
@@ -335,6 +343,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_output_dir.empty()) {
                 throw std::invalid_argument("No output directory specified");
+            }
+
+            if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
+                throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
+                );
             }
         } else if ((char)Command::Search == command_input) {
             std::string archives_dir;

@@ -20,6 +20,7 @@ struct JsonConstructorOption {
     std::string archive_id;
     std::string output_dir;
     bool ordered;
+    size_t ordered_chunk_size;
 };
 
 class JsonConstructor {
@@ -55,14 +56,14 @@ private:
     /**
      * Reads all of the tables from m_archive_reader and writes all of the records
      * they contain to writer in timestamp order.
-     * @param writer
      */
-    void construct_in_order(FileWriter& writer);
+    void construct_in_order();
 
     std::string m_archives_dir;
     std::string m_archive_id;
     std::string m_output_dir;
     bool m_ordered{false};
+    size_t m_ordered_chunk_size{0};
 
     std::unique_ptr<ArchiveReader> m_archive_reader;
 };
