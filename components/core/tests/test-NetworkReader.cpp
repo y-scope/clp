@@ -53,7 +53,6 @@ auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
 }
 
 auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vector<char> {
-    clp::CurlGlobalInstance const curl_global_instance;
     std::vector<char> buf;
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
     auto const read_buf{std::make_unique<char[]>(read_buf_size)};
