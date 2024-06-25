@@ -93,10 +93,7 @@ private:
     void split_archive();
 
     int m_num_messages;
-    int m_compression_level;
     std::vector<std::string> m_file_paths;
-    std::string m_archives_dir;
-    std::string m_schema_tree_path;
 
     Schema m_current_schema;
     ParsedMessage m_current_parsed_message;
@@ -106,10 +103,10 @@ private:
 
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
+    ArchiveWriterOption m_archive_options{};
     size_t m_target_encoded_size;
     size_t m_max_document_size;
     bool m_structurize_arrays{false};
-    bool m_print_archive_stats{false};
 };
 }  // namespace clp_s
 

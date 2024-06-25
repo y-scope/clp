@@ -11,14 +11,11 @@
 
 namespace clp_s {
 JsonParser::JsonParser(JsonParserOption const& option)
-        : m_archives_dir(option.archives_dir),
-          m_num_messages(0),
-          m_compression_level(option.compression_level),
+        : m_num_messages(0),
           m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
-          m_structurize_arrays(option.structurize_arrays),
-          m_print_archive_stats(option.print_archive_stats) {
+          m_structurize_arrays(option.structurize_arrays) {
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
     }
@@ -31,14 +28,13 @@ JsonParser::JsonParser(JsonParserOption const& option)
         FileUtils::find_all_files(file_path, m_file_paths);
     }
 
-    ArchiveWriterOption archive_writer_option{};
-    archive_writer_option.archives_dir = m_archives_dir;
-    archive_writer_option.id = m_generator();
-    archive_writer_option.compression_level = option.compression_level;
-    archive_writer_option.print_archive_stats = m_print_archive_stats;
+    m_archive_options.archives_dir = option.archives_dir;
+    m_archive_options.compression_level = option.compression_level;
+    m_archive_options.print_archive_stats = option.print_archive_stats;
+    m_archive_options.id = m_generator();
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
-    m_archive_writer->open(archive_writer_option);
+    m_archive_writer->open(m_archive_options);
 }
 
 void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_id) {
@@ -506,14 +502,8 @@ void JsonParser::store() {
 
 void JsonParser::split_archive() {
     m_archive_writer->close();
-
-    ArchiveWriterOption archive_writer_option{};
-    archive_writer_option.archives_dir = m_archives_dir;
-    archive_writer_option.id = m_generator();
-    archive_writer_option.compression_level = m_compression_level;
-    archive_writer_option.print_archive_stats = m_print_archive_stats;
-
-    m_archive_writer->open(archive_writer_option);
+    m_archive_options.id = m_generator();
+    m_archive_writer->open(m_archive_options);
 }
 
 }  // namespace clp_s
