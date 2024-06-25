@@ -282,6 +282,8 @@ set(SOURCE_FILES_unitTest
         src/clp/CurlDownloadHandler.cpp
         src/clp/CurlDownloadHandler.hpp
         src/clp/CurlEasyHandle.hpp
+        src/clp/CurlGlobalInstance.cpp
+        src/clp/CurlGlobalInstance.hpp
         src/clp/CurlOperationFailed.hpp
         src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
@@ -473,7 +475,7 @@ set(SOURCE_FILES_unitTest
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-Utils.cpp
-        )
+)
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
         PRIVATE

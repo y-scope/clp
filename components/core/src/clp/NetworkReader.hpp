@@ -70,23 +70,9 @@ public:
     static constexpr size_t cMinBufferSize{512};
 
     /**
-     * Initializes static resources for this class. This must be called before using the class.
-     * @return ErrorCode_Success on success.
-     * @return ErrorCode_Failure if libcurl initialization failed.
-     */
-    [[nodiscard]] static auto init() -> ErrorCode;
-
-    /**
-     * De-initializes any static resources.
-     */
-    static auto deinit() -> void;
-
-    /**
      * Constructs a reader to stream data from the given URL, starting at the given offset.
-     * TODO: the current implementation doesn't handle the case when the given offset is out of
-     * range. The file_pos will be set to an invalid state if this happens, which can be
-     * problematic if the other part of the program depends on this position. It can be fixed by
-     * capturing the error code 416 in the response header.
+     * Note: This class depends on `libcurl`. An instance of `clp::CurlGlobalInstance` must remain
+     * alive for the entire lifespan of any instance of this class to maintain proper functionality.
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
@@ -245,8 +231,6 @@ private:
         size_t m_offset{0};
         bool m_disable_caching{false};
     };
-
-    static bool m_static_init_complete;
 
     /**
      * Submits a request to abort the ongoing curl download session.
