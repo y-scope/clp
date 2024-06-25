@@ -109,6 +109,7 @@ private:
     size_t m_target_encoded_size;
     size_t m_max_document_size;
     bool m_structurize_arrays{false};
+    bool m_print_archive_stats{false};
 };
 }  // namespace clp_s
 
