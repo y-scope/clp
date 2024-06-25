@@ -9,7 +9,7 @@ def main(argv):
 
     found_violation = False
 
-    # Check for https://docs.yscope.com links with ".md" suffixes
+    # Check for docs.yscope.com links with ".md" suffixes
     if _check_tracked_files(
             r"docs\.yscope\.com/.+\.md",
             repo_root,
