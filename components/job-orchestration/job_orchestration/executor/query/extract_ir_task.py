@@ -13,8 +13,11 @@ from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
-from .utils import generate_final_task_results, get_logger_file_path, update_query_task_metadata
-
+from job_orchestration.executor.query.utils import (
+    generate_final_task_result,
+    get_task_log_file_path,
+    update_query_task_metadata,
+)
 # Setup logging
 logger = get_task_logger(__name__)
 
@@ -23,8 +26,8 @@ def make_command(
     storage_engine: str,
     clp_home: Path,
     archives_dir: Path,
-    ir_output_dir: Path,
     archive_id: str,
+    ir_output_dir: Path,
     extract_ir_config: ExtractIrJobConfig,
     results_cache_uri: str,
     results_collection: str,
@@ -41,9 +44,9 @@ def make_command(
             results_cache_uri,
             results_collection,
         ]
-        if extract_ir_config.target_size is not None:
+        if extract_ir_config.target_uncompressed_size is not None:
             command.append("--target-size")
-            command.append(extract_ir_config.target_size)
+            command.append(extract_ir_config.target_uncompressed_size)
     else:
         raise ValueError(f"Unsupported storage engine {storage_engine}")
 
@@ -71,7 +74,7 @@ def extract_ir(
 
     # Setup logging to file
     set_logging_level(logger, clp_logging_level)
-    clo_log_path = get_logger_file_path(clp_logs_dir, job_id, task_id)
+    clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
     logger.info(f"Started IR extraction task for job {job_id}")
@@ -86,8 +89,8 @@ def extract_ir(
             storage_engine=clp_storage_engine,
             clp_home=clp_home,
             archives_dir=archive_directory,
-            ir_output_dir=ir_directory,
             archive_id=archive_id,
+            ir_output_dir=ir_directory,
             extract_ir_config=extract_ir_config,
             results_cache_uri=results_cache_uri,
             results_collection=ir_collection,
@@ -147,4 +150,4 @@ def extract_ir(
         sql_adapter, task_id, dict(status=task_status, start_time=start_time, duration=duration)
     )
 
-    return generate_final_task_results(task_id, task_status, duration, clo_log_path)
+    return generate_final_task_result(task_id, task_status, duration, clo_log_path)

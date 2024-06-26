@@ -7,22 +7,22 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
 
-def get_logger_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
+def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Path:
     worker_logs_dir = clp_logs_dir / job_id
     worker_logs_dir.mkdir(exist_ok=True, parents=True)
     return worker_logs_dir / f"{task_id}-clo.log"
 
 
-def generate_final_task_results(
-    task_id: int, job_status: QueryTaskStatus, duration: float, clo_log_path: Path
+def generate_final_task_result(
+    task_id: int, task_status: QueryTaskStatus, duration: float, clo_log_path: Path
 ) -> Dict[Any, Any]:
     task_result = QueryTaskResult(
-        status=job_status,
+        status=task_status,
         task_id=task_id,
         duration=duration,
     )
 
-    if QueryTaskStatus.FAILED == job_status:
+    if QueryTaskStatus.FAILED == task_status:
         task_result.error_log_path = str(clo_log_path)
 
     return task_result.dict()

@@ -286,7 +286,7 @@ def get_archive_and_update_config_for_extraction(
     orig_file_id = extract_ir_config.orig_file_id
     msg_ix = extract_ir_config.msg_ix
 
-    results = get_archive_and_file_split_for_extraction(db_conn, orig_file_id, msg_ix)
+    results = get_archive_and_file_split_ids(db_conn, orig_file_id, msg_ix)
     if len(results) == 0:
         logger.error(f"No matching file splits for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         return None
@@ -303,7 +303,7 @@ def get_archive_and_update_config_for_extraction(
 
 
 @exception_default_value(default=[])
-def get_archive_and_file_split_for_extraction(
+def get_archive_and_file_split_ids(
     db_conn,
     orig_file_id: str,
     msg_ix: int,
@@ -432,7 +432,7 @@ def dispatch_job_and_update_db(
     target_archives: List[str],
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
-    num_task: int,
+    num_tasks: int,
 ) -> None:
     dispatch_query_job(
         db_conn, new_job, target_archives, clp_metadata_db_conn_params, results_cache_uri
@@ -446,7 +446,7 @@ def dispatch_job_and_update_db(
         QueryJobStatus.RUNNING,
         QueryJobStatus.PENDING,
         start_time=start_time,
-        num_tasks=num_task,
+        num_tasks=num_tasks,
     )
 
 
@@ -520,7 +520,6 @@ def handle_pending_query_jobs(
                     db_conn, extract_ir_config
                 )
                 if not archive_id:
-                    logger.error(f"Failed to get archive for extraction")
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,
@@ -717,8 +716,8 @@ async def handle_finished_extract_ir_job(
 
     job_id = job.id
     new_job_status = QueryJobStatus.SUCCEEDED
-    num_task = len(task_results)
-    if 1 != num_task:
+    num_tasks = len(task_results)
+    if 1 != num_tasks:
         logger.error(
             f"Unexpected number of tasks for IR extraction job {job_id}. "
             f"Expected 1, got {num_tasks}."
@@ -745,7 +744,7 @@ async def handle_finished_extract_ir_job(
         job_id,
         new_job_status,
         QueryJobStatus.RUNNING,
-        num_tasks_completed=num_task,
+        num_tasks_completed=num_tasks,
         duration=(datetime.datetime.now() - job.start_time).total_seconds(),
     ):
         if new_job_status == QueryJobStatus.SUCCEEDED:

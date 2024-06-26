@@ -254,8 +254,8 @@ class Reducer(BaseModel):
 class ResultsCache(BaseModel):
     host: str = "localhost"
     port: int = 27017
-    db_name: str = "clp-search"
-    ir_collection_name: str = "clp-ir"
+    db_name: str = "clp-query-results"
+    ir_collection_name: str = "ir-files"
 
     @validator("host")
     def validate_host(cls, field):

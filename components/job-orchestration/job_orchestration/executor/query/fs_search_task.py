@@ -15,7 +15,11 @@ from job_orchestration.executor.query.celery import app
 from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
-from .utils import generate_final_task_results, get_logger_file_path, update_query_task_metadata
+from job_orchestration.executor.query.utils import (
+    generate_final_task_result,
+    get_task_log_file_path,
+    update_query_task_metadata,
+)
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -111,7 +115,7 @@ def search(
 
     # Setup logging to file
     set_logging_level(logger, clp_logging_level)
-    clo_log_path = get_logger_file_path(clp_logs_dir, job_id, task_id)
+    clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
     logger.info(f"Started search task for job {job_id}")
@@ -151,9 +155,9 @@ def search(
             error_log_path=str(clo_log_path),
         ).dict()
 
-    search_status = QueryTaskStatus.RUNNING
+    task_status = QueryTaskStatus.RUNNING
     update_query_task_metadata(
-        sql_adapter, task_id, dict(status=search_status, start_time=start_time)
+        sql_adapter, task_id, dict(status=task_status, start_time=start_time)
     )
 
     logger.info(f'Running: {" ".join(task_command)}')
@@ -199,4 +203,4 @@ def search(
         sql_adapter, task_id, dict(status=task_status, start_time=start_time, duration=duration)
     )
 
-    return generate_final_task_results(task_id, task_status, duration, clo_log_path)
+    return generate_final_task_result(task_id, task_status, duration, clo_log_path)

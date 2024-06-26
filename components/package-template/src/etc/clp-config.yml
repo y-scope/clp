@@ -46,8 +46,8 @@
 #results_cache:
 #  host: "localhost"
 #  port: 27017
-#  db_name: "clp-search"
-#  ir_collection_name: "clp-ir"
+#  db_name: "clp-query-results"
+#  ir_collection_name: "ir-files"
 #
 #compression_worker:
 #  logging_level: "INFO"
