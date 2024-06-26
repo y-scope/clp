@@ -9,7 +9,10 @@ from clp_py_utils.clp_config import Database, StorageEngine
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
-from job_orchestration.executor.query.utils import generic_run_query_task, report_command_creation_failure
+from job_orchestration.executor.query.utils import (
+    generic_run_query_task,
+    report_command_creation_failure,
+)
 from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
@@ -108,7 +111,6 @@ def search(
     set_logging_level(logger, clp_logging_level)
 
     logger.info(f"Started {TASK_NAME} task for job {job_id}")
-
 
     start_time = datetime.datetime.now()
     task_status: QueryTaskStatus
