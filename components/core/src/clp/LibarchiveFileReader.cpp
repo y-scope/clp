@@ -229,7 +229,7 @@ auto LibarchiveFileReader::peek_buffered_data() const -> std::span<char const> {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
     if (nullptr == m_data_block) {
-        return {static_cast<char const*>(nullptr), 0};
+        return {static_cast<char const*>(m_data_block), 0};
     }
     if (m_pos_in_file < m_data_block_pos_in_file) {
         // Position in the file is before the current data block, so we return nulls corresponding
