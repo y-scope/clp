@@ -24,7 +24,7 @@ import os
 import pathlib
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import celery
 import msgpack
@@ -279,27 +279,24 @@ def get_archives_for_search(
     return archives_for_search
 
 
-def get_archive_and_update_config_for_extraction(
+def get_archive_and_file_split_ids_for_extraction(
     db_conn,
     extract_ir_config: ExtractIrJobConfig,
-) -> Optional[str]:
+) -> Tuple[Optional[str], Optional[str]]:
     orig_file_id = extract_ir_config.orig_file_id
     msg_ix = extract_ir_config.msg_ix
 
     results = get_archive_and_file_split_ids(db_conn, orig_file_id, msg_ix)
     if len(results) == 0:
         logger.error(f"No matching file splits for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
-        return None
+        return None, None
     elif len(results) > 1:
         logger.error(f"Multiple file splits found for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         for result in results:
             logger.error(f"{result['archive_id']}:{result['id']}")
-        return None
+        return None, None
 
-    file_split_id = results[0]["id"]
-    archive_id = results[0]["archive_id"]
-    extract_ir_config.file_split_id = file_split_id
-    return archive_id
+    return results[0]["archive_id"], results[0]["file_split_id"]
 
 
 @exception_default_value(default=[])
@@ -308,7 +305,15 @@ def get_archive_and_file_split_ids(
     orig_file_id: str,
     msg_ix: int,
 ):
-    query = f"""SELECT id, archive_id 
+    """
+    TBD
+    :param job:
+    :param
+    :param
+    :return:
+    """
+
+    query = f"""SELECT archive_id, id as file_split_id 
             FROM {CLP_METADATA_TABLE_PREFIX}files WHERE
             orig_file_id = '{orig_file_id}' AND 
             begin_message_ix <= {msg_ix} AND 
@@ -516,10 +521,10 @@ def handle_pending_query_jobs(
 
             elif QueryJobType.EXTRACT_IR == job_type:
                 extract_ir_config = ExtractIrJobConfig.parse_obj(msgpack.unpackb(job_config))
-                archive_id = get_archive_and_update_config_for_extraction(
+                archive_id, file_split_id = get_archive_and_file_split_ids_for_extraction(
                     db_conn, extract_ir_config
                 )
-                if not archive_id:
+                if not archive_id or not file_split_id:
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,
@@ -533,6 +538,7 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
+                extract_ir_config.file_split_id = file_split_id
                 new_extract_ir_job = ExtractIrJob(
                     id=job_id,
                     archive_id=archive_id,

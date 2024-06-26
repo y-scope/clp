@@ -430,6 +430,11 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.archive_output.directory)
         except ValueError as ex:
             raise ValueError(f"archive_output.directory is invalid: {ex}")
+    def validate_ir_output_dir(self):
+        try:
+            validate_path_could_be_dir(self.ir_output.directory)
+        except ValueError as ex:
+            raise ValueError(f"ir_output.directory is invalid: {ex}")
 
     def validate_data_dir(self):
         try:
