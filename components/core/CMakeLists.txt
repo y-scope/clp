@@ -438,6 +438,8 @@ set(SOURCE_FILES_unitTest
         src/clp/TraceableException.hpp
         src/clp/time_types.hpp
         src/clp/type_utils.hpp
+        src/clp/utf8_utils.cpp
+        src/clp/utf8_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -472,8 +474,8 @@ set(SOURCE_FILES_unitTest
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
+        tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
-        tests/test-ffi_utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest

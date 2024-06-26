@@ -9,13 +9,16 @@
 #include <string_view>
 #include <tuple>
 
+#include "../utf8_utils.hpp"
+
 using std::string;
 using std::string_view;
 
 namespace clp::ffi {
 auto validate_and_escape_utf8_string(string_view raw) -> std::optional<string> {
-    string_view::const_iterator bookmark{raw.cbegin()};
-    string escaped;
+    string_view::const_iterator next_char_to_copy_it{raw.cbegin()};
+    std::optional<std::string> ret_val;
+    auto& escaped{ret_val.emplace()};
     escaped.reserve(raw.size() + (raw.size() / 2));
 
     auto escape_handler = [&](string_view::const_iterator it) -> void {
@@ -23,36 +26,36 @@ auto validate_and_escape_utf8_string(string_view raw) -> std::optional<string> {
         // used by `snprintf` to append '\0'
         constexpr size_t cControlCharacterBufSize{7};
         std::array<char, cControlCharacterBufSize> buf{};
-        std::string_view escaped_content;
+        std::string_view escaped_char;
         bool escape_required{true};
         switch (*it) {
             case '\b':
-                escaped_content = "\\b";
+                escaped_char = "\\b";
                 break;
             case '\t':
-                escaped_content = "\\t";
+                escaped_char = "\\t";
                 break;
             case '\n':
-                escaped_content = "\\n";
+                escaped_char = "\\n";
                 break;
             case '\f':
-                escaped_content = "\\f";
+                escaped_char = "\\f";
                 break;
             case '\r':
-                escaped_content = "\\r";
+                escaped_char = "\\r";
                 break;
             case '\\':
-                escaped_content = "\\\\";
+                escaped_char = "\\\\";
                 break;
             case '"':
-                escaped_content = "\\\"";
+                escaped_char = "\\\"";
                 break;
             default: {
                 constexpr uint8_t cLargestControlCharacter{0x1F};
                 auto const byte{static_cast<uint8_t>(*it)};
                 if (cLargestControlCharacter >= byte) {
                     std::ignore = snprintf(buf.data(), buf.size(), "\\u00%02x", byte);
-                    escaped_content = {buf.data(), buf.size() - 1};
+                    escaped_char = {buf.data(), buf.size() - 1};
                 } else {
                     escape_required = false;
                 }
@@ -60,87 +63,20 @@ auto validate_and_escape_utf8_string(string_view raw) -> std::optional<string> {
             }
         }
         if (escape_required) {
-            escaped.append(bookmark, it);
-            escaped.append(escaped_content.cbegin(), escaped_content.cend());
-            bookmark = it + 1;
+            escaped.append(next_char_to_copy_it, it);
+            escaped += escaped_char;
+            next_char_to_copy_it = it + 1;
         }
     };
 
-    if (false == generic_validate_utf8_string(raw, escape_handler)) {
+    if (false == validate_utf8_string(raw, escape_handler)) {
         return std::nullopt;
     }
 
-    if (raw.cend() != bookmark) {
-        escaped.append(bookmark, raw.cend());
+    if (raw.cend() != next_char_to_copy_it) {
+        escaped.append(next_char_to_copy_it, raw.cend());
     }
 
-    return escaped;
+    return ret_val;
 }
-
-auto is_utf8_encoded(string_view str) -> bool {
-    auto escape_handler = []([[maybe_unused]] string_view::const_iterator it) -> void {};
-    return generic_validate_utf8_string(str, escape_handler);
-}
-
-namespace utils_hpp {
-auto validate_header_byte_and_set_code_point(
-        uint8_t header,
-        size_t& num_continuation_bytes,
-        uint32_t& code_point,
-        uint32_t& code_point_lower_bound,
-        uint32_t& code_point_upper_bound
-) -> bool {
-    constexpr uint8_t cThreeByteContinuationMask{0xF8};  // 0b1111_1xxx
-    constexpr uint8_t cValidThreeByteContinuation{0xF0};  // 0b1111_0xxx
-    constexpr uint8_t cTwoByteContinuationMask{0xF0};  // 0b1111_xxxx
-    constexpr uint8_t cValidTwoByteContinuation{0xE0};  // 0b1110_xxxx
-    constexpr uint8_t cOneByteContinuationMask{0xE0};  // 0b111x_xxxx
-    constexpr uint8_t cValidOneByteContinuation{0xC0};  // 0b110x_xxxx
-
-    if ((header & cThreeByteContinuationMask) == cValidThreeByteContinuation) {
-        num_continuation_bytes = 3;
-        code_point = (~cThreeByteContinuationMask & header);
-        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        code_point_lower_bound = 0x1'0000;
-        code_point_upper_bound = 0x10'FFFF;
-        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-    } else if ((header & cTwoByteContinuationMask) == cValidTwoByteContinuation) {
-        num_continuation_bytes = 2;
-        code_point = (~cTwoByteContinuationMask & header);
-        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        code_point_lower_bound = 0x800;
-        code_point_upper_bound = 0xFFFF;
-        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-    } else if ((header & cOneByteContinuationMask) == cValidOneByteContinuation) {
-        num_continuation_bytes = 1;
-        code_point = (~cOneByteContinuationMask & header);
-        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        code_point_lower_bound = 0x80;
-        code_point_upper_bound = 0x7FF;
-        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-    } else {
-        return false;
-    }
-    return true;
-}
-
-auto is_ascii_char(uint8_t byte) -> bool {
-    constexpr uint8_t cLargestValidASCIIChar{0x7F};
-    return cLargestValidASCIIChar >= byte;
-}
-
-auto is_valid_utf8_continuation_byte(uint8_t byte) -> bool {
-    constexpr uint8_t cContinuationByteMask{0xC0};
-    constexpr uint8_t cValidMaskedContinuationByte{0x80};
-    return (byte & cContinuationByteMask) == cValidMaskedContinuationByte;
-}
-
-auto update_code_point(uint32_t code_point, uint8_t continuation_byte) -> uint32_t {
-    constexpr uint32_t cContinuationBytePayloadMask{0x3F};
-    constexpr uint8_t cNumContinuationBytePayloadBits{6};
-    return (code_point << cNumContinuationBytePayloadBits)
-           + (continuation_byte & cContinuationBytePayloadMask);
-}
-}  // namespace utils_hpp
-
 }  // namespace clp::ffi
