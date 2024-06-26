@@ -1,6 +1,5 @@
 #include "CurlGlobalInstance.hpp"
 
-#include <cstddef>
 #include <mutex>
 
 #include <curl/curl.h>
@@ -9,11 +8,8 @@
 #include "ErrorCode.hpp"
 
 namespace clp {
-std::mutex CurlGlobalInstance::m_global_mutex;
-size_t CurlGlobalInstance::m_num_living_instances{0};
-
 CurlGlobalInstance::CurlGlobalInstance() {
-    std::unique_lock<std::mutex> const global_lock{m_global_mutex};
+    std::lock_guard<std::mutex> const global_lock{m_global_mutex};
     if (0 == m_num_living_instances) {
         if (auto const err{curl_global_init(CURL_GLOBAL_ALL)}; CURLE_OK != err) {
             throw CurlOperationFailed(
@@ -29,7 +25,7 @@ CurlGlobalInstance::CurlGlobalInstance() {
 }
 
 CurlGlobalInstance::~CurlGlobalInstance() {
-    std::unique_lock<std::mutex> const global_lock{m_global_mutex};
+    std::lock_guard<std::mutex> const global_lock{m_global_mutex};
     --m_num_living_instances;
     if (0 == m_num_living_instances) {
 #if defined(__APPLE__)
