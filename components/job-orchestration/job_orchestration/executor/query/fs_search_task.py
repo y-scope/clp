@@ -114,7 +114,7 @@ def search(
     clo_log_path = get_logger_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
-    logger.info(f"Started task for job {job_id}")
+    logger.info(f"Started search task for job {job_id}")
 
     search_config = SearchJobConfig.parse_obj(job_config_obj)
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))

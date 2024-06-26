@@ -283,16 +283,15 @@ def get_archive_and_update_config_for_extraction(
     db_conn,
     extract_ir_config: ExtractIrJobConfig,
 ) -> Optional[str]:
-
     orig_file_id = extract_ir_config.orig_file_id
     msg_ix = extract_ir_config.msg_ix
 
     results = get_archive_and_file_split_for_extraction(db_conn, orig_file_id, msg_ix)
     if len(results) == 0:
-        logger.error(f"No file split and archive match with config: {orig_file_id}:{msg_ix}")
+        logger.error(f"No matching file splits for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         return None
     elif len(results) > 1:
-        logger.error(f"Multiple splits match with config: {orig_file_id}:{msg_ix}")
+        logger.error(f"Multiple file splits found for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         for result in results:
             logger.error(f"{result['archive_id']}:{result['id']}")
         return None
@@ -532,7 +531,7 @@ def handle_pending_query_jobs(
                         num_tasks=0,
                         duration=0,
                     ):
-                        logger.error(f"Failed to set job: {job_id} as failed")
+                        logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
                 new_extract_ir_job = ExtractIrJob(
@@ -712,7 +711,7 @@ async def handle_finished_search_job(
 
 
 async def handle_finished_extract_ir_job(
-    db_conn, job: SearchJob, task_results: Optional[Any]
+    db_conn, job: ExtractIrJob, task_results: Optional[Any]
 ) -> None:
     global active_jobs
 
@@ -721,8 +720,8 @@ async def handle_finished_extract_ir_job(
     num_task = len(task_results)
     if 1 != num_task:
         logger.error(
-            f"Unexpected number of task under IR extraction job: {job_id}. "
-            f"expected 1, got {num_task}"
+            f"Unexpected number of tasks for IR extraction job {job_id}. "
+            f"Expected 1, got {num_tasks}."
         )
         new_job_status = QueryJobStatus.FAILED
     else:
@@ -750,9 +749,9 @@ async def handle_finished_extract_ir_job(
         duration=(datetime.datetime.now() - job.start_time).total_seconds(),
     ):
         if new_job_status == QueryJobStatus.SUCCEEDED:
-            logger.info(f"Completed job {job_id}.")
+            logger.info(f"Completed IR extraction job {job_id}.")
         else:
-            logger.info(f"Completed job {job_id} with failing tasks.")
+            logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
     del active_jobs[job_id]
 
 
