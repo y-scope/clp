@@ -27,7 +27,7 @@ public:
 
 private:
     static inline std::mutex m_global_mutex;
-    static inline size_t m_num_living_instances;
+    static inline size_t m_num_living_instances{0};
 };
 }  // namespace clp
 
