@@ -48,9 +48,10 @@ auto generate_utf8_byte_sequence(uint32_t code_point, size_t num_continuation_by
     while (encoded_bytes.size() < num_continuation_bytes) {
         auto const least_significant_byte{static_cast<uint8_t>(code_point)};
         encoded_bytes.push_back(static_cast<char>(
-                (least_significant_byte & ~clp::cContinuationByteMask) | clp::cContinuationByte
+                (least_significant_byte & ~clp::cUtf8ContinuationByteMask)
+                | clp::cUtf8ContinuationByteHeader
         ));
-        code_point >>= clp::cNumContinuationByteCodePointBits;
+        code_point >>= clp::cUtf8NumContinuationByteCodePointBits;
     }
 
     uint8_t lead_byte_code_point_mask{};

@@ -44,12 +44,12 @@ auto is_ascii_char(uint8_t byte) -> bool {
 }
 
 auto is_valid_utf8_continuation_byte(uint8_t byte) -> bool {
-    return (byte & cContinuationByteMask) == cContinuationByte;
+    return (byte & cUtf8ContinuationByteMask) == cUtf8ContinuationByteHeader;
 }
 
 auto parse_continuation_byte(uint32_t code_point, uint8_t continuation_byte) -> uint32_t {
-    return (code_point << cNumContinuationByteCodePointBits)
-           + (continuation_byte & cContinuationByteCodePointMask);
+    return (code_point << cUtf8NumContinuationByteCodePointBits)
+           + (continuation_byte & cUtf8ContinuationByteCodePointMask);
 }
 }  // namespace utf8_utils_internal
 }  // namespace clp

@@ -8,12 +8,12 @@
 namespace clp {
 // Constants
 // Lead byte signature
-constexpr uint8_t cFourByteUtf8CharHeaderMask{0xF8};  // 0b1111_1xxx
-constexpr uint8_t cFourByteUtf8CharHeader{0xF0};  // 0b1111_0xxx
-constexpr uint8_t cThreeByteUtf8CharHeaderMask{0xF0};  // 0b1111_xxxx
-constexpr uint8_t cThreeByteUtf8CharHeader{0xE0};  // 0b1110_xxxx
 constexpr uint8_t cTwoByteUtf8CharHeaderMask{0xE0};  // 0b111x_xxxx
 constexpr uint8_t cTwoByteUtf8CharHeader{0xC0};  // 0b110x_xxxx
+constexpr uint8_t cThreeByteUtf8CharHeaderMask{0xF0};  // 0b1111_xxxx
+constexpr uint8_t cThreeByteUtf8CharHeader{0xE0};  // 0b1110_xxxx
+constexpr uint8_t cFourByteUtf8CharHeaderMask{0xF8};  // 0b1111_1xxx
+constexpr uint8_t cFourByteUtf8CharHeader{0xF0};  // 0b1111_0xxx
 
 // Code point ranges (inclusive)
 constexpr uint32_t cOneByteUtf8CharCodePointLowerBound{0};
@@ -26,10 +26,10 @@ constexpr uint32_t cFourByteUtf8CharCodePointLowerBound{0x1'0000};
 constexpr uint32_t cFourByteUtf8CharCodePointUpperBound{0x10'FFFF};
 
 // Continuation byte
-constexpr uint32_t cContinuationByteMask{0xC0};
-constexpr uint32_t cContinuationByte{0x80};
-constexpr uint32_t cContinuationByteCodePointMask{0x3F};
-constexpr uint8_t cNumContinuationByteCodePointBits{6};
+constexpr uint32_t cUtf8ContinuationByteMask{0xC0};
+constexpr uint32_t cUtf8ContinuationByteHeader{0x80};
+constexpr uint32_t cUtf8ContinuationByteCodePointMask{0x3F};
+constexpr uint8_t cUtf8NumContinuationByteCodePointBits{6};
 
 /**
  * Validates whether the given string is UTF-8 encoded, optionally escaping ASCII characters using
@@ -101,7 +101,8 @@ auto validate_utf8_string(std::string_view src, EscapeHandler escape_handler) ->
     uint32_t code_point_lower_bound{};
     uint32_t code_point_upper_bound{};
 
-    for (std::string_view::const_iterator it{src.cbegin()}; it != src.cend(); ++it) {
+    // NOLINTNEXTLINE(readability-qualified-auto)
+    for (auto it{src.cbegin()}; it != src.cend(); ++it) {
         auto const byte{static_cast<uint8_t>(*it)};
         if (0 == num_continuation_bytes_to_validate) {
             if (utf8_utils_internal::is_ascii_char(byte)) {
