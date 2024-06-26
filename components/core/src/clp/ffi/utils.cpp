@@ -16,10 +16,17 @@ using std::string_view;
 
 namespace clp::ffi {
 auto validate_and_escape_utf8_string(string_view raw) -> std::optional<string> {
-    string_view::const_iterator next_char_to_copy_it{raw.cbegin()};
     std::optional<std::string> ret_val;
     auto& escaped{ret_val.emplace()};
     escaped.reserve(raw.size() + (raw.size() / 2));
+    if (false == validate_and_append_escaped_utf8_string(raw, escaped)) {
+        return std::nullopt;
+    }
+    return ret_val;
+}
+
+auto validate_and_append_escaped_utf8_string(std::string_view src, std::string& dst) -> bool {
+    string_view::const_iterator next_char_to_copy_it{src.cbegin()};
 
     auto escape_handler = [&](string_view::const_iterator it) -> void {
         // Allocate 6 + 1 size buffer to format control characters as "\u00bb", with the last byte
@@ -63,20 +70,20 @@ auto validate_and_escape_utf8_string(string_view raw) -> std::optional<string> {
             }
         }
         if (escape_required) {
-            escaped.append(next_char_to_copy_it, it);
-            escaped += escaped_char;
+            dst.append(next_char_to_copy_it, it);
+            dst += escaped_char;
             next_char_to_copy_it = it + 1;
         }
     };
 
-    if (false == validate_utf8_string(raw, escape_handler)) {
-        return std::nullopt;
+    if (false == validate_utf8_string(src, escape_handler)) {
+        return false;
     }
 
-    if (raw.cend() != next_char_to_copy_it) {
-        escaped.append(next_char_to_copy_it, raw.cend());
+    if (src.cend() != next_char_to_copy_it) {
+        dst.append(next_char_to_copy_it, src.cend());
     }
 
-    return ret_val;
+    return true;
 }
 }  // namespace clp::ffi
