@@ -17,8 +17,6 @@ using clp::ffi::validate_and_escape_utf8_string;
 
 namespace {
 /**
- * Gets an expected escaped string by first convert the raw string into a json string and then dumps
- * the a printable string using nlohmann::json.
  * @param raw
  * @return The input string after escaping any characters that are invalid in JSON strings.
  */
