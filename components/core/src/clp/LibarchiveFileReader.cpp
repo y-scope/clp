@@ -1,6 +1,7 @@
 #include "LibarchiveFileReader.hpp"
 
 #include <cstring>
+#include <span>
 
 #include "spdlog_with_specializations.hpp"
 
@@ -221,8 +222,6 @@ auto LibarchiveFileReader::try_load_nonempty_data_block() -> ErrorCode {
 }
 
 auto LibarchiveFileReader::peek_buffered_data() const -> std::span<char const> {
-    char const* buf{nullptr};
-    size_t buf_size{};
     if (nullptr == m_archive) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -230,24 +229,22 @@ auto LibarchiveFileReader::peek_buffered_data() const -> std::span<char const> {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
     if (nullptr == m_data_block) {
-        buf_size = 0;
-        buf = nullptr;
-    } else if (m_pos_in_file < m_data_block_pos_in_file) {
+        return {static_cast<char const*>(nullptr), 0};
+    }
+    if (m_pos_in_file < m_data_block_pos_in_file) {
         // Position in the file is before the current data block, so we return nulls corresponding
         // to the sparse bytes before the data block
         // NOTE: We don't return ALL sparse bytes before the data block since that might require
         // allocating more bytes, violating the const-ness of this method. Since peek is a
         // best-effort method, this should be sufficient for most callers.
-        buf = m_nulls_for_peek.data();
-        buf_size = std::min(
-                m_nulls_for_peek.size(),
-                static_cast<size_t>(m_data_block_pos_in_file - m_pos_in_file)
-        );
-    } else {
-        buf_size = m_data_block_length - m_pos_in_data_block;
-        buf = static_cast<char const*>(m_data_block);
+        return {m_nulls_for_peek.data(),
+                std::min(
+                        m_nulls_for_peek.size(),
+                        static_cast<size_t>(m_data_block_pos_in_file - m_pos_in_file)
+                )};
     }
-    return {buf, buf_size};
+
+    return {static_cast<char const*>(m_data_block), m_data_block_length - m_pos_in_data_block};
 }
 
 auto LibarchiveFileReader::read_next_nonempty_data_block() -> ErrorCode {
