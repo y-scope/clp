@@ -326,6 +326,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/ffi/utils.cpp
+        src/clp/ffi/utils.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
         src/clp/FileReader.cpp
@@ -438,6 +440,8 @@ set(SOURCE_FILES_unitTest
         src/clp/TraceableException.hpp
         src/clp/time_types.hpp
         src/clp/type_utils.hpp
+        src/clp/utf8_utils.cpp
+        src/clp/utf8_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -472,6 +476,7 @@ set(SOURCE_FILES_unitTest
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
+        tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
