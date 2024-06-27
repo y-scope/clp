@@ -17,11 +17,12 @@ namespace clp::ffi {
 ) -> std::optional<std::string>;
 
 /**
- * Validates whether the given string is UTF-8 encoded, and append the src to the dst by escaping
- * any characters to make the string compatible with the JSON specification.
- * @param src The source string to validate and escape.
- * @param dst Outputs the destination string with escaped src appended.
- * @return Whether the src is a valid UTF-8 encoded string.
+ * Validates whether `src` is UTF-8 encoded, and appends `src` to `dst` while escaping any
+ * characters to make the appended string compatible with the JSON specification.
+ * @param src The string to validate and escape.
+ * @param dst Returns `dst` with an escaped version of `src` appended.
+ * @return Whether `src` is a valid UTF-8-encoded string. NOTE: Even if `src` is not UTF-8 encoded,
+ * `dst` may be modified.
  */
 [[nodiscard]] auto
 validate_and_append_escaped_utf8_string(std::string_view src, std::string& dst) -> bool;
