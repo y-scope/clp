@@ -14,8 +14,12 @@
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
+    "@fastify/mysql": "^4.3.0",
+    "@fastify/mongodb": "^8.0.0",
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.0",
+    "fastify-plugin": "^4.5.1",
     "http-status-codes": "^2.3.0",
     "pino-pretty": "^11.2.1"
   },
