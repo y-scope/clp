@@ -38,6 +38,7 @@ auto serialize_msgpack_bytes_to_json_str(vector<unsigned char> const& msgpack_by
             clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
             msgpack_bytes.size()
     );
+
     optional<string> ret_val;
     auto const& msgpack_obj{msgpack_oh.get()};
     if (msgpack::type::ARRAY == msgpack_obj.type) {
@@ -58,10 +59,20 @@ auto serialize_msgpack_bytes_to_json_str(vector<unsigned char> const& msgpack_by
 
 TEST_CASE("test_msgpack_to_json", "[ffi][utils]") {
     optional<string> result;
+    constexpr string_view cStringWithEscape{"String with\\\"escaped\"\\ characters\n\t"};
 
     // Test array with primitive values only
     json const array_with_primitive_values_only
-            = {1, -1, 1.01, -1.01, true, false, "short_string", "This is a long string", nullptr};
+            = {1,
+               -1,
+               1.01,
+               -1.01,
+               true,
+               false,
+               "short_string",
+               "This is a long string",
+               cStringWithEscape,
+               nullptr};
     result = serialize_msgpack_bytes_to_json_str(json::to_msgpack(array_with_primitive_values_only)
     );
     REQUIRE((result.has_value() && array_with_primitive_values_only == json::parse(result.value()))
@@ -76,6 +87,7 @@ TEST_CASE("test_msgpack_to_json", "[ffi][utils]") {
                {"bool_key_true", false},
                {"bool_key_false", true},
                {"str_key", "Test string"},
+               {"str_with_\"escaped\"_key", cStringWithEscape},
                {"null_key", nullptr}};
     result = serialize_msgpack_bytes_to_json_str(json::to_msgpack(map_with_primitive_values_only));
     REQUIRE((result.has_value() && map_with_primitive_values_only == json::parse(result.value())));
