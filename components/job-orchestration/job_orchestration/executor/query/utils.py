@@ -41,7 +41,7 @@ def report_command_creation_failure(
     ).dict()
 
 
-def generic_run_query_task(
+def run_query_task(
     sql_adapter: SQL_Adapter,
     logger: Logger,
     clp_logs_dir: Path,
@@ -72,7 +72,7 @@ def generic_run_query_task(
         logger.debug("Entered sigterm handler")
         if task_proc.poll() is None:
             logger.debug(f"Trying to kill {task_name} process")
-            # Kill the process group in case the search process also forked
+            # Kill the process group in case the task process also forked
             os.killpg(os.getpgid(task_proc.pid), signal.SIGTERM)
             os.waitpid(task_proc.pid, 0)
             logger.info(f"Cancelling {task_name} task.")
@@ -84,8 +84,8 @@ def generic_run_query_task(
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     logger.info(f"Waiting for {task_name} to finish")
-    # communicate is equivalent to wait in this case, but avoids deadlocks if we switch to piping
-    # stdout/stderr in the future.
+    # `communicate` is equivalent to `wait` in this case, but avoids deadlocks if we switch to
+    # piping stdout/stderr in the future.
     task_proc.communicate()
     return_code = task_proc.returncode
     if 0 != return_code:

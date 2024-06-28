@@ -10,8 +10,8 @@ from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
-    generic_run_query_task,
     report_command_creation_failure,
+    run_query_task,
 )
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
@@ -63,15 +63,14 @@ def extract_ir(
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
 ) -> Dict[str, Any]:
-    # Task name
-    TASK_NAME = "IR extraction"
+    task_name = "IR extraction"
 
     # Setup logging to file
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
     set_logging_level(logger, clp_logging_level)
 
-    logger.info(f"Started {TASK_NAME} task for job {job_id}")
+    logger.info(f"Started {task_name} task for job {job_id}")
 
     start_time = datetime.datetime.now()
     task_status: QueryTaskStatus
@@ -95,22 +94,21 @@ def extract_ir(
         results_cache_uri=results_cache_uri,
         ir_collection=ir_collection,
     )
-
     if not task_command:
         return report_command_creation_failure(
             sql_adapter=sql_adapter,
             logger=logger,
-            task_name=TASK_NAME,
+            task_name=task_name,
             task_id=task_id,
             start_time=start_time,
         )
 
-    return generic_run_query_task(
+    return run_query_task(
         sql_adapter=sql_adapter,
         logger=logger,
         clp_logs_dir=clp_logs_dir,
         task_command=task_command,
-        task_name=TASK_NAME,
+        task_name=task_name,
         job_id=job_id,
         task_id=task_id,
         start_time=start_time,
