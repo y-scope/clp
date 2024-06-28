@@ -173,7 +173,6 @@ void load_lexer_from_file(
         bool reverse,
         log_surgeon::lexers::ByteLexer& lexer
 ) {
-    log_surgeon::SchemaParser sp;
     std::unique_ptr<log_surgeon::SchemaAST> schema_ast
             = log_surgeon::SchemaParser::try_schema_file(schema_file_path);
     if (!lexer.m_symbol_id.empty()) {

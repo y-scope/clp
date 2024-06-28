@@ -23,7 +23,11 @@ public:
         char const* what() const noexcept override { return "StringReader operation failed"; }
     };
 
-    StringReader() : pos(0), m_getdelim_buf_len(0), m_getdelim_buf(nullptr), string_is_set(false) {}
+    StringReader()
+            : m_pos(0),
+              m_getdelim_buf_len(0),
+              m_getdelim_buf(nullptr),
+              m_string_is_set(false) {}
 
     ~StringReader();
 
@@ -59,7 +63,7 @@ public:
     ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
 
     // Methods
-    bool is_open() const { return string_is_set; }
+    bool is_open() const { return m_string_is_set; }
 
     /**
      * Tries to open a file
@@ -86,11 +90,11 @@ public:
      * @return ErrorCode_Success on success
      */
 private:
-    size_t m_getdelim_buf_len;
-    char* m_getdelim_buf;
-    std::string input_string;
-    uint32_t pos;
-    bool string_is_set;
+    size_t m_getdelim_buf_len{0};
+    char* m_getdelim_buf{nullptr};
+    std::string m_input_string;
+    uint32_t m_pos{0};
+    bool m_string_is_set{false};
 };
 }  // namespace clp
 
