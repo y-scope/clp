@@ -460,6 +460,7 @@ set(SOURCE_FILES_unitTest
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-ffi_SchemaTree.cpp
+        tests/test-ffi_utils.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp

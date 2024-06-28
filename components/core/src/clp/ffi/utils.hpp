@@ -5,6 +5,8 @@
 #include <string>
 #include <string_view>
 
+#include <msgpack.hpp>
+
 namespace clp::ffi {
 /**
  * Validates whether the given string is UTF-8 encoded, and escapes any characters to make the
@@ -26,6 +28,30 @@ namespace clp::ffi {
  */
 [[nodiscard]] auto
 validate_and_append_escaped_utf8_string(std::string_view src, std::string& dst) -> bool;
+
+/**
+ * Serializes and appends a msgpack array to the given JSON string.
+ * @param array
+ * @param json_str Outputs the appended JSON string.
+ * @return Whether the serialized succeeded. NOTE: Event if the serialization failed, `json_str` may
+ * be modified.
+ */
+[[nodiscard]] auto serialize_and_append_msgpack_array_to_json_str(
+        msgpack::object const& array,
+        std::string& json_str
+) -> bool;
+
+/**
+ * Serializes and appends a msgpack map to the given JSON string.
+ * @param map
+ * @param json_str Outputs the appended JSON string.
+ * @return Whether the serialized succeeded. NOTE: Event if the serialization failed, `json_str` may
+ * be modified.
+ */
+[[nodiscard]] auto serialize_and_append_msgpack_map_to_json_str(
+        msgpack::object const& map,
+        std::string& json_str
+) -> bool;
 }  // namespace clp::ffi
 
 #endif  // CLP_FFI_UTILS_HPP
