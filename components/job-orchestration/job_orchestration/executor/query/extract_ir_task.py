@@ -67,7 +67,7 @@ def extract_ir(
 
     # Setup logging to file
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
-    clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
+    clp_logging_level = os.getenv("CLP_LOGGING_LEVEL")
     set_logging_level(logger, clp_logging_level)
 
     logger.info(f"Started {task_name} task for job {job_id}")
@@ -79,9 +79,9 @@ def extract_ir(
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
     archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
-    clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
+    clp_storage_engine = os.getenv("CLP_STORAGE_ENGINE")
     ir_output_dir = Path(os.getenv("CLP_IR_OUTPUT_DIR"))
-    ir_collection = str(os.getenv("CLP_IR_COLLECTION"))
+    ir_collection = os.getenv("CLP_IR_COLLECTION")
     extract_ir_config = ExtractIrJobConfig.parse_obj(job_config_obj)
 
     task_command = make_command(
