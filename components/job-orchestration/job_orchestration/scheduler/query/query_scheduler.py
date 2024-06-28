@@ -24,7 +24,7 @@ import os
 import pathlib
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import celery
 import msgpack
@@ -39,9 +39,10 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
+from job_orchestration.executor.query.extract_ir_task import extract_ir
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
-from job_orchestration.scheduler.job_config import SearchJobConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, SearchJobConfig
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
@@ -49,6 +50,7 @@ from job_orchestration.scheduler.query.reducer_handler import (
     ReducerHandlerMessageType,
 )
 from job_orchestration.scheduler.scheduler_data import (
+    ExtractIrJob,
     InternalJobState,
     QueryJob,
     QueryTaskResult,
@@ -277,6 +279,57 @@ def get_archives_for_search(
     return archives_for_search
 
 
+def get_archive_and_file_split_ids_for_extraction(
+    db_conn,
+    extract_ir_config: ExtractIrJobConfig,
+) -> Tuple[Optional[str], Optional[str]]:
+    orig_file_id = extract_ir_config.orig_file_id
+    msg_ix = extract_ir_config.msg_ix
+
+    results = get_archive_and_file_split_ids(db_conn, orig_file_id, msg_ix)
+    if len(results) == 0:
+        logger.error(f"No matching file splits for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
+        return None, None
+    elif len(results) > 1:
+        logger.error(f"Multiple file splits found for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
+        for result in results:
+            logger.error(f"{result['archive_id']}:{result['id']}")
+        return None, None
+
+    return results[0]["archive_id"], results[0]["file_split_id"]
+
+
+@exception_default_value(default=[])
+def get_archive_and_file_split_ids(
+    db_conn,
+    orig_file_id: str,
+    msg_ix: int,
+):
+    """
+    Fetches the IDs of the file split and the archive containing the file split based on the
+    following criteria:
+    1. The file split's original file id = `orig_file_id`
+    2. The file split includes the message with index = `msg_ix`
+    :param db_conn:
+    :param orig_file_id: Original file id of the split
+    :param msg_ix: Index of the message that the file split must include
+    :return: A list of (archive id, file split id) on success. An empty list if
+    an exception occurs while interacting with the database.
+    """
+
+    query = f"""SELECT archive_id, id as file_split_id 
+            FROM {CLP_METADATA_TABLE_PREFIX}files WHERE
+            orig_file_id = '{orig_file_id}' AND 
+            begin_message_ix <= {msg_ix} AND 
+            (begin_message_ix + num_messages) > {msg_ix}
+            """
+
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+        cursor.execute(query)
+        results = list(cursor.fetchall())
+    return results
+
+
 def get_task_group_for_job(
     archive_ids: List[str],
     task_ids: List[int],
@@ -285,17 +338,35 @@ def get_task_group_for_job(
     results_cache_uri: str,
 ):
     job_config_obj = job.get_config().dict()
-    return celery.group(
-        search.s(
-            job_id=job.id,
-            archive_id=archive_ids[i],
-            task_id=task_ids[i],
-            job_config_obj=job_config_obj,
-            clp_metadata_db_conn_params=clp_metadata_db_conn_params,
-            results_cache_uri=results_cache_uri,
+    job_type = job.get_type()
+    if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
+        return celery.group(
+            search.s(
+                job_id=job.id,
+                archive_id=archive_ids[i],
+                task_id=task_ids[i],
+                job_config_obj=job_config_obj,
+                clp_metadata_db_conn_params=clp_metadata_db_conn_params,
+                results_cache_uri=results_cache_uri,
+            )
+            for i in range(len(archive_ids))
         )
-        for i in range(len(archive_ids))
-    )
+    elif QueryJobType.EXTRACT_IR == job_type:
+        return celery.group(
+            extract_ir.s(
+                job_id=job.id,
+                archive_id=archive_ids[i],
+                task_id=task_ids[i],
+                job_config_obj=job_config_obj,
+                clp_metadata_db_conn_params=clp_metadata_db_conn_params,
+                results_cache_uri=results_cache_uri,
+            )
+            for i in range(len(archive_ids))
+        )
+    else:
+        error_msg = f"Unexpected job type: {job_type}"
+        logger.error(error_msg)
+        raise NotImplementedError(error_msg)
 
 
 def dispatch_query_job(
@@ -364,6 +435,30 @@ async def acquire_reducer_for_job(job: SearchJob):
     logger.info(f"Got reducer for job {job.id} at {reducer_host}:{reducer_port}")
 
 
+def dispatch_job_and_update_db(
+    db_conn,
+    new_job: QueryJob,
+    target_archives: List[str],
+    clp_metadata_db_conn_params: Dict[str, any],
+    results_cache_uri: str,
+    num_tasks: int,
+) -> None:
+    dispatch_query_job(
+        db_conn, new_job, target_archives, clp_metadata_db_conn_params, results_cache_uri
+    )
+    start_time = datetime.datetime.now()
+    new_job.start_time = start_time
+    set_job_or_task_status(
+        db_conn,
+        QUERY_JOBS_TABLE_NAME,
+        new_job.id,
+        QueryJobStatus.RUNNING,
+        QueryJobStatus.PENDING,
+        start_time=start_time,
+        num_tasks=num_tasks,
+    )
+
+
 def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
@@ -427,6 +522,46 @@ def handle_pending_query_jobs(
                 else:
                     pending_search_jobs.append(new_search_job)
                 active_jobs[job_id] = new_search_job
+
+            elif QueryJobType.EXTRACT_IR == job_type:
+                extract_ir_config = ExtractIrJobConfig.parse_obj(msgpack.unpackb(job_config))
+                archive_id, file_split_id = get_archive_and_file_split_ids_for_extraction(
+                    db_conn, extract_ir_config
+                )
+                if not archive_id or not file_split_id:
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as failed")
+                    continue
+
+                extract_ir_config.file_split_id = file_split_id
+                new_extract_ir_job = ExtractIrJob(
+                    id=job_id,
+                    archive_id=archive_id,
+                    extract_ir_config=extract_ir_config,
+                    state=InternalJobState.WAITING_FOR_DISPATCH,
+                )
+                target_archive = [new_extract_ir_job.archive_id]
+
+                dispatch_job_and_update_db(
+                    db_conn,
+                    new_extract_ir_job,
+                    target_archive,
+                    clp_metadata_db_conn_params,
+                    results_cache_uri,
+                    1,
+                )
+                active_jobs[new_extract_ir_job.id] = new_extract_ir_job
+                logger.info(f"Dispatched IR extraction job {job_id} on archive: {archive_id}")
+
             else:
                 # NOTE: We're skipping the job for this iteration, but its status will remain
                 # unchanged. So this log will print again in the next iteration unless the user
@@ -452,22 +587,16 @@ def handle_pending_query_jobs(
 
             archive_ids_for_search = [archive["archive_id"] for archive in archives_for_search]
 
-            dispatch_query_job(
-                db_conn, job, archive_ids_for_search, clp_metadata_db_conn_params, results_cache_uri
+            dispatch_job_and_update_db(
+                db_conn,
+                job,
+                archive_ids_for_search,
+                clp_metadata_db_conn_params,
+                results_cache_uri,
+                job.num_archives_to_search,
             )
             logger.info(
                 f"Dispatched job {job_id} with {len(archive_ids_for_search)} archives to search."
-            )
-            start_time = datetime.datetime.now()
-            job.start_time = start_time
-            set_job_or_task_status(
-                db_conn,
-                QUERY_JOBS_TABLE_NAME,
-                job_id,
-                QueryJobStatus.RUNNING,
-                QueryJobStatus.PENDING,
-                start_time=start_time,
-                num_tasks=job.num_archives_to_search,
             )
 
     return reducer_acquisition_tasks
@@ -590,6 +719,51 @@ async def handle_finished_search_job(
     del active_jobs[job_id]
 
 
+async def handle_finished_extract_ir_job(
+    db_conn, job: ExtractIrJob, task_results: Optional[Any]
+) -> None:
+    global active_jobs
+
+    job_id = job.id
+    new_job_status = QueryJobStatus.SUCCEEDED
+    num_tasks = len(task_results)
+    if 1 != num_tasks:
+        logger.error(
+            f"Unexpected number of tasks for IR extraction job {job_id}. "
+            f"Expected 1, got {num_tasks}."
+        )
+        new_job_status = QueryJobStatus.FAILED
+    else:
+        task_result = QueryTaskResult.parse_obj(task_results[0])
+        task_id = task_result.task_id
+        if not QueryJobStatus.SUCCEEDED == task_result.status:
+            logger.error(
+                f"IR extraction task job-{job_id}-task-{task_id} failed. "
+                f"Check {task_result.error_log_path} for details."
+            )
+            new_job_status = QueryJobStatus.FAILED
+        else:
+            logger.info(
+                f"IR extraction task job-{job_id}-task-{task_id} succeeded in "
+                f"{task_result.duration} second(s)."
+            )
+
+    if set_job_or_task_status(
+        db_conn,
+        QUERY_JOBS_TABLE_NAME,
+        job_id,
+        new_job_status,
+        QueryJobStatus.RUNNING,
+        num_tasks_completed=num_tasks,
+        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+    ):
+        if new_job_status == QueryJobStatus.SUCCEEDED:
+            logger.info(f"Completed IR extraction job {job_id}.")
+        else:
+            logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
+    del active_jobs[job_id]
+
+
 async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
     global active_jobs
 
@@ -627,6 +801,9 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 await handle_finished_search_job(
                     db_conn, search_job, returned_results, results_cache_uri
                 )
+            elif QueryJobType.EXTRACT_IR == job_type:
+                extract_ir_job: ExtractIrJob = job
+                await handle_finished_extract_ir_job(db_conn, extract_ir_job, returned_results)
             else:
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
 
