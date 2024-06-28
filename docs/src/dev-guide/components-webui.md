@@ -41,7 +41,7 @@ package:
    ```shell
    # Please update `<database.password>` accordingly.
    
-   MONGO_URL="mongodb://localhost:27017/clp-search" \
+   MONGO_URL="mongodb://localhost:27017/clp-query-results" \
    ROOT_URL="http://localhost:4000"                 \
    CLP_DB_USER="clp-user"                           \
    CLP_DB_PASS="<database.password>"                \
