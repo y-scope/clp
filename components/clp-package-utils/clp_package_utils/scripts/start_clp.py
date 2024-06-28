@@ -87,6 +87,15 @@ def append_docker_port_settings_for_host_ips(
         cmd.append(f"{ip}:{host_port}:{container_port}")
 
 
+def chown_recursively(
+    path: pathlib.Path,
+    user_id: int,
+    group_id: int,
+):
+    chown_cmd = ["chown", "-R", f"{user_id}:{group_id}", str(path)]
+    subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+
+
 def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int):
     container_exec_cmd = ["docker", "exec", container_name]
     cmd = container_exec_cmd + cmd_to_run
@@ -268,6 +277,14 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         DockerMount(DockerMountType.BIND, queue_logs_dir, rabbitmq_logs_dir),
     ]
     rabbitmq_pid_file_path = pathlib.Path("/") / "tmp" / "rabbitmq.pid"
+
+    container_user = f"{os.getuid()}:{os.getgid()}"
+    if os.getuid() == 0:
+        # Use the default container user and make the directories
+        # writable by the default user if the current user is root
+        container_user = "rabbitmq"
+        chown_recursively(queue_logs_dir, 999, 999)
+
     # fmt: off
     cmd = [
         "docker", "run",
@@ -277,7 +294,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
         "-e", f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
         "-e", f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
+        "-u", container_user
     ]
     # fmt: on
     append_docker_port_settings_for_host_ips(
@@ -330,13 +347,22 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
         ),
         DockerMount(DockerMountType.BIND, redis_data_dir, pathlib.Path("/") / "data"),
     ]
+
+    container_user = f"{os.getuid()}:{os.getgid()}"
+    if os.getuid() == 0:
+        # Use the default container user and make the directories
+        # writable by the default user if the current user is root
+        container_user = "redis"
+        chown_recursively(redis_data_dir, 999, 999)
+        chown_recursively(redis_logs_dir, 999, 999)
+
     # fmt: off
     cmd = [
         "docker", "run",
         "-d",
         "--name", container_name,
         "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
+        "-u", container_user,
     ]
     # fmt: on
     for mount in mounts:
@@ -349,6 +375,19 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     cmd.append("redis-server")
     cmd.append(str(config_file_path))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    # fmt: off
+    redis_ping_cmd = [
+        "redis-cli",
+        "-h", "127.0.0.1",
+        "-p", "6379",
+        "-a", clp_config.redis.password,
+        "PING"
+    ]
+    # fmt: on
+
+    if not wait_for_container_cmd(container_name, redis_ping_cmd, 30):
+        raise EnvironmentError(f"{component_name} did not initialize in time")
 
     logger.info(f"Started {component_name}.")
 
@@ -376,13 +415,22 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         DockerMount(DockerMountType.BIND, data_dir, pathlib.Path("/") / "data" / "db"),
         DockerMount(DockerMountType.BIND, logs_dir, pathlib.Path("/") / "var" / "log" / "mongodb"),
     ]
+
+    container_user = f"{os.getuid()}:{os.getgid()}"
+    if os.getuid() == 0:
+        # Use the default container user and make the directories
+        # writable by the default user if the current user is root
+        container_user = "mongodb"
+        chown_recursively(data_dir, 999, 999)
+        chown_recursively(logs_dir, 999, 999)
+
     # fmt: off
     cmd = [
         "docker", "run",
         "-d",
         "--name", container_name,
         "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
+        "-u", container_user,
     ]
     # fmt: on
     for mount in mounts:
