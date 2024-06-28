@@ -306,13 +306,13 @@ def get_archive_and_file_split_ids(
     msg_ix: int,
 ):
     """
-    Fetches the id of the file split id and the id of the archive containing
-    the file split based on the following criteria:
-    - 1. The file split's original file id = orig_file_id
-    - 2. The file split includes the message with index = msg_ix
+    Fetches the IDs of the file split and the archive containing the file split based on the
+    following criteria:
+    1. The file split's original file id = `orig_file_id`
+    2. The file split includes the message with index = `msg_ix`
     :param db_conn:
-    :param orig_file_id: original file id of the split
-    :param msg_ix: message index the file split must include
+    :param orig_file_id: Original file id of the split
+    :param msg_ix: Index of the message that the file split must include
     :return: A list of (archive id, file split id) on success. An empty list if
     an exception occurs while interacting with the database.
     """
