@@ -39,6 +39,16 @@ bool serialize_log_event(
         std::string& logtype,
         std::vector<int8_t>& ir_buf
 );
+
+/**
+ * Serializes the given message into the eight-byte encoding IR stream
+ * delta
+ * @param message
+ * @param logtype
+ * @param ir_buf
+ * @return true on success, false otherwise
+ */
+bool serialize_message(std::string_view message, std::string& logtype, std::vector<int8_t>& ir_buf);
 }  // namespace eight_byte_encoding
 
 namespace four_byte_encoding {

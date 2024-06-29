@@ -3,11 +3,16 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
 
+#include "../../ir/types.hpp"
 #include "byteswap.hpp"
+#include "encoding_methods.hpp"
+#include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
@@ -28,6 +33,24 @@ serialize_metadata(nlohmann::json& metadata, std::vector<int8_t>& ir_buf) -> boo
 template <typename integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& ir_buf) -> void;
 
+/**
+ * Serializes a string using clp encoding.
+ * @tparam encoded_variable_t
+ * @param str
+ * @param buf Outputs the serialized byte sequence.
+ * @return Whether serialization succeeded.
+ */
+template <typename encoded_variable_t>
+[[nodiscard]] auto serialize_clp_string(std::string_view str, std::vector<int8_t>& buf) -> bool;
+
+/**
+ * Serializes a string packet.
+ * @param str
+ * @param buf Outputs the serialized byte sequence.
+ * @return Whether the serialization succeeded.
+ */
+[[nodiscard]] auto serialize_string_packet(std::string_view str, std::vector<int8_t>& buf) -> bool;
+
 template <typename integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& ir_buf) -> void {
     integer_t value_big_endian{};
@@ -42,6 +65,24 @@ auto serialize_int(integer_t value, std::vector<int8_t>& ir_buf) -> void {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     std::span<int8_t> const data_view{reinterpret_cast<int8_t*>(&value_big_endian), sizeof(value)};
     ir_buf.insert(ir_buf.end(), data_view.begin(), data_view.end());
+}
+
+template <typename encoded_variable_t>
+[[nodiscard]] auto serialize_clp_string(std::string_view str, std::vector<int8_t>& buf) -> bool {
+    static_assert(
+            (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
+             || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)
+    );
+    std::string logtype;
+    bool error{};
+    if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
+        buf.push_back(cProtocol::Payload::ValueFourByteEncodingClpStr);
+        error = four_byte_encoding::serialize_message(str, logtype, buf);
+    } else {
+        buf.push_back(cProtocol::Payload::ValueEightByteEncodingClpStr);
+        error = eight_byte_encoding::serialize_message(str, logtype, buf);
+    }
+    return error;
 }
 }  // namespace clp::ffi::ir_stream
 #endif

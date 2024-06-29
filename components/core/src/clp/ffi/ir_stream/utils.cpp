@@ -1,6 +1,7 @@
 #include "utils.hpp"
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
@@ -27,6 +28,25 @@ auto serialize_metadata(nlohmann::json& metadata, std::vector<int8_t>& ir_buf) -
     }
     ir_buf.insert(ir_buf.cend(), metadata_serialized.cbegin(), metadata_serialized.cend());
 
+    return true;
+}
+
+auto serialize_string_packet(std::string_view str, std::vector<int8_t>& buf) -> bool {
+    auto const length{str.length()};
+    if (length <= UINT8_MAX) {
+        buf.push_back(cProtocol::Payload::StrPacketLenUByte);
+        buf.push_back(static_cast<int8_t>(static_cast<uint8_t>(length)));
+    } else if (length <= UINT16_MAX) {
+        buf.push_back(cProtocol::Payload::StrPacketLenUShort);
+        serialize_int(static_cast<uint16_t>(length), buf);
+    } else if (length <= UINT32_MAX) {
+        buf.push_back(cProtocol::Payload::StrPacketLenUInt);
+        serialize_int(static_cast<uint32_t>(length), buf);
+    } else {
+        // Out of range
+        return false;
+    }
+    buf.insert(buf.cend(), str.cbegin(), str.cend());
     return true;
 }
 }  // namespace clp::ffi::ir_stream

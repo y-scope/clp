@@ -136,6 +136,22 @@ bool serialize_log_event(
         string& logtype,
         vector<int8_t>& ir_buf
 ) {
+    if (false == serialize_message(message, logtype, ir_buf)) {
+        return false;
+    }
+
+    // Encode timestamp
+    ir_buf.push_back(cProtocol::Payload::TimestampVal);
+    serialize_int(timestamp, ir_buf);
+
+    return true;
+}
+
+bool serialize_message(
+        std::string_view message,
+        std::string& logtype,
+        std::vector<int8_t>& ir_buf
+) {
     auto encoded_var_handler = [&ir_buf](eight_byte_encoded_variable_t encoded_var) {
         ir_buf.push_back(cProtocol::Payload::VarEightByteEncoding);
         serialize_int(encoded_var, ir_buf);
@@ -153,15 +169,7 @@ bool serialize_log_event(
         return false;
     }
 
-    if (false == serialize_logtype(logtype, ir_buf)) {
-        return false;
-    }
-
-    // Encode timestamp
-    ir_buf.push_back(cProtocol::Payload::TimestampVal);
-    serialize_int(timestamp, ir_buf);
-
-    return true;
+    return serialize_logtype(logtype, ir_buf);
 }
 }  // namespace eight_byte_encoding
 

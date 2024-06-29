@@ -6,9 +6,11 @@
 #include <vector>
 
 #include <boost-outcome/include/boost/outcome/std_result.hpp>
+#include <msgpack.hpp>
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
+#include "../SchemaTreeNode.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
@@ -79,9 +81,40 @@ public:
      */
     auto change_utc_offset(UtcOffset utc_offset) -> void;
 
+    /**
+     * Serializes the given log event.
+     * @param log_event Key-value pair log event to serialize, represented as a msgpack object.
+     * @return Whether the serialization succeeded.
+     */
+    [[nodiscard]] auto serialize_log_event(msgpack::object const& log_event) -> bool;
+
 private:
     // Constructors
     Serializer() = default;
+
+    // Methods
+    /**
+     * Serializes a schema tree node identified by the given locator into `m_schema_tree_node_buf`.
+     * @param locator
+     * @return Whether the serialization succeeded.
+     */
+    [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator) -> bool;
+
+    /**
+     * Serializes the given key id into `m_key_group_buf`.
+     * @param id
+     * @return true on success.
+     * @return false if the id value exceeds the representable range.
+     */
+    [[nodiscard]] auto serialize_key(SchemaTreeNode::id_t id) -> bool;
+
+    /**
+     * Serializes the given msgpack value into `m_value_group_buf`.
+     * @param val
+     * @param type The corresponded `SchemaTreeNode::Type` of `val`.
+     * @return Whether the serialization succeeded.
+     */
+    [[nodiscard]] auto serialize_val(msgpack::object const& val, SchemaTreeNode::Type type) -> bool;
 
     UtcOffset m_curr_utc_offset{0};
     Buffer m_ir_buf;
