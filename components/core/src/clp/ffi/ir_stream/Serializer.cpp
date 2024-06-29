@@ -188,6 +188,7 @@ auto serialize_value_int(int64_t val, vector<int8_t>& buf) -> void {
 }
 
 auto serialize_value_float(double val, vector<int8_t>& buf) -> void {
+    buf.push_back(cProtocol::Payload::ValueFloat);
     serialize_int(bit_cast<uint64_t>(val), buf);
 }
 
