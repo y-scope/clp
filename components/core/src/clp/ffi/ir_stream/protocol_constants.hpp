@@ -52,8 +52,8 @@ constexpr int8_t TimestampDeltaLong = 0x34;
 constexpr int8_t UtcOffsetChange = 0x3F;
 
 constexpr int8_t StrPacketLenUByte = 0x41;
-constexpr int8_t StrPacketLenUShort = 0x41;
-constexpr int8_t StrPacketLenUInt = 0x41;
+constexpr int8_t StrPacketLenUShort = 0x42;
+constexpr int8_t StrPacketLenUInt = 0x43;
 
 constexpr int8_t SchemaTreeNodeInt = 0x71;
 constexpr int8_t SchemaTreeNodeFloat = 0x72;
