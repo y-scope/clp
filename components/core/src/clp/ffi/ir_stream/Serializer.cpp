@@ -1,6 +1,5 @@
 #include "Serializer.hpp"
 
-#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -17,6 +16,7 @@
 
 #include "../../ir/types.hpp"
 #include "../../time_types.hpp"
+#include "../../type_utils.hpp"
 #include "../encoding_methods.hpp"
 #include "../SchemaTree.hpp"
 #include "../SchemaTreeNode.hpp"
@@ -188,7 +188,7 @@ auto serialize_value_int(int64_t val, vector<int8_t>& buf) -> void {
 }
 
 auto serialize_value_float(double val, vector<int8_t>& buf) -> void {
-    serialize_int(std::bit_cast<uint64_t>(val), buf);
+    serialize_int(bit_cast<uint64_t>(val), buf);
 }
 
 auto serialize_value_bool(bool val, vector<int8_t>& buf) -> void {
