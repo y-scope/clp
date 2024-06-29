@@ -110,33 +110,6 @@ curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> s
 }
 }  // namespace
 
-bool NetworkReader::m_static_init_complete{false};
-
-auto NetworkReader::init() -> ErrorCode {
-    if (m_static_init_complete) {
-        return ErrorCode_Success;
-    }
-    if (0 != curl_global_init(CURL_GLOBAL_ALL)) {
-        return ErrorCode_Failure;
-    }
-    m_static_init_complete = true;
-    return ErrorCode_Success;
-}
-
-auto NetworkReader::deinit() -> void {
-#if defined(__APPLE__)
-    // NOTE: On macOS, calling `curl_global_init` after `curl_global_cleanup` will fail with
-    // CURLE_SSL_CONNECT_ERROR. Thus, for now, we skip `deinit` on macOS. Related issues:
-    // - https://github.com/curl/curl/issues/12525
-    // - https://github.com/curl/curl/issues/13805
-    // TODO: Remove this conditional logic when the issues are resolved.
-    return;
-#else
-    curl_global_cleanup();
-    m_static_init_complete = false;
-#endif
-}
-
 NetworkReader::NetworkReader(
         std::string_view src_url,
         size_t offset,
@@ -156,9 +129,6 @@ NetworkReader::NetworkReader(
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
         m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
-    }
-    if (false == m_static_init_complete) {
-        throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
     }
     m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
     m_downloader_thread->start();
