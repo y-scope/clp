@@ -52,6 +52,14 @@ public:
     [[nodiscard]] size_t get_num_bytes_read() const { return m_bytes_read; }
 
     /**
+     * Note: this method can not be const because checking if a simdjson iterator is at the end
+     * of a document stream is non-const.
+     *
+     * @return total number of bytes consumed from the file via get_json
+     */
+    [[nodiscard]] size_t get_num_bytes_consumed();
+
+    /**
      * @return the last error code encountered when iterating over the json file
      */
     [[nodiscard]] simdjson::error_code get_error() const { return m_error_code; }
