@@ -12,7 +12,6 @@
 #include "DictionaryReader.hpp"
 #include "ReaderUtils.hpp"
 #include "SchemaReader.hpp"
-#include "TableReader.hpp"
 #include "TimestampDictionaryReader.hpp"
 #include "Utils.hpp"
 
@@ -92,11 +91,8 @@ public:
      * @param should_marshal_records
      * @return the schema reader
      */
-    SchemaReader& read_schema_table(
-            int32_t schema_id,
-            bool should_extract_timestamp,
-            bool should_marshal_records
-    );
+    SchemaReader&
+    read_table(int32_t schema_id, bool should_extract_timestamp, bool should_marshal_records);
 
     /**
      * Loads all of the tables in the archive and returns SchemaReaders for them.
@@ -175,14 +171,6 @@ private:
             bool should_marshal_records
     );
 
-    /**
-     * Reads a table with given ID from the table reader. If read_table is called multiple times in
-     * a row for the same table_id a cached buffer is returned. This function allows the caller to
-     * ask for the same buffer to be reused to read multiple different tables: this can save memory
-     * allocations, but can only be used when tables are read one at a time.
-     */
-    std::shared_ptr<char[]> read_table(size_t table_id, bool reuse_buffer);
-
     bool m_is_open;
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -193,15 +181,13 @@ private:
     std::shared_ptr<SchemaTree> m_schema_tree;
     std::shared_ptr<ReaderUtils::SchemaMap> m_schema_map;
     std::vector<int32_t> m_schema_ids;
-    std::map<int32_t, SchemaReader::SchemaMetadata> m_id_to_schema_metadata;
+    std::map<int32_t, SchemaReader::TableMetadata> m_id_to_table_metadata;
 
-    TableReader m_table_reader;
+    FileReader m_tables_file_reader;
     FileReader m_table_metadata_file_reader;
+    ZstdDecompressor m_tables_decompressor;
     ZstdDecompressor m_table_metadata_decompressor;
     SchemaReader m_schema_reader;
-    std::shared_ptr<char[]> m_table_buffer{};
-    size_t m_table_buffer_size{0ULL};
-    size_t m_cur_table_id{0ULL};
 };
 }  // namespace clp_s
 

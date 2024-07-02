@@ -1,7 +1,6 @@
 #ifndef CLP_S_SCHEMAREADER_HPP
 #define CLP_S_SCHEMAREADER_HPP
 
-#include <memory>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -12,6 +11,7 @@
 #include "FileReader.hpp"
 #include "JsonSerializer.hpp"
 #include "SchemaTree.hpp"
+#include "ZstdDecompressor.hpp"
 
 namespace clp_s {
 class SchemaReader;
@@ -47,10 +47,9 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    struct SchemaMetadata {
-        size_t table_id;
-        size_t table_offset;
-        size_t num_messages;
+    struct TableMetadata {
+        uint64_t num_messages;
+        size_t offset;
         size_t uncompressed_size;
     };
 
@@ -131,12 +130,11 @@ public:
     );
 
     /**
-     * Loads the encoded messages from a shared buffer starting at a given offset
-     * @param table_buffer
-     * @param offset
+     * Loads the encoded messages
+     * @param decompressor
      * @param uncompressed_size
      */
-    void load(std::shared_ptr<char[]> table_buffer, size_t offset, size_t uncompressed_size);
+    void load(ZstdDecompressor& decompressor, size_t uncompressed_size);
 
     /**
      * Gets next message
@@ -279,7 +277,8 @@ private:
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
     std::vector<BaseColumnReader*> m_reordered_columns;
-    std::shared_ptr<char[]> m_table_buffer;
+    std::unique_ptr<char[]> m_table_buffer;
+    size_t m_table_buffer_size{0};
 
     BaseColumnReader* m_timestamp_column;
     std::function<epochtime_t()> m_get_timestamp;
