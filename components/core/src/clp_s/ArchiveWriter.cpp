@@ -1,5 +1,8 @@
 #include "ArchiveWriter.hpp"
 
+#include <algorithm>
+#include <tuple>
+
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "archive_constants.hpp"
@@ -11,6 +14,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_id = boost::uuids::to_string(option.id);
     m_compression_level = option.compression_level;
     m_print_archive_stats = option.print_archive_stats;
+    m_min_table_size = option.min_table_size;
     auto archive_path = boost::filesystem::path(option.archives_dir) / m_id;
 
     boost::system::error_code boost_error_code;
@@ -138,18 +142,69 @@ size_t ArchiveWriter::store_tables() {
             FileWriter::OpenMode::CreateForWriting
     );
     m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);
-    m_table_metadata_compressor.write_numeric_value(m_id_to_schema_writer.size());
-    for (auto& i : m_id_to_schema_writer) {
-        m_table_metadata_compressor.write_numeric_value(i.first);
-        m_table_metadata_compressor.write_numeric_value(i.second->get_num_messages());
-        m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
 
-        m_tables_compressor.open(m_tables_file_writer, m_compression_level);
-        size_t uncompressed_size = i.second->store(m_tables_compressor);
-        m_tables_compressor.close();
-        delete i.second;
+    using schema_map_it = decltype(m_id_to_schema_writer)::iterator;
+    std::vector<schema_map_it> schemas;
+    std::vector<std::tuple<size_t, size_t>> table_metadata;
+    std::vector<std::tuple<int32_t, size_t, size_t, size_t>> schema_metadata;
 
+    schema_metadata.reserve(m_id_to_schema_writer.size());
+    schemas.reserve(m_id_to_schema_writer.size());
+    auto it = m_id_to_schema_writer.begin();
+    for (size_t i = 0; i < m_id_to_schema_writer.size(); ++i) {
+        schemas.push_back(it++);
+    }
+    auto comp = [](schema_map_it const& lhs, schema_map_it const& rhs) -> bool {
+        return lhs->second->get_total_uncompressed_size()
+               > rhs->second->get_total_uncompressed_size();
+    };
+    std::sort(schemas.begin(), schemas.end(), comp);
+
+    size_t current_table_size = 0;
+    size_t current_table_id = 0;
+    size_t current_table_file_offset = 0;
+    m_tables_compressor.open(m_tables_file_writer, m_compression_level);
+    for (auto it : schemas) {
+        it->second->store(m_tables_compressor);
+        schema_metadata.emplace_back(
+                it->first,
+                it->second->get_num_messages(),
+                current_table_id,
+                current_table_size
+        );
+        current_table_size += it->second->get_total_uncompressed_size();
+        delete it->second;
+
+        if (current_table_size > m_min_table_size || schemas.size() == schema_metadata.size()) {
+            table_metadata.emplace_back(current_table_file_offset, current_table_size);
+            m_tables_compressor.close();
+            current_table_size = 0;
+            ++current_table_id;
+            current_table_file_offset = m_tables_file_writer.get_pos();
+
+            if (schemas.size() != schema_metadata.size()) {
+                m_tables_compressor.open(m_tables_file_writer, m_compression_level);
+            }
+        }
+    }
+
+    // table metadata schema
+    // # num tables <64 bit>
+    // # [offset into file <64 bit> uncompressed size <64 bit>]+
+    // # num schemas <64 bit>
+    // # [table id <64 bit> offset into table <64 bit> schema id <32 bit> num messages <64 bit>]+
+    m_table_metadata_compressor.write_numeric_value(table_metadata.size());
+    for (auto& [file_offset, uncompressed_size] : table_metadata) {
+        m_table_metadata_compressor.write_numeric_value(file_offset);
         m_table_metadata_compressor.write_numeric_value(uncompressed_size);
+    }
+
+    m_table_metadata_compressor.write_numeric_value(schema_metadata.size());
+    for (auto& [schema_id, num_messages, table_id, table_offset] : schema_metadata) {
+        m_table_metadata_compressor.write_numeric_value(table_id);
+        m_table_metadata_compressor.write_numeric_value(table_offset);
+        m_table_metadata_compressor.write_numeric_value(schema_id);
+        m_table_metadata_compressor.write_numeric_value(num_messages);
     }
     m_table_metadata_compressor.close();
 

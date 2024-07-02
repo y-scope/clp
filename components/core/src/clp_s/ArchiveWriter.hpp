@@ -21,6 +21,7 @@ struct ArchiveWriterOption {
     std::string archives_dir;
     int compression_level;
     bool print_archive_stats;
+    size_t min_table_size;
 };
 
 class ArchiveWriter {
@@ -159,6 +160,7 @@ private:
     std::shared_ptr<clp::GlobalMySQLMetadataDB> m_metadata_db;
     int m_compression_level{};
     bool m_print_archive_stats{};
+    size_t m_min_table_size{};
 
     SchemaMap m_schema_map;
     SchemaTree m_schema_tree;
