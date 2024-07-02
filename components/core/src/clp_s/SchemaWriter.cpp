@@ -4,6 +4,7 @@
 
 namespace clp_s {
 void SchemaWriter::append_column(BaseColumnWriter* column_writer) {
+    m_total_uncompressed_size += column_writer->get_total_header_size();
     m_columns.push_back(column_writer);
 }
 
@@ -24,15 +25,14 @@ size_t SchemaWriter::append_message(ParsedMessage& message) {
     }
 
     m_num_messages++;
+    m_total_uncompressed_size += total_size;
     return total_size;
 }
 
-size_t SchemaWriter::store(ZstdCompressor& compressor) {
-    size_t total_size = 0;
+void SchemaWriter::store(ZstdCompressor& compressor) {
     for (auto& writer : m_columns) {
-        total_size += writer->store(compressor);
+        writer->store(compressor);
     }
-    return total_size;
 }
 
 SchemaWriter::~SchemaWriter() {
