@@ -2,7 +2,6 @@
 #define CLP_SQLITEPREPAREDSELECTSTATEMENT_HPP
 
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -14,8 +13,8 @@
 #include "TraceableException.hpp"
 
 /**
- * This class provides abstractions to a sqlite select statement. It maintains a map to lookup the
- * index of a selected column in the statement from a given name.
+ * A SQLite `SELECT` prepared statement that maintains a mapping between each selected column and
+ * its index, so that each column in the result set can be retrieved using its name.
  */
 namespace clp {
 class SQLitePreparedSelectStatement : public SQLitePreparedStatement {
@@ -40,63 +39,65 @@ public:
         std::string m_msg;
     };
 
-    // Factory functions.
+    // Factory functions
     /**
-     * Constructs and returns a SQLite select statement with given parameters.
-     * @param columns_to_select The name of columns to select.
+     * Constructs a SQLite `SELECT` statement with the given parameters.
+     * @param columns_to_select The names of the columns to select.
      * @param table The name of the table to select from.
-     * @param where_clause SQLite `WHERE` clause to filter rows in the result set. Each element is
-     * a formatted comparison. All the comparisons are chained with `AND` logic operator.
-     * @param ordering_clause SQLite `ORDER BY` clause to sort the result set.
+     * @param where_clause_predicates Optional predicates for the `WHERE` clause.
+     * @param sort_keys Optional sort keys for the `ORDER BY` clause. These may be in the form
+     * "<column-name>" OR "<column-name> <ASC|DESC>".
      * @param db_handle
-     * @return a new constructed select statement.
+     * @return The SQLite statement.
      * @throw clp::SQLitePreparedStatement::OperationFailed on failure.
      */
     [[nodiscard]] static auto create_sqlite_prepared_select_statement(
             std::vector<std::string> const& columns_to_select,
             std::string_view table,
-            std::vector<std::string> const& where_clause,
-            std::vector<std::string> const& ordering_clause,
+            std::vector<std::string> const& where_clause_predicates,
+            std::vector<std::string> const& sort_keys,
             sqlite3* db_handle
     ) -> SQLitePreparedSelectStatement;
 
-    ~SQLitePreparedSelectStatement() override = default;
-
-    // Deletes copy constructor and assignment.
+    // Constructors and assignment operators
+    // Disable copy constructor and assignment operator
     SQLitePreparedSelectStatement(SQLitePreparedSelectStatement const&) = delete;
     auto operator=(SQLitePreparedSelectStatement const&) -> SQLitePreparedSelectStatement& = delete;
 
-    // Defines default move constructor and assignment.
+    // Use default move constructor and assignment operator
     SQLitePreparedSelectStatement(SQLitePreparedSelectStatement&& rhs) noexcept = default;
     auto operator=(SQLitePreparedSelectStatement&& rhs
     ) noexcept -> SQLitePreparedSelectStatement& = default;
 
+    // Destructor
+    ~SQLitePreparedSelectStatement() override = default;
+
     // Methods
     /**
-     * @param selected_column
-     * @return The int value from the selected column.
-     * @throw OperationFailed if the name is not a valid selected column.
+     * @param column_name
+     * @return The selected column's value as an int.
+     * @throw OperationFailed if the name is not a selected column.
      */
-    [[nodiscard]] auto column_int(std::string const& selected_column) const -> int {
+    [[nodiscard]] auto column_int(std::string const& column_name) const -> int {
         return SQLitePreparedStatement::column_int(
-                static_cast<int>(get_selected_column_idx(selected_column))
+                static_cast<int>(get_selected_column_idx(column_name))
         );
     }
 
     /**
-     * @param selected_column
-     * @return The int64 value from the selected column.
-     * @throw OperationFailed if the name is not a valid selected column.
+     * @param column_name
+     * @return The selected column's value as an int64.
+     * @throw OperationFailed if the name is not a selected column.
      */
-    [[nodiscard]] auto column_int64(std::string const& selected_column) const -> int64_t {
+    [[nodiscard]] auto column_int64(std::string const& column_name) const -> int64_t {
         return SQLitePreparedStatement::column_int64(
-                static_cast<int>(get_selected_column_idx(selected_column))
+                static_cast<int>(get_selected_column_idx(column_name))
         );
     }
 
     /**
      * @param selected_column
-     * @param value Returns the string value from the selected column.
+     * @param value Returns the selected column's value as a string.
      * @throw OperationFailed if the name is not a valid selected column.
      */
     auto column_string(std::string const& selected_column, std::string& value) const -> void {
@@ -108,26 +109,26 @@ public:
 
 private:
     /**
-     * Constructor. It should not be accessible outside of the class.
-     * `create_sqlite_prepared_select_statement` should be used to create an instance of this
-     * class.
+     * @param statement
+     * @param db_handle
+     * @param selected_column_to_idx
      */
     explicit SQLitePreparedSelectStatement(
             std::string_view statement,
             sqlite3* db_handle,
-            std::unordered_map<std::string, size_t> idx_map
+            std::unordered_map<std::string, size_t> selected_column_to_idx
     )
             : SQLitePreparedStatement{statement.data(), statement.size(), db_handle},
-              m_idx_map{std::move(idx_map)} {}
+              m_selected_column_to_idx{std::move(selected_column_to_idx)} {}
 
     /**
-     * @param selected_column
-     * @return The idx of the selected column in the statement.
-     * @throw OperationFailed if the name doesn't appear in the select statement.
+     * @param column_name
+     * @return Index of the selected column in the statement.
+     * @throw OperationFailed if the name is not a selected column.
      */
-    [[nodiscard]] auto get_selected_column_idx(std::string const& selected_column) const -> size_t;
+    [[nodiscard]] auto get_selected_column_idx(std::string const& column_name) const -> size_t;
 
-    std::unordered_map<std::string, size_t> m_idx_map;
+    std::unordered_map<std::string, size_t> m_selected_column_to_idx;
 };
 }  // namespace clp
 

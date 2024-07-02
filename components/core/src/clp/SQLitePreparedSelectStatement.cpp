@@ -14,12 +14,15 @@
 #include "ErrorCode.hpp"
 #include "SQLitePreparedStatement.hpp"
 
+using std::string;
+using std::vector;
+
 namespace clp {
 auto SQLitePreparedSelectStatement::create_sqlite_prepared_select_statement(
-        std::vector<std::string> const& columns_to_select,
+        vector<string> const& columns_to_select,
         std::string_view table,
-        std::vector<std::string> const& where_clause,
-        std::vector<std::string> const& ordering_clause,
+        vector<string> const& where_clause_predicates,
+        vector<string> const& sort_keys,
         sqlite3* db_handle
 ) -> SQLitePreparedSelectStatement {
     if (columns_to_select.empty()) {
@@ -27,11 +30,11 @@ auto SQLitePreparedSelectStatement::create_sqlite_prepared_select_statement(
                 ErrorCode_Failure,
                 __FILENAME__,
                 __LINE__,
-                "clp::SQLitePreparedSelectStatement Failed: no column to select."
+                "clp::SQLitePreparedSelectStatement: No columns to select."
         );
     }
 
-    std::unordered_map<std::string, size_t> idx_map;
+    std::unordered_map<string, size_t> selected_column_to_idx;
     fmt::memory_buffer statement_buffer;
     auto statement_buffer_ix{std::back_inserter(statement_buffer)};
 
@@ -43,45 +46,45 @@ auto SQLitePreparedSelectStatement::create_sqlite_prepared_select_statement(
     );
     size_t idx{0};
     for (auto const& column : columns_to_select) {
-        idx_map.emplace(column, idx++);
+        selected_column_to_idx.emplace(column, idx++);
     }
 
-    if (false == where_clause.empty()) {
+    if (false == where_clause_predicates.empty()) {
         bool is_first{true};
-        for (auto const& filter : where_clause) {
-            fmt::format_to(statement_buffer_ix, " {} {}", is_first ? "WHERE" : "AND", filter);
+        for (auto const& predicate : where_clause_predicates) {
+            fmt::format_to(statement_buffer_ix, " {} {}", is_first ? "WHERE" : "AND", predicate);
             is_first = false;
         }
     }
 
-    if (false == ordering_clause.empty()) {
+    if (false == sort_keys.empty()) {
         fmt::format_to(statement_buffer_ix, " ORDER BY");
         bool is_first{true};
-        for (auto const& ordering : ordering_clause) {
+        for (auto const& sort_key : sort_keys) {
             if (is_first) {
-                fmt::format_to(statement_buffer_ix, " {}", ordering);
+                fmt::format_to(statement_buffer_ix, " {}", sort_key);
                 is_first = false;
                 continue;
             }
-            fmt::format_to(statement_buffer_ix, ", {}", ordering);
+            fmt::format_to(statement_buffer_ix, ", {}", sort_key);
         }
     }
 
     return SQLitePreparedSelectStatement{
             {statement_buffer.data(), statement_buffer.size()},
             db_handle,
-            idx_map
+            selected_column_to_idx
     };
 }
 
-auto SQLitePreparedSelectStatement::get_selected_column_idx(std::string const& selected_column
+auto SQLitePreparedSelectStatement::get_selected_column_idx(string const& column_name
 ) const -> size_t {
-    auto const idx_it{m_idx_map.find(selected_column)};
-    if (m_idx_map.cend() == idx_it) {
-        std::string const msg{
-                "clp::SQLitePreparedSelectStatement Failed with unknown selected column: "
+    auto const idx_it{m_selected_column_to_idx.find(column_name)};
+    if (m_selected_column_to_idx.cend() == idx_it) {
+        string const msg{
+                "clp::SQLitePreparedSelectStatement: " + column_name + " is not a selected column."
         };
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__, msg + selected_column);
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__, msg + column_name);
     }
     return idx_it->second;
 }
