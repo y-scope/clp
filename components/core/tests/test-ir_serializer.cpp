@@ -1,4 +1,6 @@
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -7,12 +9,11 @@
 
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
-#include "../src/clp/FileReader.hpp"
 #include "../src/clp/ir/constants.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/LogEventSerializer.hpp"
+#include "../src/clp/ir/types.hpp"
 #include "../src/clp/streaming_compression/zstd/Decompressor.hpp"
-#include "../src/clp/Utils.hpp"
 
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
@@ -25,9 +26,7 @@ using std::chrono::milliseconds;
 using std::chrono::system_clock;
 using std::is_same_v;
 
-using clp::ErrorCode_Success;
 using clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success;
-using clp::FileReader;
 using clp::ir::cIrFileExtension;
 using clp::ir::epoch_time_ms_t;
 using clp::ir::LogEventDeserializer;
@@ -48,6 +47,11 @@ auto match_encoding_type(bool is_four_bytes_encoding) -> bool {
         return is_four_bytes_encoding;
     }
 }
+
+struct TestLogEvent {
+    epoch_time_ms_t timestamp;
+    string msg;
+};
 }  // namespace
 
 /*
@@ -57,7 +61,8 @@ auto match_encoding_type(bool is_four_bytes_encoding) -> bool {
 TEMPLATE_TEST_CASE(
         "Serialize log events",
         "[ir][serialize-log-event]",
-        four_byte_encoded_variable_t
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
 ) {
     LogEventSerializer<TestType> serializer;
 
@@ -74,29 +79,34 @@ TEMPLATE_TEST_CASE(
                "abc123"};
     size_t var_ix{0};
 
-    string first_log_event = "here is first string with a small int " + var_strs[var_ix++];
+    vector<TestLogEvent> test_log_events;
+
     auto const first_ts
             = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    string first_log_event = "here is first string with a small int " + var_strs[var_ix++];
     first_log_event += " and a medium int " + var_strs[var_ix++];
     first_log_event += " and a very large int " + var_strs[var_ix++];
     first_log_event += " and a small float " + var_strs[var_ix++];
     first_log_event += "\n";
+    test_log_events.push_back({first_ts, first_log_event});
 
-    auto second_log_event = "here is second string with a medium float " + var_strs[var_ix++];
     auto const second_ts
             = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    auto second_log_event = "here is second string with a medium float " + var_strs[var_ix++];
     second_log_event += " and a weird float " + var_strs[var_ix++];
     second_log_event += " and a string with numbers " + var_strs[var_ix++];
     second_log_event += " and another string with numbers " + var_strs[var_ix++];
     second_log_event += "\n";
+    test_log_events.push_back({second_ts, second_log_event});
 
     string ir_test_file = "ir_serializer_test";
     ir_test_file += cIrFileExtension;
 
     REQUIRE(serializer.open(ir_test_file));
     // Test serializing log events
-    REQUIRE(serializer.serialize_log_event(first_ts, first_log_event));
-    REQUIRE(serializer.serialize_log_event(second_ts, second_log_event));
+    for (auto const& test_log_event: test_log_events) {
+        REQUIRE(serializer.serialize_log_event(test_log_event.timestamp, test_log_event.msg));
+    }
     serializer.close();
 
     Decompressor ir_reader;
@@ -105,43 +115,30 @@ TEMPLATE_TEST_CASE(
     bool uses_four_byte_encoding{false};
     REQUIRE(IRErrorCode_Success
             == clp::ffi::ir_stream::get_encoding_type(ir_reader, uses_four_byte_encoding));
-    REQUIRE(true == uses_four_byte_encoding);
+    REQUIRE(match_encoding_type<TestType>(uses_four_byte_encoding));
 
     auto result = LogEventDeserializer<TestType>::create(ir_reader);
     REQUIRE(false == result.has_error());
-    auto deserializer_inst = std::move(result.value());
+    auto& deserializer_inst = result.value();
 
-    string decoded_message{};
-    // Deserialize the first log event from the IR
-    auto deserialized_result = deserializer_inst.deserialize_log_event();
-    REQUIRE(false == deserialized_result.has_error());
+    for (auto const& test_log_event: test_log_events) {
+        string decoded_message{};
+        // Deserialize the first log event from the IR
+        auto deserialized_result = deserializer_inst.deserialize_log_event();
+        REQUIRE(false == deserialized_result.has_error());
 
-    // Deserialize the log event
-    auto log_event = deserialized_result.value();
-    REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event(log_event, decoded_message));
+        // Deserialize the log event
+        auto log_event = deserialized_result.value();
+        REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
+                == deserialize_log_event(log_event, decoded_message));
 
-    // Compare decoded message and timestamp
-    REQUIRE(decoded_message == first_log_event);
-    REQUIRE(log_event.get_timestamp() == first_ts);
-
-    // Deserialize the second log event from the IR
-    deserialized_result = deserializer_inst.deserialize_log_event();
-    REQUIRE(false == deserialized_result.has_error());
-
-    // Deserialize the log event
-    log_event = deserialized_result.value();
-    decoded_message.clear();
-    REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
-            == deserialize_log_event(log_event, decoded_message));
-
-    // Compare decoded message and timestamp
-    REQUIRE(decoded_message == second_log_event);
-    REQUIRE(log_event.get_timestamp() == second_ts);
-
+        // Compare decoded message and timestamp
+        REQUIRE(decoded_message == test_log_event.msg);
+        REQUIRE(log_event.get_timestamp() == test_log_event.timestamp);
+    }
     // Try decoding non-existing message
-    deserialized_result = deserializer_inst.deserialize_log_event();
-    REQUIRE(true == deserialized_result.has_error());
+    auto deserialized_result = deserializer_inst.deserialize_log_event();
+    REQUIRE(deserialized_result.has_error());
 
     std::filesystem::remove(ir_test_file);
 }
