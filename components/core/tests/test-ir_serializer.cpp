@@ -104,7 +104,7 @@ TEMPLATE_TEST_CASE(
 
     REQUIRE(serializer.open(ir_test_file));
     // Test serializing log events
-    for (auto const& test_log_event: test_log_events) {
+    for (auto const& test_log_event : test_log_events) {
         REQUIRE(serializer.serialize_log_event(test_log_event.timestamp, test_log_event.msg));
     }
     serializer.close();
@@ -121,7 +121,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE(false == result.has_error());
     auto& deserializer_inst = result.value();
 
-    for (auto const& test_log_event: test_log_events) {
+    for (auto const& test_log_event : test_log_events) {
         string decoded_message{};
         // Deserialize the first log event from the IR
         auto deserialized_result = deserializer_inst.deserialize_log_event();
