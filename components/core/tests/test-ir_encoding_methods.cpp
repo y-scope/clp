@@ -1,9 +1,12 @@
 #include <optional>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
+#include <msgpack.hpp>
 
 #include "../src/clp/BufferReader.hpp"
 #include "../src/clp/ErrorCode.hpp"
@@ -132,6 +135,19 @@ auto flush_and_clear_serializer_buffer(
         std::vector<int8_t>& byte_buf
 ) -> void;
 
+/**
+ * Unpacks and serializes the given msgpack bytes using kv serializer.
+ * @tparam encoded_variable_t
+ * @param serializer
+ * @param msgpack_bytes
+ * @return Whether the serialization is succeeded.
+ */
+template <typename encoded_variable_t>
+[[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
+        Serializer<encoded_variable_t>& serializer,
+        vector<unsigned char> const& msgpack_bytes
+) -> bool;
+
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
         vector<UnstructuredLogEvent> const& log_events,
@@ -240,6 +256,20 @@ auto flush_and_clear_serializer_buffer(
     auto const view{serializer.get_ir_buf_view()};
     byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
     serializer.clear_ir_buf();
+}
+
+template <typename encoded_variable_t>
+auto unpack_and_serialize_msgpack_bytes(
+        Serializer<encoded_variable_t>& serializer,
+        vector<unsigned char> const& msgpack_bytes
+) -> bool {
+    msgpack::object_handle msgpack_oh;
+    msgpack::unpack(
+            msgpack_oh,
+            clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
+            msgpack_bytes.size()
+    );
+    return serializer.serialize_msgpack_map(msgpack_oh.get());
 }
 }  // namespace
 
@@ -970,4 +1000,87 @@ TEMPLATE_TEST_CASE(
             (clp::ErrorCode_EndOfFile == buffer_reader.try_read(&eof, 1, num_bytes_read)
              && 0 == num_bytes_read)
     );
+}
+
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_Serializer_serialize_msgpack",
+        "[clp][ffi][ir_stream][Serializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    vector<int8_t> ir_buf;
+
+    auto result{Serializer<TestType>::create()};
+    REQUIRE((false == result.has_error()));
+
+    auto& serializer{result.value()};
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+
+    auto const empty_array = nlohmann::json::parse("[]");
+    auto const empty_obj = nlohmann::json::parse("{}");
+    REQUIRE(unpack_and_serialize_msgpack_bytes(serializer, nlohmann::json::to_msgpack(empty_obj)));
+
+    // TODO:
+    // Before kv-pair IR Deserializer is implemented, we cannot test whether the serialized bytes
+    // can be correctly deserialized. We should improve the test coverage once we have a
+    // deserializer implementation.
+
+    // Test encoding basic object
+    constexpr string_view cShortString{"short_string"};
+    constexpr string_view cClpString{"uid=0, CPU usage: 99.99%, \"user_name\"=YScope"};
+    nlohmann::json const basic_obj
+            = {{"int8_max", INT8_MAX},
+               {"int8_min", INT8_MIN},
+               {"int16_max", INT16_MAX},
+               {"int16_min", INT16_MIN},
+               {"int32_max", INT32_MAX},
+               {"int32_min", INT32_MIN},
+               {"int64_max", INT64_MAX},
+               {"int64_min", INT64_MIN},
+               {"float_zero", 0.0},
+               {"float_pos", 1.01},
+               {"float_neg", -1.01},
+               {"true", true},
+               {"false", false},
+               {"string", cShortString},
+               {"clp_string", cClpString},
+               {"null", nullptr},
+               {"empty_object", empty_obj},
+               {"empty_array", empty_array}};
+
+    REQUIRE(unpack_and_serialize_msgpack_bytes(serializer, nlohmann::json::to_msgpack(basic_obj)));
+
+    auto basic_array = empty_array;
+    basic_array.emplace_back(1);
+    basic_array.emplace_back(1.0);
+    basic_array.emplace_back(true);
+    basic_array.emplace_back(cShortString);
+    basic_array.emplace_back(cClpString);
+    basic_array.emplace_back(nullptr);
+    basic_array.emplace_back(empty_array);
+    for (auto const& element : basic_array) {
+        // Non-map objects should fail the serialization
+        REQUIRE(
+                (false
+                 == unpack_and_serialize_msgpack_bytes(
+                         serializer,
+                         nlohmann::json::to_msgpack(element)
+                 ))
+        );
+    }
+    basic_array.emplace_back(empty_obj);
+
+    // Recursively construct an object containing inner maps and inner arrays.
+    auto recursive_obj = basic_obj;
+    auto recursive_array = basic_array;
+    constexpr size_t cRecursiveDepth{5};
+    for (size_t i{0}; i < cRecursiveDepth; ++i) {
+        recursive_array.emplace_back(recursive_obj);
+        recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
+        recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
+        REQUIRE(unpack_and_serialize_msgpack_bytes(
+                serializer,
+                nlohmann::json::to_msgpack(recursive_obj)
+        ));
+    }
 }

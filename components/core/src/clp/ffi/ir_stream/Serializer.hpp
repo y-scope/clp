@@ -82,11 +82,11 @@ public:
     auto change_utc_offset(UtcOffset utc_offset) -> void;
 
     /**
-     * Serializes the given log event.
-     * @param log_event Key-value pair log event to serialize, represented as a msgpack object.
+     * Serializes the given msgpack map as a key-value pair log event.
+     * @param msgpack_map msgpack key-value pair map to serialize, representing an log event.
      * @return Whether the serialization succeeded.
      */
-    [[nodiscard]] auto serialize_log_event(msgpack::object const& log_event) -> bool;
+    [[nodiscard]] auto serialize_msgpack_map(msgpack::object const& msgpack_map) -> bool;
 
 private:
     // Constructors

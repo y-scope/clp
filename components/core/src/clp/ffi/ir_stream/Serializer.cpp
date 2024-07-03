@@ -259,13 +259,14 @@ auto Serializer<encoded_variable_t>::change_utc_offset(UtcOffset utc_offset) -> 
 }
 
 template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::serialize_log_event(msgpack::object const& log_event) -> bool {
-    if (msgpack::type::MAP != log_event.type) {
+auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object const& msgpack_map
+) -> bool {
+    if (msgpack::type::MAP != msgpack_map.type) {
         return false;
     }
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-    auto const& map{log_event.via.map};
+    auto const& map{msgpack_map.via.map};
     if (0 == map.size) {
         serialize_empty_object(m_ir_buf);
         return true;
@@ -468,11 +469,11 @@ template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOf
 ) -> void;
 template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
 ) -> void;
-template auto Serializer<four_byte_encoded_variable_t>::serialize_log_event(
-        msgpack::object const& log_event
+template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
+        msgpack::object const& msgpack_map
 ) -> bool;
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_log_event(
-        msgpack::object const& log_event
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
+        msgpack::object const& msgpack_map
 ) -> bool;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
