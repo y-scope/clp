@@ -140,7 +140,7 @@ auto flush_and_clear_serializer_buffer(
  * @tparam encoded_variable_t
  * @param serializer
  * @param msgpack_bytes
- * @return Whether the serialization is succeeded.
+ * @return Whether the serialization is successful.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(

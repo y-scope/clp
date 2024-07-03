@@ -84,7 +84,7 @@ private:
 
 /**
  * Serializes a value corresponded to an empty object.
- * @parma buf Outputs the serialized byte sequence.
+ * @param buf Outputs the serialized byte sequence.
  */
 auto serialize_empty_object(vector<int8_t>& buf) -> void;
 
