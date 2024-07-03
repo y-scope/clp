@@ -156,4 +156,14 @@ bool JsonFileIterator::get_json(simdjson::ondemand::document_stream::iterator& i
     } while (read_new_json());
     return false;
 }
+
+size_t JsonFileIterator::get_num_bytes_consumed() {
+    // If there are more documents left in the current buffer account for how much of the
+    // buffer has been consumed, otherwise report the total number of bytes read so that we
+    // capture trailing whitespace.
+    if (m_doc_it != m_stream.end()) {
+        return m_bytes_read - (m_buf_occupied - m_next_document_position);
+    }
+    return m_bytes_read;
+}
 }  // namespace clp_s
