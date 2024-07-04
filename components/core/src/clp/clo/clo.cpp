@@ -192,7 +192,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp(
                             clp::clo::cResultsCacheKeys::IrOutput::Path,
-                            dest_ir_path.string()
+                            dest_ir_file_name
                     ),
                     bsoncxx::builder::basic::kvp(
                             clp::clo::cResultsCacheKeys::OrigFileId,
