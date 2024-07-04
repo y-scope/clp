@@ -55,7 +55,9 @@ const config = {
     },
     output: {
         path: path.resolve(dirname, "dist"),
-        filename: "[name].[contenthash].bundle.js",
+        filename: isProduction ?
+            "[name].[contenthash].bundle.js" :
+            "[name].bundle.js",
         clean: true,
         publicPath: "auto",
     },
