@@ -4,10 +4,10 @@
   "description": "",
   "main": "src/index.jsx",
   "scripts": {
-    "lint:check": "npx eslint --no-eslintrc --config package.json src webpack.config.js",
-    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src webpack.config.js",
     "build": "webpack --define-process-env-node-env production",
-    "watch": "webpack serve"
+    "start": "webpack serve",
+    "lint:check": "npx eslint --no-eslintrc --config package.json src webpack.config.js",
+    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src webpack.config.js"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
