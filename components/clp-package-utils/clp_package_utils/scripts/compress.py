@@ -14,7 +14,8 @@ from clp_package_utils.general import (
     generate_container_start_cmd,
     get_clp_home,
     JobType,
-    validate_and_load_config_for_job_submission_script,
+    load_config_file,
+    validate_and_load_db_credentials_file,
 )
 
 # Setup logging
@@ -54,10 +55,17 @@ def main(argv):
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
-    clp_config = validate_and_load_config_for_job_submission_script(
-        clp_home, pathlib.Path(parsed_args.config), default_config_file_path, logger
-    )
-    if not clp_config:
+    try:
+        config_file_path = pathlib.Path(parsed_args.config)
+        clp_config = load_config_file(
+            config_file_path, default_config_file_path, clp_home
+        )
+        clp_config.validate_logs_dir()
+
+        # Validate and load necessary credentials
+        validate_and_load_db_credentials_file(clp_config, clp_home, False)
+    except:
+        logger.exception("Failed to load config.")
         return -1
 
     container_name = generate_container_name(JobType.COMPRESSION)

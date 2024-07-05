@@ -8,8 +8,7 @@ import subprocess
 import typing
 import uuid
 from enum import auto
-from logging import Logger
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -322,29 +321,9 @@ def validate_config_key_existence(config, key):
     return value
 
 
-def validate_and_load_config_for_job_submission_script(
-    clp_home: pathlib.Path,
-    config_file_path: pathlib.Path,
-    default_config_file_path: pathlib.Path,
-    logger: Logger,
-) -> Optional[CLPConfig]:
-    # Validate and load config file
-    try:
-        config_file_path = pathlib.Path(config_file_path)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
-
-        # Validate and load necessary credentials
-        validate_and_load_db_credentials_file(clp_config, clp_home, False)
-        return clp_config
-    except:
-        logger.exception("Failed to load config.")
-        return None
-
-
 def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
-) -> CLPConfig:
+):
     if config_file_path.exists():
         raw_clp_config = read_yaml_config_file(config_file_path)
         if raw_clp_config is None:
