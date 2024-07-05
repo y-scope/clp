@@ -25,7 +25,7 @@ from clp_package_utils.general import (
     get_clp_home,
     is_container_exited,
     is_container_running,
-    validate_and_load_config_file,
+    load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
 )
@@ -103,7 +103,7 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
+        clp_config = load_config_file(
             config_file_path, default_config_file_path, clp_home
         )
 

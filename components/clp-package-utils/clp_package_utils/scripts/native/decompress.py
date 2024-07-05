@@ -12,7 +12,7 @@ from clp_py_utils.clp_config import CLPConfig
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     get_clp_home,
-    validate_and_load_config_file,
+    load_config_file,
 )
 
 # Setup logging
@@ -26,7 +26,7 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def _validate_and_load_config_file(
+def validate_and_load_config_file(
     clp_home: pathlib.Path,
     config_file_path: pathlib.Path,
     default_config_file_path: pathlib.Path,
@@ -39,7 +39,7 @@ def _validate_and_load_config_file(
     :return: clp_config on success, None otherwise.
     """
     try:
-        clp_config = validate_and_load_config_file(
+        clp_config = load_config_file(
             config_file_path, default_config_file_path, clp_home
         )
         clp_config.validate_archive_output_dir()
@@ -72,7 +72,7 @@ def handle_decompression_command(
         return -1
 
     # Validate and load config file
-    clp_config = _validate_and_load_config_file(
+    clp_config = validate_and_load_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
     if not clp_config:

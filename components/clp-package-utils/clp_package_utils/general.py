@@ -321,7 +321,7 @@ def validate_config_key_existence(config, key):
     return value
 
 
-def validate_and_load_config_file(
+def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
 ):
     if config_file_path.exists():

@@ -18,7 +18,7 @@ from job_orchestration.scheduler.job_config import AggregationConfig, SearchJobC
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     get_clp_home,
-    validate_and_load_config_file,
+    load_config_file,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -270,7 +270,7 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
+        clp_config = load_config_file(
             config_file_path, default_config_file_path, clp_home
         )
         clp_config.validate_logs_dir()
