@@ -7,7 +7,7 @@
     "build": "webpack --define-process-env-node-env production",
     "lint:check": "npx eslint --no-eslintrc --config package.json src webpack.config.js",
     "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src webpack.config.js",
-    "start": "webpack serve",
+    "start": "webpack serve"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
