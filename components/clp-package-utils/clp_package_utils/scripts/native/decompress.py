@@ -39,9 +39,7 @@ def validate_and_load_config_file(
     :return: clp_config on success, None otherwise.
     """
     try:
-        clp_config = load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_archive_output_dir()
         clp_config.validate_logs_dir()
         return clp_config
