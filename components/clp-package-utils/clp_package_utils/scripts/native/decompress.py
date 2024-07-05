@@ -119,6 +119,5 @@ def main(argv):
     return handle_decompression(parsed_args, clp_home, clp_config)
 
 
-
 if "__main__" == __name__:
     sys.exit(main(sys.argv))

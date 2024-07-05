@@ -191,7 +191,9 @@ def is_path_already_mounted(
     return host_path_relative_to_mounted_root == container_path_relative_to_mounted_root
 
 
-def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
+def generate_container_config(
+    clp_config: CLPConfig, clp_home: pathlib.Path
+) -> Tuple[CLPConfig, CLPDockerMounts]:
     """
     Copies the given config and sets up mounts mapping the relevant host paths into the container
 
@@ -256,7 +258,7 @@ def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
 
 
 def dump_container_config(
-    clp_config: CLPConfig, container_clp_config, container_name: str
+    clp_config: CLPConfig, container_clp_config: CLPConfig, container_name: str
 ) -> Tuple[pathlib.Path, pathlib.Path]:
     container_config_filename = f".{container_name}-config.yml"
     config_file_path_on_host = clp_config.logs_directory / container_config_filename
@@ -268,8 +270,8 @@ def dump_container_config(
 
 
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[DockerMount], execution_container: str
-):
+    container_name: str, container_mounts: List[CLPDockerMounts], execution_container: str
+) -> List[str]:
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
