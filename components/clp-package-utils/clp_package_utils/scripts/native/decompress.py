@@ -25,15 +25,24 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def decompress_paths(
+def handle_decompression(
+    parsed_args,
     clp_home: pathlib.Path,
-    paths,
-    list_path: pathlib.Path,
     clp_config: CLPConfig,
-    archives_dir: pathlib.Path,
-    logs_dir: pathlib.Path,
-    extraction_dir: pathlib.Path,
 ):
+    # Validate paths were specified using only one method
+    if len(parsed_args.paths) > 0 and parsed_args.files_from is not None:
+        logger.error("Paths cannot be specified both on the command line and through a file.")
+
+    # Validate extraction directory
+    extraction_dir = pathlib.Path(parsed_args.extraction_dir)
+    if not extraction_dir.is_dir():
+        logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
+        return -1
+
+    logs_dir = clp_config.logs_directory
+    archives_dir = clp_config.archive_output.directory
+
     # Generate database config file for clp
     db_config_file_path = logs_dir / f".decompress-db-config-{uuid.uuid4()}.yml"
     with open(db_config_file_path, "w") as f:
@@ -46,6 +55,8 @@ def decompress_paths(
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
+    paths = parsed_args.paths
+    list_path = parsed_args.files_from
     files_to_decompress_list_path = None
     if list_path is not None:
         decompression_cmd.append("-f")
@@ -93,16 +104,6 @@ def main(argv):
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Validate paths were specified using only one method
-    if len(parsed_args.paths) > 0 and parsed_args.files_from is not None:
-        args_parser.error("Paths cannot be specified both on the command line and through a file.")
-
-    # Validate extraction directory
-    extraction_dir = pathlib.Path(parsed_args.extraction_dir)
-    if not extraction_dir.is_dir():
-        logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
-        return -1
-
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
@@ -115,15 +116,8 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    return decompress_paths(
-        clp_home,
-        parsed_args.paths,
-        parsed_args.files_from,
-        clp_config,
-        clp_config.archive_output.directory,
-        clp_config.logs_directory,
-        extraction_dir,
-    )
+    return handle_decompression(parsed_args, clp_home, clp_config)
+
 
 
 if "__main__" == __name__:

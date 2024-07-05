@@ -1,19 +1,19 @@
 import argparse
 import logging
-import os
 import pathlib
 import subprocess
 import sys
 import uuid
 
-import yaml
-
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
+    dump_container_config,
     generate_container_config,
+    generate_container_name,
+    generate_container_start_cmd,
     get_clp_home,
+    JobType,
     validate_and_load_config_file,
     validate_and_load_db_credentials_file,
 )
@@ -67,41 +67,23 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    container_name = f"clp-compressor-{str(uuid.uuid4())[-4:]}"
+    container_name = generate_container_name(JobType.COMPRESSION)
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
-    container_config_filename = f".{container_name}-config.yml"
-    container_config_file_path_on_host = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path_on_host, "w") as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+    config_file_path_on_container, config_file_path_on_host = dump_container_config(
+        clp_config, container_clp_config, container_name
+    )
 
-    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
-    # fmt: off
-    container_start_cmd = [
-        "docker", "run",
-        "-i",
-        "--rm",
-        "--network", "host",
-        "-w", str(CONTAINER_CLP_HOME),
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
-        "--name", container_name,
-        "--log-driver", "local",
-        "--mount", str(mounts.clp_home),
-    ]
-    # fmt: on
-    necessary_mounts = [mounts.input_logs_dir, mounts.data_dir, mounts.logs_dir]
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))
-    container_start_cmd.append(clp_config.execution_container)
+    necessary_mounts = [mounts.clp_home, mounts.input_logs_dir, mounts.data_dir, mounts.logs_dir]
+    container_start_cmd = generate_container_start_cmd(
+        container_name, necessary_mounts, clp_config.execution_container
+    )
 
     # fmt: off
     compress_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
-        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--config", str(config_file_path_on_container),
         "--remove-path-prefix", str(CONTAINER_INPUT_LOGS_ROOT_DIR),
     ]
     # fmt: on
@@ -140,7 +122,7 @@ def main(argv):
     subprocess.run(cmd, check=True)
 
     # Remove generated files
-    container_config_file_path_on_host.unlink()
+    config_file_path_on_host.unlink()
 
     return 0
 
