@@ -32,9 +32,9 @@ def validate_and_load_config_file(
     default_config_file_path: pathlib.Path,
 ) -> Optional[CLPConfig]:
     """
-    Validates and loads the config file for container.
-    :param config_file_path:
+    Validates and loads the config file.
     :param clp_home:
+    :param config_file_path:
     :param default_config_file_path:
     :return: clp_config on success, None otherwise.
     """
@@ -43,13 +43,13 @@ def validate_and_load_config_file(
         clp_config.validate_archive_output_dir()
         clp_config.validate_logs_dir()
         return clp_config
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return None
 
 
 def handle_decompression_command(
-    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ):
     """
     Handles the decompression command.

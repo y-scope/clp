@@ -268,8 +268,8 @@ def dump_container_config(
 ) -> Tuple[pathlib.Path, pathlib.Path]:
     """
     Writes the given config to the logs directory so that it's accessible in the container.
-    :param clp_config: The corresponding config on the host (used to determine the logs directory).
     :param container_clp_config: The config to write.
+    :param clp_config: The corresponding config on the host (used to determine the logs directory).
     :param container_name:
     :return: The path to the config file in the container and on the host.
     """
