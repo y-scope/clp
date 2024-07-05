@@ -6,6 +6,9 @@ import secrets
 import socket
 import subprocess
 import typing
+import uuid
+from enum import auto
+from typing import List, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -24,8 +27,12 @@ from clp_py_utils.core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
+from strenum import KebabCaseStrEnum
 
 # CONSTANTS
+DECOMPRESSION_COMMAND = "x"
+IR_EXTRACTION_COMMAND = "i"
+
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
@@ -36,6 +43,13 @@ DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
 class DockerMountType(enum.IntEnum):
     BIND = 0
+
+
+class JobType(KebabCaseStrEnum):
+    COMPRESSION = auto()
+    DECOMPRESSION = auto()
+    IR_EXTRACTION = auto()
+    SEARCH = auto()
 
 
 class DockerMount:
@@ -89,6 +103,10 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
+
+
+def generate_container_name(job_type: JobType) -> str:
+    return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
 def check_dependencies():
@@ -239,6 +257,43 @@ def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
         )
 
     return container_clp_config, docker_mounts
+
+
+def dump_container_config(
+    clp_config: CLPConfig, container_clp_config, container_name: str
+) -> Tuple[pathlib.Path, pathlib.Path]:
+    container_config_filename = f".{container_name}-config.yml"
+    config_file_path_on_host = clp_config.logs_directory / container_config_filename
+    config_file_path_on_container = container_clp_config.logs_directory / container_config_filename
+    with open(config_file_path_on_host, "w") as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
+    return config_file_path_on_container, config_file_path_on_host
+
+
+def generate_container_start_cmd(
+    container_name: str, container_mounts: List[DockerMount], execution_container: str
+):
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-i",
+        "--rm",
+        "--network", "host",
+        "-w", str(CONTAINER_CLP_HOME),
+        "-e", f"PYTHONPATH={clp_site_packages_dir}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+        "--name", container_name,
+        "--log-driver", "local"
+    ]
+    for mount in container_mounts:
+        if mount:
+            container_start_cmd.append("--mount")
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(execution_container)
+
+    return container_start_cmd
 
 
 def validate_config_key_existence(config, key):
