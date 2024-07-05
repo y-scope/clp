@@ -2,6 +2,7 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import * as path from "node:path";
 import {fileURLToPath} from "node:url";
+import ReactRefreshPlugin from "@pmmmwh/react-refresh-webpack-plugin";
 
 
 const filename = fileURLToPath(import.meta.url);
@@ -41,6 +42,7 @@ const config = {
                                 },
                             ],
                         ],
+                        plugins: isProduction ? [] : ["react-refresh/babel"]
                     },
                 },
             },
@@ -63,7 +65,7 @@ const config = {
     },
     plugins: plugins.concat(isProduction ?
         [new MiniCssExtractPlugin()] :
-        []),
+        [new ReactRefreshPlugin()]),
     resolve: {
         extensions: [
             ".js",
