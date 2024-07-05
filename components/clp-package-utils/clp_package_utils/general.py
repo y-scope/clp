@@ -102,6 +102,10 @@ def get_clp_home():
 
 
 def generate_container_name(job_type: JobType) -> str:
+    """
+    :param job_type:
+    :return: A unique container name for the given job type.
+    """
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
@@ -260,6 +264,13 @@ def generate_container_config(
 def dump_container_config(
     clp_config: CLPConfig, container_clp_config: CLPConfig, container_name: str
 ) -> Tuple[pathlib.Path, pathlib.Path]:
+    """
+    Writes the given config to the logs directory so that it's accessible in the container.
+    :param clp_config: The corresponding config on the host (used to determine the logs directory).
+    :param container_clp_config: The config to write.
+    :param container_name:
+    :return: The path to the config file in the container and on the host.
+    """
     container_config_filename = f".{container_name}-config.yml"
     config_file_path_on_host = clp_config.logs_directory / container_config_filename
     config_file_path_on_container = container_clp_config.logs_directory / container_config_filename
@@ -272,6 +283,13 @@ def dump_container_config(
 def generate_container_start_cmd(
     container_name: str, container_mounts: List[CLPDockerMounts], execution_container: str
 ) -> List[str]:
+    """
+    Generates the command to start a container with the given mounts and name.
+    :param container_name:
+    :param container_mounts:
+    :param execution_container:
+    :return: The command.
+    """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [

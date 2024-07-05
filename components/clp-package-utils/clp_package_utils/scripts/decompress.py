@@ -82,6 +82,7 @@ def main(argv):
     config_file_path_on_container, config_file_path_on_host = dump_container_config(
         clp_config, container_clp_config, container_name
     )
+
     # Set up mounts
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [

@@ -30,9 +30,17 @@ def handle_decompression(
     clp_home: pathlib.Path,
     clp_config: CLPConfig,
 ):
+    """
+    Handles the decompression command.
+    :param parsed_args:
+    :param clp_home:
+    :param clp_config:
+    :return: 0 on success, -1 otherwise.
+    """
     # Validate paths were specified using only one method
     if len(parsed_args.paths) > 0 and parsed_args.files_from is not None:
         logger.error("Paths cannot be specified both on the command line and through a file.")
+        return -1
 
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir)
