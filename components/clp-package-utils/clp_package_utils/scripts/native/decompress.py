@@ -4,6 +4,7 @@ import pathlib
 import subprocess
 import sys
 import uuid
+from typing import Optional
 
 import yaml
 from clp_py_utils.clp_config import CLPConfig
@@ -25,16 +26,38 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def handle_decompression(
-    parsed_args,
+def _validate_and_load_config_file(
     clp_home: pathlib.Path,
-    clp_config: CLPConfig,
+    config_file_path: pathlib.Path,
+    default_config_file_path: pathlib.Path,
+) -> Optional[CLPConfig]:
+    """
+    Validates and loads the config file for container.
+    :param config_file_path:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: clp_config on success, None otherwise.
+    """
+    try:
+        clp_config = validate_and_load_config_file(
+            config_file_path, default_config_file_path, clp_home
+        )
+        clp_config.validate_archive_output_dir()
+        clp_config.validate_logs_dir()
+        return clp_config
+    except:
+        logger.exception("Failed to load config.")
+        return None
+
+
+def handle_decompression_command(
+    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ):
     """
     Handles the decompression command.
     :param parsed_args:
     :param clp_home:
-    :param clp_config:
+    :param default_config_file_path:
     :return: 0 on success, -1 otherwise.
     """
     # Validate paths were specified using only one method
@@ -46,6 +69,13 @@ def handle_decompression(
     extraction_dir = pathlib.Path(parsed_args.extraction_dir)
     if not extraction_dir.is_dir():
         logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
+        return -1
+
+    # Validate and load config file
+    clp_config = _validate_and_load_config_file(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
+    if not clp_config:
         return -1
 
     paths = parsed_args.paths
@@ -114,19 +144,7 @@ def main(argv):
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Validate and load config file
-    try:
-        config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
-        clp_config.validate_archive_output_dir()
-        clp_config.validate_logs_dir()
-    except:
-        logger.exception("Failed to load config.")
-        return -1
-
-    return handle_decompression(parsed_args, clp_home, clp_config)
+    return handle_decompression_command(parsed_args, clp_home, default_config_file_path)
 
 
 if "__main__" == __name__:

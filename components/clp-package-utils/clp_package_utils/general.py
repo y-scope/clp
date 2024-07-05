@@ -263,7 +263,7 @@ def generate_container_config(
 
 
 def dump_container_config(
-    clp_config: CLPConfig, container_clp_config: CLPConfig, container_name: str
+    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
 ) -> Tuple[pathlib.Path, pathlib.Path]:
     """
     Writes the given config to the logs directory so that it's accessible in the container.
