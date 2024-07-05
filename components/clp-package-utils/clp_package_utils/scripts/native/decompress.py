@@ -48,6 +48,9 @@ def handle_decompression(
         logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
         return -1
 
+    paths = parsed_args.paths
+    list_path = parsed_args.files_from
+
     logs_dir = clp_config.logs_directory
     archives_dir = clp_config.archive_output.directory
 
@@ -63,8 +66,7 @@ def handle_decompression(
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
-    paths = parsed_args.paths
-    list_path = parsed_args.files_from
+
     files_to_decompress_list_path = None
     if list_path is not None:
         decompression_cmd.append("-f")

@@ -203,6 +203,7 @@ def generate_container_config(
 
     :param clp_config:
     :param clp_home:
+    :return: The container config and the mounts.
     """
     container_clp_config = clp_config.copy(deep=True)
 
@@ -281,13 +282,13 @@ def dump_container_config(
 
 
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[CLPDockerMounts], execution_container: str
+    container_name: str, container_mounts: List[CLPDockerMounts], container_image: str
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.
     :param container_name:
     :param container_mounts:
-    :param execution_container:
+    :param container_image:
     :return: The command.
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -307,7 +308,7 @@ def generate_container_start_cmd(
         if mount:
             container_start_cmd.append("--mount")
             container_start_cmd.append(str(mount))
-    container_start_cmd.append(execution_container)
+    container_start_cmd.append(container_image)
 
     return container_start_cmd
 

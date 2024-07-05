@@ -87,7 +87,7 @@ def main(argv):
     container_name = generate_container_name(JobType.SEARCH)
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
-    config_file_path_on_container, config_file_path_on_host = dump_container_config(
+    generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         clp_config, container_clp_config, container_name
     )
 
@@ -100,7 +100,7 @@ def main(argv):
     search_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.search",
-        "--config", str(config_file_path_on_container),
+        "--config", str(generated_config_path_on_container),
         parsed_args.wildcard_query,
     ]
     # fmt: on
@@ -127,7 +127,7 @@ def main(argv):
     subprocess.run(cmd, check=True)
 
     # Remove generated files
-    config_file_path_on_host.unlink()
+    generated_config_path_on_host.unlink()
 
     return 0
 
