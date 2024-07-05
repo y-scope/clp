@@ -22,7 +22,7 @@ cd components/log-viewer-webui
 To run the client during development:
 
 ```shell
-npm run watch
+npm run start
 ```
 
 To run the server during development:
