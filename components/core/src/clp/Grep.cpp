@@ -512,14 +512,153 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
 }
 }  // namespace
 
+void Grep::generate_query_matrix(
+        std::string& processed_search_string,
+        log_surgeon::lexers::ByteLexer& lexer,
+        vector<set<QueryLogtype>>& query_matrix
+) {
+    for (uint32_t i = 0; i < processed_search_string.size(); i++) {
+        for (uint32_t j = 0; j <= i; j++) {
+            std::string current_string = processed_search_string.substr(j, i - j + 1);
+            std::vector<QueryLogtype> suffixes;
+            clp::SearchToken search_token;
+            if (current_string == "*") {
+                suffixes.emplace_back('*', "*", false);
+            } else {
+                // Add * if preceding and proceeding characters are *
+                bool prev_star = j > 0 && processed_search_string[j - 1] == '*';
+                bool next_star = i < processed_search_string.back() - 1
+                                 && processed_search_string[i + 1] == '*';
+                if (prev_star) {
+                    current_string.insert(0, "*");
+                }
+                if (next_star) {
+                    current_string.push_back('*');
+                }
+                bool is_surrounded_by_delims = false;
+                if ((j == 0 || current_string[0] == '*'
+                     || lexer.is_delimiter(processed_search_string[j - 1]))
+                    && (i == processed_search_string.size() - 1 || current_string.back() == '*'
+                        || lexer.is_delimiter(processed_search_string[i + 1])))
+                {
+                    is_surrounded_by_delims = true;
+                }
+                bool contains_wildcard = false;
+                set<uint32_t> schema_types;
+                // All variables must be surrounded by delimiters
+                if (is_surrounded_by_delims) {
+                    log_surgeon::ParserInputBuffer parser_input_buffer;
+                    std::string regex_search_string;
+                    bool contains_central_wildcard = false;
+                    uint32_t pos = 0;
+                    for (char const& c : current_string) {
+                        if (c == '*') {
+                            contains_wildcard = true;
+                            regex_search_string.push_back('.');
+                            if (pos > 0 && pos < current_string.size() - 1) {
+                                contains_central_wildcard = true;
+                            }
+                        } else if (log_surgeon::SchemaParser::get_special_regex_characters()
+                                           .find(c)
+                                   != log_surgeon::SchemaParser::get_special_regex_characters()
+                                              .end())
+                        {
+                            regex_search_string.push_back('\\');
+                        }
+                        regex_search_string.push_back(c);
+                        pos++;
+                    }
+                    log_surgeon::NonTerminal::m_next_children_start = 0;
+                    log_surgeon::Schema schema2;
+                    // TODO: we don't always need to do a DFA intersect
+                    //       most of the time we can just use the forward
+                    //       and reverse lexers which is much much faster
+                    // TODO: NFA creation not optimized at all
+                    schema2.add_variable("search", regex_search_string, -1);
+                    RegexNFA<RegexNFAByteState> nfa;
+                    std::unique_ptr<SchemaAST> schema_ast = schema2.release_schema_ast_ptr();
+                    for (std::unique_ptr<ParserAST> const& parser_ast :
+                         schema_ast->m_schema_vars)
+                    {
+                        auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
+                        ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
+                        rule.add_ast(&nfa);
+                    }
+                    // TODO: DFA creation isn't optimized for performance
+                    //       at all
+                    // TODO: log-surgeon code needs to be refactored to
+                    //       allow direct usage of DFA/NFA without lexer
+                    unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = lexer.nfa_to_dfa(nfa);
+                    unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = lexer.get_dfa();
+                    schema_types = dfa1->get_intersect(dfa2);
+                    bool already_added_var = false;
+                    for (int id : schema_types) {
+                        auto& schema_type = lexer.m_id_symbol[id];
+                        if (schema_type != "int" && schema_type != "float") {
+                            if (already_added_var) {
+                                continue;
+                            }
+                            already_added_var = true;
+                        }
+                        bool start_star = current_string[0] == '*' && false == prev_star;
+                        bool end_star = current_string.back() == '*' && false == next_star;
+                        suffixes.emplace_back();
+                        QueryLogtype& suffix = suffixes.back();
+                        if (start_star) {
+                            suffix.append_value('*', "*", false);
+                        }
+                        suffix.append_value(id, current_string, contains_wildcard);
+                        if (end_star) {
+                            suffix.append_value('*', "*", false);
+                        }
+                        // If no wildcard, only use the top priority type
+                        if (false == contains_wildcard) {
+                            break;
+                        }
+                    }
+                }
+                // Non-guaranteed variables, are potentially static text
+                if (schema_types.empty() || contains_wildcard
+                    || is_surrounded_by_delims == false)
+                {
+                    suffixes.emplace_back();
+                    auto& suffix = suffixes.back();
+                    uint32_t start_id = prev_star ? 1 : 0;
+                    uint32_t end_id
+                            = next_star ? current_string.size() - 1 : current_string.size();
+                    for (uint32_t k = start_id; k < end_id; k++) {
+                        char const& c = current_string[k];
+                        std::string char_string({c});
+                        suffix.append_value(c, char_string, false);
+                    }
+                }
+            }
+            set<QueryLogtype>& new_queries = query_matrix[i];
+            if (j > 0) {
+                for (QueryLogtype const& prefix : query_matrix[j - 1]) {
+                    for (QueryLogtype& suffix : suffixes) {
+                        QueryLogtype new_query = prefix;
+                        new_query.append_logtype(suffix);
+                        new_queries.insert(new_query);
+                    }
+                }
+            } else {
+                // handles first column
+                for (QueryLogtype& suffix : suffixes) {
+                    new_queries.insert(suffix);
+                }
+            }
+        }
+    }
+}
+
 std::optional<Query> Grep::process_raw_query(
         Archive const& archive,
         string const& search_string,
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 ) {
     // Add prefix and suffix '*' to make the search a sub-string match
@@ -619,142 +758,10 @@ std::optional<Query> Grep::process_raw_query(
         // DFA search
         static vector<set<QueryLogtype>> query_matrix(processed_search_string.size());
         static bool query_matrix_set = false;
-        for (uint32_t i = 0; i < processed_search_string.size() && false == query_matrix_set; i++) {
-            for (uint32_t j = 0; j <= i; j++) {
-                std::string current_string = processed_search_string.substr(j, i - j + 1);
-                std::vector<QueryLogtype> suffixes;
-                clp::SearchToken search_token;
-                if (current_string == "*") {
-                    suffixes.emplace_back('*', "*", false);
-                } else {
-                    // Add * if preceding and proceeding characters are *
-                    bool prev_star = j > 0 && processed_search_string[j - 1] == '*';
-                    bool next_star = i < processed_search_string.back() - 1
-                                     && processed_search_string[i + 1] == '*';
-                    if (prev_star) {
-                        current_string.insert(0, "*");
-                    }
-                    if (next_star) {
-                        current_string.push_back('*');
-                    }
-                    bool is_surrounded_by_delims = false;
-                    if ((j == 0 || current_string[0] == '*'
-                         || forward_lexer.is_delimiter(processed_search_string[j - 1]))
-                        && (i == processed_search_string.size() - 1 || current_string.back() == '*'
-                            || forward_lexer.is_delimiter(processed_search_string[i + 1])))
-                    {
-                        is_surrounded_by_delims = true;
-                    }
-                    bool contains_wildcard = false;
-                    set<uint32_t> schema_types;
-                    // All variables must be surrounded by delimiters
-                    if (is_surrounded_by_delims) {
-                        log_surgeon::ParserInputBuffer parser_input_buffer;
-                        std::string regex_search_string;
-                        bool contains_central_wildcard = false;
-                        uint32_t pos = 0;
-                        for (char const& c : current_string) {
-                            if (c == '*') {
-                                contains_wildcard = true;
-                                regex_search_string.push_back('.');
-                                if (pos > 0 && pos < current_string.size() - 1) {
-                                    contains_central_wildcard = true;
-                                }
-                            } else if (log_surgeon::SchemaParser::get_special_regex_characters()
-                                               .find(c)
-                                       != log_surgeon::SchemaParser::get_special_regex_characters()
-                                                  .end())
-                            {
-                                regex_search_string.push_back('\\');
-                            }
-                            regex_search_string.push_back(c);
-                            pos++;
-                        }
-                        log_surgeon::NonTerminal::m_next_children_start = 0;
-                        log_surgeon::Schema schema2;
-                        // TODO: we don't always need to do a DFA intersect
-                        //       most of the time we can just use the forward
-                        //       and reverse lexers which is much much faster
-                        // TODO: NFA creation not optimized at all
-                        schema2.add_variable("search", regex_search_string, -1);
-                        RegexNFA<RegexNFAByteState> nfa;
-                        std::unique_ptr<SchemaAST> schema_ast = schema2.release_schema_ast_ptr();
-                        for (std::unique_ptr<ParserAST> const& parser_ast :
-                             schema_ast->m_schema_vars)
-                        {
-                            auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-                            ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
-                            rule.add_ast(&nfa);
-                        }
-                        // TODO: DFA creation isn't optimized for performance
-                        //       at all
-                        // TODO: log-surgeon code needs to be refactored to
-                        //       allow direct usage of DFA/NFA without lexer
-                        unique_ptr<RegexDFA<RegexDFAByteState>> dfa2
-                                = forward_lexer.nfa_to_dfa(nfa);
-                        unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1
-                                = forward_lexer.get_dfa();
-                        schema_types = dfa1->get_intersect(dfa2);
-                        bool already_added_var = false;
-                        for (int id : schema_types) {
-                            auto& schema_type = forward_lexer.m_id_symbol[id];
-                            if (schema_type != "int" && schema_type != "float") {
-                                if (already_added_var) {
-                                    continue;
-                                }
-                                already_added_var = true;
-                            }
-                            bool start_star = current_string[0] == '*' && false == prev_star;
-                            bool end_star = current_string.back() == '*' && false == next_star;
-                            suffixes.emplace_back();
-                            QueryLogtype& suffix = suffixes.back();
-                            if (start_star) {
-                                suffix.append_value('*', "*", false);
-                            }
-                            suffix.append_value(id, current_string, contains_wildcard);
-                            if (end_star) {
-                                suffix.append_value('*', "*", false);
-                            }
-                            // If no wildcard, only use the top priority type
-                            if (false == contains_wildcard) {
-                                break;
-                            }
-                        }
-                    }
-                    // Non-guaranteed variables, are potentially static text
-                    if (schema_types.empty() || contains_wildcard
-                        || is_surrounded_by_delims == false)
-                    {
-                        suffixes.emplace_back();
-                        auto& suffix = suffixes.back();
-                        uint32_t start_id = prev_star ? 1 : 0;
-                        uint32_t end_id
-                                = next_star ? current_string.size() - 1 : current_string.size();
-                        for (uint32_t k = start_id; k < end_id; k++) {
-                            char const& c = current_string[k];
-                            std::string char_string({c});
-                            suffix.append_value(c, char_string, false);
-                        }
-                    }
-                }
-                set<QueryLogtype>& new_queries = query_matrix[i];
-                if (j > 0) {
-                    for (QueryLogtype const& prefix : query_matrix[j - 1]) {
-                        for (QueryLogtype& suffix : suffixes) {
-                            QueryLogtype new_query = prefix;
-                            new_query.append_logtype(suffix);
-                            new_queries.insert(new_query);
-                        }
-                    }
-                } else {
-                    // handles first column
-                    for (QueryLogtype& suffix : suffixes) {
-                        new_queries.insert(suffix);
-                    }
-                }
-            }
+        if (false == query_matrix_set) {
+            generate_query_matrix(processed_search_string, lexer, query_matrix);
+            query_matrix_set = true;
         }
-        query_matrix_set = true;
         uint32_t last_row = query_matrix.size() - 1;
         for (QueryLogtype const& query_logtype : query_matrix[last_row]) {
             SubQuery sub_query;
@@ -769,7 +776,7 @@ std::optional<Query> Grep::process_raw_query(
                 if (std::holds_alternative<char>(value)) {
                     logtype_string.push_back(std::get<char>(value));
                 } else {
-                    auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
+                    auto& schema_type = lexer.m_id_symbol[std::get<int>(value)];
                     encoded_variable_t encoded_var;
                     // Create a duplicate query that will treat a wildcard
                     // int/float as an int/float encoded in a segment
@@ -825,7 +832,7 @@ std::optional<Query> Grep::process_raw_query(
                 auto const& is_special = query_logtype.m_is_potentially_in_dict[i];
                 auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
                 if (std::holds_alternative<int>(value)) {
-                    auto& schema_type = forward_lexer.m_id_symbol[std::get<int>(value)];
+                    auto& schema_type = lexer.m_id_symbol[std::get<int>(value)];
                     encoded_variable_t encoded_var;
                     if (is_special) {
                         sub_query.mark_wildcard_match_required();
@@ -1031,149 +1038,6 @@ bool Grep::get_bounds_of_next_potential_var(
         }
     }
 
-    return (value_length != begin_pos);
-}
-
-bool Grep::get_bounds_of_next_potential_var(
-        string const& value,
-        size_t& begin_pos,
-        size_t& end_pos,
-        bool& is_var,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer
-) {
-    size_t const value_length = value.length();
-    if (end_pos >= value_length) {
-        return false;
-    }
-
-    is_var = false;
-    bool contains_wildcard = false;
-    while (false == is_var && false == contains_wildcard && begin_pos < value_length) {
-        // Start search at end of last token
-        begin_pos = end_pos;
-
-        // Find variable begin or wildcard
-        bool is_escaped = false;
-        for (; begin_pos < value_length; ++begin_pos) {
-            char c = value[begin_pos];
-
-            if (is_escaped) {
-                is_escaped = false;
-
-                if (false == forward_lexer.is_delimiter(c)) {
-                    // Found escaped non-delimiter, so reverse the index to retain the escape
-                    // character
-                    --begin_pos;
-                    break;
-                }
-            } else if ('\\' == c) {
-                // Escape character
-                is_escaped = true;
-            } else {
-                if (is_wildcard(c)) {
-                    contains_wildcard = true;
-                    break;
-                }
-                if (false == forward_lexer.is_delimiter(c)) {
-                    break;
-                }
-            }
-        }
-
-        // Find next delimiter
-        is_escaped = false;
-        end_pos = begin_pos;
-        for (; end_pos < value_length; ++end_pos) {
-            char c = value[end_pos];
-
-            if (is_escaped) {
-                is_escaped = false;
-
-                if (forward_lexer.is_delimiter(c)) {
-                    // Found escaped delimiter, so reverse the index to retain the escape character
-                    --end_pos;
-                    break;
-                }
-            } else if ('\\' == c) {
-                // Escape character
-                is_escaped = true;
-            } else {
-                if (is_wildcard(c)) {
-                    contains_wildcard = true;
-                } else if (forward_lexer.is_delimiter(c)) {
-                    // Found delimiter that's not also a wildcard
-                    break;
-                }
-            }
-        }
-
-        if (end_pos > begin_pos) {
-            bool has_prefix_wildcard = ('*' == value[begin_pos]) || ('?' == value[begin_pos]);
-            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[begin_pos]);
-            bool has_wildcard_in_middle = false;
-            for (size_t i = begin_pos + 1; i < end_pos - 1; ++i) {
-                if (('*' == value[i] || '?' == value[i]) && value[i - 1] != '\\') {
-                    has_wildcard_in_middle = true;
-                    break;
-                }
-            }
-            clp::SearchToken search_token;
-            if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
-                // DO NOTHING
-            } else {
-                StringReader string_reader;
-                LogSurgeonReader reader_wrapper(string_reader);
-                log_surgeon::ParserInputBuffer parser_input_buffer;
-                if (has_suffix_wildcard) {  // text*
-                    // TODO: creating a string reader, setting it equal to a string, to read it into
-                    // the ParserInputBuffer, seems like a convoluted way to set a string equal to a
-                    // string, should be improved when adding a SearchParser to log_surgeon
-                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
-                    parser_input_buffer.read_if_safe(reader_wrapper);
-                    forward_lexer.reset();
-                    forward_lexer.scan_with_wildcard(
-                            parser_input_buffer,
-                            value[end_pos - 1],
-                            search_token
-                    );
-                } else if (has_prefix_wildcard) {  // *text
-                    std::string value_reverse
-                            = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
-                    std::reverse(value_reverse.begin(), value_reverse.end());
-                    string_reader.open(value_reverse);
-                    parser_input_buffer.read_if_safe(reader_wrapper);
-                    reverse_lexer.reset();
-                    reverse_lexer.scan_with_wildcard(
-                            parser_input_buffer,
-                            value[begin_pos],
-                            search_token
-                    );
-                } else {  // no wildcards
-                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos));
-                    parser_input_buffer.read_if_safe(reader_wrapper);
-                    forward_lexer.reset();
-                    forward_lexer.scan(parser_input_buffer, search_token);
-                    search_token.m_type_ids_set.insert(search_token.m_type_ids_ptr->at(0));
-                }
-                // TODO: use a set so its faster
-                // auto const& set = search_token.m_type_ids_set;
-                // if (set.find(static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID))
-                //            == set.end()
-                //     && set.find(static_cast<int>(log_surgeon::SymbolID::TokenEndID))
-                //            == set.end())
-                // {
-                //     is_var = true;
-                // }
-                auto const& type = search_token.m_type_ids_ptr->at(0);
-                if (type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
-                    && type != static_cast<int>(log_surgeon::SymbolID::TokenEndID))
-                {
-                    is_var = true;
-                }
-            }
-        }
-    }
     return (value_length != begin_pos);
 }
 

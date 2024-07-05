@@ -145,8 +145,21 @@ public:
             std::string const& decompressed_msg,
             void* custom_arg
     );
-
+    
     // Methods
+    /**
+     * Generates the MxM query matrix containing all substrings of the search string, where 
+     * M is the length of the search string, and substr(m,n) is in entry n,m.
+     * @param processed_search_string 
+     * @param lexer 
+     * @param query_matrix 
+     */
+    static void generate_query_matrix(
+            std::string& processed_search_string,
+            log_surgeon::lexers::ByteLexer& lexer,
+            std::vector<std::set<QueryLogtype>>& query_matrix
+    );
+
     /**
      * Processes a raw user query into a Query
      * @param archive
@@ -154,8 +167,7 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
-     * @param forward_lexer DFA for determining if input is in the schema
-     * @param reverse_lexer DFA for determining if reverse of input is in the schema
+     * @param lexer DFA for determining if input is in the schema
      * @param use_heuristic
      * @return Query if it may match a message, std::nullopt otherwise
      */
@@ -165,8 +177,7 @@ public:
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            log_surgeon::lexers::ByteLexer& forward_lexer,
-            log_surgeon::lexers::ByteLexer& reverse_lexer,
+            log_surgeon::lexers::ByteLexer& lexer,
             bool use_heuristic
     );
 
@@ -185,26 +196,7 @@ public:
             size_t& end_pos,
             bool& is_var
     );
-
-    /**
-     * Returns bounds of next potential variable (either a definite variable or a token with
-     * wildcards)
-     * @param value String containing token
-     * @param begin_pos Begin position of last token, changes to begin position of next token
-     * @param end_pos End position of last token, changes to end position of next token
-     * @param is_var Whether the token is definitely a variable
-     * @param forward_lexer DFA for determining if input is in the schema
-     * @param reverse_lexer DFA for determining if reverse of input is in the schema
-     * @return true if another potential variable was found, false otherwise
-     */
-    static bool get_bounds_of_next_potential_var(
-            std::string const& value,
-            size_t& begin_pos,
-            size_t& end_pos,
-            bool& is_var,
-            log_surgeon::lexers::ByteLexer& forward_lexer,
-            log_surgeon::lexers::ByteLexer& reverse_lexer
-    );
+    
     /**
      * Marks which sub-queries in each query are relevant to the given file
      * @param compressed_file
