@@ -209,6 +209,7 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
+add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
 add_subdirectory(src/clp/clg)
@@ -458,26 +459,27 @@ set(SOURCE_FILES_unitTest
         tests/LogSuppressor.hpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
+        tests/test-Grep.cpp
+        tests/test-MemoryMappedFile.cpp
+        tests/test-NetworkReader.cpp
+        tests/test-ParserWithUserSchema.cpp
+        tests/test-SQLiteDB.cpp
+        tests/test-Segment.cpp
+        tests/test-Stopwatch.cpp
+        tests/test-StreamingCompression.cpp
+        tests/test-TimestampPattern.cpp
+        tests/test-Utils.cpp
         tests/test-encoding_methods.cpp
         tests/test-ffi_SchemaTree.cpp
-        tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
-        tests/test-MemoryMappedFile.cpp
-        tests/test-NetworkReader.cpp
-        tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
-        tests/test-Segment.cpp
-        tests/test-SQLiteDB.cpp
-        tests/test-Stopwatch.cpp
-        tests/test-StreamingCompression.cpp
+        tests/test-regex_utils.cpp
         tests/test-string_utils.cpp
-        tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
-        tests/test-Utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
@@ -497,6 +499,7 @@ target_link_libraries(unitTest
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
+        clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
