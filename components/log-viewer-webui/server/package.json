@@ -4,11 +4,11 @@
   "description": "",
   "main": "src/main.js",
   "scripts": {
+    "lint:check": "npx eslint --no-eslintrc --config package.json src",
+    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src",
     "prod": "NODE_ENV=production node src/main.js",
     "start": "NODE_ENV=development nodemon src/main.js",
-    "test": "tap",
-    "lint:check": "npx eslint --no-eslintrc --config package.json src",
-    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src"
+    "test": "tap"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
