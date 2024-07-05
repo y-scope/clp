@@ -1,13 +1,13 @@
 {
-  "name": "log-viewer-server",
+  "name": "log-viewer-webui-server",
   "version": "0.1.0",
   "description": "",
   "main": "src/main.js",
   "scripts": {
-    "dev": "NODE_ENV=development nodemon src/main.js",
     "lint:check": "npx eslint --no-eslintrc --config package.json src",
     "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src",
-    "start": "NODE_ENV=production node src/main.js",
+    "prod": "NODE_ENV=production node src/main.js",
+    "start": "NODE_ENV=development nodemon src/main.js",
     "test": "tap"
   },
   "author": "YScope Inc. <dev@yscope.com>",
