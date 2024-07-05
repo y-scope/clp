@@ -74,11 +74,6 @@ const config = {
 };
 
 export default () => {
-    if (isProduction) {
-        config.mode = "production";
-    } else {
-        config.mode = "development";
-    }
-
+    config.mode = isProduction ? "production" : "development";
     return config;
 };
