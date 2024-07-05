@@ -28,7 +28,7 @@ npm run start
 To run the server during development:
 
 ```shell
-npm run watch
+npm run start
 ```
 
 To run the server in production:
