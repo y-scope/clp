@@ -34,7 +34,7 @@ npm run start
 To run the server in production:
 
 ```shell
-npm start
+npm run prod
 ```
 
 In both cases, if you want to customize what host and port the server binds to, you can use the
