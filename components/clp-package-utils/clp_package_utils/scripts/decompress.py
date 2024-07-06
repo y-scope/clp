@@ -1,21 +1,22 @@
 import argparse
 import logging
-import os
 import pathlib
 import subprocess
 import sys
-import uuid
 
-import yaml
+from clp_py_utils.clp_config import CLPConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CONTAINER_CLP_HOME,
     DockerMount,
     DockerMountType,
+    dump_container_config,
     generate_container_config,
+    generate_container_name,
+    generate_container_start_cmd,
     get_clp_home,
-    validate_and_load_config_file,
+    JobType,
+    load_config_file,
     validate_and_load_db_credentials_file,
     validate_path_could_be_dir,
 )
@@ -53,11 +54,10 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
 
+        # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
@@ -76,33 +76,16 @@ def main(argv):
         return -1
     extraction_dir.mkdir(exist_ok=True)
 
-    container_name = f"clp-decompressor-{str(uuid.uuid4())[-4:]}"
-
+    container_name = generate_container_name(JobType.DECOMPRESSION)
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
-    container_config_filename = f".{container_name}-config.yml"
-    container_config_file_path_on_host = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path_on_host, "w") as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
-
-    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
-    # fmt: off
-    container_start_cmd = [
-        "docker", "run",
-        "-i",
-        "--rm",
-        "--network", "host",
-        "-w", str(CONTAINER_CLP_HOME),
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
-        "--name", container_name,
-        "--log-driver", "local",
-        "--mount", str(mounts.clp_home),
-    ]
-    # fmt: on
+    generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
+        container_clp_config, clp_config, container_name
+    )
 
     # Set up mounts
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [
+        mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
         mounts.archives_output_dir,
@@ -120,18 +103,15 @@ def main(argv):
                 container_paths_to_decompress_file_path,
             )
         )
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))
-
-    container_start_cmd.append(clp_config.execution_container)
+    container_start_cmd = generate_container_start_cmd(
+        container_name, necessary_mounts, clp_config.execution_container
+    )
 
     # fmt: off
     decompress_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
-        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--config", str(generated_config_path_on_container),
         "-d", str(container_extraction_dir),
     ]
     # fmt: on
@@ -145,7 +125,7 @@ def main(argv):
     subprocess.run(cmd, check=True)
 
     # Remove generated files
-    container_config_file_path_on_host.unlink()
+    generated_config_path_on_host.unlink()
 
     return 0
 
