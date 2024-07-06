@@ -6,6 +6,9 @@ import secrets
 import socket
 import subprocess
 import typing
+import uuid
+from enum import auto
+from typing import List, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -24,6 +27,7 @@ from clp_py_utils.core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
+from strenum import KebabCaseStrEnum
 
 # CONSTANTS
 # Paths
@@ -36,6 +40,12 @@ DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
 class DockerMountType(enum.IntEnum):
     BIND = 0
+
+
+class JobType(KebabCaseStrEnum):
+    COMPRESSION = auto()
+    DECOMPRESSION = auto()
+    SEARCH = auto()
 
 
 class DockerMount:
@@ -89,6 +99,14 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
+
+
+def generate_container_name(job_type: JobType) -> str:
+    """
+    :param job_type:
+    :return: A unique container name for the given job type.
+    """
+    return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
 def check_dependencies():
@@ -177,12 +195,15 @@ def is_path_already_mounted(
     return host_path_relative_to_mounted_root == container_path_relative_to_mounted_root
 
 
-def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
+def generate_container_config(
+    clp_config: CLPConfig, clp_home: pathlib.Path
+) -> Tuple[CLPConfig, CLPDockerMounts]:
     """
     Copies the given config and sets up mounts mapping the relevant host paths into the container
 
     :param clp_config:
     :param clp_home:
+    :return: The container config and the mounts.
     """
     container_clp_config = clp_config.copy(deep=True)
 
@@ -241,6 +262,57 @@ def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
     return container_clp_config, docker_mounts
 
 
+def dump_container_config(
+    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
+) -> Tuple[pathlib.Path, pathlib.Path]:
+    """
+    Writes the given config to the logs directory so that it's accessible in the container.
+    :param container_clp_config: The config to write.
+    :param clp_config: The corresponding config on the host (used to determine the logs directory).
+    :param container_name:
+    :return: The path to the config file in the container and on the host.
+    """
+    container_config_filename = f".{container_name}-config.yml"
+    config_file_path_on_host = clp_config.logs_directory / container_config_filename
+    config_file_path_on_container = container_clp_config.logs_directory / container_config_filename
+    with open(config_file_path_on_host, "w") as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
+    return config_file_path_on_container, config_file_path_on_host
+
+
+def generate_container_start_cmd(
+    container_name: str, container_mounts: List[CLPDockerMounts], container_image: str
+) -> List[str]:
+    """
+    Generates the command to start a container with the given mounts and name.
+    :param container_name:
+    :param container_mounts:
+    :param container_image:
+    :return: The command.
+    """
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-i",
+        "--rm",
+        "--network", "host",
+        "-w", str(CONTAINER_CLP_HOME),
+        "-e", f"PYTHONPATH={clp_site_packages_dir}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+        "--name", container_name,
+        "--log-driver", "local"
+    ]
+    for mount in container_mounts:
+        if mount:
+            container_start_cmd.append("--mount")
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(container_image)
+
+    return container_start_cmd
+
+
 def validate_config_key_existence(config, key):
     try:
         value = get_config_value(config, key)
@@ -249,7 +321,7 @@ def validate_config_key_existence(config, key):
     return value
 
 
-def validate_and_load_config_file(
+def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
 ):
     if config_file_path.exists():
