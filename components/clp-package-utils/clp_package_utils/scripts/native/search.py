@@ -25,11 +25,6 @@ from clp_package_utils.scripts.native.utils import (
     submit_query_job,
     wait_for_query_job,
 )
-from clp_package_utils.scripts.native.utils import (
-    run_function_in_process,
-    submit_query_job,
-    wait_for_query_job,
-)
 
 # Setup logging
 # Create logger

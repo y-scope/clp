@@ -6,7 +6,6 @@ import subprocess
 import sys
 import uuid
 from contextlib import closing
-
 from typing import Optional
 
 import yaml
@@ -44,9 +43,10 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     Returns the original file id of the file with the given path
     If multiple files have the same path, this method returns
     the first file returned from the archive metadata database
-    :param db_config: config of the archive metadata database
-    :param path: original path of the file
-    :return: orig_file_id. None if no file matches with input path
+    :param db_config:
+    :param path:
+    :return: The original file id of a file with the given path.
+    If no file matches with input path, returns None
     """
     sql_adapter = SQL_Adapter(db_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -72,16 +72,24 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
         return results[0]["orig_file_id"]
 
 
-def create_and_monitor_ir_extraction_job_in_db(
+def submit_and_monitor_ir_extraction_job_in_db(
     db_config: Database,
     orig_file_id: str,
     msg_ix: int,
-    target_size: int | None,
-):
+    target_uncompressed_size: int | None,
+) -> None:
+    """
+    Submits an IR extraction job to the scheduler database and
+    waits until the job finishes.
+    :param db_config:
+    :param orig_file_id:
+    :param msg_ix:
+    :param target_uncompressed_size:
+    """
     extract_ir_config = ExtractIrJobConfig(
         orig_file_id=orig_file_id,
         msg_ix=msg_ix,
-        target_size=target_size,
+        target_uncompressed_size=target_uncompressed_size,
     )
 
     sql_adapter = SQL_Adapter(db_config)
@@ -98,18 +106,27 @@ async def do_extract(
     db_config: Database,
     orig_file_id: str,
     msg_ix: int,
-    target_size: int | None,
+    target_uncompressed_size: int | None,
 ):
     await run_function_in_process(
-        create_and_monitor_ir_extraction_job_in_db, db_config, orig_file_id, msg_ix, target_size
+        submit_and_monitor_ir_extraction_job_in_db,
+        db_config,
+        orig_file_id,
+        msg_ix,
+        target_uncompressed_size,
     )
 
 
 def handle_ir_extraction_command(
-    parsed_args: argparse.Namespace,
-    clp_home: pathlib.Path,
-    default_config_file_path: pathlib.Path
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
+    """
+    Handles the IR extraction command.
+    :param parsed_args:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: 0 on success, -1 otherwise.
+    """
     # Validate and load config file
     clp_config = validate_and_load_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
@@ -129,12 +146,14 @@ def handle_ir_extraction_command(
                 clp_config.database,
                 orig_file_id,
                 parsed_args.msg_ix,
-                parsed_args.target_size,
+                parsed_args.target_uncompressed_size,
             )
         )
     except asyncio.CancelledError:
         logger.error("Extraction cancelled.")
         return -1
+
+    return 0
 
 
 def validate_and_load_config_file(
@@ -261,7 +280,9 @@ def main(argv):
     # IR extraction command parser
     ir_extraction_parser = command_args_parser.add_parser(IR_EXTRACTION_COMMAND)
     ir_extraction_parser.add_argument("msg_ix", type=int, help="Message index.")
-    ir_extraction_parser.add_argument("--target-size", type=int, help="Target IR size.")
+    ir_extraction_parser.add_argument(
+        "--target-uncompressed-size", type=int, help="Target uncompressed IR size."
+    )
 
     group = ir_extraction_parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--orig-file-id", type=str, help="Original file ID.")

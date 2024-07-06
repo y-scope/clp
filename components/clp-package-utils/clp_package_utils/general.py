@@ -8,7 +8,7 @@ import subprocess
 import typing
 import uuid
 from enum import auto
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -286,7 +286,7 @@ def dump_container_config(
 
 
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[CLPDockerMounts], container_image: str
+    container_name: str, container_mounts: List[Optional[DockerMount]], container_image: str
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.

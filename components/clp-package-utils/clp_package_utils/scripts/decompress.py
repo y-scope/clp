@@ -3,7 +3,6 @@ import logging
 import pathlib
 import subprocess
 import sys
-
 from typing import Optional
 
 from clp_py_utils.clp_config import CLPConfig
@@ -60,7 +59,9 @@ def validate_and_load_config(
         return None
 
 
-def handle_decompression_command(parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path):
+def handle_decompression_command(
+    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+):
     paths_to_decompress_file_path = None
     if parsed_args.files_from:
         paths_to_decompress_file_path = pathlib.Path(parsed_args.files_from)
@@ -75,7 +76,9 @@ def handle_decompression_command(parsed_args, clp_home: pathlib.Path, default_co
     extraction_dir.mkdir(exist_ok=True)
 
     # Validate and load config file
-    clp_config = validate_and_load_config(clp_home, pathlib.Path(parsed_args.config), clp_home)
+    clp_config = validate_and_load_config(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
     if not clp_config:
         return -1
 
@@ -134,7 +137,9 @@ def handle_decompression_command(parsed_args, clp_home: pathlib.Path, default_co
 
 def handle_extraction(parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path):
     # Validate and load config file
-    clp_config = validate_and_load_config(clp_home, pathlib.Path(parsed_args.config), clp_home)
+    clp_config = validate_and_load_config(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
     if not clp_config:
         return -1
 
@@ -164,8 +169,8 @@ def handle_extraction(parsed_args, clp_home: pathlib.Path, default_config_file_p
     else:
         extract_cmd.append("--path")
         extract_cmd.append(str(parsed_args.path))
-    if parsed_args.target_size:
-        extract_cmd.append("--target-size")
+    if parsed_args.target_uncompressed_size:
+        extract_cmd.append("--target-uncompressed-size")
         extract_cmd.append(str(parsed_args.target_size))
     cmd = container_start_cmd + extract_cmd
     subprocess.run(cmd, check=True)
@@ -201,7 +206,9 @@ def main(argv):
     # IR extraction command parser
     ir_extraction_parser = command_args_parser.add_parser(IR_EXTRACTION_COMMAND)
     ir_extraction_parser.add_argument("msg_ix", type=int, help="Message index.")
-    ir_extraction_parser.add_argument("--target-size", type=int, help="Target IR size.")
+    ir_extraction_parser.add_argument(
+        "--target-uncompressed-size", type=int, help="Target uncompressed IR size."
+    )
 
     group = ir_extraction_parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--orig-file-id", type=str, help="Original file ID.")
