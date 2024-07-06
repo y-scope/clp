@@ -6,6 +6,7 @@ import subprocess
 import sys
 import uuid
 from contextlib import closing
+
 from typing import Optional
 
 import yaml
@@ -19,7 +20,7 @@ from clp_package_utils.general import (
     DECOMPRESSION_COMMAND,
     get_clp_home,
     IR_EXTRACTION_COMMAND,
-    validate_and_load_config_file,
+    load_config_file,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -104,15 +105,24 @@ async def do_extract(
     )
 
 
-def handle_ir_extraction(
-    parsed_args,
-    clp_config: CLPConfig,
-):
+def handle_ir_extraction_command(
+    parsed_args: argparse.Namespace,
+    clp_home: pathlib.Path,
+    default_config_file_path: pathlib.Path
+) -> int:
+    # Validate and load config file
+    clp_config = validate_and_load_config_file(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
+    if not clp_config:
+        return -1
+
     orig_file_id: str
     if parsed_args.orig_file_id:
         orig_file_id = parsed_args.orig_file_id
     else:
         orig_file_id = get_orig_file_id(clp_config.database, parsed_args.path)
+
     try:
         asyncio.run(
             do_extract(
@@ -127,20 +137,58 @@ def handle_ir_extraction(
         return -1
 
 
-def handle_decompression(
-    parsed_args,
+def validate_and_load_config_file(
     clp_home: pathlib.Path,
-    clp_config: CLPConfig,
-):
+    config_file_path: pathlib.Path,
+    default_config_file_path: pathlib.Path,
+) -> Optional[CLPConfig]:
+    """
+    Validates and loads the config file.
+    :param clp_home:
+    :param config_file_path:
+    :param default_config_file_path:
+    :return: clp_config on success, None otherwise.
+    """
+    try:
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config.validate_archive_output_dir()
+        clp_config.validate_logs_dir()
+        return clp_config
+    except Exception:
+        logger.exception("Failed to load config.")
+        return None
+
+
+def handle_decompression_command(
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+) -> int:
+    """
+    Handles the decompression command.
+    :param parsed_args:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: 0 on success, -1 otherwise.
+    """
     # Validate paths were specified using only one method
     if len(parsed_args.paths) > 0 and parsed_args.files_from is not None:
         logger.error("Paths cannot be specified both on the command line and through a file.")
+        return -1
 
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir)
     if not extraction_dir.is_dir():
         logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
         return -1
+
+    # Validate and load config file
+    clp_config = validate_and_load_config_file(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
+    if not clp_config:
+        return -1
+
+    paths = parsed_args.paths
+    list_path = parsed_args.files_from
 
     logs_dir = clp_config.logs_directory
     archives_dir = clp_config.archive_output.directory
@@ -157,8 +205,7 @@ def handle_decompression(
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
-    paths = parsed_args.paths
-    list_path = parsed_args.files_from
+
     files_to_decompress_list_path = None
     if list_path is not None:
         decompression_cmd.append("-f")
@@ -222,23 +269,11 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Validate and load config file
-    try:
-        config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
-        clp_config.validate_archive_output_dir()
-        clp_config.validate_logs_dir()
-    except:
-        logger.exception("Failed to load config.")
-        return -1
-
     command = parsed_args.command
     if DECOMPRESSION_COMMAND == command:
-        return handle_decompression(parsed_args, clp_home, clp_config)
+        return handle_decompression_command(parsed_args, clp_home, default_config_file_path)
     elif IR_EXTRACTION_COMMAND == command:
-        return handle_ir_extraction(parsed_args, clp_config)
+        return handle_ir_extraction_command(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1

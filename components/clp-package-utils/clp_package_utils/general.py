@@ -106,6 +106,10 @@ def get_clp_home():
 
 
 def generate_container_name(job_type: JobType) -> str:
+    """
+    :param job_type:
+    :return: A unique container name for the given job type.
+    """
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
@@ -195,12 +199,15 @@ def is_path_already_mounted(
     return host_path_relative_to_mounted_root == container_path_relative_to_mounted_root
 
 
-def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
+def generate_container_config(
+    clp_config: CLPConfig, clp_home: pathlib.Path
+) -> Tuple[CLPConfig, CLPDockerMounts]:
     """
     Copies the given config and sets up mounts mapping the relevant host paths into the container
 
     :param clp_config:
     :param clp_home:
+    :return: The container config and the mounts.
     """
     container_clp_config = clp_config.copy(deep=True)
 
@@ -260,8 +267,15 @@ def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
 
 
 def dump_container_config(
-    clp_config: CLPConfig, container_clp_config, container_name: str
+    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
 ) -> Tuple[pathlib.Path, pathlib.Path]:
+    """
+    Writes the given config to the logs directory so that it's accessible in the container.
+    :param container_clp_config: The config to write.
+    :param clp_config: The corresponding config on the host (used to determine the logs directory).
+    :param container_name:
+    :return: The path to the config file in the container and on the host.
+    """
     container_config_filename = f".{container_name}-config.yml"
     config_file_path_on_host = clp_config.logs_directory / container_config_filename
     config_file_path_on_container = container_clp_config.logs_directory / container_config_filename
@@ -272,8 +286,15 @@ def dump_container_config(
 
 
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[DockerMount], execution_container: str
-):
+    container_name: str, container_mounts: List[CLPDockerMounts], container_image: str
+) -> List[str]:
+    """
+    Generates the command to start a container with the given mounts and name.
+    :param container_name:
+    :param container_mounts:
+    :param container_image:
+    :return: The command.
+    """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
@@ -291,7 +312,7 @@ def generate_container_start_cmd(
         if mount:
             container_start_cmd.append("--mount")
             container_start_cmd.append(str(mount))
-    container_start_cmd.append(execution_container)
+    container_start_cmd.append(container_image)
 
     return container_start_cmd
 
@@ -304,7 +325,7 @@ def validate_config_key_existence(config, key):
     return value
 
 
-def validate_and_load_config_file(
+def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
 ):
     if config_file_path.exists():

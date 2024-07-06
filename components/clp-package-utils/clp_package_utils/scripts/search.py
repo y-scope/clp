@@ -16,7 +16,7 @@ from clp_package_utils.general import (
     generate_container_start_cmd,
     get_clp_home,
     JobType,
-    validate_and_load_config_file,
+    load_config_file,
     validate_and_load_db_credentials_file,
 )
 
@@ -73,13 +73,11 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
 
         # Validate and load necessary credentials
-        validate_and_load_db_credentials_file(clp_config, clp_home, True)
+        validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
         return -1
@@ -87,8 +85,8 @@ def main(argv):
     container_name = generate_container_name(JobType.SEARCH)
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
-    config_file_path_on_container, config_file_path_on_host = dump_container_config(
-        clp_config, container_clp_config, container_name
+    generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
+        container_clp_config, clp_config, container_name
     )
 
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
@@ -100,7 +98,7 @@ def main(argv):
     search_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.search",
-        "--config", str(config_file_path_on_container),
+        "--config", str(generated_config_path_on_container),
         parsed_args.wildcard_query,
     ]
     # fmt: on
@@ -127,7 +125,7 @@ def main(argv):
     subprocess.run(cmd, check=True)
 
     # Remove generated files
-    config_file_path_on_host.unlink()
+    generated_config_path_on_host.unlink()
 
     return 0
 

@@ -50,6 +50,13 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
 def submit_query_job(
     sql_adapter: SQL_Adapter, job_config: QueryJobConfig, job_type: QueryJobType
 ) -> int:
+    """
+    Submits a query job.
+    :param sql_adapter:
+    :param job_config:
+    :param job_type:
+    :return: The job's ID.
+    """
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
@@ -63,6 +70,12 @@ def submit_query_job(
 
 
 def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
+    """
+    Waits for the query job with the given ID to complete.
+    :param sql_adapter:
+    :param job_id:
+    :return: The job's status on completion.
+    """
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:

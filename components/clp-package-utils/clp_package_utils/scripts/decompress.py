@@ -4,6 +4,8 @@ import pathlib
 import subprocess
 import sys
 
+from typing import Optional
+
 from clp_py_utils.clp_config import CLPConfig
 
 from clp_package_utils.general import (
@@ -18,7 +20,7 @@ from clp_package_utils.general import (
     get_clp_home,
     IR_EXTRACTION_COMMAND,
     JobType,
-    validate_and_load_config_file,
+    load_config_file,
     validate_and_load_db_credentials_file,
     validate_path_could_be_dir,
 )
@@ -34,7 +36,31 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def handle_decompression(parsed_args, clp_config: CLPConfig, clp_home: pathlib.Path):
+def validate_and_load_config(
+    clp_home: pathlib.Path,
+    config_file_path: pathlib.Path,
+    default_config_file_path: pathlib.Path,
+) -> Optional[CLPConfig]:
+    """
+    Validates and loads the config file.
+    :param clp_home:
+    :param config_file_path:
+    :param default_config_file_path:
+    :return: clp_config on success, None otherwise.
+    """
+    try:
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config.validate_logs_dir()
+
+        # Validate and load necessary credentials
+        validate_and_load_db_credentials_file(clp_config, clp_home, False)
+        return clp_config
+    except:
+        logger.exception("Failed to load config.")
+        return None
+
+
+def handle_decompression_command(parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path):
     paths_to_decompress_file_path = None
     if parsed_args.files_from:
         paths_to_decompress_file_path = pathlib.Path(parsed_args.files_from)
@@ -48,11 +74,17 @@ def handle_decompression(parsed_args, clp_config: CLPConfig, clp_home: pathlib.P
         return -1
     extraction_dir.mkdir(exist_ok=True)
 
+    # Validate and load config file
+    clp_config = validate_and_load_config(clp_home, pathlib.Path(parsed_args.config), clp_home)
+    if not clp_config:
+        return -1
+
     container_name = generate_container_name(JobType.DECOMPRESSION)
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
-    config_file_path_on_container, config_file_path_on_host = dump_container_config(
-        clp_config, container_clp_config, container_name
+    generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
+        container_clp_config, clp_config, container_name
     )
+
     # Set up mounts
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [
@@ -82,7 +114,7 @@ def handle_decompression(parsed_args, clp_config: CLPConfig, clp_home: pathlib.P
     decompress_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
-        "--config", str(config_file_path_on_container),
+        "--config", str(generated_config_path_on_container),
         DECOMPRESSION_COMMAND,
         "-d", str(container_extraction_dir),
     ]
@@ -97,14 +129,19 @@ def handle_decompression(parsed_args, clp_config: CLPConfig, clp_home: pathlib.P
     subprocess.run(cmd, check=True)
 
     # Remove generated files
-    config_file_path_on_host.unlink()
+    generated_config_path_on_host.unlink()
 
 
-def handle_extraction(parsed_args, clp_config: CLPConfig, clp_home: pathlib.Path):
+def handle_extraction(parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path):
+    # Validate and load config file
+    clp_config = validate_and_load_config(clp_home, pathlib.Path(parsed_args.config), clp_home)
+    if not clp_config:
+        return -1
+
     container_name = generate_container_name(JobType.IR_EXTRACTION)
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
-    config_file_path_on_container, config_file_path_on_host = dump_container_config(
-        clp_config, container_clp_config, container_name
+    generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
+        container_clp_config, clp_config, container_name
     )
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
     container_start_cmd = generate_container_start_cmd(
@@ -116,7 +153,7 @@ def handle_extraction(parsed_args, clp_config: CLPConfig, clp_home: pathlib.Path
         "-m",
         "clp_package_utils.scripts.native.decompress",
         "--config",
-        str(config_file_path_on_container),
+        str(generated_config_path_on_container),
         IR_EXTRACTION_COMMAND,
         str(parsed_args.msg_ix),
     ]
@@ -134,7 +171,7 @@ def handle_extraction(parsed_args, clp_config: CLPConfig, clp_home: pathlib.Path
     subprocess.run(cmd, check=True)
 
     # Remove generated files
-    config_file_path_on_host.unlink()
+    generated_config_path_on_host.unlink()
 
 
 def main(argv):
@@ -172,23 +209,11 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Validate and load config file
-    try:
-        config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
-        clp_config.validate_logs_dir()
-
-        validate_and_load_db_credentials_file(clp_config, clp_home, False)
-    except:
-        logger.exception("Failed to load config.")
-        return -1
     command = parsed_args.command
     if DECOMPRESSION_COMMAND == command:
-        return handle_decompression(parsed_args, clp_config, clp_home)
+        return handle_decompression_command(parsed_args, clp_home, default_config_file_path)
     elif IR_EXTRACTION_COMMAND == command:
-        return handle_extraction(parsed_args, clp_config, clp_home)
+        return handle_extraction(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1
