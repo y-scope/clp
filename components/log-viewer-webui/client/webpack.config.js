@@ -2,6 +2,7 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import * as path from "node:path";
 import {fileURLToPath} from "node:url";
+
 import ReactRefreshPlugin from "@pmmmwh/react-refresh-webpack-plugin";
 
 
@@ -42,7 +43,9 @@ const config = {
                                 },
                             ],
                         ],
-                        plugins: isProduction ? [] : ["react-refresh/babel"]
+                        plugins: isProduction ?
+                            [] :
+                            ["react-refresh/babel"],
                     },
                 },
             },
@@ -76,6 +79,9 @@ const config = {
 };
 
 export default () => {
-    config.mode = isProduction ? "production" : "development";
+    config.mode = isProduction ?
+        "production" :
+        "development";
+
     return config;
 };
