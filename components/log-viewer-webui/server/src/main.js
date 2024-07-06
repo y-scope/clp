@@ -8,7 +8,7 @@ import app from "./app.js";
 /**
  * Parses environment variables into config values for the application.
  *
- * @return {{HOST: string, PORT: string, CLIENT_DIR: string}}
+ * @return {{CLIENT_DIR: string, HOST: string, PORT: string}}
  * @throws {Error} if any required environment variable is undefined.
  */
 const parseEnvVars = () => {
@@ -17,10 +17,10 @@ const parseEnvVars = () => {
     });
 
     const {
-        HOST, PORT, CLIENT_DIR,
+        CLIENT_DIR, HOST, PORT,
     } = process.env;
     const envVars = {
-        HOST, PORT, CLIENT_DIR,
+        CLIENT_DIR, HOST, PORT,
     };
 
     // Check for mandatory environment variables
