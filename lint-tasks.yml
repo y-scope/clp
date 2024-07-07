@@ -53,6 +53,7 @@ tasks:
           LINT_CMD: "check"
     sources: &js_source_files
       - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
+      - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
@@ -126,7 +127,7 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: ["linter-node-modules"]
+    deps: [":log-viewer-webui-node-modules", "linter-node-modules"]
     cmds:
       - for:
           - "components/log-viewer-webui"

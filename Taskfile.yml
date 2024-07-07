@@ -210,6 +210,7 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_LATEST_NODEJS_DIR}}"
+    run: once
     cmds:
       - task: "nodejs"
         vars:
@@ -286,6 +287,67 @@ tasks:
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources: ["{{.TASKFILE}}"]
     generates: ["{{.CHECKSUM_FILE}}"]
+
+  # NOTE: The log-viewer-webui has three different node_modules directories (client, server, and the
+  # top-level one we call "package"), meaning we have to create three different checksums. To allow
+  # tasks which depend on this task to only have to check one checksum file, we concatenate the
+  # three checksum files into one.
+  log-viewer-webui-node-modules:
+    internal: true
+    vars:
+      # Checksum files
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-client-node-modules.md5"
+      PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-package-node-modules.md5"
+      SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-server-node-modules.md5"
+
+      # Directories
+      SRC_DIR: "{{.TASKFILE_DIR}}/components/log-viewer-webui"
+      CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
+      PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
+      SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
+    dir: "{{.SRC_DIR}}"
+    deps:
+      - "nodejs-latest"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          DATA_DIR: "{{.CLIENT_OUTPUT_DIR}}"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+          DATA_DIR: "{{.SERVER_OUTPUT_DIR}}"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
+    cmds:
+      - "rm -f {{.CHECKSUM_FILE}}"
+      - "rm -rf '{{.CLIENT_OUTPUT_DIR}}' '{{.PACKAGE_OUTPUT_DIR}}' '{{.SERVER_OUTPUT_DIR}}'"
+      - "PATH='{{.G_LATEST_NODEJS_DIR}}/bin':$PATH npm run init"
+      # These commands must be last
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.CLIENT_OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.SERVER_OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+      # This command must be last
+      - >-
+        cat "{{.CLIENT_CHECKSUM_FILE}}" "{{.PACKAGE_CHECKSUM_FILE}}" "{{.SERVER_CHECKSUM_FILE}}"
+        > "{{.CHECKSUM_FILE}}"
+    sources: ["{{.G_BUILD_DIR}}/nodejs-latest.md5", "{{.TASKFILE}}"]
+    generates:
+      - "{{.CHECKSUM_FILE}}"
+      - "{{.CLIENT_CHECKSUM_FILE}}"
+      - "{{.PACKAGE_CHECKSUM_FILE}}"
+      - "{{.SERVER_CHECKSUM_FILE}}"
 
   meteor:
     run: "once"
