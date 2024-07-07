@@ -9,6 +9,7 @@ vars:
   # Paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
+  G_LATEST_NODEJS_DIR: "{{.G_BUILD_DIR}}/nodejs-latest"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
@@ -203,6 +204,18 @@ tasks:
       - "server/**/*"
       - "tests/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
+
+  nodejs-latest:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_LATEST_NODEJS_DIR}}"
+    cmds:
+      - task: "nodejs"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          NODEJS_VERSION: "latest"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   webui-nodejs:
     internal: true
