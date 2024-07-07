@@ -27,6 +27,7 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.G_BUILD_DIR}}'"
+      - task: "clean-log-viewer-webui"
       - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
@@ -36,6 +37,18 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-webui"
+
+  clean-log-viewer-webui:
+    cmds:
+      - "rm -rf 'components/log-viewer-webui/client/node_modules'"
+      - "rm -rf 'components/log-viewer-webui/node_modules'"
+      - "rm -rf 'components/log-viewer-webui/server/node_modules'"
+
+  clean-webui:
+    cmds:
+      - "rm -rf 'components/webui/.meteor/local'"
+      - "rm -rf 'components/webui/node_modules'"
 
   clp-json-pkg-tar:
     cmds:
