@@ -223,7 +223,7 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_LATEST_NODEJS_DIR}}"
-    run: once
+    run: "once"
     cmds:
       - task: "nodejs"
         vars:
