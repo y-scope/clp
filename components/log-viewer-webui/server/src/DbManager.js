@@ -12,7 +12,7 @@ class DbManager {
     /**
      * Creates a DbManager.
      *
-     * @param {Object} app - The Fastify application instance
+     * @param {import("fastify").FastifyInstance} app - The Fastify application instance
      * @param {Object} dbConfig - The database configuration
      * @param {Object} dbConfig.mysqlConfig - The MySQL configuration
      * @param {Object} dbConfig.mongoConfig - The MongoDB configuration
@@ -79,8 +79,10 @@ class DbManager {
         return await this.mysqlConnection.query(
             `INSERT INTO ${this.queryJobsTableName} (id, job_config)
              VALUES (?, ?)`,
-            [1,
-                Buffer.from(msgpack.encode(jobConfig))]
+            [
+                1,
+                Buffer.from(msgpack.encode(jobConfig)),
+            ]
         );
     }
 
