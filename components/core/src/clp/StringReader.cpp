@@ -61,6 +61,8 @@ void StringReader::open(string const& input_string) {
 }
 
 void StringReader::close() {
+    m_input_string.clear();
+    m_string_is_set = false;
     m_pos = 0;
 }
 }  // namespace clp

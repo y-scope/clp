@@ -16,7 +16,7 @@ namespace clp {
 
 /**
  * Represents a logtype that would match the given search query. The logtype is a sequence
- * containing values, where each value is either a static character or an integers representing
+ * containing values, where each value is either a static character or an integer representing
  * a variable type id. Also indicates if an integer/float variable is potentially in the dictionary
  * to handle cases containing wildcards. Note: long float and integers that cannot be encoded do not
  * fall under this case, as they are not potentially, but definitely in the dictionary, so will be
@@ -119,16 +119,6 @@ public:
     }
 };
 
-/**
- * Wraps the tokens returned from the log_surgeon lexer, and stores the variable
- * ids of the tokens in a search query in a set. This allows for optimized
- * search performance.
- */
-class SearchToken : public log_surgeon::Token {
-public:
-    std::set<int> m_type_ids_set;
-};
-
 class Grep {
 public:
     // Types
@@ -147,19 +137,6 @@ public:
     );
     
     // Methods
-    /**
-     * Generates the MxM query matrix containing all substrings of the search string, where 
-     * M is the length of the search string, and substr(m,n) is in entry n,m.
-     * @param processed_search_string 
-     * @param lexer 
-     * @param query_matrix 
-     */
-    static void generate_query_matrix(
-            std::string& processed_search_string,
-            log_surgeon::lexers::ByteLexer& lexer,
-            std::vector<std::set<QueryLogtype>>& query_matrix
-    );
-
     /**
      * Processes a raw user query into a Query
      * @param archive
@@ -251,6 +228,48 @@ public:
             size_t limit,
             streaming_archive::reader::Archive& archive,
             streaming_archive::reader::File& compressed_file
+    );
+    /**
+     * Generates all possible logtypes that can match each substr(0,n) of the search string.
+     * @param processed_search_string
+     * @param lexer
+     * @param query_matrix
+     */
+    static void generate_query_substring_logtypes(
+            std::string& processed_search_string,
+            log_surgeon::lexers::ByteLexer& lexer,
+            std::vector<std::set<QueryLogtype>>& query_substring_logtypes
+    );
+
+    /**
+     * Perform DFA intersect to determine the type of variables the string can match
+     * @param current_string
+     * @param lexer
+     * @param contains_wildcard
+     * @param variable_types
+     */
+    static void get_substring_variable_types(
+            std::string& current_string,
+            log_surgeon::lexers::ByteLexer& lexer,
+            bool& contains_wildcard,
+            std::set<uint32_t>& variable_types
+    );
+
+    /**
+     * Compare all possible query logtypes against the archive to determine all possible sub queries
+     * that can match against messages in the archive. 
+     * @param query_logtypes 
+     * @param archive 
+     * @param lexer 
+     * @param ignore_case 
+     * @param sub_queries 
+     */
+    static void generate_sub_queries(
+            std::set<QueryLogtype>& query_logtypes,
+            streaming_archive::reader::Archive const& archive,
+            log_surgeon::lexers::ByteLexer& lexer,
+            bool ignore_case,
+            std::vector<SubQuery>& sub_queries
     );
 };
 }  // namespace clp

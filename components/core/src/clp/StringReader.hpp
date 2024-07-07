@@ -23,11 +23,7 @@ public:
         char const* what() const noexcept override { return "StringReader operation failed"; }
     };
 
-    StringReader()
-            : m_pos(0),
-              m_getdelim_buf_len(0),
-              m_getdelim_buf(nullptr),
-              m_string_is_set(false) {}
+    StringReader() = default;
 
     ~StringReader();
 

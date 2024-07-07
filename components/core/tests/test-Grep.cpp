@@ -26,7 +26,6 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     size_t begin_pos;
     size_t end_pos;
     bool is_var;
-    std::string post_string;
 
     // m_end_pos past the end of the string
     str = "";
