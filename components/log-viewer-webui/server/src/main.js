@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import * as path from "node:path";
 import process from "node:process";
 
 import app from "./app.js";
@@ -7,7 +8,7 @@ import app from "./app.js";
 /**
  * Parses environment variables into config values for the application.
  *
- * @return {{PORT: string, HOST: string}}
+ * @return {{CLIENT_DIR: string, HOST: string, PORT: string}}
  * @throws {Error} if any required environment variable is undefined.
  */
 const parseEnvVars = () => {
@@ -16,10 +17,10 @@ const parseEnvVars = () => {
     });
 
     const {
-        HOST, PORT,
+        CLIENT_DIR, HOST, PORT,
     } = process.env;
     const envVars = {
-        HOST, PORT,
+        CLIENT_DIR, HOST, PORT,
     };
 
     // Check for mandatory environment variables
@@ -45,12 +46,13 @@ const main = async () => {
         production: true,
         test: false,
     };
-    const server = await app({
+
+    const envVars = parseEnvVars();
+    const server = await app(path.resolve(envVars.CLIENT_DIR), {
         logger: envToLogger[process.env.NODE_ENV] ?? true,
     });
 
     try {
-        const envVars = parseEnvVars();
         await server.listen({host: envVars.HOST, port: Number(envVars.PORT)});
     } catch (e) {
         server.log.error(e);
