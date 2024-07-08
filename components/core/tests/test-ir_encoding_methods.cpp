@@ -269,7 +269,11 @@ auto unpack_and_serialize_msgpack_bytes(
             clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
             msgpack_bytes.size()
     );
-    return serializer.serialize_msgpack_map(msgpack_oh.get());
+    auto const& msgpack_obj{msgpack_oh.get()};
+    if (msgpack::type::MAP != msgpack_obj.type) {
+        return false;
+    }
+    return serializer.serialize_msgpack_map(msgpack_obj.via.map);
 }
 }  // namespace
 

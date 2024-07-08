@@ -86,7 +86,7 @@ public:
      * @param msgpack_map msgpack key-value pair map to serialize, representing an log event.
      * @return Whether the serialization succeeded.
      */
-    [[nodiscard]] auto serialize_msgpack_map(msgpack::object const& msgpack_map) -> bool;
+    [[nodiscard]] auto serialize_msgpack_map(msgpack::object_map const& msgpack_map) -> bool;
 
 private:
     // Constructors
