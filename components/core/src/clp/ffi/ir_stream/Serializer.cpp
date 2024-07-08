@@ -203,7 +203,7 @@ auto serialize_value_null(vector<int8_t>& buf) -> void {
 template <typename encoded_variable_t>
 auto serialize_value_string(string_view val, vector<int8_t>& buf) -> bool {
     if (string_view::npos == val.find(' ')) {
-        return serialize_string_packet(val, buf);
+        return serialize_string(val, buf);
     }
     return serialize_clp_string<encoded_variable_t>(val, buf);
 }
@@ -395,7 +395,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
         return false;
     }
 
-    return serialize_string_packet(locator.get_key_name(), m_schema_tree_node_buf);
+    return serialize_string(locator.get_key_name(), m_schema_tree_node_buf);
 }
 
 template <typename encoded_variable_t>

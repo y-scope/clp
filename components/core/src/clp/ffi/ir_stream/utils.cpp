@@ -31,7 +31,7 @@ auto serialize_metadata(nlohmann::json& metadata, std::vector<int8_t>& ir_buf) -
     return true;
 }
 
-auto serialize_string_packet(std::string_view str, std::vector<int8_t>& buf) -> bool {
+auto serialize_string(std::string_view str, std::vector<int8_t>& buf) -> bool {
     auto const length{str.length()};
     if (length <= UINT8_MAX) {
         buf.push_back(cProtocol::Payload::StrPacketLenUByte);

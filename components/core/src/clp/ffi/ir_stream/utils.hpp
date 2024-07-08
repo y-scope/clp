@@ -49,7 +49,7 @@ template <typename encoded_variable_t>
  * @param buf Outputs the serialized byte sequence.
  * @return Whether the serialization succeeded.
  */
-[[nodiscard]] auto serialize_string_packet(std::string_view str, std::vector<int8_t>& buf) -> bool;
+[[nodiscard]] auto serialize_string(std::string_view str, std::vector<int8_t>& buf) -> bool;
 
 template <typename integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& ir_buf) -> void {
