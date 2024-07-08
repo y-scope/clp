@@ -336,7 +336,7 @@ tasks:
           DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
     cmds:
       - "rm -f {{.CHECKSUM_FILE}}"
-      - "rm -rf '{{.CLIENT_OUTPUT_DIR}}' '{{.PACKAGE_OUTPUT_DIR}}' '{{.SERVER_OUTPUT_DIR}}'"
+      - task: "clean-log-viewer-webui"
       - "PATH='{{.G_LATEST_NODEJS_DIR}}/bin':$PATH npm run init"
       # These commands must be last
       - task: "utils:compute-checksum"
@@ -355,7 +355,15 @@ tasks:
       - >-
         cat "{{.CLIENT_CHECKSUM_FILE}}" "{{.PACKAGE_CHECKSUM_FILE}}" "{{.SERVER_CHECKSUM_FILE}}"
         > "{{.CHECKSUM_FILE}}"
-    sources: ["{{.G_BUILD_DIR}}/nodejs-latest.md5", "{{.TASKFILE}}"]
+    sources:
+      - "{{.G_BUILD_DIR}}/nodejs-latest.md5"
+      - "{{.TASKFILE}}"
+      - "client/package.json"
+      - "client/package-lock.json"
+      - "package.json"
+      - "package-lock.json"
+      - "server/package.json"
+      - "server/package-lock.json"
     generates:
       - "{{.CHECKSUM_FILE}}"
       - "{{.CLIENT_CHECKSUM_FILE}}"
