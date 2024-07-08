@@ -37,11 +37,13 @@ auto serialize_int(integer_t value, std::vector<int8_t>& ir_buf) -> void;
  * Serializes a string using clp encoding.
  * @tparam encoded_variable_t
  * @param str
+ * @param logtype Outputs the logtype of the serialized clp string.
  * @param buf Outputs the serialized byte sequence.
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_clp_string(std::string_view str, std::vector<int8_t>& buf) -> bool;
+[[nodiscard]] auto
+serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& buf) -> bool;
 
 /**
  * Serializes a string packet.
@@ -68,12 +70,12 @@ auto serialize_int(integer_t value, std::vector<int8_t>& ir_buf) -> void {
 }
 
 template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_clp_string(std::string_view str, std::vector<int8_t>& buf) -> bool {
+[[nodiscard]] auto
+serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& buf) -> bool {
     static_assert(
             (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
              || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)
     );
-    std::string logtype;
     bool error{};
     if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
         buf.push_back(cProtocol::Payload::ValueFourByteEncodingClpStr);

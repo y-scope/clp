@@ -120,21 +120,25 @@ auto serialize_value_null(vector<int8_t>& buf) -> void;
  * Serializes a value of string type.
  * @tparam encoded_variable_t
  * @param val
+ * @param logtype_buf
  * @param buf Outputs the serialized byte sequence.
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_value_string(string_view val, vector<int8_t>& buf) -> bool;
+[[nodiscard]] auto
+serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& buf) -> bool;
 
 /**
  * Serializes a msgpack array as a JSON string, using clp encoding.
  * @tparam encoded_variable_t
  * @param val
+ * @param logtype_buf
  * @param buf Outputs the serialized byte sequence.
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_value_array(msgpack::object const& val, vector<int8_t>& buf) -> bool;
+[[nodiscard]] auto
+serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<int8_t>& buf) -> bool;
 
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
 ) -> optional<SchemaTreeNode::Type> {
@@ -201,18 +205,21 @@ auto serialize_value_null(vector<int8_t>& buf) -> void {
 }
 
 template <typename encoded_variable_t>
-auto serialize_value_string(string_view val, vector<int8_t>& buf) -> bool {
+auto serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& buf) -> bool {
     if (string_view::npos == val.find(' ')) {
         return serialize_string(val, buf);
     }
-    return serialize_clp_string<encoded_variable_t>(val, buf);
+    logtype_buf.clear();
+    return serialize_clp_string<encoded_variable_t>(val, logtype_buf, buf);
 }
 
 template <typename encoded_variable_t>
-auto serialize_value_array(msgpack::object const& val, vector<int8_t>& buf) -> bool {
+auto serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<int8_t>& buf)
+        -> bool {
     std::ostringstream oss;
     oss << val;
-    return serialize_clp_string<encoded_variable_t>(oss.str(), buf);
+    logtype_buf.clear();
+    return serialize_clp_string<encoded_variable_t>(oss.str(), logtype_buf, buf);
 }
 }  // namespace
 
@@ -439,6 +446,7 @@ auto Serializer<encoded_variable_t>::serialize_val(
             if (false
                 == serialize_value_string<encoded_variable_t>(
                         val.as<string_view>(),
+                        m_logtype_buf,
                         m_value_group_buf
                 ))
             {
@@ -454,7 +462,9 @@ auto Serializer<encoded_variable_t>::serialize_val(
             break;
 
         case SchemaTreeNode::Type::UnstructuredArray:
-            if (false == serialize_value_array<encoded_variable_t>(val, m_value_group_buf)) {
+            if (false
+                == serialize_value_array<encoded_variable_t>(val, m_logtype_buf, m_value_group_buf))
+            {
                 return false;
             }
             break;
