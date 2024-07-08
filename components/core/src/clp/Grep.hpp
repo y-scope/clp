@@ -24,50 +24,7 @@ namespace clp {
  */
 class QueryLogtype {
 public:
-    std::vector<std::variant<char, int>> m_logtype;
-    std::vector<std::string> m_search_query;
-    std::vector<bool> m_is_potentially_in_dict;
-    std::vector<bool> m_var_has_wildcard;
-
-    /**
-     * Append a logtype to the current logtype.
-     * @param suffix
-     */
-    auto append_logtype(QueryLogtype& suffix) -> void {
-        m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
-        m_search_query.insert(
-                m_search_query.end(),
-                suffix.m_search_query.begin(),
-                suffix.m_search_query.end()
-        );
-        m_is_potentially_in_dict.insert(
-                m_is_potentially_in_dict.end(),
-                suffix.m_is_potentially_in_dict.begin(),
-                suffix.m_is_potentially_in_dict.end()
-        );
-        m_var_has_wildcard.insert(
-                m_var_has_wildcard.end(),
-                suffix.m_var_has_wildcard.begin(),
-                suffix.m_var_has_wildcard.end()
-        );
-    }
-
-    /**
-     * Append a single value to the current logtype.
-     * @param val
-     * @param string
-     * @param var_contains_wildcard
-     */
-    auto append_value(
-            std::variant<char, int> const& val,
-            std::string const& string,
-            bool var_contains_wildcard
-    ) -> void {
-        m_var_has_wildcard.push_back(var_contains_wildcard);
-        m_logtype.push_back(val);
-        m_search_query.push_back(string);
-        m_is_potentially_in_dict.push_back(false);
-    }
+    QueryLogtype() = default;
 
     QueryLogtype(
             std::variant<char, int> const& val,
@@ -76,8 +33,6 @@ public:
     ) {
         append_value(val, string, var_contains_wildcard);
     }
-
-    QueryLogtype() = default;
 
     /**
      * @param rhs
@@ -88,35 +43,49 @@ public:
      * true if the first mismatch in special character locations is a non-special character for the
      * current logtype, false otherwise.
      */
-    bool operator<(QueryLogtype const& rhs) const {
-        if (m_logtype.size() < rhs.m_logtype.size()) {
-            return true;
-        } else if (m_logtype.size() > rhs.m_logtype.size()) {
-            return false;
-        }
-        for (uint32_t i = 0; i < m_logtype.size(); i++) {
-            if (m_logtype[i] < rhs.m_logtype[i]) {
-                return true;
-            } else if (m_logtype[i] > rhs.m_logtype[i]) {
-                return false;
-            }
-        }
-        for (uint32_t i = 0; i < m_search_query.size(); i++) {
-            if (m_search_query[i] < rhs.m_search_query[i]) {
-                return true;
-            } else if (m_search_query[i] > rhs.m_search_query[i]) {
-                return false;
-            }
-        }
-        for (uint32_t i = 0; i < m_is_potentially_in_dict.size(); i++) {
-            if (m_is_potentially_in_dict[i] < rhs.m_is_potentially_in_dict[i]) {
-                return true;
-            } else if (m_is_potentially_in_dict[i] > rhs.m_is_potentially_in_dict[i]) {
-                return false;
-            }
-        }
-        return false;
+    bool operator<(QueryLogtype const& rhs) const;
+
+    /**
+     * Append a logtype to the current logtype.
+     * @param suffix
+     */
+    void append_logtype(QueryLogtype& suffix);
+
+    /**
+     * Append a single value to the current logtype.
+     * @param val
+     * @param string
+     * @param var_contains_wildcard
+     */
+    void append_value(
+            std::variant<char, int> const& val,
+            std::string const& string,
+            bool var_contains_wildcard
+    );
+
+    void set_var_is_potentially_in_dict(uint32_t i, bool value) {
+        m_is_potentially_in_dict[i] = value;
     }
+
+    [[nodiscard]] uint32_t get_logtype_size() const { return m_logtype.size(); }
+
+    [[nodiscard]] std::variant<char, int> get_logtype_value(uint32_t i) const {
+        return m_logtype[i];
+    }
+
+    [[nodiscard]] std::string const& get_query_string(uint32_t i) const { return m_query[i]; }
+
+    [[nodiscard]] bool get_is_potentially_in_dict(uint32_t i) const {
+        return m_is_potentially_in_dict[i];
+    }
+
+    [[nodiscard]] bool get_has_wildcard(uint32_t i) const { return m_has_wildcard[i]; }
+
+private:
+    std::vector<std::variant<char, int>> m_logtype;
+    std::vector<std::string> m_query;
+    std::vector<bool> m_is_potentially_in_dict;
+    std::vector<bool> m_has_wildcard;
 };
 
 class Grep {
@@ -135,7 +104,7 @@ public:
             std::string const& decompressed_msg,
             void* custom_arg
     );
-    
+
     // Methods
     /**
      * Processes a raw user query into a Query
@@ -173,7 +142,7 @@ public:
             size_t& end_pos,
             bool& is_var
     );
-    
+
     /**
      * Marks which sub-queries in each query are relevant to the given file
      * @param compressed_file
@@ -257,12 +226,12 @@ public:
 
     /**
      * Compare all possible query logtypes against the archive to determine all possible sub queries
-     * that can match against messages in the archive. 
-     * @param query_logtypes 
-     * @param archive 
-     * @param lexer 
-     * @param ignore_case 
-     * @param sub_queries 
+     * that can match against messages in the archive.
+     * @param query_logtypes
+     * @param archive
+     * @param lexer
+     * @param ignore_case
+     * @param sub_queries
      */
     static void generate_sub_queries(
             std::set<QueryLogtype>& query_logtypes,

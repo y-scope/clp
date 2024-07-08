@@ -511,6 +511,66 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
 }
 }  // namespace
 
+bool QueryLogtype::operator<(QueryLogtype const& rhs) const {
+    if (m_logtype.size() < rhs.m_logtype.size()) {
+        return true;
+    } else if (m_logtype.size() > rhs.m_logtype.size()) {
+        return false;
+    }
+    for (uint32_t i = 0; i < m_logtype.size(); i++) {
+        if (m_logtype[i] < rhs.m_logtype[i]) {
+            return true;
+        } else if (m_logtype[i] > rhs.m_logtype[i]) {
+            return false;
+        }
+    }
+    for (uint32_t i = 0; i < m_query.size(); i++) {
+        if (m_query[i] < rhs.m_query[i]) {
+            return true;
+        } else if (m_query[i] > rhs.m_query[i]) {
+            return false;
+        }
+    }
+    for (uint32_t i = 0; i < m_is_potentially_in_dict.size(); i++) {
+        if (m_is_potentially_in_dict[i] < rhs.m_is_potentially_in_dict[i]) {
+            return true;
+        } else if (m_is_potentially_in_dict[i] > rhs.m_is_potentially_in_dict[i]) {
+            return false;
+        }
+    }
+    return false;
+}
+
+void QueryLogtype::append_logtype(QueryLogtype& suffix) {
+    m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
+    m_query.insert(
+            m_query.end(),
+            suffix.m_query.begin(),
+            suffix.m_query.end()
+    );
+    m_is_potentially_in_dict.insert(
+            m_is_potentially_in_dict.end(),
+            suffix.m_is_potentially_in_dict.begin(),
+            suffix.m_is_potentially_in_dict.end()
+    );
+    m_has_wildcard.insert(
+            m_has_wildcard.end(),
+            suffix.m_has_wildcard.begin(),
+            suffix.m_has_wildcard.end()
+    );
+}
+
+void QueryLogtype::append_value(
+        std::variant<char, int> const& val,
+        std::string const& string,
+        bool var_contains_wildcard
+) {
+    m_has_wildcard.push_back(var_contains_wildcard);
+    m_logtype.push_back(val);
+    m_query.push_back(string);
+    m_is_potentially_in_dict.push_back(false);
+}
+
 std::optional<Query> Grep::process_raw_query(
         Archive const& archive,
         string const& search_string,
@@ -1133,11 +1193,11 @@ void Grep::generate_sub_queries(
         // comparing against the dictionary than they do when comparing against the segment.
         std::string logtype_string;
         bool has_vars = true;
-        for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-            auto const& logtype_value = query_logtype.m_logtype[i];
-            auto const& raw_string = query_logtype.m_search_query[i];
-            auto const& is_dict_var = query_logtype.m_is_potentially_in_dict[i];
-            auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
+        for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
+            auto const& logtype_value = query_logtype.get_logtype_value(i);
+            auto const& raw_string = query_logtype.get_query_string(i);
+            auto const& is_dict_var = query_logtype.get_is_potentially_in_dict(i);
+            auto const& var_has_wildcard = query_logtype.get_has_wildcard(i);
             if (std::holds_alternative<char>(logtype_value)) {
                 logtype_string.push_back(std::get<char>(logtype_value));
             } else {
@@ -1151,7 +1211,7 @@ void Grep::generate_sub_queries(
                     && (schema_type == "int" || schema_type == "float"))
                 {
                     QueryLogtype new_query_logtype = query_logtype;
-                    new_query_logtype.m_is_potentially_in_dict[i] = true;
+                    new_query_logtype.set_var_is_potentially_in_dict(i, true);
                     // TODO: sketchy, but works cause < operator inserts it after current iterator
                     query_logtypes.insert(new_query_logtype);
                 }
@@ -1199,11 +1259,11 @@ void Grep::generate_sub_queries(
         // encoded in the segment, we just assume it exists in the segment, as we estimate that
         // checking is slower than decompressing.
         SubQuery sub_query;
-        for (uint32_t i = 0; i < query_logtype.m_logtype.size(); i++) {
-            auto const& logtype_value = query_logtype.m_logtype[i];
-            auto const& raw_string = query_logtype.m_search_query[i];
-            auto const& is_dict_var = query_logtype.m_is_potentially_in_dict[i];
-            auto const& var_has_wildcard = query_logtype.m_var_has_wildcard[i];
+        for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
+            auto const& logtype_value = query_logtype.get_logtype_value(i);
+            auto const& raw_string = query_logtype.get_query_string(i);
+            auto const& is_dict_var = query_logtype.get_is_potentially_in_dict(i);
+            auto const& var_has_wildcard = query_logtype.get_has_wildcard(i);
             if (std::holds_alternative<int>(logtype_value)) {
                 auto& schema_type = lexer.m_id_symbol[std::get<int>(logtype_value)];
                 encoded_variable_t encoded_var;

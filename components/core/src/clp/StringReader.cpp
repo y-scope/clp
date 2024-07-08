@@ -14,7 +14,6 @@ using std::string;
 namespace clp {
 StringReader::~StringReader() {
     close();
-    free(m_getdelim_buf);
 }
 
 ErrorCode StringReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {

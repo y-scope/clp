@@ -79,15 +79,7 @@ public:
      * Closes the file if it's open
      */
     void close();
-    /**
-     * Tries to stat the current file
-     * @param stat_buffer
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
-     */
 private:
-    size_t m_getdelim_buf_len{0};
-    char* m_getdelim_buf{nullptr};
     std::string m_input_string;
     uint32_t m_pos{0};
     bool m_string_is_set{false};
