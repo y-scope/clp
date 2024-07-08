@@ -80,28 +80,7 @@ tasks:
       - task: "js"
         vars:
           LINT_CMD: "fix"
-    sources:
-      - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
-      - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.css"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/package.json"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/*.js"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/package.json"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
-      - "{{.TASKFILE}}"
-      - "{{.G_WEBUI_SRC_DIR}}/client/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/client/**/*.jsx"
-      - "{{.G_WEBUI_SRC_DIR}}/imports/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/imports/**/*.jsx"
-      - "{{.G_WEBUI_SRC_DIR}}/launcher.js"
-      - "{{.G_WEBUI_SRC_DIR}}/package.json"
-      - "{{.G_WEBUI_SRC_DIR}}/server/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/server/**/*.jsx"
-      - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.jsx"
+    sources: *js_source_files
 
   py-check:
     cmds:
