@@ -1016,9 +1016,10 @@ void Grep::generate_query_substring_logtypes(
     // with the last entry having all possible logtypes for the full query itself.
     for (uint32_t i = 0; i < processed_search_string.size(); i++) {
         for (uint32_t j = 0; j <= i; ++j) {
-            std::string current_string = processed_search_string.substr(j, i - j + 1);
             std::vector<QueryLogtype> possible_substring_types;
-            if (current_string == "*") {
+            std::string_view substr
+                    = std::string_view(processed_search_string).substr(j, i - j + 1);
+            if (substr == "*") {
                 possible_substring_types.emplace_back('*', "*", false);
             } else {
                 set<uint32_t> variable_types;
@@ -1030,14 +1031,16 @@ void Grep::generate_query_substring_logtypes(
                 // If we decompose the string into either substrings "* ","ab*","cd"," *" or
                 // "* ","ab","*cd"," *", neither would capture the possibility of a logtype with the
                 // form "* <has#><has#> *", which is a valid possibility during compression.
+                std::string current_string;
                 bool prev_star = j > 0 && processed_search_string[j - 1] == '*';
                 bool next_star = i < processed_search_string.back() - 1
                                  && processed_search_string[i + 1] == '*';
                 if (prev_star) {
-                    current_string.insert(0, "*");
+                    current_string += "*";
                 }
+                current_string += substr;
                 if (next_star) {
-                    current_string.push_back('*');
+                    current_string += "*";
                 }
 
                 // If the substring contains a wildcard, we need a different approach to determine
