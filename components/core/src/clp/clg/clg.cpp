@@ -595,8 +595,7 @@ int main(int argc, char const* argv[]) {
                 // fast to create
                 if (lexer_map_it == lexer_map.end()) {
                     // Create forward lexer
-                    auto insert_result
-                            = lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
+                    auto insert_result = lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
                     lexer_ptr = &insert_result.first->second;
                     load_lexer_from_file(schema_file_path, false, *lexer_ptr);
                 } else {
@@ -611,12 +610,7 @@ int main(int argc, char const* argv[]) {
         }
 
         // Perform search
-        if (!search(search_strings,
-                    command_line_args,
-                    archive_reader,
-                    *lexer_ptr,
-                    use_heuristic))
-        {
+        if (!search(search_strings, command_line_args, archive_reader, *lexer_ptr, use_heuristic)) {
             return -1;
         }
         archive_reader.close();

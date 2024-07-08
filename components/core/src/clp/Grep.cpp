@@ -543,11 +543,7 @@ bool QueryLogtype::operator<(QueryLogtype const& rhs) const {
 
 void QueryLogtype::append_logtype(QueryLogtype& suffix) {
     m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
-    m_query.insert(
-            m_query.end(),
-            suffix.m_query.begin(),
-            suffix.m_query.end()
-    );
+    m_query.insert(m_query.end(), suffix.m_query.begin(), suffix.m_query.end());
     m_is_potentially_in_dict.insert(
             m_is_potentially_in_dict.end(),
             suffix.m_is_potentially_in_dict.begin(),

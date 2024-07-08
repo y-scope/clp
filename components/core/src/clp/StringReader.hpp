@@ -79,6 +79,7 @@ public:
      * Closes the file if it's open
      */
     void close();
+
 private:
     std::string m_input_string;
     uint32_t m_pos{0};
