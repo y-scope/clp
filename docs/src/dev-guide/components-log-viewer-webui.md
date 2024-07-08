@@ -50,7 +50,25 @@ npm test
 
 ## Linting
 
-To check for linting errors in either the client or server:
+You can lint this component either as part of the entire project or as a standalone component.
+
+### Lint as part of the project
+
+To check for linting errors:
+
+```shell
+task lint:js-check
+```
+
+To also fix linting errors (if possible):
+
+```shell
+task lint:js-fix
+```
+
+### Lint the component alone
+
+To check for linting errors:
 
 ```shell
 npm run lint:check
