@@ -353,7 +353,10 @@ tasks:
           OUTPUT_FILE: "{{.SERVER_CHECKSUM_FILE}}"
       # This command must be last
       - >-
-        cat "{{.CLIENT_CHECKSUM_FILE}}" "{{.PACKAGE_CHECKSUM_FILE}}" "{{.SERVER_CHECKSUM_FILE}}"
+        cat
+        "{{.CLIENT_CHECKSUM_FILE}}"
+        "{{.PACKAGE_CHECKSUM_FILE}}"
+        "{{.SERVER_CHECKSUM_FILE}}"
         > "{{.CHECKSUM_FILE}}"
     sources:
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
