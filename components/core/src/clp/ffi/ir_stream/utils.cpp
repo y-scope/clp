@@ -35,7 +35,7 @@ auto serialize_string_packet(std::string_view str, std::vector<int8_t>& buf) -> 
     auto const length{str.length()};
     if (length <= UINT8_MAX) {
         buf.push_back(cProtocol::Payload::StrPacketLenUByte);
-        buf.push_back(static_cast<int8_t>(static_cast<uint8_t>(length)));
+        buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(length)));
     } else if (length <= UINT16_MAX) {
         buf.push_back(cProtocol::Payload::StrPacketLenUShort);
         serialize_int(static_cast<uint16_t>(length), buf);

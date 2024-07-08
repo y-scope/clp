@@ -145,7 +145,7 @@ auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
             ret_val.emplace(SchemaTreeNode::Type::Int);
             break;
         case msgpack::type::FLOAT32:
-        case msgpack::type::FLOAT:
+        case msgpack::type::FLOAT64:
             ret_val.emplace(SchemaTreeNode::Type::Float);
             break;
         case msgpack::type::STR:
@@ -286,14 +286,15 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object const
             working_stack.pop_back();
             continue;
         }
+
         auto const& [key, val]{curr.get_next_child()};
         auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
         if (false == opt_schema_tree_node_type.has_value()) {
             failure = true;
             break;
         }
-
         auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
+
         SchemaTree::NodeLocator const locator{
                 curr.get_parent_id(),
                 key.as<string_view>(),
@@ -377,6 +378,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
             // Unknown type
             return false;
     }
+
     auto const parent_id{locator.get_parent_id()};
     if (parent_id <= UINT8_MAX) {
         m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUByte);
@@ -388,6 +390,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
         // Out of range
         return false;
     }
+
     return serialize_string_packet(locator.get_key_name(), m_schema_tree_node_buf);
 }
 
@@ -395,7 +398,7 @@ template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id) -> bool {
     if (id <= UINT8_MAX) {
         m_key_group_buf.push_back(cProtocol::Payload::KeyIdUByte);
-        m_key_group_buf.push_back(static_cast<int8_t>(static_cast<uint8_t>(id)));
+        m_key_group_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(id)));
     } else if (id <= UINT16_MAX) {
         m_key_group_buf.push_back(cProtocol::Payload::KeyIdUShort);
         serialize_int(static_cast<uint16_t>(id), m_key_group_buf);

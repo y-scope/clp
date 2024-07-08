@@ -46,7 +46,7 @@ bool serialize_log_event(
  * @param message
  * @param logtype
  * @param ir_buf
- * @return true on success, false otherwise
+ * @return Whether the message was serialized successfully.
  */
 bool serialize_message(std::string_view message, std::string& logtype, std::vector<int8_t>& ir_buf);
 }  // namespace eight_byte_encoding
