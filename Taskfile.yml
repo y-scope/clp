@@ -10,6 +10,7 @@ vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
+  G_NODEJS_22_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
@@ -26,6 +27,7 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.G_BUILD_DIR}}'"
+      - task: "clean-log-viewer-webui"
       - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
@@ -35,6 +37,18 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-webui"
+
+  clean-log-viewer-webui:
+    cmds:
+      - "rm -rf 'components/log-viewer-webui/client/node_modules'"
+      - "rm -rf 'components/log-viewer-webui/node_modules'"
+      - "rm -rf 'components/log-viewer-webui/server/node_modules'"
+
+  clean-webui:
+    cmds:
+      - "rm -rf 'components/webui/.meteor/local'"
+      - "rm -rf 'components/webui/node_modules'"
 
   clp-json-pkg-tar:
     cmds:
@@ -204,6 +218,19 @@ tasks:
       - "tests/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
 
+  nodejs-22:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_NODEJS_22_DIR}}"
+    run: "once"
+    cmds:
+      - task: "nodejs"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          NODEJS_VERSION: "v22.4.0"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+
   webui-nodejs:
     internal: true
     vars:
@@ -273,6 +300,78 @@ tasks:
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
     sources: ["{{.TASKFILE}}"]
     generates: ["{{.CHECKSUM_FILE}}"]
+
+  # NOTE: The log-viewer-webui has three different node_modules directories (client, server, and the
+  # top-level one we call "package"), meaning we have to create three different checksums. To allow
+  # tasks which depend on this task to only have to check one checksum file, we concatenate the
+  # three checksum files into one.
+  log-viewer-webui-node-modules:
+    internal: true
+    vars:
+      # Checksum files
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-client-node-modules.md5"
+      PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-package-node-modules.md5"
+      SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-server-node-modules.md5"
+
+      # Directories
+      SRC_DIR: "{{.TASKFILE_DIR}}/components/log-viewer-webui"
+      CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
+      PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
+      SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
+    dir: "{{.SRC_DIR}}"
+    deps:
+      - "nodejs-22"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          DATA_DIR: "{{.CLIENT_OUTPUT_DIR}}"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+          DATA_DIR: "{{.SERVER_OUTPUT_DIR}}"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
+    cmds:
+      - "rm -f {{.CHECKSUM_FILE}}"
+      - task: "clean-log-viewer-webui"
+      - "PATH='{{.G_NODEJS_22_DIR}}/bin':$PATH npm run init"
+      # These commands must be last
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.CLIENT_OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.SERVER_OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+      # This command must be last
+      - >-
+        cat
+        "{{.CLIENT_CHECKSUM_FILE}}"
+        "{{.PACKAGE_CHECKSUM_FILE}}"
+        "{{.SERVER_CHECKSUM_FILE}}"
+        > "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
+      - "{{.TASKFILE}}"
+      - "client/package.json"
+      - "client/package-lock.json"
+      - "package.json"
+      - "package-lock.json"
+      - "server/package.json"
+      - "server/package-lock.json"
+    generates:
+      - "{{.CHECKSUM_FILE}}"
+      - "{{.CLIENT_CHECKSUM_FILE}}"
+      - "{{.PACKAGE_CHECKSUM_FILE}}"
+      - "{{.SERVER_CHECKSUM_FILE}}"
 
   meteor:
     run: "once"
