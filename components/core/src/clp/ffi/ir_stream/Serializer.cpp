@@ -36,15 +36,15 @@ using clp::ir::four_byte_encoded_variable_t;
 namespace clp::ffi::ir_stream {
 namespace {
 /**
- * Class for tracking states when traversing a msgpack map using pre-order traversal.
+ * Class for iterating a msgpack map.
  */
-class MsgpackMapNode {
+class MsgpackMapIterator {
 public:
     // Types
     using Child = msgpack::object_kv;
 
     // Constructors
-    MsgpackMapNode(SchemaTreeNode::id_t parent_id, Child* child_data, size_t child_data_length)
+    MsgpackMapIterator(SchemaTreeNode::id_t parent_id, Child* child_data, size_t child_data_length)
             : m_parent_id{parent_id},
               m_children{child_data, child_data_length} {}
 
@@ -277,16 +277,19 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object const
     m_key_group_buf.clear();
     m_value_group_buf.clear();
 
+    // Traverse the map from the root using DFS iteratively.
     bool failure{false};
-    vector<MsgpackMapNode> working_stack;
+    vector<MsgpackMapIterator> working_stack;
     working_stack.emplace_back(SchemaTree::cRootId, map.ptr, static_cast<size_t>(map.size));
     while (false == working_stack.empty()) {
         auto& curr{working_stack.back()};
         if (false == curr.has_next_child()) {
+            // All child has been visited. Pop it out from the working stack
             working_stack.pop_back();
             continue;
         }
 
+        // Convert the type of the current value to its corresponded schema tree node type
         auto const& [key, val]{curr.get_next_child()};
         auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
         if (false == opt_schema_tree_node_type.has_value()) {
@@ -301,6 +304,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object const
                 schema_tree_node_type
         };
 
+        // Get the corresponded node in the schema tree. If the node doesn't exist yet, create one
         auto opt_schema_tree_node_id{m_schema_tree.try_get_node_id(locator)};
         if (false == opt_schema_tree_node_id.has_value()) {
             opt_schema_tree_node_id.emplace(m_schema_tree.insert_node(locator));
@@ -312,6 +316,8 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object const
         auto const schema_tree_node_id{opt_schema_tree_node_id.value()};
 
         if (SchemaTreeNode::Type::Obj == schema_tree_node_type && msgpack::type::MAP == val.type) {
+            // Serialize sub-maps. If the sub-map is not empty, push an iterator of the sub-map into
+            // the working stack to continue DFS
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             auto const& inner_map{val.via.map};
             auto const inner_map_size(static_cast<size_t>(inner_map.size));
@@ -325,7 +331,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object const
                 working_stack.emplace_back(schema_tree_node_id, inner_map.ptr, inner_map_size);
             }
         } else {
-            // Serialize primitive values
+            // A primitive value is reached. Directly serialize its key and value into the IR stream
             if (false
                 == (serialize_key(schema_tree_node_id) && serialize_val(val, schema_tree_node_type)
                 ))
