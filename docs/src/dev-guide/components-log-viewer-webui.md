@@ -60,7 +60,7 @@ To check for linting errors:
 task lint:js-check
 ```
 
-To also fix linting errors (if possible):
+To also fix linting errors (if applicable):
 
 ```shell
 task lint:js-fix
@@ -74,7 +74,7 @@ To check for linting errors:
 npm run lint:check
 ```
 
-To also fix linting errors (if possible):
+To also fix linting errors (if applicable):
 
 ```shell
 npm run lint:fix
