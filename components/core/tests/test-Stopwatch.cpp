@@ -34,13 +34,13 @@ TEST_CASE("Stopwatch", "[Stopwatch]") {
         REQUIRE(time_taken >= 1.0);
         REQUIRE(time_taken < 1.1);
     }
-    
+
     SECTION("Test multiple measurements") {
         // Measure some work
         stopwatch.start();
         sleep(1);
         stopwatch.stop();
-        
+
         // Do some other work
         sleep(1);
 
