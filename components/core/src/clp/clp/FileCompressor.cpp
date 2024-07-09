@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <set>
+#include <span>
 
 #include <archive_entry.h>
 #include <boost/algorithm/string.hpp>
@@ -343,7 +344,7 @@ bool FileCompressor::try_compressing_as_archive(
         m_libarchive_reader.open_file_reader(m_libarchive_file_reader);
 
         // Check that file is UTF-8 encoded
-        if (auto error_code = m_libarchive_file_reader.try_load_data_block();
+        if (auto error_code = m_libarchive_file_reader.try_load_nonempty_data_block();
             ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
         {
             SPDLOG_ERROR(
@@ -355,12 +356,10 @@ bool FileCompressor::try_compressing_as_archive(
             succeeded = false;
             continue;
         }
-        char const* utf8_validation_buf{nullptr};
-        size_t peek_size{0};
-        m_libarchive_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
+        auto const utf8_validation_buf{m_libarchive_file_reader.peek_buffered_data()};
         string file_path{m_libarchive_reader.get_path()};
-        auto utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
-        if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
+        auto utf8_validation_buf_len = std::min(utf8_validation_buf.size(), cUtfMaxValidationLen);
+        if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf.data())) {
             auto boost_path_for_compression = parent_boost_path / file_path;
             if (use_heuristic) {
                 parse_and_encode_with_heuristic(
@@ -383,7 +382,10 @@ bool FileCompressor::try_compressing_as_archive(
                         m_libarchive_file_reader
                 );
             }
-        } else if (has_ir_stream_magic_number({utf8_validation_buf, peek_size})) {
+        } else if (has_ir_stream_magic_number(
+                           {utf8_validation_buf.data(), utf8_validation_buf.size()}
+                   ))
+        {
             // Remove .clp suffix if found
             static constexpr char cIrStreamExtension[] = ".clp";
             if (boost::iends_with(file_path, cIrStreamExtension)) {
