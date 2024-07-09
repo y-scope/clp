@@ -21,6 +21,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
+    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -49,6 +50,7 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
+    validate_log_viewer_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
@@ -698,10 +700,9 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         return
 
     webui_logs_dir = clp_config.logs_directory / component_name
-    node_path = str(
-        CONTAINER_CLP_HOME / "var" / "www" / "programs" / "server" / "npm" / "node_modules"
-    )
-    settings_json_path = get_clp_home() / "var" / "www" / "settings.json"
+    container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
+    node_path = str(container_webui_dir / "programs" / "server" / "npm" / "node_modules")
+    settings_json_path = get_clp_home() / "var" / "www" / "webui" / "settings.json"
 
     validate_webui_config(clp_config, webui_logs_dir, settings_json_path)
 
@@ -758,9 +759,67 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
-        str(CONTAINER_CLP_HOME / "bin" / "node"),
-        str(CONTAINER_CLP_HOME / "var" / "www" / "launcher.js"),
-        str(CONTAINER_CLP_HOME / "var" / "www" / "main.js"),
+        str(CONTAINER_CLP_HOME / "bin" / "node-14"),
+        str(container_webui_dir / "launcher.js"),
+        str(container_webui_dir / "main.js"),
+    ]
+    cmd = container_cmd + node_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
+def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
+    component_name = LOG_VIEWER_WEBUI_COMPONENT_NAME
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f"clp-{component_name}-{instance_id}"
+    if container_exists(container_name):
+        return
+
+    log_viewer_webui_logs_dir = clp_config.logs_directory / component_name
+    container_log_viewer_dir = CONTAINER_CLP_HOME / "var" / "www" / "log_viewer"
+    node_path = str(container_log_viewer_dir / "server" / "node_modules")
+
+    validate_log_viewer_config(clp_config, log_viewer_webui_logs_dir)
+
+    # Create directories
+    log_viewer_webui_logs_dir.mkdir(exist_ok=True, parents=True)
+
+    container_log_viewer_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
+
+    # Start container
+    # fmt: off
+    container_cmd = [
+        "docker", "run",
+        "-d",
+        "--network", "host",
+        "--name", container_name,
+        "--log-driver", "local",
+        "-e", f"NODE_PATH={node_path}",
+        "-e", f"CLIENT_DIR=../client/dist",
+        "-e", f"PORT={clp_config.log_viewer_webui.port}",
+        "-e", f"HOST={clp_config.log_viewer_webui.host}",
+        "-e", f"NODE_ENV=production",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+    ]
+    # fmt: on
+    necessary_mounts = [
+        mounts.clp_home,
+        mounts.ir_output_dir,
+        DockerMount(
+            DockerMountType.BIND, log_viewer_webui_logs_dir, container_log_viewer_webui_logs_dir
+        ),
+    ]
+    for mount in necessary_mounts:
+        if mount:
+            container_cmd.append("--mount")
+            container_cmd.append(str(mount))
+    container_cmd.append(clp_config.execution_container)
+
+    node_cmd = [
+        str(CONTAINER_CLP_HOME / "bin" / "node-22"),
+        str(container_log_viewer_dir / "server" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -897,6 +956,7 @@ def main(argv):
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             QUERY_SCHEDULER_COMPONENT_NAME,
             WEBUI_COMPONENT_NAME,
+            LOG_VIEWER_WEBUI_COMPONENT_NAME,
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
@@ -984,6 +1044,8 @@ def main(argv):
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
+        if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME):
+            start_log_viewer_webui(instance_id, clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:

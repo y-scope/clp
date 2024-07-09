@@ -15,7 +15,9 @@ vars:
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
   G_WEBUI_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/webui-nodejs"
+  G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_WEBUI_NODEJS_BIN_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}/bin"
+  G_LOG_VIEWER_WEBUI_BIN_DIR: "{{.G_NODEJS_22_DIR}}/bin"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
@@ -81,6 +83,7 @@ tasks:
           DATA_DIR: "{{.OUTPUT_DIR}}"
       - "webui"
       - "webui-nodejs"
+      - "log-viewer-webui"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
@@ -101,16 +104,30 @@ tasks:
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
         "{{.OUTPUT_DIR}}/bin/"
+      - >-
+        rsync -a
+        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
+        "{{.OUTPUT_DIR}}/bin/node-14"
+      - >-
+        rsync -a
+        "{{.G_LOG_VIEWER_WEBUI_BIN_DIR}}/node"
+        "{{.OUTPUT_DIR}}/bin/node-22"
       - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
       - >-
         rsync -a
         "{{.G_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/"
+        "{{.OUTPUT_DIR}}/var/www/webui/"
       - |-
-        cd "{{.OUTPUT_DIR}}/var/www/programs/server"
+        cd "{{.OUTPUT_DIR}}/var/www/webui/programs/server"
         PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
+      - >-
+        rsync -a
+        "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/"
+        "{{.OUTPUT_DIR}}/var/www/log_viewer/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/var/www/log_viewer/server"
+        PATH="{{.G_LOG_VIEWER_WEBUI_BIN_DIR}}":$PATH npm i
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
@@ -173,6 +190,36 @@ tasks:
     - task: "python-component"
       vars:
         COMPONENT: "{{.TASK}}"
+
+  log-viewer-webui:
+    deps:
+      - "init"
+      - "log-viewer-webui-node-modules"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+    dir: "components/log-viewer-webui"
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "rsync -a client server {{.OUTPUT_DIR}}/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/client"
+        PATH="{{.G_LOG_VIEWER_WEBUI_BIN_DIR}}":$PATH npm run build
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/log-viewer-modules.md5"
+      - "{{.TASKFILE}}"
+      - "*"
+      - "client/**/*"
+      - "server/**/*"
+    generates: ["{{.CHECKSUM_FILE}}"]
 
   webui:
     deps:
@@ -306,7 +353,6 @@ tasks:
   # tasks which depend on this task to only have to check one checksum file, we concatenate the
   # three checksum files into one.
   log-viewer-webui-node-modules:
-    internal: true
     vars:
       # Checksum files
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"

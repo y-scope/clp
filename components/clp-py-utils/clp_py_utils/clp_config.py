@@ -26,6 +26,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
+LOG_VIEWER_WEBUI_COMPONENT_NAME = "log_viewer_webui"
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -382,6 +383,29 @@ class WebUi(BaseModel):
         return field
 
 
+class LogViewerWebUi(BaseModel):
+    host: str = "localhost"
+    port: int = 3000
+    logging_level: str = "INFO"
+
+    @validator("host")
+    def validate_host(cls, field):
+        if "" == field:
+            raise ValueError(f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.host cannot be empty.")
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        min_valid_port = 0
+        max_valid_port = 2**16 - 1
+        if min_valid_port > field or max_valid_port < field:
+            raise ValueError(
+                f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port is not within valid range "
+                f"{min_valid_port}-{max_valid_port}."
+            )
+        return field
+
+
 class CLPConfig(BaseModel):
     execution_container: typing.Optional[str]
 
@@ -398,6 +422,7 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
+    log_viewer_webui: LogViewerWebUi = LogViewerWebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
