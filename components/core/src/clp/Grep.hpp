@@ -218,7 +218,12 @@ public:
      * @param variable_types
      */
     static void get_substring_variable_types(
-            std::string& current_string,
+            uint32_t substr_start,
+            uint32_t substr_end,
+            std::string& schema_search_string,
+            std::vector<bool>& is_greedy_wildcard,
+            std::vector<bool>& is_non_greedy_wildcard,
+            std::vector<bool>& is_cancel,
             log_surgeon::lexers::ByteLexer& lexer,
             bool& contains_wildcard,
             std::set<uint32_t>& variable_types

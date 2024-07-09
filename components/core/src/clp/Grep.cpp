@@ -674,22 +674,22 @@ std::optional<Query> Grep::process_raw_query(
         // creates all possible logtypes that can match substring(0,n) of the query, which includes
         // all possible logtypes that can match the query itself. Then these logtypes, and their
         // corresponding variables are compared against the archive.
-        static vector<set<QueryLogtype>> query_substring_logtypes(processed_search_string.size());
+        static vector<set<QueryLogtype>> query_substr_logtypes(processed_search_string.size());
 
-        // We only need get the possible logtypes for the query once across all archives.
-        static bool query_substring_logtypes_set = false;
-        if (false == query_substring_logtypes_set) {
+        // Get the possible logtypes for the query (but only do it once across all archives).
+        static bool query_substr_logtypes_set = false;
+        if (false == query_substr_logtypes_set) {
             generate_query_substring_logtypes(
                     processed_search_string,
                     lexer,
-                    query_substring_logtypes
+                    query_substr_logtypes
             );
-            query_substring_logtypes_set = true;
+            query_substr_logtypes_set = true;
         }
 
-        // The last entry of the query_substring_logtypes is the logtypes for the query itself. Use
+        // The last entry of the query_substr_logtypes is the logtypes for the query itself. Use
         // this to determine all subqueries that may match against the current archive.
-        auto& query_logtypes = query_substring_logtypes.back();
+        auto& query_logtypes = query_substr_logtypes.back();
         generate_sub_queries(query_logtypes, archive, lexer, ignore_case, sub_queries);
     }
 
@@ -1003,68 +1003,131 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
 void Grep::generate_query_substring_logtypes(
         string& processed_search_string,
         ByteLexer& lexer,
-        vector<std::set<QueryLogtype>>& query_substring_logtypes
+        vector<std::set<QueryLogtype>>& query_substr_logtypes
 ) {
+    // We need to differentiate between literal '*'/'?' and wildcards
+    std::vector<bool> is_greedy_wildcard;
+    std::vector<bool> is_non_greedy_wildcard;
+    std::vector<bool> is_cancel;
+    is_greedy_wildcard.reserve(processed_search_string.size());
+    is_non_greedy_wildcard.reserve(processed_search_string.size());
+    is_cancel.reserve(processed_search_string.size());
+    bool is_cancelled = false;
+    for (auto c : processed_search_string) {
+        if (is_cancelled) {
+            is_greedy_wildcard.push_back(false);
+            is_non_greedy_wildcard.push_back(false);
+            is_cancel.push_back(false);
+            is_cancelled = false;
+        } else {
+            if (c == '\\') {
+                is_cancelled = true;
+                is_greedy_wildcard.push_back(false);
+                is_non_greedy_wildcard.push_back(false);
+                is_cancel.push_back(true);
+            } else if (c == '*') {
+                is_greedy_wildcard.push_back(true);
+                is_non_greedy_wildcard.push_back(false);
+                is_cancel.push_back(false);
+            } else if (c == '?') {
+                is_greedy_wildcard.push_back(false);
+                is_non_greedy_wildcard.push_back(true);
+                is_cancel.push_back(false);
+            } else {
+                is_greedy_wildcard.push_back(false);
+                is_non_greedy_wildcard.push_back(false);
+                is_cancel.push_back(false);
+            }
+        }
+    }
+
     // Consider each substr(i,j) of the processed_search_string and determine if it could have been
-    // compressed as uniquely static-text, a unique variable, or some combination of variables
-    // (including static-text as 1 option in the set). Then we populate each entry in
-    // query_substring_logtypes which corresponds to the logtype for substr(0,n). To do this, for
-    // each combination of substr(i,j) that reconstructs substr(0,n) (e.g., substring "*1 34", can
-    // be reconstructed from substrings "*1", " ", "34"), store all possible logtypes
-    // (e.g. "*<int> <int>, "*<has#> <int>, etc.) that are unique from any previously checked
-    // combination. Each entry in query_substring_logtypes is used to build the following entry,
-    // with the last entry having all possible logtypes for the full query itself.
+    // compressed as static-text, a variable, or some combination of variables/static-text
+    // Then we populate each entry in query_substr_logtypes which corresponds to the logtype for
+    // substr(0,n). To do this, for each combination of substr(i,j) that reconstructs substr(0,n)
+    // (e.g., substring "*1 34", can be reconstructed from substrings "*1", " ", "34"), store all
+    // possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that are unique from any
+    // previously checked combination. Each entry in query_substr_logtypes is used to build the
+    // following entry, with the last entry having all possible logtypes for the full query itself.
+    bool i_is_cancelled = false;
     for (uint32_t i = 0; i < processed_search_string.size(); i++) {
+        if (i_is_cancelled) {
+            i_is_cancelled = false;
+        } else if ('\\' == processed_search_string[i]) {
+            i_is_cancelled = true;
+            continue;
+        }
+        bool j_is_cancelled = false;
         for (uint32_t j = 0; j <= i; ++j) {
-            std::vector<QueryLogtype> possible_substring_types;
-            std::string_view substr
-                    = std::string_view(processed_search_string).substr(j, i - j + 1);
-            if (substr == "*") {
-                possible_substring_types.emplace_back('*', "*", false);
+            if (j_is_cancelled) {
+                j_is_cancelled = false;
+                continue;
+            } else if ('\\' == processed_search_string[j]) {
+                j_is_cancelled = true;
+            }
+            std::vector<QueryLogtype> possible_substr_types;
+            // Don't allow an isolated wildcard to be considered a variable
+            if (i == j && is_greedy_wildcard[j]) {
+                possible_substr_types.emplace_back('*', "*", false);
+            } else if (i == j && is_non_greedy_wildcard[j]) {
+                possible_substr_types.emplace_back('?', "?", false);
             } else {
                 set<uint32_t> variable_types;
 
-                // If the substring is preceded or proceeded by * then it's possible the substring
-                // could be extended to match a var, so the wildcards are added to the substring. If
-                // we don't consider this case we could miss combinations. Take for example
-                // "* ab*cd *", "ab*" and "*cd" may both match a has# style variable ("\w*\d+\w*").
-                // If we decompose the string into either substrings "* ","ab*","cd"," *" or
-                // "* ","ab","*cd"," *", neither would capture the possibility of a logtype with the
-                // form "* <has#><has#> *", which is a valid possibility during compression.
-                std::string current_string;
-                bool prev_star = j > 0 && processed_search_string[j - 1] == '*';
-                bool next_star = i < processed_search_string.back() - 1
-                                 && processed_search_string[i + 1] == '*';
+                // If the substring is preceded or proceeded by a greedy wildcard then it's possible
+                // the substring could be extended to match a var, so the wildcards are added to the
+                // substring. If we don't consider this case we could miss combinations. Take for
+                // example "* ab*cd *", "ab*" and "*cd" may both match a has# style variable
+                // ("\w*\d+\w*"). If we decompose the string into either substrings "* " + "ab*" +
+                // "cd" + " *" or "* " + "ab" + "*cd" + " *", neither would capture the possibility
+                // of a logtype with the form "* <has#><has#> *", which is a valid possibility
+                // during compression. Note, non-greedy wildcards do not need to be considered, for
+                // example "* ab?cd *" can never match "* <has#><has#> *".
+                uint32_t substr_start = j;
+                uint32_t substr_end = i;
+                bool prev_star = j > 0 && is_greedy_wildcard[j - 1];
+                bool next_star
+                        = i < processed_search_string.back() - 1 && is_greedy_wildcard[i + 1];
                 if (prev_star) {
-                    current_string += "*";
+                    substr_start--;
                 }
-                current_string += substr;
                 if (next_star) {
-                    current_string += "*";
+                    substr_end++;
                 }
 
-                // If the substring contains a wildcard, we need a different approach to determine
-                // if it may be a variable. If it is a variable, we also need to consider the case
-                // that it could also be static text, and we need a different approach to compare
-                // against the archive.
+                // If the substring contains a wildcard, we need to consider the case that it can
+                // simultaneously match multiple variables and static text, and we need a different
+                // approach to compare against the archive.
                 bool contains_wildcard = false;
 
                 // If the substring isn't surrounded by delimiters there is no reason to consider
                 // the case where it is a variable as CLP would not compress it as such. Note:
-                // we must consider that wildcards could potentially be delimiters.
-                if ((j == 0 || current_string[0] == '*'
-                     || lexer.is_delimiter(processed_search_string[j - 1]))
-                    && (i == processed_search_string.size() - 1 || current_string.back() == '*'
-                        || lexer.is_delimiter(processed_search_string[i + 1])))
-                {
+                // we must consider that wildcards could potentially be delimiters, and that the
+                // start and end of a log are also treated as delimiters.
+                bool has_preceding_delimiter
+                        = j == 0 || is_greedy_wildcard[j] || is_non_greedy_wildcard[j - 1]
+                          || lexer.is_delimiter(processed_search_string[j - 1]);
+                bool has_proceeding_delimiter
+                        = i == processed_search_string.size() - 1 || is_greedy_wildcard[i]
+                          || is_non_greedy_wildcard[i + 1]
+                          || (false == is_cancel[i + 1]
+                              && lexer.is_delimiter(processed_search_string[i + 1]))
+                          || (is_cancel[i + 1] && i <= processed_search_string.size() - 2
+                              && lexer.is_delimiter(processed_search_string[i + 2]));
+                if (has_preceding_delimiter && has_proceeding_delimiter) {
                     get_substring_variable_types(
-                            current_string,
+                            substr_start,
+                            substr_end,
+                            processed_search_string,
+                            is_greedy_wildcard,
+                            is_non_greedy_wildcard,
+                            is_cancel,
                             lexer,
                             contains_wildcard,
                             variable_types
                     );
                     bool already_added_var = false;
-                    // Use the variable types to determine the possible_substring_types
+                    // Use the variable types to determine the possible_substr_types
                     for (int id : variable_types) {
                         auto& schema_type = lexer.m_id_symbol[id];
                         if (schema_type != "int" && schema_type != "float") {
@@ -1080,17 +1143,24 @@ void Grep::generate_query_substring_logtypes(
                             break;
                         }
 
-                        // If the substring had preceding or proceeding wildcards, even when it may
-                        // match a variable, it may match more. So we want to store it as "*<var>"/
-                        // "<var>*"/"*<var>*" instead of just <var>.
-                        bool start_star = current_string[0] == '*' && false == prev_star;
-                        bool end_star = current_string.back() == '*' && false == next_star;
-                        possible_substring_types.emplace_back();
-                        QueryLogtype& suffix = possible_substring_types.back();
+                        // If the substring had preceding or proceeding greedy wildcards, even when
+                        // it may match a variable, it may match more. So we want to store it as
+                        // "*<var>"/"<var>*"/"*<var>*" instead of just <var>. We don't need to do
+                        // this if the wildcard was borrowed from the neighboring substring, as the
+                        // neighboring substring will handle these cases for us.
+                        bool start_star = is_greedy_wildcard[substr_start] && false == prev_star;
+                        bool end_star = is_greedy_wildcard[substr_end] && false == next_star;
+                        possible_substr_types.emplace_back();
+                        QueryLogtype& suffix = possible_substr_types.back();
                         if (start_star) {
                             suffix.append_value('*', "*", false);
                         }
-                        suffix.append_value(id, current_string, contains_wildcard);
+                        suffix.append_value(
+                                id,
+                                processed_search_string
+                                        .substr(substr_start, substr_end - substr_start + 1),
+                                contains_wildcard
+                        );
                         if (end_star) {
                             suffix.append_value('*', "*", false);
                         }
@@ -1099,14 +1169,12 @@ void Grep::generate_query_substring_logtypes(
                 // If the substring matches no variables, or has a wildcard, it is potentially
                 // static-text.
                 if (variable_types.empty() || contains_wildcard) {
-                    possible_substring_types.emplace_back();
-                    auto& possible_substring_type = possible_substring_types.back();
-                    uint32_t start_id = prev_star ? 1 : 0;
-                    uint32_t end_id = next_star ? current_string.size() - 1 : current_string.size();
-                    for (uint32_t k = start_id; k < end_id; k++) {
-                        char const& c = current_string[k];
+                    possible_substr_types.emplace_back();
+                    auto& possible_substr_type = possible_substr_types.back();
+                    for (uint32_t k = i; k <= j; k++) {
+                        char const& c = processed_search_string[k];
                         std::string char_string({c});
-                        possible_substring_type.append_value(c, char_string, false);
+                        possible_substr_type.append_value(c, char_string, false);
                     }
                 }
             }
@@ -1115,17 +1183,17 @@ void Grep::generate_query_substring_logtypes(
             // possible logtypes for each substr(0,n), for all n.
             if (j > 0) {
                 // handle the case where substr(0,n) is composed of multiple substr(i,j)
-                for (auto const& prefix : query_substring_logtypes[j - 1]) {
-                    for (auto& suffix : possible_substring_types) {
+                for (auto const& prefix : query_substr_logtypes[j - 1]) {
+                    for (auto& suffix : possible_substr_types) {
                         QueryLogtype query_logtype = prefix;
                         query_logtype.append_logtype(suffix);
-                        query_substring_logtypes[i].insert(query_logtype);
+                        query_substr_logtypes[i].insert(query_logtype);
                     }
                 }
             } else {
                 // handle the case where substr(0,n) == substr(i,j)
-                for (auto& possible_substring_type : possible_substring_types) {
-                    query_substring_logtypes[i].insert(possible_substring_type);
+                for (auto& possible_substr_type : possible_substr_types) {
+                    query_substr_logtypes[i].insert(possible_substr_type);
                 }
             }
         }
@@ -1133,7 +1201,12 @@ void Grep::generate_query_substring_logtypes(
 }
 
 void Grep::get_substring_variable_types(
-        std::string& current_string,
+        uint32_t substr_start,
+        uint32_t substr_end,
+        std::string& schema_search_string,
+        std::vector<bool>& is_greedy_wildcard,
+        std::vector<bool>& is_non_greedy_wildcard,
+        std::vector<bool>& is_cancel,
         ByteLexer& lexer,
         bool& contains_wildcard,
         set<uint32_t>& variable_types
@@ -1143,14 +1216,22 @@ void Grep::get_substring_variable_types(
     // the compression DFA.
     std::string regex_search_string;
     uint32_t pos = 0;
-    for (char const& c : current_string) {
-        if (c == '*') {
-            contains_wildcard = true;
-            regex_search_string.push_back('.');
-        } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {
-            regex_search_string.push_back('\\');
+    for (uint32_t i = substr_start; i <= substr_end; i++) {
+        if (is_cancel[i]) {
+            continue;
         }
-        regex_search_string.push_back(c);
+        auto const& c = schema_search_string[i];
+        if (is_greedy_wildcard[i]) {
+            contains_wildcard = true;
+            regex_search_string += ".*";
+        } else if (is_non_greedy_wildcard[i]) {
+            contains_wildcard = true;
+            regex_search_string += ".";
+        } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {
+            regex_search_string += "\\" + c;
+        } else {
+            regex_search_string += c;
+        }
         pos++;
     }
 
