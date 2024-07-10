@@ -676,11 +676,23 @@ std::optional<Query> Grep::process_raw_query(
         // corresponding variables are compared against the archive.
         static vector<set<QueryLogtype>> query_substr_logtypes(processed_search_string.size());
 
+        // TODO: remove this when subqueries can handle '?' wildcards
+        string search_string_for_sub_queries{processed_search_string};
+        // Replace '?' wildcards with '*' wildcards since we currently have no support for
+        // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
+        // message uses the original wildcards, so correctness will be maintained.
+        std::replace(
+                search_string_for_sub_queries.begin(),
+                search_string_for_sub_queries.end(),
+                '?',
+                '*'
+        );
+
         // Get the possible logtypes for the query (but only do it once across all archives).
         static bool query_substr_logtypes_set = false;
         if (false == query_substr_logtypes_set) {
             generate_query_substring_logtypes(
-                    processed_search_string,
+                    search_string_for_sub_queries,
                     lexer,
                     query_substr_logtypes
             );
@@ -1041,10 +1053,10 @@ void Grep::generate_query_substring_logtypes(
         }
     }
 
-    // Consider each substr(i,j) of the processed_search_string and determine if it could have been
+    // Consider each substr(j,i) of the processed_search_string and determine if it could have been
     // compressed as static-text, a variable, or some combination of variables/static-text
     // Then we populate each entry in query_substr_logtypes which corresponds to the logtype for
-    // substr(0,n). To do this, for each combination of substr(i,j) that reconstructs substr(0,n)
+    // substr(0,n). To do this, for each combination of substr(j,i) that reconstructs substr(0,n)
     // (e.g., substring "*1 34", can be reconstructed from substrings "*1", " ", "34"), store all
     // possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that are unique from any
     // previously checked combination. Each entry in query_substr_logtypes is used to build the
@@ -1171,7 +1183,7 @@ void Grep::generate_query_substring_logtypes(
                 if (variable_types.empty() || contains_wildcard) {
                     possible_substr_types.emplace_back();
                     auto& possible_substr_type = possible_substr_types.back();
-                    for (uint32_t k = i; k <= j; k++) {
+                    for (uint32_t k = j; k <= i; k++) {
                         char const& c = processed_search_string[k];
                         std::string char_string({c});
                         possible_substr_type.append_value(c, char_string, false);
@@ -1179,10 +1191,10 @@ void Grep::generate_query_substring_logtypes(
                 }
             }
 
-            // Use the completed set of variable types for each substr(i,j) to construct all
+            // Use the completed set of variable types for each substr(j,i) to construct all
             // possible logtypes for each substr(0,n), for all n.
             if (j > 0) {
-                // handle the case where substr(0,n) is composed of multiple substr(i,j)
+                // handle the case where substr(0,n) is composed of multiple substr(j,i)
                 for (auto const& prefix : query_substr_logtypes[j - 1]) {
                     for (auto& suffix : possible_substr_types) {
                         QueryLogtype query_logtype = prefix;
@@ -1191,7 +1203,7 @@ void Grep::generate_query_substring_logtypes(
                     }
                 }
             } else {
-                // handle the case where substr(0,n) == substr(i,j)
+                // handle the case where substr(0,n) == substr(j,i)
                 for (auto& possible_substr_type : possible_substr_types) {
                     query_substr_logtypes[i].insert(possible_substr_type);
                 }
