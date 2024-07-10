@@ -9,15 +9,15 @@ vars:
   # Paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
+  G_LOG_VIEWER_WEBUI_BIN_DIR: "{{.G_NODEJS_22_DIR}}/bin"
+  G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
   G_NODEJS_22_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
   G_WEBUI_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/webui-nodejs"
-  G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_WEBUI_NODEJS_BIN_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}/bin"
-  G_LOG_VIEWER_WEBUI_BIN_DIR: "{{.G_NODEJS_22_DIR}}/bin"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
@@ -353,6 +353,7 @@ tasks:
   # tasks which depend on this task to only have to check one checksum file, we concatenate the
   # three checksum files into one.
   log-viewer-webui-node-modules:
+    internal: true
     vars:
       # Checksum files
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"

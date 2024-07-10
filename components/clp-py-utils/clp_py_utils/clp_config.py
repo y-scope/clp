@@ -154,6 +154,21 @@ def _validate_logging_level(cls, field):
         )
 
 
+def _validate_host(cls, field):
+    if "" == field:
+        raise ValueError(f"{cls.__name__}.host cannot be empty.")
+
+
+def _validate_port(cls, field):
+    min_valid_port = 0
+    max_valid_port = 2 ** 16 - 1
+    if min_valid_port > field or max_valid_port < field:
+        raise ValueError(
+            f"{cls.__name__}.port is not within valid range "
+            f"{min_valid_port}-{max_valid_port}."
+        )
+
+
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
@@ -362,19 +377,12 @@ class WebUi(BaseModel):
 
     @validator("host")
     def validate_host(cls, field):
-        if "" == field:
-            raise ValueError(f"{WEBUI_COMPONENT_NAME}.host cannot be empty.")
+        _validate_host(cls, field)
         return field
 
     @validator("port")
     def validate_port(cls, field):
-        min_valid_port = 0
-        max_valid_port = 2**16 - 1
-        if min_valid_port > field or max_valid_port < field:
-            raise ValueError(
-                f"{WEBUI_COMPONENT_NAME}.port is not within valid range "
-                f"{min_valid_port}-{max_valid_port}."
-            )
+        _validate_port(cls, field)
         return field
 
     @validator("logging_level")
@@ -390,19 +398,12 @@ class LogViewerWebUi(BaseModel):
 
     @validator("host")
     def validate_host(cls, field):
-        if "" == field:
-            raise ValueError(f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.host cannot be empty.")
+        _validate_host(cls, field)
         return field
 
     @validator("port")
     def validate_port(cls, field):
-        min_valid_port = 0
-        max_valid_port = 2**16 - 1
-        if min_valid_port > field or max_valid_port < field:
-            raise ValueError(
-                f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port is not within valid range "
-                f"{min_valid_port}-{max_valid_port}."
-            )
+        _validate_port(cls, field)
         return field
 
 
