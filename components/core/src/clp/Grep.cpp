@@ -1149,12 +1149,6 @@ void Grep::generate_query_substring_logtypes(
                             already_added_var = true;
                         }
 
-                        // If the substring has no wildcards, we can safely exclude lower priority
-                        // variable types.
-                        if (false == contains_wildcard) {
-                            break;
-                        }
-
                         // If the substring had preceding or proceeding greedy wildcards, even when
                         // it may match a variable, it may match more. So we want to store it as
                         // "*<var>"/"<var>*"/"*<var>*" instead of just <var>. We don't need to do
@@ -1175,6 +1169,12 @@ void Grep::generate_query_substring_logtypes(
                         );
                         if (end_star) {
                             suffix.append_value('*', "*", false);
+                        }
+
+                        // If the substring has no wildcards, we can safely exclude lower priority
+                        // variable types.
+                        if (false == contains_wildcard) {
+                            break;
                         }
                     }
                 }
@@ -1240,7 +1240,8 @@ void Grep::get_substring_variable_types(
             contains_wildcard = true;
             regex_search_string += ".";
         } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {
-            regex_search_string += "\\" + c;
+            regex_search_string += "\\";
+            regex_search_string += c;
         } else {
             regex_search_string += c;
         }
