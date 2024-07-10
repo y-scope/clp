@@ -1246,7 +1246,7 @@ void Grep::get_substring_variable_types(
         }
         pos++;
     }
-    
+
     // Generated substring NFA from regex.
     log_surgeon::Schema substring_schema;
     // TODO: LogSurgeon should handle resetting this value.
