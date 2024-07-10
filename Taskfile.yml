@@ -9,10 +9,10 @@ vars:
   # Paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
-  G_LOG_VIEWER_WEBUI_BIN_DIR: "{{.G_NODEJS_22_DIR}}/bin"
-  G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
   G_NODEJS_22_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
+  G_LOG_VIEWER_WEBUI_BIN_DIR: "{{.G_NODEJS_22_DIR}}/bin"
+  G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
