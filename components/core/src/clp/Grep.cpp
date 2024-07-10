@@ -1246,9 +1246,11 @@ void Grep::get_substring_variable_types(
         }
         pos++;
     }
-
+    
     // Generated substring NFA from regex.
     log_surgeon::Schema substring_schema;
+    // TODO: LogSurgeon should handle resetting this value.
+    log_surgeon::NonTerminal::m_next_children_start = 0;
     // TODO: could use a forward/reverse lexer in place of intersect a lot of cases.
     // TODO: NFA creation not optimized at all.
     substring_schema.add_variable("search", regex_search_string, -1);
