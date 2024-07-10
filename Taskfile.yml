@@ -120,14 +120,14 @@ tasks:
         "{{.OUTPUT_DIR}}/var/www/webui/"
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/webui/programs/server"
-        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
+        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm clean-install
       - >-
         rsync -a
         "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/"
         "{{.OUTPUT_DIR}}/var/www/log_viewer/"
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/log_viewer/server"
-        PATH="{{.G_LOG_VIEWER_WEBUI_BIN_DIR}}":$PATH npm i
+        PATH="{{.G_LOG_VIEWER_WEBUI_BIN_DIR}}":$PATH npm clean-install
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
@@ -216,9 +216,12 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/log-viewer-modules.md5"
       - "{{.TASKFILE}}"
-      - "*"
-      - "client/**/*"
-      - "server/**/*"
+      - "client/src/**/*.css"
+      - "client/src/**/*.jsx"
+      - "client/src/package.json"
+      - "client/src/webpack.config.js"
+      - "server/src/**/*.js"
+      - "server/src/**/package.json"
     generates: ["{{.CHECKSUM_FILE}}"]
 
   webui:
