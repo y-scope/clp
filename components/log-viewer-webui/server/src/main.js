@@ -14,7 +14,10 @@ import app from "./app.js";
  */
 const parseEnvVars = () => {
     dotenv.config({
-        path: ".env",
+        path: [
+            ".env.local",
+            ".env",
+        ],
     });
 
     const {
