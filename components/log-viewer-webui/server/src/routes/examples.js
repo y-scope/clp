@@ -15,7 +15,7 @@ const routes = async (fastify, options) => {
         const result = await fastify.dbManager.insertDecompressionJob(req.body);
         resp.send(result);
     });
-    
+
     fastify.get("/stats", async (req, resp) => {
         const result = await fastify.dbManager.getStats();
         console.log(result);

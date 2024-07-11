@@ -11,9 +11,7 @@
 
 namespace clp_s {
 JsonParser::JsonParser(JsonParserOption const& option)
-        : m_archives_dir(option.archives_dir),
-          m_num_messages(0),
-          m_compression_level(option.compression_level),
+        : m_num_messages(0),
           m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
@@ -30,14 +28,13 @@ JsonParser::JsonParser(JsonParserOption const& option)
         FileUtils::find_all_files(file_path, m_file_paths);
     }
 
-    ArchiveWriterOption archive_writer_option;
-    archive_writer_option.archives_dir = m_archives_dir;
-    archive_writer_option.id = m_generator();
-    archive_writer_option.compression_level = option.compression_level;
-    archive_writer_option.print_archive_stats = option.print_archive_stats;
+    m_archive_options.archives_dir = option.archives_dir;
+    m_archive_options.compression_level = option.compression_level;
+    m_archive_options.print_archive_stats = option.print_archive_stats;
+    m_archive_options.id = m_generator();
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
-    m_archive_writer->open(archive_writer_option);
+    m_archive_writer->open(m_archive_options);
 }
 
 void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_id) {
@@ -442,7 +439,7 @@ bool JsonParser::parse() {
         simdjson::ondemand::document_stream::iterator json_it;
 
         m_num_messages = 0;
-        size_t last_num_bytes_read = 0;
+        size_t last_num_bytes_consumed = 0;
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
@@ -466,9 +463,11 @@ bool JsonParser::parse() {
                     ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                size_t num_bytes_read = json_file_iterator.get_num_bytes_read();
-                m_archive_writer->increment_uncompressed_size(num_bytes_read - last_num_bytes_read);
-                last_num_bytes_read = num_bytes_read;
+                size_t num_bytes_read = json_file_iterator.get_num_bytes_consumed();
+                m_archive_writer->increment_uncompressed_size(
+                        num_bytes_read - last_num_bytes_consumed
+                );
+                last_num_bytes_consumed = num_bytes_read;
                 split_archive();
             }
 
@@ -476,7 +475,7 @@ bool JsonParser::parse() {
         }
 
         m_archive_writer->increment_uncompressed_size(
-                json_file_iterator.get_num_bytes_read() - last_num_bytes_read
+                json_file_iterator.get_num_bytes_read() - last_num_bytes_consumed
         );
 
         if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
@@ -505,13 +504,8 @@ void JsonParser::store() {
 
 void JsonParser::split_archive() {
     m_archive_writer->close();
-
-    ArchiveWriterOption archive_writer_option;
-    archive_writer_option.archives_dir = m_archives_dir;
-    archive_writer_option.id = m_generator();
-    archive_writer_option.compression_level = m_compression_level;
-
-    m_archive_writer->open(archive_writer_option);
+    m_archive_options.id = m_generator();
+    m_archive_writer->open(m_archive_options);
 }
 
 }  // namespace clp_s

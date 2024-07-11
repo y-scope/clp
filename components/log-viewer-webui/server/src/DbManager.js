@@ -1,7 +1,7 @@
 import fastifyPlugin from "fastify-plugin";
 
-import fastifyMysql from "@fastify/mysql";
 import fastifyMongo from "@fastify/mongodb";
+import fastifyMysql from "@fastify/mysql";
 import msgpack from "@msgpack/msgpack";
 
 
@@ -12,12 +12,12 @@ class DbManager {
     /**
      * Creates a DbManager.
      *
-     * @param {import("fastify").FastifyInstance} app - The Fastify application instance
-     * @param {Object} dbConfig - The database configuration
-     * @param {Object} dbConfig.mysqlConfig - The MySQL configuration
-     * @param {Object} dbConfig.mongoConfig - The MongoDB configuration
+     * @param {import("fastify").FastifyInstance} app The Fastify application instance
+     * @param {object} dbConfig The database configuration
+     * @param {object} dbConfig.mysqlConfig The MySQL configuration
+     * @param {object} dbConfig.mongoConfig The MongoDB configuration
      */
-    constructor(app, dbConfig) {
+    constructor (app, dbConfig) {
         this.app = app;
         this.initMySql(dbConfig.mysqlConfig);
         this.initMongo(dbConfig.mongoConfig);
@@ -26,7 +26,7 @@ class DbManager {
     /**
      * Initializes MySQL connection.
      *
-     * @param {Object} config
+     * @param {object} config
      * @param {string} config.user
      * @param {string} config.password
      * @param {string} config.host
@@ -34,7 +34,7 @@ class DbManager {
      * @param {string} config.database
      * @param {string} config.queryJobsTableName
      */
-    initMySql(config) {
+    initMySql (config) {
         this.app.register(fastifyMysql, {
             promise: true,
             connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
@@ -51,17 +51,17 @@ class DbManager {
     /**
      * Initializes MongoDB connection.
      *
-     * @param {Object} config
+     * @param {object} config
      * @param {string} config.host
      * @param {number} config.port
      * @param {string} config.database
      * @param {string} config.statsCollectionName
      */
-    initMongo(config) {
+    initMongo (config) {
         this.app.register(fastifyMongo, {
             forceClose: true,
             url: `mongodb://${config.host}:${config.port}/${config.database}`,
-        }).after(err => {
+        }).after((err) => {
             if (err) {
                 throw err;
             }
@@ -72,10 +72,10 @@ class DbManager {
     /**
      * Inserts a decompression job into MySQL.
      *
-     * @param {Object} jobConfig - The job configuration.
-     * @returns {Promise<Object>} The result of the insert query or null if an error occurred.
+     * @param {object} jobConfig The job configuration.
+     * @return {Promise<object>} The result of the insert query or null if an error occurred.
      */
-    async insertDecompressionJob(jobConfig) {
+    async insertDecompressionJob (jobConfig) {
         return await this.mysqlConnection.query(
             `INSERT INTO ${this.queryJobsTableName} (id, job_config)
              VALUES (?, ?)`,
@@ -89,10 +89,10 @@ class DbManager {
     /**
      * Retrieves a decompression job from MySQL.
      *
-     * @param {number} jobId - The ID of the job.
-     * @returns {Promise<Object>} The job configuration.
+     * @param {number} jobId
+     * @return {Promise<object>} The job configuration.
      */
-    async getDecompressionJob(jobId) {
+    async getDecompressionJob (jobId) {
         const [results] = await this.mysqlConnection.query(
             `SELECT job_config
              FROM ${this.queryJobsTableName}
@@ -106,9 +106,9 @@ class DbManager {
     /**
      * Retrieve statistics from MongoDB.
      *
-     * @returns {Promise<Array>} The array of statistics documents.
+     * @return {Promise<Array>} The array of statistics documents.
      */
-    async getStats() {
+    async getStats () {
         return await this.mongoStatsCollection.find().toArray();
     }
 }

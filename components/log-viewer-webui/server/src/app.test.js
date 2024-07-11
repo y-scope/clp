@@ -2,20 +2,22 @@ import httpStatusCodes from "http-status-codes";
 import {test} from "tap";
 
 import app from "./app.js";
-import {parseEnvVars} from "./utils.js";
+import {parseEnvVars} from "./main.js";
 
 
 test("Tests the example routes", async (t) => {
     const envVars = parseEnvVars();
     const server = await app(
         {
+            clientDir: envVars.CLIENT_DIR,
+            dbPass: envVars.CLP_DB_PASS,
+            dbUser: envVars.CLP_DB_USER,
             fastifyOptions: {
                 logger: false,
             },
-            dbUser: envVars.CLP_DB_USER,
-            dbPass: envVars.CLP_DB_PASS,
         },
     );
+
     t.teardown(() => server.close());
 
     let resp = await server.inject({
