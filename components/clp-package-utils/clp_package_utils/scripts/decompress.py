@@ -165,13 +165,13 @@ def handle_extraction(parsed_args, clp_home: pathlib.Path, default_config_file_p
     # fmt: on
     if parsed_args.orig_file_id:
         extract_cmd.append("--orig-file-id")
-        extract_cmd.append(str(parsed_args.target_size))
+        extract_cmd.append(str(parsed_args.orig_file_id))
     else:
         extract_cmd.append("--path")
         extract_cmd.append(str(parsed_args.path))
     if parsed_args.target_uncompressed_size:
         extract_cmd.append("--target-uncompressed-size")
-        extract_cmd.append(str(parsed_args.target_size))
+        extract_cmd.append(str(parsed_args.target_uncompressed_size))
     cmd = container_start_cmd + extract_cmd
     subprocess.run(cmd, check=True)
 

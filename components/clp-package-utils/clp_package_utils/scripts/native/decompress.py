@@ -76,7 +76,7 @@ def submit_and_monitor_ir_extraction_job_in_db(
     db_config: Database,
     orig_file_id: str,
     msg_ix: int,
-    target_uncompressed_size: int | None,
+    target_uncompressed_size: Optional[int],
 ) -> None:
     """
     Submits an IR extraction job to the scheduler database and
@@ -106,7 +106,7 @@ async def do_extract(
     db_config: Database,
     orig_file_id: str,
     msg_ix: int,
-    target_uncompressed_size: int | None,
+    target_uncompressed_size: Optional[int],
 ):
     await run_function_in_process(
         submit_and_monitor_ir_extraction_job_in_db,
