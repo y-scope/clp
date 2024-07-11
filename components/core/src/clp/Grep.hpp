@@ -181,7 +181,7 @@ public:
             streaming_archive::reader::Message& compressed_msg,
             std::string& decompressed_msg
     );
-    
+
     /**
      * Searches a file with the given query without outputting the results
      * @param query
@@ -199,7 +199,7 @@ public:
             streaming_archive::reader::Archive& archive,
             streaming_archive::reader::File& compressed_file
     );
-    
+
     /**
      * Generates all possible logtypes that can match each substr(0,n) of the search string.
      * @param processed_search_string
@@ -214,9 +214,9 @@ public:
     
     /**
      * Mark the locations of non-cancelled wildcards '*', '?', and cancel characters '\'
-     * @param is_greedy_wildcard 
-     * @param is_non_greedy_wildcard 
-     * @param is_cancel 
+     * @param is_greedy_wildcard
+     * @param is_non_greedy_wildcard
+     * @param is_cancel
      */
     static void get_wildcard_and_cancel_locations(
             std::string const& processed_search_string,
