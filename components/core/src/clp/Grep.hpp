@@ -181,6 +181,7 @@ public:
             streaming_archive::reader::Message& compressed_msg,
             std::string& decompressed_msg
     );
+    
     /**
      * Searches a file with the given query without outputting the results
      * @param query
@@ -198,6 +199,7 @@ public:
             streaming_archive::reader::Archive& archive,
             streaming_archive::reader::File& compressed_file
     );
+    
     /**
      * Generates all possible logtypes that can match each substr(0,n) of the search string.
      * @param processed_search_string
@@ -208,6 +210,19 @@ public:
             std::string& processed_search_string,
             log_surgeon::lexers::ByteLexer& lexer,
             std::vector<std::set<QueryLogtype>>& query_substring_logtypes
+    );
+    
+    /**
+     * 
+     * @param is_greedy_wildcard 
+     * @param is_non_greedy_wildcard 
+     * @param is_cancel 
+     */
+    static void get_wildcard_and_cancel_locations(
+            std::string const& processed_search_string,
+            std::vector<bool>& is_greedy_wildcard,
+            std::vector<bool>& is_non_greedy_wildcard,
+            std::vector<bool>& is_cancel
     );
 
     /**
@@ -228,7 +243,6 @@ public:
             bool& contains_wildcard,
             std::set<uint32_t>& variable_types
     );
-
     /**
      * Compare all possible query logtypes against the archive to determine all possible sub queries
      * that can match against messages in the archive.

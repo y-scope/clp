@@ -1021,37 +1021,12 @@ void Grep::generate_query_substring_logtypes(
     std::vector<bool> is_greedy_wildcard;
     std::vector<bool> is_non_greedy_wildcard;
     std::vector<bool> is_cancel;
-    is_greedy_wildcard.reserve(processed_search_string.size());
-    is_non_greedy_wildcard.reserve(processed_search_string.size());
-    is_cancel.reserve(processed_search_string.size());
-    bool is_cancelled = false;
-    for (auto c : processed_search_string) {
-        if (is_cancelled) {
-            is_greedy_wildcard.push_back(false);
-            is_non_greedy_wildcard.push_back(false);
-            is_cancel.push_back(false);
-            is_cancelled = false;
-        } else {
-            if (c == '\\') {
-                is_cancelled = true;
-                is_greedy_wildcard.push_back(false);
-                is_non_greedy_wildcard.push_back(false);
-                is_cancel.push_back(true);
-            } else if (c == '*') {
-                is_greedy_wildcard.push_back(true);
-                is_non_greedy_wildcard.push_back(false);
-                is_cancel.push_back(false);
-            } else if (c == '?') {
-                is_greedy_wildcard.push_back(false);
-                is_non_greedy_wildcard.push_back(true);
-                is_cancel.push_back(false);
-            } else {
-                is_greedy_wildcard.push_back(false);
-                is_non_greedy_wildcard.push_back(false);
-                is_cancel.push_back(false);
-            }
-        }
-    }
+    get_wildcard_and_cancel_locations(
+            processed_search_string,
+            is_greedy_wildcard,
+            is_non_greedy_wildcard,
+            is_cancel
+    );
 
     // Consider each substr(j,i) of the processed_search_string and determine if it could have been
     // compressed as static-text, a variable, or some combination of variables/static-text
@@ -1207,6 +1182,45 @@ void Grep::generate_query_substring_logtypes(
                 for (auto& possible_substr_type : possible_substr_types) {
                     query_substr_logtypes[i].insert(possible_substr_type);
                 }
+            }
+        }
+    }
+}
+
+void Grep::get_wildcard_and_cancel_locations(
+        std::string const& processed_search_string,
+        std::vector<bool>& is_greedy_wildcard,
+        std::vector<bool>& is_non_greedy_wildcard,
+        std::vector<bool>& is_cancel
+) {
+    is_greedy_wildcard.reserve(processed_search_string.size());
+    is_non_greedy_wildcard.reserve(processed_search_string.size());
+    is_cancel.reserve(processed_search_string.size());
+    bool is_cancelled = false;
+    for (auto c : processed_search_string) {
+        if (is_cancelled) {
+            is_greedy_wildcard.push_back(false);
+            is_non_greedy_wildcard.push_back(false);
+            is_cancel.push_back(false);
+            is_cancelled = false;
+        } else {
+            if (c == '\\') {
+                is_cancelled = true;
+                is_greedy_wildcard.push_back(false);
+                is_non_greedy_wildcard.push_back(false);
+                is_cancel.push_back(true);
+            } else if (c == '*') {
+                is_greedy_wildcard.push_back(true);
+                is_non_greedy_wildcard.push_back(false);
+                is_cancel.push_back(false);
+            } else if (c == '?') {
+                is_greedy_wildcard.push_back(false);
+                is_non_greedy_wildcard.push_back(true);
+                is_cancel.push_back(false);
+            } else {
+                is_greedy_wildcard.push_back(false);
+                is_non_greedy_wildcard.push_back(false);
+                is_cancel.push_back(false);
             }
         }
     }
