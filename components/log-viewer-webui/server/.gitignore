@@ -1,2 +1,5 @@
+# Debug
+.env.local
+
 # Testing
 /.tap
