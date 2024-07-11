@@ -11,13 +11,13 @@ vars:
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
-  G_NODEJS_22_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
-  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_DIR}}/bin"
+  G_NODEJS_14_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-14"
+  G_NODEJS_14_BIN_DIR: "{{.G_NODEJS_14_BUILD_DIR}}/bin"
+  G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
+  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
-  G_WEBUI_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/webui-nodejs"
-  G_WEBUI_NODEJS_BIN_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}/bin"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
@@ -85,7 +85,7 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
       - "webui"
-      - "webui-nodejs"
+      - "nodejs-14"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
@@ -109,7 +109,7 @@ tasks:
         "{{.OUTPUT_DIR}}/bin/"
       - >-
         rsync -a
-        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
+        "{{.G_NODEJS_14_BIN_DIR}}/node"
         "{{.OUTPUT_DIR}}/bin/node-14"
       - >-
         rsync -a
@@ -124,7 +124,7 @@ tasks:
       # package-lock.json that clean-install depends on
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/webui/programs/server"
-        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
+        PATH="{{.G_NODEJS_14_BIN_DIR}}":$PATH npm install
       - >-
         rsync -a
         "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/"
@@ -280,7 +280,7 @@ tasks:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_NODEJS_22_DIR}}"
+      OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
     run: "once"
     cmds:
       - task: "nodejs"
@@ -289,11 +289,11 @@ tasks:
           NODEJS_VERSION: "v22.4.0"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
-  webui-nodejs:
+  nodejs-14:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}"
+      OUTPUT_DIR: "{{.G_NODEJS_14_BUILD_DIR}}"
     cmds:
       - task: "nodejs"
         vars:
@@ -395,7 +395,7 @@ tasks:
     cmds:
       - "rm -f {{.CHECKSUM_FILE}}"
       - task: "clean-log-viewer-webui"
-      - "PATH='{{.G_NODEJS_22_DIR}}/bin':$PATH npm run init"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       # These commands must be last
       - task: "utils:compute-checksum"
         vars:
