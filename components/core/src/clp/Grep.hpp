@@ -213,7 +213,7 @@ public:
     );
     
     /**
-     * 
+     * Mark the locations of non-cancelled wildcards '*', '?', and cancel characters '\'
      * @param is_greedy_wildcard 
      * @param is_non_greedy_wildcard 
      * @param is_cancel 
