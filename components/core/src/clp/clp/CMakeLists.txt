@@ -133,6 +133,8 @@ set(
         ../TimestampPattern.hpp
         ../TraceableException.hpp
         ../type_utils.hpp
+        ../utf8_utils.cpp
+        ../utf8_utils.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
