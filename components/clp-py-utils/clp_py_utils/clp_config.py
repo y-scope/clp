@@ -161,11 +161,10 @@ def _validate_host(cls, field):
 
 def _validate_port(cls, field):
     min_valid_port = 0
-    max_valid_port = 2 ** 16 - 1
+    max_valid_port = 2**16 - 1
     if min_valid_port > field or max_valid_port < field:
         raise ValueError(
-            f"{cls.__name__}.port is not within valid range "
-            f"{min_valid_port}-{max_valid_port}."
+            f"{cls.__name__}.port is not within valid range " f"{min_valid_port}-{max_valid_port}."
         )
 
 
