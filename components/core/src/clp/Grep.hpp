@@ -211,7 +211,7 @@ public:
             log_surgeon::lexers::ByteLexer& lexer,
             std::vector<std::set<QueryLogtype>>& query_substring_logtypes
     );
-    
+
     /**
      * Mark the locations of non-cancelled wildcards '*', '?', and cancel characters '\'
      * @param is_greedy_wildcard
