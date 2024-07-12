@@ -26,6 +26,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
+LOG_VIEWER_WEBUI_COMPONENT_NAME = "log_viewer_webui"
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -150,6 +151,20 @@ def _validate_logging_level(cls, field):
         raise ValueError(
             f"{cls.__name__}: '{field}' is not a valid logging level. Use one of"
             f" {get_valid_logging_level()}"
+        )
+
+
+def _validate_host(cls, field):
+    if "" == field:
+        raise ValueError(f"{cls.__name__}.host cannot be empty.")
+
+
+def _validate_port(cls, field):
+    min_valid_port = 0
+    max_valid_port = 2**16 - 1
+    if min_valid_port > field or max_valid_port < field:
+        raise ValueError(
+            f"{cls.__name__}.port is not within valid range " f"{min_valid_port}-{max_valid_port}."
         )
 
 
@@ -361,24 +376,33 @@ class WebUi(BaseModel):
 
     @validator("host")
     def validate_host(cls, field):
-        if "" == field:
-            raise ValueError(f"{WEBUI_COMPONENT_NAME}.host cannot be empty.")
+        _validate_host(cls, field)
         return field
 
     @validator("port")
     def validate_port(cls, field):
-        min_valid_port = 0
-        max_valid_port = 2**16 - 1
-        if min_valid_port > field or max_valid_port < field:
-            raise ValueError(
-                f"{WEBUI_COMPONENT_NAME}.port is not within valid range "
-                f"{min_valid_port}-{max_valid_port}."
-            )
+        _validate_port(cls, field)
         return field
 
     @validator("logging_level")
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
+        return field
+
+
+class LogViewerWebUi(BaseModel):
+    host: str = "localhost"
+    port: int = 3000
+    logging_level: str = "INFO"
+
+    @validator("host")
+    def validate_host(cls, field):
+        _validate_host(cls, field)
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        _validate_port(cls, field)
         return field
 
 
@@ -398,6 +422,7 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
+    log_viewer_webui: LogViewerWebUi = LogViewerWebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
