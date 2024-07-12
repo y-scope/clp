@@ -67,11 +67,11 @@ tasks:
           STORAGE_ENGINE: "clp"
 
   package:
+    env:
+      NODE_ENV: "production"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
-    env:
-      NODE_ENV: "production"
     deps:
       - "core"
       - "clp-package-utils"
@@ -120,8 +120,8 @@ tasks:
         rsync -a
         "{{.G_WEBUI_BUILD_DIR}}/"
         "{{.OUTPUT_DIR}}/var/www/webui/"
-      # Don't use clean-install because meteor doesn't generate
-      # package-lock.json that clean-install depends on
+      # Avoid using `npm clean-install` because Meteor does not generate a `package-lock.json` file,
+      # which `clean-install` depends on.
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/webui/programs/server"
         PATH="{{.G_NODEJS_14_BIN_DIR}}":$PATH npm install
