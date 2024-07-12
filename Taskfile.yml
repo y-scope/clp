@@ -79,13 +79,13 @@ tasks:
       - "init"
       - "job-orchestration"
       - "log-viewer-webui"
+      - "nodejs-14"
       - "package-venv"
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
       - "webui"
-      - "nodejs-14"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
