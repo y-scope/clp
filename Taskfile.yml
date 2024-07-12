@@ -72,6 +72,22 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.G_BUILD_DIR}}/webui.md5"
+      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+      - "components/package-template/src/**/*"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
       - "clp-package-utils"
@@ -137,35 +153,10 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.G_BUILD_DIR}}/package-venv.md5"
-      - "{{.G_BUILD_DIR}}/webui.md5"
-      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "components/clp-package-utils/dist/*.whl"
-      - "components/clp-py-utils/dist/*.whl"
-      - "components/job-orchestration/dist/*.whl"
-      - "components/package-template/src/**/*"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   core:
-    deps: ["core-submodules", "init"]
     vars:
       SRC_DIR: "components/core"
-    cmds:
-      - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-      - >-
-        cmake
-        --build "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-        --parallel
-        --target clg clo clp clp-s reducer-server
     sources:
       - "{{.G_BUILD_DIR}}/core-submodules.md5"
       - "{{.SRC_DIR}}/cmake/**/*"
@@ -179,6 +170,15 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+    deps: ["core-submodules", "init"]
+    cmds:
+      - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
+      - >-
+        cmake
+        --build "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+        --parallel
+        --target clg clo clp clp-s reducer-server
 
   clp-package-utils:
     - task: "python-component"
