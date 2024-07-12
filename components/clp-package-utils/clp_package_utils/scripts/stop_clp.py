@@ -93,6 +93,7 @@ def main(argv):
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(QUERY_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(LOG_VIEWER_WEBUI_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -107,7 +108,12 @@ def main(argv):
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
         # Validate and load necessary credentials
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            DB_COMPONENT_NAME,
+            LOG_VIEWER_WEBUI_COMPONENT_NAME,
+        ):
             validate_and_load_db_credentials_file(clp_config, clp_home, False)
         if target in (
             ALL_TARGET_NAME,

@@ -797,7 +797,7 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
         "--name", container_name,
         "--log-driver", "local",
         "-e", f"NODE_PATH={node_path}",
-        "-e", f"CLIENT_DIR=../client/dist",
+        "-e", f"CLIENT_DIR={container_log_viewer_dir}/client/dist",
         "-e", f"PORT={clp_config.log_viewer_webui.port}",
         "-e", f"HOST={clp_config.log_viewer_webui.host}",
         "-e", f"NODE_ENV=production",
@@ -929,6 +929,7 @@ def main(argv):
     reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(LOG_VIEWER_WEBUI_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
