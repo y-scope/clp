@@ -624,7 +624,6 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
-
     cmds:
       - task: "utils:create-venv"
         vars:
