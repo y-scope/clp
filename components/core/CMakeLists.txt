@@ -210,6 +210,7 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
 add_subdirectory(src/clp/string_utils)
+add_subdirectory(src/clp/regex_utils)
 
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
@@ -475,6 +476,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
+        tests/test-regex_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
@@ -498,6 +500,7 @@ target_link_libraries(unitTest
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
         clp::string_utils
+        clp::regex_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )
