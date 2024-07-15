@@ -45,7 +45,7 @@ def make_command(
         ]
         if extract_ir_config.target_uncompressed_size is not None:
             command.append("--target-size")
-            command.append(extract_ir_config.target_uncompressed_size)
+            command.append(str(extract_ir_config.target_uncompressed_size))
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
         return None
