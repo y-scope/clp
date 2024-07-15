@@ -129,7 +129,7 @@ def search(
         archive_id=archive_id,
         search_config=search_config,
         results_cache_uri=results_cache_uri,
-        results_collection=str(task_id),
+        results_collection=job_id,
     )
     if not task_command:
         return report_command_creation_failure(
