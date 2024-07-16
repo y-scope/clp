@@ -45,32 +45,34 @@ const app = async ({
         });
     }
 
-    await server.register(fastifyStatic, {
-        prefix: "/ir",
-        root: irDataDir,
-    });
-    await server.register(fastifyStatic, {
-        prefix: "/log-viewer",
-        root: logViewerDir,
-        decorateReply: false,
-    });
+    if ("test" !== process.env.NODE_ENV) {
+        await server.register(fastifyStatic, {
+            prefix: "/ir",
+            root: irDataDir,
+        });
+        await server.register(fastifyStatic, {
+            prefix: "/log-viewer",
+            root: logViewerDir,
+            decorateReply: false,
+        });
 
-    await server.register(DbManager, {
-        mysqlConfig: {
-            database: "clp-db",
-            host: "127.0.0.1",
-            password: dbPass,
-            port: 3306,
-            queryJobsTableName: "query_jobs",
-            user: dbUser,
-        },
-        mongoConfig: {
-            database: "clp-query-results",
-            host: "127.0.0.1",
-            irFilesCollectionName: "ir-files",
-            port: 27017,
-        },
-    });
+        await server.register(DbManager, {
+            mysqlConfig: {
+                database: "clp-db",
+                host: "127.0.0.1",
+                password: dbPass,
+                port: 3306,
+                queryJobsTableName: "query_jobs",
+                user: dbUser,
+            },
+            mongoConfig: {
+                database: "clp-query-results",
+                host: "127.0.0.1",
+                irFilesCollectionName: "ir-files",
+                port: 27017,
+            },
+        });
+    }
 
     await server.register(exampleRoutes);
     await server.register(queryRoutes);
