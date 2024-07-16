@@ -30,19 +30,6 @@ const app = async ({
     const dirname = path.dirname(filename);
     const parentDirname = path.resolve(dirname, "..");
 
-    if ("production" === process.env.NODE_ENV) {
-        // In the development environment, we expect the client to use a separate webserver that
-        // supports live reloading.
-        if (false === path.isAbsolute(settings.ClientDir)) {
-            throw new Error("`clientDir` must be an absolute path.");
-        }
-
-        await server.register(fastifyStatic, {
-            prefix: "/",
-            root: settings.ClientDir,
-        });
-    }
-
     if ("test" !== process.env.NODE_ENV) {
         let irDataDir = settings.IrDataDir;
         if (false === path.isAbsolute(irDataDir)) {
@@ -51,16 +38,6 @@ const app = async ({
         await server.register(fastifyStatic, {
             prefix: "/ir",
             root: irDataDir,
-        });
-
-        let logViewerDir = settings.LogViewerDir;
-        if (false === path.isAbsolute(logViewerDir)) {
-            logViewerDir = path.resolve(parentDirname, logViewerDir);
-        }
-        await server.register(fastifyStatic, {
-            prefix: "/log-viewer",
-            root: logViewerDir,
-            decorateReply: false,
         });
 
         await server.register(DbManager, {
@@ -78,6 +55,20 @@ const app = async ({
                 irFilesCollectionName: settings.MongoDbIrFilesCollectionName,
                 port: settings.MongoDbPort,
             },
+        });
+    }
+
+    if ("production" === process.env.NODE_ENV) {
+        // In the development environment, we expect the client to use a separate webserver that
+        // supports live reloading.
+        if (false === path.isAbsolute(settings.ClientDir)) {
+            throw new Error("`clientDir` must be an absolute path.");
+        }
+
+        await server.register(fastifyStatic, {
+            prefix: "/",
+            root: settings.ClientDir,
+            decorateReply: false,
         });
     }
 
