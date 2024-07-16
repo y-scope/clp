@@ -5,15 +5,18 @@ import process from "node:process";
 import {fastifyStatic} from "@fastify/static";
 
 import DbManager from "./DbManager.js";
-import exampleRoutes from "./routes/examples.js";
+import exampleRoutes from "./routes/example.js";
+import queryRoutes from "./routes/query.js";
 
 
 /**
- * Creates the Fastify app with the given options.
+ * Creates the Fastify #fastify with the given options.
  *
  * @param {object} props
  * @param {string} props.clientDir Absolute path to the client directory to serve when in
  * running in a production environment.
+ * @param {string} props.irDataDir
+ * @param {string} props.logViewerDir
  * @param {import("fastify").FastifyServerOptions} props.fastifyOptions
  * @param {string} props.dbPass The MySQL database password.
  * @param {string} props.dbUser The MySQL database user.
@@ -21,6 +24,8 @@ import exampleRoutes from "./routes/examples.js";
  */
 const app = async ({
     clientDir,
+    irDataDir,
+    logViewerDir,
     fastifyOptions,
     dbPass,
     dbUser,
@@ -39,7 +44,17 @@ const app = async ({
             root: clientDir,
         });
     }
-    await server.register(exampleRoutes);
+
+    await server.register(fastifyStatic, {
+        prefix: "/ir",
+        root: irDataDir,
+    });
+    await server.register(fastifyStatic, {
+        prefix: "/log-viewer",
+        root: logViewerDir,
+        decorateReply: false,
+    });
+
     await server.register(DbManager, {
         mysqlConfig: {
             database: "clp-db",
@@ -52,10 +67,13 @@ const app = async ({
         mongoConfig: {
             database: "clp-query-results",
             host: "127.0.0.1",
+            irFilesCollectionName: "ir-files",
             port: 27017,
-            statsCollectionName: "stats",
         },
     });
+
+    await server.register(exampleRoutes);
+    await server.register(queryRoutes);
 
     return server;
 };
