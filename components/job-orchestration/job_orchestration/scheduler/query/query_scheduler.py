@@ -556,7 +556,7 @@ def handle_pending_query_jobs(
                         QueryJobStatus.RUNNING,
                         QueryJobStatus.PENDING,
                         start_time=datetime.datetime.now(),
-                        num_tasks=0
+                        num_tasks=0,
                     ):
                         logger.error(f"Failed to set job {job_id} as running")
                     continue
