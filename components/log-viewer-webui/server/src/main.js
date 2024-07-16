@@ -55,15 +55,11 @@ const main = async () => {
 
     const envVars = parseEnvVars();
     const server = await app({
-        clientDir: path.resolve(envVars.CLIENT_DIR),
-        irDataDir: path.resolve(envVars.IR_DATA_DIR),
-        logViewerDir: path.resolve(envVars.LOG_VIEWER_DIR),
-
-        dbPass: envVars.CLP_DB_PASS,
-        dbUser: envVars.CLP_DB_USER,
         fastifyOptions: {
             logger: envToLogger[process.env.NODE_ENV] ?? true,
         },
+        sqlDbPass: envVars.CLP_DB_PASS,
+        sqlDbUser: envVars.CLP_DB_USER,
     });
 
 

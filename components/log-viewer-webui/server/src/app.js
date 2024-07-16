@@ -1,9 +1,11 @@
 import fastify from "fastify";
 import * as path from "node:path";
 import process from "node:process";
+import {fileURLToPath} from "node:url";
 
 import {fastifyStatic} from "@fastify/static";
 
+import settings from "../settings.json" with {type: "json"};
 import DbManager from "./DbManager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
@@ -13,43 +15,48 @@ import queryRoutes from "./routes/query.js";
  * Creates the Fastify app with the given options.
  *
  * @param {object} props
- * @param {string} props.clientDir Absolute path to the client directory to serve when in
- * running in a production environment.
- * @param {string} props.irDataDir
- * @param {string} props.logViewerDir
  * @param {import("fastify").FastifyServerOptions} props.fastifyOptions
- * @param {string} props.dbPass The MySQL database password.
- * @param {string} props.dbUser The MySQL database user.
+ * @param {string} props.sqlDbPass The SQL database password.
+ * @param {string} props.sqlDbUser The SQL database user.
  * @return {Promise<import("fastify").FastifyInstance>}
  */
 const app = async ({
-    clientDir,
-    irDataDir,
-    logViewerDir,
     fastifyOptions,
-    dbPass,
-    dbUser,
+    sqlDbPass,
+    sqlDbUser,
 }) => {
     const server = fastify(fastifyOptions);
+    const filename = fileURLToPath(import.meta.url);
+    const dirname = path.dirname(filename);
+    const parentDirname = path.resolve(dirname, "..");
 
     if ("production" === process.env.NODE_ENV) {
         // In the development environment, we expect the client to use a separate webserver that
         // supports live reloading.
-        if (false === path.isAbsolute(clientDir)) {
+        if (false === path.isAbsolute(settings.ClientDir)) {
             throw new Error("`clientDir` must be an absolute path.");
         }
 
         await server.register(fastifyStatic, {
             prefix: "/",
-            root: clientDir,
+            root: settings.ClientDir,
         });
     }
 
     if ("test" !== process.env.NODE_ENV) {
+        let irDataDir = settings.IrDataDir;
+        if (false === path.isAbsolute(irDataDir)) {
+            irDataDir = path.resolve(parentDirname, irDataDir);
+        }
         await server.register(fastifyStatic, {
             prefix: "/ir",
             root: irDataDir,
         });
+
+        let logViewerDir = settings.LogViewerDir;
+        if (false === path.isAbsolute(logViewerDir)) {
+            logViewerDir = path.resolve(parentDirname, logViewerDir);
+        }
         await server.register(fastifyStatic, {
             prefix: "/log-viewer",
             root: logViewerDir,
@@ -58,18 +65,18 @@ const app = async ({
 
         await server.register(DbManager, {
             mysqlConfig: {
-                database: "clp-db",
-                host: "127.0.0.1",
-                password: dbPass,
-                port: 3306,
-                queryJobsTableName: "query_jobs",
-                user: dbUser,
+                database: settings.SqlDbName,
+                host: settings.SqlDbHost,
+                password: sqlDbPass,
+                port: settings.SqlDbPort,
+                queryJobsTableName: settings.SqlDbQueryJobsTableName,
+                user: sqlDbUser,
             },
             mongoConfig: {
-                database: "clp-query-results",
-                host: "127.0.0.1",
-                irFilesCollectionName: "ir-files",
-                port: 27017,
+                database: settings.MongoDbName,
+                host: settings.MongoDbHost,
+                irFilesCollectionName: settings.MongoDbIrFilesCollectionName,
+                port: settings.MongoDbPort,
             },
         });
     }
