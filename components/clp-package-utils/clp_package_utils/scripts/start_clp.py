@@ -50,7 +50,7 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
-    validate_log_viewer_config,
+    validate_log_viewer_webui_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
@@ -668,13 +668,13 @@ def generic_start_worker(
     logger.info(f"Started {component_name}.")
 
 
-def update_meteor_settings(
+def update_settings_json(
     parent_key_prefix: str,
     settings: Dict[str, Any],
     updates: Dict[str, Any],
 ):
     """
-    Recursively updates the given Meteor settings object with the values from `updates`.
+    Recursively updates the given settings object with the values from `updates`.
 
     :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
     :param settings: The settings to update.
@@ -686,7 +686,7 @@ def update_meteor_settings(
             error_msg = f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
             raise ValueError(error_msg)
         if isinstance(value, dict):
-            update_meteor_settings(f"{parent_key_prefix}{key}.", settings[key], value)
+            update_settings_json(f"{parent_key_prefix}{key}.", settings[key], value)
         else:
             settings[key] = updates[key]
 
@@ -726,7 +726,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
             "ClpStorageEngine": clp_config.package.storage_engine,
         },
     }
-    update_meteor_settings("", meteor_settings, meteor_settings_updates)
+    update_settings_json("", meteor_settings, meteor_settings_updates)
 
     # Start container
     # fmt: off
@@ -769,7 +769,9 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     logger.info(f"Started {component_name}.")
 
 
-def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
+def start_log_viewer_webui(
+    instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts
+):
     component_name = LOG_VIEWER_WEBUI_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
 
@@ -777,17 +779,30 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
     if container_exists(container_name):
         return
 
-    log_viewer_webui_logs_dir = clp_config.logs_directory / component_name
-    container_log_viewer_dir = CONTAINER_CLP_HOME / "var" / "www" / "log_viewer"
-    container_ir_dir = CONTAINER_CLP_HOME / "var" / "data" / "ir"
-    node_path = str(container_log_viewer_dir / "server" / "node_modules")
+    container_log_viewer_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log_viewer_webui"
+    node_path = str(container_log_viewer_webui_dir / "server" / "node_modules")
+    settings_json_path = get_clp_home() / "var" / "www" / "log_viewer_webui" / "server" / "settings.json"
 
-    validate_log_viewer_config(clp_config, log_viewer_webui_logs_dir)
+    validate_log_viewer_webui_config(clp_config, settings_json_path)
 
-    # Create directories
-    log_viewer_webui_logs_dir.mkdir(exist_ok=True, parents=True)
+    with open(settings_json_path, "r") as settings_json_file:
+        settings_json = json.loads(settings_json_file.read())
+    settings_json_updates = {
+        "SqlDbHost": clp_config.database.host,
+        "SqlDbPort": clp_config.database.port,
+        "SqlDbName": clp_config.database.name,
+        "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+        "MongoDbHost": clp_config.results_cache.host,
+        "MongoDbPort": clp_config.results_cache.port,
+        "MongoDbName": clp_config.results_cache.db_name,
+        "MongoDbIrFilesCollectionName": clp_config.results_cache.ir_collection_name,
 
-    container_log_viewer_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
+        "ClientDir": str(container_log_viewer_webui_dir / "client"),
+        "IrDataDir": str(container_clp_config.ir_output.directory),
+    }
+    update_settings_json("", settings_json, settings_json_updates)
+    with open(settings_json_path, "w") as settings_json_file:
+        settings_json_file.write(json.dumps(settings_json))
 
     # Start container
     # fmt: off
@@ -798,10 +813,9 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
         "--name", container_name,
         "--log-driver", "local",
         "-e", f"NODE_PATH={node_path}",
-        "-e", f"CLIENT_DIR={container_log_viewer_dir}/client/dist",
-        "-e", f"IR_DATA_DIR={container_ir_dir}",
-        "-e", f"PORT={clp_config.log_viewer_webui.port}",
         "-e", f"HOST={clp_config.log_viewer_webui.host}",
+        "-e", f"CLP_DB_USER={clp_config.database.username}",
+        "-e", f"CLP_DB_PASS={clp_config.database.password}",
         "-e", f"NODE_ENV=production",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
@@ -809,9 +823,6 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
     necessary_mounts = [
         mounts.clp_home,
         mounts.ir_output_dir,
-        DockerMount(
-            DockerMountType.BIND, log_viewer_webui_logs_dir, container_log_viewer_webui_logs_dir
-        ),
     ]
     for mount in necessary_mounts:
         if mount:
@@ -821,7 +832,7 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
-        str(container_log_viewer_dir / "server" / "src" / "main.js"),
+        str(container_log_viewer_webui_dir / "server" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -1048,7 +1059,7 @@ def main(argv):
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
         if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME):
-            start_log_viewer_webui(instance_id, clp_config, mounts)
+            start_log_viewer_webui(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:

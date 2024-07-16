@@ -497,11 +497,13 @@ def validate_webui_config(
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
 
 
-def validate_log_viewer_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{LOG_VIEWER_WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
+def validate_log_viewer_webui_config(
+        clp_config: CLPConfig, settings_json_path: pathlib.Path
+):
+    if not settings_json_path.exists():
+        raise ValueError(
+            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
+        )
 
     validate_port(
         f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port",
