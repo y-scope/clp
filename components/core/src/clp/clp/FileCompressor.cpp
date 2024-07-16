@@ -16,6 +16,7 @@
 #include "../LogSurgeonReader.hpp"
 #include "../Profiler.hpp"
 #include "../streaming_archive/writer/utils.hpp"
+#include "../utf8_utils.hpp"
 #include "utils.hpp"
 
 using clp::ir::eight_byte_encoded_variable_t;
@@ -145,8 +146,8 @@ bool FileCompressor::compress_file(
     size_t peek_size{0};
     m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
     bool succeeded = true;
-    auto utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
-    if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
+    auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
+    if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
         if (use_heuristic) {
             parse_and_encode_with_heuristic(
                     target_data_size_of_dicts,
@@ -359,8 +360,8 @@ bool FileCompressor::try_compressing_as_archive(
         size_t peek_size{0};
         m_libarchive_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
         string file_path{m_libarchive_reader.get_path()};
-        auto utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
-        if (is_utf8_sequence(utf8_validation_buf_len, utf8_validation_buf)) {
+        auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
+        if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
             auto boost_path_for_compression = parent_boost_path / file_path;
             if (use_heuristic) {
                 parse_and_encode_with_heuristic(
