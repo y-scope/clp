@@ -779,6 +779,7 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
 
     log_viewer_webui_logs_dir = clp_config.logs_directory / component_name
     container_log_viewer_dir = CONTAINER_CLP_HOME / "var" / "www" / "log_viewer"
+    container_ir_dir = CONTAINER_CLP_HOME / "var" / "data" / "ir"
     node_path = str(container_log_viewer_dir / "server" / "node_modules")
 
     validate_log_viewer_config(clp_config, log_viewer_webui_logs_dir)
@@ -798,6 +799,7 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
         "--log-driver", "local",
         "-e", f"NODE_PATH={node_path}",
         "-e", f"CLIENT_DIR={container_log_viewer_dir}/client/dist",
+        "-e", f"IR_DATA_DIR={container_ir_dir}",
         "-e", f"PORT={clp_config.log_viewer_webui.port}",
         "-e", f"HOST={clp_config.log_viewer_webui.host}",
         "-e", f"NODE_ENV=production",
