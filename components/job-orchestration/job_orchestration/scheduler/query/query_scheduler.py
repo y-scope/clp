@@ -467,6 +467,7 @@ def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
+    ir_collection_name: str,
     num_archives_to_search_per_sub_job: int,
 ) -> List[asyncio.Task]:
     global active_jobs
@@ -557,8 +558,23 @@ def handle_pending_query_jobs(
                         QueryJobStatus.PENDING,
                         start_time=datetime.datetime.now(),
                         num_tasks=0,
+                        duration=0,
                     ):
                         logger.error(f"Failed to set job {job_id} as running")
+                    continue
+
+                if is_file_split_extracted_as_ir(results_cache_uri, ir_collection_name, file_split_id):
+                    if not set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.SUCCEEDED,
+                            QueryJobStatus.PENDING,
+                            start_time=datetime.datetime.now(),
+                            num_tasks=0,
+                            duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
 
                 active_extraction_file_splits[file_split_id] = [job_id]
@@ -652,6 +668,18 @@ def found_max_num_latest_results(
         )
         min_timestamp_in_top_results = 0 if len(results) == 0 else results[0]["timestamp"]
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
+
+
+def is_file_split_extracted_as_ir(
+    results_cache_uri: str,
+    ir_collection_name: str,
+    file_split_id: str
+):
+    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+        ir_collection = results_cache_client.get_default_database()[ir_collection_name]
+        results_count = ir_collection.count_documents({'file_split_id': file_split_id})
+        return 0 != results_count
+
 
 
 async def handle_finished_search_job(
@@ -858,6 +886,7 @@ async def handle_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
+    ir_collection_name: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
 ) -> None:
@@ -871,6 +900,7 @@ async def handle_jobs(
             db_conn_pool,
             clp_metadata_db_conn_params,
             results_cache_uri,
+            ir_collection_name,
             num_archives_to_search_per_sub_job,
         )
         if 0 == len(reducer_acquisition_tasks):
@@ -954,6 +984,7 @@ async def main(argv: List[str]) -> int:
                     True
                 ),
                 results_cache_uri=clp_config.results_cache.get_uri(),
+                ir_collection_name=clp_config.results_cache.ir_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
             )
