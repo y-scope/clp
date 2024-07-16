@@ -547,6 +547,11 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
+                # Note: the following two if blocks should not be reordered.
+                # The second if statement only check if any chunk of the specific file split is extracted, but
+                # it does not guarantee all chunks to be ready because the extraction job could still be running.
+                # However, if there is no running extraction job for the file split, then a single chunk being
+                # available guarantees that all chunks are extracted.
                 if file_split_id in active_extraction_file_splits:
                     active_extraction_file_splits[file_split_id].append(job_id)
                     logger.info(
