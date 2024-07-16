@@ -10,7 +10,7 @@ test("Tests the example routes", async (t) => {
 
     let resp = await server.inject({
         method: "GET",
-        url: "/examples/get/Alice",
+        url: "/example/get/Alice",
     });
 
     t.equal(resp.statusCode, httpStatusCodes.OK);
@@ -18,7 +18,7 @@ test("Tests the example routes", async (t) => {
 
     resp = await server.inject({
         method: "POST",
-        url: "/examples/post",
+        url: "/example/post",
         payload: {name: "Bob"},
     });
     t.equal(resp.statusCode, httpStatusCodes.OK);
