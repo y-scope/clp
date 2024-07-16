@@ -9,6 +9,5 @@
     "MongoDbIrFilesCollectionName": "ir-files",
 
     "ClientDir": "../client/dist",
-    "IrDataDir": "../../../build/clp-package/var/data/ir",
-    "LogViewerDir": "../yscope-log-viewer/dist"
+    "IrDataDir": "../../../build/clp-package/var/data/ir"
 }

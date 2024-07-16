@@ -94,7 +94,7 @@ tasks:
       - "clp-py-utils"
       - "init"
       - "job-orchestration"
-      - "log-viewer-webui"
+      - "log-viewer-webui-clients"
       - "nodejs-14"
       - "package-venv"
       - task: "utils:validate-checksum"
@@ -143,10 +143,15 @@ tasks:
         PATH="{{.G_NODEJS_14_BIN_DIR}}":$PATH npm install
       - >-
         rsync -a
-        "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/log_viewer/"
+        "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/client"
+        "{{.OUTPUT_DIR}}/var/www/log_viewer_webui/"
       - |-
-        cd "{{.OUTPUT_DIR}}/var/www/log_viewer/server"
+        cd components/log-viewer-webui/server/
+        rsync -a \
+        src package-lock.json package.json settings.json \
+        "{{.OUTPUT_DIR}}/var/www/log_viewer_webui/server/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/var/www/log_viewer_webui/server"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # This command must be last
       - task: "utils:compute-checksum"
@@ -195,19 +200,17 @@ tasks:
       vars:
         COMPONENT: "{{.TASK}}"
 
-  log-viewer-webui:
+  log-viewer-webui-clients:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}"
     sources:
       - "{{.G_BUILD_DIR}}/log-viewer-modules.md5"
       - "{{.TASKFILE}}"
+      - "client/package.json"
       - "client/src/**/*.css"
       - "client/src/**/*.jsx"
-      - "client/src/package.json"
       - "client/src/webpack.config.js"
-      - "server/src/**/*.js"
-      - "server/src/**/package.json"
     dir: "components/log-viewer-webui"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -219,14 +222,10 @@ tasks:
           DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "rsync -a client {{.OUTPUT_DIR}}/"
       - |-
-        cd "{{.OUTPUT_DIR}}/client"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build
-      - "mkdir {{.OUTPUT_DIR}}/server"
-      - |-
-        cd server
-        rsync -a src package-lock.json package.json {{.OUTPUT_DIR}}/server/
+        cd client
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
+        --output-path "{{.OUTPUT_DIR}}/client"
       - task: "utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
