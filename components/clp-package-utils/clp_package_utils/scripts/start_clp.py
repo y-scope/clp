@@ -770,7 +770,10 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
 
 
 def start_log_viewer_webui(
-    instance_id: str, clp_config: CLPConfig, container_clp_config: CLPConfig, mounts: CLPDockerMounts
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
 ):
     component_name = LOG_VIEWER_WEBUI_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
@@ -781,7 +784,9 @@ def start_log_viewer_webui(
 
     container_log_viewer_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log_viewer_webui"
     node_path = str(container_log_viewer_webui_dir / "server" / "node_modules")
-    settings_json_path = get_clp_home() / "var" / "www" / "log_viewer_webui" / "server" / "settings.json"
+    settings_json_path = (
+        get_clp_home() / "var" / "www" / "log_viewer_webui" / "server" / "settings.json"
+    )
 
     validate_log_viewer_webui_config(clp_config, settings_json_path)
 
@@ -796,7 +801,6 @@ def start_log_viewer_webui(
         "MongoDbPort": clp_config.results_cache.port,
         "MongoDbName": clp_config.results_cache.db_name,
         "MongoDbIrFilesCollectionName": clp_config.results_cache.ir_collection_name,
-
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
         "IrDataDir": str(container_clp_config.ir_output.directory),
     }
