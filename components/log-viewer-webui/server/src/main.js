@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import * as path from "node:path";
 import process from "node:process";
 
 import app from "./app.js";
@@ -8,8 +7,7 @@ import app from "./app.js";
 /**
  * Parses environment variables into config values for the application.
  *
- * @return {{CLIENT_DIR: string, IR_DATA_DIR: string, LOG_VIEWER_DIR: string,
- * CLP_DB_PASS: string, CLP_DB_USER: string, HOST: string, PORT: string}}
+ * @return {{CLP_DB_PASS: string, CLP_DB_USER: string, HOST: string, PORT: string}}
  * @throws {Error} if any required environment variable is undefined.
  */
 const parseEnvVars = () => {
@@ -22,10 +20,10 @@ const parseEnvVars = () => {
 
     /* eslint-disable sort-keys */
     const {
-        CLIENT_DIR, IR_DATA_DIR, LOG_VIEWER_DIR, CLP_DB_PASS, CLP_DB_USER, HOST, PORT,
+        CLP_DB_PASS, CLP_DB_USER, HOST, PORT,
     } = process.env;
     const envVars = {
-        CLIENT_DIR, IR_DATA_DIR, LOG_VIEWER_DIR, CLP_DB_PASS, CLP_DB_USER, HOST, PORT,
+        CLP_DB_PASS, CLP_DB_USER, HOST, PORT,
     };
     /* eslint-enable sort-keys */
 
