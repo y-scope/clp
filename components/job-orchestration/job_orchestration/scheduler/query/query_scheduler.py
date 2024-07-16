@@ -821,8 +821,8 @@ async def handle_finished_extract_ir_job(
 
     waiting_jobs = active_extraction_file_splits[file_split_id]
     waiting_jobs.remove(job_id)
-    logger.info(f"Setting {new_job_status} status for waiting jobs: {waiting_jobs}.")
     for waiting_job in waiting_jobs:
+        logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
         set_job_or_task_status(
             db_conn,
             QUERY_JOBS_TABLE_NAME,
