@@ -549,7 +549,9 @@ def handle_pending_query_jobs(
 
                 if file_split_id in active_extraction_file_splits:
                     active_extraction_file_splits[file_split_id].append(job_id)
-                    logger.info(f"Split {file_split_id} is being extracted, mark job {job_id} as running")
+                    logger.info(
+                        f"Split {file_split_id} is being extracted, mark job {job_id} as running"
+                    )
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,
@@ -562,17 +564,19 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as running")
                     continue
 
-                if is_file_split_extracted_as_ir(results_cache_uri, ir_collection_name, file_split_id):
+                if is_file_split_extracted_as_ir(
+                    results_cache_uri, ir_collection_name, file_split_id
+                ):
                     logger.info(f"Split {file_split_id} already extracted, skip job {job_id}")
                     if not set_job_or_task_status(
-                            db_conn,
-                            QUERY_JOBS_TABLE_NAME,
-                            job_id,
-                            QueryJobStatus.SUCCEEDED,
-                            QueryJobStatus.PENDING,
-                            start_time=datetime.datetime.now(),
-                            num_tasks=0,
-                            duration=0,
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.SUCCEEDED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
                     ):
                         logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
@@ -671,15 +675,12 @@ def found_max_num_latest_results(
 
 
 def is_file_split_extracted_as_ir(
-    results_cache_uri: str,
-    ir_collection_name: str,
-    file_split_id: str
+    results_cache_uri: str, ir_collection_name: str, file_split_id: str
 ):
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
         ir_collection = results_cache_client.get_default_database()[ir_collection_name]
-        results_count = ir_collection.count_documents({'file_split_id': file_split_id})
+        results_count = ir_collection.count_documents({"file_split_id": file_split_id})
         return 0 != results_count
-
 
 
 async def handle_finished_search_job(
