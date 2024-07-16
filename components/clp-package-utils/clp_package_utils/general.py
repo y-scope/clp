@@ -15,6 +15,7 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
     DB_COMPONENT_NAME,
+    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -498,3 +499,16 @@ def validate_webui_config(
         raise ValueError(f"{WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_log_viewer_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{LOG_VIEWER_WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
+
+    validate_port(
+        f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port",
+        clp_config.log_viewer_webui.host,
+        clp_config.log_viewer_webui.port,
+    )

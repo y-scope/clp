@@ -9,13 +9,15 @@ vars:
   # Paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
+  G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
-  G_NODEJS_22_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
+  G_NODEJS_14_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-14"
+  G_NODEJS_14_BIN_DIR: "{{.G_NODEJS_14_BUILD_DIR}}/bin"
+  G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
+  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
-  G_WEBUI_NODEJS_BUILD_DIR: "{{.G_BUILD_DIR}}/webui-nodejs"
-  G_WEBUI_NODEJS_BIN_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}/bin"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
@@ -65,22 +67,41 @@ tasks:
           STORAGE_ENGINE: "clp"
 
   package:
+    env:
+      NODE_ENV: "production"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.G_BUILD_DIR}}/webui.md5"
+      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+      - "components/package-template/src/**/*"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
       - "clp-package-utils"
       - "clp-py-utils"
       - "init"
       - "job-orchestration"
+      - "log-viewer-webui"
+      - "nodejs-14"
       - "package-venv"
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
       - "webui"
-      - "webui-nodejs"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
@@ -101,50 +122,41 @@ tasks:
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.G_WEBUI_NODEJS_BIN_DIR}}/node"
         "{{.OUTPUT_DIR}}/bin/"
+      - >-
+        rsync -a
+        "{{.G_NODEJS_14_BIN_DIR}}/node"
+        "{{.OUTPUT_DIR}}/bin/node-14"
+      - >-
+        rsync -a
+        "{{.G_NODEJS_22_BIN_DIR}}/node"
+        "{{.OUTPUT_DIR}}/bin/node-22"
       - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
       - >-
         rsync -a
         "{{.G_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/"
+        "{{.OUTPUT_DIR}}/var/www/webui/"
+      # Avoid using `npm clean-install` because Meteor does not generate a `package-lock.json` file,
+      # which `clean-install` depends on.
       - |-
-        cd "{{.OUTPUT_DIR}}/var/www/programs/server"
-        PATH="{{.G_WEBUI_NODEJS_BIN_DIR}}":$PATH npm install
+        cd "{{.OUTPUT_DIR}}/var/www/webui/programs/server"
+        PATH="{{.G_NODEJS_14_BIN_DIR}}":$PATH npm install
+      - >-
+        rsync -a
+        "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/"
+        "{{.OUTPUT_DIR}}/var/www/log_viewer/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/var/www/log_viewer/server"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.G_BUILD_DIR}}/package-venv.md5"
-      - "{{.G_BUILD_DIR}}/webui.md5"
-      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "components/clp-package-utils/dist/*.whl"
-      - "components/clp-py-utils/dist/*.whl"
-      - "components/job-orchestration/dist/*.whl"
-      - "components/package-template/src/**/*"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   core:
-    deps: ["core-submodules", "init"]
     vars:
       SRC_DIR: "components/core"
-    cmds:
-      - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-      - >-
-        cmake
-        --build "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-        --parallel
-        --target clg clo clp clp-s reducer-server
     sources:
       - "{{.G_BUILD_DIR}}/core-submodules.md5"
       - "{{.SRC_DIR}}/cmake/**/*"
@@ -158,6 +170,15 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+    deps: ["core-submodules", "init"]
+    cmds:
+      - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
+      - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
+      - >-
+        cmake
+        --build "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+        --parallel
+        --target clg clo clp clp-s reducer-server
 
   clp-package-utils:
     - task: "python-component"
@@ -174,7 +195,60 @@ tasks:
       vars:
         COMPONENT: "{{.TASK}}"
 
+  log-viewer-webui:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/log-viewer-modules.md5"
+      - "{{.TASKFILE}}"
+      - "client/src/**/*.css"
+      - "client/src/**/*.jsx"
+      - "client/src/package.json"
+      - "client/src/webpack.config.js"
+      - "server/src/**/*.js"
+      - "server/src/**/package.json"
+    dir: "components/log-viewer-webui"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "init"
+      - "log-viewer-webui-node-modules"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "rsync -a client {{.OUTPUT_DIR}}/"
+      - |-
+        cd "{{.OUTPUT_DIR}}/client"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build
+      - "mkdir {{.OUTPUT_DIR}}/server"
+      - |-
+        cd server
+        rsync -a src package-lock.json package.json {{.OUTPUT_DIR}}/server/
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+
   webui:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/meteor.md5"
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.TASKFILE}}"
+      - "*"
+      - ".meteor/*"
+      - "client/**/*"
+      - "imports/**/*"
+      - "server/**/*"
+      - "tests/**/*"
+    dir: "components/webui"
+    platforms: ["386", "amd64"]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
       - "meteor"
@@ -183,11 +257,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
       - "webui-node-modules"
-    dir: "components/webui"
-    platforms: ["386", "amd64"]
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
@@ -206,23 +275,12 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.G_BUILD_DIR}}/meteor.md5"
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.TASKFILE}}"
-      - "*"
-      - ".meteor/*"
-      - "client/**/*"
-      - "imports/**/*"
-      - "server/**/*"
-      - "tests/**/*"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   nodejs-22:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_NODEJS_22_DIR}}"
+      OUTPUT_DIR: "{{.G_NODEJS_22_BUILD_DIR}}"
     run: "once"
     cmds:
       - task: "nodejs"
@@ -231,11 +289,11 @@ tasks:
           NODEJS_VERSION: "v22.4.0"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
-  webui-nodejs:
+  nodejs-14:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_WEBUI_NODEJS_BUILD_DIR}}"
+      OUTPUT_DIR: "{{.G_NODEJS_14_BUILD_DIR}}"
     cmds:
       - task: "nodejs"
         vars:
@@ -245,10 +303,15 @@ tasks:
 
   core-submodules:
     internal: true
-    dir: "components/core"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "submodules"
+    sources:
+      - "{{.TASKFILE}}"
+      - ".gitmodules"
+      - "tools/scripts/deps-download/**/*"
+    dir: "components/core"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
       - task: "utils:validate-checksum"
@@ -262,21 +325,18 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.TASKFILE}}"
-      - ".gitmodules"
-      - "tools/scripts/deps-download/**/*"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   download-and-extract-tar:
     internal: true
-    requires:
-      vars: ["CHECKSUM_FILE", "EXTRACTED_DIR_NAME", "TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
     label: "{{.TASK}}-{{.TAR_NAME}}"
     vars:
       OUTPUT_TMP_DIR: "{{.OUTPUT_DIR}}-tmp"
       EXTRACTED_DIR: "{{.OUTPUT_TMP_DIR}}/{{.EXTRACTED_DIR_NAME}}"
       TAR_PATH: "{{.OUTPUT_TMP_DIR}}/{{.TAR_NAME}}"
+    requires:
+      vars: ["CHECKSUM_FILE", "EXTRACTED_DIR_NAME", "TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
+    sources: ["{{.TASKFILE}}"]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
       - task: "utils:validate-checksum"
@@ -298,8 +358,6 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources: ["{{.TASKFILE}}"]
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   # NOTE: The log-viewer-webui has three different node_modules directories (client, server, and the
   # top-level one we call "package"), meaning we have to create three different checksums. To allow
@@ -319,7 +377,21 @@ tasks:
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
+    sources:
+      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
+      - "{{.TASKFILE}}"
+      - "client/package.json"
+      - "client/package-lock.json"
+      - "package.json"
+      - "package-lock.json"
+      - "server/package.json"
+      - "server/package-lock.json"
     dir: "{{.SRC_DIR}}"
+    generates:
+      - "{{.CHECKSUM_FILE}}"
+      - "{{.CLIENT_CHECKSUM_FILE}}"
+      - "{{.PACKAGE_CHECKSUM_FILE}}"
+      - "{{.SERVER_CHECKSUM_FILE}}"
     deps:
       - "nodejs-22"
       - task: "utils:validate-checksum"
@@ -337,7 +409,7 @@ tasks:
     cmds:
       - "rm -f {{.CHECKSUM_FILE}}"
       - task: "clean-log-viewer-webui"
-      - "PATH='{{.G_NODEJS_22_DIR}}/bin':$PATH npm run init"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       # These commands must be last
       - task: "utils:compute-checksum"
         vars:
@@ -358,32 +430,18 @@ tasks:
         "{{.PACKAGE_CHECKSUM_FILE}}"
         "{{.SERVER_CHECKSUM_FILE}}"
         > "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
-      - "{{.TASKFILE}}"
-      - "client/package.json"
-      - "client/package-lock.json"
-      - "package.json"
-      - "package-lock.json"
-      - "server/package.json"
-      - "server/package-lock.json"
-    generates:
-      - "{{.CHECKSUM_FILE}}"
-      - "{{.CLIENT_CHECKSUM_FILE}}"
-      - "{{.PACKAGE_CHECKSUM_FILE}}"
-      - "{{.SERVER_CHECKSUM_FILE}}"
 
   meteor:
-    run: "once"
-    preconditions:
-      - sh: >-
-          (test "$(uname -m)" != "aarch64") || (test "$(uname -s)" != "Linux")
-        msg: "Meteor 2.x does not support aarch64 on Linux"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x86_64{{ end }}"
       METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
       METEOR_RELEASE: "2.15"
+    run: "once"
+    preconditions:
+      - sh: >-
+          (test "$(uname -m)" != "aarch64") || (test "$(uname -s)" != "Linux")
+        msg: "Meteor 2.x does not support aarch64 on Linux"
     cmds:
       - task: "download-and-extract-tar"
         vars:
@@ -395,9 +453,6 @@ tasks:
 
   nodejs:
     internal: true
-    deps: ["init"]
-    requires:
-      vars: ["CHECKSUM_FILE", "NODEJS_VERSION", "OUTPUT_DIR"]
     vars:
       NODEJS_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x64{{ end }}"
       NODEJS_VERSION_BASE_URL: "https://nodejs.org/dist/{{.NODEJS_VERSION}}/"
@@ -409,6 +464,9 @@ tasks:
           --max-count 1
           "node-v[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+-{{OS}}-{{.NODEJS_ARCH}}"
           | head --lines 1
+    requires:
+      vars: ["CHECKSUM_FILE", "NODEJS_VERSION", "OUTPUT_DIR"]
+    deps: ["init"]
     cmds:
       - task: "download-and-extract-tar"
         vars:
@@ -420,8 +478,6 @@ tasks:
 
   package-tar:
     internal: true
-    requires:
-      vars: ["FLAVOUR", "STORAGE_ENGINE"]
     vars:
       VERSIONED_PACKAGE_NAME:
         sh: |
@@ -429,7 +485,14 @@ tasks:
           echo "clp-{{.FLAVOUR}}-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
       OUTPUT_DIR: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}"
       OUTPUT_FILE: "{{.OUTPUT_DIR}}.tar.gz"
+    requires:
+      vars: ["FLAVOUR", "STORAGE_ENGINE"]
+    sources:
+      - "{{.G_BUILD_DIR}}/package.md5"
+      - "{{.TASKFILE}}"
     dir: "{{.G_BUILD_DIR}}"
+    generates:
+      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
     deps: ["package"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_FILE}}'"
@@ -451,17 +514,17 @@ tasks:
         tar czf '{{.OUTPUT_FILE}}'
         --directory '{{.G_BUILD_DIR}}'
         --dereference '{{.VERSIONED_PACKAGE_NAME}}'
-    sources:
-      - "{{.G_BUILD_DIR}}/package.md5"
-      - "{{.TASKFILE}}"
-    generates:
-      - "{{.VERSIONED_PACKAGE_NAME}}.tar.gz"
 
   package-venv:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_VENV_DIR}}"
+    sources:
+      - "{{.ROOT_DIR}}/requirements.txt"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
       - task: "utils:validate-checksum"
@@ -479,34 +542,16 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.ROOT_DIR}}/requirements.txt"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   python-component:
     internal: true
-    requires:
-      vars: ["COMPONENT"]
     label: "{{.COMPONENT}}"
-    deps:
-      - task: "component-venv"
-        vars:
-          COMPONENT: "{{.COMPONENT}}"
-          OUTPUT_DIR: "{{.VENV_DIR}}"
     vars:
       PACKAGE:
         sh: "echo {{.COMPONENT}} | tr - _"
       VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
-    dir: "components/{{.COMPONENT}}"
-    cmds:
-      - task: "clean-python-component"
-        vars:
-          COMPONENT: "{{.COMPONENT}}"
-      - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        poetry build --format wheel
+    requires:
+      vars: ["COMPONENT"]
     sources:
       - "{{.G_BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
       - "{{.PACKAGE}}/**/*"
@@ -514,8 +559,21 @@ tasks:
       - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "pyproject.toml"
+    dir: "components/{{.COMPONENT}}"
     generates:
       - "dist/*.whl"
+    deps:
+      - task: "component-venv"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+          OUTPUT_DIR: "{{.VENV_DIR}}"
+    cmds:
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        poetry build --format wheel
 
   webui-node-modules:
     internal: true
@@ -523,7 +581,13 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
       OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
+    sources:
+      - "{{.G_BUILD_DIR}}/meteor.md5"
+      - "{{.TASKFILE}}"
+      - ".meteor/packages"
+      - "package.json"
     dir: "{{.WEBUI_SRC_DIR}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
       - "meteor"
@@ -539,21 +603,21 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.G_BUILD_DIR}}/meteor.md5"
-      - "{{.TASKFILE}}"
-      - ".meteor/packages"
-      - "package.json"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   component-venv:
     internal: true
-    requires:
-      vars: ["COMPONENT", "OUTPUT_DIR"]
     label: "{{.COMPONENT}}-venv"
-    dir: "components/{{.COMPONENT}}"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
+    requires:
+      vars: ["COMPONENT", "OUTPUT_DIR"]
+    sources:
+      - "{{.ROOT_DIR}}/requirements.txt"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "pyproject.toml"
+    dir: "components/{{.COMPONENT}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
       - task: "utils:validate-checksum"
@@ -571,24 +635,17 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.ROOT_DIR}}/requirements.txt"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "pyproject.toml"
-    generates: ["{{.CHECKSUM_FILE}}"]
-
   clean-python-component:
     internal: true
+    label: "clean-{{.COMPONENT}}"
     requires:
       vars: ["COMPONENT"]
-    label: "clean-{{.COMPONENT}}"
     dir: "components/{{.COMPONENT}}"
     cmds:
       - "rm -rf dist"
 
   init:
     internal: true
-    run: "once"
     silent: true
+    run: "once"
     cmd: "mkdir -p '{{.G_BUILD_DIR}}'"
