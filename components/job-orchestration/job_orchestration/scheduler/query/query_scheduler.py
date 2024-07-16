@@ -64,6 +64,10 @@ logger = get_logger("search-job-handler")
 # Dictionary of active jobs indexed by job id
 active_jobs: Dict[str, QueryJob] = {}
 
+# Dictionary of active file_split_ids being extracted and
+# the job ids waiting on it
+active_extraction_file_splits: Dict[str, List[str]] = {}
+
 reducer_connection_queue: Optional[asyncio.Queue] = None
 
 
@@ -466,9 +470,9 @@ def handle_pending_query_jobs(
     num_archives_to_search_per_sub_job: int,
 ) -> List[asyncio.Task]:
     global active_jobs
+    global active_extraction_file_splits
 
     reducer_acquisition_tasks = []
-
     pending_search_jobs = [
         job
         for job in active_jobs.values()
@@ -542,10 +546,27 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
+                if file_split_id in active_extraction_file_splits:
+                    active_extraction_file_splits[file_split_id].append(job_id)
+                    logger.info(f"Duplicated file split request, mark {job_id} as running")
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.RUNNING,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0
+                    ):
+                        logger.error(f"Failed to set job {job_id} as running")
+                    continue
+
+                active_extraction_file_splits[file_split_id] = [job_id]
                 extract_ir_config.file_split_id = file_split_id
                 new_extract_ir_job = ExtractIrJob(
                     id=job_id,
                     archive_id=archive_id,
+                    file_split_id=file_split_id,
                     extract_ir_config=extract_ir_config,
                     state=InternalJobState.WAITING_FOR_DISPATCH,
                 )
@@ -723,8 +744,10 @@ async def handle_finished_extract_ir_job(
     db_conn, job: ExtractIrJob, task_results: Optional[Any]
 ) -> None:
     global active_jobs
+    global active_extraction_file_splits
 
     job_id = job.id
+    file_split_id = job.file_split_id
     new_job_status = QueryJobStatus.SUCCEEDED
     num_tasks = len(task_results)
     if 1 != num_tasks:
@@ -761,6 +784,22 @@ async def handle_finished_extract_ir_job(
             logger.info(f"Completed IR extraction job {job_id}.")
         else:
             logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
+
+    waiting_jobs = active_extraction_file_splits[file_split_id]
+    waiting_jobs.remove(job_id)
+    logger.info(f"Setting {new_job_status} status for waiting jobs: {waiting_jobs}.")
+    for waiting_job in waiting_jobs:
+        set_job_or_task_status(
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            waiting_job,
+            new_job_status,
+            QueryJobStatus.RUNNING,
+            num_tasks_completed=0,
+            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        )
+
+    del active_extraction_file_splits[file_split_id]
     del active_jobs[job_id]
 
 
