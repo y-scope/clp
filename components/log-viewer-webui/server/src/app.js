@@ -10,7 +10,7 @@ import queryRoutes from "./routes/query.js";
 
 
 /**
- * Creates the Fastify #fastify with the given options.
+ * Creates the Fastify app with the given options.
  *
  * @param {object} props
  * @param {string} props.clientDir Absolute path to the client directory to serve when in
