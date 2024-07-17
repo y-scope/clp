@@ -12,8 +12,15 @@
 #include "regex_utils/ErrorCode.hpp"
 #include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
 
-using namespace clp::regex_utils;
-
+using clp::regex_utils::cRegexEndAnchor;
+using clp::regex_utils::cRegexOneOrMore;
+using clp::regex_utils::cRegexStartAnchor;
+using clp::regex_utils::cRegexZeroOrMore;
+using clp::regex_utils::cRegexZeroOrOne;
+using clp::regex_utils::cSingleCharWildcard;
+using clp::regex_utils::cZeroOrMoreCharsWildcard;
+using clp::regex_utils::ErrorCode;
+using clp::regex_utils::RegexToWildcardTranslatorConfig;
 using std::error_code;
 using std::string;
 using std::string_view;
