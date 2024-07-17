@@ -41,10 +41,9 @@ bool serialize_log_event(
 );
 
 /**
- * Serializes the given message into the eight-byte encoding IR stream
- * delta
+ * Serializes the given message into the eight-byte encoding IR stream.
  * @param message
- * @param logtype
+ * @param logtype Returns the message's logtype.
  * @param ir_buf
  * @return Whether the message was serialized successfully.
  */

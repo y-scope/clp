@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
-#include <sstream>  // Should be removed
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -395,7 +395,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
     auto const parent_id{locator.get_parent_id()};
     if (parent_id <= UINT8_MAX) {
         m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUByte);
-        m_schema_tree_node_buf.push_back(static_cast<int8_t>(static_cast<uint8_t>(parent_id)));
+        m_schema_tree_node_buf.push_back(static_cast<int8_t>(bit_cast<uint8_t>(parent_id)));
     } else if (parent_id <= UINT16_MAX) {
         m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUShort);
         serialize_int(static_cast<uint16_t>(parent_id), m_schema_tree_node_buf);
