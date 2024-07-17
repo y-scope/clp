@@ -145,7 +145,7 @@ auto flush_and_clear_serializer_buffer(
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
         Serializer<encoded_variable_t>& serializer,
-        vector<unsigned char> const& msgpack_bytes
+        vector<uint8_t> const& msgpack_bytes
 ) -> bool;
 
 template <typename encoded_variable_t>
@@ -261,15 +261,13 @@ auto flush_and_clear_serializer_buffer(
 template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(
         Serializer<encoded_variable_t>& serializer,
-        vector<unsigned char> const& msgpack_bytes
+        vector<uint8_t> const& msgpack_bytes
 ) -> bool {
-    msgpack::object_handle msgpack_oh;
-    msgpack::unpack(
-            msgpack_oh,
+    auto const msgpack_obj_handle{msgpack::unpack(
             clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
             msgpack_bytes.size()
-    );
-    auto const& msgpack_obj{msgpack_oh.get()};
+    )};
+    auto const msgpack_obj{msgpack_obj_handle.get()};
     if (msgpack::type::MAP != msgpack_obj.type) {
         return false;
     }
@@ -1074,7 +1072,7 @@ TEMPLATE_TEST_CASE(
     // Recursively construct an object containing inner maps and inner arrays.
     auto recursive_obj = basic_obj;
     auto recursive_array = basic_array;
-    constexpr size_t cRecursiveDepth{5};
+    constexpr size_t cRecursiveDepth{6};
     for (size_t i{0}; i < cRecursiveDepth; ++i) {
         recursive_array.emplace_back(recursive_obj);
         recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
