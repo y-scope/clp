@@ -59,7 +59,6 @@ constexpr int8_t ValueInt8 = 0x51;
 constexpr int8_t ValueInt16 = 0x52;
 constexpr int8_t ValueInt32 = 0x53;
 constexpr int8_t ValueInt64 = 0x54;
-constexpr int8_t ValueUnsignedInt64 = 0x55;
 constexpr int8_t ValueFloat = 0x56;
 constexpr int8_t ValueTrue = 0x57;
 constexpr int8_t ValueFalse = 0x58;

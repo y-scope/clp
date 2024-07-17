@@ -1,3 +1,5 @@
+#include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -138,14 +140,14 @@ auto flush_and_clear_serializer_buffer(
 /**
  * Unpacks and serializes the given msgpack bytes using kv serializer.
  * @tparam encoded_variable_t
- * @param serializer
  * @param msgpack_bytes
+ * @param serializer
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
-        Serializer<encoded_variable_t>& serializer,
-        vector<uint8_t> const& msgpack_bytes
+        vector<uint8_t> const& msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
 ) -> bool;
 
 template <typename encoded_variable_t>
@@ -260,8 +262,8 @@ auto flush_and_clear_serializer_buffer(
 
 template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(
-        Serializer<encoded_variable_t>& serializer,
-        vector<uint8_t> const& msgpack_bytes
+        vector<uint8_t> const& msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
 ) -> bool {
     auto const msgpack_obj_handle{msgpack::unpack(
             clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
@@ -1021,7 +1023,7 @@ TEMPLATE_TEST_CASE(
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
     auto const empty_obj = nlohmann::json::parse("{}");
-    REQUIRE(unpack_and_serialize_msgpack_bytes(serializer, nlohmann::json::to_msgpack(empty_obj)));
+    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(empty_obj), serializer));
 
     // Test encoding basic object
     constexpr string_view cShortString{"short_string"};
@@ -1047,7 +1049,7 @@ TEMPLATE_TEST_CASE(
                {"empty_object", empty_obj},
                {"empty_array", empty_array}};
 
-    REQUIRE(unpack_and_serialize_msgpack_bytes(serializer, nlohmann::json::to_msgpack(basic_obj)));
+    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(basic_obj), serializer));
 
     auto basic_array = empty_array;
     basic_array.emplace_back(1);
@@ -1062,8 +1064,8 @@ TEMPLATE_TEST_CASE(
         REQUIRE(
                 (false
                  == unpack_and_serialize_msgpack_bytes(
-                         serializer,
-                         nlohmann::json::to_msgpack(element)
+                         nlohmann::json::to_msgpack(element),
+                         serializer
                  ))
         );
     }
@@ -1078,8 +1080,8 @@ TEMPLATE_TEST_CASE(
         recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
         recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
         REQUIRE(unpack_and_serialize_msgpack_bytes(
-                serializer,
-                nlohmann::json::to_msgpack(recursive_obj)
+                nlohmann::json::to_msgpack(recursive_obj),
+                serializer
         ));
     }
 }
