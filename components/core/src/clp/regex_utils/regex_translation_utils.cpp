@@ -5,7 +5,6 @@
 #include <string_view>
 #include <system_error>
 
-#include <boost-outcome/include/boost/outcome/config.hpp>
 #include <boost-outcome/include/boost/outcome/std_result.hpp>
 
 #include "regex_utils/constants.hpp"

@@ -4,7 +4,6 @@
 #include <string>
 #include <string_view>
 
-#include <boost-outcome/include/boost/outcome/config.hpp>
 #include <boost-outcome/include/boost/outcome/std_result.hpp>
 
 #include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
