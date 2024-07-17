@@ -484,7 +484,7 @@ auto Serializer<encoded_variable_t>::serialize_val(
             break;
 
         default:
-            // Unknown schema tree node schema_tree_node_type
+            // Unknown schema tree node type
             return false;
     }
     return true;
@@ -502,10 +502,10 @@ template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOf
 template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
 ) -> void;
 
-template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& msgpack_map
 ) -> bool;
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
+template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& msgpack_map
 ) -> bool;
 
