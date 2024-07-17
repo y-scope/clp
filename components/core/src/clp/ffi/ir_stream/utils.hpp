@@ -34,11 +34,11 @@ template <typename integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& ir_buf) -> void;
 
 /**
- * Serializes a string using clp encoding.
+ * Serializes a string using CLP's encoding for unstructured text.
  * @tparam encoded_variable_t
  * @param str
- * @param logtype Outputs the logtype of the serialized clp string.
- * @param buf Outputs the serialized byte sequence.
+ * @param logtype Returns the corresponding logtype.
+ * @param buf
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
@@ -46,10 +46,10 @@ template <typename encoded_variable_t>
 serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& buf) -> bool;
 
 /**
- * Serializes a string packet.
+ * Serializes a string.
  * @param str
- * @param buf Outputs the serialized byte sequence.
- * @return Whether the serialization succeeded.
+ * @param buf
+ * @return Whether serialization succeeded.
  */
 [[nodiscard]] auto serialize_string(std::string_view str, std::vector<int8_t>& buf) -> bool;
 
@@ -76,15 +76,15 @@ serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int
             (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
              || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)
     );
-    bool error{};
+    bool succeeded{};
     if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
         buf.push_back(cProtocol::Payload::ValueFourByteEncodingClpStr);
-        error = four_byte_encoding::serialize_message(str, logtype, buf);
+        succeeded = four_byte_encoding::serialize_message(str, logtype, buf);
     } else {
         buf.push_back(cProtocol::Payload::ValueEightByteEncodingClpStr);
-        error = eight_byte_encoding::serialize_message(str, logtype, buf);
+        succeeded = eight_byte_encoding::serialize_message(str, logtype, buf);
     }
-    return error;
+    return succeeded;
 }
 }  // namespace clp::ffi::ir_stream
 #endif

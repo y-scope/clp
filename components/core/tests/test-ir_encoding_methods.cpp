@@ -140,7 +140,7 @@ auto flush_and_clear_serializer_buffer(
  * @tparam encoded_variable_t
  * @param serializer
  * @param msgpack_bytes
- * @return Whether the serialization is successful.
+ * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
@@ -1012,6 +1012,8 @@ TEMPLATE_TEST_CASE(
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
+    // TODO: Test deserializing the serialized bytes once a KV-pair IR deserializer is implemented.
+
     vector<int8_t> ir_buf;
 
     auto result{Serializer<TestType>::create()};
@@ -1020,18 +1022,13 @@ TEMPLATE_TEST_CASE(
     auto& serializer{result.value()};
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
-    auto const empty_array = nlohmann::json::parse("[]");
     auto const empty_obj = nlohmann::json::parse("{}");
     REQUIRE(unpack_and_serialize_msgpack_bytes(serializer, nlohmann::json::to_msgpack(empty_obj)));
-
-    // TODO:
-    // Before kv-pair IR Deserializer is implemented, we cannot test whether the serialized bytes
-    // can be correctly deserialized. We should improve the test coverage once we have a
-    // deserializer implementation.
 
     // Test encoding basic object
     constexpr string_view cShortString{"short_string"};
     constexpr string_view cClpString{"uid=0, CPU usage: 99.99%, \"user_name\"=YScope"};
+    auto const empty_array = nlohmann::json::parse("[]");
     nlohmann::json const basic_obj
             = {{"int8_max", INT8_MAX},
                {"int8_min", INT8_MIN},
@@ -1063,7 +1060,7 @@ TEMPLATE_TEST_CASE(
     basic_array.emplace_back(nullptr);
     basic_array.emplace_back(empty_array);
     for (auto const& element : basic_array) {
-        // Non-map objects should fail the serialization
+        // Non-map objects should not be serializable
         REQUIRE(
                 (false
                  == unpack_and_serialize_msgpack_bytes(

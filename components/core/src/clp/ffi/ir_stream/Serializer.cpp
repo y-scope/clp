@@ -36,7 +36,7 @@ using clp::ir::four_byte_encoded_variable_t;
 namespace clp::ffi::ir_stream {
 namespace {
 /**
- * Class for iterating a msgpack map.
+ * Class for iterating the kv-pairs of a MessagePack map.
  */
 class MsgpackMapIterator {
 public:
@@ -50,12 +50,12 @@ public:
 
     // Methods
     /**
-     * @return The id of the parent in the schema tree.
+     * @return This map's ID in the schema tree.
      */
     [[nodiscard]] auto get_parent_id() const -> SchemaTreeNode::id_t { return m_parent_id; }
 
     /**
-     * @return Whether it has more child to traverse.
+     * @return Whether there are more children to traverse.
      */
     [[nodiscard]] auto has_next_child() const -> bool {
         return m_children.size() > m_curr_child_idx;
@@ -74,54 +74,54 @@ private:
 };
 
 /**
- * Gets the corresponded schema tree node type from the given msgpack  value.
- * @param val msgpack value.
- * @return The corresponded schema tree node type.
- * @return std::nullopt if the value doesn't match any of the supported schema tree node type.
+ * Gets the schema-tree node type that corresponds with a given MessagePack value.
+ * @param val
+ * @return The corresponding schema-tree node type.
+ * @return std::nullopt if the value doesn't match any of the supported schema-tree node types.
  */
 [[nodiscard]] auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
 ) -> optional<SchemaTreeNode::Type>;
 
 /**
- * Serializes a value corresponded to an empty object.
- * @param buf Outputs the serialized byte sequence.
+ * Serializes an empty object.
+ * @param buf
  */
 auto serialize_empty_object(vector<int8_t>& buf) -> void;
 
 /**
- * Serializes a value of integer type.
+ * Serializes an integer.
  * @param val
- * @param buf Outputs the serialized byte sequence.
+ * @param buf
  * @return Whether serialization succeeded.
  */
 auto serialize_value_int(int64_t val, vector<int8_t>& buf) -> void;
 
 /**
- * Serializes a value of float type.
+ * Serializes a float.
  * @param val
- * @param buf Outputs the serialized byte sequence.
+ * @param buf
  */
 auto serialize_value_float(double val, vector<int8_t>& buf) -> void;
 
 /**
- * Serializes a value of bool.
+ * Serializes a boolean.
  * @param val
- * @param buf Outputs the serialized byte sequence.
+ * @param buf
  */
 auto serialize_value_bool(bool val, vector<int8_t>& buf) -> void;
 
 /**
- * Serializes a value of NULL type.
- * @param buf Outputs the serialized byte sequence.
+ * Serializes a null.
+ * @param buf
  */
 auto serialize_value_null(vector<int8_t>& buf) -> void;
 
 /**
- * Serializes a value of string type.
+ * Serializes a string.
  * @tparam encoded_variable_t
  * @param val
  * @param logtype_buf
- * @param buf Outputs the serialized byte sequence.
+ * @param buf
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
@@ -129,11 +129,11 @@ template <typename encoded_variable_t>
 serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& buf) -> bool;
 
 /**
- * Serializes a msgpack array as a JSON string, using clp encoding.
+ * Serializes a MessagePack array as a JSON string, using CLP's encoding for unstructured text.
  * @tparam encoded_variable_t
  * @param val
  * @param logtype_buf
- * @param buf Outputs the serialized byte sequence.
+ * @param buf
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
@@ -278,7 +278,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
     m_key_group_buf.clear();
     m_value_group_buf.clear();
 
-    // Traverse the map from the root using DFS iteratively.
+    // Traverse the map using DFS iteratively
     bool failure{false};
     vector<MsgpackMapIterator> working_stack;
     working_stack.emplace_back(
@@ -289,12 +289,12 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
     while (false == working_stack.empty()) {
         auto& curr{working_stack.back()};
         if (false == curr.has_next_child()) {
-            // All child has been visited. Pop it out from the working stack
+            // Visited all children, so pop node
             working_stack.pop_back();
             continue;
         }
 
-        // Convert the type of the current value to its corresponded schema tree node type
+        // Convert the current value's type to its corresponding schema-tree node type
         auto const& [key, val]{curr.get_next_child()};
         auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
         if (false == opt_schema_tree_node_type.has_value()) {
@@ -309,7 +309,8 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
                 schema_tree_node_type
         };
 
-        // Get the corresponded node in the schema tree. If the node doesn't exist yet, create one
+        // Get the schema-tree node that corresponds with the current kv-pair, or add it if it
+        // doesn't exist.
         auto opt_schema_tree_node_id{m_schema_tree.try_get_node_id(locator)};
         if (false == opt_schema_tree_node_id.has_value()) {
             opt_schema_tree_node_id.emplace(m_schema_tree.insert_node(locator));
@@ -321,22 +322,23 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
         auto const schema_tree_node_id{opt_schema_tree_node_id.value()};
 
         if (SchemaTreeNode::Type::Obj == schema_tree_node_type && msgpack::type::MAP == val.type) {
-            // Serialize sub-maps. If the sub-map is not empty, push an iterator of the sub-map into
-            // the working stack to continue DFS
+            // Serialize map
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             auto const& inner_map{val.via.map};
             auto const inner_map_size(static_cast<size_t>(inner_map.size));
             if (0 == inner_map_size) {
+                // Value is an empty map, so we can serialize it immediately
                 if (false == serialize_key(schema_tree_node_id)) {
                     failure = true;
                     break;
                 }
                 serialize_empty_object(m_value_group_buf);
             } else {
+                // Add map for DFS iteration
                 working_stack.emplace_back(schema_tree_node_id, inner_map.ptr, inner_map_size);
             }
         } else {
-            // A primitive value is reached. Directly serialize its key and value into the IR stream
+            // Serialize primitive
             if (false
                 == (serialize_key(schema_tree_node_id) && serialize_val(val, schema_tree_node_type)
                 ))

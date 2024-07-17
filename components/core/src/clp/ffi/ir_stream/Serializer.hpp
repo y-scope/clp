@@ -84,8 +84,8 @@ public:
 
     /**
      * Serializes the given msgpack map as a key-value pair log event.
-     * @param msgpack_map msgpack key-value pair map to serialize, representing an log event.
-     * @return Whether the serialization succeeded.
+     * @param msgpack_map
+     * @return Whether serialization succeeded.
      */
     [[nodiscard]] auto serialize_msgpack_map(msgpack::object_map const& msgpack_map) -> bool;
 
@@ -97,23 +97,23 @@ private:
     /**
      * Serializes a schema tree node identified by the given locator into `m_schema_tree_node_buf`.
      * @param locator
-     * @return Whether the serialization succeeded.
+     * @return Whether serialization succeeded.
      */
     [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator) -> bool;
 
     /**
-     * Serializes the given key id into `m_key_group_buf`.
+     * Serializes the given key ID into `m_key_group_buf`.
      * @param id
      * @return true on success.
-     * @return false if the id value exceeds the representable range.
+     * @return false if the ID exceeds the representable range.
      */
     [[nodiscard]] auto serialize_key(SchemaTreeNode::id_t id) -> bool;
 
     /**
-     * Serializes the given msgpack value into `m_value_group_buf`.
+     * Serializes the given MessagePack value into `m_value_group_buf`.
      * @param val
-     * @param type The corresponded `SchemaTreeNode::Type` of `val`.
-     * @return Whether the serialization succeeded.
+     * @param type The schema-node type that corresponds to `val`.
+     * @return Whether serialization succeeded.
      */
     [[nodiscard]] auto serialize_val(msgpack::object const& val, SchemaTreeNode::Type type) -> bool;
 
