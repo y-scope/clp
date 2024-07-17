@@ -44,33 +44,36 @@ public:
     using Child = msgpack::object_kv;
 
     // Constructors
-    MsgpackMapIterator(SchemaTreeNode::id_t parent_id, Child* child_data, size_t child_data_length)
-            : m_parent_id{parent_id},
-              m_children{child_data, child_data_length} {}
+    MsgpackMapIterator(SchemaTreeNode::id_t schema_tree_node_id, span<Child> children)
+            : m_schema_tree_node_id{schema_tree_node_id},
+              m_children{children},
+              m_curr_child_it{m_children.begin()} {}
 
     // Methods
     /**
      * @return This map's ID in the schema tree.
      */
-    [[nodiscard]] auto get_parent_id() const -> SchemaTreeNode::id_t { return m_parent_id; }
+    [[nodiscard]] auto get_schema_tree_node_id() const -> SchemaTreeNode::id_t {
+        return m_schema_tree_node_id;
+    }
 
     /**
      * @return Whether there are more children to traverse.
      */
     [[nodiscard]] auto has_next_child() const -> bool {
-        return m_children.size() > m_curr_child_idx;
+        return m_curr_child_it != m_children.end();
     }
 
     /**
      * Gets the next child and advances the underlying child idx.
      * @return The next child to traverse.
      */
-    [[nodiscard]] auto get_next_child() -> Child const& { return m_children[m_curr_child_idx++]; }
+    [[nodiscard]] auto get_next_child() -> Child const& { return *(m_curr_child_it++); }
 
 private:
-    SchemaTreeNode::id_t m_parent_id;
+    SchemaTreeNode::id_t m_schema_tree_node_id;
     span<Child> m_children;
-    size_t m_curr_child_idx{0};
+    span<Child>::iterator m_curr_child_it;
 };
 
 /**
@@ -84,61 +87,64 @@ private:
 
 /**
  * Serializes an empty object.
- * @param buf
+ * @param output_buf
  */
-auto serialize_empty_object(vector<int8_t>& buf) -> void;
+auto serialize_value_empty_object(vector<int8_t>& output_buf) -> void;
 
 /**
  * Serializes an integer.
  * @param val
- * @param buf
+ * @param output_buf
  * @return Whether serialization succeeded.
  */
-auto serialize_value_int(int64_t val, vector<int8_t>& buf) -> void;
+auto serialize_value_int(int64_t val, vector<int8_t>& output_buf) -> void;
 
 /**
  * Serializes a float.
  * @param val
- * @param buf
+ * @param output_buf
  */
-auto serialize_value_float(double val, vector<int8_t>& buf) -> void;
+auto serialize_value_float(double val, vector<int8_t>& output_buf) -> void;
 
 /**
  * Serializes a boolean.
  * @param val
- * @param buf
+ * @param output_buf
  */
-auto serialize_value_bool(bool val, vector<int8_t>& buf) -> void;
+auto serialize_value_bool(bool val, vector<int8_t>& output_buf) -> void;
 
 /**
  * Serializes a null.
- * @param buf
+ * @param output_buf
  */
-auto serialize_value_null(vector<int8_t>& buf) -> void;
+auto serialize_value_null(vector<int8_t>& output_buf) -> void;
 
 /**
  * Serializes a string.
  * @tparam encoded_variable_t
  * @param val
  * @param logtype_buf
- * @param buf
+ * @param output_buf
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto
-serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& buf) -> bool;
+serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& output_buf) -> bool;
 
 /**
  * Serializes a MessagePack array as a JSON string, using CLP's encoding for unstructured text.
  * @tparam encoded_variable_t
  * @param val
  * @param logtype_buf
- * @param buf
+ * @param output_buf
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
-[[nodiscard]] auto
-serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<int8_t>& buf) -> bool;
+[[nodiscard]] auto serialize_value_array(
+        msgpack::object const& val,
+        string& logtype_buf,
+        vector<int8_t>& output_buf
+) -> bool;
 
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
 ) -> optional<SchemaTreeNode::Type> {
@@ -171,55 +177,59 @@ auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
     return ret_val;
 }
 
-auto serialize_empty_object(vector<int8_t>& buf) -> void {
-    buf.push_back(cProtocol::Payload::ValueEmpty);
+auto serialize_value_empty_object(vector<int8_t>& output_buf) -> void {
+    output_buf.push_back(cProtocol::Payload::ValueEmpty);
 }
 
-auto serialize_value_int(int64_t val, vector<int8_t>& buf) -> void {
+auto serialize_value_int(int64_t val, vector<int8_t>& output_buf) -> void {
     if (INT8_MIN <= val && val <= INT8_MAX) {
-        buf.push_back(cProtocol::Payload::ValueInt8);
-        buf.push_back(static_cast<int8_t>(val));
+        output_buf.push_back(cProtocol::Payload::ValueInt8);
+        output_buf.push_back(static_cast<int8_t>(val));
     } else if (INT16_MIN <= val && val <= INT16_MAX) {
-        buf.push_back(cProtocol::Payload::ValueInt16);
-        serialize_int(static_cast<int16_t>(val), buf);
+        output_buf.push_back(cProtocol::Payload::ValueInt16);
+        serialize_int(static_cast<int16_t>(val), output_buf);
     } else if (INT32_MIN <= val && val <= INT32_MAX) {
-        buf.push_back(cProtocol::Payload::ValueInt32);
-        serialize_int(static_cast<int32_t>(val), buf);
+        output_buf.push_back(cProtocol::Payload::ValueInt32);
+        serialize_int(static_cast<int32_t>(val), output_buf);
     } else {  // (INT64_MIN <= val && val <= INT64_MAX)
-        buf.push_back(cProtocol::Payload::ValueInt64);
-        serialize_int(val, buf);
+        output_buf.push_back(cProtocol::Payload::ValueInt64);
+        serialize_int(val, output_buf);
     }
 }
 
-auto serialize_value_float(double val, vector<int8_t>& buf) -> void {
-    buf.push_back(cProtocol::Payload::ValueFloat);
-    serialize_int(bit_cast<uint64_t>(val), buf);
+auto serialize_value_float(double val, vector<int8_t>& output_buf) -> void {
+    output_buf.push_back(cProtocol::Payload::ValueFloat);
+    serialize_int(bit_cast<uint64_t>(val), output_buf);
 }
 
-auto serialize_value_bool(bool val, vector<int8_t>& buf) -> void {
-    buf.push_back(val ? cProtocol::Payload::ValueTrue : cProtocol::Payload::ValueFalse);
+auto serialize_value_bool(bool val, vector<int8_t>& output_buf) -> void {
+    output_buf.push_back(val ? cProtocol::Payload::ValueTrue : cProtocol::Payload::ValueFalse);
 }
 
-auto serialize_value_null(vector<int8_t>& buf) -> void {
-    buf.push_back(cProtocol::Payload::ValueNull);
+auto serialize_value_null(vector<int8_t>& output_buf) -> void {
+    output_buf.push_back(cProtocol::Payload::ValueNull);
 }
 
 template <typename encoded_variable_t>
-auto serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& buf) -> bool {
+auto serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& output_buf)
+        -> bool {
     if (string_view::npos == val.find(' ')) {
-        return serialize_string(val, buf);
+        return serialize_string(val, output_buf);
     }
     logtype_buf.clear();
-    return serialize_clp_string<encoded_variable_t>(val, logtype_buf, buf);
+    return serialize_clp_string<encoded_variable_t>(val, logtype_buf, output_buf);
 }
 
 template <typename encoded_variable_t>
-auto serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<int8_t>& buf)
-        -> bool {
+auto serialize_value_array(
+        msgpack::object const& val,
+        string& logtype_buf,
+        vector<int8_t>& output_buf
+) -> bool {
     std::ostringstream oss;
     oss << val;
     logtype_buf.clear();
-    return serialize_clp_string<encoded_variable_t>(oss.str(), logtype_buf, buf);
+    return serialize_clp_string<encoded_variable_t>(oss.str(), logtype_buf, output_buf);
 }
 }  // namespace
 
@@ -269,7 +279,7 @@ template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map const& msgpack_map
 ) -> bool {
     if (0 == msgpack_map.size) {
-        serialize_empty_object(m_ir_buf);
+        serialize_value_empty_object(m_ir_buf);
         return true;
     }
 
@@ -280,17 +290,16 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
 
     // Traverse the map using DFS iteratively
     bool failure{false};
-    vector<MsgpackMapIterator> working_stack;
-    working_stack.emplace_back(
+    vector<MsgpackMapIterator> dfs_stack;
+    dfs_stack.emplace_back(
             SchemaTree::cRootId,
-            msgpack_map.ptr,
-            static_cast<size_t>(msgpack_map.size)
+            span<MsgpackMapIterator::Child>{msgpack_map.ptr, msgpack_map.size}
     );
-    while (false == working_stack.empty()) {
-        auto& curr{working_stack.back()};
+    while (false == dfs_stack.empty()) {
+        auto& curr{dfs_stack.back()};
         if (false == curr.has_next_child()) {
             // Visited all children, so pop node
-            working_stack.pop_back();
+            dfs_stack.pop_back();
             continue;
         }
 
@@ -304,7 +313,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
         auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
 
         SchemaTree::NodeLocator const locator{
-                curr.get_parent_id(),
+                curr.get_schema_tree_node_id(),
                 key.as<string_view>(),
                 schema_tree_node_type
         };
@@ -321,21 +330,24 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
         }
         auto const schema_tree_node_id{opt_schema_tree_node_id.value()};
 
-        if (SchemaTreeNode::Type::Obj == schema_tree_node_type && msgpack::type::MAP == val.type) {
+        if (msgpack::type::MAP == val.type) {
             // Serialize map
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             auto const& inner_map{val.via.map};
-            auto const inner_map_size(static_cast<size_t>(inner_map.size));
+            auto const inner_map_size(inner_map.size);
             if (0 == inner_map_size) {
                 // Value is an empty map, so we can serialize it immediately
                 if (false == serialize_key(schema_tree_node_id)) {
                     failure = true;
                     break;
                 }
-                serialize_empty_object(m_value_group_buf);
+                serialize_value_empty_object(m_value_group_buf);
             } else {
                 // Add map for DFS iteration
-                working_stack.emplace_back(schema_tree_node_id, inner_map.ptr, inner_map_size);
+                dfs_stack.emplace_back(
+                        schema_tree_node_id,
+                        span<MsgpackMapIterator::Child>{inner_map.ptr, inner_map_size}
+                );
             }
         } else {
             // Serialize primitive
@@ -395,7 +407,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
     auto const parent_id{locator.get_parent_id()};
     if (parent_id <= UINT8_MAX) {
         m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUByte);
-        m_schema_tree_node_buf.push_back(static_cast<int8_t>(bit_cast<uint8_t>(parent_id)));
+        m_schema_tree_node_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(parent_id)));
     } else if (parent_id <= UINT16_MAX) {
         m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUShort);
         serialize_int(static_cast<uint16_t>(parent_id), m_schema_tree_node_buf);
@@ -424,9 +436,9 @@ auto Serializer<encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id) -> b
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_val(
         msgpack::object const& val,
-        SchemaTreeNode::Type type
+        SchemaTreeNode::Type schema_tree_node_type
 ) -> bool {
-    switch (type) {
+    switch (schema_tree_node_type) {
         case SchemaTreeNode::Type::Int:
             if (msgpack::type::POSITIVE_INTEGER == val.type
                 && static_cast<uint64_t>(INT64_MAX) < val.as<uint64_t>())
@@ -472,7 +484,7 @@ auto Serializer<encoded_variable_t>::serialize_val(
             break;
 
         default:
-            // Unknown schema tree node type
+            // Unknown schema tree node schema_tree_node_type
             return false;
     }
     return true;
@@ -484,32 +496,37 @@ template auto Serializer<eight_byte_encoded_variable_t>::create(
 ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
 template auto Serializer<four_byte_encoded_variable_t>::create(
 ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
+
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
 ) -> void;
 template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
 ) -> void;
+
 template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& msgpack_map
 ) -> bool;
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& msgpack_map
 ) -> bool;
-template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node(
-        SchemaTree::NodeLocator const& locator
-) -> bool;
+
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
 ) -> bool;
+template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node(
+        SchemaTree::NodeLocator const& locator
+) -> bool;
+
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id
+) -> bool;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id
 ) -> bool;
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id
+
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_val(
+        msgpack::object const& val,
+        SchemaTreeNode::Type schema_tree_node_type
 ) -> bool;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_val(
         msgpack::object const& val,
-        SchemaTreeNode::Type type
-) -> bool;
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_val(
-        msgpack::object const& val,
-        SchemaTreeNode::Type type
+        SchemaTreeNode::Type schema_tree_node_type
 ) -> bool;
 }  // namespace clp::ffi::ir_stream

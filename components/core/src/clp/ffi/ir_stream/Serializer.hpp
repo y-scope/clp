@@ -112,10 +112,11 @@ private:
     /**
      * Serializes the given MessagePack value into `m_value_group_buf`.
      * @param val
-     * @param type The schema-node type that corresponds to `val`.
+     * @param schema_tree_node_type The type of the schema tree node that corresponds to `val`.
      * @return Whether serialization succeeded.
      */
-    [[nodiscard]] auto serialize_val(msgpack::object const& val, SchemaTreeNode::Type type) -> bool;
+    [[nodiscard]] auto
+    serialize_val(msgpack::object const& val, SchemaTreeNode::Type schema_tree_node_type) -> bool;
 
     UtcOffset m_curr_utc_offset{0};
     Buffer m_ir_buf;
