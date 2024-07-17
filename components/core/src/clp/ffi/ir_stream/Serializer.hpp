@@ -3,12 +3,15 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 #include <boost-outcome/include/boost/outcome/std_result.hpp>
+#include <msgpack.hpp>
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
+#include "../SchemaTreeNode.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
@@ -79,14 +82,47 @@ public:
      */
     auto change_utc_offset(UtcOffset utc_offset) -> void;
 
+    /**
+     * Serializes the given msgpack map as a key-value pair log event.
+     * @param msgpack_map
+     * @return Whether serialization succeeded.
+     */
+    [[nodiscard]] auto serialize_msgpack_map(msgpack::object_map const& msgpack_map) -> bool;
+
 private:
     // Constructors
     Serializer() = default;
+
+    // Methods
+    /**
+     * Serializes a schema tree node identified by the given locator into `m_schema_tree_node_buf`.
+     * @param locator
+     * @return Whether serialization succeeded.
+     */
+    [[nodiscard]] auto serialize_schema_tree_node(SchemaTree::NodeLocator const& locator) -> bool;
+
+    /**
+     * Serializes the given key ID into `m_key_group_buf`.
+     * @param id
+     * @return true on success.
+     * @return false if the ID exceeds the representable range.
+     */
+    [[nodiscard]] auto serialize_key(SchemaTreeNode::id_t id) -> bool;
+
+    /**
+     * Serializes the given MessagePack value into `m_value_group_buf`.
+     * @param val
+     * @param schema_tree_node_type The type of the schema tree node that corresponds to `val`.
+     * @return Whether serialization succeeded.
+     */
+    [[nodiscard]] auto
+    serialize_val(msgpack::object const& val, SchemaTreeNode::Type schema_tree_node_type) -> bool;
 
     UtcOffset m_curr_utc_offset{0};
     Buffer m_ir_buf;
     SchemaTree m_schema_tree;
 
+    std::string m_logtype_buf;
     Buffer m_schema_tree_node_buf;
     Buffer m_key_group_buf;
     Buffer m_value_group_buf;
