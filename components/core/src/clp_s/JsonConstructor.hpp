@@ -1,6 +1,7 @@
 #ifndef CLP_S_JSONCONSTRUCTOR_HPP
 #define CLP_S_JSONCONSTRUCTOR_HPP
 
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -15,12 +16,18 @@
 #include "TraceableException.hpp"
 
 namespace clp_s {
+struct MetadataDbOption {
+    std::string mongodb_uri;
+    std::string mongodb_collection;
+};
+
 struct JsonConstructorOption {
     std::string archives_dir;
     std::string archive_id;
     std::string output_dir;
-    bool ordered;
-    size_t ordered_chunk_size;
+    bool ordered{false};
+    size_t ordered_chunk_size{0};
+    std::optional<MetadataDbOption> metadata_db;
 };
 
 class JsonConstructor {
@@ -59,12 +66,7 @@ private:
      */
     void construct_in_order();
 
-    std::string m_archives_dir;
-    std::string m_archive_id;
-    std::string m_output_dir;
-    bool m_ordered{false};
-    size_t m_ordered_chunk_size{0};
-
+    JsonConstructorOption m_option{};
     std::unique_ptr<ArchiveReader> m_archive_reader;
 };
 }  // namespace clp_s

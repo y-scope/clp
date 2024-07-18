@@ -286,6 +286,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             extraction_options.add(input_options);
 
+            po::options_description metadata_options;
+            // clang-format off
+            metadata_options.add_options()(
+                    "mongodb-uri",
+                    po::value<std::string>(&m_mongodb_uri),
+                    "The mongodb database used to record decompression metadata"
+            )(
+                    "mongodb-collection",
+                    po::value<std::string>(&m_mongodb_collection),
+                    "The collection used to record decompression metadata"
+            );
+            // clang-format on
+            extraction_options.add(metadata_options);
+
             po::options_description decompression_options("Decompression Options");
             // clang-format off
             decompression_options.add_options()(
@@ -347,6 +361,18 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
                 throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
+                );
+            }
+
+            if (m_mongodb_uri.empty() ^ m_mongodb_collection.empty()) {
+                throw std::invalid_argument(
+                        "mongodb-uri and mongodb-collection must both be non-empty"
+                );
+            }
+
+            if (false == m_mongodb_uri.empty() && false == m_ordered_decompression) {
+                throw std::invalid_argument(
+                        "recording decompression metadata only supported for ordered decompression"
                 );
             }
         } else if ((char)Command::Search == command_input) {
