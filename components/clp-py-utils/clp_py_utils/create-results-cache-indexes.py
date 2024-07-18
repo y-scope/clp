@@ -3,7 +3,7 @@ import logging
 import pathlib
 import sys
 
-import pymongo
+from pymongo import IndexModel, MongoClient
 
 # Setup logging
 # Create logger
@@ -34,10 +34,12 @@ def main(argv):
         results_cache_uri = results_cache_config.get_uri()
         ir_collection_name = results_cache_config.ir_collection_name
 
-        with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+        with MongoClient(results_cache_uri) as results_cache_client:
             ir_collection = results_cache_client.get_default_database()[ir_collection_name]
-            ir_collection.create_index(["file_split_id"])
-            ir_collection.create_index(["orig_file_id", "begin_msg_ix", "end_msg_ix"])
+
+            file_split_id_index = IndexModel(["file_split_id"])
+            orig_file_id_index = IndexModel(["orig_file_id", "begin_msg_ix", "end_msg_ix"])
+            ir_collection.create_indexes([file_split_id_index, orig_file_id_index])
 
     except:
         logger.exception("Failed to create clp results cache indexes.")
