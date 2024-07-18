@@ -1,9 +1,12 @@
 #include <regex_utils/ErrorCode.hpp>
 #include <regex_utils/regex_translation_utils.hpp>
+#include <regex_utils/RegexToWildcardTranslatorConfig.hpp>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
+using clp::regex_utils::ErrorCode;
 using clp::regex_utils::regex_to_wildcard;
+using clp::regex_utils::RegexToWildcardTranslatorConfig;
 
 TEST_CASE("regex_to_wildcard", "[regex_utils][regex_to_wildcard]") {
     // Test empty string
@@ -15,10 +18,21 @@ TEST_CASE("regex_to_wildcard", "[regex_utils][regex_to_wildcard]") {
     REQUIRE((regex_to_wildcard(". xyz .+ zyx .*").value() == "? xyz ?* zyx *"));
 
     // Test unescaped meta characters
-    REQUIRE((regex_to_wildcard(".? xyz .* zyx .").error() == clp::regex_utils::ErrorCode::Question)
-    );
-    REQUIRE((regex_to_wildcard(". xyz .** zyx .").error() == clp::regex_utils::ErrorCode::Star));
-    REQUIRE((regex_to_wildcard(". xyz .*+ zyx .").error() == clp::regex_utils::ErrorCode::Plus));
-    REQUIRE((regex_to_wildcard(". xyz |.* zyx .").error() == clp::regex_utils::ErrorCode::Pipe));
-    REQUIRE((regex_to_wildcard(". xyz ^.* zyx .").error() == clp::regex_utils::ErrorCode::Caret));
+    REQUIRE((regex_to_wildcard(".? xyz .* zyx .").error() == ErrorCode::Question));
+    REQUIRE((regex_to_wildcard(". xyz .** zyx .").error() == ErrorCode::Star));
+    REQUIRE((regex_to_wildcard(". xyz .*+ zyx .").error() == ErrorCode::Plus));
+    REQUIRE((regex_to_wildcard(". xyz |.* zyx .").error() == ErrorCode::Pipe));
+    REQUIRE((regex_to_wildcard(". xyz ^.* zyx .").error() == ErrorCode::Caret));
+}
+
+// Test anchors and prefix/suffix wildcards
+TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][regex_to_wildcard][anchor_config]") {
+    RegexToWildcardTranslatorConfig const config{false, true};
+    REQUIRE(((regex_to_wildcard("^", config).value() == "*")));
+    REQUIRE((regex_to_wildcard("$", config).value() == "*"));
+    REQUIRE((regex_to_wildcard("^xyz$", config).value() == "xyz"));
+    REQUIRE((regex_to_wildcard("xyz", config).value() == "*xyz*"));
+    REQUIRE((regex_to_wildcard("xyz$$", config).value() == "*xyz"));
+
+    REQUIRE((regex_to_wildcard("xyz$zyx$", config).error() == ErrorCode::Dollar));
 }

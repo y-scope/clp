@@ -6,7 +6,6 @@
 #include <type_traits>
 
 namespace clp::regex_utils {
-
 /**
  * Enum class for propagating and handling various regex utility errors.
  * More detailed descriptions can be found in ErrorCode.cpp.
@@ -35,7 +34,6 @@ enum class ErrorCode : uint8_t {
  * @return The corresponding std::error_code type variable.
  */
 [[nodiscard]] auto make_error_code(ErrorCode ec) -> std::error_code;
-
 }  // namespace clp::regex_utils
 
 namespace std {

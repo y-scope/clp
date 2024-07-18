@@ -209,8 +209,8 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
-add_subdirectory(src/clp/string_utils)
 add_subdirectory(src/clp/regex_utils)
+add_subdirectory(src/clp/string_utils)
 
 add_subdirectory(src/clp/clg)
 add_subdirectory(src/clp/clo)
@@ -305,11 +305,11 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
+        src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/ir_stream/Serializer.cpp
         src/clp/ffi/ir_stream/Serializer.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
-        src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
         src/clp/ffi/SchemaTreeNode.hpp
@@ -436,10 +436,10 @@ set(SOURCE_FILES_unitTest
         src/clp/StringReader.hpp
         src/clp/Thread.cpp
         src/clp/Thread.hpp
+        src/clp/time_types.hpp
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp
-        src/clp/time_types.hpp
         src/clp/type_utils.hpp
         src/clp/utf8_utils.cpp
         src/clp/utf8_utils.hpp
@@ -471,12 +471,12 @@ set(SOURCE_FILES_unitTest
         tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
+        tests/test-regex_utils.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
-        tests/test-regex_utils.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
@@ -499,8 +499,8 @@ target_link_libraries(unitTest
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
-        clp::string_utils
         clp::regex_utils
+        clp::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
         )

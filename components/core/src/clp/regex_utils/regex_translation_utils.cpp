@@ -5,54 +5,61 @@
 #include <string_view>
 #include <system_error>
 
-#include <boost-outcome/include/boost/outcome/std_result.hpp>
+#include <outcome/single-header/outcome.hpp>
 
 #include "regex_utils/constants.hpp"
 #include "regex_utils/ErrorCode.hpp"
 #include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
 
-using clp::regex_utils::cRegexEndAnchor;
-using clp::regex_utils::cRegexOneOrMore;
-using clp::regex_utils::cRegexStartAnchor;
-using clp::regex_utils::cRegexZeroOrMore;
-using clp::regex_utils::cRegexZeroOrOne;
-using clp::regex_utils::cSingleCharWildcard;
-using clp::regex_utils::cZeroOrMoreCharsWildcard;
-using clp::regex_utils::ErrorCode;
-using clp::regex_utils::RegexToWildcardTranslatorConfig;
 using std::error_code;
 using std::string;
 using std::string_view;
 
+namespace clp::regex_utils {
 namespace {
-// Internal utility class and function declarations
-/**
- * Class for storing regex translation analysis states, capture group, quantifier information, etc.
- */
+// Class for storing regex translation analysis states, capture group, quantifier information, etc.
 class TranslatorState;
 
-// State transition functions common signature
-using StateTransitionFunc
-        = auto(TranslatorState&,
-               string_view::const_iterator&,
-               string&,
-               RegexToWildcardTranslatorConfig const&) -> error_code;
-
-// State transition functions whose names correspond to the current analysis state.
-[[nodiscard]] StateTransitionFunc normal_state_transition;
-[[nodiscard]] StateTransitionFunc dot_state_transition;
-[[nodiscard]] StateTransitionFunc end_state_transition;
-[[nodiscard]] StateTransitionFunc final_state_cleanup;
+/**
+ * Functions that handle current-state-specific tasks before transitioning to the next state.
+ *
+ * @param[in, out] state The object that stores translator's internal information. The primary
+ * state member variable is always updated if a transition occures. Even if there's no state
+ * transition, other analysis info may be updated.
+ * @param[in, out] it The iterator that represents the current regex string scan position. May be
+ * updated to advance or backtrack the scan position.
+ * @param[out] wildcard_str The translated wildcard string. May or may not be updated.
+ * @param[in] config The translator config.
+ * @return 0 (clp::regex_utils::ErrorCode::Success) upon successful operation. Otherwise, return
+ * related error code.
+ */
+using StateTransitionFuncSig
+        = auto(TranslatorState& state,
+               string_view::const_iterator& it,
+               string& wildcard_str,
+               RegexToWildcardTranslatorConfig const& config) -> error_code;
+[[nodiscard]] StateTransitionFuncSig normal_state_transition;
+[[nodiscard]] StateTransitionFuncSig dot_state_transition;
+[[nodiscard]] StateTransitionFuncSig end_state_transition;
+[[nodiscard]] StateTransitionFuncSig final_state_cleanup;
 
 class TranslatorState {
 public:
-    // Regex translation pattern analysis states.
+    /**
+     * States for which we apply specific rules to translate encountered regex patterns.
+     *
+     * This list may be expanded as the translator supports translating more regex patterns.
+     * <ul>
+     *   <li>NORMAL: The initial state, where characters have no special meanings and are treated
+     * literally.</li>
+     *   <li>DOT: Encountered a period `.`. Expecting wildcard expression.</li>
+     *   <li>END: Encountered a dollar sign `$`, meaning the regex string has reached the end
+     * anchor.</li>
+     * </ul>
+     */
     enum class RegexPatternState : uint8_t {
-        // The initial state, where characters have no special meanings and are treated literally.
         NORMAL = 0,
-        // Encountered a period `.`. Expecting wildcard expression.
         DOT,
-        // Encountered a dollar sign `$`, meaning the regex string has reached the end anchor.
         END,
     };
 
@@ -66,27 +73,23 @@ public:
     auto set_next_state(RegexPatternState const& state) -> void { m_state = state; }
 
 private:
-    // Variables
+    // Members
     RegexPatternState m_state{RegexPatternState::NORMAL};
 };
 }  // namespace
 
-namespace clp::regex_utils {
-// Main API
-auto regex_to_wildcard(string_view regex_str) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<string> {
-    RegexToWildcardTranslatorConfig const default_config{false, false};
-    return regex_to_wildcard(regex_str, default_config);
+auto regex_to_wildcard(string_view regex_str) -> OUTCOME_V2_NAMESPACE::std_result<string> {
+    return regex_to_wildcard(regex_str, {false, false});
 }
 
 auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig const& config)
-        -> BOOST_OUTCOME_V2_NAMESPACE::std_result<string> {
+        -> OUTCOME_V2_NAMESPACE::std_result<string> {
     if (regex_str.empty()) {
-        return string();
+        return string{};
     }
 
-    // Initialize translation state, scan position, and return string
     TranslatorState state;
-    string_view::const_iterator it = regex_str.cbegin();
+    string_view::const_iterator it{regex_str.cbegin()};
     string wildcard_str;
 
     // If there is no starting anchor character, append multichar wildcard prefix
@@ -97,8 +100,7 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
     }
 
     error_code ec{};
-    while (it != regex_str.end()) {
-        // Main state transition table
+    while (it != regex_str.cend()) {
         switch (state.get_state()) {
             case TranslatorState::RegexPatternState::NORMAL:
                 ec = normal_state_transition(state, it, wildcard_str, config);
@@ -119,24 +121,27 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
         ++it;
     }
 
-    // Do the final state check and clean up
     ec = final_state_cleanup(state, it, wildcard_str, config);
     if (ec) {
         return ec;
     }
     return wildcard_str;
 }
-}  // namespace clp::regex_utils
 
 namespace {
-
+/**
+ * Treats each character literally and directly append it to the wildcard string, unless it is a
+ * meta-character.
+ *
+ * Each meta-character either triggers a state transition, or makes the regex string untranslatable.
+ */
 auto normal_state_transition(
         TranslatorState& state,
         string_view::const_iterator& it,
         string& wildcard_str,
-        RegexToWildcardTranslatorConfig const& /*config*/
+        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
-    char const ch = *it;
+    auto const ch{*it};
     switch (ch) {
         case '.':
             state.set_next_state(TranslatorState::RegexPatternState::DOT);
@@ -163,23 +168,30 @@ auto normal_state_transition(
     return ErrorCode::Success;
 }
 
+/**
+ * Attempt to translate regex wildcard patterns that start with `.` character.
+ *
+ * Performs the following translation if possible:
+ * <ul>
+ *   <li> `.*` gets translated into `*`</li>
+ *   <li> `.+` gets translated into `?*`</li>
+ *   <li> `.` gets translated into `?`</li>
+ * </ul>
+ */
 auto dot_state_transition(
         TranslatorState& state,
         string_view::const_iterator& it,
         string& wildcard_str,
-        RegexToWildcardTranslatorConfig const& /*config*/
+        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
     switch (*it) {
         case cZeroOrMoreCharsWildcard:
-            // .* gets translated to *
             wildcard_str += cZeroOrMoreCharsWildcard;
             break;
         case cRegexOneOrMore:
-            // .+ gets translated to ?*
             wildcard_str = wildcard_str + cSingleCharWildcard + cZeroOrMoreCharsWildcard;
             break;
         default:
-            // . gets translated to ?
             wildcard_str += cSingleCharWildcard;
             // Backtrack the scan by one position to handle the current char in the next iteration.
             --it;
@@ -189,11 +201,12 @@ auto dot_state_transition(
     return ErrorCode::Success;
 }
 
+// Once we've seen the end anchor, we should not expect any other character to appear.
 auto end_state_transition(
-        TranslatorState& /*state*/,
+        [[maybe_unused]] TranslatorState& state,
         string_view::const_iterator& it,
-        string& /*wildcard_str*/,
-        RegexToWildcardTranslatorConfig const& /*config*/
+        [[maybe_unused]] string& wildcard_str,
+        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
     if (cRegexEndAnchor != *it) {
         return ErrorCode::Dollar;
@@ -201,9 +214,13 @@ auto end_state_transition(
     return ErrorCode::Success;
 }
 
+/**
+ * States other than the NORMAL state may require special handling after the whole regex string has
+ * been scanned and processed.
+ */
 auto final_state_cleanup(
         TranslatorState& state,
-        string_view::const_iterator& /*it*/,
+        [[maybe_unused]] string_view::const_iterator& it,
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
@@ -225,3 +242,4 @@ auto final_state_cleanup(
     return ErrorCode::Success;
 }
 }  // namespace
+}  // namespace clp::regex_utils

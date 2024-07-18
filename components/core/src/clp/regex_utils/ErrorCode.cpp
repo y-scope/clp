@@ -10,23 +10,22 @@ using std::string;
 using std::string_view;
 
 namespace clp::regex_utils {
-
+namespace {
 /**
  * Class for giving the error codes more detailed string descriptions.
- * This class does not need to be seen outside the std error code wrapper implementation.
  */
 class ErrorCodeCategory : public error_category {
 public:
     /**
      * @return The class of errors.
      */
-    [[nodiscard]] char const* name() const noexcept override;
+    [[nodiscard]] auto name() const noexcept -> char const* override;
 
     /**
      * @param The error code encoded in int.
      * @return The descriptive message for the error.
      */
-    [[nodiscard]] string message(int ev) const override;
+    [[nodiscard]] auto message(int ev) const -> string override;
 };
 
 auto ErrorCodeCategory::name() const noexcept -> char const* {
@@ -69,10 +68,10 @@ auto ErrorCodeCategory::message(int ev) const -> string {
     }
 }
 
-ErrorCodeCategory const cTheErrorCodeCategory{};
+ErrorCodeCategory const cErrorCodeCategoryInstance;
+}  // namespace
 
 auto make_error_code(ErrorCode e) -> error_code {
-    return {static_cast<int>(e), cTheErrorCodeCategory};
+    return {static_cast<int>(e), cErrorCodeCategoryInstance};
 }
-
 }  // namespace clp::regex_utils
