@@ -17,8 +17,8 @@ from job_orchestration.scheduler.job_config import ExtractIrJobConfig
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     EXTRACT_FILE_CMD,
-    get_clp_home,
     EXTRACT_IR_CMD,
+    get_clp_home,
     load_config_file,
 )
 from clp_package_utils.scripts.native.utils import (

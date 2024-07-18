@@ -9,15 +9,15 @@ from clp_py_utils.clp_config import CLPConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    EXTRACT_FILE_CMD,
     DockerMount,
     DockerMountType,
     dump_container_config,
+    EXTRACT_FILE_CMD,
+    EXTRACT_IR_CMD,
     generate_container_config,
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
-    EXTRACT_IR_CMD,
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
