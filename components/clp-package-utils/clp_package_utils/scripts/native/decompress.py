@@ -16,9 +16,9 @@ from job_orchestration.scheduler.job_config import ExtractIrJobConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    DECOMPRESSION_COMMAND,
+    EXTRACT_FILE_CMD,
     get_clp_home,
-    IR_EXTRACTION_COMMAND,
+    EXTRACT_IR_CMD,
     load_config_file,
 )
 from clp_package_utils.scripts.native.utils import (
@@ -114,7 +114,7 @@ async def do_extract(
     )
 
 
-def handle_ir_extraction_command(
+def handle_extract_ir_cmd(
     parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
@@ -135,7 +135,7 @@ def handle_ir_extraction_command(
     if parsed_args.orig_file_id:
         orig_file_id = parsed_args.orig_file_id
     else:
-        orig_file_id = get_orig_file_id(clp_config.database, parsed_args.path)
+        orig_file_id = get_orig_file_id(clp_config.database, parsed_args.orig_file_path)
 
     try:
         asyncio.run(
@@ -175,7 +175,7 @@ def validate_and_load_config_file(
         return None
 
 
-def handle_decompression_command(
+def handle_extract_file_cmd(
     parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
@@ -265,7 +265,7 @@ def main(argv):
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
     # Decompression command parser
-    decompression_job_parser = command_args_parser.add_parser(DECOMPRESSION_COMMAND)
+    decompression_job_parser = command_args_parser.add_parser(EXTRACT_FILE_CMD)
     decompression_job_parser.add_argument(
         "paths", metavar="PATH", nargs="*", help="Files to decompress."
     )
@@ -277,7 +277,7 @@ def main(argv):
     )
 
     # IR extraction command parser
-    ir_extraction_parser = command_args_parser.add_parser(IR_EXTRACTION_COMMAND)
+    ir_extraction_parser = command_args_parser.add_parser(EXTRACT_IR_CMD)
     ir_extraction_parser.add_argument("msg_ix", type=int, help="Message index.")
     ir_extraction_parser.add_argument(
         "--target-uncompressed-size", type=int, help="Target uncompressed IR size."
@@ -285,15 +285,15 @@ def main(argv):
 
     group = ir_extraction_parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
-    group.add_argument("--path", type=str, help="Original file's path.")
+    group.add_argument("--orig-file-path", type=str, help="Original file's path.")
 
     parsed_args = args_parser.parse_args(argv[1:])
 
     command = parsed_args.command
-    if DECOMPRESSION_COMMAND == command:
-        return handle_decompression_command(parsed_args, clp_home, default_config_file_path)
-    elif IR_EXTRACTION_COMMAND == command:
-        return handle_ir_extraction_command(parsed_args, clp_home, default_config_file_path)
+    if EXTRACT_FILE_CMD == command:
+        return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
+    elif EXTRACT_IR_CMD == command:
+        return handle_extract_ir_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1

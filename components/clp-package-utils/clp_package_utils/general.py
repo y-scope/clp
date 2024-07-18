@@ -31,8 +31,8 @@ from clp_py_utils.core import (
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
-DECOMPRESSION_COMMAND = "x"
-IR_EXTRACTION_COMMAND = "i"
+EXTRACT_FILE_CMD = "x"
+EXTRACT_IR_CMD = "i"
 
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
@@ -301,7 +301,6 @@ def generate_container_start_cmd(
     container_start_cmd = [
         "docker", "run",
         "-i",
-        "--rm",
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
         "-e", f"PYTHONPATH={clp_site_packages_dir}",

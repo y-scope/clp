@@ -9,7 +9,7 @@ from clp_py_utils.clp_config import CLPConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    DECOMPRESSION_COMMAND,
+    EXTRACT_FILE_CMD,
     DockerMount,
     DockerMountType,
     dump_container_config,
@@ -17,7 +17,7 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
-    IR_EXTRACTION_COMMAND,
+    EXTRACT_IR_CMD,
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
@@ -59,7 +59,7 @@ def validate_and_load_config(
         return None
 
 
-def handle_decompression_command(
+def handle_extract_file_cmd(
     parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
@@ -80,7 +80,6 @@ def handle_decompression_command(
     except ValueError as ex:
         logger.error(f"extraction-dir is invalid: {ex}")
         return -1
-    extraction_dir.mkdir(exist_ok=True)
 
     # Validate and load config file
     clp_config = validate_and_load_config(
@@ -96,6 +95,7 @@ def handle_decompression_command(
     )
 
     # Set up mounts
+    extraction_dir.mkdir(exist_ok=True)
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [
         mounts.clp_home,
@@ -125,7 +125,7 @@ def handle_decompression_command(
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
         "--config", str(generated_config_path_on_container),
-        DECOMPRESSION_COMMAND,
+        EXTRACT_FILE_CMD,
         "-d", str(container_extraction_dir),
     ]
     # fmt: on
@@ -148,7 +148,7 @@ def handle_decompression_command(
     return 0
 
 
-def handle_extraction(
+def handle_extract_ir_cmd(
     parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
@@ -180,7 +180,7 @@ def handle_extraction(
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
         "--config", str(generated_config_path_on_container),
-        IR_EXTRACTION_COMMAND,
+        EXTRACT_IR_CMD,
         str(parsed_args.msg_ix),
     ]
     # fmt: on
@@ -188,8 +188,8 @@ def handle_extraction(
         extract_cmd.append("--orig-file-id")
         extract_cmd.append(str(parsed_args.orig_file_id))
     else:
-        extract_cmd.append("--path")
-        extract_cmd.append(str(parsed_args.path))
+        extract_cmd.append("--orig-file-path")
+        extract_cmd.append(str(parsed_args.orig_file_path))
     if parsed_args.target_uncompressed_size:
         extract_cmd.append("--target-uncompressed-size")
         extract_cmd.append(str(parsed_args.target_uncompressed_size))
@@ -221,7 +221,7 @@ def main(argv):
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
     # Decompression command parser
-    decompression_job_parser = command_args_parser.add_parser(DECOMPRESSION_COMMAND)
+    decompression_job_parser = command_args_parser.add_parser(EXTRACT_FILE_CMD)
     decompression_job_parser.add_argument(
         "paths", metavar="PATH", nargs="*", help="Files to decompress."
     )
@@ -233,7 +233,7 @@ def main(argv):
     )
 
     # IR extraction command parser
-    ir_extraction_parser = command_args_parser.add_parser(IR_EXTRACTION_COMMAND)
+    ir_extraction_parser = command_args_parser.add_parser(EXTRACT_IR_CMD)
     ir_extraction_parser.add_argument("msg_ix", type=int, help="Message index.")
     ir_extraction_parser.add_argument(
         "--target-uncompressed-size", type=int, help="Target uncompressed IR size."
@@ -241,15 +241,15 @@ def main(argv):
 
     group = ir_extraction_parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
-    group.add_argument("--path", type=str, help="Original file's path.")
+    group.add_argument("--orig-file-path", type=str, help="Original file's path.")
 
     parsed_args = args_parser.parse_args(argv[1:])
 
     command = parsed_args.command
-    if DECOMPRESSION_COMMAND == command:
-        return handle_decompression_command(parsed_args, clp_home, default_config_file_path)
-    elif IR_EXTRACTION_COMMAND == command:
-        return handle_extraction(parsed_args, clp_home, default_config_file_path)
+    if EXTRACT_FILE_CMD == command:
+        return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
+    elif EXTRACT_IR_CMD == command:
+        return handle_extract_ir_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1
