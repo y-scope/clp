@@ -7,6 +7,10 @@
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
+#include "../type_utils.hpp"
+
+using clp::size_checked_pointer_cast;
+
 namespace clp::aws {
 /**
  * Converts a char array to a string
@@ -30,21 +34,31 @@ inline std::string char_array_to_string(unsigned char const* a, size_t size) {
  * @return The HMAC SHA256 hash
  */
 inline std::string
-get_hmac_sha256_hash(std::string const& key, std::string const& value, bool hex_output = false) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    HMAC_CTX* hmac = HMAC_CTX_new();
-    HMAC_Init_ex(hmac, key.c_str(), key.size(), EVP_sha256(), nullptr);
-    HMAC_Update(hmac, reinterpret_cast<unsigned char const*>(value.c_str()), value.size());
-    unsigned int len = SHA256_DIGEST_LENGTH;
-    HMAC_Final(hmac, hash, &len);
-    HMAC_CTX_free(hmac);
+get_hmac_sha256_hash(std::string const& key, std::string const& input, bool hex_output = false) {
 
-    if (hex_output) {
-        return char_array_to_string(hash, SHA256_DIGEST_LENGTH);
+    std::array<unsigned char, SHA256_DIGEST_LENGTH> hash{};
+    unsigned int hash_length {0};
+    int key_length{0};
+    if(key.size() > INT32_MAX) {
+
     }
+    auto* res = HMAC(
+         EVP_sha256(),
+         key.c_str(),
+         key.size(),
+         size_checked_pointer_cast<const unsigned char>(input.c_str()),
+         input.size(),
+         hash.data(),
+         &hash_length
+    );
 
     std::string result;
-    result.assign(reinterpret_cast<char*>(hash), SHA256_DIGEST_LENGTH);
+    result.assign(size_checked_pointer_cast<char>(hash.data()), SHA256_DIGEST_LENGTH);
+
+    if (hex_output) {
+        return char_array_to_string(hash.data(), SHA256_DIGEST_LENGTH);
+    }
+
     return result;
 }
 
@@ -54,43 +68,20 @@ get_hmac_sha256_hash(std::string const& key, std::string const& value, bool hex_
  * @return The SHA256 hash
  */
 inline std::string get_sha256_hash(std::string const& input) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, input.c_str(), input.size());
-    SHA256_Final(hash, &sha256);
 
-    return char_array_to_string(hash, SHA256_DIGEST_LENGTH);
-}
+    EVP_MD_CTX * mdctx = EVP_MD_CTX_new();
 
-/**
- * Initializes SHA256 hash
- * @param sha256
- */
-inline void init_sha256_hash(SHA256_CTX* sha256) {
-    SHA256_Init(sha256);
-}
+    EVP_DigestInit_ex(mdctx, EVP_sha256(), nullptr);
 
-/**
- * Updates SHA256 hash
- * @param sha256
- * @param input
- * @param length
- */
-inline void update_sha256_hash(SHA256_CTX* sha256, void* input, size_t length) {
-    SHA256_Update(sha256, input, length);
-}
+    EVP_DigestUpdate(mdctx, input.c_str(), input.size());
 
-/**
- * Finalizes SHA256 hash
- * @param sha256
- * @return The SHA256 hash
- */
-inline std::string finalize_sha256_hash(SHA256_CTX* sha256) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_Final(hash, sha256);
+    std::array<unsigned char, SHA256_DIGEST_LENGTH> hash{};
+    unsigned int digest_len{0};
+    EVP_DigestFinal_ex(mdctx, hash.data(), &digest_len);
 
-    return char_array_to_string(hash, SHA256_DIGEST_LENGTH);
+    EVP_MD_CTX_free(mdctx);
+
+    return char_array_to_string(hash.data(), digest_len);
 }
 
 }  // namespace clp::aws
