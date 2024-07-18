@@ -23,3 +23,6 @@
 [submodule "tools/yscope-dev-utils"]
 	path = tools/yscope-dev-utils
 	url = https://github.com/y-scope/yscope-dev-utils.git
+[submodule "components/core/submodules/outcome"]
+	path = components/core/submodules/outcome
+	url = https://github.com/ned14/outcome.git
