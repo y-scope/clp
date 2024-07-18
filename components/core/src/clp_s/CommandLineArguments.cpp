@@ -286,7 +286,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             extraction_options.add(input_options);
 
-            po::options_description metadata_options;
+            po::options_description metadata_options("Metadata Options");
             // clang-format off
             metadata_options.add_options()(
                     "mongodb-uri",
@@ -347,6 +347,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(general_options);
                 visible_options.add(input_options);
                 visible_options.add(decompression_options);
+                visible_options.add(metadata_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
