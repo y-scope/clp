@@ -40,13 +40,11 @@ logger.addHandler(logging_console_handler)
 
 def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     """
-    Returns the original file id of the file with the given path
-    If multiple files have the same path, this method returns
-    the first file returned from the archive metadata database
     :param db_config:
-    :param path:
-    :return: The original file id of a file with the given path.
-    If no file matches with input path, returns None
+    :param path: Path of the original file.
+    :return: The ID of an original file which has the given path, or None if no such file exists.
+    NOTE: Multiple original files may have the same path in which case this method returns the ID of
+    only one of them.
     """
     sql_adapter = SQL_Adapter(db_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -60,13 +58,13 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
         db_conn.commit()
 
         if len(results) == 0:
-            logger.error("No file found for the given file path.")
+            logger.error("No file found for the given path.")
             return None
 
         if len(results) > 1:
             logger.warning(
-                "Multiple files found for the given file path, "
-                "return the orig_file_id of the first file"
+                "Multiple files found for the given path."
+                " Returning the orig_file_id of one of them."
             )
 
         return results[0]["orig_file_id"]
@@ -79,8 +77,7 @@ def submit_and_monitor_ir_extraction_job_in_db(
     target_uncompressed_size: Optional[int],
 ) -> None:
     """
-    Submits an IR extraction job to the scheduler database and
-    waits until the job finishes.
+    Submits an IR extraction job to the scheduler and waits until the job finishes.
     :param db_config:
     :param orig_file_id:
     :param msg_ix:
@@ -97,9 +94,9 @@ def submit_and_monitor_ir_extraction_job_in_db(
     job_status = wait_for_query_job(sql_adapter, job_id)
 
     if QueryJobStatus.SUCCEEDED == job_status:
-        logger.info(f"Finished job {job_id}")
+        logger.info(f"Finished IR extraction job {job_id}.")
     else:
-        logger.error(f"job {job_id} finished with unexpected status: {job_status}")
+        logger.error(f"IR extraction job {job_id} finished with unexpected status: {job_status}.")
 
 
 async def do_extract(
@@ -150,7 +147,7 @@ def handle_ir_extraction_command(
             )
         )
     except asyncio.CancelledError:
-        logger.error("Extraction cancelled.")
+        logger.error("IR extraction cancelled.")
         return -1
 
     return 0
@@ -266,6 +263,7 @@ def main(argv):
         help="CLP configuration file.",
     )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
+
     # Decompression command parser
     decompression_job_parser = command_args_parser.add_parser(DECOMPRESSION_COMMAND)
     decompression_job_parser.add_argument(
@@ -275,8 +273,9 @@ def main(argv):
         "-f", "--files-from", help="A file listing all files to decompress."
     )
     decompression_job_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=".", help="Decompress files into DIR"
+        "-d", "--extraction-dir", metavar="DIR", default=".", help="Decompress files into DIR."
     )
+
     # IR extraction command parser
     ir_extraction_parser = command_args_parser.add_parser(IR_EXTRACTION_COMMAND)
     ir_extraction_parser.add_argument("msg_ix", type=int, help="Message index.")
@@ -285,8 +284,8 @@ def main(argv):
     )
 
     group = ir_extraction_parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--orig-file-id", type=str, help="Original file ID.")
-    group.add_argument("--path", type=str, help="Path to the file.")
+    group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
+    group.add_argument("--path", type=str, help="Original file's path.")
 
     parsed_args = args_parser.parse_args(argv[1:])
 

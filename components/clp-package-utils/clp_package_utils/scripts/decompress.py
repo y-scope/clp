@@ -45,7 +45,7 @@ def validate_and_load_config(
     :param clp_home:
     :param config_file_path:
     :param default_config_file_path:
-    :return: clp_config on success, None otherwise.
+    :return: The config object on success, None otherwise.
     """
     try:
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
@@ -61,7 +61,14 @@ def validate_and_load_config(
 
 def handle_decompression_command(
     parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
-):
+) -> int:
+    """
+    Handles the decompression command.
+    :param parsed_args:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: 0 on success, -1 otherwise.
+    """
     paths_to_decompress_file_path = None
     if parsed_args.files_from:
         paths_to_decompress_file_path = pathlib.Path(parsed_args.files_from)
@@ -129,13 +136,28 @@ def handle_decompression_command(
         decompress_cmd.append(container_paths_to_decompress_file_path)
 
     cmd = container_start_cmd + decompress_cmd
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        logger.exception("Docker or decompression command failed.")
+        return -1
 
     # Remove generated files
     generated_config_path_on_host.unlink()
 
+    return 0
 
-def handle_extraction(parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path):
+
+def handle_extraction(
+    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+) -> int:
+    """
+    Handles the IR extraction command.
+    :param parsed_args:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: 0 on success, -1 otherwise.
+    """
     # Validate and load config file
     clp_config = validate_and_load_config(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
@@ -153,12 +175,11 @@ def handle_extraction(parsed_args, clp_home: pathlib.Path, default_config_file_p
         container_name, necessary_mounts, clp_config.execution_container
     )
 
+    # fmt: off
     extract_cmd = [
         "python3",
-        "-m",
-        "clp_package_utils.scripts.native.decompress",
-        "--config",
-        str(generated_config_path_on_container),
+        "-m", "clp_package_utils.scripts.native.decompress",
+        "--config", str(generated_config_path_on_container),
         IR_EXTRACTION_COMMAND,
         str(parsed_args.msg_ix),
     ]
@@ -173,10 +194,17 @@ def handle_extraction(parsed_args, clp_home: pathlib.Path, default_config_file_p
         extract_cmd.append("--target-uncompressed-size")
         extract_cmd.append(str(parsed_args.target_uncompressed_size))
     cmd = container_start_cmd + extract_cmd
-    subprocess.run(cmd, check=True)
+
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        logger.exception("Docker or IR extraction command failed.")
+        return -1
 
     # Remove generated files
     generated_config_path_on_host.unlink()
+
+    return 0
 
 
 def main(argv):
@@ -187,11 +215,11 @@ def main(argv):
     args_parser.add_argument(
         "--config",
         "-c",
-        type=str,
         default=str(default_config_file_path),
-        help="CLP package configuration file.",
+        help="CLP configuration file.",
     )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
+
     # Decompression command parser
     decompression_job_parser = command_args_parser.add_parser(DECOMPRESSION_COMMAND)
     decompression_job_parser.add_argument(
@@ -201,8 +229,9 @@ def main(argv):
         "-f", "--files-from", help="A file listing all files to decompress."
     )
     decompression_job_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=".", help="Decompress files into DIR"
+        "-d", "--extraction-dir", metavar="DIR", default=".", help="Decompress files into DIR."
     )
+
     # IR extraction command parser
     ir_extraction_parser = command_args_parser.add_parser(IR_EXTRACTION_COMMAND)
     ir_extraction_parser.add_argument("msg_ix", type=int, help="Message index.")
@@ -211,8 +240,8 @@ def main(argv):
     )
 
     group = ir_extraction_parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--orig-file-id", type=str, help="Original file ID.")
-    group.add_argument("--path", type=str, help="Path to the file.")
+    group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
+    group.add_argument("--path", type=str, help="Original file's path.")
 
     parsed_args = args_parser.parse_args(argv[1:])
 
