@@ -10,9 +10,9 @@
 #include <system_error>
 #include <vector>
 
-#include <boost-outcome/include/boost/outcome/std_result.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
+#include <outcome/single-header/outcome.hpp>
 
 #include "../../ir/types.hpp"
 #include "../../time_types.hpp"
@@ -235,7 +235,7 @@ auto serialize_value_array(
 
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::create(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
+) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
     static_assert(
             (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
              || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -493,9 +493,9 @@ auto Serializer<encoded_variable_t>::serialize_val(
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
 template auto Serializer<eight_byte_encoded_variable_t>::create(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
 template auto Serializer<four_byte_encoded_variable_t>::create(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
 ) -> void;

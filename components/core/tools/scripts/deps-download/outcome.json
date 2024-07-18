@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/ned14/outcome/archive/refs/tags/v2.2.9.zip",
+  "unzip": true,
+  "targets": [
+    {
+      "source": "outcome-2.2.9",
+      "destination": "submodules/outcome"
+    }
+  ]
+}

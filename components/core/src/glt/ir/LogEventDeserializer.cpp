@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
+#include <outcome/single-header/outcome.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
@@ -11,7 +12,7 @@
 namespace glt::ir {
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
     ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata;
     auto ir_error_code = ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata);
@@ -67,7 +68,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
 
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
     epoch_time_ms_t timestamp_or_timestamp_delta{};
     std::string logtype;
     std::vector<std::string> dict_vars;
@@ -106,11 +107,11 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
 template auto LogEventDeserializer<eight_byte_encoded_variable_t>::create(ReaderInterface& reader
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::create(ReaderInterface& reader
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
 }  // namespace glt::ir

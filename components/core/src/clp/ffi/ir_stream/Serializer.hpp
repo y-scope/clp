@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include <boost-outcome/include/boost/outcome/std_result.hpp>
 #include <msgpack.hpp>
+#include <outcome/single-header/outcome.hpp>
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
@@ -44,7 +44,7 @@ public:
      * - std::errc::protocol_error on failure to serialize the preamble.
      */
     [[nodiscard]] static auto create(
-    ) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
+    ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
 
     // Disable copy constructor/assignment operator
     Serializer(Serializer const&) = delete;
