@@ -94,7 +94,7 @@ tasks:
       - "clp-py-utils"
       - "init"
       - "job-orchestration"
-      - "log-viewer-webui-clients"
+      - "log-viewer-webui-client"
       - "nodejs-14"
       - "package-venv"
       - task: "utils:validate-checksum"
@@ -200,7 +200,7 @@ tasks:
       vars:
         COMPONENT: "{{.TASK}}"
 
-  log-viewer-webui-clients:
+  log-viewer-webui-client:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}"
