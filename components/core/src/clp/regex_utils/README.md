@@ -31,12 +31,12 @@ using clp::regex_utils::regex_to_wildcard;
 
 // Other code
 
-auto result = regex_to_wildcard(wildcard_str);
+auto result{regex_to_wildcard(wildcard_str)};
 if (result.has_error()) {
-    auto err_code = result.error();
+    auto err_code{result.error()};
     // Handle error
 } else {
-    auto regex_str = result.value();
+    auto regex_str{result.value()};
     // Do things with the translated string
 }
 ```
@@ -47,7 +47,7 @@ if (result.has_error()) {
 #include <regex_utils/RegexToWildcardTranslatorConfig.hpp>
 
 RegexToWildcardTranslatorConfig config{true, false, /*...other booleans*/};
-auto result = regex_to_wildcard(wildcard_str, config);
+auto result{regex_to_wildcard(wildcard_str, config)};
 
 // Same as above
 ```
