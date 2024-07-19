@@ -11,7 +11,7 @@ const routes = async (fastify, options) => {
         const sanitizedMsgIdx = Number(msgIdx);
         let irMetadata = await fastify.dbManager.getExtractIrMetadata(origFileId, sanitizedMsgIdx);
         if (null === irMetadata) {
-            const extractResult = await fastify.dbManager.insertExtractIrJob({
+            const extractResult = await fastify.dbManager.submitAndWaitForExtractIrJob({
                 file_split_id: null,
                 msg_ix: sanitizedMsgIdx,
                 orig_file_id: origFileId,

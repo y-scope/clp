@@ -139,19 +139,19 @@ class DbManager {
     }
 
     /**
-     * Inserts an Extract IR job into MySQL.
+     * Submits an Extract IR job and waits for it to finish.
      *
-     * @param {object} config The job configuration.
+     * @param {object} jobConfig
      * @return {Promise<number|null>} The job id of the inserted query or null if an error occurred.
      */
-    async insertExtractIrJob (config) {
+    async submitAndWaitForExtractIrJob (jobConfig) {
         let jobId;
         try {
             const [result] = await this.#mysqlConnectionPool.query(
                 `INSERT INTO ${this.#queryJobsTableName} (job_config, type)
              VALUES (?, ?)`,
                 [
-                    Buffer.from(msgpack.encode(config)),
+                    Buffer.from(msgpack.encode(jobConfig)),
                     QUERY_JOB_TYPE.EXTRACT_IR,
                 ]
             );
