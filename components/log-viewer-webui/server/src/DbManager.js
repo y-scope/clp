@@ -70,7 +70,9 @@ const QUERY_JOB_TYPE = Object.freeze({
  */
 class DbManager {
     /**
-     * @type {import("fastify").FastifyInstance | {mysql: import("@fastify/mysql").MySQLPromisePool}}
+     * @type {import("fastify").FastifyInstance |
+     * {mysql: import("@fastify/mysql").MySQLPromisePool} |
+     * {mongo: import("@fastify/mongodb").FastifyMongoObject}}
      */
     #fastify;
 
@@ -78,6 +80,11 @@ class DbManager {
      * @type {import("@fastify/mysql").MySQLPromisePool}
      */
     #mysqlConnectionPool;
+
+    /**
+     * @type {import("mongodb").Collection}
+     */
+    #irFilesCollection;
 
     #queryJobsTableName;
 
@@ -170,7 +177,7 @@ class DbManager {
      * @return {Promise<object>} A promise that resolves to the extracted IR metadata.
      */
     async getExtractIrMetadata (origFileId, msgIdx) {
-        return await this.irFilesCollection.findOne({
+        return await this.#irFilesCollection.findOne({
             orig_file_id: origFileId,
             begin_msg_ix: {$lte: msgIdx},
             end_msg_ix: {$gt: msgIdx},
@@ -219,7 +226,7 @@ class DbManager {
             if (err) {
                 throw err;
             }
-            this.irFilesCollection =
+            this.#irFilesCollection =
                 this.#fastify.mongo.db.collection(config.irFilesCollectionName);
         });
     }
