@@ -11,11 +11,11 @@
 #include "regex_utils/ErrorCode.hpp"
 #include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
 
+namespace clp::regex_utils {
 using std::error_code;
 using std::string;
 using std::string_view;
 
-namespace clp::regex_utils {
 namespace {
 /**
  * Class for storing regex translation analysis states, capture group, quantifier information, etc.

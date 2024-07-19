@@ -4,13 +4,14 @@
 #include <string_view>
 #include <system_error>
 
-using std::error_category;
+namespace clp::regex_utils {
 using std::error_code;
+
+namespace {
+using std::error_category;
 using std::string;
 using std::string_view;
 
-namespace clp::regex_utils {
-namespace {
 /**
  * Class for giving the error codes more detailed string descriptions.
  */
