@@ -1,4 +1,4 @@
-# Regex_utils
+# regex_utils library
 
 This library contains useful utilities to handle all regex related tasks.
 
@@ -58,10 +58,10 @@ For a detailed description on the options order and usage, see the
 ### Functionalities
 
 * Wildcards
-  - Turn `.` into `?`
-  - Turn `.*` into `*`
-  - Turn `.+` into `?*`
-  - E.g. `abc.*def.ghi.+` will get translated to `abc*def?ghi?*`
+  * Turn `.` into `?`
+  * Turn `.*` into `*`
+  * Turn `.+` into `?*`
+  * E.g. `abc.*def.ghi.+` will get translated to `abc*def?ghi?*`
 
 ### Custom configuration
 
@@ -69,9 +69,9 @@ The `RegexToWildcardTranslatorConfig` class objects are currently immutable once
 constructor takes the following arguments in order:
 
 * `case_insensitive_wildcard`: to be added later along with the character set translation
-implementation.
+  implementation.
 
 * `add_prefix_suffix_wildcards`: in the absence of regex anchors, add prefix or suffix wildcards so
-the query becomes a substring query.
-  - E.g. `info.*system` gets translated into `*info*system*` which makes the original query a
-  substring query.
+  the query becomes a substring query.
+  * E.g. `info.*system` gets translated into `*info*system*` which makes the original query a
+    substring query.
