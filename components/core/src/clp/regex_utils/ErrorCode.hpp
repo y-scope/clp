@@ -13,18 +13,13 @@ namespace clp::regex_utils {
 enum class ErrorCode : uint8_t {
     Success = 0,
     IllegalState,
-    Star,
-    Plus,
-    Question,
-    Pipe,
-    Caret,
-    Dollar,
-    DisallowedEscapeSequence,
+    UntranslatableStar,
+    UntranslatablePlus,
+    UnsupportedQuestionMark,
+    UnsupportedPipe,
+    IllegalCaret,
+    IllegalDollarSign,
     UnmatchedParenthesis,
-    UnsupportedCharsets,
-    IncompleteCharsetStructure,
-    UnsupportedQuantifier,
-    TokenUnquantifiable,
 };
 
 /**

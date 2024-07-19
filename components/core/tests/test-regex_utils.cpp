@@ -18,11 +18,11 @@ TEST_CASE("regex_to_wildcard", "[regex_utils][regex_to_wildcard]") {
     REQUIRE((regex_to_wildcard(". xyz .+ zyx .*").value() == "? xyz ?* zyx *"));
 
     // Test unescaped meta characters
-    REQUIRE((regex_to_wildcard(".? xyz .* zyx .").error() == ErrorCode::Question));
-    REQUIRE((regex_to_wildcard(". xyz .** zyx .").error() == ErrorCode::Star));
-    REQUIRE((regex_to_wildcard(". xyz .*+ zyx .").error() == ErrorCode::Plus));
-    REQUIRE((regex_to_wildcard(". xyz |.* zyx .").error() == ErrorCode::Pipe));
-    REQUIRE((regex_to_wildcard(". xyz ^.* zyx .").error() == ErrorCode::Caret));
+    REQUIRE((regex_to_wildcard(".? xyz .* zyx .").error() == ErrorCode::UnsupportedQuestionMark));
+    REQUIRE((regex_to_wildcard(". xyz .** zyx .").error() == ErrorCode::UntranslatableStar));
+    REQUIRE((regex_to_wildcard(". xyz .*+ zyx .").error() == ErrorCode::UntranslatablePlus));
+    REQUIRE((regex_to_wildcard(". xyz |.* zyx .").error() == ErrorCode::UnsupportedPipe));
+    REQUIRE((regex_to_wildcard(". xyz ^.* zyx .").error() == ErrorCode::IllegalCaret));
 }
 
 // Test anchors and prefix/suffix wildcards
@@ -34,5 +34,5 @@ TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][regex_to_wildcard][a
     REQUIRE((regex_to_wildcard("xyz", config).value() == "*xyz*"));
     REQUIRE((regex_to_wildcard("xyz$$", config).value() == "*xyz"));
 
-    REQUIRE((regex_to_wildcard("xyz$zyx$", config).error() == ErrorCode::Dollar));
+    REQUIRE((regex_to_wildcard("xyz$zyx$", config).error() == ErrorCode::IllegalDollarSign));
 }

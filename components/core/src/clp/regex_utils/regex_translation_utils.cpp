@@ -150,15 +150,15 @@ auto normal_state_transition(
             state.set_next_state(TranslatorState::RegexPatternState::END);
             break;
         case cRegexZeroOrMore:
-            return ErrorCode::Star;
+            return ErrorCode::UntranslatableStar;
         case cRegexOneOrMore:
-            return ErrorCode::Plus;
+            return ErrorCode::UntranslatablePlus;
         case cRegexZeroOrOne:
-            return ErrorCode::Question;
+            return ErrorCode::UnsupportedQuestionMark;
         case '|':
-            return ErrorCode::Pipe;
+            return ErrorCode::UnsupportedPipe;
         case cRegexStartAnchor:
-            return ErrorCode::Caret;
+            return ErrorCode::IllegalCaret;
         case ')':
             return ErrorCode::UnmatchedParenthesis;
         default:
@@ -209,7 +209,7 @@ auto end_state_transition(
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
     if (cRegexEndAnchor != *it) {
-        return ErrorCode::Dollar;
+        return ErrorCode::IllegalDollarSign;
     }
     return ErrorCode::Success;
 }

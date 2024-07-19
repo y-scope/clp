@@ -40,24 +40,28 @@ auto ErrorCodeCategory::message(int ev) const -> string {
         case ErrorCode::IllegalState:
             return "Unrecognized state.";
 
-        case ErrorCode::Star:
-            return "Failed to translate due to metachar `*` (zero or more occurences).";
+        case ErrorCode::UntranslatableStar:
+            return "Unable to express regex quantifier `*` in wildcard, which repeats a token for "
+                   "zero or more occurences, unless it is combined with a wildcard `.`";
 
-        case ErrorCode::Plus:
-            return "Failed to translate due to metachar `+` (one or more occurences).";
+        case ErrorCode::UntranslatablePlus:
+            return "Unable to express regex quantifier `+` in wildcard, which repeats a token for "
+                   "one or more occurences, unless it is combined with a wildcard `.`";
 
-        case ErrorCode::Question:
-            return "Currently does not support returning a list of wildcard translations. The "
-                   "metachar `?` (lazy match) may be supported in the future.";
+        case ErrorCode::UnsupportedQuestionMark:
+            return "Unable to express regex quantifier `?` in wildcard, which makes the preceding "
+                   "token optional, unless the translator supports returning a list of possible "
+                   "wildcard translations.";
 
-        case ErrorCode::Pipe:
-            return "Currently does not support returning a list of wildcard translations. The "
-                   "regex OR condition feature may be supported in the future.";
+        case ErrorCode::UnsupportedPipe:
+            return "Unable to express regex OR `|` in wildcard, which allows the query string to "
+                   "match a single token out of a series of options, unless the translator "
+                   "supports returning a list of possible wildcard translations.";
 
-        case ErrorCode::Caret:
+        case ErrorCode::IllegalCaret:
             return "Failed to translate due to start anchor `^` in the middle of the string.";
 
-        case ErrorCode::Dollar:
+        case ErrorCode::IllegalDollarSign:
             return "Failed to translate due to end anchor `$` in the middle of the string.";
 
         case ErrorCode::UnmatchedParenthesis:
