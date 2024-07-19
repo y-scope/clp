@@ -91,6 +91,7 @@ centos7.4-deps-install
 macos12-deps-install
 ubuntu-focal-deps-install
 ubuntu-jammy-deps-install
+regex-utils
 :::
 
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
