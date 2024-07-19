@@ -10,6 +10,7 @@ vars:
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
+  G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/log-viewer-webui"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
   G_NODEJS_14_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-14"
   G_NODEJS_14_BIN_DIR: "{{.G_NODEJS_14_BUILD_DIR}}/bin"
