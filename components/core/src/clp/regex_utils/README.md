@@ -19,8 +19,8 @@ metacharacters above, CLP should use the wildcard version.
 
 ### Includes
 
-* The translator function returns a `Result<T,E>` type, which can either contain a value or an error
-code.
+* The translator function returns a `Result<std::string, std::error_code>` type, which can either
+contain a value or an error code.
 
 To use the translator:
 
@@ -46,7 +46,7 @@ if (result.has_error()) {
 ```cpp
 #include <regex_utils/RegexToWildcardTranslatorConfig.hpp>
 
-RegexToWildcardTranslatorConfig config{true, false, //...other booleans};
+RegexToWildcardTranslatorConfig config{true, false, /*...other booleans*/};
 auto result = regex_to_wildcard(wildcard_str, config);
 
 // Same as above
@@ -64,6 +64,12 @@ For a detailed description on the options order and usage, see the
   - E.g. `abc.*def.ghi.+` will get translated to `abc*def?ghi?*`
 
 ### Custom configuration
+
+The `RegexToWildcardTranslatorConfig` class objects are currently immutable once instantiated. The
+constructor takes the following arguments in order:
+
+* `case_insensitive_wildcard`: to be added later along with the character set translation
+implementation.
 
 * `add_prefix_suffix_wildcards`: in the absence of regex anchors, add prefix or suffix wildcards so
 the query becomes a substring query.
