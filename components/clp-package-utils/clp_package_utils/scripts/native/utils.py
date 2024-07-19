@@ -86,7 +86,7 @@ def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
             )
             # There will only ever be one row since it's impossible to have more than one job with
             # the same ID
-            new_status = db_cursor.fetchall()[0]["status"]
+            new_status = QueryJobStatus(db_cursor.fetchall()[0]["status"])
             db_conn.commit()
             if new_status in (
                 QueryJobStatus.SUCCEEDED,
