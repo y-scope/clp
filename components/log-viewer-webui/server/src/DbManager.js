@@ -65,7 +65,6 @@ const QUERY_JOB_TYPE = Object.freeze({
 });
 /* eslint-enable sort-keys */
 
-
 /**
  * Class representing the database manager.
  */
