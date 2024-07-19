@@ -106,9 +106,7 @@ def handle_extract_file_cmd(
     ]
     container_paths_to_extract_file_path = None
     if paths_to_extract_file_path:
-        container_paths_to_extract_file_path = (
-            pathlib.Path("/") / "mnt" / "paths-to-extract.txt"
-        )
+        container_paths_to_extract_file_path = pathlib.Path("/") / "mnt" / "paths-to-extract.txt"
         necessary_mounts.append(
             DockerMount(
                 DockerMountType.BIND,
