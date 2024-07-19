@@ -16,14 +16,14 @@ import queryRoutes from "./routes/query.js";
  *
  * @param {object} props
  * @param {import("fastify").FastifyServerOptions} props.fastifyOptions
- * @param {string} props.sqlDbPass
  * @param {string} props.sqlDbUser
+ * @param {string} props.sqlDbPass
  * @return {Promise<import("fastify").FastifyInstance>}
  */
 const app = async ({
     fastifyOptions,
-    sqlDbPass,
     sqlDbUser,
+    sqlDbPass,
 }) => {
     const server = fastify(fastifyOptions);
     const filename = fileURLToPath(import.meta.url);

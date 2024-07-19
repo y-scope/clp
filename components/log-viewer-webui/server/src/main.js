@@ -20,10 +20,10 @@ const parseEnvVars = () => {
 
     /* eslint-disable sort-keys */
     const {
-        CLP_DB_PASS, CLP_DB_USER, HOST, PORT,
+        CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
     } = process.env;
     const envVars = {
-        CLP_DB_PASS, CLP_DB_USER, HOST, PORT,
+        CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
     };
     /* eslint-enable sort-keys */
 
