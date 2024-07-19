@@ -176,7 +176,7 @@ class DbManager {
      * @param {number} msgIdx
      * @return {Promise<object>} A promise that resolves to the extracted IR metadata.
      */
-    async getExtractIrMetadata (origFileId, msgIdx) {
+    async getExtractedIrFileMetadata (origFileId, msgIdx) {
         return await this.#irFilesCollection.findOne({
             orig_file_id: origFileId,
             begin_msg_ix: {$lte: msgIdx},

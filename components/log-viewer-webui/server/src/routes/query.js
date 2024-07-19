@@ -9,7 +9,10 @@ const routes = async (fastify, options) => {
     await fastify.post("/query/extract-ir", async (req, resp) => {
         const {orig_file_id: origFileId, msg_ix: msgIdx} = req.body;
         const sanitizedMsgIdx = Number(msgIdx);
-        let irMetadata = await fastify.dbManager.getExtractIrMetadata(origFileId, sanitizedMsgIdx);
+
+        let irMetadata =
+            await fastify.dbManager.getExtractedIrFileMetadata(origFileId, sanitizedMsgIdx);
+
         if (null === irMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractIrJob({
                 file_split_id: null,
@@ -26,7 +29,8 @@ const routes = async (fastify, options) => {
                 err.statusCode = 400;
                 throw err;
             }
-            irMetadata = await fastify.dbManager.getExtractIrMetadata(origFileId, sanitizedMsgIdx);
+            irMetadata =
+                await fastify.dbManager.getExtractedIrFileMetadata(origFileId, sanitizedMsgIdx);
         }
 
         resp.send(irMetadata);
