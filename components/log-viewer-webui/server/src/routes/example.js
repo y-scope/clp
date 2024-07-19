@@ -6,11 +6,11 @@
  * @return {Promise<void>}
  */
 const routes = async (fastify, options) => {
-    await fastify.get("/example/get/:name", async (req, resp) => {
+    fastify.get("/example/get/:name", async (req, resp) => {
         return {msg: `Hello, ${req.params.name}!`};
     });
 
-    await fastify.post("/example/post", async (req, resp) => {
+    fastify.post("/example/post", async (req, resp) => {
         return {msg: `Goodbye, ${req.body.name}!`};
     });
 };

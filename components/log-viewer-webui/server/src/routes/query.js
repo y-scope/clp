@@ -6,7 +6,7 @@
  * @return {Promise<void>}
  */
 const routes = async (fastify, options) => {
-    await fastify.post("/query/extract-ir", async (req, resp) => {
+    fastify.post("/query/extract-ir", async (req, resp) => {
         const {orig_file_id: origFileId, msg_ix: msgIdx} = req.body;
         const sanitizedMsgIdx = Number(msgIdx);
 
