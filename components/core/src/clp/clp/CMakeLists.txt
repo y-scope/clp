@@ -4,6 +4,7 @@ set(
         ../aws/AwsAuthenticationSigner.cpp
         ../aws/AwsAuthenticationSigner.hpp
         ../aws/Constants.hpp
+        ../aws/hash_utils.cpp
         ../aws/hash_utils.hpp
         ../BufferedFileReader.cpp
         ../BufferedFileReader.hpp

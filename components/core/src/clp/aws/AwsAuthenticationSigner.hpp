@@ -125,15 +125,7 @@ private:
             std::string& scope,
             std::string& timestamp_string,
             std::string const& canonical_request
-    ) {
-        return fmt::format(
-                "{}\n{}\n{}\n{}",
-                cAws4HmacSha256,
-                timestamp_string,
-                scope,
-                get_sha256_hash(canonical_request)
-        );
-    }
+    );
 
     /**
      * Gets the canonical request string
@@ -241,13 +233,8 @@ private:
      * @param date_string
      * @return
      */
-    [[nodiscard]] std::string
-    get_signature_key(std::string const& region, std::string const& date_string) {
-        std::string date_key = get_hmac_sha256_hash(cAws4 + m_secret_access_key, date_string);
-        std::string date_region_key = get_hmac_sha256_hash(date_key, region);
-        std::string date_region_service_key = get_hmac_sha256_hash(date_region_key, cS3Service);
-        return get_hmac_sha256_hash(date_region_service_key, cAws4Request);
-    }
+    [[nodiscard]] ErrorCode
+    get_signature_key(std::string const& region, std::string const& date_string, std::vector<unsigned char>& signature_key);
 
     /**
      * Gets the signature
@@ -255,9 +242,9 @@ private:
      * @param string_to_sign
      * @return
      */
-    [[nodiscard]] static std::string
-    get_signature(std::string const& signature_key, std::string const& string_to_sign) {
-        return get_hmac_sha256_hash(signature_key, string_to_sign, true);
+    [[nodiscard]] static ErrorCode
+    get_signature(std::span<unsigned char const> signature_key, std::span<unsigned char const> string_to_sign, std::vector<unsigned char>& signature) {
+        return get_hmac_sha256_hash(signature_key, string_to_sign, signature);
     }
 
     // Variables
