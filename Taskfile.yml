@@ -82,6 +82,10 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/package.json"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/package-lock.json"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/settings.json"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/*.js"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "components/clp-package-utils/dist/*.whl"
@@ -149,7 +153,7 @@ tasks:
       - |-
         cd components/log-viewer-webui/server/
         rsync -a \
-        src package-lock.json package.json settings.json \
+        package.json package-lock.json settings.json src \
         "{{.OUTPUT_DIR}}/var/www/log_viewer_webui/server/"
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/log_viewer_webui/server"
