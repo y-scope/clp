@@ -668,7 +668,7 @@ def generic_start_worker(
     logger.info(f"Started {component_name}.")
 
 
-def update_settings_json(
+def update_settings_object(
     parent_key_prefix: str,
     settings: Dict[str, Any],
     updates: Dict[str, Any],
@@ -686,9 +686,23 @@ def update_settings_json(
             error_msg = f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
             raise ValueError(error_msg)
         if isinstance(value, dict):
-            update_settings_json(f"{parent_key_prefix}{key}.", settings[key], value)
+            update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
         else:
             settings[key] = updates[key]
+
+
+def read_and_update_settings_json(json_path: str, updates: Dict[str, Any]):
+    """
+    Reads and updates the settings JSON file.
+
+    :param json_path:
+    :param updates:
+    """
+    with open(json_path, "r") as settings_json_file:
+        settings_object = json.loads(settings_json_file.read())
+    update_settings_object("", settings_object, updates)
+
+    return settings_object
 
 
 def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
@@ -710,8 +724,8 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     webui_logs_dir.mkdir(exist_ok=True, parents=True)
 
     container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
-    with open(settings_json_path, "r") as settings_json_file:
-        meteor_settings = json.loads(settings_json_file.read())
+
+    # Read and update settings.json
     meteor_settings_updates = {
         "private": {
             "SqlDbHost": clp_config.database.host,
@@ -726,7 +740,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
             "ClpStorageEngine": clp_config.package.storage_engine,
         },
     }
-    update_settings_json("", meteor_settings, meteor_settings_updates)
+    meteor_settings = read_and_update_settings_json(settings_json_path, meteor_settings_updates)
 
     # Start container
     # fmt: off
@@ -790,8 +804,7 @@ def start_log_viewer_webui(
 
     validate_log_viewer_webui_config(clp_config, settings_json_path)
 
-    with open(settings_json_path, "r") as settings_json_file:
-        settings_json = json.loads(settings_json_file.read())
+    # Read, update, and write back settings.json
     settings_json_updates = {
         "SqlDbHost": clp_config.database.host,
         "SqlDbPort": clp_config.database.port,
@@ -804,7 +817,7 @@ def start_log_viewer_webui(
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
         "IrDataDir": str(container_clp_config.ir_output.directory),
     }
-    update_settings_json("", settings_json, settings_json_updates)
+    settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(settings_json))
 
