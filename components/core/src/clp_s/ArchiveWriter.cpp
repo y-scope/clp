@@ -143,10 +143,29 @@ size_t ArchiveWriter::store_tables() {
     );
     m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);
 
+    /**
+     * Table metadata schema
+     * # num tables <64 bit>
+     * # [offset into file <64 bit> uncompressed size <64 bit>]+
+     * # num schemas <64 bit>
+     * # [table id <64 bit> offset into stream <64 bit> schema id <32 bit> num messages <64 bit>]+
+     *
+     * Schema tables are packed into a series of compression streams. Each of those compression
+     * streams is identified by a 64 bit table id. In the first half of the metadata we identify
+     * how many streams there are, and the offset into the file where each compression stream can
+     * be found. In the second half of the metadata we record how many schema tables there are,
+     * which compression stream they belong to, the offset into that compression stream where
+     * they can be found, and how many messages that schema table contains.
+     *
+     * We buffer the first half of the metadata in the "table_metadata" vector, and the second half
+     * of the metadata in the "schema_metadata" vector as we compress the tables. The metadata is
+     * flushed once all of the schema tables have been compressed.
+     */
+
     using schema_map_it = decltype(m_id_to_schema_writer)::iterator;
     std::vector<schema_map_it> schemas;
     std::vector<std::tuple<size_t, size_t>> table_metadata;
-    std::vector<std::tuple<int32_t, size_t, size_t, size_t>> schema_metadata;
+    std::vector<std::tuple<size_t, size_t, int32_t, size_t>> schema_metadata;
 
     schema_metadata.reserve(m_id_to_schema_writer.size());
     schemas.reserve(m_id_to_schema_writer.size());
@@ -159,25 +178,25 @@ size_t ArchiveWriter::store_tables() {
     };
     std::sort(schemas.begin(), schemas.end(), comp);
 
-    size_t current_table_size = 0;
+    size_t current_stream_offset = 0;
     size_t current_table_id = 0;
     size_t current_table_file_offset = 0;
     m_tables_compressor.open(m_tables_file_writer, m_compression_level);
     for (auto it : schemas) {
         it->second->store(m_tables_compressor);
         schema_metadata.emplace_back(
-                it->first,
-                it->second->get_num_messages(),
                 current_table_id,
-                current_table_size
+                current_stream_offset,
+                it->first,
+                it->second->get_num_messages()
         );
-        current_table_size += it->second->get_total_uncompressed_size();
+        current_stream_offset += it->second->get_total_uncompressed_size();
         delete it->second;
 
-        if (current_table_size > m_min_table_size || schemas.size() == schema_metadata.size()) {
-            table_metadata.emplace_back(current_table_file_offset, current_table_size);
+        if (current_stream_offset > m_min_table_size || schemas.size() == schema_metadata.size()) {
+            table_metadata.emplace_back(current_table_file_offset, current_stream_offset);
             m_tables_compressor.close();
-            current_table_size = 0;
+            current_stream_offset = 0;
             ++current_table_id;
             current_table_file_offset = m_tables_file_writer.get_pos();
 
@@ -187,11 +206,6 @@ size_t ArchiveWriter::store_tables() {
         }
     }
 
-    // table metadata schema
-    // # num tables <64 bit>
-    // # [offset into file <64 bit> uncompressed size <64 bit>]+
-    // # num schemas <64 bit>
-    // # [table id <64 bit> offset into table <64 bit> schema id <32 bit> num messages <64 bit>]+
     m_table_metadata_compressor.write_numeric_value(table_metadata.size());
     for (auto& [file_offset, uncompressed_size] : table_metadata) {
         m_table_metadata_compressor.write_numeric_value(file_offset);
@@ -199,9 +213,9 @@ size_t ArchiveWriter::store_tables() {
     }
 
     m_table_metadata_compressor.write_numeric_value(schema_metadata.size());
-    for (auto& [schema_id, num_messages, table_id, table_offset] : schema_metadata) {
+    for (auto& [table_id, stream_offset, schema_id, num_messages] : schema_metadata) {
         m_table_metadata_compressor.write_numeric_value(table_id);
-        m_table_metadata_compressor.write_numeric_value(table_offset);
+        m_table_metadata_compressor.write_numeric_value(stream_offset);
         m_table_metadata_compressor.write_numeric_value(schema_id);
         m_table_metadata_compressor.write_numeric_value(num_messages);
     }
