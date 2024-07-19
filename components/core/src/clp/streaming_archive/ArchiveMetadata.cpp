@@ -26,6 +26,7 @@ ArchiveMetadata::ArchiveMetadata(FileReader& file_reader) {
     file_reader.read_numeric_value(m_archive_format_version, false);
     file_reader.read_numeric_value(m_creator_id_len, false);
     file_reader.read_string(m_creator_id_len, m_creator_id, false);
+    file_reader.read_numeric_value(m_creation_idx, false);
     file_reader.read_numeric_value(m_uncompressed_size, false);
     file_reader.read_numeric_value(m_compressed_size, false);
     file_reader.read_numeric_value(m_begin_timestamp, false);
