@@ -60,7 +60,6 @@ const main = async () => {
         sqlDbUser: envVars.CLP_DB_USER,
     });
 
-
     try {
         await server.listen({host: envVars.HOST, port: Number(envVars.PORT)});
     } catch (e) {
