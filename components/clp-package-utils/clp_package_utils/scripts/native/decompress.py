@@ -98,7 +98,9 @@ def submit_and_monitor_ir_extraction_job_in_db(
         logger.info(f"Finished IR extraction job {job_id}.")
         return 0
 
-    logger.error(f"IR extraction job {job_id} finished with unexpected status: {job_status}.")
+    logger.error(
+        f"IR extraction job {job_id} finished with unexpected status: {job_status.to_str()}."
+    )
     return -1
 
 
@@ -126,7 +128,6 @@ def handle_extract_ir_cmd(
         orig_file_id = get_orig_file_id(clp_config.database, parsed_args.orig_file_path)
         if orig_file_id is None:
             return -1
-
 
     try:
         return asyncio.run(
