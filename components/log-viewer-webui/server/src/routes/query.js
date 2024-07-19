@@ -33,7 +33,7 @@ const routes = async (fastify, options) => {
                 await fastify.dbManager.getExtractedIrFileMetadata(origFileId, sanitizedMsgIdx);
         }
 
-        resp.send(irMetadata);
+        return irMetadata;
     });
 };
 
