@@ -115,7 +115,7 @@ def handle_extract_ir_cmd(
     clp_config = validate_and_load_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
-    if not clp_config:
+    if clp_config is None:
         return -1
 
     orig_file_id: str
@@ -165,7 +165,7 @@ def handle_extract_file_cmd(
     parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
-    Handles the decompression command.
+    Handles the file extraction command.
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
@@ -186,7 +186,7 @@ def handle_extract_file_cmd(
     clp_config = validate_and_load_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
-    if not clp_config:
+    if clp_config is None:
         return -1
 
     paths = parsed_args.paths
@@ -201,36 +201,36 @@ def handle_extract_file_cmd(
         yaml.safe_dump(clp_config.database.get_clp_connection_params_and_type(True), f)
 
     # fmt: off
-    decompression_cmd = [
+    extract_cmd = [
         str(clp_home / "bin" / "clp"),
         "x", str(archives_dir), str(extraction_dir),
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
 
-    files_to_decompress_list_path = None
+    files_to_extract_list_path = None
     if list_path is not None:
-        decompression_cmd.append("-f")
-        decompression_cmd.append(str(list_path))
+        extract_cmd.append("-f")
+        extract_cmd.append(str(list_path))
     elif len(paths) > 0:
         # Write paths to file
-        files_to_decompress_list_path = logs_dir / f"paths-to-decompress-{uuid.uuid4()}.txt"
-        with open(files_to_decompress_list_path, "w") as stream:
+        files_to_extract_list_path = logs_dir / f"paths-to-extract-{uuid.uuid4()}.txt"
+        with open(files_to_extract_list_path, "w") as stream:
             for path in paths:
                 stream.write(path + "\n")
 
-        decompression_cmd.append("-f")
-        decompression_cmd.append(str(files_to_decompress_list_path))
+        extract_cmd.append("-f")
+        extract_cmd.append(str(files_to_extract_list_path))
 
-    proc = subprocess.Popen(decompression_cmd)
+    proc = subprocess.Popen(extract_cmd)
     return_code = proc.wait()
     if 0 != return_code:
-        logger.error(f"Decompression failed, return_code={return_code}")
+        logger.error(f"File extraction failed, return_code={return_code}")
         return return_code
 
     # Remove generated files
-    if files_to_decompress_list_path is not None:
-        files_to_decompress_list_path.unlink()
+    if files_to_extract_list_path is not None:
+        files_to_extract_list_path.unlink()
     db_config_file_path.unlink()
 
     return 0
@@ -250,16 +250,16 @@ def main(argv):
     )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
-    # Decompression command parser
-    decompression_job_parser = command_args_parser.add_parser(EXTRACT_FILE_CMD)
-    decompression_job_parser.add_argument(
-        "paths", metavar="PATH", nargs="*", help="Files to decompress."
+    # File extraction command parser
+    file_extraction_parser = command_args_parser.add_parser(EXTRACT_FILE_CMD)
+    file_extraction_parser.add_argument(
+        "paths", metavar="PATH", nargs="*", help="Files to extract."
     )
-    decompression_job_parser.add_argument(
-        "-f", "--files-from", help="A file listing all files to decompress."
+    file_extraction_parser.add_argument(
+        "-f", "--files-from", help="A file listing all files to extract."
     )
-    decompression_job_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=".", help="Decompress files into DIR."
+    file_extraction_parser.add_argument(
+        "-d", "--extraction-dir", metavar="DIR", default=".", help="Extract files into DIR."
     )
 
     # IR extraction command parser

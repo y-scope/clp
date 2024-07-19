@@ -48,7 +48,7 @@ class DockerMountType(enum.IntEnum):
 
 class JobType(KebabCaseStrEnum):
     COMPRESSION = auto()
-    DECOMPRESSION = auto()
+    FILE_EXTRACTION = auto()
     IR_EXTRACTION = auto()
     SEARCH = auto()
 
