@@ -301,6 +301,7 @@ def generate_container_start_cmd(
     container_start_cmd = [
         "docker", "run",
         "-i",
+        "--rm",
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
