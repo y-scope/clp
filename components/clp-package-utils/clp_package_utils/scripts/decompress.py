@@ -85,7 +85,7 @@ def handle_extract_file_cmd(
     clp_config = validate_and_load_config(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
-    if not clp_config:
+    if clp_config is not None:
         return -1
 
     container_name = generate_container_name(JobType.DECOMPRESSION)
