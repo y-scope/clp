@@ -31,8 +31,8 @@ using BinaryErrorCategory = ErrorCategory<BinaryErrorCodeEnum>;
 
 constexpr string_view cAlwaysSuccessErrorCategoryName{"Always Success Error Code"};
 constexpr string_view cBinaryTestErrorCategoryName{"Binary Error Code"};
-constexpr string_view cSuccessErrMsg{"Success"};
-constexpr string_view cFailureErrMsg{"Failure"};
+constexpr string_view cSuccessErrorMsg{"Success"};
+constexpr string_view cFailureErrorMsg{"Failure"};
 constexpr string_view cUnrecognizedErrorCode{"Unrecognized Error Code"};
 constexpr std::array cFailureConditions{std::errc::not_connected, std::errc::timed_out};
 constexpr std::array cNoneFailureConditions{std::errc::broken_pipe, std::errc::address_in_use};
@@ -55,7 +55,7 @@ template <>
 auto AlwaysSuccessErrorCategory::message(AlwaysSuccessErrorCodeEnum error_enum) const -> string {
     switch (error_enum) {
         case AlwaysSuccessErrorCodeEnum::Success:
-            return string{cSuccessErrMsg};
+            return string{cSuccessErrorMsg};
         default:
             return string{cUnrecognizedErrorCode};
     }
@@ -70,9 +70,9 @@ template <>
 auto BinaryErrorCategory::message(BinaryErrorCodeEnum error_enum) const -> string {
     switch (error_enum) {
         case BinaryErrorCodeEnum::Success:
-            return string{cSuccessErrMsg};
+            return string{cSuccessErrorMsg};
         case BinaryErrorCodeEnum::Failure:
-            return string{cFailureErrMsg};
+            return string{cFailureErrorMsg};
         default:
             return string{cUnrecognizedErrorCode};
     }
@@ -100,14 +100,14 @@ TEST_CASE("test_error_code_implementation", "[error_handling][ErrorCode]") {
     BinaryErrorCode const success{BinaryErrorCodeEnum::Success};
     std::error_code const success_error_code{success};
     REQUIRE((success == success_error_code));
-    REQUIRE((cSuccessErrMsg == success_error_code.message()));
+    REQUIRE((cSuccessErrorMsg == success_error_code.message()));
     REQUIRE((BinaryErrorCode::get_category() == success_error_code.category()));
     REQUIRE((cBinaryTestErrorCategoryName == success_error_code.category().name()));
 
     BinaryErrorCode const failure{BinaryErrorCodeEnum::Failure};
     std::error_code const failure_error_code{failure};
     REQUIRE((failure == failure_error_code));
-    REQUIRE((cFailureErrMsg == failure_error_code.message()));
+    REQUIRE((cFailureErrorMsg == failure_error_code.message()));
     REQUIRE((BinaryErrorCode::get_category() == failure_error_code.category()));
     REQUIRE((cBinaryTestErrorCategoryName == failure_error_code.category().name()));
     std::for_each(
@@ -129,7 +129,7 @@ TEST_CASE("test_error_code_implementation", "[error_handling][ErrorCode]") {
     AlwaysSuccessErrorCode const always_success{AlwaysSuccessErrorCodeEnum::Success};
     std::error_code const always_success_error_code{always_success};
     REQUIRE((always_success_error_code == always_success));
-    REQUIRE((cSuccessErrMsg == always_success_error_code.message()));
+    REQUIRE((cSuccessErrorMsg == always_success_error_code.message()));
     REQUIRE((AlwaysSuccessErrorCode::get_category() == always_success_error_code.category()));
     REQUIRE((cAlwaysSuccessErrorCategoryName == always_success_error_code.category().name()));
 
