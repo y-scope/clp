@@ -27,9 +27,9 @@ public:
     /**
      * Adds a value to the column
      * @param value
-     * @param size
+     * @return the size of the encoded data appended to this column in bytes
      */
-    virtual void add_value(ParsedMessage::variable_t& value, size_t& size) = 0;
+    virtual size_t add_value(ParsedMessage::variable_t& value) = 0;
 
     /**
      * Stores the column to a compressed file.
@@ -42,7 +42,7 @@ public:
      * size plus the sum of sizes returned by add_value is equal to the total size of data that will
      * be written to the compressor in bytes.
      *
-     * @return the total size of header data that will
+     * @return the total size of header data that will be written to the compressor in bytes
      */
     virtual size_t get_total_header_size() const { return 0; }
 
@@ -59,7 +59,7 @@ public:
     ~Int64ColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -76,7 +76,7 @@ public:
     ~FloatColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -93,7 +93,7 @@ public:
     ~BooleanColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -117,7 +117,7 @@ public:
     ~ClpStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -173,7 +173,7 @@ public:
     ~VariableStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
     void store(ZstdCompressor& compressor) override;
 
@@ -191,7 +191,7 @@ public:
     ~DateStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
     void store(ZstdCompressor& compressor) override;
 

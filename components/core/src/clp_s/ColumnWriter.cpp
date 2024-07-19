@@ -1,9 +1,9 @@
 #include "ColumnWriter.hpp"
 
 namespace clp_s {
-void Int64ColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& size) {
-    size = sizeof(int64_t);
+size_t Int64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_values.push_back(std::get<int64_t>(value));
+    return sizeof(int64_t);
 }
 
 void Int64ColumnWriter::store(ZstdCompressor& compressor) {
@@ -11,9 +11,9 @@ void Int64ColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
-void FloatColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& size) {
-    size = sizeof(double);
+size_t FloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_values.push_back(std::get<double>(value));
+    return sizeof(double);
 }
 
 void FloatColumnWriter::store(ZstdCompressor& compressor) {
@@ -21,9 +21,9 @@ void FloatColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
-void BooleanColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& size) {
-    size = sizeof(uint8_t);
+size_t BooleanColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_values.push_back(std::get<bool>(value) ? 1 : 0);
+    return sizeof(uint8_t);
 }
 
 void BooleanColumnWriter::store(ZstdCompressor& compressor) {
@@ -31,8 +31,7 @@ void BooleanColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
-void ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& size) {
-    size = sizeof(int64_t);
+size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     std::string string_var = std::get<std::string>(value);
     uint64_t id;
     uint64_t offset = m_encoded_vars.size();
@@ -45,7 +44,7 @@ void ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& 
     m_log_dict->add_entry(m_logtype_entry, id);
     auto encoded_id = encode_log_dict_id(id, offset);
     m_logtypes.push_back(encoded_id);
-    size += sizeof(int64_t) * (m_encoded_vars.size() - offset);
+    return sizeof(int64_t) + sizeof(int64_t) * (m_encoded_vars.size() - offset);
 }
 
 void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
@@ -57,12 +56,12 @@ void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_encoded_vars.data()), encoded_vars_size);
 }
 
-void VariableStringColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& size) {
-    size = sizeof(int64_t);
+size_t VariableStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     std::string string_var = std::get<std::string>(value);
     uint64_t id;
     m_var_dict->add_entry(string_var, id);
     m_variables.push_back(id);
+    return sizeof(int64_t);
 }
 
 void VariableStringColumnWriter::store(ZstdCompressor& compressor) {
@@ -70,11 +69,12 @@ void VariableStringColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_variables.data()), size);
 }
 
-void DateStringColumnWriter::add_value(ParsedMessage::variable_t& value, size_t& size) {
-    size = 2 * sizeof(int64_t);
+size_t DateStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     auto encoded_timestamp = std::get<std::pair<uint64_t, epochtime_t>>(value);
     m_timestamps.push_back(encoded_timestamp.second);
     m_timestamp_encodings.push_back(encoded_timestamp.first);
+    return 2 * sizeof(int64_t);
+    ;
 }
 
 void DateStringColumnWriter::store(ZstdCompressor& compressor) {

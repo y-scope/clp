@@ -108,7 +108,7 @@ public:
 
     size_t get_ordered_chunk_size() const { return m_ordered_chunk_size; }
 
-    size_t get_min_table_size() const { return m_minimum_table_size; }
+    size_t get_minimum_table_size() const { return m_minimum_table_size; }
 
 private:
     // Methods

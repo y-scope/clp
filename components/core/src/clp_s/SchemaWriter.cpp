@@ -9,18 +9,15 @@ void SchemaWriter::append_column(BaseColumnWriter* column_writer) {
 }
 
 size_t SchemaWriter::append_message(ParsedMessage& message) {
-    int count = 0;
-    size_t size, total_size;
-    size = total_size = 0;
+    int count{};
+    size_t total_size{};
     for (auto& i : message.get_content()) {
-        m_columns[count]->add_value(i.second, size);
-        total_size += size;
-        count++;
+        total_size += m_columns[count]->add_value(i.second);
+        ++count;
     }
 
     for (auto& i : message.get_unordered_content()) {
-        m_columns[count]->add_value(i, size);
-        total_size += size;
+        total_size += m_columns[count]->add_value(i);
         ++count;
     }
 
