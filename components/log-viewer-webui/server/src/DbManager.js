@@ -70,11 +70,14 @@ const QUERY_JOB_TYPE = Object.freeze({
  */
 class DbManager {
     /**
-     * @type {import("fastify").FastifyInstance}
+     * @type {import("fastify").FastifyInstance | {mysql: import("@fastify/mysql").MySQLPromisePool}}
      */
     #fastify;
 
-    #mysqlConnection;
+    /**
+     * @type {import("@fastify/mysql").MySQLPromisePool}
+     */
+    #mysqlConnectionPool;
 
     #queryJobsTableName;
 
@@ -96,7 +99,7 @@ class DbManager {
         while (true) {
             let rows;
             try {
-                const [queryRows] = await this.#mysqlConnection.query(
+                const [queryRows] = await this.#mysqlConnectionPool.query(
                     `
                     SELECT ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
                     FROM ${this.#queryJobsTableName}
@@ -137,7 +140,7 @@ class DbManager {
     async insertExtractIrJob (config) {
         let jobId;
         try {
-            const [result] = await this.#mysqlConnection.query(
+            const [result] = await this.#mysqlConnectionPool.query(
                 `INSERT INTO ${this.#queryJobsTableName} (job_config, type)
              VALUES (?, ?)`,
                 [
@@ -194,7 +197,7 @@ class DbManager {
             if (err) {
                 throw err;
             }
-            this.#mysqlConnection = await this.#fastify.mysql.getConnection();
+            this.#mysqlConnectionPool = await this.#fastify.mysql.pool;
             this.#queryJobsTableName = config.queryJobsTableName;
         });
     }
