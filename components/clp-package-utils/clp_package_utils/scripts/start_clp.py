@@ -831,6 +831,7 @@ def start_log_viewer_webui(
         "--log-driver", "local",
         "-e", f"NODE_PATH={node_path}",
         "-e", f"HOST={clp_config.log_viewer_webui.host}",
+        "-e", f"PORT={clp_config.log_viewer_webui.port}",
         "-e", f"CLP_DB_USER={clp_config.database.username}",
         "-e", f"CLP_DB_PASS={clp_config.database.password}",
         "-e", f"NODE_ENV=production",
