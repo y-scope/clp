@@ -30,24 +30,9 @@ public:
             CommandLineArguments::InputSource input_source,
             boost::uuids::random_generator& uuid_generator,
             std::unique_ptr<log_surgeon::ReaderParser> reader_parser
-    )
-            : m_input_source(input_source),
-              m_uuid_generator(uuid_generator),
-              m_reader_parser(std::move(reader_parser)) {
-        if (CommandLineArguments::InputSource::S3 == input_source) {
-            m_aws_auth_signer.emplace();
-            if (ErrorCode_Success != NetworkReader::init()) {
-                SPDLOG_ERROR("Failed to initialize streaming reader");
-                throw std::runtime_error("Failed to initialize streaming reader");
-            }
-        }
-    }
+    );
 
-    ~FileCompressor() {
-        if (CommandLineArguments::InputSource::S3 == m_input_source) {
-            NetworkReader::deinit();
-        }
-    }
+    ~FileCompressor();
 
     // Methods
     /**

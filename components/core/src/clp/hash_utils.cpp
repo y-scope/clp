@@ -9,10 +9,10 @@
 #include <span>
 #include <string_view>
 
-#include "../type_utils.hpp"
+#include "type_utils.hpp"
 
-#include "../ErrorCode.hpp"
-#include "../spdlog_with_specializations.hpp"
+#include "ErrorCode.hpp"
+#include "spdlog_with_specializations.hpp"
 
 using clp::size_checked_pointer_cast;
 using std::string;

@@ -1,5 +1,6 @@
 #include "AwsAuthenticationSigner.hpp"
 #include "../type_utils.hpp"
+#include "../hash_utils.hpp"
 
 using clp::size_checked_pointer_cast;
 
@@ -129,17 +130,6 @@ get_canonical_request(clp::aws::AwsAuthenticationSigner::HttpMethod method, clp:
             clp::aws::cUnsignedPayload
     );
 }
-
-/**
- * Gets the signature
- * @param signature_key
- * @param string_to_sign
- * @return
- */
-[[nodiscard]] clp::ErrorCode
-get_signature(span<unsigned char const> signature_key, span<unsigned char const> string_to_sign, vector<unsigned char>& signature) {
-    return clp::aws::get_hmac_sha256_hash(signature_key, string_to_sign, signature);
-}
 }
 
 namespace clp::aws {
@@ -189,7 +179,7 @@ string AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod
     vector<unsigned char> signature_key {};
     vector<unsigned char> signature {};
     auto error_code = get_signature_key(s3_region, date_string, signature_key);
-    error_code = get_signature(
+    error_code = get_hmac_sha256_hash(
         {size_checked_pointer_cast<unsigned char>(signature_key.data()), signature_key.size()},
         {size_checked_pointer_cast<unsigned char>(string_to_sign.data()), string_to_sign.size()},
         signature

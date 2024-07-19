@@ -108,6 +108,35 @@ static void write_message_to_encoded_file(
 }
 
 namespace clp::clp {
+FileCompressor::FileCompressor(
+        CommandLineArguments::InputSource input_source,
+        boost::uuids::random_generator& uuid_generator,
+        std::unique_ptr<log_surgeon::ReaderParser> reader_parser
+) : m_input_source(input_source), m_uuid_generator(uuid_generator), m_reader_parser(std::move(reader_parser))
+{
+    if (CommandLineArguments::InputSource::S3 == input_source) {
+        if (ErrorCode_Success != NetworkReader::init()) {
+            SPDLOG_ERROR("Failed to initialize streaming reader");
+            throw std::runtime_error("Failed to initialize streaming reader");
+        }
+        string const access_key_id {getenv("AWS_ACCESS_KEY_ID")};
+        string const secret_access_key {getenv("AWS_SECRET_ACCESS_KEY")};
+        if (access_key_id.empty()) {
+            throw std::invalid_argument("AWS_ACCESS_KEY_ID environment variable is not set");
+        }
+        if (secret_access_key.empty()) {
+            throw std::invalid_argument("AWS_SECRET_ACCESS_KEY environment variable is not set");
+        }
+        m_aws_auth_signer.emplace(access_key_id, secret_access_key);
+    }
+}
+
+FileCompressor::~FileCompressor () {
+    if (CommandLineArguments::InputSource::S3 == m_input_source) {
+        NetworkReader::deinit();
+    }
+}
+
 bool FileCompressor::compress_file(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,

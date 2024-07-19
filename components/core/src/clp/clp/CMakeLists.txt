@@ -4,8 +4,6 @@ set(
         ../aws/AwsAuthenticationSigner.cpp
         ../aws/AwsAuthenticationSigner.hpp
         ../aws/Constants.hpp
-        ../aws/hash_utils.cpp
-        ../aws/hash_utils.hpp
         ../BufferedFileReader.cpp
         ../BufferedFileReader.hpp
         ../BufferReader.cpp
@@ -50,6 +48,8 @@ set(
         ../GlobalMySQLMetadataDB.hpp
         ../GlobalSQLiteMetadataDB.cpp
         ../GlobalSQLiteMetadataDB.hpp
+        ../hash_utils.cpp
+        ../hash_utils.hpp
         ../ir/constants.hpp
         ../ir/LogEvent.hpp
         ../ir/LogEventDeserializer.cpp

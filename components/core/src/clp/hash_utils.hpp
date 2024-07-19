@@ -1,7 +1,7 @@
 #ifndef CLP_AWS_HASH_UTILS_HPP
 #define CLP_AWS_HASH_UTILS_HPP
 
-#include "../ErrorCode.hpp"
+#include "ErrorCode.hpp"
 
 #include <vector>
 #include <span>

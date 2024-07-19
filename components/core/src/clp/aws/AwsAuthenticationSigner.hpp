@@ -7,7 +7,7 @@
 #include <fmt/format.h>
 
 #include "Constants.hpp"
-#include "hash_utils.hpp"
+#include "../ErrorCode.hpp"
 
 namespace clp::aws {
 /**
@@ -58,28 +58,11 @@ public:
 
     // Constructors
     AwsAuthenticationSigner(
-            std::string& access_key_id,
-            std::string& secret_access_key,
-            AwsService service = AwsService::S3
+            std::string_view access_key_id,
+            std::string_view secret_access_key
     )
             : m_access_key_id(access_key_id),
-              m_secret_access_key(secret_access_key),
-              m_service(service) {
-        if (AwsService::S3 != m_service) {
-            throw std::invalid_argument("Unsupported service");
-        }
-    }
-
-    AwsAuthenticationSigner()
-            : m_access_key_id(getenv("AWS_ACCESS_KEY_ID")),
-              m_secret_access_key(getenv("AWS_SECRET_ACCESS_KEY")) {
-        if (m_access_key_id.empty()) {
-            throw std::invalid_argument("AWS_ACCESS_KEY_ID environment variable is not set");
-        }
-        if (m_secret_access_key.empty()) {
-            throw std::invalid_argument("AWS_SECRET_ACCESS_KEY environment variable is not set");
-        }
-    }
+              m_secret_access_key(secret_access_key) {}
 
     // Methods
     /**
@@ -113,7 +96,6 @@ private:
     // Variables
     std::string m_access_key_id;
     std::string m_secret_access_key;
-    AwsService m_service{AwsService::S3};
 };
 }  // namespace clp::aws
 
