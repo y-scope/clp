@@ -43,7 +43,7 @@ const QUERY_JOB_STATUS = Object.freeze({
 /* eslint-enable sort-keys */
 
 /**
- * List of states that indicates the job has running actions.
+ * List of states that indicate the job is either pending or in progress.
  */
 const QUERY_JOB_STATUS_WAITING_STATES = Object.freeze([
     QUERY_JOB_STATUS.PENDING,
@@ -54,7 +54,7 @@ const QUERY_JOB_STATUS_WAITING_STATES = Object.freeze([
 /* eslint-disable sort-keys */
 let enumQueryType;
 /**
- * Enum of job type, matching the `QueryJobType` class in
+ * Enum of job types, matching the `QueryJobType` class in
  * `job_orchestration.query_scheduler.constants`.
  *
  * @enum {number}
@@ -66,7 +66,7 @@ const QUERY_JOB_TYPE = Object.freeze({
 /* eslint-enable sort-keys */
 
 /**
- * Class representing the database manager.
+ * Class to manage connections to the jobs database (MySQL) and results cache (MongoDB).
  */
 class DbManager {
     /**
@@ -89,12 +89,10 @@ class DbManager {
     #queryJobsTableName;
 
     /**
-     * Creates a DbManager.
-     *
-     * @param {import("fastify").FastifyInstance} app The Fastify application instance
-     * @param {object} dbConfig The database configuration
-     * @param {object} dbConfig.mysqlConfig The MySQL configuration
-     * @param {object} dbConfig.mongoConfig The MongoDB configuration
+     * @param {import("fastify").FastifyInstance} app
+     * @param {object} dbConfig
+     * @param {object} dbConfig.mysqlConfig
+     * @param {object} dbConfig.mongoConfig
      */
     constructor (app, dbConfig) {
         this.#fastify = app;
@@ -102,6 +100,12 @@ class DbManager {
         this.#initMongo(dbConfig.mongoConfig);
     }
 
+    /**
+     * Waits for the job with the given ID to finish.
+     *
+     * @param {number} jobId
+     * @return {Promise<void>}
+     */
     async awaitJobCompletion (jobId) {
         while (true) {
             let rows;
@@ -139,10 +143,10 @@ class DbManager {
     }
 
     /**
-     * Submits an Extract IR job and waits for it to finish.
+     * Submits an IR extraction job to the scheduler and waits for it to finish.
      *
      * @param {object} jobConfig
-     * @return {Promise<number|null>} The job id of the inserted query or null if an error occurred.
+     * @return {Promise<number|null>} The ID of the job or null if an error occurred.
      */
     async submitAndWaitForExtractIrJob (jobConfig) {
         let jobId;
@@ -168,13 +172,12 @@ class DbManager {
     }
 
     /**
-     * Retrieves the extracted IR split metadata for a given original file ID. When there are
-     * multiple splits for a single original file, only the metadata of the split containing a given
-     * message index will be returned.
+     * Gets the metadata for an IR file extracted from part of an original file, where the original
+     * file has the given ID and the extracted part contains the given message index.
      *
      * @param {string} origFileId
      * @param {number} msgIdx
-     * @return {Promise<object>} A promise that resolves to the extracted IR metadata.
+     * @return {Promise<object>} A promise that resolves to the extracted IR file's metadata.
      */
     async getExtractedIrFileMetadata (origFileId, msgIdx) {
         return await this.#irFilesCollection.findOne({
@@ -185,7 +188,7 @@ class DbManager {
     }
 
     /**
-     * Initializes MySQL connection.
+     * Initializes the MySQL plugin.
      *
      * @param {object} config
      * @param {string} config.user
@@ -210,7 +213,7 @@ class DbManager {
     }
 
     /**
-     * Initializes MongoDB connection.
+     * Initializes the MongoDB plugin.
      *
      * @param {object} config
      * @param {string} config.host

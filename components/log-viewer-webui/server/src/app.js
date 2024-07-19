@@ -16,8 +16,8 @@ import queryRoutes from "./routes/query.js";
  *
  * @param {object} props
  * @param {import("fastify").FastifyServerOptions} props.fastifyOptions
- * @param {string} props.sqlDbPass The SQL database password.
- * @param {string} props.sqlDbUser The SQL database user.
+ * @param {string} props.sqlDbPass
+ * @param {string} props.sqlDbUser
  * @return {Promise<import("fastify").FastifyInstance>}
  */
 const app = async ({

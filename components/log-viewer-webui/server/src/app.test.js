@@ -26,4 +26,4 @@ test("Tests the example routes", async (t) => {
 });
 
 // eslint-disable-next-line no-warning-comments
-// TODO: add tests for `query` routes.
+// TODO: Add tests for `query` routes.

@@ -23,7 +23,7 @@ const routes = async (fastify, options) => {
             });
 
             if (null === extractResult) {
-                const err = new Error("Unable to extract IR for " +
+                const err = new Error("Unable to extract IR for file with " +
                     `orig_file_id=${origFileId} at msg_ix=${sanitizedMsgIdx}`);
 
                 err.statusCode = 400;
