@@ -115,7 +115,7 @@ def handle_extract_ir_cmd(
     clp_config = validate_and_load_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
-    if not clp_config:
+    if clp_config is None:
         return -1
 
     orig_file_id: str
@@ -186,7 +186,7 @@ def handle_extract_file_cmd(
     clp_config = validate_and_load_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
-    if not clp_config:
+    if clp_config is None:
         return -1
 
     paths = parsed_args.paths
