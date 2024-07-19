@@ -73,6 +73,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     sources:
+      - "{{.G_BUILD_DIR}}/log-viewer-webui-client.md5"
       - "{{.G_BUILD_DIR}}/package-venv.md5"
       - "{{.G_BUILD_DIR}}/webui.md5"
       - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
