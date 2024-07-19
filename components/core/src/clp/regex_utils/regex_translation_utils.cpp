@@ -169,7 +169,7 @@ auto normal_state_transition(
 }
 
 /**
- * Attempt to translate regex wildcard patterns that start with `.` character.
+ * Attempts to translate regex wildcard patterns that start with `.` character.
  *
  * Performs the following translation if possible:
  * <ul>
@@ -201,7 +201,9 @@ auto dot_state_transition(
     return ErrorCode::Success;
 }
 
-// Once we've seen the end anchor, we should not expect any other character to appear.
+/**
+ * Disallows the appearances of other characters after encountering an end anchor in the string.
+ */
 auto end_state_transition(
         [[maybe_unused]] TranslatorState& state,
         string_view::const_iterator& it,
