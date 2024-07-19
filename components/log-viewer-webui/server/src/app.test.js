@@ -24,3 +24,6 @@ test("Tests the example routes", async (t) => {
     t.equal(resp.statusCode, httpStatusCodes.OK);
     t.match(JSON.parse(resp.body), {msg: String});
 });
+
+// eslint-disable-next-line no-warning-comments
+// TODO: add tests for `query` routes.
