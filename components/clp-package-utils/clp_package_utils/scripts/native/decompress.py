@@ -75,7 +75,7 @@ def submit_and_monitor_ir_extraction_job_in_db(
     orig_file_id: str,
     msg_ix: int,
     target_uncompressed_size: Optional[int],
-) -> None:
+) -> int:
     """
     Submits an IR extraction job to the scheduler and waits until the job finishes.
     :param db_config:
@@ -95,23 +95,10 @@ def submit_and_monitor_ir_extraction_job_in_db(
 
     if QueryJobStatus.SUCCEEDED == job_status:
         logger.info(f"Finished IR extraction job {job_id}.")
-    else:
-        logger.error(f"IR extraction job {job_id} finished with unexpected status: {job_status}.")
+        return 0
 
-
-async def do_extract(
-    db_config: Database,
-    orig_file_id: str,
-    msg_ix: int,
-    target_uncompressed_size: Optional[int],
-):
-    await run_function_in_process(
-        submit_and_monitor_ir_extraction_job_in_db,
-        db_config,
-        orig_file_id,
-        msg_ix,
-        target_uncompressed_size,
-    )
+    logger.error(f"IR extraction job {job_id} finished with unexpected status: {job_status}.")
+    return -1
 
 
 def handle_extract_ir_cmd(
@@ -138,8 +125,9 @@ def handle_extract_ir_cmd(
         orig_file_id = get_orig_file_id(clp_config.database, parsed_args.orig_file_path)
 
     try:
-        asyncio.run(
-            do_extract(
+        return asyncio.run(
+            run_function_in_process(
+                submit_and_monitor_ir_extraction_job_in_db,
                 clp_config.database,
                 orig_file_id,
                 parsed_args.msg_ix,
@@ -149,8 +137,6 @@ def handle_extract_ir_cmd(
     except asyncio.CancelledError:
         logger.error("IR extraction cancelled.")
         return -1
-
-    return 0
 
 
 def validate_and_load_config_file(
