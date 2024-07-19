@@ -29,8 +29,8 @@ namespace clp::aws {
  */
 std::string char_array_to_string(span<unsigned char> input) {
     std::string hex_string;
-    for (auto const i : input) {
-        hex_string += fmt::format("{:02x}", static_cast<int>(i));
+    for (auto const c : input) {
+        hex_string += fmt::format("{:02x}", c);
     }
     return hex_string;
 }

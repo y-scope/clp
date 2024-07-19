@@ -99,7 +99,7 @@ private:
      * @return
      */
     [[nodiscard]] std::string
-    get_default_query_string(std::string& scope, std::string& timestamp_string);
+    get_default_query_string(std::string_view scope, std::string_view timestamp_string);
 
     /**
      * Gets the signature key
