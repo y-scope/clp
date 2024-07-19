@@ -691,14 +691,14 @@ def update_settings_object(
             settings[key] = updates[key]
 
 
-def read_and_update_settings_json(json_path: str, updates: Dict[str, Any]):
+def read_and_update_settings_json(settings_file_path: pathlib.Path, updates: Dict[str, Any]):
     """
-    Reads and updates the settings JSON file.
+    Reads and updates a settings JSON file.
 
-    :param json_path:
+    :param settings_file_path:
     :param updates:
     """
-    with open(json_path, "r") as settings_json_file:
+    with open(settings_file_path, "r") as settings_json_file:
         settings_object = json.loads(settings_json_file.read())
     update_settings_object("", settings_object, updates)
 
