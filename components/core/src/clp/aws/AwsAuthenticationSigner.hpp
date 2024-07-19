@@ -21,13 +21,13 @@ public:
     S3Url() = delete;
 
     // Methods
-    [[nodiscard]] std::string& get_host() { return m_host; }
+    [[nodiscard]] std::string_view get_host() { return m_host; }
 
-    [[nodiscard]] std::string& get_bucket() { return m_bucket; }
+    [[nodiscard]] std::string_view get_bucket() { return m_bucket; }
 
-    [[nodiscard]] std::string& get_region() { return m_region; }
+    [[nodiscard]] std::string_view get_region() { return m_region; }
 
-    [[nodiscard]] std::string& get_path() { return m_path; }
+    [[nodiscard]] std::string_view get_path() { return m_path; }
 
 private:
     std::string m_host;
@@ -41,10 +41,8 @@ private:
  */
 class AwsAuthenticationSigner {
 public:
-    using TimePoint = std::chrono::system_clock::time_point;
-
     // Default expire time of presigned URL in seconds
-    static constexpr int const cDefaultExpireTime = 86'400;  // 24 hours
+    static constexpr int cDefaultExpireTime = 86'400;  // 24 hours
 
     // Types
     enum class HttpMethod : uint8_t {
@@ -95,137 +93,13 @@ public:
 
 private:
     /**
-     * Converts an HttpMethod to a string
-     * @param method HTTP method
-     * @return The converted string
-     */
-    [[nodiscard]] static std::string get_method_string(HttpMethod method) {
-        switch (method) {
-            case HttpMethod::GET:
-                return "GET";
-            case HttpMethod::PUT:
-                return "PUT";
-            case HttpMethod::POST:
-                return "POST";
-            case HttpMethod::DELETE:
-                return "DELETE";
-            default:
-                throw std::runtime_error("Invalid HTTP method");
-        }
-    }
-
-    /**
-     * Gets the string to sign
-     * @param scope
-     * @param timestamp_string
-     * @param canonical_request
-     * @return String to sign
-     */
-    [[nodiscard]] static std::string get_string_to_sign(
-            std::string& scope,
-            std::string& timestamp_string,
-            std::string const& canonical_request
-    );
-
-    /**
-     * Gets the canonical request string
-     * @param method HTTP method
-     * @param url S3 URL
-     * @param query_string Query string
-     * @return Canonical request
-     */
-    [[nodiscard]] static std::string
-    get_canonical_request(HttpMethod method, S3Url& url, std::string const& query_string) {
-        return fmt::format(
-                "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
-                get_method_string(method),
-                get_encoded_uri(url.get_path(), false),
-                query_string,
-                cDefaultSignedHeaders,
-                url.get_host(),
-                cDefaultSignedHeaders,
-                cUnsignedPayload
-        );
-    }
-
-    /**
-     * Gets the encoded URI
-     * @param value
-     * @param encode_slash
-     * @return The encoded URI
-     */
-    [[nodiscard]] static std::string
-    get_encoded_uri(std::string const& value, bool encode_slash = true) {
-        std::string encoded_uri;
-
-        for (char c : value) {
-            if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-                encoded_uri += c;
-                continue;
-            }
-
-            if (c == '/' && false == encode_slash) {
-                encoded_uri += c;
-                continue;
-            }
-
-            encoded_uri += fmt::format("%{:02X}", static_cast<int>(static_cast<unsigned char>(c)));
-        }
-
-        return encoded_uri;
-    }
-
-    /**
-     * Gets the scope
-     * @param date_string
-     * @param region
-     * @return The scope
-     */
-    [[nodiscard]] static std::string
-    get_scope(std::string& date_string, std::string const& region) {
-        return fmt::format("{}/{}/{}/{}", date_string, region, cS3Service, cAws4Request);
-    }
-
-    /**
-     * Gets the timestamp string
-     * @param timestamp
-     * @return The timestamp string
-     */
-    [[nodiscard]] static std::string get_timestamp_string(TimePoint& timestamp) {
-        return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
-    }
-
-    /**
-     * Gets the date string
-     * @param timestamp
-     * @return The date string
-     */
-    [[nodiscard]] static std::string get_date_string(TimePoint& timestamp) {
-        return fmt::format("{:%Y%m%d}", timestamp);
-    }
-
-    /**
      * Gets the default query string
      * @param scope
      * @param timestamp_string
      * @return
      */
     [[nodiscard]] std::string
-    get_default_query_string(std::string& scope, std::string& timestamp_string) {
-        return fmt::format(
-                "{}={}&{}={}&{}={}&{}={}&{}={}",
-                cXAmzAlgorithm,
-                cAws4HmacSha256,
-                cXAmzCredential,
-                get_encoded_uri(m_access_key_id + "/" + scope),
-                cXAmzDate,
-                timestamp_string,
-                cXAmzExpires,
-                cDefaultExpireTime,
-                cXAmzSignedHeaders,
-                cDefaultSignedHeaders
-        );
-    }
+    get_default_query_string(std::string& scope, std::string& timestamp_string);
 
     /**
      * Gets the signature key
@@ -234,18 +108,7 @@ private:
      * @return
      */
     [[nodiscard]] ErrorCode
-    get_signature_key(std::string const& region, std::string const& date_string, std::vector<unsigned char>& signature_key);
-
-    /**
-     * Gets the signature
-     * @param signature_key
-     * @param string_to_sign
-     * @return
-     */
-    [[nodiscard]] static ErrorCode
-    get_signature(std::span<unsigned char const> signature_key, std::span<unsigned char const> string_to_sign, std::vector<unsigned char>& signature) {
-        return get_hmac_sha256_hash(signature_key, string_to_sign, signature);
-    }
+    get_signature_key(std::string_view region, std::string_view date_string, std::vector<unsigned char>& signature_key);
 
     // Variables
     std::string m_access_key_id;

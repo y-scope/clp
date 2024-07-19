@@ -1,11 +1,12 @@
 #ifndef CLP_AWS_HASH_UTILS_HPP
 #define CLP_AWS_HASH_UTILS_HPP
 
-#include <string>
 #include "../ErrorCode.hpp"
 
 #include <vector>
 #include <span>
+#include <string>
+#include <string_view>
 
 namespace clp::aws {
 /**
@@ -30,6 +31,6 @@ ErrorCode get_hmac_sha256_hash(std::span<unsigned char const> key, std::span<uns
  * @param input
  * @return The SHA256 hash
  */
-ErrorCode get_sha256_hash(std::string const& input, std::vector<unsigned char>& hash);
+ErrorCode get_sha256_hash(std::string_view, std::vector<unsigned char>& hash);
 }  // namespace clp::aws
 #endif  // CLP_AWS_HASH_UTILS_HPP

@@ -10,6 +10,136 @@ using clp::size_checked_pointer_cast;
 
 using std::span;
 using std::vector;
+
+namespace {
+/**
+ * Gets the timestamp string
+ * @param timestamp
+ * @return The timestamp string
+ */
+[[nodiscard]] std::string get_timestamp_string(std::chrono::system_clock::time_point const& timestamp) {
+    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
+}
+
+/**
+ * Gets the date string
+ * @param timestamp
+ * @return The date string
+ */
+[[nodiscard]] std::string get_date_string(std::chrono::system_clock::time_point const& timestamp) {
+    return fmt::format("{:%Y%m%d}", timestamp);
+}
+
+/**
+ * Converts an HttpMethod to a string
+ * @param method HTTP method
+ * @return The converted string
+ */
+[[nodiscard]] static std::string get_method_string(clp::aws::AwsAuthenticationSigner::HttpMethod method) {
+    switch (method) {
+        case clp::aws::AwsAuthenticationSigner::HttpMethod::GET:
+            return "GET";
+        case clp::aws::AwsAuthenticationSigner::HttpMethod::PUT:
+            return "PUT";
+        case clp::aws::AwsAuthenticationSigner::HttpMethod::POST:
+            return "POST";
+        case clp::aws::AwsAuthenticationSigner::HttpMethod::DELETE:
+            return "DELETE";
+        default:
+            throw std::runtime_error("Invalid HTTP method");
+    }
+}
+
+/**
+ * Gets the string to sign
+ * @param scope
+ * @param timestamp_string
+ * @param canonical_request
+ * @return String to sign
+ */
+[[nodiscard]] std::string get_string_to_sign(
+        std::string& scope,
+        std::string& timestamp_string,
+        std::string const& canonical_request
+) {
+    std::vector<unsigned char> signed_canonical_request;
+    auto error_code = clp::aws::get_sha256_hash(canonical_request, signed_canonical_request);
+    auto const signed_canonical_request_str = clp::aws::char_array_to_string({signed_canonical_request.data(), signed_canonical_request.size()});
+    return fmt::format(
+            "{}\n{}\n{}\n{}",
+            clp::aws::cAws4HmacSha256,
+            timestamp_string,
+            scope,
+            signed_canonical_request_str
+    );
+}
+/**
+ * Gets the encoded URI
+ * @param value
+ * @param encode_slash
+ * @return The encoded URI
+ */
+[[nodiscard]] std::string
+get_encoded_uri(std::string_view value, bool encode_slash = true) {
+    std::string encoded_uri;
+
+    for (auto const c : value) {
+        if ((std::isalnum(c) != 0) || c == '-' || c == '_' || c == '.' || c == '~') {
+            encoded_uri += c;
+        } else if (c == '/' && false == encode_slash) {
+            encoded_uri += c;
+        } else {
+            encoded_uri += fmt::format("%{:02X}", static_cast<int>(c));
+        }
+    }
+
+    return encoded_uri;
+}
+
+/**
+ * Gets the scope
+ * @param date_string
+ * @param region
+ * @return The scope
+ */
+[[nodiscard]] std::string
+get_scope(std::string& date_string, std::string_view region) {
+    return fmt::format("{}/{}/{}/{}", date_string, region, clp::aws::cS3Service, clp::aws::cAws4Request);
+}
+
+/**
+ * Gets the canonical request string
+ * @param method HTTP method
+ * @param url S3 URL
+ * @param query_string Query string
+ * @return Canonical request
+ */
+[[nodiscard]] std::string
+get_canonical_request(clp::aws::AwsAuthenticationSigner::HttpMethod method, clp::aws::S3Url& url, std::string const& query_string) {
+    return fmt::format(
+            "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
+            get_method_string(method),
+            get_encoded_uri(url.get_path(), false),
+            query_string,
+            clp::aws::cDefaultSignedHeaders,
+            url.get_host(),
+            clp::aws::cDefaultSignedHeaders,
+            clp::aws::cUnsignedPayload
+    );
+}
+
+/**
+ * Gets the signature
+ * @param signature_key
+ * @param string_to_sign
+ * @return
+ */
+[[nodiscard]] clp::ErrorCode
+get_signature(std::span<unsigned char const> signature_key, std::span<unsigned char const> string_to_sign, std::vector<unsigned char>& signature) {
+    return clp::aws::get_hmac_sha256_hash(signature_key, string_to_sign, signature);
+}
+}
+
 namespace clp::aws {
 S3Url::S3Url(std::string const& url) {
     // Regular expression to match virtual host-style HTTP URL format
@@ -43,10 +173,10 @@ std::string AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpM
         throw std::runtime_error("Unsupported HTTP method!");
     }
 
-    auto s3_region = s3_url.get_region();
+    auto const s3_region = s3_url.get_region();
 
     // Gets current time
-    auto now = std::chrono::system_clock::now();
+    auto const now = std::chrono::system_clock::now();
     auto date_string = get_date_string(now);
     auto timestamp_string = get_timestamp_string(now);
 
@@ -75,25 +205,8 @@ std::string AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpM
     );
 }
 
-[[nodiscard]] std::string AwsAuthenticationSigner::get_string_to_sign(
-        std::string& scope,
-        std::string& timestamp_string,
-        std::string const& canonical_request
-) {
-    std::vector<unsigned char> signed_canonical_request;
-    auto error_code = get_sha256_hash(canonical_request, signed_canonical_request);
-    auto const signed_canonical_request_str = char_array_to_string({signed_canonical_request.data(), signed_canonical_request.size()});
-    return fmt::format(
-            "{}\n{}\n{}\n{}",
-            cAws4HmacSha256,
-            timestamp_string,
-            scope,
-            signed_canonical_request_str
-    );
-}
-
 [[nodiscard]] ErrorCode
-AwsAuthenticationSigner::get_signature_key(std::string const& region, std::string const& date_string, std::vector<unsigned char>& signature_key) {
+AwsAuthenticationSigner::get_signature_key(std::string_view region, std::string_view date_string, std::vector<unsigned char>& signature_key) {
     std::string input_key {cAws4};
     input_key += m_secret_access_key;
 
@@ -124,5 +237,21 @@ AwsAuthenticationSigner::get_signature_key(std::string const& region, std::strin
     return ErrorCode_Success;
 }
 
+std::string
+AwsAuthenticationSigner::get_default_query_string(std::string& scope, std::string& timestamp_string) {
+    return fmt::format(
+            "{}={}&{}={}&{}={}&{}={}&{}={}",
+            cXAmzAlgorithm,
+            cAws4HmacSha256,
+            cXAmzCredential,
+            get_encoded_uri(m_access_key_id + "/" + scope),
+            cXAmzDate,
+            timestamp_string,
+            cXAmzExpires,
+            cDefaultExpireTime,
+            cXAmzSignedHeaders,
+            cDefaultSignedHeaders
+    );
+}
 
 }  // namespace clp::aws
