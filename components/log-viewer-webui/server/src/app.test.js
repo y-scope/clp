@@ -5,8 +5,6 @@ import app from "./app.js";
 
 
 test("Tests the example routes", async (t) => {
-    process.env.NODE_ENV = "test";
-
     const server = await app({});
     t.teardown(() => server.close());
 
