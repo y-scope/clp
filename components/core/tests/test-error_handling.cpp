@@ -7,8 +7,7 @@
 #include <type_traits>
 
 #include <Catch2/single_include/catch2/catch.hpp>
-
-#include "../src/clp/error_handling/ErrorCode.hpp"
+#include <error_handling/ErrorCode.hpp>
 
 using clp::error_handling::ErrorCategory;
 using clp::error_handling::ErrorCode;
