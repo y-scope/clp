@@ -94,7 +94,8 @@ std::string AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpM
 
 [[nodiscard]] ErrorCode
 AwsAuthenticationSigner::get_signature_key(std::string const& region, std::string const& date_string, std::vector<unsigned char>& signature_key) {
-    auto const input_key = cAws4 + m_secret_access_key;
+    std::string input_key {cAws4};
+    input_key += m_secret_access_key;
 
     std::vector<unsigned char> date_key{};
     std::vector<unsigned char> date_region_key{};
