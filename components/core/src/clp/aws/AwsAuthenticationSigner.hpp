@@ -6,8 +6,8 @@
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 
-#include "Constants.hpp"
 #include "../ErrorCode.hpp"
+#include "Constants.hpp"
 
 namespace clp::aws {
 /**
@@ -56,10 +56,7 @@ public:
     };
 
     // Constructors
-    AwsAuthenticationSigner(
-            std::string_view access_key_id,
-            std::string_view secret_access_key
-    )
+    AwsAuthenticationSigner(std::string_view access_key_id, std::string_view secret_access_key)
             : m_access_key_id(access_key_id),
               m_secret_access_key(secret_access_key) {}
 
@@ -89,8 +86,11 @@ private:
      * @param date_string
      * @return
      */
-    [[nodiscard]] ErrorCode
-    get_signature_key(std::string_view region, std::string_view date_string, std::vector<unsigned char>& signature_key);
+    [[nodiscard]] ErrorCode get_signature_key(
+            std::string_view region,
+            std::string_view date_string,
+            std::vector<unsigned char>& signature_key
+    );
 
     // Variables
     std::string m_access_key_id;

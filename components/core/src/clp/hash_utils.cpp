@@ -1,24 +1,23 @@
 #include "hash_utils.hpp"
 
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include <fmt/format.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
-#include <string>
-#include <vector>
-#include <span>
-#include <string_view>
-
-#include "type_utils.hpp"
-
 #include "ErrorCode.hpp"
 #include "spdlog_with_specializations.hpp"
+#include "type_utils.hpp"
 
 using clp::size_checked_pointer_cast;
-using std::string;
-using std::vector;
 using std::span;
+using std::string;
 using std::string_view;
+using std::vector;
 
 namespace clp::aws {
 /**
@@ -35,25 +34,27 @@ std::string char_array_to_string(span<unsigned char> input) {
     return hex_string;
 }
 
-ErrorCode get_hmac_sha256_hash(span<unsigned char const> key, span<unsigned char const> input, vector<unsigned char>& hash) {
-
+ErrorCode get_hmac_sha256_hash(
+        span<unsigned char const> key,
+        span<unsigned char const> input,
+        vector<unsigned char>& hash
+) {
     hash.resize(SHA256_DIGEST_LENGTH);
-    unsigned int hash_length {0};
+    unsigned int hash_length{0};
 
     if (key.size() > INT32_MAX) {
         SPDLOG_ERROR("Key too long");
         return ErrorCode_BadParam;
     }
     int key_length{static_cast<int>(key.size())};
-    auto* res = HMAC(
-            EVP_sha256(),
-            key.data(),
-            key_length,
-            input.data(),
-            input.size(),
-            hash.data(),
-            &hash_length
-    );
+    auto* res
+            = HMAC(EVP_sha256(),
+                   key.data(),
+                   key_length,
+                   input.data(),
+                   input.size(),
+                   hash.data(),
+                   &hash_length);
 
     if (nullptr == res) {
         SPDLOG_ERROR("Failed to get HMAC hashes");
@@ -74,8 +75,7 @@ ErrorCode get_hmac_sha256_hash(span<unsigned char const> key, span<unsigned char
  * @return The SHA256 hash
  */
 ErrorCode get_sha256_hash(string_view input, std::vector<unsigned char>& hash) {
-
-    EVP_MD_CTX * mdctx = EVP_MD_CTX_new();
+    EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
 
     EVP_DigestInit_ex(mdctx, EVP_sha256(), nullptr);
 
@@ -88,4 +88,4 @@ ErrorCode get_sha256_hash(string_view input, std::vector<unsigned char>& hash) {
 
     return ErrorCode_Success;
 }
-}
+}  // namespace clp::aws
