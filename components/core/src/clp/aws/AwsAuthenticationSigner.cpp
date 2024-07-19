@@ -135,18 +135,16 @@ get_canonical_request(clp::aws::AwsAuthenticationSigner::HttpMethod method, clp:
 namespace clp::aws {
 S3Url::S3Url(string const& url) {
     // Regular expression to match virtual host-style HTTP URL format
-    //    std::regex regex1(R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/.*?)$)");
-    std::regex const regex1(R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)");
+    std::regex const host_style_url_regex(R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)");
     // Regular expression to match path-style HTTP URL format
-    //    std::regex regex2(R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/.*?)$)");
-    std::regex const regex2(R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)");
+    std::regex const path_style_url_regex(R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)");
 
     std::smatch match;
-    if (std::regex_match(url, match, regex1)) {
+    if (std::regex_match(url, match, host_style_url_regex)) {
         m_bucket = match[1].str();
         m_region = match[3].str();
         m_path = match[4].str();
-    } else if (std::regex_match(url, match, regex2)) {
+    } else if (std::regex_match(url, match, path_style_url_regex)) {
         m_region = match[2].str();
         m_bucket = match[3].str();
         m_path = match[4].str();
@@ -157,6 +155,21 @@ S3Url::S3Url(string const& url) {
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
+    m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
+}
+
+S3Url::S3Url(string const& s3_uri, string_view region): m_region{region} {
+    // Regular expression to match S3 URI format. But it does not include region.
+    std::regex const s3_uri_regex(R"(s3://([a-z0-9.-]+)(/[^?]+).*)");
+
+    std::smatch match;
+    if (std::regex_match(s3_uri, match, s3_uri_regex)) {
+        m_bucket = match[1].str();
+        m_path = match[2].str();
+    } else {
+        throw std::invalid_argument("S3 URI format");
+    }
+
     m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
 }
 

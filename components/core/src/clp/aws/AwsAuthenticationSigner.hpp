@@ -16,18 +16,17 @@ namespace clp::aws {
 class S3Url {
 public:
     // Constructor
-    explicit S3Url(std::string const& url);
-
-    S3Url() = delete;
+    S3Url(std::string const& url);
+    S3Url(std::string const& s3_uri, std::string_view region);
 
     // Methods
-    [[nodiscard]] std::string_view get_host() { return m_host; }
+    [[nodiscard]] auto get_host() -> std::string_view { return m_host; }
 
-    [[nodiscard]] std::string_view get_bucket() { return m_bucket; }
+    [[nodiscard]] auto get_bucket() -> std::string_view { return m_bucket; }
 
-    [[nodiscard]] std::string_view get_region() { return m_region; }
+    [[nodiscard]] auto get_region() -> std::string_view { return m_region; }
 
-    [[nodiscard]] std::string_view get_path() { return m_path; }
+    [[nodiscard]] auto get_path() -> std::string_view { return m_path; }
 
 private:
     std::string m_host;
