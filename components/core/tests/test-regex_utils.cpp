@@ -25,8 +25,8 @@ TEST_CASE("regex_to_wildcard", "[regex_utils][regex_to_wildcard]") {
     REQUIRE((regex_to_wildcard(". xyz ^.* zyx .").error() == ErrorCode::IllegalCaret));
 }
 
-// Test anchors and prefix/suffix wildcards
 TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][regex_to_wildcard][anchor_config]") {
+    // Test anchors and prefix/suffix wildcards
     RegexToWildcardTranslatorConfig const config{false, true};
     REQUIRE(((regex_to_wildcard("^", config).value() == "*")));
     REQUIRE((regex_to_wildcard("$", config).value() == "*"));

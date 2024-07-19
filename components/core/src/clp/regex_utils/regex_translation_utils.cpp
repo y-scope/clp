@@ -17,32 +17,9 @@ using std::string_view;
 
 namespace clp::regex_utils {
 namespace {
-// Class for storing regex translation analysis states, capture group, quantifier information, etc.
-class TranslatorState;
-
 /**
- * Functions that handle current-state-specific tasks before transitioning to the next state.
- *
- * @param[in, out] state The object that stores translator's internal information. The primary
- * state member variable is always updated if a transition occures. Even if there's no state
- * transition, other analysis info may be updated.
- * @param[in, out] it The iterator that represents the current regex string scan position. May be
- * updated to advance or backtrack the scan position.
- * @param[out] wildcard_str The translated wildcard string. May or may not be updated.
- * @param[in] config The translator config.
- * @return 0 (clp::regex_utils::ErrorCode::Success) upon successful operation. Otherwise, return
- * related error code.
+ * Class for storing regex translation analysis states, capture group, quantifier information, etc.
  */
-using StateTransitionFuncSig
-        = auto(TranslatorState& state,
-               string_view::const_iterator& it,
-               string& wildcard_str,
-               RegexToWildcardTranslatorConfig const& config) -> error_code;
-[[nodiscard]] StateTransitionFuncSig normal_state_transition;
-[[nodiscard]] StateTransitionFuncSig dot_state_transition;
-[[nodiscard]] StateTransitionFuncSig end_state_transition;
-[[nodiscard]] StateTransitionFuncSig final_state_cleanup;
-
 class TranslatorState {
 public:
     /**
@@ -76,6 +53,147 @@ private:
     // Members
     RegexPatternState m_state{RegexPatternState::NORMAL};
 };
+
+/**
+ * Functions that handle current-state-specific tasks before transitioning to the next state.
+ *
+ * @param[in, out] state The object that stores translator's internal information. The primary
+ * state member variable is always updated if a transition occures. Even if there's no state
+ * transition, other analysis info may be updated.
+ * @param[in, out] it The iterator that represents the current regex string scan position. May be
+ * updated to advance or backtrack the scan position.
+ * @param[out] wildcard_str The translated wildcard string. May or may not be updated.
+ * @param[in] config The translator config.
+ * @return clp::regex_utils::ErrorCode
+ */
+using StateTransitionFuncSig
+        = auto(TranslatorState& state,
+               string_view::const_iterator& it,
+               string& wildcard_str,
+               RegexToWildcardTranslatorConfig const& config) -> error_code;
+
+/**
+ * Treats each character literally and directly append it to the wildcard string, unless it is a
+ * meta-character.
+ *
+ * Each meta-character either triggers a state transition, or makes the regex string untranslatable.
+ */
+[[nodiscard]] StateTransitionFuncSig normal_state_transition;
+
+/**
+ * Attempts to translate regex wildcard patterns that start with `.` character.
+ *
+ * Performs the following translation if possible:
+ * <ul>
+ *   <li> `.*` gets translated into `*`</li>
+ *   <li> `.+` gets translated into `?*`</li>
+ *   <li> `.` gets translated into `?`</li>
+ * </ul>
+ */
+[[nodiscard]] StateTransitionFuncSig dot_state_transition;
+
+/**
+ * Disallows the appearances of other characters after encountering an end anchor in the string.
+ */
+[[nodiscard]] StateTransitionFuncSig end_state_transition;
+
+/**
+ * States other than the NORMAL state may require special handling after the whole regex string has
+ * been scanned and processed.
+ */
+[[nodiscard]] StateTransitionFuncSig final_state_cleanup;
+
+auto normal_state_transition(
+        TranslatorState& state,
+        string_view::const_iterator& it,
+        string& wildcard_str,
+        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
+) -> error_code {
+    auto const ch{*it};
+    switch (ch) {
+        case '.':
+            state.set_next_state(TranslatorState::RegexPatternState::DOT);
+            break;
+        case cRegexEndAnchor:
+            state.set_next_state(TranslatorState::RegexPatternState::END);
+            break;
+        case cRegexZeroOrMore:
+            return ErrorCode::UntranslatableStar;
+        case cRegexOneOrMore:
+            return ErrorCode::UntranslatablePlus;
+        case cRegexZeroOrOne:
+            return ErrorCode::UnsupportedQuestionMark;
+        case '|':
+            return ErrorCode::UnsupportedPipe;
+        case cRegexStartAnchor:
+            return ErrorCode::IllegalCaret;
+        case ')':
+            return ErrorCode::UnmatchedParenthesis;
+        default:
+            wildcard_str += ch;
+            break;
+    }
+    return ErrorCode::Success;
+}
+
+auto dot_state_transition(
+        TranslatorState& state,
+        string_view::const_iterator& it,
+        string& wildcard_str,
+        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
+) -> error_code {
+    switch (*it) {
+        case cZeroOrMoreCharsWildcard:
+            wildcard_str += cZeroOrMoreCharsWildcard;
+            break;
+        case cRegexOneOrMore:
+            wildcard_str = wildcard_str + cSingleCharWildcard + cZeroOrMoreCharsWildcard;
+            break;
+        default:
+            wildcard_str += cSingleCharWildcard;
+            // Backtrack the scan by one position to handle the current char in the next iteration.
+            --it;
+            break;
+    }
+    state.set_next_state(TranslatorState::RegexPatternState::NORMAL);
+    return ErrorCode::Success;
+}
+
+auto end_state_transition(
+        [[maybe_unused]] TranslatorState& state,
+        string_view::const_iterator& it,
+        [[maybe_unused]] string& wildcard_str,
+        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
+) -> error_code {
+    if (cRegexEndAnchor != *it) {
+        return ErrorCode::IllegalDollarSign;
+    }
+    return ErrorCode::Success;
+}
+
+auto final_state_cleanup(
+        TranslatorState& state,
+        [[maybe_unused]] string_view::const_iterator& it,
+        string& wildcard_str,
+        RegexToWildcardTranslatorConfig const& config
+) -> error_code {
+    switch (state.get_state()) {
+        case TranslatorState::RegexPatternState::DOT:
+            // The last character is a single `.`, without the possibility of becoming a
+            // multichar wildcard
+            wildcard_str += cSingleCharWildcard;
+            break;
+        default:
+            break;
+    }
+
+    if (TranslatorState::RegexPatternState::END != state.get_state()
+        && config.add_prefix_suffix_wildcards())
+    {
+        wildcard_str += cZeroOrMoreCharsWildcard;
+    }
+    return ErrorCode::Success;
+}
 }  // namespace
 
 auto regex_to_wildcard(string_view regex_str) -> OUTCOME_V2_NAMESPACE::std_result<string> {
@@ -127,121 +245,4 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
     }
     return wildcard_str;
 }
-
-namespace {
-/**
- * Treats each character literally and directly append it to the wildcard string, unless it is a
- * meta-character.
- *
- * Each meta-character either triggers a state transition, or makes the regex string untranslatable.
- */
-auto normal_state_transition(
-        TranslatorState& state,
-        string_view::const_iterator& it,
-        string& wildcard_str,
-        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
-    auto const ch{*it};
-    switch (ch) {
-        case '.':
-            state.set_next_state(TranslatorState::RegexPatternState::DOT);
-            break;
-        case cRegexEndAnchor:
-            state.set_next_state(TranslatorState::RegexPatternState::END);
-            break;
-        case cRegexZeroOrMore:
-            return ErrorCode::UntranslatableStar;
-        case cRegexOneOrMore:
-            return ErrorCode::UntranslatablePlus;
-        case cRegexZeroOrOne:
-            return ErrorCode::UnsupportedQuestionMark;
-        case '|':
-            return ErrorCode::UnsupportedPipe;
-        case cRegexStartAnchor:
-            return ErrorCode::IllegalCaret;
-        case ')':
-            return ErrorCode::UnmatchedParenthesis;
-        default:
-            wildcard_str += ch;
-            break;
-    }
-    return ErrorCode::Success;
-}
-
-/**
- * Attempts to translate regex wildcard patterns that start with `.` character.
- *
- * Performs the following translation if possible:
- * <ul>
- *   <li> `.*` gets translated into `*`</li>
- *   <li> `.+` gets translated into `?*`</li>
- *   <li> `.` gets translated into `?`</li>
- * </ul>
- */
-auto dot_state_transition(
-        TranslatorState& state,
-        string_view::const_iterator& it,
-        string& wildcard_str,
-        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
-    switch (*it) {
-        case cZeroOrMoreCharsWildcard:
-            wildcard_str += cZeroOrMoreCharsWildcard;
-            break;
-        case cRegexOneOrMore:
-            wildcard_str = wildcard_str + cSingleCharWildcard + cZeroOrMoreCharsWildcard;
-            break;
-        default:
-            wildcard_str += cSingleCharWildcard;
-            // Backtrack the scan by one position to handle the current char in the next iteration.
-            --it;
-            break;
-    }
-    state.set_next_state(TranslatorState::RegexPatternState::NORMAL);
-    return ErrorCode::Success;
-}
-
-/**
- * Disallows the appearances of other characters after encountering an end anchor in the string.
- */
-auto end_state_transition(
-        [[maybe_unused]] TranslatorState& state,
-        string_view::const_iterator& it,
-        [[maybe_unused]] string& wildcard_str,
-        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
-    if (cRegexEndAnchor != *it) {
-        return ErrorCode::IllegalDollarSign;
-    }
-    return ErrorCode::Success;
-}
-
-/**
- * States other than the NORMAL state may require special handling after the whole regex string has
- * been scanned and processed.
- */
-auto final_state_cleanup(
-        TranslatorState& state,
-        [[maybe_unused]] string_view::const_iterator& it,
-        string& wildcard_str,
-        RegexToWildcardTranslatorConfig const& config
-) -> error_code {
-    switch (state.get_state()) {
-        case TranslatorState::RegexPatternState::DOT:
-            // The last character is a single `.`, without the possibility of becoming a
-            // multichar wildcard
-            wildcard_str += cSingleCharWildcard;
-            break;
-        default:
-            break;
-    }
-
-    if (TranslatorState::RegexPatternState::END != state.get_state()
-        && config.add_prefix_suffix_wildcards())
-    {
-        wildcard_str += cZeroOrMoreCharsWildcard;
-    }
-    return ErrorCode::Success;
-}
-}  // namespace
 }  // namespace clp::regex_utils
