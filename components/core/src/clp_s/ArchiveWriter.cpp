@@ -150,9 +150,8 @@ size_t ArchiveWriter::store_tables() {
 
     schema_metadata.reserve(m_id_to_schema_writer.size());
     schemas.reserve(m_id_to_schema_writer.size());
-    auto it = m_id_to_schema_writer.begin();
-    for (size_t i = 0; i < m_id_to_schema_writer.size(); ++i) {
-        schemas.push_back(it++);
+    for (auto it = m_id_to_schema_writer.begin(); it != m_id_to_schema_writer.end(); ++it) {
+        schemas.push_back(it);
     }
     auto comp = [](schema_map_it const& lhs, schema_map_it const& rhs) -> bool {
         return lhs->second->get_total_uncompressed_size()
