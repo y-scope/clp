@@ -82,6 +82,7 @@ def submit_and_monitor_ir_extraction_job_in_db(
     :param orig_file_id:
     :param msg_ix:
     :param target_uncompressed_size:
+    :return: 0 on success, -1 otherwise.
     """
     extract_ir_config = ExtractIrJobConfig(
         orig_file_id=orig_file_id,
@@ -123,6 +124,9 @@ def handle_extract_ir_cmd(
         orig_file_id = parsed_args.orig_file_id
     else:
         orig_file_id = get_orig_file_id(clp_config.database, parsed_args.orig_file_path)
+        if orig_file_id is None:
+            return -1
+
 
     try:
         return asyncio.run(
