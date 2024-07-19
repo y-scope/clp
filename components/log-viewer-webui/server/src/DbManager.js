@@ -77,7 +77,7 @@ class DbManager {
     #fastify;
 
     /**
-     * @type {import("@fastify/mysql").MySQLPromisePool}
+     * @type {import("@fastify/mysql").PromisePool}
      */
     #mysqlConnectionPool;
 
@@ -165,7 +165,7 @@ class DbManager {
             if (err) {
                 throw err;
             }
-            this.#mysqlConnectionPool = await this.#fastify.mysql.pool;
+            this.#mysqlConnectionPool = this.#fastify.mysql.pool;
             this.#queryJobsTableName = config.queryJobsTableName;
         });
     }
