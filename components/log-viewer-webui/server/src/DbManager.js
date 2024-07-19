@@ -196,9 +196,8 @@ class DbManager {
      * Waits for the job with the given ID to finish.
      *
      * @param {number} jobId
-     * @throws {Error} If there is an error querying the status for the job or if the job is not
-     * found in the database.
-     * @throws {Error} If the job was cancelled or if it exited with an unexpected status.
+     * @throws {Error} If there's an error querying the job's status, the job is not found in the
+     * database, the job was cancelled, or it exited with an unexpected status.
      */
     async #awaitJobCompletion (jobId) {
         while (true) {
