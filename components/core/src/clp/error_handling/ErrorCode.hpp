@@ -114,7 +114,7 @@ auto ErrorCode<ErrorCodeEnum>::get_category() -> ErrorCategory<ErrorCodeEnum> co
 }
 
 template <typename ErrorCodeEnum>
-[[nodiscard]] auto make_error_code(ErrorCode<ErrorCodeEnum> error) -> std::error_code {
+auto make_error_code(ErrorCode<ErrorCodeEnum> error) -> std::error_code {
     return {error.get_errno(), ErrorCode<ErrorCodeEnum>::get_category()};
 }
 }  // namespace clp::error_handling
