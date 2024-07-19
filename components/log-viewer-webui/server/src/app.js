@@ -31,13 +31,13 @@ const app = async ({
     const parentDirname = path.resolve(dirname, "..");
 
     if ("test" !== process.env.NODE_ENV) {
-        let irDataDir = settings.IrDataDir;
-        if (false === path.isAbsolute(irDataDir)) {
-            irDataDir = path.resolve(parentDirname, irDataDir);
+        let irFilesDir = settings.IrFilesDir;
+        if (false === path.isAbsolute(irFilesDir)) {
+            irFilesDir = path.resolve(parentDirname, irFilesDir);
         }
         await server.register(fastifyStatic, {
             prefix: "/ir",
-            root: irDataDir,
+            root: irFilesDir,
         });
 
         await server.register(DbManager, {

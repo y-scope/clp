@@ -815,7 +815,7 @@ def start_log_viewer_webui(
         "MongoDbName": clp_config.results_cache.db_name,
         "MongoDbIrFilesCollectionName": clp_config.results_cache.ir_collection_name,
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
-        "IrDataDir": str(container_clp_config.ir_output.directory),
+        "IrFilesDir": str(container_clp_config.ir_output.directory),
     }
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:

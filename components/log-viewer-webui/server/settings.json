@@ -9,5 +9,5 @@
     "MongoDbIrFilesCollectionName": "ir-files",
 
     "ClientDir": "../client/dist",
-    "IrDataDir": "../../../build/clp-package/var/data/ir"
+    "IrFilesDir": "../../../build/clp-package/var/data/ir"
 }
