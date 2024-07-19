@@ -23,6 +23,19 @@ TEST_CASE("regex_to_wildcard", "[regex_utils][regex_to_wildcard]") {
     REQUIRE((regex_to_wildcard(". xyz .*+ zyx .").error() == ErrorCode::UntranslatablePlus));
     REQUIRE((regex_to_wildcard(". xyz |.* zyx .").error() == ErrorCode::UnsupportedPipe));
     REQUIRE((regex_to_wildcard(". xyz ^.* zyx .").error() == ErrorCode::IllegalCaret));
+
+    // Test escaped meta characters
+    REQUIRE((regex_to_wildcard("<>-_/=!").value() == "<>-_/=!"));
+    REQUIRE((regex_to_wildcard("\\<\\>\\-\\_\\/\\=\\!").value() == "<>-_/=!"));
+    REQUIRE(
+            (regex_to_wildcard("\\*\\+\\?\\|\\^\\$\\.\\{\\}\\[\\]\\(\\)\\<\\>\\-\\_\\/\\=\\!\\\\")
+                     .value()
+             == "\\*+\\?|^$.{}[]()<>-_/=!\\\\")
+    );
+    REQUIRE(
+            (regex_to_wildcard("abc\\Qdefghi\\Ejkl").error()
+             == clp::regex_utils::ErrorCode::IllegalEscapeSequence)
+    );
 }
 
 TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][regex_to_wildcard][anchor_config]") {

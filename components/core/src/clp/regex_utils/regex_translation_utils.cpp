@@ -37,6 +37,7 @@ public:
     enum class RegexPatternState : uint8_t {
         NORMAL = 0,
         DOT,
+        ESCAPED,
         END,
     };
 
@@ -93,6 +94,14 @@ using StateTransitionFuncSig
 [[nodiscard]] StateTransitionFuncSig dot_state_transition;
 
 /**
+ * Appends regex metacharacters literally to the wildcard string.
+ *
+ * These metacharacters are escaped by backslashes, so they have their special meanings suppressed.
+ * For metacharacters shared by the regex and the wildcard syntax, keep the escape backslashes.
+ */
+[[nodiscard]] StateTransitionFuncSig escaped_state_transition;
+
+/**
  * Disallows the appearances of other characters after encountering an end anchor in the string.
  */
 [[nodiscard]] StateTransitionFuncSig end_state_transition;
@@ -113,6 +122,9 @@ auto normal_state_transition(
     switch (ch) {
         case '.':
             state.set_next_state(TranslatorState::RegexPatternState::DOT);
+            break;
+        case cEscapeChar:
+            state.set_next_state(TranslatorState::RegexPatternState::ESCAPED);
             break;
         case cRegexEndAnchor:
             state.set_next_state(TranslatorState::RegexPatternState::END);
@@ -154,6 +166,25 @@ auto dot_state_transition(
             // Backtrack the scan by one position to handle the current char in the next iteration.
             --it;
             break;
+    }
+    state.set_next_state(TranslatorState::RegexPatternState::NORMAL);
+    return ErrorCode::Success;
+}
+
+auto escaped_state_transition(
+        TranslatorState& state,
+        string_view::const_iterator& it,
+        string& wildcard_str,
+        [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
+) -> error_code {
+    auto const ch{*it};
+    if (!cRegexEscapeSeqMetaChars.at(ch)) {
+        return ErrorCode::IllegalEscapeSequence;
+    }
+    if (cWildcardMetaChars.at(ch)) {
+        wildcard_str = wildcard_str + cEscapeChar + ch;
+    } else {
+        wildcard_str += ch;
     }
     state.set_next_state(TranslatorState::RegexPatternState::NORMAL);
     return ErrorCode::Success;
@@ -225,6 +256,9 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
                 break;
             case TranslatorState::RegexPatternState::DOT:
                 ec = dot_state_transition(state, it, wildcard_str, config);
+                break;
+            case TranslatorState::RegexPatternState::ESCAPED:
+                ec = escaped_state_transition(state, it, wildcard_str, config);
                 break;
             case TranslatorState::RegexPatternState::END:
                 ec = end_state_transition(state, it, wildcard_str, config);
