@@ -101,48 +101,6 @@ class DbManager {
     }
 
     /**
-     * Waits for the job with the given ID to finish.
-     *
-     * @param {number} jobId
-     * @return {Promise<void>}
-     */
-    async awaitJobCompletion (jobId) {
-        while (true) {
-            let rows;
-            try {
-                const [queryRows] = await this.#mysqlConnectionPool.query(
-                    `
-                    SELECT ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
-                    FROM ${this.#queryJobsTableName}
-                    WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
-                    `,
-                    jobId,
-                );
-
-                rows = queryRows;
-            } catch (e) {
-                throw new Error(`Failed to query status for job ${jobId} - ${e}`);
-            }
-            if (0 === rows.length) {
-                throw new Error(`Job ${jobId} not found in database.`);
-            }
-            const status = rows[0][QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
-
-            if (false === QUERY_JOB_STATUS_WAITING_STATES.includes(status)) {
-                if (QUERY_JOB_STATUS.CANCELLED === status) {
-                    throw new Error(`Job ${jobId} was cancelled.`);
-                } else if (QUERY_JOB_STATUS.SUCCEEDED !== status) {
-                    throw new Error(`Job ${jobId} exited with unexpected status=${status}: ` +
-                        `${Object.keys(QUERY_JOB_STATUS)[status]}.`);
-                }
-                break;
-            }
-
-            await sleep(JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS);
-        }
-    }
-
-    /**
      * Submits an IR extraction job to the scheduler and waits for it to finish.
      *
      * @param {object} jobConfig
@@ -161,7 +119,7 @@ class DbManager {
             );
 
             ({insertId: jobId} = result);
-            await this.awaitJobCompletion(jobId);
+            await this.#awaitJobCompletion(jobId);
         } catch (e) {
             this.#fastify.log.error(e);
 
@@ -232,6 +190,50 @@ class DbManager {
             this.#irFilesCollection =
                 this.#fastify.mongo.db.collection(config.irFilesCollectionName);
         });
+    }
+
+    /**
+     * Waits for the job with the given ID to finish.
+     *
+     * @param {number} jobId
+     * @throws {Error} If there is an error querying the status for the job or if the job is not
+     * found in the database.
+     * @throws {Error} If the job was cancelled or if it exited with an unexpected status.
+     */
+    async #awaitJobCompletion (jobId) {
+        while (true) {
+            let rows;
+            try {
+                const [queryRows] = await this.#mysqlConnectionPool.query(
+                    `
+                    SELECT ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
+                    FROM ${this.#queryJobsTableName}
+                    WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
+                    `,
+                    jobId,
+                );
+
+                rows = queryRows;
+            } catch (e) {
+                throw new Error(`Failed to query status for job ${jobId} - ${e}`);
+            }
+            if (0 === rows.length) {
+                throw new Error(`Job ${jobId} not found in database.`);
+            }
+            const status = rows[0][QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
+
+            if (false === QUERY_JOB_STATUS_WAITING_STATES.includes(status)) {
+                if (QUERY_JOB_STATUS.CANCELLED === status) {
+                    throw new Error(`Job ${jobId} was cancelled.`);
+                } else if (QUERY_JOB_STATUS.SUCCEEDED !== status) {
+                    throw new Error(`Job ${jobId} exited with unexpected status=${status}: ` +
+                        `${Object.keys(QUERY_JOB_STATUS)[status]}.`);
+                }
+                break;
+            }
+
+            await sleep(JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS);
+        }
     }
 }
 
