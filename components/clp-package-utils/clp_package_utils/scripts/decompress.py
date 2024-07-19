@@ -63,15 +63,15 @@ def handle_extract_file_cmd(
     parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
-    Handles the decompression command.
+    Handles the file extraction command.
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
     :return: 0 on success, -1 otherwise.
     """
-    paths_to_decompress_file_path = None
+    paths_to_extract_file_path = None
     if parsed_args.files_from:
-        paths_to_decompress_file_path = pathlib.Path(parsed_args.files_from)
+        paths_to_extract_file_path = pathlib.Path(parsed_args.files_from)
 
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
@@ -104,16 +104,16 @@ def handle_extract_file_cmd(
         mounts.archives_output_dir,
         DockerMount(DockerMountType.BIND, extraction_dir, container_extraction_dir),
     ]
-    container_paths_to_decompress_file_path = None
-    if paths_to_decompress_file_path:
-        container_paths_to_decompress_file_path = (
-            pathlib.Path("/") / "mnt" / "paths-to-decompress.txt"
+    container_paths_to_extract_file_path = None
+    if paths_to_extract_file_path:
+        container_paths_to_extract_file_path = (
+            pathlib.Path("/") / "mnt" / "paths-to-extract.txt"
         )
         necessary_mounts.append(
             DockerMount(
                 DockerMountType.BIND,
-                paths_to_decompress_file_path,
-                container_paths_to_decompress_file_path,
+                paths_to_extract_file_path,
+                container_paths_to_extract_file_path,
             )
         )
     container_start_cmd = generate_container_start_cmd(
@@ -121,7 +121,7 @@ def handle_extract_file_cmd(
     )
 
     # fmt: off
-    decompress_cmd = [
+    extract_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
         "--config", str(generated_config_path_on_container),
@@ -130,16 +130,16 @@ def handle_extract_file_cmd(
     ]
     # fmt: on
     for path in parsed_args.paths:
-        decompress_cmd.append(path)
-    if container_paths_to_decompress_file_path:
-        decompress_cmd.append("--input-list")
-        decompress_cmd.append(container_paths_to_decompress_file_path)
+        extract_cmd.append(path)
+    if container_paths_to_extract_file_path:
+        extract_cmd.append("--input-list")
+        extract_cmd.append(container_paths_to_extract_file_path)
 
-    cmd = container_start_cmd + decompress_cmd
+    cmd = container_start_cmd + extract_cmd
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError:
-        logger.exception("Docker or decompression command failed.")
+        logger.exception("Docker or file extraction command failed.")
         return -1
 
     # Remove generated files
@@ -220,16 +220,16 @@ def main(argv):
     )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
-    # Decompression command parser
-    decompression_job_parser = command_args_parser.add_parser(EXTRACT_FILE_CMD)
-    decompression_job_parser.add_argument(
-        "paths", metavar="PATH", nargs="*", help="Files to decompress."
+    # File extraction command parser
+    file_extraction_parser = command_args_parser.add_parser(EXTRACT_FILE_CMD)
+    file_extraction_parser.add_argument(
+        "paths", metavar="PATH", nargs="*", help="Files to extract."
     )
-    decompression_job_parser.add_argument(
-        "-f", "--files-from", help="A file listing all files to decompress."
+    file_extraction_parser.add_argument(
+        "-f", "--files-from", help="A file listing all files to extract."
     )
-    decompression_job_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=".", help="Decompress files into DIR."
+    file_extraction_parser.add_argument(
+        "-d", "--extraction-dir", metavar="DIR", default=".", help="Extract files into DIR."
     )
 
     # IR extraction command parser
