@@ -38,7 +38,21 @@ public:
      * @param error_num
      * @return The descriptive message for the error.
      */
-    [[nodiscard]] auto message(int error_num) const -> std::string override;
+    [[nodiscard]] auto message(int error_num) const -> std::string override {
+        return message(static_cast<ErrorCodeEnum>(error_num));
+    }
+
+    /**
+     * @param error_num
+     * @param condition
+     * @return Whether the error condition of the given error matches the given condition.
+     */
+    [[nodiscard]] auto equivalent(
+            int error_num,
+            std::error_condition const& condition
+    ) const noexcept -> bool override {
+        return equivalent(static_cast<ErrorCodeEnum>(error_num), condition);
+    }
 
     // Methods
     /**
@@ -48,6 +62,17 @@ public:
      * @return The descriptive message for the error.
      */
     [[nodiscard]] auto message(ErrorCodeEnum error_enum) const -> std::string;
+
+    /**
+     * Note: A specialization can be implemented to create error enum to error condition mappings.
+     * @param error_num
+     * @param condition
+     * @return Whether the error condition of the given error matches the given condition.
+     */
+    [[nodiscard]] auto equivalent(
+            ErrorCodeEnum error_enum,
+            std::error_condition const& condition
+    ) const noexcept -> bool;
 };
 
 /**
@@ -65,19 +90,21 @@ public:
     ErrorCode(ErrorCodeEnum error) : m_error{error} {}
 
     /**
-     * @return The error code as an error number.
-     */
-    [[nodiscard]] auto get_errno() const -> int;
-
-    /**
      * @return The underlying error code enum.
      */
-    [[nodiscard]] auto get_err_enum() const -> ErrorCodeEnum;
+    [[nodiscard]] auto get_error() const -> ErrorCodeEnum { return m_error; }
+
+    /**
+     * @return The error code as an error number.
+     */
+    [[nodiscard]] auto get_error_num() const -> int { return static_cast<int>(m_error); }
 
     /**
      * @return The reference to the singleton of the corresponded error category.
      */
-    [[nodiscard]] static auto get_category() -> ErrorCategory<ErrorCodeEnum> const&;
+    [[nodiscard]] constexpr static auto get_category() -> ErrorCategory<ErrorCodeEnum> const& {
+        return cCategory;
+    }
 
 private:
     static inline ErrorCategory<ErrorCodeEnum> const cCategory;
@@ -94,28 +121,16 @@ template <typename ErrorCodeEnum>
 [[nodiscard]] auto make_error_code(ErrorCode<ErrorCodeEnum> error) -> std::error_code;
 
 template <ErrorCodeEnumType ErrorCodeEnum>
-auto ErrorCategory<ErrorCodeEnum>::message(int error_num) const -> std::string {
-    return message(static_cast<ErrorCodeEnum>(error_num));
-}
-
-template <ErrorCodeEnumType ErrorCodeEnum>
-auto ErrorCode<ErrorCodeEnum>::get_errno() const -> int {
-    return static_cast<int>(m_error);
-}
-
-template <ErrorCodeEnumType ErrorCodeEnum>
-auto ErrorCode<ErrorCodeEnum>::get_err_enum() const -> ErrorCodeEnum {
-    return m_error;
-}
-
-template <ErrorCodeEnumType ErrorCodeEnum>
-auto ErrorCode<ErrorCodeEnum>::get_category() -> ErrorCategory<ErrorCodeEnum> const& {
-    return ErrorCode<ErrorCodeEnum>::cCategory;
+auto ErrorCategory<ErrorCodeEnum>::equivalent(
+        ErrorCodeEnum error_enum,
+        std::error_condition const& condition
+) const noexcept -> bool {
+    return std::error_category::default_error_condition(static_cast<int>(error_enum)) == condition;
 }
 
 template <typename ErrorCodeEnum>
 auto make_error_code(ErrorCode<ErrorCodeEnum> error) -> std::error_code {
-    return {error.get_errno(), ErrorCode<ErrorCodeEnum>::get_category()};
+    return {error.get_error_num(), ErrorCode<ErrorCodeEnum>::get_category()};
 }
 }  // namespace clp::error_handling
 

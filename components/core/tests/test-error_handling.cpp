@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -33,6 +35,8 @@ constexpr string_view cBinaryTestErrorCategoryName{"Binary Error Code"};
 constexpr string_view cSuccessErrMsg{"Success"};
 constexpr string_view cFailureErrMsg{"Failure"};
 constexpr string_view cUnrecognizedErrorCode{"Unrecognized Error Code"};
+constexpr std::array cFailureConditions{std::errc::not_connected, std::errc::timed_out};
+constexpr std::array cNoneFailureConditions{std::errc::broken_pipe, std::errc::address_in_use};
 }  // namespace
 
 namespace std {
@@ -75,6 +79,23 @@ auto BinaryErrorCategory::message(BinaryErrorCodeEnum error_enum) const -> strin
     }
 }
 
+template <>
+auto BinaryErrorCategory::equivalent(
+        BinaryErrorCodeEnum error_enum,
+        std::error_condition const& condition
+) const noexcept -> bool {
+    switch (error_enum) {
+        case BinaryErrorCodeEnum::Failure:
+            return std::any_of(
+                    cFailureConditions.cbegin(),
+                    cFailureConditions.cend(),
+                    [&](auto failure_condition) -> bool { return condition == failure_condition; }
+            );
+        default:
+            return false;
+    }
+}
+
 TEST_CASE("test_error_code_implementation", "[error_handling][ErrorCode]") {
     // Test error codes within the same error category
     BinaryErrorCode const success{BinaryErrorCodeEnum::Success};
@@ -90,6 +111,18 @@ TEST_CASE("test_error_code_implementation", "[error_handling][ErrorCode]") {
     REQUIRE((cFailureErrMsg == failure_error_code.message()));
     REQUIRE((BinaryErrorCode::get_category() == failure_error_code.category()));
     REQUIRE((cBinaryTestErrorCategoryName == failure_error_code.category().name()));
+    std::for_each(
+            cFailureConditions.cbegin(),
+            cFailureConditions.cend(),
+            [&](auto failure_condition) { REQUIRE((failure_error_code == failure_condition)); }
+    );
+    std::for_each(
+            cNoneFailureConditions.cbegin(),
+            cNoneFailureConditions.cend(),
+            [&](auto none_failure_condition) {
+                REQUIRE((failure_error_code != none_failure_condition));
+            }
+    );
 
     REQUIRE((success_error_code != failure_error_code));
     REQUIRE((success_error_code.category() == failure_error_code.category()));
