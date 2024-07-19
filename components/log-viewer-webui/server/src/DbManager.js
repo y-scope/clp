@@ -88,55 +88,8 @@ class DbManager {
      */
     constructor (app, dbConfig) {
         this.#fastify = app;
-        this.initMySql(dbConfig.mysqlConfig);
-        this.initMongo(dbConfig.mongoConfig);
-    }
-
-    /**
-     * Initializes MySQL connection.
-     *
-     * @param {object} config
-     * @param {string} config.user
-     * @param {string} config.password
-     * @param {string} config.host
-     * @param {number} config.port
-     * @param {string} config.database
-     * @param {string} config.queryJobsTableName
-     */
-    initMySql (config) {
-        this.#fastify.register(fastifyMysql, {
-            promise: true,
-            connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
-                `${config.port}/${config.database}`,
-        }).after(async (err) => {
-            if (err) {
-                throw err;
-            }
-            this.#mysqlConnection = await this.#fastify.mysql.getConnection();
-            this.#queryJobsTableName = config.queryJobsTableName;
-        });
-    }
-
-    /**
-     * Initializes MongoDB connection.
-     *
-     * @param {object} config
-     * @param {string} config.host
-     * @param {number} config.port
-     * @param {string} config.database
-     * @param {string} config.irFilesCollectionName
-     */
-    initMongo (config) {
-        this.#fastify.register(fastifyMongo, {
-            forceClose: true,
-            url: `mongodb://${config.host}:${config.port}/${config.database}`,
-        }).after((err) => {
-            if (err) {
-                throw err;
-            }
-            this.irFilesCollection =
-                this.#fastify.mongo.db.collection(config.irFilesCollectionName);
-        });
+        this.#initMySql(dbConfig.mysqlConfig);
+        this.#initMongo(dbConfig.mongoConfig);
     }
 
     async awaitJobCompletion (jobId) {
@@ -218,6 +171,53 @@ class DbManager {
             orig_file_id: origFileId,
             begin_msg_ix: {$lte: msgIdx},
             end_msg_ix: {$gt: msgIdx},
+        });
+    }
+
+    /**
+     * Initializes MySQL connection.
+     *
+     * @param {object} config
+     * @param {string} config.user
+     * @param {string} config.password
+     * @param {string} config.host
+     * @param {number} config.port
+     * @param {string} config.database
+     * @param {string} config.queryJobsTableName
+     */
+    #initMySql (config) {
+        this.#fastify.register(fastifyMysql, {
+            promise: true,
+            connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
+                `${config.port}/${config.database}`,
+        }).after(async (err) => {
+            if (err) {
+                throw err;
+            }
+            this.#mysqlConnection = await this.#fastify.mysql.getConnection();
+            this.#queryJobsTableName = config.queryJobsTableName;
+        });
+    }
+
+    /**
+     * Initializes MongoDB connection.
+     *
+     * @param {object} config
+     * @param {string} config.host
+     * @param {number} config.port
+     * @param {string} config.database
+     * @param {string} config.irFilesCollectionName
+     */
+    #initMongo (config) {
+        this.#fastify.register(fastifyMongo, {
+            forceClose: true,
+            url: `mongodb://${config.host}:${config.port}/${config.database}`,
+        }).after((err) => {
+            if (err) {
+                throw err;
+            }
+            this.irFilesCollection =
+                this.#fastify.mongo.db.collection(config.irFilesCollectionName);
         });
     }
 }
