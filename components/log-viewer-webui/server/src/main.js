@@ -7,7 +7,7 @@ import app from "./app.js";
 /**
  * Parses environment variables into config values for the application.
  *
- * @return {{CLP_DB_PASS: string, CLP_DB_USER: string, HOST: string, PORT: string}}
+ * @return {{CLP_DB_USER: string, CLP_DB_PASS: string, HOST: string, PORT: string}}
  * @throws {Error} if any required environment variable is undefined.
  */
 const parseEnvVars = () => {
