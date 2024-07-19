@@ -21,19 +21,14 @@ from clp_py_utils.core import read_yaml_config_file
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Creates results cache indexes for CLP.")
-    args_parser.add_argument("--config", required=True, help="Results cache config file.")
+    args_parser.add_argument("--uri", required=True, help="URI of the results cache.")
+    args_parser.add_argument("--ir-collection", required=True, help="Collection for IR metadata.")
     parsed_args = args_parser.parse_args(argv[1:])
 
-    config_file_path = pathlib.Path(parsed_args.config)
+    results_cache_uri = parsed_args.uri
+    ir_collection_name = parsed_args.ir_collection
 
     try:
-        results_cache_config = ResultsCache.parse_obj(read_yaml_config_file(config_file_path))
-        if results_cache_config is None:
-            raise ValueError(f"results cache configuration file '{parsed_args.config}' is empty.")
-
-        results_cache_uri = results_cache_config.get_uri()
-        ir_collection_name = results_cache_config.ir_collection_name
-
         with MongoClient(results_cache_uri) as results_cache_client:
             ir_collection = results_cache_client.get_default_database()[ir_collection_name]
 

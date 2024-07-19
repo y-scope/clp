@@ -245,12 +245,6 @@ def create_results_cache_indexes(
 
     container_name = f"clp-{component_name}-indexes-creator-{instance_id}"
 
-    # Create results cache config file
-    results_cache_config_filename = f"{container_name}.yml"
-    results_cache_config_file_path = clp_config.logs_directory / results_cache_config_filename
-    with open(results_cache_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.results_cache.dict(), f)
-
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
@@ -276,15 +270,14 @@ def create_results_cache_indexes(
     create_tables_cmd = [
         "python3",
         str(clp_py_utils_dir / "create-results-cache-indexes.py"),
-        "--config", str(container_clp_config.logs_directory / results_cache_config_filename),
+        "--uri", container_clp_config.results_cache.get_uri(),
+        "--ir-collection", container_clp_config.results_cache.ir_collection_name,
     ]
     # fmt: on
 
     cmd = container_start_cmd + create_tables_cmd
     logger.debug(" ".join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-
-    results_cache_config_file_path.unlink()
 
     logger.info(f"Created {component_name} indexes.")
 
