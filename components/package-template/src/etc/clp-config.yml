@@ -60,7 +60,7 @@
 #  port: 4000
 #  logging_level: "INFO"
 #
-#log_viewer_webui
+#log_viewer_webui:
 #  host: "localhost"
 #  port: 3000
 #
