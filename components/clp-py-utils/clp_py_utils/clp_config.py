@@ -393,7 +393,6 @@ class WebUi(BaseModel):
 class LogViewerWebUi(BaseModel):
     host: str = "localhost"
     port: int = 3000
-    logging_level: str = "INFO"
 
     @validator("host")
     def validate_host(cls, field):

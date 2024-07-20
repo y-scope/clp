@@ -2,7 +2,6 @@ version: "3"
 
 vars:
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
-  G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/log-viewer-webui"
   G_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
 
 tasks:
@@ -51,12 +50,13 @@ tasks:
       - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
       - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/package.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.css"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/package.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/package.json"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/settings.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/*.js"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/package.json"
       - "{{.G_WEBUI_SRC_DIR}}/client/**/*.js"
       - "{{.G_WEBUI_SRC_DIR}}/client/**/*.jsx"
       - "{{.G_WEBUI_SRC_DIR}}/imports/**/*.js"
