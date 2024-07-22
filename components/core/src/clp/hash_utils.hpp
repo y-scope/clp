@@ -15,7 +15,7 @@ namespace clp::aws {
  * @param size
  * @return The converted string
  */
-std::string char_array_to_string(std::span<unsigned char> input);
+std::string convert_hash_to_string(std::span<unsigned char> input);
 
 /**
  * Gets the HMAC-SHA256 hash

@@ -20,13 +20,7 @@ using std::string_view;
 using std::vector;
 
 namespace clp::aws {
-/**
- * Converts a char array to a string
- * @param a
- * @param size
- * @return The converted string
- */
-std::string char_array_to_string(span<unsigned char> input) {
+std::string convert_hash_to_string(span<unsigned char> input) {
     std::string hex_string;
     for (auto const c : input) {
         hex_string += fmt::format("{:02x}", c);
@@ -46,7 +40,7 @@ ErrorCode get_hmac_sha256_hash(
         SPDLOG_ERROR("Key too long");
         return ErrorCode_BadParam;
     }
-    int key_length{static_cast<int>(key.size())};
+    int const key_length{static_cast<int>(key.size())};
     auto* res
             = HMAC(EVP_sha256(),
                    key.data(),

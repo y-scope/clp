@@ -64,7 +64,7 @@ namespace {
 get_string_to_sign(string_view scope, string_view timestamp_string, string_view canonical_request) {
     vector<unsigned char> signed_canonical_request;
     auto error_code = clp::aws::get_sha256_hash(canonical_request, signed_canonical_request);
-    auto const signed_canonical_request_str = clp::aws::char_array_to_string(
+    auto const signed_canonical_request_str = clp::aws::convert_hash_to_string(
             {signed_canonical_request.data(), signed_canonical_request.size()}
     );
     return fmt::format(
@@ -82,7 +82,7 @@ get_string_to_sign(string_view scope, string_view timestamp_string, string_view 
  * @param encode_slash
  * @return The encoded URI
  */
-[[nodiscard]] string get_encoded_uri(string_view value, bool encode_slash = true) {
+[[nodiscard]] string encode_uri(string_view value, bool encode_slash = true) {
     string encoded_uri;
 
     for (auto const c : value) {
@@ -129,7 +129,7 @@ get_string_to_sign(string_view scope, string_view timestamp_string, string_view 
     return fmt::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
             get_method_string(method),
-            get_encoded_uri(url.get_path(), false),
+            encode_uri(url.get_path(), false),
             query_string,
             clp::aws::cDefaultSignedHeaders,
             url.get_host(),
@@ -197,75 +197,119 @@ string AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod
     auto const timestamp_string = get_timestamp_string(now);
 
     auto scope = get_scope(date_string, s3_region);
-    auto query_string = get_default_query_string(scope, timestamp_string);
-    auto canonical_request = get_canonical_request(method, s3_url, query_string);
-    auto string_to_sign = get_string_to_sign(scope, timestamp_string, canonical_request);
-    vector<unsigned char> signature_key{};
-    vector<unsigned char> signature{};
-    auto error_code = get_signature_key(s3_region, date_string, signature_key);
-    error_code = get_hmac_sha256_hash(
-            {size_checked_pointer_cast<unsigned char>(signature_key.data()), signature_key.size()},
-            {size_checked_pointer_cast<unsigned char>(string_to_sign.data()), string_to_sign.size()
-            },
-            signature
-    );
+    auto canonical_query_string = get_canonical_query_string(scope, timestamp_string);
 
-    auto const signature_str = char_array_to_string({signature.data(), signature.size()});
+    auto canonical_request = get_canonical_request(method, s3_url, canonical_query_string);
+    auto string_to_sign = get_string_to_sign(scope, timestamp_string, canonical_request);
+
+    vector<unsigned char> signature{};
+    if (auto error_code = get_signature(s3_region, date_string, string_to_sign, signature);
+        ErrorCode_Success != error_code)
+    {
+        throw std::runtime_error("Unexpected error");
+    }
+    auto const signature_str = convert_hash_to_string({signature.data(), signature.size()});
 
     return fmt::format(
             "https://{}{}?{}&{}={}",
             s3_url.get_host(),
             s3_url.get_path(),
-            query_string,
+            canonical_query_string,
             cXAmzSignature,
             signature_str
     );
 }
 
-[[nodiscard]] ErrorCode AwsAuthenticationSigner::get_signature_key(
+ErrorCode AwsAuthenticationSigner::get_signature(
         string_view region,
         string_view date_string,
-        vector<unsigned char>& signature_key
+        string_view string_to_sign,
+        vector<unsigned char>& signature
 ) {
-    string input_key{cAws4};
-    input_key += m_secret_access_key;
+    vector<unsigned char> signing_key{};
+    if (auto error_code = get_signing_key(region, date_string, signing_key);
+        ErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
+
+    if (auto error_code = get_hmac_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(signing_key.data()),
+                 signing_key.size()},
+                {size_checked_pointer_cast<unsigned char const>(string_to_sign.data()),
+                 string_to_sign.size()},
+                signature
+        );
+        ErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
+    return ErrorCode_Success;
+}
+
+ErrorCode AwsAuthenticationSigner::get_signing_key(
+        string_view region,
+        string_view date_string,
+        vector<unsigned char>& signing_key
+) {
+    string key{cAws4};
+    key += m_secret_access_key;
 
     vector<unsigned char> date_key{};
     vector<unsigned char> date_region_key{};
     vector<unsigned char> date_region_service_key{};
-    auto error_code = get_hmac_sha256_hash(
-            {size_checked_pointer_cast<unsigned char const>(input_key.data()), input_key.size()},
-            {size_checked_pointer_cast<unsigned char const>(date_string.data()), date_string.size()
-            },
-            date_key
-    );
+    if (auto error_code = get_hmac_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(key.data()), key.size()},
+                {size_checked_pointer_cast<unsigned char const>(date_string.data()),
+                 date_string.size()},
+                date_key
+        );
+        error_code != ErrorCode_Success)
+    {
+        return error_code;
+    }
 
-    error_code = get_hmac_sha256_hash(
-            {size_checked_pointer_cast<unsigned char const>(date_key.data()), date_key.size()},
-            {size_checked_pointer_cast<unsigned char const>(region.data()), region.size()},
-            date_region_key
-    );
+    if (auto error_code = get_hmac_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(date_key.data()), date_key.size()},
+                {size_checked_pointer_cast<unsigned char const>(region.data()), region.size()},
+                date_region_key
+        );
+        error_code != ErrorCode_Success)
+    {
+        return error_code;
+    }
 
-    error_code = get_hmac_sha256_hash(
-            {size_checked_pointer_cast<unsigned char const>(date_region_key.data()),
-             date_region_key.size()},
-            {size_checked_pointer_cast<unsigned char const>(cS3Service.data()), cS3Service.size()},
-            date_region_service_key
-    );
+    if (auto error_code = get_hmac_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(date_region_key.data()),
+                 date_region_key.size()},
+                {size_checked_pointer_cast<unsigned char const>(cS3Service.data()),
+                 cS3Service.size()},
+                date_region_service_key
+        );
+        error_code != ErrorCode_Success)
+    {
+        return error_code;
+    }
 
-    error_code = get_hmac_sha256_hash(
-            {size_checked_pointer_cast<unsigned char const>(date_region_service_key.data()),
-             date_region_service_key.size()},
-            {size_checked_pointer_cast<unsigned char const>(cAws4Request.data()),
-             cAws4Request.size()},
-            signature_key
-    );
+    if (auto error_code = get_hmac_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(date_region_service_key.data()),
+                 date_region_service_key.size()},
+                {size_checked_pointer_cast<unsigned char const>(cAws4Request.data()),
+                 cAws4Request.size()},
+                signing_key
+        );
+        error_code != ErrorCode_Success)
+    {
+        return error_code;
+    }
 
     return ErrorCode_Success;
 }
 
-string
-AwsAuthenticationSigner::get_default_query_string(string_view scope, string_view timestamp_string) {
+string AwsAuthenticationSigner::get_canonical_query_string(
+        string_view scope,
+        string_view timestamp_string
+) {
     string uri{m_access_key_id + "/"};
     uri += scope;
     return fmt::format(
@@ -273,7 +317,7 @@ AwsAuthenticationSigner::get_default_query_string(string_view scope, string_view
             cXAmzAlgorithm,
             cAws4HmacSha256,
             cXAmzCredential,
-            get_encoded_uri(uri),
+            encode_uri(uri),
             cXAmzDate,
             timestamp_string,
             cXAmzExpires,

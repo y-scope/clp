@@ -22,8 +22,6 @@ public:
     // Methods
     [[nodiscard]] auto get_host() -> std::string_view { return m_host; }
 
-    [[nodiscard]] auto get_bucket() -> std::string_view { return m_bucket; }
-
     [[nodiscard]] auto get_region() -> std::string_view { return m_region; }
 
     [[nodiscard]] auto get_path() -> std::string_view { return m_path; }
@@ -51,10 +49,6 @@ public:
         DELETE
     };
 
-    enum class AwsService : uint8_t {
-        S3
-    };
-
     // Constructors
     AwsAuthenticationSigner(std::string_view access_key_id, std::string_view secret_access_key)
             : m_access_key_id(access_key_id),
@@ -78,7 +72,7 @@ private:
      * @return
      */
     [[nodiscard]] std::string
-    get_default_query_string(std::string_view scope, std::string_view timestamp_string);
+    get_canonical_query_string(std::string_view scope, std::string_view timestamp_string);
 
     /**
      * Gets the signature key
@@ -86,10 +80,26 @@ private:
      * @param date_string
      * @return
      */
-    [[nodiscard]] ErrorCode get_signature_key(
+    [[nodiscard]] ErrorCode get_signing_key(
             std::string_view region,
             std::string_view date_string,
-            std::vector<unsigned char>& signature_key
+            std::vector<unsigned char>& signing_key
+    );
+
+    /**
+     *
+     */
+    /**
+     * Gets the signature key
+     * @param region
+     * @param date_string
+     * @return
+     */
+    [[nodiscard]] ErrorCode get_signature(
+            std::string_view region,
+            std::string_view date_string,
+            std::string_view string_to_sign,
+            std::vector<unsigned char>& signature
     );
 
     // Variables
