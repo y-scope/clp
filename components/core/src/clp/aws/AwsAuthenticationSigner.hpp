@@ -64,8 +64,11 @@ public:
      * @param method HTTP method
      * @return The generated presigned URL
      */
-    [[nodiscard]] auto
-    generate_presigned_url(S3Url& s3_url, HttpMethod method = HttpMethod::GET) -> std::string;
+    [[nodiscard]] auto generate_presigned_url(
+            S3Url& s3_url,
+            std::string& presigned_url,
+            HttpMethod method = HttpMethod::GET
+    ) -> ErrorCode;
 
 private:
     /**

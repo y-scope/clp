@@ -157,13 +157,14 @@ S3Url::S3Url(string const& url) {
     );
 
     std::smatch match;
+    string bucket{};
     if (std::regex_match(url, match, host_style_url_regex)) {
-        m_bucket = match[1].str();
+        bucket = match[1].str();
         m_region = match[3].str();
         m_path = match[4].str();
     } else if (std::regex_match(url, match, path_style_url_regex)) {
         m_region = match[2].str();
-        m_bucket = match[3].str();
+        bucket = match[3].str();
         m_path = match[4].str();
     } else {
         throw std::invalid_argument("Invalid S3 HTTP URL format");
@@ -172,7 +173,7 @@ S3Url::S3Url(string const& url) {
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
+    m_host = fmt::format("{}.s3.{}.amazonaws.com", bucket, m_region);
 }
 
 S3Url::S3Url(string const& s3_uri, string_view region) : m_region{region} {
@@ -180,17 +181,22 @@ S3Url::S3Url(string const& s3_uri, string_view region) : m_region{region} {
     std::regex const s3_uri_regex(R"(s3://([a-z0-9.-]+)(/[^?]+).*)");
 
     std::smatch match;
+    string bucket{};
     if (std::regex_match(s3_uri, match, s3_uri_regex)) {
-        m_bucket = match[1].str();
+        bucket = match[1].str();
         m_path = match[2].str();
     } else {
         throw std::invalid_argument("S3 URI format");
     }
 
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
+    m_host = fmt::format("{}.s3.{}.amazonaws.com", bucket, m_region);
 }
 
-auto AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod method) -> string {
+auto AwsAuthenticationSigner::generate_presigned_url(
+        S3Url& s3_url,
+        string& presigned_url,
+        HttpMethod method
+) -> ErrorCode {
     if (HttpMethod::GET != method) {
         throw std::runtime_error("Unsupported HTTP method!");
     }
@@ -216,7 +222,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod m
     }
     auto const signature_str = convert_hash_to_string({signature.data(), signature.size()});
 
-    return fmt::format(
+    presigned_url = fmt::format(
             "https://{}{}?{}&{}={}",
             s3_url.get_host(),
             s3_url.get_path(),
@@ -224,6 +230,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod m
             cXAmzSignature,
             signature_str
     );
+    return ErrorCode_Success;
 }
 
 auto AwsAuthenticationSigner::get_signature(
