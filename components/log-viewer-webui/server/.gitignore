@@ -1,2 +1,5 @@
+ # Local development
+.env.local
+
 # Testing
 /.tap

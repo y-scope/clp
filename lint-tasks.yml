@@ -2,8 +2,6 @@ version: "3"
 
 vars:
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
-  G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/log-viewer-webui"
-  G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_DIR}}/bin"
   G_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
 
 tasks:
@@ -22,11 +20,6 @@ tasks:
       - task: "yml-fix"
 
   cpp-check:
-    dir: "components/core"
-    cmds:
-      - task: "cpp"
-        vars:
-          FLAGS: "--dry-run"
     sources: &cpp_source_files
       - "{{.TASKFILE}}"
       - ".clang-format"
@@ -38,30 +31,32 @@ tasks:
       - "tests/**/*.h"
       - "tests/**/*.hpp"
       - "tests/**/*.inc"
+    dir: "components/core"
+    cmds:
+      - task: "cpp"
+        vars:
+          FLAGS: "--dry-run"
 
   cpp-fix:
+    sources: *cpp_source_files
     dir: "components/core"
     cmds:
       - task: "cpp"
         vars:
           FLAGS: "-i"
-    sources: *cpp_source_files
 
   js-check:
-    cmds:
-      - task: "js"
-        vars:
-          LINT_CMD: "check"
     sources: &js_source_files
       - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
       - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/package.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.css"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/package.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/package.json"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/settings.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/*.js"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/package.json"
       - "{{.G_WEBUI_SRC_DIR}}/client/**/*.js"
       - "{{.G_WEBUI_SRC_DIR}}/client/**/*.jsx"
       - "{{.G_WEBUI_SRC_DIR}}/imports/**/*.js"
@@ -74,13 +69,17 @@ tasks:
       - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.jsx"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
+    cmds:
+      - task: "js"
+        vars:
+          LINT_CMD: "check"
 
   js-fix:
+    sources: *js_source_files
     cmds:
       - task: "js"
         vars:
           LINT_CMD: "fix"
-    sources: *js_source_files
 
   py-check:
     cmds:
@@ -118,8 +117,8 @@ tasks:
     internal: true
     requires:
       vars: ["FLAGS"]
-    deps: ["venv"]
     dir: "components/core"
+    deps: ["venv"]
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
@@ -161,6 +160,18 @@ tasks:
 
   linter-node-modules:
     internal: true
+    vars:
+      WEBUI_LINTER_DIR: "{{.ROOT_DIR}}/components/webui/linter"
+      OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+    sources:
+      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
+      - "../package.json"
+    dir: "{{.WEBUI_LINTER_DIR}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - ":webui-node-modules"
@@ -169,11 +180,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.OUTPUT_DIR}}"
       - ":nodejs-22"
-    dir: "{{.WEBUI_LINTER_DIR}}"
-    vars:
-      WEBUI_LINTER_DIR: "{{.ROOT_DIR}}/components/webui/linter"
-      OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm update"
@@ -182,19 +188,17 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
-      - "{{.TASKFILE}}"
-      - "../package.json"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   venv:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
+    sources:
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
+      - "lint-requirements.txt"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -212,8 +216,3 @@ tasks:
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-    sources:
-      - "{{.ROOT_DIR}}/Taskfile.yml"
-      - "{{.TASKFILE}}"
-      - "lint-requirements.txt"
-    generates: ["{{.CHECKSUM_FILE}}"]

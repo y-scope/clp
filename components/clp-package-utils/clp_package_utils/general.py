@@ -8,13 +8,14 @@ import subprocess
 import typing
 import uuid
 from enum import auto
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
     DB_COMPONENT_NAME,
+    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -30,6 +31,9 @@ from clp_py_utils.core import (
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
+EXTRACT_FILE_CMD = "x"
+EXTRACT_IR_CMD = "i"
+
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
@@ -44,7 +48,8 @@ class DockerMountType(enum.IntEnum):
 
 class JobType(KebabCaseStrEnum):
     COMPRESSION = auto()
-    DECOMPRESSION = auto()
+    FILE_EXTRACTION = auto()
+    IR_EXTRACTION = auto()
     SEARCH = auto()
 
 
@@ -282,7 +287,7 @@ def dump_container_config(
 
 
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[CLPDockerMounts], container_image: str
+    container_name: str, container_mounts: List[Optional[DockerMount]], container_image: str
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.
@@ -494,3 +499,16 @@ def validate_webui_config(
         raise ValueError(f"{WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_log_viewer_webui_config(clp_config: CLPConfig, settings_json_path: pathlib.Path):
+    if not settings_json_path.exists():
+        raise ValueError(
+            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
+        )
+
+    validate_port(
+        f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port",
+        clp_config.log_viewer_webui.host,
+        clp_config.log_viewer_webui.port,
+    )
