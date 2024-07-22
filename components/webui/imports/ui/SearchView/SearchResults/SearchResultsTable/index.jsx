@@ -1,3 +1,4 @@
+import {Meteor} from "meteor/meteor";
 import {useEffect} from "react";
 import Table from "react-bootstrap/Table";
 
@@ -35,7 +36,7 @@ const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
  * @param {boolean} props.hasMoreResultsInTotal
  * @param {number} props.maxLinesPerResult
  * @param {Function} props.onLoadMoreResults
- * @param {object} props.searchResults
+ * @param {object[]} props.searchResults
  * @param {Function} props.setFieldToSortBy
  * @return {React.ReactElement}
  */
@@ -77,6 +78,12 @@ const SearchResultsTable = ({
         }
     };
 
+    const handleSearchResultClick = (ev) => {
+        const {orig_file_id: origFileId, log_event_ix:logEventIx} = ev.currentTarget.dataset;
+        window.open(Meteor.settings.public.LogViewerWebuiClientUrl +
+            `?origFileId=${origFileId}&logEventIx=${logEventIx}`);
+    };
+
     useEffect(() => {
         document.documentElement.style.setProperty(
             "--search-results-message-line-height",
@@ -91,24 +98,30 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
-    const rows = [];
-    for (let i = 0; i < searchResults.length; ++i) {
-        const searchResult = searchResults[i];
-        rows.push(
-            <tr key={searchResult._id}>
+    const rows =  searchResults.map((result)=> {
+        return (
+            <tr key={result._id}>
                 <td className={"search-results-content search-results-timestamp"}>
-                    {searchResult.timestamp ?
-                        dayjs.utc(searchResult.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
+                    {result.timestamp ?
+                        dayjs.utc(result.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
                         "N/A"}
                 </td>
                 <td>
-                    <pre className={"search-results-content search-results-message"}>
-                        {searchResult.message}
-                    </pre>
+                    <a
+                        title={"Go to the log context"}
+                        className={"search-results-content-clickable"}
+                        data-orig_file_id={result.orig_file_id}
+                        data-log_event_ix={result.log_event_ix}
+                        onClick={handleSearchResultClick}>
+                        <pre
+                            className={"search-results-content search-results-message"}>
+                            {result.message}
+                        </pre>
+                    </a>
                 </td>
             </tr>
         );
-    }
+    });
 
     return (
         <div className={"search-results-container"}>
@@ -119,11 +132,11 @@ const SearchResultsTable = ({
                 striped={true}
             >
                 <thead>
-                    <tr>
-                        <th
-                            className={"search-results-th search-results-th-sortable"}
-                            data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                            key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                <tr>
+                    <th
+                        className={"search-results-th search-results-th-sortable"}
+                        data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                        key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>

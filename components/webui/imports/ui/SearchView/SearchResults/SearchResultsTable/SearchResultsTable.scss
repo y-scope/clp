@@ -29,6 +29,10 @@
 .search-results-content {
   font-size: 0.875rem;
   line-height: var(--search-results-message-line-height);
+
+  &-clickable {
+    cursor: pointer;
+  }
 }
 
 .search-results-timestamp {
