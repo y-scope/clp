@@ -2,12 +2,14 @@
 
 #include "../hash_utils.hpp"
 #include "../type_utils.hpp"
+#include "../ErrorCode.hpp"
 
 using clp::size_checked_pointer_cast;
 
 #include <regex>
 #include <span>
 #include <vector>
+#include <chrono>
 
 using std::span;
 using std::string;
