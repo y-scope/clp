@@ -20,7 +20,8 @@ namespace {
  * @param timestamp
  * @return The timestamp string
  */
-[[nodiscard]] string get_timestamp_string(std::chrono::system_clock::time_point const& timestamp) {
+[[nodiscard]] auto get_timestamp_string(std::chrono::system_clock::time_point const& timestamp
+) -> string {
     return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
 }
 
@@ -29,7 +30,8 @@ namespace {
  * @param timestamp
  * @return The date string
  */
-[[nodiscard]] string get_date_string(std::chrono::system_clock::time_point const& timestamp) {
+[[nodiscard]] auto get_date_string(std::chrono::system_clock::time_point const& timestamp
+) -> string {
     return fmt::format("{:%Y%m%d}", timestamp);
 }
 
@@ -38,7 +40,8 @@ namespace {
  * @param method HTTP method
  * @return The converted string
  */
-[[nodiscard]] string get_method_string(clp::aws::AwsAuthenticationSigner::HttpMethod method) {
+[[nodiscard]] auto get_method_string(clp::aws::AwsAuthenticationSigner::HttpMethod method
+) -> string {
     switch (method) {
         case clp::aws::AwsAuthenticationSigner::HttpMethod::GET:
             return "GET";
@@ -60,8 +63,11 @@ namespace {
  * @param canonical_request
  * @return String to sign
  */
-[[nodiscard]] string
-get_string_to_sign(string_view scope, string_view timestamp_string, string_view canonical_request) {
+[[nodiscard]] auto get_string_to_sign(
+        string_view scope,
+        string_view timestamp_string,
+        string_view canonical_request
+) -> string {
     vector<unsigned char> signed_canonical_request;
     auto error_code = clp::aws::get_sha256_hash(canonical_request, signed_canonical_request);
     auto const signed_canonical_request_str = clp::aws::convert_hash_to_string(
@@ -82,7 +88,7 @@ get_string_to_sign(string_view scope, string_view timestamp_string, string_view 
  * @param encode_slash
  * @return The encoded URI
  */
-[[nodiscard]] string encode_uri(string_view value, bool encode_slash = true) {
+[[nodiscard]] auto encode_uri(string_view value, bool encode_slash = true) -> string {
     string encoded_uri;
 
     for (auto const c : value) {
@@ -104,7 +110,7 @@ get_string_to_sign(string_view scope, string_view timestamp_string, string_view 
  * @param region
  * @return The scope
  */
-[[nodiscard]] string get_scope(string_view date_string, string_view region) {
+[[nodiscard]] auto get_scope(string_view date_string, string_view region) -> string {
     return fmt::format(
             "{}/{}/{}/{}",
             date_string,
@@ -121,11 +127,11 @@ get_string_to_sign(string_view scope, string_view timestamp_string, string_view 
  * @param query_string Query string
  * @return Canonical request
  */
-[[nodiscard]] string get_canonical_request(
+[[nodiscard]] auto get_canonical_request(
         clp::aws::AwsAuthenticationSigner::HttpMethod method,
         clp::aws::S3Url& url,
         string_view query_string
-) {
+) -> string {
     return fmt::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
             get_method_string(method),
@@ -184,7 +190,7 @@ S3Url::S3Url(string const& s3_uri, string_view region) : m_region{region} {
     m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
 }
 
-string AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod method) {
+auto AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod method) -> string {
     if (HttpMethod::GET != method) {
         throw std::runtime_error("Unsupported HTTP method!");
     }
@@ -220,12 +226,12 @@ string AwsAuthenticationSigner::generate_presigned_url(S3Url& s3_url, HttpMethod
     );
 }
 
-ErrorCode AwsAuthenticationSigner::get_signature(
+auto AwsAuthenticationSigner::get_signature(
         string_view region,
         string_view date_string,
         string_view string_to_sign,
         vector<unsigned char>& signature
-) {
+) -> ErrorCode {
     vector<unsigned char> signing_key{};
     if (auto error_code = get_signing_key(region, date_string, signing_key);
         ErrorCode_Success != error_code)
@@ -247,11 +253,11 @@ ErrorCode AwsAuthenticationSigner::get_signature(
     return ErrorCode_Success;
 }
 
-ErrorCode AwsAuthenticationSigner::get_signing_key(
+auto AwsAuthenticationSigner::get_signing_key(
         string_view region,
         string_view date_string,
         vector<unsigned char>& signing_key
-) {
+) -> ErrorCode {
     string key{cAws4};
     key += m_secret_access_key;
 
@@ -306,10 +312,10 @@ ErrorCode AwsAuthenticationSigner::get_signing_key(
     return ErrorCode_Success;
 }
 
-string AwsAuthenticationSigner::get_canonical_query_string(
+auto AwsAuthenticationSigner::get_canonical_query_string(
         string_view scope,
         string_view timestamp_string
-) {
+) -> string {
     string uri{m_access_key_id + "/"};
     uri += scope;
     return fmt::format(

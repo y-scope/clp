@@ -15,7 +15,7 @@ namespace clp::aws {
  * @param size
  * @return The converted string
  */
-std::string convert_hash_to_string(std::span<unsigned char> input);
+auto convert_hash_to_string(std::span<unsigned char> input) -> std::string;
 
 /**
  * Gets the HMAC-SHA256 hash
@@ -24,17 +24,17 @@ std::string convert_hash_to_string(std::span<unsigned char> input);
  * @param hex_output Whether to output the hash as a hex string
  * @return The HMAC SHA256 hash
  */
-ErrorCode get_hmac_sha256_hash(
+auto get_hmac_sha256_hash(
         std::span<unsigned char const> key,
         std::span<unsigned char const> input,
         std::vector<unsigned char>& hash
-);
+) -> ErrorCode;
 
 /**
  * Gets the SHA256 hash
  * @param input
  * @return The SHA256 hash
  */
-ErrorCode get_sha256_hash(std::string_view, std::vector<unsigned char>& hash);
+auto get_sha256_hash(std::string_view, std::vector<unsigned char>& hash) -> ErrorCode;
 }  // namespace clp::aws
 #endif  // CLP_AWS_HASH_UTILS_HPP

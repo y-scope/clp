@@ -20,19 +20,19 @@ using std::string_view;
 using std::vector;
 
 namespace clp::aws {
-std::string convert_hash_to_string(span<unsigned char> input) {
-    std::string hex_string;
+auto convert_hash_to_string(span<unsigned char> input) -> string {
+    string hex_string;
     for (auto const c : input) {
         hex_string += fmt::format("{:02x}", c);
     }
     return hex_string;
 }
 
-ErrorCode get_hmac_sha256_hash(
+auto get_hmac_sha256_hash(
         span<unsigned char const> key,
         span<unsigned char const> input,
         vector<unsigned char>& hash
-) {
+) -> ErrorCode {
     hash.resize(SHA256_DIGEST_LENGTH);
     unsigned int hash_length{0};
 
@@ -68,7 +68,7 @@ ErrorCode get_hmac_sha256_hash(
  * @param input
  * @return The SHA256 hash
  */
-ErrorCode get_sha256_hash(string_view input, std::vector<unsigned char>& hash) {
+auto get_sha256_hash(string_view input, vector<unsigned char>& hash) -> ErrorCode {
     EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
 
     EVP_DigestInit_ex(mdctx, EVP_sha256(), nullptr);

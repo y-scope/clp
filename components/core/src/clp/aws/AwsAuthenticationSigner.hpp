@@ -2,6 +2,9 @@
 #define CLP_AWS_AWSAUTHENTICATIONSIGNER_HPP
 
 #include <chrono>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
@@ -61,8 +64,8 @@ public:
      * @param method HTTP method
      * @return The generated presigned URL
      */
-    [[nodiscard]] std::string
-    generate_presigned_url(S3Url& s3_url, HttpMethod method = HttpMethod::GET);
+    [[nodiscard]] auto
+    generate_presigned_url(S3Url& s3_url, HttpMethod method = HttpMethod::GET) -> std::string;
 
 private:
     /**
@@ -71,8 +74,10 @@ private:
      * @param timestamp_string
      * @return
      */
-    [[nodiscard]] std::string
-    get_canonical_query_string(std::string_view scope, std::string_view timestamp_string);
+    [[nodiscard]] auto get_canonical_query_string(
+            std::string_view scope,
+            std::string_view timestamp_string
+    ) -> std::string;
 
     /**
      * Gets the signature key
@@ -80,11 +85,11 @@ private:
      * @param date_string
      * @return
      */
-    [[nodiscard]] ErrorCode get_signing_key(
+    [[nodiscard]] auto get_signing_key(
             std::string_view region,
             std::string_view date_string,
             std::vector<unsigned char>& signing_key
-    );
+    ) -> ErrorCode;
 
     /**
      *
