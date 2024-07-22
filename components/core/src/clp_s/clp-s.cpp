@@ -245,6 +245,7 @@ int main(int argc, char const* argv[]) {
     }
 
     clp_s::TimestampPattern::init();
+    mongocxx::instance const mongocxx_instance{};
 
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
@@ -300,8 +301,6 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
     } else {
-        mongocxx::instance const mongocxx_instance{};
-
         auto const& query = command_line_arguments.get_query();
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);
