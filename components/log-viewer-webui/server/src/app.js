@@ -70,6 +70,12 @@ const app = async ({
             root: settings.ClientDir,
             decorateReply: false,
         });
+
+        await server.register(fastifyStatic, {
+            prefix: "/",
+            root: settings.YlvDir,
+            decorateReply: false,
+        });
     }
 
     await server.register(exampleRoutes);

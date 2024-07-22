@@ -26,3 +26,6 @@
 [submodule "components/core/submodules/outcome"]
 	path = components/core/submodules/outcome
 	url = https://github.com/ned14/outcome.git
+[submodule "components/log-viewer-webui/yscope-log-viewer"]
+    path = components/log-viewer-webui/yscope-log-viewer
+    url = git@github.com:y-scope/yscope-log-viewer.git
