@@ -112,15 +112,17 @@ FileCompressor::FileCompressor(
         CommandLineArguments::InputSource input_source,
         boost::uuids::random_generator& uuid_generator,
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser
-) : m_input_source(input_source), m_uuid_generator(uuid_generator), m_reader_parser(std::move(reader_parser))
-{
+)
+        : m_input_source(input_source),
+          m_uuid_generator(uuid_generator),
+          m_reader_parser(std::move(reader_parser)) {
     if (CommandLineArguments::InputSource::S3 == m_input_source) {
         if (ErrorCode_Success != NetworkReader::init()) {
             SPDLOG_ERROR("Failed to initialize streaming reader");
             throw std::runtime_error("Failed to initialize streaming reader");
         }
-        string const access_key_id {getenv("AWS_ACCESS_KEY_ID")};
-        string const secret_access_key {getenv("AWS_SECRET_ACCESS_KEY")};
+        string const access_key_id{getenv("AWS_ACCESS_KEY_ID")};
+        string const secret_access_key{getenv("AWS_SECRET_ACCESS_KEY")};
         if (access_key_id.empty()) {
             throw std::invalid_argument("AWS_ACCESS_KEY_ID environment variable is not set");
         }
@@ -131,7 +133,7 @@ FileCompressor::FileCompressor(
     }
 }
 
-FileCompressor::~FileCompressor () {
+FileCompressor::~FileCompressor() {
     if (CommandLineArguments::InputSource::S3 == m_input_source) {
         NetworkReader::deinit();
     }
@@ -149,32 +151,39 @@ bool FileCompressor::compress_file(
     std::string file_name;
     if (CommandLineArguments::InputSource::S3 == m_input_source) {
         aws::S3Url s3_url(file_to_compress.get_path());
-        file_name = s3_url.get_path().substr(1);
-
-        PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
         Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>(
         );
-        NetworkReader network_reader(m_aws_auth_signer.value().generate_presigned_url(s3_url));
-        parse_and_encode(
-                target_data_size_of_dicts,
-                archive_user_config,
-                target_encoded_file_size,
-                file_to_compress.get_path_for_compression(),
-                file_to_compress.get_group_id(),
-                archive_writer,
-                network_reader,
-                use_heuristic
-        );
+        string presigned_url;
+        if (auto error_code
+            = m_aws_auth_signer.value().generate_presigned_url(s3_url, presigned_url);
+            ErrorCode_Success != error_code)
+        {
+            SPDLOG_ERROR(
+                    "Failed to generate presigned url for {}, errno={}",
+                    s3_url.get_path(),
+                    error_code
+            );
+        }
+        NetworkReader network_reader(presigned_url);
+                parse_and_encode(
+                        target_data_size_of_dicts,
+                        archive_user_config,
+                        target_encoded_file_size,
+                        file_to_compress.get_path_for_compression(),
+                        file_to_compress.get_group_id(),
+                        archive_writer,
+                        network_reader,
+                        use_heuristic
+                );
     } else if (CommandLineArguments::InputSource::Filesystem == m_input_source) {
-        file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
-        PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
-        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>(
+        );
 
         m_file_reader.open(file_to_compress.get_path());
 
         // Check that file is UTF-8 encoded
         if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
-                ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
+            ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
         {
             if (ErrorCode_errno == error_code) {
                 SPDLOG_ERROR(
@@ -231,7 +240,7 @@ bool FileCompressor::compress_file(
     return succeeded;
 }
 
-auto FileCompressor::parse_and_encode (
+auto FileCompressor::parse_and_encode(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
         size_t target_encoded_file_size,
