@@ -365,6 +365,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
+            // We use xor to check that these arguments are either both specified or both
+            // unspecified.
             if (m_mongodb_uri.empty() ^ m_mongodb_collection.empty()) {
                 throw std::invalid_argument(
                         "mongodb-uri and mongodb-collection must both be non-empty"
