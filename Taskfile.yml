@@ -378,9 +378,9 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-client-node-modules.md5"
       LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE: >
+        {{.G_BUILD_DIR}}/log-viewer-webui-inner-client-node-modules.md5
       PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-package-node-modules.md5"
       SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-server-node-modules.md5"
-        {{.G_BUILD_DIR}}/log-viewer-webui-inner-client-node-modules.md5
 
       # Directories
       SRC_DIR: "{{.TASKFILE_DIR}}/components/log-viewer-webui"
