@@ -66,20 +66,26 @@ namespace {
 [[nodiscard]] auto get_string_to_sign(
         string_view scope,
         string_view timestamp_string,
-        string_view canonical_request
-) -> string {
+        string_view canonical_request,
+        string& string_to_sign
+) -> clp::ErrorCode {
     vector<unsigned char> signed_canonical_request;
-    auto error_code = clp::aws::get_sha256_hash(canonical_request, signed_canonical_request);
-    auto const signed_canonical_request_str = clp::aws::convert_hash_to_string(
+    if (auto error_code = clp::get_sha256_hash(canonical_request, signed_canonical_request);
+        clp::ErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
+    auto const signed_canonical_request_str = clp::convert_hash_to_hex_string(
             {signed_canonical_request.data(), signed_canonical_request.size()}
     );
-    return fmt::format(
+    string_to_sign = fmt::format(
             "{}\n{}\n{}\n{}",
             clp::aws::cAws4HmacSha256,
             timestamp_string,
             scope,
             signed_canonical_request_str
     );
+    return clp::ErrorCode_Success;
 }
 
 /**
@@ -212,15 +218,22 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     auto canonical_query_string = get_canonical_query_string(scope, timestamp_string);
 
     auto canonical_request = get_canonical_request(method, s3_url, canonical_query_string);
-    auto string_to_sign = get_string_to_sign(scope, timestamp_string, canonical_request);
+
+    string string_to_sign{};
+    if (auto error_code
+        = get_string_to_sign(scope, timestamp_string, canonical_request, string_to_sign);
+        ErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
 
     vector<unsigned char> signature{};
     if (auto error_code = get_signature(s3_region, date_string, string_to_sign, signature);
         ErrorCode_Success != error_code)
     {
-        throw std::runtime_error("Unexpected error");
+        return error_code;
     }
-    auto const signature_str = convert_hash_to_string({signature.data(), signature.size()});
+    auto const signature_str = convert_hash_to_hex_string({signature.data(), signature.size()});
 
     presigned_url = fmt::format(
             "https://{}{}?{}&{}={}",
@@ -247,10 +260,10 @@ auto AwsAuthenticationSigner::get_signature(
     }
 
     if (auto error_code = get_hmac_sha256_hash(
-                {size_checked_pointer_cast<unsigned char const>(signing_key.data()),
-                 signing_key.size()},
                 {size_checked_pointer_cast<unsigned char const>(string_to_sign.data()),
                  string_to_sign.size()},
+                {size_checked_pointer_cast<unsigned char const>(signing_key.data()),
+                 signing_key.size()},
                 signature
         );
         ErrorCode_Success != error_code)
@@ -272,9 +285,9 @@ auto AwsAuthenticationSigner::get_signing_key(
     vector<unsigned char> date_region_key{};
     vector<unsigned char> date_region_service_key{};
     if (auto error_code = get_hmac_sha256_hash(
-                {size_checked_pointer_cast<unsigned char const>(key.data()), key.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_string.data()),
                  date_string.size()},
+                {size_checked_pointer_cast<unsigned char const>(key.data()), key.size()},
                 date_key
         );
         error_code != ErrorCode_Success)
@@ -283,8 +296,8 @@ auto AwsAuthenticationSigner::get_signing_key(
     }
 
     if (auto error_code = get_hmac_sha256_hash(
-                {size_checked_pointer_cast<unsigned char const>(date_key.data()), date_key.size()},
                 {size_checked_pointer_cast<unsigned char const>(region.data()), region.size()},
+                {size_checked_pointer_cast<unsigned char const>(date_key.data()), date_key.size()},
                 date_region_key
         );
         error_code != ErrorCode_Success)
@@ -293,10 +306,10 @@ auto AwsAuthenticationSigner::get_signing_key(
     }
 
     if (auto error_code = get_hmac_sha256_hash(
-                {size_checked_pointer_cast<unsigned char const>(date_region_key.data()),
-                 date_region_key.size()},
                 {size_checked_pointer_cast<unsigned char const>(cS3Service.data()),
                  cS3Service.size()},
+                {size_checked_pointer_cast<unsigned char const>(date_region_key.data()),
+                 date_region_key.size()},
                 date_region_service_key
         );
         error_code != ErrorCode_Success)
@@ -305,10 +318,10 @@ auto AwsAuthenticationSigner::get_signing_key(
     }
 
     if (auto error_code = get_hmac_sha256_hash(
-                {size_checked_pointer_cast<unsigned char const>(date_region_service_key.data()),
-                 date_region_service_key.size()},
                 {size_checked_pointer_cast<unsigned char const>(cAws4Request.data()),
                  cAws4Request.size()},
+                {size_checked_pointer_cast<unsigned char const>(date_region_service_key.data()),
+                 date_region_service_key.size()},
                 signing_key
         );
         error_code != ErrorCode_Success)

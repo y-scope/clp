@@ -19,8 +19,8 @@ using std::string;
 using std::string_view;
 using std::vector;
 
-namespace clp::aws {
-auto convert_hash_to_string(span<unsigned char> input) -> string {
+namespace clp {
+auto convert_hash_to_hex_string(std::span<unsigned char> input) -> string {
     string hex_string;
     for (auto const c : input) {
         hex_string += fmt::format("{:02x}", c);
@@ -29,15 +29,15 @@ auto convert_hash_to_string(span<unsigned char> input) -> string {
 }
 
 auto get_hmac_sha256_hash(
-        span<unsigned char const> key,
         span<unsigned char const> input,
+        span<unsigned char const> key,
         vector<unsigned char>& hash
 ) -> ErrorCode {
     hash.resize(SHA256_DIGEST_LENGTH);
     unsigned int hash_length{0};
 
     if (key.size() > INT32_MAX) {
-        SPDLOG_ERROR("Key too long");
+        SPDLOG_ERROR("Input key exceeds maximum length");
         return ErrorCode_BadParam;
     }
     int const key_length{static_cast<int>(key.size())};
@@ -69,17 +69,26 @@ auto get_hmac_sha256_hash(
  * @return The SHA256 hash
  */
 auto get_sha256_hash(string_view input, vector<unsigned char>& hash) -> ErrorCode {
-    EVP_MD_CTX* mdctx = EVP_MD_CTX_new();
+    EvpCtxManager evp_ctx_manager{};
 
-    EVP_DigestInit_ex(mdctx, EVP_sha256(), nullptr);
+    if (1 != evp_ctx_manager.DigestInitEx(EVP_sha256(), nullptr)) {
+        SPDLOG_ERROR("Failed to initialize ctx manager");
+        return ErrorCode_Failure;
+    }
 
-    EVP_DigestUpdate(mdctx, input.data(), input.size());
+    if (1 != evp_ctx_manager.DigestUpdate(input.data(), input.size())) {
+        SPDLOG_ERROR("Failed to digest input");
+        return ErrorCode_Failure;
+    }
 
     unsigned int digest_len{0};
     hash.resize(SHA256_DIGEST_LENGTH);
-    EVP_DigestFinal_ex(mdctx, hash.data(), &digest_len);
-    EVP_MD_CTX_free(mdctx);
+
+    if (1 != evp_ctx_manager.DigestFinalEx(hash.data(), &digest_len)) {
+        SPDLOG_ERROR("Failed to Finalize digest");
+        return ErrorCode_Failure;
+    }
 
     return ErrorCode_Success;
 }
-}  // namespace clp::aws
+}  // namespace clp
