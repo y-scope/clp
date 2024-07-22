@@ -79,9 +79,9 @@ const SearchResultsTable = ({
     };
 
     const handleSearchResultClick = (ev) => {
-        const {orig_file_id: origFileId, log_event_ix:logEventIx} = ev.currentTarget.dataset;
-        window.open(Meteor.settings.public.LogViewerWebuiClientUrl +
-            `?origFileId=${origFileId}&logEventIx=${logEventIx}`);
+        const {orig_file_id: origFileId, log_event_ix: logEventIx} = ev.currentTarget.dataset;
+        window.open(`${Meteor.settings.public.LogViewerWebuiClientUrl
+        }?origFileId=${origFileId}&logEventIx=${logEventIx}`);
     };
 
     useEffect(() => {
@@ -98,7 +98,7 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
-    const rows =  searchResults.map((result)=> {
+    const rows = searchResults.map((result) => {
         return (
             <tr key={result._id}>
                 <td className={"search-results-content search-results-timestamp"}>
@@ -108,13 +108,15 @@ const SearchResultsTable = ({
                 </td>
                 <td>
                     <a
-                        title={"Go to the log context"}
                         className={"search-results-content-clickable"}
-                        data-orig_file_id={result.orig_file_id}
                         data-log_event_ix={result.log_event_ix}
-                        onClick={handleSearchResultClick}>
+                        data-orig_file_id={result.orig_file_id}
+                        title={"Go to the log context"}
+                        onClick={handleSearchResultClick}
+                    >
                         <pre
-                            className={"search-results-content search-results-message"}>
+                            className={"search-results-content search-results-message"}
+                        >
                             {result.message}
                         </pre>
                     </a>
@@ -132,11 +134,11 @@ const SearchResultsTable = ({
                 striped={true}
             >
                 <thead>
-                <tr>
-                    <th
-                        className={"search-results-th search-results-th-sortable"}
-                        data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                        key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                    <tr>
+                        <th
+                            className={"search-results-th search-results-th-sortable"}
+                            data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
+                            key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>
