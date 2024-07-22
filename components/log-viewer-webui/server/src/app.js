@@ -73,7 +73,7 @@ const app = async ({
 
         await server.register(fastifyStatic, {
             prefix: "/",
-            root: settings.YlvDir,
+            root: settings.LogViewerDir,
             decorateReply: false,
         });
     }

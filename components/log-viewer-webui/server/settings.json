@@ -10,5 +10,5 @@
 
     "ClientDir": "../client/dist",
     "IrFilesDir": "../../../build/clp-package/var/data/ir",
-    "YlvDir": "../yscope-log-viewer/dist"
+    "LogViewerDir": "../yscope-log-viewer/dist"
 }

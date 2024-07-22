@@ -234,11 +234,6 @@ tasks:
         cd client
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
         --output-path "{{.OUTPUT_DIR}}/client"
-      - |-
-        cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm i && \
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --output-path "{{.OUTPUT_DIR}}/yscope-log-viewer"
       - task: "utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
@@ -382,9 +377,9 @@ tasks:
       # Checksum files
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-client-node-modules.md5"
+      LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE: >
       PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-package-node-modules.md5"
       SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-server-node-modules.md5"
-      LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE: >
         {{.G_BUILD_DIR}}/log-viewer-webui-inner-client-node-modules.md5
 
       # Directories
@@ -408,9 +403,9 @@ tasks:
     generates:
       - "{{.CHECKSUM_FILE}}"
       - "{{.CLIENT_CHECKSUM_FILE}}"
+      - "{{.LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE}}"
       - "{{.PACKAGE_CHECKSUM_FILE}}"
       - "{{.SERVER_CHECKSUM_FILE}}"
-      - "{{.LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE}}"
     deps:
       - "nodejs-22"
       - task: "utils:validate-checksum"
@@ -433,6 +428,10 @@ tasks:
       - "rm -f {{.CHECKSUM_FILE}}"
       - task: "clean-log-viewer-webui"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
+      - |-
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm i && \
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
+        --output-path "{{.OUTPUT_DIR}}/yscope-log-viewer"
       # These commands must be last
       - task: "utils:compute-checksum"
         vars:
