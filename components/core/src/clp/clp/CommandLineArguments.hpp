@@ -19,11 +19,6 @@ public:
         ExtractIr = 'i'
     };
 
-    enum class InputSource : uint8_t {
-        Filesystem,
-        S3
-    };
-
     // Constructors
     explicit CommandLineArguments(std::string const& program_name)
             : CommandLineArgumentsBase(program_name),
@@ -72,8 +67,6 @@ public:
 
     std::string const& get_archives_dir() const { return m_archives_dir; }
 
-    InputSource get_input_source() const { return m_input_source; }
-
     std::vector<std::string> const& get_input_paths() const { return m_input_paths; }
 
     std::string const& get_orig_file_id() const { return m_orig_file_id; }
@@ -109,7 +102,6 @@ private:
     int m_compression_level;
     Command m_command;
     std::string m_archives_dir;
-    InputSource m_input_source;
     std::vector<std::string> m_input_paths;
     GlobalMetadataDBConfig m_metadata_db_config;
 };

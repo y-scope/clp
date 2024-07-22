@@ -332,14 +332,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             // boost::program_options doesn't support boolean flags which can be set to false, so
             // we use a string argument to set the flag manually.
             string sort_input_files_str = "true";
-            string input_source_str = "filesystem";
             options_compression.add_options()(
-                    "input-source",
-                    po::value<string>(&input_source_str)
-                            ->value_name("SOURCE")
-                            ->default_value(input_source_str),
-                    "Source of input paths. 'filesystem' or 's3'."
-            )(
                     "remove-path-prefix",
                     po::value<string>(&m_path_prefix_to_remove)
                             ->value_name("DIR")
@@ -425,14 +418,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                 visible_options.add(options_compression);
                 cerr << visible_options << endl;
                 return ParsingResult::InfoCommand;
-            }
-
-            if ("filesystem" == input_source_str) {
-                m_input_source = InputSource::Filesystem;
-            } else if ("s3" == input_source_str) {
-                m_input_source = InputSource::S3;
-            } else {
-                throw invalid_argument("Invalid input source specified.");
             }
 
             // Validate at least one input path should exist (we validate that the file isn't empty

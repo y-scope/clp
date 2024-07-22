@@ -108,37 +108,6 @@ static void write_message_to_encoded_file(
 }
 
 namespace clp::clp {
-FileCompressor::FileCompressor(
-        CommandLineArguments::InputSource input_source,
-        boost::uuids::random_generator& uuid_generator,
-        std::unique_ptr<log_surgeon::ReaderParser> reader_parser
-)
-        : m_input_source(input_source),
-          m_uuid_generator(uuid_generator),
-          m_reader_parser(std::move(reader_parser)) {
-    if (CommandLineArguments::InputSource::S3 == m_input_source) {
-        if (ErrorCode_Success != NetworkReader::init()) {
-            SPDLOG_ERROR("Failed to initialize streaming reader");
-            throw std::runtime_error("Failed to initialize streaming reader");
-        }
-        string const access_key_id{getenv("AWS_ACCESS_KEY_ID")};
-        string const secret_access_key{getenv("AWS_SECRET_ACCESS_KEY")};
-        if (access_key_id.empty()) {
-            throw std::invalid_argument("AWS_ACCESS_KEY_ID environment variable is not set");
-        }
-        if (secret_access_key.empty()) {
-            throw std::invalid_argument("AWS_SECRET_ACCESS_KEY environment variable is not set");
-        }
-        m_aws_auth_signer.emplace(access_key_id, secret_access_key);
-    }
-}
-
-FileCompressor::~FileCompressor() {
-    if (CommandLineArguments::InputSource::S3 == m_input_source) {
-        NetworkReader::deinit();
-    }
-}
-
 bool FileCompressor::compress_file(
         size_t target_data_size_of_dicts,
         streaming_archive::writer::Archive::UserConfig& archive_user_config,
@@ -147,130 +116,81 @@ bool FileCompressor::compress_file(
         streaming_archive::writer::Archive& archive_writer,
         bool use_heuristic
 ) {
-    bool succeeded = true;
-    std::string file_name;
-    if (CommandLineArguments::InputSource::S3 == m_input_source) {
-        aws::S3Url s3_url(file_to_compress.get_path());
-        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>(
-        );
-        string presigned_url;
-        if (auto error_code
-            = m_aws_auth_signer.value().generate_presigned_url(s3_url, presigned_url);
-            ErrorCode_Success != error_code)
-        {
+    std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
+
+    PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
+    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+
+    m_file_reader.open(file_to_compress.get_path());
+
+    // Check that file is UTF-8 encoded
+    if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
+        ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
+    {
+        if (ErrorCode_errno == error_code) {
             SPDLOG_ERROR(
-                    "Failed to generate presigned url for {}, errno={}",
-                    s3_url.get_path(),
+                    "Failed to read {} into buffer, errno={}",
+                    file_to_compress.get_path(),
+                    errno
+            );
+        } else {
+            SPDLOG_ERROR(
+                    "Failed to read {} into buffer, error={}",
+                    file_to_compress.get_path(),
                     error_code
             );
         }
-        NetworkReader network_reader(presigned_url);
-                parse_and_encode(
-                        target_data_size_of_dicts,
-                        archive_user_config,
-                        target_encoded_file_size,
-                        file_to_compress.get_path_for_compression(),
-                        file_to_compress.get_group_id(),
-                        archive_writer,
-                        network_reader,
-                        use_heuristic
-                );
-    } else if (CommandLineArguments::InputSource::Filesystem == m_input_source) {
-        Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>(
-        );
-
-        m_file_reader.open(file_to_compress.get_path());
-
-        // Check that file is UTF-8 encoded
-        if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
-            ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
-        {
-            if (ErrorCode_errno == error_code) {
-                SPDLOG_ERROR(
-                        "Failed to read {} into buffer, errno={}",
-                        file_to_compress.get_path(),
-                        errno
-                );
-            } else {
-                SPDLOG_ERROR(
-                        "Failed to read {} into buffer, error={}",
-                        file_to_compress.get_path(),
-                        error_code
-                );
-            }
-            return false;
-        }
-        char const* utf8_validation_buf{nullptr};
-        size_t peek_size{0};
-        m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
-        auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
-        if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
-            parse_and_encode(
+        return false;
+    }
+    char const* utf8_validation_buf{nullptr};
+    size_t peek_size{0};
+    m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
+    bool succeeded = true;
+    auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
+    if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
+        if (use_heuristic) {
+            parse_and_encode_with_heuristic(
                     target_data_size_of_dicts,
                     archive_user_config,
                     target_encoded_file_size,
                     file_to_compress.get_path_for_compression(),
                     file_to_compress.get_group_id(),
                     archive_writer,
-                    m_file_reader,
-                    use_heuristic
+                    m_file_reader
             );
         } else {
-            if (false
-                == try_compressing_as_archive(
-                        target_data_size_of_dicts,
-                        archive_user_config,
-                        target_encoded_file_size,
-                        file_to_compress,
-                        archive_writer,
-                        use_heuristic
-                ))
-            {
-                succeeded = false;
-            }
+            parse_and_encode_with_library(
+                    target_data_size_of_dicts,
+                    archive_user_config,
+                    target_encoded_file_size,
+                    file_to_compress.get_path_for_compression(),
+                    file_to_compress.get_group_id(),
+                    archive_writer,
+                    m_file_reader
+            );
         }
-
-        m_file_reader.close();
+    } else {
+        if (false
+            == try_compressing_as_archive(
+                    target_data_size_of_dicts,
+                    archive_user_config,
+                    target_encoded_file_size,
+                    file_to_compress,
+                    archive_writer,
+                    use_heuristic
+            ))
+        {
+            succeeded = false;
+        }
     }
+
+    m_file_reader.close();
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
     PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
 
     return succeeded;
-}
-
-auto FileCompressor::parse_and_encode(
-        size_t target_data_size_of_dicts,
-        streaming_archive::writer::Archive::UserConfig& archive_user_config,
-        size_t target_encoded_file_size,
-        string const& path_for_compression,
-        group_id_t group_id,
-        streaming_archive::writer::Archive& archive_writer,
-        ReaderInterface& reader,
-        bool use_heuristic
-) -> void {
-    if (use_heuristic) {
-        parse_and_encode_with_heuristic(
-                target_data_size_of_dicts,
-                archive_user_config,
-                target_encoded_file_size,
-                path_for_compression,
-                group_id,
-                archive_writer,
-                reader
-        );
-    } else {
-        parse_and_encode_with_library(
-                target_data_size_of_dicts,
-                archive_user_config,
-                target_encoded_file_size,
-                path_for_compression,
-                group_id,
-                archive_writer,
-                reader
-        );
-    }
 }
 
 void FileCompressor::parse_and_encode_with_library(
@@ -443,16 +363,27 @@ bool FileCompressor::try_compressing_as_archive(
         auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
         if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
             auto boost_path_for_compression = parent_boost_path / file_path;
-            parse_and_encode(
-                    target_data_size_of_dicts,
-                    archive_user_config,
-                    target_encoded_file_size,
-                    boost_path_for_compression.string(),
-                    file_to_compress.get_group_id(),
-                    archive_writer,
-                    m_libarchive_file_reader,
-                    use_heuristic
-            );
+            if (use_heuristic) {
+                parse_and_encode_with_heuristic(
+                        target_data_size_of_dicts,
+                        archive_user_config,
+                        target_encoded_file_size,
+                        boost_path_for_compression.string(),
+                        file_to_compress.get_group_id(),
+                        archive_writer,
+                        m_libarchive_file_reader
+                );
+            } else {
+                parse_and_encode_with_library(
+                        target_data_size_of_dicts,
+                        archive_user_config,
+                        target_encoded_file_size,
+                        boost_path_for_compression.string(),
+                        file_to_compress.get_group_id(),
+                        archive_writer,
+                        m_libarchive_file_reader
+                );
+            }
         } else if (has_ir_stream_magic_number({utf8_validation_buf, peek_size})) {
             // Remove .clp suffix if found
             static constexpr char cIrStreamExtension[] = ".clp";

@@ -117,11 +117,7 @@ bool compress(
     archive_writer.add_empty_directories(empty_directory_paths);
 
     bool all_files_compressed_successfully = true;
-    FileCompressor file_compressor(
-            command_line_args.get_input_source(),
-            uuid_generator,
-            std::move(reader_parser)
-    );
+    FileCompressor file_compressor(uuid_generator, std::move(reader_parser));
     auto target_data_size_of_dictionaries
             = command_line_args.get_target_data_size_of_dictionaries();
 
@@ -131,9 +127,7 @@ bool compress(
     if (command_line_args.show_progress()) {
         num_files_to_compress = files_to_compress.size() + grouped_files_to_compress.size();
     }
-    if (CommandLineArguments::InputSource::Filesystem == command_line_args.get_input_source()
-        && command_line_args.sort_input_files())
-    {
+    if (command_line_args.sort_input_files()) {
         sort(files_to_compress.begin(), files_to_compress.end(), file_gt_last_write_time_comparator
         );
     }
