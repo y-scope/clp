@@ -98,33 +98,6 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
-    const rows = searchResults.map((result) => {
-        return (
-            <tr key={result._id}>
-                <td className={"search-results-content search-results-timestamp"}>
-                    {result.timestamp ?
-                        dayjs.utc(result.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
-                        "N/A"}
-                </td>
-                <td>
-                    <a
-                        className={"search-results-content-clickable"}
-                        data-log_event_ix={result.log_event_ix}
-                        data-orig_file_id={result.orig_file_id}
-                        title={"Go to the log context"}
-                        onClick={handleSearchResultClick}
-                    >
-                        <pre
-                            className={"search-results-content search-results-message"}
-                        >
-                            {result.message}
-                        </pre>
-                    </a>
-                </td>
-            </tr>
-        );
-    });
-
     return (
         <div className={"search-results-container"}>
             <Table
@@ -158,7 +131,30 @@ const SearchResultsTable = ({
                     </tr>
                 </thead>
                 <tbody>
-                    {rows}
+                    {searchResults.map((result) => (
+                        <tr key={result._id}>
+                            <td className={"search-results-content search-results-timestamp"}>
+                                {result.timestamp ?
+                                    dayjs.utc(result.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
+                                    "N/A"}
+                            </td>
+                            <td>
+                                <a
+                                    className={"search-results-content-clickable"}
+                                    data-log_event_ix={result.log_event_ix}
+                                    data-orig_file_id={result.orig_file_id}
+                                    title={"Go to the log context"}
+                                    onClick={handleSearchResultClick}
+                                >
+                                    <pre
+                                        className={"search-results-content search-results-message"}
+                                    >
+                                        {result.message}
+                                    </pre>
+                                </a>
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </Table>
             <SearchResultsLoadSensor
