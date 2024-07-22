@@ -429,6 +429,7 @@ tasks:
       - task: "clean-log-viewer-webui"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       - |-
+        cd yscope-log-viewer
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm i && \
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
         --output-path "{{.OUTPUT_DIR}}/yscope-log-viewer"
