@@ -16,7 +16,7 @@ using std::vector;
 
 namespace {
 /**
- * Gets the timestamp string
+ * Gets the timestamp string specified by AWS Signature Version 4 format
  * @param timestamp
  * @return The timestamp string
  */
@@ -26,7 +26,7 @@ namespace {
 }
 
 /**
- * Gets the date string
+ * Gets the date string specified by AWS Signature Version 4 format
  * @param timestamp
  * @return The date string
  */
@@ -57,11 +57,13 @@ namespace {
 }
 
 /**
- * Gets the string to sign
+ * Gets the string to sign specified by AWS Signature Version 4 format
  * @param scope
  * @param timestamp_string
  * @param canonical_request
- * @return String to sign
+ * @param string_to_sign Returns the string to sign
+ * @return clp::ErrorCode_Success on success
+ * On failure, same as clp::get_sha256_hash
  */
 [[nodiscard]] auto get_string_to_sign(
         string_view scope,
@@ -89,15 +91,15 @@ namespace {
 }
 
 /**
- * Gets the encoded URI
- * @param value
+ * Encode the uri as specified by AWS Signature Version 4's UriEncode()
+ * @param uri
  * @param encode_slash
  * @return The encoded URI
  */
-[[nodiscard]] auto encode_uri(string_view value, bool encode_slash = true) -> string {
+[[nodiscard]] auto encode_uri(string_view uri, bool encode_slash = true) -> string {
     string encoded_uri;
 
-    for (auto const c : value) {
+    for (auto const c : uri) {
         if ((std::isalnum(c) != 0) || c == '-' || c == '_' || c == '.' || c == '~') {
             encoded_uri += c;
         } else if (c == '/' && false == encode_slash) {
@@ -111,10 +113,10 @@ namespace {
 }
 
 /**
- * Gets the scope
+ * Gets the scope specified by AWS Signature Version 4 format
  * @param date_string
  * @param region
- * @return The scope
+ * @return The scope as a string
  */
 [[nodiscard]] auto get_scope(string_view date_string, string_view region) -> string {
     return fmt::format(
@@ -183,7 +185,8 @@ S3Url::S3Url(string const& url) {
 }
 
 S3Url::S3Url(string const& s3_uri, string_view region) : m_region{region} {
-    // Regular expression to match S3 URI format. But it does not include region.
+    // Regular expression to match S3 URI format.
+    // Note it does not include region.
     std::regex const s3_uri_regex(R"(s3://([a-z0-9.-]+)(/[^?]+).*)");
 
     std::smatch match;
@@ -215,7 +218,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     auto const timestamp_string = get_timestamp_string(now);
 
     auto scope = get_scope(date_string, s3_region);
-    auto canonical_query_string = get_canonical_query_string(scope, timestamp_string);
+    auto canonical_query_string = generate_canonical_query_string(scope, timestamp_string);
 
     auto canonical_request = get_canonical_request(method, s3_url, canonical_query_string);
 
@@ -332,7 +335,7 @@ auto AwsAuthenticationSigner::get_signing_key(
     return ErrorCode_Success;
 }
 
-auto AwsAuthenticationSigner::get_canonical_query_string(
+auto AwsAuthenticationSigner::generate_canonical_query_string(
         string_view scope,
         string_view timestamp_string
 ) -> string {
