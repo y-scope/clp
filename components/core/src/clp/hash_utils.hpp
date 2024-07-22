@@ -15,7 +15,7 @@
 namespace clp {
 /**
  * A class the wraps around openssl EVP_MD_CTX to manage the life cycle of
- * dynamically allocated memory.
+ * dynamically allocated EVP_MD_CTX object.
  */
 class EvpCtxManager {
 public:
@@ -32,29 +32,31 @@ public:
         }
     };
 
-    /**
-     * Constructor
-     * @throw EvpCtxManager::OperationFailed if a new evp_md_ctx can not be created
-     */
+    // Constructors
     EvpCtxManager() : m_md_ctx{EVP_MD_CTX_new()} {
         if (nullptr == m_md_ctx) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
     }
 
-    auto DigestInitEx(const EVP_MD* type, ENGINE* impl) -> int {
+    // Disable copy and move constructor/assignment
+    EvpCtxManager(EvpCtxManager const&) = delete;
+    auto operator=(EvpCtxManager const&) -> EvpCtxManager& = delete;
+
+    // Destructor
+    ~EvpCtxManager() { EVP_MD_CTX_free(m_md_ctx); }
+
+    auto digest_init_ex(const EVP_MD* type, ENGINE* impl) -> int {
         return EVP_DigestInit_ex(m_md_ctx, type, impl);
     }
 
-    auto DigestUpdate(void const* d, size_t cnt) -> int {
+    auto digest_update(void const* d, size_t cnt) -> int {
         return EVP_DigestUpdate(m_md_ctx, d, cnt);
     }
 
-    auto DigestFinalEx(unsigned char* md, unsigned int* s) -> int {
+    auto digest_final_ex(unsigned char* md, unsigned int* s) -> int {
         return EVP_DigestFinal_ex(m_md_ctx, md, s);
     }
-
-    ~EvpCtxManager() { EVP_MD_CTX_free(m_md_ctx); }
 
 private:
     EVP_MD_CTX* m_md_ctx{nullptr};

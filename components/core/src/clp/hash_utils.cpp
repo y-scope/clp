@@ -71,12 +71,12 @@ auto get_hmac_sha256_hash(
 auto get_sha256_hash(string_view input, vector<unsigned char>& hash) -> ErrorCode {
     EvpCtxManager evp_ctx_manager{};
 
-    if (1 != evp_ctx_manager.DigestInitEx(EVP_sha256(), nullptr)) {
+    if (1 != evp_ctx_manager.digest_init_ex(EVP_sha256(), nullptr)) {
         SPDLOG_ERROR("Failed to initialize ctx manager");
         return ErrorCode_Failure;
     }
 
-    if (1 != evp_ctx_manager.DigestUpdate(input.data(), input.size())) {
+    if (1 != evp_ctx_manager.digest_update(input.data(), input.size())) {
         SPDLOG_ERROR("Failed to digest input");
         return ErrorCode_Failure;
     }
@@ -84,7 +84,7 @@ auto get_sha256_hash(string_view input, vector<unsigned char>& hash) -> ErrorCod
     unsigned int digest_len{0};
     hash.resize(SHA256_DIGEST_LENGTH);
 
-    if (1 != evp_ctx_manager.DigestFinalEx(hash.data(), &digest_len)) {
+    if (1 != evp_ctx_manager.digest_final_ex(hash.data(), &digest_len)) {
         SPDLOG_ERROR("Failed to Finalize digest");
         return ErrorCode_Failure;
     }
