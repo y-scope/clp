@@ -40,6 +40,16 @@ const app = async ({
             root: irFilesDir,
         });
 
+        let logViewerDir = settings.LogViewerDir;
+        if (false === path.isAbsolute(logViewerDir)) {
+            logViewerDir = path.resolve(parentDirname, logViewerDir);
+        }
+        await server.register(fastifyStatic, {
+            prefix: "/log-viewer",
+            root: logViewerDir,
+            decorateReply: false,
+        });
+
         await server.register(DbManager, {
             mysqlConfig: {
                 database: settings.SqlDbName,
@@ -68,12 +78,6 @@ const app = async ({
         await server.register(fastifyStatic, {
             prefix: "/",
             root: settings.ClientDir,
-            decorateReply: false,
-        });
-
-        await server.register(fastifyStatic, {
-            prefix: "/",
-            root: settings.LogViewerDir,
             decorateReply: false,
         });
     }
