@@ -25,7 +25,6 @@ TEST_CASE("regex_to_wildcard_unescaped_metachar", "[regex_utils][re2wc][unescape
     REQUIRE((regex_to_wildcard(". xyz $.* zyx .").error() == ErrorCode::IllegalDollarSign));
 }
 
-
 TEST_CASE("regex_to_wildcard_escaped_metachar", "[regex_utils][re2wc][escaped_metachar]") {
     // Escape backslash is superfluous for the following set of characters
     REQUIRE((regex_to_wildcard("<>-_/=!").value() == "<>-_/=!"));
