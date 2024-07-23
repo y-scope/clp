@@ -8,6 +8,8 @@ import {
     Typography,
 } from "@mui/joy";
 
+import "./Loading.css";
+
 
 /**
  * Descriptions for query states.
@@ -115,27 +117,19 @@ const Loading = ({currentState, errorMsg}) => {
 
     return (
         <>
-            <Sheet
-                style={{
-                    alignItems: "center",
-                    display: "flex",
-                    flexDirection: "column",
-                    height: "100%",
-                    justifyContent: "center",
-                }}
-            >
-                <Box style={{width: "100%"}}>
+            <Sheet className={"loading-sheet"}>
+                <Box className={"loading-progress-container"}>
                     <LinearProgress
                         determinate={null !== errorMsg}
                         color={null === errorMsg ?
                             "primary" :
                             "danger"}/>
                 </Box>
-                <Box style={{flexGrow: 1, display: "flex", alignItems: "center"}}>
+                <Box className={"loading-stepper-container"}>
                     <Stepper
+                        className={"loading-stepper"}
                         orientation={"vertical"}
                         size={"lg"}
-                        sx={{"--Stepper-verticalGap": "2rem"}}
                     >
                         {steps}
                     </Stepper>
