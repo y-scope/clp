@@ -209,6 +209,7 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
+add_subdirectory(src/clp/error_handling)
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
@@ -460,6 +461,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-error_handling.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
         tests/test-ir_encoding_methods.cpp
