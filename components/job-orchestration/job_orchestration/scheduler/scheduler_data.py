@@ -59,6 +59,7 @@ class QueryJob(BaseModel, ABC):
 
 class ExtractIrJob(QueryJob):
     extract_ir_config: ExtractIrJobConfig
+    file_split_id: str
     archive_id: str
 
     def get_type(self) -> QueryJobType:
