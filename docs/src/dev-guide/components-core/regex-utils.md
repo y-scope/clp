@@ -63,11 +63,13 @@ For a detailed description on the options order and usage, see the
   * Turn `.+` into `?*`
   * E.g. `abc.*def.ghi.+` will get translated to `abc*def?ghi?*`
 * Metacharacter escape sequences
-  * Append the escaped metacharacters literally to the wildcard output string.
-    * The list of characters that require escaping is `[\/^$.|?*+(){}`.
-    * The list of characters that are optional to escape is `],<>-_=!`. Escaping them will not have
-      any effect (the escape backslash is ignored). This list may be expanded in the future.
+  * An escaped regex metacharacter is treated as a literal and appended to the wildcard output.
+    * The list of characters that require escaping to have their special meanings suppressed is
+      `[\/^$.|?*+(){}`.
+    * Superfluous escape characters are ignored for the following characters: `],<>-_=!`.
     * E.g. `a\[\+b\-\_c-_d` will get translated to `a[+b-_c-_d`
+    * Note: generally, any non-alphanumeric character can be escaped to use it as a literal. The
+      list this utils library supports is non-exhaustive and can be expanded when necessary.
   * For metacharacters shared by both syntaxes, keep the escape backslashes.
     * The list of characters that fall into this category is `*?\`. All wildcard metacharacters are
       also regex metacharacters.

@@ -94,10 +94,11 @@ using StateTransitionFuncSig
 [[nodiscard]] StateTransitionFuncSig dot_state_transition;
 
 /**
- * Appends regex metacharacters literally to the wildcard string.
+ * Appends an escaped regex metacharacter as a literal character to the wildcard string by
+ * discarding its preceding backslash.
  *
- * These metacharacters are escaped by backslashes, so they have their special meanings suppressed.
- * For metacharacters shared by the regex and the wildcard syntax, keep the escape backslashes.
+ * The preceding backslash must be kept for characters that also have special meanings in the
+ * wildcard syntax, e.g. `abc.\*xyz` should be translated into `abc?\*xyz` instead of `abc?*xyz`.
  */
 [[nodiscard]] StateTransitionFuncSig escaped_state_transition;
 
@@ -178,10 +179,10 @@ auto escaped_state_transition(
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
     auto const ch{*it};
-    if (!cRegexEscapeSeqMetaChars.at(ch)) {
+    if (false == cRegexEscapeSeqMetaCharsLUT.at(ch)) {
         return ErrorCode::IllegalEscapeSequence;
     }
-    if (cWildcardMetaChars.at(ch)) {
+    if (cWildcardMetaCharsLUT.at(ch)) {
         wildcard_str = wildcard_str + cEscapeChar + ch;
     } else {
         wildcard_str += ch;

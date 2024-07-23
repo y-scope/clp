@@ -8,37 +8,42 @@ using clp::regex_utils::ErrorCode;
 using clp::regex_utils::regex_to_wildcard;
 using clp::regex_utils::RegexToWildcardTranslatorConfig;
 
-TEST_CASE("regex_to_wildcard", "[regex_utils][regex_to_wildcard]") {
-    // Test empty string
+TEST_CASE("regex_to_wildcard_simple_translations", "[regex_utils][re2wc][simple_translations]") {
     REQUIRE(regex_to_wildcard("").value().empty());
 
-    // Test simple wildcard translations
     REQUIRE((regex_to_wildcard("xyz").value() == "xyz"));
     REQUIRE((regex_to_wildcard(". xyz .* zyx .").value() == "? xyz * zyx ?"));
     REQUIRE((regex_to_wildcard(". xyz .+ zyx .*").value() == "? xyz ?* zyx *"));
+}
 
-    // Test unescaped meta characters
+TEST_CASE("regex_to_wildcard_unescaped_metachar", "[regex_utils][re2wc][unescaped_metachar]") {
     REQUIRE((regex_to_wildcard(".? xyz .* zyx .").error() == ErrorCode::UnsupportedQuestionMark));
     REQUIRE((regex_to_wildcard(". xyz .** zyx .").error() == ErrorCode::UntranslatableStar));
     REQUIRE((regex_to_wildcard(". xyz .*+ zyx .").error() == ErrorCode::UntranslatablePlus));
     REQUIRE((regex_to_wildcard(". xyz |.* zyx .").error() == ErrorCode::UnsupportedPipe));
     REQUIRE((regex_to_wildcard(". xyz ^.* zyx .").error() == ErrorCode::IllegalCaret));
+    REQUIRE((regex_to_wildcard(". xyz $.* zyx .").error() == ErrorCode::IllegalDollarSign));
+}
 
-    // Test escaped meta characters
+
+TEST_CASE("regex_to_wildcard_escaped_metachar", "[regex_utils][re2wc][escaped_metachar]") {
+    // Escape backslash is superfluous for the following set of characters
     REQUIRE((regex_to_wildcard("<>-_/=!").value() == "<>-_/=!"));
     REQUIRE((regex_to_wildcard("\\<\\>\\-\\_\\/\\=\\!").value() == "<>-_/=!"));
+    // Test the full escape sequences set
     REQUIRE(
             (regex_to_wildcard("\\*\\+\\?\\|\\^\\$\\.\\{\\}\\[\\]\\(\\)\\<\\>\\-\\_\\/\\=\\!\\\\")
                      .value()
              == "\\*+\\?|^$.{}[]()<>-_/=!\\\\")
     );
+    // Test unsupported escape sequences
     REQUIRE(
             (regex_to_wildcard("abc\\Qdefghi\\Ejkl").error()
              == clp::regex_utils::ErrorCode::IllegalEscapeSequence)
     );
 }
 
-TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][regex_to_wildcard][anchor_config]") {
+TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][re2wc][anchor_config]") {
     // Test anchors and prefix/suffix wildcards
     RegexToWildcardTranslatorConfig const config{false, true};
     REQUIRE(((regex_to_wildcard("^", config).value() == "*")));
