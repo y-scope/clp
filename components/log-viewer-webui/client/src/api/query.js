@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, {AxiosError} from "axios";
 
 
 /**
@@ -26,14 +26,25 @@ const QUERY_LOAD_STATE = Object.freeze({
  * @param {Function} onErrorMsg Callback to set error message.
  */
 const submitExtractIrJob = async (origFileId, logEventIx, onQueryStateChange, onErrorMsg) => {
-    const {data} = await axios.post("/query/extract-ir", {
-        msg_ix: logEventIx,
-        orig_file_id: origFileId,
-    });
+    try {
+        const {data} = await axios.post("/query/extract-ir", {
+            msg_ix: logEventIx,
+            orig_file_id: origFileId,
+        });
 
-    onQueryStateChange(QUERY_LOAD_STATE.LOADING);
+        onQueryStateChange(QUERY_LOAD_STATE.LOADING);
 
-    window.location = `/log-viewer/index.html?filePath=/ir/${data.path}`;
+        window.location = `/log-viewer/index.html?filePath=/ir/${data.path}`;
+    } catch (e) {
+        let errorMsg = "Unknown error.";
+        if (e instanceof AxiosError) {
+            errorMsg = e.message;
+            if ("undefined" !== typeof e.response) {
+                errorMsg = e.response.data.message ?? e.response.statusText;
+            }
+        }
+        onErrorMsg(errorMsg);
+    }
 };
 
 export {
