@@ -34,7 +34,9 @@ const submitExtractIrJob = async (origFileId, logEventIx, onQueryStateChange, on
 
         onQueryStateChange(QUERY_LOAD_STATE.LOADING);
 
-        window.location = `/log-viewer/index.html?filePath=/ir/${data.path}`;
+        const innerLogEventIx = logEventIx - data.begin_msg_ix + 1;
+        window.location = `/log-viewer/index.html?filePath=/ir/${data.path}` +
+            `#logEventIdx=${innerLogEventIx}`;
     } catch (e) {
         let errorMsg = "Unknown error.";
         if (e instanceof AxiosError) {
