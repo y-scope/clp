@@ -37,17 +37,13 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     }
 }
 
-void SchemaReader::load(ZstdDecompressor& decompressor, size_t uncompressed_size) {
-    if (uncompressed_size > m_table_buffer_size) {
-        m_table_buffer = std::make_unique<char[]>(uncompressed_size);
-        m_table_buffer_size = uncompressed_size;
-    }
-    auto error = decompressor.try_read_exact_length(m_table_buffer.get(), uncompressed_size);
-    if (ErrorCodeSuccess != error) {
-        throw OperationFailed(error, __FILENAME__, __LINE__);
-    }
-
-    BufferViewReader buffer_reader{m_table_buffer.get(), uncompressed_size};
+void SchemaReader::load(
+        std::shared_ptr<char[]> table_buffer,
+        size_t offset,
+        size_t uncompressed_size
+) {
+    m_table_buffer = table_buffer;
+    BufferViewReader buffer_reader{m_table_buffer.get() + offset, uncompressed_size};
     for (auto& reader : m_columns) {
         reader->load(buffer_reader, m_num_messages);
     }
