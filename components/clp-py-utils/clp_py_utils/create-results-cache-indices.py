@@ -1,6 +1,5 @@
 import argparse
 import logging
-import pathlib
 import sys
 
 from pymongo import IndexModel, MongoClient
@@ -15,12 +14,10 @@ logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
-from clp_py_utils.clp_config import ResultsCache
-from clp_py_utils.core import read_yaml_config_file
 
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(description="Creates results cache indexes for CLP.")
+    args_parser = argparse.ArgumentParser(description="Creates results cache indices for CLP.")
     args_parser.add_argument("--uri", required=True, help="URI of the results cache.")
     args_parser.add_argument("--ir-collection", required=True, help="Collection for IR metadata.")
     parsed_args = args_parser.parse_args(argv[1:])
@@ -35,9 +32,8 @@ def main(argv):
             file_split_id_index = IndexModel(["file_split_id"])
             orig_file_id_index = IndexModel(["orig_file_id", "begin_msg_ix", "end_msg_ix"])
             ir_collection.create_indexes([file_split_id_index, orig_file_id_index])
-
-    except:
-        logger.exception("Failed to create clp results cache indexes.")
+    except Exception:
+        logger.exception("Failed to create clp results cache indices.")
         return -1
 
     return 0

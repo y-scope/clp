@@ -64,8 +64,7 @@ logger = get_logger("search-job-handler")
 # Dictionary of active jobs indexed by job id
 active_jobs: Dict[str, QueryJob] = {}
 
-# Dictionary of active file_split_ids being extracted and
-# the job ids waiting on it
+# Dictionary that maps IDs of file splits being extracted to IDs of jobs waiting for them
 active_file_split_ir_extractions: Dict[str, List[str]] = {}
 
 reducer_connection_queue: Optional[asyncio.Queue] = None
@@ -547,15 +546,19 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
-                # Note: the following two if blocks should not be reordered.
-                # The second if statement only check if any chunk of the specific file split is extracted, but
-                # it does not guarantee all chunks to be ready because the extraction job could still be running.
-                # However, if there is no running extraction job for the file split, then a single chunk being
-                # available guarantees that all chunks are extracted.
+                # NOTE: The following two if blocks should not be reordered since if we first check
+                # whether *an* IR file has been extracted for the requested file split, it doesn't
+                # mean that *all* IR files have has been extracted for the file split (since the
+                # extraction job may still be in progress). Thus, we must first check whether the
+                # file split is in the process of being extracted, and then check whether it's
+                # already been extracted.
+
+                # Check if the file split is currently being extracted; if so, add the job ID to the
+                # list of jobs waiting for it.
                 if file_split_id in active_file_split_ir_extractions:
                     active_file_split_ir_extractions[file_split_id].append(job_id)
                     logger.info(
-                        f"Split {file_split_id} is being extracted, mark job {job_id} as running"
+                        f"Split {file_split_id} is being extracted, so mark job {job_id} as running"
                     )
                     if not set_job_or_task_status(
                         db_conn,
@@ -569,10 +572,13 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as running")
                     continue
 
+                # Check if the file split has already been extracted
                 if ir_file_exists_for_file_split(
                     results_cache_uri, ir_collection_name, file_split_id
                 ):
-                    logger.info(f"Split {file_split_id} already extracted, skip job {job_id}")
+                    logger.info(
+                        f"Split {file_split_id} already extracted, so mark job {job_id} as done"
+                    )
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,
