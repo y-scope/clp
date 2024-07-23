@@ -15,7 +15,6 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Creates results cache indices for CLP.")
     args_parser.add_argument("--uri", required=True, help="URI of the results cache.")
