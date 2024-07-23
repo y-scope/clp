@@ -14,13 +14,12 @@
 
 namespace clp::aws {
 /**
- * Class for parsing S3 URL
+ * Class for parsing S3 URL. The format of S3 URL is specie
  */
 class S3Url {
 public:
     // Constructor
     S3Url(std::string const& url);
-    S3Url(std::string const& s3_uri, std::string_view region);
 
     // Methods
     [[nodiscard]] auto get_host() -> std::string_view { return m_host; }

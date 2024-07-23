@@ -157,11 +157,11 @@ namespace {
 
 namespace clp::aws {
 S3Url::S3Url(string const& url) {
-    // Regular expression to match virtual host-style HTTP URL format
+    // Regular expression to match Virtual-hosted-style HTTP URL format
     std::regex const host_style_url_regex(
             R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)"
     );
-    // Regular expression to match path-style HTTP URL format
+    // Regular expression to match Path-style HTTP URL format
     std::regex const path_style_url_regex(
             R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)"
     );
@@ -183,23 +183,6 @@ S3Url::S3Url(string const& url) {
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", bucket, m_region);
-}
-
-S3Url::S3Url(string const& s3_uri, string_view region) : m_region{region} {
-    // Regular expression to match S3 URI format.
-    // Note it does not include region.
-    std::regex const s3_uri_regex(R"(s3://([a-z0-9.-]+)(/[^?]+).*)");
-
-    std::smatch match;
-    string bucket{};
-    if (std::regex_match(s3_uri, match, s3_uri_regex)) {
-        bucket = match[1].str();
-        m_path = match[2].str();
-    } else {
-        throw std::invalid_argument("S3 URI format");
-    }
-
     m_host = fmt::format("{}.s3.{}.amazonaws.com", bucket, m_region);
 }
 
