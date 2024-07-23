@@ -16,13 +16,13 @@ constexpr char cArchiveLogDictFile[] = "/log.dict";
 constexpr char cArchiveTimestampDictFile[] = "/timestamp.dict";
 constexpr char cArchiveVarDictFile[] = "/var.dict";
 
-namespace results_cache { namespace decompression {
+namespace results_cache::decompression {
 constexpr char cPath[]{"path"};
 constexpr char cOrigFileId[]{"orig_file_id"};
 constexpr char cBeginMsgIx[]{"begin_msg_ix"};
 constexpr char cEndMsgIx[]{"end_msg_ix"};
 constexpr char cIsLastIrChunk[]{"is_last_ir_chunk"};
-}}  // namespace results_cache::decompression
+}  // namespace results_cache::decompression
 
 }  // namespace clp_s::constants
 #endif  // CLP_S_ARCHIVE_CONSTANTS_HPP

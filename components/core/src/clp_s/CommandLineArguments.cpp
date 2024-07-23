@@ -286,20 +286,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             extraction_options.add(input_options);
 
-            po::options_description metadata_options("Metadata Options");
-            // clang-format off
-            metadata_options.add_options()(
-                    "mongodb-uri",
-                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
-                    "MongoDB URI for the database to write decompression metadata to"
-            )(
-                    "mongodb-collection",
-                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
-                    "MongoDB collection to write decompression metadata to"
-            );
-            // clang-format on
-            extraction_options.add(metadata_options);
-
             po::options_description decompression_options("Decompression Options");
             // clang-format off
             decompression_options.add_options()(
@@ -315,6 +301,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
             extraction_options.add(decompression_options);
+
+            po::options_description output_metadata_options("Output Metadata Options");
+            // clang-format off
+            output_metadata_options.add_options()(
+                    "mongodb-uri",
+                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
+                    "MongoDB URI for the database to write decompression metadata to"
+            )(
+                    "mongodb-collection",
+                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
+                    "MongoDB collection to write decompression metadata to"
+            );
+            // clang-format on
+            extraction_options.add(output_metadata_options);
 
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
@@ -347,7 +347,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(general_options);
                 visible_options.add(input_options);
                 visible_options.add(decompression_options);
-                visible_options.add(metadata_options);
+                visible_options.add(output_metadata_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }

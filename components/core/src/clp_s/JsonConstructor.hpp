@@ -17,6 +17,10 @@
 
 namespace clp_s {
 struct MetadataDbOption {
+    MetadataDbOption(std::string const& uri, std::string const& collection)
+            : mongodb_uri(uri),
+              mongodb_collection(collection) {}
+
     std::string mongodb_uri;
     std::string mongodb_collection;
 };
