@@ -290,12 +290,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format off
             metadata_options.add_options()(
                     "mongodb-uri",
-                    po::value<std::string>(&m_mongodb_uri),
-                    "The mongodb database used to record decompression metadata"
+                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
+                    "MongoDB URI for the database to write decompression metadata to"
             )(
                     "mongodb-collection",
-                    po::value<std::string>(&m_mongodb_collection),
-                    "The collection used to record decompression metadata"
+                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
+                    "MongoDB collection to write decompression metadata to"
             );
             // clang-format on
             extraction_options.add(metadata_options);
@@ -375,7 +375,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (false == m_mongodb_uri.empty() && false == m_ordered_decompression) {
                 throw std::invalid_argument(
-                        "recording decompression metadata only supported for ordered decompression"
+                        "Recording decompression metadata only supported for ordered decompression"
                 );
             }
         } else if ((char)Command::Search == command_input) {
