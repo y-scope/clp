@@ -241,9 +241,9 @@ def create_results_cache_indexes(
     mounts: CLPDockerMounts,
 ):
     component_name = RESULTS_CACHE_COMPONENT_NAME
-    logger.info(f"Creating {component_name} indexes...")
+    logger.info(f"Creating {component_name} indices...")
 
-    container_name = f"clp-{component_name}-indexes-creator-{instance_id}"
+    container_name = f"clp-{component_name}-indices-creator-{instance_id}"
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
@@ -279,7 +279,7 @@ def create_results_cache_indexes(
     logger.debug(" ".join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
-    logger.info(f"Created {component_name} indexes.")
+    logger.info(f"Created {component_name} indices.")
 
 
 def start_queue(instance_id: str, clp_config: CLPConfig):
