@@ -66,7 +66,7 @@ active_jobs: Dict[str, QueryJob] = {}
 
 # Dictionary of active file_split_ids being extracted and
 # the job ids waiting on it
-active_extraction_file_splits: Dict[str, List[str]] = {}
+active_file_split_ir_extractions: Dict[str, List[str]] = {}
 
 reducer_connection_queue: Optional[asyncio.Queue] = None
 
@@ -471,7 +471,7 @@ def handle_pending_query_jobs(
     num_archives_to_search_per_sub_job: int,
 ) -> List[asyncio.Task]:
     global active_jobs
-    global active_extraction_file_splits
+    global active_file_split_ir_extractions
 
     reducer_acquisition_tasks = []
     pending_search_jobs = [
@@ -552,8 +552,8 @@ def handle_pending_query_jobs(
                 # it does not guarantee all chunks to be ready because the extraction job could still be running.
                 # However, if there is no running extraction job for the file split, then a single chunk being
                 # available guarantees that all chunks are extracted.
-                if file_split_id in active_extraction_file_splits:
-                    active_extraction_file_splits[file_split_id].append(job_id)
+                if file_split_id in active_file_split_ir_extractions:
+                    active_file_split_ir_extractions[file_split_id].append(job_id)
                     logger.info(
                         f"Split {file_split_id} is being extracted, mark job {job_id} as running"
                     )
@@ -569,7 +569,7 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as running")
                     continue
 
-                if is_file_split_extracted_as_ir(
+                if ir_file_exists_for_file_split(
                     results_cache_uri, ir_collection_name, file_split_id
                 ):
                     logger.info(f"Split {file_split_id} already extracted, skip job {job_id}")
@@ -586,7 +586,7 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
 
-                active_extraction_file_splits[file_split_id] = [job_id]
+                active_file_split_ir_extractions[file_split_id] = [job_id]
                 extract_ir_config.file_split_id = file_split_id
                 new_extract_ir_job = ExtractIrJob(
                     id=job_id,
@@ -679,7 +679,7 @@ def found_max_num_latest_results(
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
 
 
-def is_file_split_extracted_as_ir(
+def ir_file_exists_for_file_split(
     results_cache_uri: str, ir_collection_name: str, file_split_id: str
 ):
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
@@ -778,7 +778,7 @@ async def handle_finished_extract_ir_job(
     db_conn, job: ExtractIrJob, task_results: Optional[Any]
 ) -> None:
     global active_jobs
-    global active_extraction_file_splits
+    global active_file_split_ir_extractions
 
     job_id = job.id
     file_split_id = job.file_split_id
@@ -819,7 +819,7 @@ async def handle_finished_extract_ir_job(
         else:
             logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
 
-    waiting_jobs = active_extraction_file_splits[file_split_id]
+    waiting_jobs = active_file_split_ir_extractions[file_split_id]
     waiting_jobs.remove(job_id)
     for waiting_job in waiting_jobs:
         logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
@@ -833,7 +833,7 @@ async def handle_finished_extract_ir_job(
             duration=(datetime.datetime.now() - job.start_time).total_seconds(),
         )
 
-    del active_extraction_file_splits[file_split_id]
+    del active_file_split_ir_extractions[file_split_id]
     del active_jobs[job_id]
 
 

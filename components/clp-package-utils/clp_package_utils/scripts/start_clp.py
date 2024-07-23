@@ -234,7 +234,7 @@ def create_db_tables(
     logger.info(f"Created {component_name} tables.")
 
 
-def create_results_cache_indexes(
+def create_results_cache_indices(
     instance_id: str,
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
@@ -269,7 +269,7 @@ def create_results_cache_indexes(
     # fmt: off
     create_tables_cmd = [
         "python3",
-        str(clp_py_utils_dir / "create-results-cache-indexes.py"),
+        str(clp_py_utils_dir / "create-results-cache-indices.py"),
         "--uri", container_clp_config.results_cache.get_uri(),
         "--ir-collection", container_clp_config.results_cache.ir_collection_name,
     ]
@@ -1076,7 +1076,7 @@ def main(argv):
         if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             start_results_cache(instance_id, clp_config, conf_dir)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
-            create_results_cache_indexes(instance_id, clp_config, container_clp_config, mounts)
+            create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
         if target in (
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
