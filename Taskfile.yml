@@ -434,9 +434,7 @@ tasks:
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       - |-
         cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm i && \
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --output-path "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/yscope-log-viewer"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm install
       # These commands must be last
       - task: "utils:compute-checksum"
         vars:
