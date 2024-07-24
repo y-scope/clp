@@ -213,7 +213,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}"
     sources:
-      - "{{.G_BUILD_DIR}}/log-viewer-modules.md5"
+      - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
       - "{{.TASKFILE}}"
       - "client/package.json"
       - "client/src/**/*.css"
