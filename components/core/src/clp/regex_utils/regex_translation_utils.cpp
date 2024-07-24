@@ -179,10 +179,10 @@ auto escaped_state_transition(
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
     auto const ch{*it};
-    if (false == cRegexEscapeSeqMetaCharsLUT.at(ch)) {
+    if (false == cRegexEscapeSeqMetaCharsLut.at(ch)) {
         return ErrorCode::IllegalEscapeSequence;
     }
-    if (cWildcardMetaCharsLUT.at(ch)) {
+    if (cWildcardMetaCharsLut.at(ch)) {
         wildcard_str = wildcard_str + cEscapeChar + ch;
     } else {
         wildcard_str += ch;

@@ -38,11 +38,12 @@ constexpr char cEscapeChar{'\\'};
 constexpr char cCharsetNegate{'^'};
 
 // Character bitmaps
-// The set of characters that can be preceded with an escape backslash. When escaped, these
-// characters are used as literals.
-constexpr auto cRegexEscapeSeqMetaCharsLUT = create_char_bit_array("*+?|^$.{}[]()<>-_/=!\\");
-// The set of metacharacters that need to be escaped in the wildcard syntax.
-constexpr auto cWildcardMetaCharsLUT = create_char_bit_array("?*\\");
+// The set of regex metacharacters that can be preceded with an escape backslash to be treated as a
+// literal.
+constexpr auto cRegexEscapeSeqMetaCharsLut = create_char_bit_array("*+?|^$.{}[]()<>-_/=!\\");
+// The set of wildcard metacharacters that must remain escaped in the translated string to be
+// treated as a literal.
+constexpr auto cWildcardMetaCharsLut = create_char_bit_array("?*\\");
 }  // namespace clp::regex_utils
 
 #endif  // CLP_REGEX_UTILS_CONSTANTS_HPP
