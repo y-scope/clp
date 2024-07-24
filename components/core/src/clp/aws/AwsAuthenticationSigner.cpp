@@ -74,7 +74,11 @@ namespace {
         string& string_to_sign
 ) -> clp::ErrorCode {
     vector<unsigned char> signed_canonical_request;
-    if (auto error_code = clp::get_sha256_hash(canonical_request, signed_canonical_request);
+    if (auto error_code = clp::get_sha256_hash(
+                {size_checked_pointer_cast<unsigned char const>(canonical_request.data()),
+                 canonical_request.size()},
+                signed_canonical_request
+        );
         clp::ErrorCode_Success != error_code)
     {
         return error_code;

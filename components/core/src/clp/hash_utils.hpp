@@ -93,6 +93,7 @@ auto get_hmac_sha256_hash(
  * ErrorCode_Success on success
  * @throw EvpCtxManager::OperationFailed if EvpCtxManager can not be initalized
  */
-auto get_sha256_hash(std::string_view input, std::vector<unsigned char>& hash) -> ErrorCode;
+auto get_sha256_hash(std::span<unsigned char const> input, std::vector<unsigned char>& hash)
+        -> ErrorCode;
 }  // namespace clp
 #endif  // CLP_HASH_UTILS_HPP

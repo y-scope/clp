@@ -20,7 +20,7 @@ using std::string_view;
 using std::vector;
 
 namespace clp {
-auto convert_hash_to_hex_string(std::span<unsigned char> input) -> string {
+auto convert_hash_to_hex_string(span<unsigned char> input) -> string {
     string hex_string;
     for (auto const c : input) {
         hex_string += fmt::format("{:02x}", c);
@@ -68,7 +68,7 @@ auto get_hmac_sha256_hash(
  * @param input
  * @return The SHA256 hash
  */
-auto get_sha256_hash(string_view input, vector<unsigned char>& hash) -> ErrorCode {
+auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& hash) -> ErrorCode {
     EvpCtxManager evp_ctx_manager{};
 
     if (1 != evp_ctx_manager.digest_init_ex(EVP_sha256(), nullptr)) {
