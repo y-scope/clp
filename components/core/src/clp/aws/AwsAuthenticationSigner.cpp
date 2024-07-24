@@ -139,7 +139,7 @@ namespace {
  */
 [[nodiscard]] auto get_canonical_request(
         clp::aws::AwsAuthenticationSigner::HttpMethod method,
-        clp::aws::S3Url& url,
+        clp::aws::S3Url const& url,
         string_view query_string
 ) -> string {
     return fmt::format(
@@ -167,27 +167,30 @@ S3Url::S3Url(string const& url) {
     );
 
     std::smatch match;
-    string bucket{};
     if (std::regex_match(url, match, host_style_url_regex)) {
-        bucket = match[1].str();
+        m_bucket = match[1].str();
         m_region = match[3].str();
         m_path = match[4].str();
     } else if (std::regex_match(url, match, path_style_url_regex)) {
         m_region = match[2].str();
-        bucket = match[3].str();
+        m_bucket = match[3].str();
         m_path = match[4].str();
     } else {
-        throw std::invalid_argument("Invalid S3 HTTP URL format");
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__, "Invalid S3 HTTP URL format");
     }
 
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", bucket, m_region);
+    m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
+}
+
+auto S3Url::get_compression_path () const -> string {
+    return fmt::format("/{}/{}{}", m_region, m_bucket, m_path);
 }
 
 auto AwsAuthenticationSigner::generate_presigned_url(
-        S3Url& s3_url,
+        S3Url const& s3_url,
         string& presigned_url,
         HttpMethod method
 ) -> ErrorCode {
