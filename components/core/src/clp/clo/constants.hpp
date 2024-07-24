@@ -7,6 +7,7 @@ constexpr char OrigFileId[]{"orig_file_id"};
 
 namespace IrOutput {
 constexpr char Path[]{"path"};
+constexpr char FileSplitId[]{"file_split_id"};
 constexpr char BeginMsgIx[]{"begin_msg_ix"};
 constexpr char EndMsgIx[]{"end_msg_ix"};
 constexpr char IsLastIrChunk[]{"is_last_ir_chunk"};
