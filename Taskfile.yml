@@ -383,17 +383,16 @@ tasks:
       # Checksum files
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-client-node-modules.md5"
-      LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE: >-
-        {{.G_BUILD_DIR}}/log-viewer-webui-inner-client-node-modules.md5
+      LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-log-viewer-node-modules.md5"
       PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-package-node-modules.md5"
       SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-server-node-modules.md5"
 
       # Directories
       SRC_DIR: "{{.TASKFILE_DIR}}/components/log-viewer-webui"
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
+      LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
-      YSCOPE_LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
     sources:
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
@@ -409,7 +408,7 @@ tasks:
     generates:
       - "{{.CHECKSUM_FILE}}"
       - "{{.CLIENT_CHECKSUM_FILE}}"
-      - "{{.LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE}}"
+      - "{{.LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.PACKAGE_CHECKSUM_FILE}}"
       - "{{.SERVER_CHECKSUM_FILE}}"
     deps:
@@ -428,8 +427,8 @@ tasks:
           DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
       - task: "utils:validate-checksum"
         vars:
-          CHECKSUM_FILE: "{{.LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE}}"
-          DATA_DIR: "{{.YSCOPE_LOG_VIEWER_OUTPUT_DIR}}"
+          CHECKSUM_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
+          DATA_DIR: "{{.LOG_VIEWER_OUTPUT_DIR}}"
     cmds:
       - "rm -f {{.CHECKSUM_FILE}}"
       - task: "clean-log-viewer-webui"
@@ -444,23 +443,23 @@ tasks:
           OUTPUT_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
       - task: "utils:compute-checksum"
         vars:
+          DATA_DIR: "{{.LOG_VIEWER_OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
+      - task: "utils:compute-checksum"
+        vars:
           DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
       - task: "utils:compute-checksum"
         vars:
           DATA_DIR: "{{.SERVER_OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.SERVER_CHECKSUM_FILE}}"
-      - task: "utils:compute-checksum"
-        vars:
-          DATA_DIR: "{{.YSCOPE_LOG_VIEWER_OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE}}"
       # This command must be last
       - >-
         cat
         "{{.CLIENT_CHECKSUM_FILE}}"
+        "{{.LOG_VIEWER_CHECKSUM_FILE}}"
         "{{.PACKAGE_CHECKSUM_FILE}}"
         "{{.SERVER_CHECKSUM_FILE}}"
-        "{{.LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE}}"
         > "{{.CHECKSUM_FILE}}"
 
   meteor:
