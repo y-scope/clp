@@ -394,6 +394,7 @@ tasks:
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
     sources:
+      - "{{.G_BUILD_DIR}}/log-viewer-webui-submodules.md5"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
       - "client/package.json"
@@ -412,6 +413,7 @@ tasks:
       - "{{.PACKAGE_CHECKSUM_FILE}}"
       - "{{.SERVER_CHECKSUM_FILE}}"
     deps:
+      - "log-viewer-webui-submodules"
       - "nodejs-22"
       - task: "utils:validate-checksum"
         vars:
@@ -461,6 +463,30 @@ tasks:
         "{{.PACKAGE_CHECKSUM_FILE}}"
         "{{.SERVER_CHECKSUM_FILE}}"
         > "{{.CHECKSUM_FILE}}"
+
+  log-viewer-webui-submodules:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "yscope-log-viewer"
+    sources:
+      - "{{.TASKFILE}}"
+      - ".gitmodules"
+    dir: "components/log-viewer-webui"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "init"
+      - task: "utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+    cmds:
+      - "git submodule update --init --recursive yscope-log-viewer"
+      # This command must be last
+      - task: "utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   meteor:
     vars:
