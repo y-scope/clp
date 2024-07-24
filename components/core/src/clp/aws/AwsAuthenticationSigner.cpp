@@ -143,7 +143,7 @@ namespace {
  */
 [[nodiscard]] auto get_canonical_request(
         clp::aws::AwsAuthenticationSigner::HttpMethod method,
-        clp::aws::S3Url& url,
+        clp::aws::S3Url const& url,
         string_view query_string
 ) -> string {
     return fmt::format(
@@ -161,61 +161,45 @@ namespace {
 
 namespace clp::aws {
 S3Url::S3Url(string const& url) {
-    // Regular expression to match virtual host-style HTTP URL format
+    // Regular expression to match Virtual-hosted-style HTTP URL format
     std::regex const host_style_url_regex(
             R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)"
     );
-    // Regular expression to match path-style HTTP URL format
+    // Regular expression to match Path-style HTTP URL format
     std::regex const path_style_url_regex(
             R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)"
     );
 
     std::smatch match;
-    string bucket{};
     if (std::regex_match(url, match, host_style_url_regex)) {
-        bucket = match[1].str();
+        m_bucket = match[1].str();
         m_region = match[3].str();
         m_path = match[4].str();
     } else if (std::regex_match(url, match, path_style_url_regex)) {
         m_region = match[2].str();
-        bucket = match[3].str();
+        m_bucket = match[3].str();
         m_path = match[4].str();
     } else {
-        throw std::invalid_argument("Invalid S3 HTTP URL format");
+        throw OperationFailed(
+                ErrorCode_BadParam,
+                __FILENAME__,
+                __LINE__,
+                "Invalid S3 HTTP URL format"
+        );
     }
 
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", bucket, m_region);
+    m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
 }
 
-S3Url::S3Url(string const& s3_uri, string_view region) : m_region{region} {
-    // Regular expression to match S3 URI format.
-    // Note it does not include region.
-    std::regex const s3_uri_regex(R"(s3://([a-z0-9.-]+)(/[^?]+).*)");
-
-    std::smatch match;
-    string bucket{};
-    if (std::regex_match(s3_uri, match, s3_uri_regex)) {
-        bucket = match[1].str();
-        m_path = match[2].str();
-    } else {
-        throw std::invalid_argument("S3 URI format");
-    }
-
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", bucket, m_region);
+auto S3Url::get_compression_path() const -> string {
+    return fmt::format("/{}/{}{}", m_region, m_bucket, m_path);
 }
 
-auto AwsAuthenticationSigner::generate_presigned_url(
-        S3Url& s3_url,
-        string& presigned_url,
-        HttpMethod method
-) -> ErrorCode {
-    if (HttpMethod::GET != method) {
-        throw std::runtime_error("Unsupported HTTP method!");
-    }
-
+auto AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& presigned_url)
+        -> ErrorCode {
     auto const s3_region = s3_url.get_region();
 
     // Gets current time
@@ -226,7 +210,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     auto scope = get_scope(date_string, s3_region);
     auto canonical_query_string = generate_canonical_query_string(scope, timestamp_string);
 
-    auto canonical_request = get_canonical_request(method, s3_url, canonical_query_string);
+    auto canonical_request = get_canonical_request(HttpMethod::GET, s3_url, canonical_query_string);
 
     string string_to_sign{};
     if (auto error_code

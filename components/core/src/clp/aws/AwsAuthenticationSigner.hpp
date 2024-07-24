@@ -10,24 +10,51 @@
 #include <fmt/format.h>
 
 #include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
 #include "Constants.hpp"
 
 namespace clp::aws {
 /**
- * Class for parsing S3 URL
+ * Class for parsing S3 URL. The format of S3 URL is specie
  */
 class S3Url {
 public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : OperationFailed(error_code, filename, line_number, "S3Url operation failed") {}
+
+        OperationFailed(
+                ErrorCode error_code,
+                char const* const filename,
+                int line_number,
+                std::string message
+        )
+                : TraceableException(error_code, filename, line_number),
+                  m_message(std::move(message)) {}
+
+        // Methods
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return m_message.c_str();
+        }
+
+    private:
+        std::string m_message;
+    };
+
     // Constructor
     S3Url(std::string const& url);
-    S3Url(std::string const& s3_uri, std::string_view region);
 
     // Methods
-    [[nodiscard]] auto get_host() -> std::string_view { return m_host; }
+    [[nodiscard]] auto get_host() const -> std::string_view { return m_host; }
 
-    [[nodiscard]] auto get_region() -> std::string_view { return m_region; }
+    [[nodiscard]] auto get_region() const -> std::string_view { return m_region; }
 
-    [[nodiscard]] auto get_path() -> std::string_view { return m_path; }
+    [[nodiscard]] auto get_path() const -> std::string_view { return m_path; }
+
+    [[nodiscard]] auto get_compression_path() const -> std::string;
 
 private:
     std::string m_host;
@@ -69,11 +96,8 @@ public:
      * On failure, same as get_string_to_sign and AwsAuthenticationSigner::get_signature
      *
      */
-    [[nodiscard]] auto generate_presigned_url(
-            S3Url& s3_url,
-            std::string& presigned_url,
-            HttpMethod method = HttpMethod::GET
-    ) -> ErrorCode;
+    [[nodiscard]] auto
+    generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) -> ErrorCode;
 
 private:
     /**
