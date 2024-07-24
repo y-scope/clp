@@ -33,7 +33,7 @@ public:
     };
 
     // Constructors
-    EvpCtxManager() : m_md_ctx{EVP_MD_CTX_new()} {
+    EvpCtxManager() : m_md_ctx{EVP_MD_CTX_create()} {
         if (nullptr == m_md_ctx) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -44,7 +44,7 @@ public:
     auto operator=(EvpCtxManager const&) -> EvpCtxManager& = delete;
 
     // Destructor
-    ~EvpCtxManager() { EVP_MD_CTX_free(m_md_ctx); }
+    ~EvpCtxManager() { EVP_MD_CTX_destroy(m_md_ctx); }
 
     auto digest_init_ex(const EVP_MD* type, ENGINE* impl) -> int {
         return EVP_DigestInit_ex(m_md_ctx, type, impl);
