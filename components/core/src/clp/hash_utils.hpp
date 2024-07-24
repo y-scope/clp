@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-#include <openssl/hmac.h>
+#include <openssl/evp.h>
 
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
