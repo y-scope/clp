@@ -234,6 +234,54 @@ def create_db_tables(
     logger.info(f"Created {component_name} tables.")
 
 
+def create_results_cache_indices(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
+):
+    component_name = RESULTS_CACHE_COMPONENT_NAME
+    logger.info(f"Creating {component_name} indices...")
+
+    container_name = f"clp-{component_name}-indices-creator-{instance_id}"
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-i",
+        "--network", "host",
+        "--rm",
+        "--name", container_name,
+        "--log-driver", "local",
+        "-e", f"PYTHONPATH={clp_site_packages_dir}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+    ]
+    # fmt: on
+    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append("--mount")
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
+    # fmt: off
+    create_tables_cmd = [
+        "python3",
+        str(clp_py_utils_dir / "create-results-cache-indices.py"),
+        "--uri", container_clp_config.results_cache.get_uri(),
+        "--ir-collection", container_clp_config.results_cache.ir_collection_name,
+    ]
+    # fmt: on
+
+    cmd = container_start_cmd + create_tables_cmd
+    logger.debug(" ".join(cmd))
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Created {component_name} indices.")
+
+
 def start_queue(instance_id: str, clp_config: CLPConfig):
     component_name = QUEUE_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
@@ -816,6 +864,7 @@ def start_log_viewer_webui(
         "MongoDbIrFilesCollectionName": clp_config.results_cache.ir_collection_name,
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
         "IrFilesDir": str(container_clp_config.ir_output.directory),
+        "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
@@ -1058,6 +1107,8 @@ def main(argv):
             start_redis(instance_id, clp_config, conf_dir)
         if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             start_results_cache(instance_id, clp_config, conf_dir)
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+            create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
         if target in (
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
