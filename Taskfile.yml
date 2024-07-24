@@ -219,6 +219,11 @@ tasks:
       - "client/src/**/*.css"
       - "client/src/**/*.jsx"
       - "client/src/webpack.config.js"
+      - "yscope-log-viewer/customized-packages/**/*"
+      - "yscope-log-viewer/package.json"
+      - "yscope-log-viewer/src/**/*"
+      - "yscope-log-viewer/webpack.common.js"
+      - "yscope-log-viewer/webpack.prod.js"
     dir: "components/log-viewer-webui"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
