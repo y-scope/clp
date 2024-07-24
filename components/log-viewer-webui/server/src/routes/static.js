@@ -40,13 +40,14 @@ const routes = async (fastify, options) => {
     if ("production" === process.env.NODE_ENV) {
         // In the development environment, we expect the client to use a separate webserver that
         // supports live reloading.
-        if (false === path.isAbsolute(settings.ClientDir)) {
-            throw new Error("`clientDir` must be an absolute path.");
+        let clientDir = settings.ClientDir;
+        if (false === path.isAbsolute(clientDir)) {
+            clientDir = path.resolve(rootDirname, settings.ClientDir);
         }
 
         await fastify.register(fastifyStatic, {
             prefix: "/",
-            root: settings.ClientDir,
+            root: clientDir,
             decorateReply: false,
         });
     }
