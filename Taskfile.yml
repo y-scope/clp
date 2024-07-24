@@ -219,6 +219,7 @@ tasks:
       - "client/src/**/*.css"
       - "client/src/**/*.jsx"
       - "client/src/webpack.config.js"
+      - "yscope-log-viewer/.babelrc"
       - "yscope-log-viewer/customized-packages/**/*"
       - "yscope-log-viewer/package.json"
       - "yscope-log-viewer/src/**/*"
