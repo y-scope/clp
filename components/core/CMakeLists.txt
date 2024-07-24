@@ -344,6 +344,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/hash_utils.cpp
+        src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
@@ -462,6 +464,7 @@ set(SOURCE_FILES_unitTest
         tests/test-encoding_methods.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
+        tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-kql.cpp
