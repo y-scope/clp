@@ -370,18 +370,20 @@ tasks:
           DATA_DIR: "{{.OUTPUT_DIR}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
-  # NOTE: The log-viewer-webui has four different node_modules directories
-  # (client, server, log-viewer submodule, and the top-level one we call "package"),
-  # meaning we have to create four different checksums.
-  # To allow tasks which depend on this task to only have to check one checksum file,
-  # we concatenate the three checksum files into one.
+  # NOTE: The log-viewer-webui has four different node_modules directories:
+  # * client
+  # * server
+  # * log-viewer submodule
+  # * the top-level one we call "package"
+  # This means we have to create four different checksums. To allow tasks which depend on this task
+  # to only have to check one checksum file, we concatenate the four checksum files into one.
   log-viewer-webui-node-modules:
     internal: true
     vars:
       # Checksum files
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-client-node-modules.md5"
-      LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE: >
+      LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE: >-
         {{.G_BUILD_DIR}}/log-viewer-webui-inner-client-node-modules.md5
       PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-package-node-modules.md5"
       SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-server-node-modules.md5"

@@ -8,7 +8,7 @@ import settings from "../../settings.json" with {type: "json"};
 
 
 /**
- * Create static files serving routes.
+ * Creates static files serving routes.
  *
  * @param {import("fastify").FastifyInstance} fastify
  * @param {import("fastify").FastifyPluginOptions} options
