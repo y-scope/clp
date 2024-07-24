@@ -27,18 +27,19 @@ public:
      *
      * This list may be expanded as the translator supports translating more regex patterns.
      * <ul>
-     *   <li>NORMAL: The initial state, where characters have no special meanings and are treated
+     *   <li>Normal: The initial state, where characters have no special meanings and are treated
      * literally.</li>
-     *   <li>DOT: Encountered a period `.`. Expecting wildcard expression.</li>
-     *   <li>END: Encountered a dollar sign `$`, meaning the regex string has reached the end
+     *   <li>Dot: Encountered a period `.`. Expecting wildcard expression.</li>
+     *   <li>Escaped: Encountered a backslash `\`. Expecting an escape sequence.</li>
+     *   <li>End: Encountered a dollar sign `$`, meaning the regex string has reached the end
      * anchor.</li>
      * </ul>
      */
     enum class RegexPatternState : uint8_t {
-        NORMAL = 0,
-        DOT,
-        ESCAPED,
-        END,
+        Normal = 0,
+        Dot,
+        Escaped,
+        End,
     };
 
     // Constructor
@@ -52,7 +53,7 @@ public:
 
 private:
     // Members
-    RegexPatternState m_state{RegexPatternState::NORMAL};
+    RegexPatternState m_state{RegexPatternState::Normal};
 };
 
 /**
@@ -108,7 +109,7 @@ using StateTransitionFuncSig
 [[nodiscard]] StateTransitionFuncSig end_state_transition;
 
 /**
- * States other than the NORMAL state may require special handling after the whole regex string has
+ * States other than the Normal state may require special handling after the whole regex string has
  * been scanned and processed.
  */
 [[nodiscard]] StateTransitionFuncSig final_state_cleanup;
@@ -122,13 +123,13 @@ auto normal_state_transition(
     auto const ch{*it};
     switch (ch) {
         case '.':
-            state.set_next_state(TranslatorState::RegexPatternState::DOT);
+            state.set_next_state(TranslatorState::RegexPatternState::Dot);
             break;
         case cEscapeChar:
-            state.set_next_state(TranslatorState::RegexPatternState::ESCAPED);
+            state.set_next_state(TranslatorState::RegexPatternState::Escaped);
             break;
         case cRegexEndAnchor:
-            state.set_next_state(TranslatorState::RegexPatternState::END);
+            state.set_next_state(TranslatorState::RegexPatternState::End);
             break;
         case cRegexZeroOrMore:
             return ErrorCode::UntranslatableStar;
@@ -168,7 +169,7 @@ auto dot_state_transition(
             --it;
             break;
     }
-    state.set_next_state(TranslatorState::RegexPatternState::NORMAL);
+    state.set_next_state(TranslatorState::RegexPatternState::Normal);
     return ErrorCode::Success;
 }
 
@@ -183,11 +184,10 @@ auto escaped_state_transition(
         return ErrorCode::IllegalEscapeSequence;
     }
     if (cWildcardMetaCharsLut.at(ch)) {
-        wildcard_str = wildcard_str + cEscapeChar + ch;
-    } else {
-        wildcard_str += ch;
+        wildcard_str += cEscapeChar;
     }
-    state.set_next_state(TranslatorState::RegexPatternState::NORMAL);
+    wildcard_str += ch;
+    state.set_next_state(TranslatorState::RegexPatternState::Normal);
     return ErrorCode::Success;
 }
 
@@ -210,7 +210,7 @@ auto final_state_cleanup(
         RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
     switch (state.get_state()) {
-        case TranslatorState::RegexPatternState::DOT:
+        case TranslatorState::RegexPatternState::Dot:
             // The last character is a single `.`, without the possibility of becoming a
             // multichar wildcard
             wildcard_str += cSingleCharWildcard;
@@ -219,7 +219,7 @@ auto final_state_cleanup(
             break;
     }
 
-    if (TranslatorState::RegexPatternState::END != state.get_state()
+    if (TranslatorState::RegexPatternState::End != state.get_state()
         && config.add_prefix_suffix_wildcards())
     {
         wildcard_str += cZeroOrMoreCharsWildcard;
@@ -252,16 +252,16 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
     error_code ec{};
     while (it != regex_str.cend()) {
         switch (state.get_state()) {
-            case TranslatorState::RegexPatternState::NORMAL:
+            case TranslatorState::RegexPatternState::Normal:
                 ec = normal_state_transition(state, it, wildcard_str, config);
                 break;
-            case TranslatorState::RegexPatternState::DOT:
+            case TranslatorState::RegexPatternState::Dot:
                 ec = dot_state_transition(state, it, wildcard_str, config);
                 break;
-            case TranslatorState::RegexPatternState::ESCAPED:
+            case TranslatorState::RegexPatternState::Escaped:
                 ec = escaped_state_transition(state, it, wildcard_str, config);
                 break;
-            case TranslatorState::RegexPatternState::END:
+            case TranslatorState::RegexPatternState::End:
                 ec = end_state_transition(state, it, wildcard_str, config);
                 break;
             default:
