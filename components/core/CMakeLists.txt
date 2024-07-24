@@ -146,6 +146,14 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
 endif()
 
+# Find OpenSSL
+find_package(OpenSSL REQUIRED)
+if (OPENSSL_FOUND)
+    message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
+else ()
+    message(FATAL_ERROR "OpenSSL not found")
+endif ()
+
 # Add log surgeon
 add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
@@ -500,6 +508,7 @@ target_link_libraries(unitTest
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog
+        OpenSSL::SSL OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
         clp::regex_utils

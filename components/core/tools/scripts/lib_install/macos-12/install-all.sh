@@ -19,5 +19,6 @@ brew install \
   mongo-cxx-driver \
   msgpack-cxx \
   spdlog \
+  openssl \
   pkg-config \
   zstd
