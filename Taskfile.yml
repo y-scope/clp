@@ -460,6 +460,7 @@ tasks:
         "{{.CLIENT_CHECKSUM_FILE}}"
         "{{.PACKAGE_CHECKSUM_FILE}}"
         "{{.SERVER_CHECKSUM_FILE}}"
+        "{{.LOG_VIEWER_WEBUI_INNER_CLIENT_CHECKSUM_FILE}}"
         > "{{.CHECKSUM_FILE}}"
 
   meteor:
