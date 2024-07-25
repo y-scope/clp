@@ -79,9 +79,9 @@ const SearchResultsTable = ({
     };
 
     const handleSearchResultClick = (ev) => {
-        const {orig_file_id: origFileId, log_event_ix: logEventIx} = ev.currentTarget.dataset;
+        const {orig_file_id: origFileId, log_event_idx: logEventIdx} = ev.currentTarget.dataset;
         window.open(`${Meteor.settings.public.LogViewerWebuiUrl
-        }?origFileId=${origFileId}&logEventIx=${logEventIx}`);
+        }?origFileId=${origFileId}&logEventIdx=${logEventIdx}`);
     };
 
     useEffect(() => {
@@ -141,7 +141,7 @@ const SearchResultsTable = ({
                             <td>
                                 <a
                                     className={"search-results-content-clickable"}
-                                    data-log_event_ix={result.log_event_ix}
+                                    data-log_event_idx={result.log_event_ix}
                                     data-orig_file_id={result.orig_file_id}
                                     title={"Go to the log context"}
                                     onClick={handleSearchResultClick}

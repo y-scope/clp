@@ -29,16 +29,16 @@ const Query = () => {
 
         const searchParams = new URLSearchParams(window.location.search);
         const origFileId = searchParams.get("origFileId");
-        const logEventIx = searchParams.get("logEventIx");
-        if (null === origFileId || null === logEventIx) {
-            const error = "Either `origFileId` or `logEventIx` are missing from the URL " +
+        const logEventIdx = searchParams.get("logEventIdx");
+        if (null === origFileId || null === logEventIdx) {
+            const error = "Either `origFileId` or `logEventIdx` are missing from the URL " +
             "parameters. Note that non-IR-extraction queries are not supported at the moment.";
 
             console.error(error);
             setErrorMsg(error);
         }
 
-        submitExtractIrJob(origFileId, Number(logEventIx), setQueryState, setErrorMsg).then();
+        submitExtractIrJob(origFileId, Number(logEventIdx), setQueryState, setErrorMsg).then();
     }, []);
 
     return (

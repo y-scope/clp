@@ -18,25 +18,21 @@ const QUERY_LOAD_STATE = Object.freeze({
 
 /**
  * Submits a job to extract the split of an original file that contains a given log event. The file
-* is extracted as a CLP IR file.
+ * is extracted as a CLP IR file.
  *
  * @param {number|string} origFileId The ID of the original file
- * @param {number} logEventIx The index of the log event
+ * @param {number} logEventIdx The index of the log event
  * @param {Function} onQueryStateChange Callback to set query state.
  * @param {Function} onErrorMsg Callback to set error message.
  */
-const submitExtractIrJob = async (origFileId, logEventIx, onQueryStateChange, onErrorMsg) => {
+const submitExtractIrJob = async (origFileId, logEventIdx, onQueryStateChange, onErrorMsg) => {
     try {
-        const {data} = await axios.post("/query/extract-ir", {
-            msg_ix: logEventIx,
-            orig_file_id: origFileId,
-        });
-
+        const {data} = await axios.post("/query/extract-ir", {logEventIdx, origFileId});
         onQueryStateChange(QUERY_LOAD_STATE.LOADING);
 
-        const innerLogEventIx = logEventIx - data.begin_msg_ix + 1;
+        const innerLogEventNum = logEventIdx - data.begin_msg_ix + 1;
         window.location = `/log-viewer/index.html?filePath=/ir/${data.path}` +
-            `#logEventIdx=${innerLogEventIx}`;
+            `#logEventIdx=${innerLogEventNum}`;
     } catch (e) {
         let errorMsg = "Unknown error.";
         if (e instanceof AxiosError) {
