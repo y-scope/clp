@@ -13,7 +13,7 @@
     "AggregationResultsCollectionName": "aggregation-results",
     "ClpStorageEngine": "clp",
     "CompressionJobsCollectionName": "compression-jobs",
-    "LogViewerWebuiClientUrl": "http://localhost:8080",
+    "LogViewerWebuiUrl": "http://localhost:8080",
     "SearchResultsCollectionName": "search-results",
     "SearchResultsMetadataCollectionName": "results-metadata",
     "StatsCollectionName": "stats",

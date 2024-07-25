@@ -80,7 +80,7 @@ const SearchResultsTable = ({
 
     const handleSearchResultClick = (ev) => {
         const {orig_file_id: origFileId, log_event_ix: logEventIx} = ev.currentTarget.dataset;
-        window.open(`${Meteor.settings.public.LogViewerWebuiClientUrl
+        window.open(`${Meteor.settings.public.LogViewerWebuiUrl
         }?origFileId=${origFileId}&logEventIx=${logEventIx}`);
     };
 
