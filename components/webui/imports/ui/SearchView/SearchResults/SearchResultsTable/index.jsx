@@ -8,6 +8,7 @@ import {
     faSort,
     faSortDown,
     faSortUp,
+    faSquareUpRight,
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
@@ -111,7 +112,6 @@ const SearchResultsTable = ({
                         <th
                             className={"search-results-th search-results-th-sortable"}
                             data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                            key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>
@@ -122,11 +122,13 @@ const SearchResultsTable = ({
                         </th>
                         <th
                             className={"search-results-th"}
-                            key={"message"}
                         >
                             <div className={"search-results-table-header"}>
                                 Log message
                             </div>
+                        </th>
+                        <th className={"search-results-th"}>
+                            <div className={"search-results-table-header"}>&nbsp;</div>
                         </th>
                     </tr>
                 </thead>
@@ -139,6 +141,13 @@ const SearchResultsTable = ({
                                     "N/A"}
                             </td>
                             <td>
+                                <pre
+                                    className={"search-results-content search-results-message"}
+                                >
+                                    {result.message}
+                                </pre>
+                            </td>
+                            <td>
                                 <a
                                     className={"search-results-content-clickable"}
                                     data-log_event_idx={result.log_event_ix}
@@ -146,11 +155,7 @@ const SearchResultsTable = ({
                                     title={"Go to the log context"}
                                     onClick={handleSearchResultClick}
                                 >
-                                    <pre
-                                        className={"search-results-content search-results-message"}
-                                    >
-                                        {result.message}
-                                    </pre>
+                                    <FontAwesomeIcon icon={faSquareUpRight}/>
                                 </a>
                             </td>
                         </tr>
