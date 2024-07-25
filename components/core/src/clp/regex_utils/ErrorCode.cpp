@@ -72,6 +72,12 @@ auto ErrorCodeCategory::message(int ev) const -> string {
         case ErrorCode::UnmatchedParenthesis:
             return "Unmatched opening `(` or closing `)`.";
 
+        case ErrorCode::IncompleteCharsetStructure:
+            return "Unmatched closing `]` at the end of the string.";
+
+        case ErrorCode::UnsupportedCharsetPattern:
+            return "Currently only supports character set that contains a single character.";
+
         default:
             return "(unrecognized error)";
     }
