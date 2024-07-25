@@ -82,16 +82,18 @@ For a detailed description on the options order and usage, see the
     * A trivial character set containing a single character or a single escaped metacharacter.
       * E.g. `[a]` into `a`, `[\^]` into `^`
     * If the `case_insensitive_wildcard` config is turned on, the translator can also reduce the
-      following patterns into a single lowercase character:
+      case-insensitive style character set patterns into a single lowercase character:
       * E.g. `[aA]` into `a`, `[Bb]` into `b`, `[xX][Yy][zZ]` into `xyz`
 
 ### Custom configuration
 
-The `RegexToWildcardTranslatorConfig` class objects are currently immutable once instantiated. The
-constructor takes the following arguments in order:
+The `RegexToWildcardTranslatorConfig` class objects are currently immutable once instantiated. By
+default, all of the options are set to `false`.
 
-* `case_insensitive_wildcard`: see *Character set* bullet point in the [Functionalities]
-  (#functionalities) section.
+The constructor takes the following option arguments in order:
+
+* `case_insensitive_wildcard`: see **Character set** bullet point in the
+  [Functionalities](#functionalities) section.
 
 * `add_prefix_suffix_wildcards`: in the absence of regex anchors, add prefix or suffix wildcards so
   the query becomes a substring query.
