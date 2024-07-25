@@ -73,10 +73,17 @@ public:
     /**
      * Constructs a reader to stream data from the given URL, starting at the given offset.
      * NOTE: This class depends on `libcurl`, so an instance of `clp::CurlGlobalInstance` must
-     * remain alive for the entire lifespan of any instance of this class. For safety concern, a
-     * `clp::CurlGlobalInstance` instance is added as a member variable in this class. However, it
-     * is suggested to instantiate `clp::CurlGlobalInstance` inside the top entry of the code to
-     * minimize `libcurl` resource init/deinit overhead.
+     * remain alive for the entire lifespan of any instance of this class.
+     *
+     * This class maintains an instance of `CurlGlobalInstance` in case the user forgets to
+     * instantiate one, but it is better for performance if the user instantiates one. For instance,
+     * if the user doesn't instantiate a `CurlGlobalInstance` and only ever creates one
+     * `NetworkReader` at a time, then every construction and destruction of `NetworkReader` would
+     * cause `libcurl` to init and deinit. In contrast, if the user instantiates a
+     * `CurlGlobalInstance` before instantiating any `NetworkReader`s, then the `CurlGlobalInstance`
+     * maintained by this class will simply be a reference to the existing one rather than
+     * initializing and deinitializing `libcurl`.
+     *
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.

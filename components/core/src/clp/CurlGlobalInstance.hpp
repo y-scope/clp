@@ -9,7 +9,7 @@ namespace clp {
  * Class to wrap `libcurl`'s global initialization/de-initialization calls using RAII. Before using
  * any `libcurl` functionalities, an instance of this class must be created. Although unnecessasry,
  * it can be safely instantiated multiple times; it maintains a static reference count to all
- * existing instances and only di-initializes `libcurl`'s global resources when the reference count
+ * existing instances and only de-initializes `libcurl`'s global resources when the reference count
  * reaches 0.
  */
 class CurlGlobalInstance {
