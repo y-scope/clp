@@ -32,7 +32,7 @@ public:
 
     // Constructors
     /**
-     * Create and initialize a hash context by calling EVP_MD_CTX_create
+     * Creates and initializes a hash context by calling EVP_MD_CTX_create
      * and EVP_DigestInit_ex from OpenSSL library
      * @param type the type of digest (hash algorithm) from OpenSSL library.
      * @throw EvpCtxManager::ErrorCode_Failure if EVP_MD_CTX_create fails.
