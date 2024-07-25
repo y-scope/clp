@@ -71,8 +71,8 @@ public:
 
     /**
      * Constructs a reader to stream data from the given URL, starting at the given offset.
-     * Note: This class depends on `libcurl`. An instance of `clp::CurlGlobalInstance` must remain
-     * alive for the entire lifespan of any instance of this class to maintain proper functionality.
+     * NOTE: This class depends on `libcurl`, so an instance of `clp::CurlGlobalInstance` must
+     * remain alive for the entire lifespan of any instance of this class.
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
