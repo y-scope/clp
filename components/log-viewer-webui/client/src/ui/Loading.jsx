@@ -38,7 +38,7 @@ const QUERY_STATE_DESCRIPTIONS = Object.freeze([
  * @param {boolean} props.isActive
  * @param {boolean} props.isError
  * @param {string} props.label
- * @param {number | string} props.stepNumber
+ * @param {number | string} props.stepIndicatorText
  * @return {React.ReactElement}
  */
 const LoadingStep = ({
@@ -46,7 +46,7 @@ const LoadingStep = ({
     isActive,
     isError,
     label,
-    stepNumber,
+    stepIndicatorText,
 }) => {
     let color = "danger";
     if (false === isError) {
@@ -64,7 +64,7 @@ const LoadingStep = ({
                         "solid" :
                         "outlined"}
                 >
-                    {stepNumber}
+                    {stepIndicatorText}
                 </StepIndicator>
             }
         >
@@ -100,7 +100,7 @@ const Loading = ({currentState, errorMsg}) => {
                 isError={false}
                 key={index}
                 label={state.label}
-                stepNumber={index + 1}/>
+                stepIndicatorText={index + 1}/>
         );
         if (isActive && null !== errorMsg) {
             steps.push(
@@ -110,7 +110,7 @@ const Loading = ({currentState, errorMsg}) => {
                     isError={true}
                     key={`${index}-error`}
                     label={"Error"}
-                    stepNumber={"X"}/>
+                    stepIndicatorText={"X"}/>
             );
         }
     });
