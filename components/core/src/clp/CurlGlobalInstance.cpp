@@ -9,7 +9,7 @@
 
 namespace clp {
 CurlGlobalInstance::CurlGlobalInstance() {
-    std::scoped_lock<std::mutex> const global_lock{m_ref_count_mutex};
+    std::scoped_lock const global_lock{m_ref_count_mutex};
     if (0 == m_ref_count) {
         if (auto const err{curl_global_init(CURL_GLOBAL_ALL)}; 0 != err) {
             throw CurlOperationFailed(
@@ -25,7 +25,7 @@ CurlGlobalInstance::CurlGlobalInstance() {
 }
 
 CurlGlobalInstance::~CurlGlobalInstance() {
-    std::scoped_lock<std::mutex> const global_lock{m_ref_count_mutex};
+    std::scoped_lock const global_lock{m_ref_count_mutex};
     --m_ref_count;
     if (0 == m_ref_count) {
 #if defined(__APPLE__)
