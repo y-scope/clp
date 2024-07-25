@@ -52,10 +52,24 @@ public:
     ~EvpDigestContext() { EVP_MD_CTX_destroy(m_md_ctx); }
 
     // Methods
-    [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> bool;
+    /**
+     * Calls EVP_DigestUpdate to digest the input and update the hash context
+     * @param input
+     * @return ErrorCode_Success on success.
+     * @return ErrorCode_Unsupported if context is already finalized.
+     * @return ErrorCode_Failure if EVP_DigestUpdate fails.
+     */
+    [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> ErrorCode;
 
-    [[nodiscard]] auto
-    digest_final_ex(std::vector<unsigned char>& hash, unsigned int& length) -> bool;
+    /**
+     * Calls EVP_DigestFinal_ex to generate the final hash result
+     * @param hash Returns the hashing result.
+     * @return ErrorCode_Success on success.
+     * @return ErrorCode_Unsupported if context is already finalized.
+     * @return ErrorCode_Corrupt if the hashing result has an unexpected length.
+     * @return ErrorCode_Failure if EVP_DigestFinal_ex fails.
+     */
+    [[nodiscard]] auto digest_final_ex(std::vector<unsigned char>& hash) -> ErrorCode;
 
 private:
     EVP_MD_CTX* m_md_ctx{nullptr};
@@ -63,7 +77,7 @@ private:
 };
 
 /**
- * Converts input hash into a hex string.
+ * Converts input hash into a hex string
  * @param input
  * @return input hash as a hex string
  */
@@ -89,9 +103,8 @@ private:
  * @param input
  * @param hash Returns the hashing result.
  * @return ErrorCode_Success on success.
- * @return ErrorCode_BadParam if input key exceeds maximum length.
- * @return ErrorCode_Failure if hash generation fails.
- * @throw EvpCtxManager::OperationFailed if EvpCtxManager can not be initalized
+ * @return Same as digest_final_ex and digest_update on failure.
+ * @throw EvpCtxManager::OperationFailed if EvpCtxManager can not be initialized.
  */
 [[nodiscard]] auto get_sha256_hash(
         std::span<unsigned char const> input,

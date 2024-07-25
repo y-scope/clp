@@ -2,7 +2,6 @@
 
 #include <span>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include <fmt/format.h>
@@ -11,29 +10,37 @@
 
 #include "ErrorCode.hpp"
 #include "spdlog_with_specializations.hpp"
-#include "type_utils.hpp"
 
-using clp::size_checked_pointer_cast;
 using std::span;
 using std::string;
-using std::string_view;
 using std::vector;
 
 namespace clp {
-auto EvpDigestContext::digest_update(std::span<unsigned char const> input) -> bool {
+auto EvpDigestContext::digest_update(std::span<unsigned char const> input) -> ErrorCode {
     if (m_is_digest_finalized) {
-        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+        return ErrorCode_Unsupported;
     }
-    return static_cast<bool>(EVP_DigestUpdate(m_md_ctx, input.data(), input.size()));
+    if (1 != EVP_DigestUpdate(m_md_ctx, input.data(), input.size())) {
+        return ErrorCode_Failure;
+    }
+    return ErrorCode_Success;
 }
 
-auto EvpDigestContext::digest_final_ex(std::vector<unsigned char>& hash, unsigned int& length)
-        -> bool {
+auto EvpDigestContext::digest_final_ex(std::vector<unsigned char>& hash) -> ErrorCode {
+    if (m_is_digest_finalized) {
+        return ErrorCode_Unsupported;
+    }
+
+    hash.resize(SHA256_DIGEST_LENGTH);
+    unsigned int length;
     if (1 != EVP_DigestFinal_ex(m_md_ctx, hash.data(), &length)) {
-        return false;
+        return ErrorCode_Failure;
+    }
+    if (SHA256_DIGEST_LENGTH != length) {
+        return ErrorCode_Corrupt;
     }
     m_is_digest_finalized = true;
-    return true;
+    return ErrorCode_Success;
 }
 
 auto convert_hash_to_hex_string(span<unsigned char> input) -> string {
@@ -78,25 +85,17 @@ auto get_hmac_sha256_hash(
     return ErrorCode_Success;
 }
 
-/**
- * Gets the SHA256 hash
- * @param input
- * @return The SHA256 hash
- */
 auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& hash) -> ErrorCode {
     EvpDigestContext evp_ctx_manager{EVP_sha256(), nullptr};
 
-    if (false == evp_ctx_manager.digest_update(input)) {
+    if (auto error_code = evp_ctx_manager.digest_update(input); ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to digest input");
-        return ErrorCode_Failure;
+        return error_code;
     }
 
-    unsigned int digest_len{0};
-    hash.resize(SHA256_DIGEST_LENGTH);
-
-    if (false == evp_ctx_manager.digest_final_ex(hash, digest_len)) {
+    if (auto error_code = evp_ctx_manager.digest_final_ex(hash); ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to Finalize digest");
-        return ErrorCode_Failure;
+        return error_code;
     }
 
     return ErrorCode_Success;
