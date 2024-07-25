@@ -13,9 +13,9 @@
 
 namespace clp {
 /**
-* A C++ wrapper for openssl's EVP digest message digest context (EVP_MD_CTX).
+ * A C++ wrapper for openssl's EVP digest message digest context (EVP_MD_CTX).
  */
-class EvpCtxManager {
+class EvpDigestContext {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -31,33 +31,35 @@ public:
     };
 
     // Constructors
-    EvpCtxManager() : m_md_ctx{EVP_MD_CTX_create()} {
+    EvpDigestContext(const EVP_MD* type, ENGINE* impl) : m_md_ctx{EVP_MD_CTX_create()} {
         if (nullptr == m_md_ctx) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
+        if (1 != EVP_DigestInit_ex(m_md_ctx, type, impl)) {
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
     }
 
-    // Disable copy and move constructor/assignment
-    EvpCtxManager(EvpCtxManager const&) = delete;
-    auto operator=(EvpCtxManager const&) -> EvpCtxManager& = delete;
+    // Disable copy constructor/assignment operator
+    EvpDigestContext(EvpDigestContext const&) = delete;
+    auto operator=(EvpDigestContext const&) -> EvpDigestContext& = delete;
+
+    // disable move constructor/assignment operator
+    EvpDigestContext(EvpDigestContext&&) = delete;
+    auto operator=(EvpDigestContext&&) -> EvpDigestContext& = delete;
 
     // Destructor
-    ~EvpCtxManager() { EVP_MD_CTX_destroy(m_md_ctx); }
-// Methods
-    auto digest_init_ex(const EVP_MD* type, ENGINE* impl) -> int {
-        return EVP_DigestInit_ex(m_md_ctx, type, impl);
-    }
+    ~EvpDigestContext() { EVP_MD_CTX_destroy(m_md_ctx); }
 
-    [[nodiscard]] auto digest_update(void const* d, size_t cnt) -> int {
-        return EVP_DigestUpdate(m_md_ctx, d, cnt);
-    }
+    // Methods
+    [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> bool;
 
-    auto digest_final_ex(unsigned char* md, unsigned int* s) -> int {
-        return EVP_DigestFinal_ex(m_md_ctx, md, s);
-    }
+    [[nodiscard]] auto
+    digest_final_ex(std::vector<unsigned char>& hash, unsigned int& length) -> bool;
 
 private:
     EVP_MD_CTX* m_md_ctx{nullptr};
+    bool m_is_digest_finalized{false};
 };
 
 /**
@@ -76,7 +78,7 @@ private:
  * @return ErrorCode_BadParam if input key exceeds maximum length.
  * @return ErrorCode_Failure if hash generation fails.
  */
-auto get_hmac_sha256_hash(
+[[nodiscard]] auto get_hmac_sha256_hash(
         std::span<unsigned char const> input,
         std::span<unsigned char const> key,
         std::vector<unsigned char>& hash
@@ -91,7 +93,9 @@ auto get_hmac_sha256_hash(
  * @return ErrorCode_Failure if hash generation fails.
  * @throw EvpCtxManager::OperationFailed if EvpCtxManager can not be initalized
  */
-auto get_sha256_hash(std::span<unsigned char const> input, std::vector<unsigned char>& hash)
-        -> ErrorCode;
+[[nodiscard]] auto get_sha256_hash(
+        std::span<unsigned char const> input,
+        std::vector<unsigned char>& hash
+) -> ErrorCode;
 }  // namespace clp
 #endif  // CLP_HASH_UTILS_HPP

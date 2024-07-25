@@ -20,6 +20,22 @@ using std::string_view;
 using std::vector;
 
 namespace clp {
+auto EvpDigestContext::digest_update(std::span<unsigned char const> input) -> bool {
+    if (m_is_digest_finalized) {
+        throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+    }
+    return static_cast<bool>(EVP_DigestUpdate(m_md_ctx, input.data(), input.size()));
+}
+
+auto EvpDigestContext::digest_final_ex(std::vector<unsigned char>& hash, unsigned int& length)
+        -> bool {
+    if (1 != EVP_DigestFinal_ex(m_md_ctx, hash.data(), &length)) {
+        return false;
+    }
+    m_is_digest_finalized = true;
+    return true;
+}
+
 auto convert_hash_to_hex_string(span<unsigned char> input) -> string {
     string hex_string;
     for (auto const c : input) {
@@ -68,14 +84,9 @@ auto get_hmac_sha256_hash(
  * @return The SHA256 hash
  */
 auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& hash) -> ErrorCode {
-    EvpCtxManager evp_ctx_manager{};
+    EvpDigestContext evp_ctx_manager{EVP_sha256(), nullptr};
 
-    if (1 != evp_ctx_manager.digest_init_ex(EVP_sha256(), nullptr)) {
-        SPDLOG_ERROR("Failed to initialize ctx manager");
-        return ErrorCode_Failure;
-    }
-
-    if (1 != evp_ctx_manager.digest_update(input.data(), input.size())) {
+    if (false == evp_ctx_manager.digest_update(input)) {
         SPDLOG_ERROR("Failed to digest input");
         return ErrorCode_Failure;
     }
@@ -83,7 +94,7 @@ auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& has
     unsigned int digest_len{0};
     hash.resize(SHA256_DIGEST_LENGTH);
 
-    if (1 != evp_ctx_manager.digest_final_ex(hash.data(), &digest_len)) {
+    if (false == evp_ctx_manager.digest_final_ex(hash, digest_len)) {
         SPDLOG_ERROR("Failed to Finalize digest");
         return ErrorCode_Failure;
     }
