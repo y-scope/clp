@@ -16,7 +16,7 @@ import Loading from "./Loading.jsx";
  *
  * @return {React.ReactElement}
  */
-const Query = () => {
+const QueryStatus = () => {
     const [queryState, setQueryState] = useState(QUERY_LOAD_STATE.SUBMITTING);
     const [errorMsg, setErrorMsg] = useState(null);
     const isFirstRun = useRef(true);
@@ -48,4 +48,4 @@ const Query = () => {
     );
 };
 
-export default Query;
+export default QueryStatus;
