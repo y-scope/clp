@@ -18,6 +18,7 @@
 #include <curl/curl.h>
 
 #include "CurlDownloadHandler.hpp"
+#include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 #include "Thread.hpp"
@@ -72,7 +73,10 @@ public:
     /**
      * Constructs a reader to stream data from the given URL, starting at the given offset.
      * NOTE: This class depends on `libcurl`, so an instance of `clp::CurlGlobalInstance` must
-     * remain alive for the entire lifespan of any instance of this class.
+     * remain alive for the entire lifespan of any instance of this class. For safety concern, a
+     * `clp::CurlGlobalInstance` instance is added as a member variable in this class. However, it
+     * is suggested to instantiate `clp::CurlGlobalInstance` inside the top entry of the code to
+     * minimize `libcurl` resource init/deinit overhead.
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
@@ -291,6 +295,8 @@ private:
     [[nodiscard]] auto at_least_one_byte_downloaded() const -> bool {
         return m_at_least_one_byte_downloaded.load();
     }
+
+    CurlGlobalInstance m_curl_global_instance;
 
     std::string m_src_url;
 

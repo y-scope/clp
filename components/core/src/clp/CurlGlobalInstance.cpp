@@ -33,6 +33,8 @@ CurlGlobalInstance::~CurlGlobalInstance() {
         // CURLE_SSL_CONNECT_ERROR. Thus, for now, we skip `deinit` on macOS. Luckily, it is safe to
         // call `curl_global_init` multiple times without calling `curl_global_cleanup`. Related
         // issues:
+        // - https://github.com/curl/curl/issues/12525
+        // - https://github.com/curl/curl/issues/13805
         // TODO: Remove this conditional logic when the issues are resolved.
         return;
 #else
