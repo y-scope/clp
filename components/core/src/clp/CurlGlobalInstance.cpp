@@ -9,8 +9,8 @@
 
 namespace clp {
 CurlGlobalInstance::CurlGlobalInstance() {
-    std::lock_guard<std::mutex> const global_lock{m_global_mutex};
-    if (0 == m_num_living_instances) {
+    std::scoped_lock<std::mutex> const global_lock{m_ref_count_mutex};
+    if (0 == m_ref_count) {
         if (auto const err{curl_global_init(CURL_GLOBAL_ALL)}; 0 != err) {
             throw CurlOperationFailed(
                     ErrorCode_Failure,
@@ -21,13 +21,13 @@ CurlGlobalInstance::CurlGlobalInstance() {
             );
         }
     }
-    ++m_num_living_instances;
+    ++m_ref_count;
 }
 
 CurlGlobalInstance::~CurlGlobalInstance() {
-    std::lock_guard<std::mutex> const global_lock{m_global_mutex};
-    --m_num_living_instances;
-    if (0 == m_num_living_instances) {
+    std::scoped_lock<std::mutex> const global_lock{m_ref_count_mutex};
+    --m_ref_count;
+    if (0 == m_ref_count) {
 #if defined(__APPLE__)
         // NOTE: On macOS, calling `curl_global_init` after `curl_global_cleanup` will fail with
         // CURLE_SSL_CONNECT_ERROR. Thus, for now, we skip `deinit` on macOS. Luckily, it is safe to

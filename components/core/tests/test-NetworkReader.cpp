@@ -67,12 +67,12 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
 }  // namespace
 
 TEST_CASE("network_reader_basic", "[NetworkReader]") {
-    clp::CurlGlobalInstance const curl_global_instance;
     clp::FileReader ref_reader;
     ref_reader.open(get_test_input_local_path());
     auto const expected{get_content(ref_reader)};
     ref_reader.close();
 
+    clp::CurlGlobalInstance const curl_global_instance;
     clp::NetworkReader reader{get_test_input_remote_url()};
     auto const actual{get_content(reader)};
     auto const ret_code{reader.get_curl_ret_code()};
@@ -83,7 +83,6 @@ TEST_CASE("network_reader_basic", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
-    clp::CurlGlobalInstance const curl_global_instance;
     constexpr size_t cOffset{319};
     clp::FileReader ref_reader;
     ref_reader.open(get_test_input_local_path());
@@ -94,6 +93,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
 
     // Read from an offset onwards by starting the download from that offset.
     {
+        clp::CurlGlobalInstance const curl_global_instance;
         clp::NetworkReader reader{get_test_input_remote_url(), cOffset};
         auto const actual{get_content(reader)};
         auto const ret_code{reader.get_curl_ret_code()};
@@ -106,6 +106,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
 
     // Read from an offset onwards by seeking to that offset.
     {
+        clp::CurlGlobalInstance const curl_global_instance;
         clp::NetworkReader reader(get_test_input_remote_url());
         reader.seek_from_begin(cOffset);
         auto const actual{get_content(reader)};
@@ -119,14 +120,13 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_destruct", "[NetworkReader]") {
-    clp::CurlGlobalInstance const curl_global_instance;
-
     // We sleep to fill out all the buffers, and then we delete the reader. The destructor will try
     // to abort the underlying download and then destroy the instance. So should ensure destructor
     // is successfully executed without deadlock or exceptions.
     bool no_exception{true};
     try {
         // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        clp::CurlGlobalInstance const curl_global_instance;
         auto reader{std::make_unique<clp::NetworkReader>(
                 get_test_input_remote_url(),
                 0,
@@ -147,10 +147,9 @@ TEST_CASE("network_reader_destruct", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
-    clp::CurlGlobalInstance const curl_global_instance;
-
     // Try to read from an out-of-bound offset.
     constexpr size_t cIllegalOffset{UINT32_MAX};
+    clp::CurlGlobalInstance const curl_global_instance;
     clp::NetworkReader reader{get_test_input_remote_url(), cIllegalOffset};
     while (true) {
         auto const ret_code{reader.get_curl_ret_code()};

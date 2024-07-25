@@ -27,8 +27,8 @@ public:
     ~CurlGlobalInstance();
 
 private:
-    static inline std::mutex m_global_mutex;
-    static inline size_t m_num_living_instances{0};
+    static inline std::mutex m_ref_count_mutex;
+    static inline size_t m_ref_count{0};
 };
 }  // namespace clp
 
