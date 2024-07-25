@@ -508,7 +508,7 @@ target_link_libraries(unitTest
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog
-        OpenSSL::SSL OpenSSL::Crypto
+        OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
         clp::regex_utils
