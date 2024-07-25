@@ -20,7 +20,7 @@ TEST_CASE("test_sha256", "[hash_utils]") {
     constexpr string_view cReferenceSha256{
             "c3a1d9f04ada1198c4c63bf51d9933fc2cc216429275cadabdcb2178775add0c"
     };
-    vector<unsigned char> hash{};
+    vector<unsigned char> hash;
 
     REQUIRE(ErrorCode_Success
             == get_sha256_hash(
@@ -37,7 +37,7 @@ TEST_CASE("test_hmac", "[hash_utils]") {
     constexpr string_view cReferenceHmacSha256{
             "38373057694c1038a6895212bea46849eb7a59b73a2ec175883ae095fb91ffda"
     };
-    vector<unsigned char> hmac_hash{};
+    vector<unsigned char> hmac_hash;
 
     REQUIRE(ErrorCode_Success
             == get_hmac_sha256_hash(

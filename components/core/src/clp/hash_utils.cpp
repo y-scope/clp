@@ -32,7 +32,7 @@ auto EvpDigestContext::digest_final_ex(std::vector<unsigned char>& hash) -> Erro
     }
 
     hash.resize(SHA256_DIGEST_LENGTH);
-    unsigned int length;
+    unsigned int length{};
     if (1 != EVP_DigestFinal_ex(m_md_ctx, hash.data(), &length)) {
         return ErrorCode_Failure;
     }
@@ -88,12 +88,16 @@ auto get_hmac_sha256_hash(
 auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& hash) -> ErrorCode {
     EvpDigestContext evp_ctx_manager{EVP_sha256(), nullptr};
 
-    if (auto error_code = evp_ctx_manager.digest_update(input); ErrorCode_Success != error_code) {
+    if (auto const error_code = evp_ctx_manager.digest_update(input);
+        ErrorCode_Success != error_code)
+    {
         SPDLOG_ERROR("Failed to digest input");
         return error_code;
     }
 
-    if (auto error_code = evp_ctx_manager.digest_final_ex(hash); ErrorCode_Success != error_code) {
+    if (auto const error_code = evp_ctx_manager.digest_final_ex(hash);
+        ErrorCode_Success != error_code)
+    {
         SPDLOG_ERROR("Failed to Finalize digest");
         return error_code;
     }

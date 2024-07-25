@@ -31,7 +31,7 @@ public:
     };
 
     // Constructors
-    EvpDigestContext(const EVP_MD* type, ENGINE* impl) : m_md_ctx{EVP_MD_CTX_create()} {
+    EvpDigestContext(EVP_MD const* type, ENGINE* impl) : m_md_ctx{EVP_MD_CTX_create()} {
         if (nullptr == m_md_ctx) {
             throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
@@ -77,7 +77,7 @@ private:
 };
 
 /**
- * Converts input hash into a hex string
+ * Converts input hash into a hex string.
  * @param input
  * @return input hash as a hex string
  */
@@ -99,7 +99,7 @@ private:
 ) -> ErrorCode;
 
 /**
- * Gets the SHA256 hash of input
+ * Gets the SHA256 hash of the input.
  * @param input
  * @param hash Returns the hashing result.
  * @return ErrorCode_Success on success.
