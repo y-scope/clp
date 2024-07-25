@@ -38,7 +38,11 @@ const submitExtractIrJob = async (origFileId, logEventIdx, onQueryStateChange, o
         if (e instanceof AxiosError) {
             errorMsg = e.message;
             if ("undefined" !== typeof e.response) {
-                errorMsg = e.response.data.message ?? e.response.statusText;
+                if ("undefined" !== typeof e.response.data.message) {
+                    errorMsg = e.response.data.message;
+                } else {
+                    errorMsg = e.response.statusText;
+                }
             }
         }
         onErrorMsg(errorMsg);
