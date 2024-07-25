@@ -34,11 +34,11 @@ const LoadingStep = ({
     label,
     stepIndicatorText,
 }) => {
-    let color = "danger";
-    if (false === isError) {
-        color = isActive ?
-            "primary" :
-            "neutral";
+    let color = isActive ?
+        "primary" :
+        "neutral";
+    if (isError) {
+        color = "danger";
     }
 
     return (
