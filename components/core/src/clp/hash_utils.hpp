@@ -1,10 +1,9 @@
 #ifndef CLP_HASH_UTILS_HPP
 #define CLP_HASH_UTILS_HPP
 
-#include <memory>
+#include <cstddef>
 #include <span>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include <openssl/evp.h>
@@ -14,8 +13,7 @@
 
 namespace clp {
 /**
- * A class the wraps around openssl EVP_MD_CTX to manage the life cycle of
- * dynamically allocated EVP_MD_CTX object.
+* A C++ wrapper for openssl's EVP digest message digest context (EVP_MD_CTX).
  */
 class EvpCtxManager {
 public:
@@ -45,12 +43,12 @@ public:
 
     // Destructor
     ~EvpCtxManager() { EVP_MD_CTX_destroy(m_md_ctx); }
-
+// Methods
     auto digest_init_ex(const EVP_MD* type, ENGINE* impl) -> int {
         return EVP_DigestInit_ex(m_md_ctx, type, impl);
     }
 
-    auto digest_update(void const* d, size_t cnt) -> int {
+    [[nodiscard]] auto digest_update(void const* d, size_t cnt) -> int {
         return EVP_DigestUpdate(m_md_ctx, d, cnt);
     }
 
@@ -63,20 +61,20 @@ private:
 };
 
 /**
- * Converts input hash into a hex string
+ * Converts input hash into a hex string.
  * @param input
  * @return input hash as a hex string
  */
-auto convert_hash_to_hex_string(std::span<unsigned char> input) -> std::string;
+[[nodiscard]] auto convert_hash_to_hex_string(std::span<unsigned char> input) -> std::string;
 
 /**
- * Gets the HMAC-SHA256 hash of input with key
+ * Gets the HMAC-SHA256 hash of input with key.
  * @param input
  * @param key
- * @param hash Returns the result hash by reference.
+ * @param hash Returns the hashing result.
+ * @return ErrorCode_Success on success.
  * @return ErrorCode_BadParam if input key exceeds maximum length.
- * ErrorCode_Failure if hash generation fails
- * ErrorCode_Success on success
+ * @return ErrorCode_Failure if hash generation fails.
  */
 auto get_hmac_sha256_hash(
         std::span<unsigned char const> input,
@@ -87,10 +85,10 @@ auto get_hmac_sha256_hash(
 /**
  * Gets the SHA256 hash of input
  * @param input
- * @param hash Returns the result hash by reference.
+ * @param hash Returns the hashing result.
+ * @return ErrorCode_Success on success.
  * @return ErrorCode_BadParam if input key exceeds maximum length.
- * ErrorCode_Failure if hash generation fails
- * ErrorCode_Success on success
+ * @return ErrorCode_Failure if hash generation fails.
  * @throw EvpCtxManager::OperationFailed if EvpCtxManager can not be initalized
  */
 auto get_sha256_hash(std::span<unsigned char const> input, std::vector<unsigned char>& hash)

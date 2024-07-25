@@ -6,6 +6,7 @@
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/hash_utils.hpp"
 #include "../src/clp/type_utils.hpp"
+
 using clp::convert_hash_to_hex_string;
 using clp::ErrorCode_Success;
 using clp::get_hmac_sha256_hash;

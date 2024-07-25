@@ -40,17 +40,16 @@ auto get_hmac_sha256_hash(
         SPDLOG_ERROR("Input key exceeds maximum length");
         return ErrorCode_BadParam;
     }
-    int const key_length{static_cast<int>(key.size())};
-    auto* res
-            = HMAC(EVP_sha256(),
-                   key.data(),
-                   key_length,
-                   input.data(),
-                   input.size(),
-                   hash.data(),
-                   &hash_length);
-
-    if (nullptr == res) {
+    auto const key_length{static_cast<int>(key.size())};
+    if (nullptr
+        == HMAC(EVP_sha256(),
+                key.data(),
+                key_length,
+                input.data(),
+                input.size(),
+                hash.data(),
+                &hash_length))
+    {
         SPDLOG_ERROR("Failed to get HMAC hashes");
         return ErrorCode_Failure;
     }
