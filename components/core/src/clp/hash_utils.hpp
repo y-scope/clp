@@ -31,12 +31,20 @@ public:
     };
 
     // Constructors
-    EvpDigestContext(EVP_MD const* type, ENGINE* impl) : m_md_ctx{EVP_MD_CTX_create()} {
+    /**
+     * Create and initialize a hash context by calling EVP_MD_CTX_create
+     * and EVP_DigestInit_ex from OpenSSL library
+     * @param type the type of digest (hash algorithm) from OpenSSL library.
+     * @throw EvpCtxManager::ErrorCode_Failure if EVP_MD_CTX_create fails.
+     * @throw EvpCtxManager::ErrorCode_NotInit if EVP_DigestInit_ex fails.
+     */
+    EvpDigestContext(EVP_MD const* type) : m_md_ctx{EVP_MD_CTX_create()} {
         if (nullptr == m_md_ctx) {
-            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-        }
-        if (1 != EVP_DigestInit_ex(m_md_ctx, type, impl)) {
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
+        // Set impl to nullptr to use the default implementation of digest type
+        if (1 != EVP_DigestInit_ex(m_md_ctx, type, nullptr)) {
+            throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
         }
     }
 

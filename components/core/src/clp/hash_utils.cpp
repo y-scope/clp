@@ -86,7 +86,7 @@ auto get_hmac_sha256_hash(
 }
 
 auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& hash) -> ErrorCode {
-    EvpDigestContext evp_ctx_manager{EVP_sha256(), nullptr};
+    EvpDigestContext evp_ctx_manager{EVP_sha256()};
 
     if (auto const error_code = evp_ctx_manager.digest_update(input);
         ErrorCode_Success != error_code)
