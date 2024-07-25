@@ -20,25 +20,25 @@ const QUERY_STATE_DESCRIPTIONS = Object.freeze([
         description: "Parsing arguments and submitting job to the server.",
     },
     {
-        label: "Waiting for job To finish",
+        label: "Waiting for job to finish",
         description: "The job is running. Waiting for the job to finish.",
     },
     {
-        label: "Loading up Log Viewer",
+        label: "Loading Log Viewer",
         description: "The query has been completed and the results are being loaded.",
     },
 ]);
 
 
 /**
- * Renders a step with a label and a description text.
+ * Renders a step with a label and description.
  *
  * @param {object} props
  * @param {string} props.description
  * @param {boolean} props.isActive
- * @param {boolean} props.isError whether an error message should be shown instead of a step.
+ * @param {boolean} props.isError
  * @param {string} props.label
- * @param {number} props.stepNumber
+ * @param {number | string} props.stepNumber
  * @return {React.ReactElement}
  */
 const LoadingStep = ({

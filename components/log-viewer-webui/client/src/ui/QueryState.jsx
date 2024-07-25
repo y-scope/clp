@@ -31,8 +31,8 @@ const Query = () => {
         const origFileId = searchParams.get("origFileId");
         const logEventIx = searchParams.get("logEventIx");
         if (null === origFileId || null === logEventIx) {
-            const error = "Non-IR-Extraction queries are not supported at the moment. " +
-            "Either origFileId or logEventIx is missing from the URL parameters.";
+            const error = "Either `origFileId` or `logEventIx` are missing from the URL " +
+            "parameters. Note that non-IR-extraction queries are not supported at the moment.";
 
             console.error(error);
             setErrorMsg(error);

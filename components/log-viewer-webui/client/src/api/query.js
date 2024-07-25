@@ -17,10 +17,10 @@ const QUERY_LOAD_STATE = Object.freeze({
 });
 
 /**
- * Submits a job to extract a segment of the original file, which contains a given log event index,
- * into CLP's IR format for viewing in the Log Viewer.
+ * Submits a job to extract the split of an original file that contains a given log event. The file
+* is extracted as a CLP IR file.
  *
- * @param {number|string} origFileId The ID of the original file to extract IR from
+ * @param {number|string} origFileId The ID of the original file
  * @param {number} logEventIx The index of the log event
  * @param {Function} onQueryStateChange Callback to set query state.
  * @param {Function} onErrorMsg Callback to set error message.
