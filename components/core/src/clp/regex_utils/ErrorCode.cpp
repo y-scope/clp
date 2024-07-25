@@ -76,7 +76,8 @@ auto ErrorCodeCategory::message(int ev) const -> string {
             return "Unmatched closing `]` at the end of the string.";
 
         case ErrorCode::UnsupportedCharsetPattern:
-            return "Currently only supports character set that contains a single character.";
+            return "Currently only supports character set that can be reduced to a single "
+                   "character.";
 
         default:
             return "(unrecognized error)";
