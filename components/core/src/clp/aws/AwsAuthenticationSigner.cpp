@@ -213,11 +213,8 @@ auto AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string
     auto const scope = get_scope(date_string, s3_region);
     auto const canonical_query_string = generate_canonical_query_string(scope, timestamp_string);
 
-    auto const canonical_request = get_canonical_request(
-            HttpMethod::GET,
-            s3_url,
-            canonical_query_string
-    );
+    auto const canonical_request
+            = get_canonical_request(HttpMethod::GET, s3_url, canonical_query_string);
 
     string string_to_sign{};
     if (auto error_code
