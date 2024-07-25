@@ -45,6 +45,7 @@ const submitExtractIrJob = async (origFileId, logEventIdx, onQueryStateChange, o
                 }
             }
         }
+        console.error(errorMsg, e);
         onErrorMsg(errorMsg);
     }
 };
