@@ -8,26 +8,12 @@ import {
     Typography,
 } from "@mui/joy";
 
+import {
+    QUERY_LOAD_STATE,
+    QUERY_STATE_DESCRIPTIONS,
+} from "../api/query.js";
+
 import "./Loading.css";
-
-
-/**
- * Descriptions for query states.
- */
-const QUERY_STATE_DESCRIPTIONS = Object.freeze([
-    {
-        label: "Submitting query Job",
-        description: "Parsing arguments and submitting job to the server.",
-    },
-    {
-        label: "Waiting for job to finish",
-        description: "The job is running. Waiting for the job to finish.",
-    },
-    {
-        label: "Loading Log Viewer",
-        description: "The query has been completed and the results are being loaded.",
-    },
-]);
 
 
 /**
@@ -91,16 +77,17 @@ const LoadingStep = ({
  */
 const Loading = ({currentState, errorMsg}) => {
     const steps = [];
-    QUERY_STATE_DESCRIPTIONS.forEach((state, index) => {
-        const isActive = (currentState === index);
+    Object.values(QUERY_LOAD_STATE).forEach((state) => {
+        const isActive = (currentState === state);
+        const stateDescription = QUERY_STATE_DESCRIPTIONS[state];
         steps.push(
             <LoadingStep
-                description={state.description}
+                description={stateDescription.description}
                 isActive={isActive}
                 isError={false}
-                key={index}
-                label={state.label}
-                stepIndicatorText={index + 1}/>
+                key={state}
+                label={stateDescription.label}
+                stepIndicatorText={state + 1}/>
         );
         if (isActive && null !== errorMsg) {
             steps.push(
@@ -108,7 +95,7 @@ const Loading = ({currentState, errorMsg}) => {
                     description={errorMsg}
                     isActive={isActive}
                     isError={true}
-                    key={`${index}-error`}
+                    key={`${state}-error`}
                     label={"Error"}
                     stepIndicatorText={"X"}/>
             );

@@ -17,6 +17,24 @@ const QUERY_LOAD_STATE = Object.freeze({
 });
 
 /**
+ * Descriptions for query states.
+ */
+const QUERY_STATE_DESCRIPTIONS = Object.freeze({
+    [QUERY_LOAD_STATE.SUBMITTING]: {
+        label: "Submitting query Job",
+        description: "Parsing arguments and submitting job to the server.",
+    },
+    [QUERY_LOAD_STATE.WAITING]: {
+        label: "Waiting for job to finish",
+        description: "The job is running. Waiting for the job to finish.",
+    },
+    [QUERY_LOAD_STATE.LOADING]: {
+        label: "Loading Log Viewer",
+        description: "The query has been completed and the results are being loaded.",
+    },
+});
+
+/**
  * Submits a job to extract the split of an original file that contains a given log event. The file
  * is extracted as a CLP IR file.
  *
@@ -52,5 +70,6 @@ const submitExtractIrJob = async (origFileId, logEventIdx, onQueryStateChange, o
 
 export {
     QUERY_LOAD_STATE,
+    QUERY_STATE_DESCRIPTIONS,
     submitExtractIrJob,
 };
