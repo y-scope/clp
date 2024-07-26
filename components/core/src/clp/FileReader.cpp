@@ -12,15 +12,24 @@
 using std::string;
 
 namespace clp {
+FileReader::FileReader(string const& path) : m_file{nullptr}, m_getdelim_buf_len(0), m_getdelim_buf(nullptr) {
+    m_file = fopen(path.c_str(), "rb");
+    if (nullptr == m_file) {
+        if (ENOENT == errno) {
+            throw OperationFailed(ErrorCode_FileNotFound, __FILE__, __LINE__);
+        }
+        throw OperationFailed(ErrorCode_errno, __FILE__, __LINE__);
+    }
+    m_path = path;
+}
 FileReader::~FileReader() {
-    close();
+    // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if
+    // it was interrupted by a signal
+    fclose(m_file);
     free(m_getdelim_buf);
 }
 
 ErrorCode FileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
-    if (nullptr == m_file) {
-        return ErrorCode_NotInit;
-    }
     if (nullptr == buf) {
         return ErrorCode_BadParam;
     }
@@ -40,10 +49,6 @@ ErrorCode FileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_
 }
 
 ErrorCode FileReader::try_seek_from_begin(size_t pos) {
-    if (nullptr == m_file) {
-        return ErrorCode_NotInit;
-    }
-
     int retval = fseeko(m_file, pos, SEEK_SET);
     if (0 != retval) {
         return ErrorCode_errno;
@@ -53,10 +58,6 @@ ErrorCode FileReader::try_seek_from_begin(size_t pos) {
 }
 
 ErrorCode FileReader::try_get_pos(size_t& pos) {
-    if (nullptr == m_file) {
-        return ErrorCode_NotInit;
-    }
-
     pos = ftello(m_file);
     if ((off_t)-1 == pos) {
         return ErrorCode_errno;
@@ -65,46 +66,8 @@ ErrorCode FileReader::try_get_pos(size_t& pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode FileReader::try_open(string const& path) {
-    // Cleanup in case caller forgot to call close before calling this function
-    close();
-
-    m_file = fopen(path.c_str(), "rb");
-    if (nullptr == m_file) {
-        if (ENOENT == errno) {
-            return ErrorCode_FileNotFound;
-        }
-        return ErrorCode_errno;
-    }
-    m_path = path;
-
-    return ErrorCode_Success;
-}
-
-void FileReader::open(string const& path) {
-    ErrorCode error_code = try_open(path);
-    if (ErrorCode_Success != error_code) {
-        if (ErrorCode_FileNotFound == error_code) {
-            throw "File not found: " + boost::filesystem::weakly_canonical(path).string() + "\n";
-        } else {
-            throw OperationFailed(error_code, __FILENAME__, __LINE__);
-        }
-    }
-}
-
-void FileReader::close() {
-    if (m_file != nullptr) {
-        // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if
-        // it was interrupted by a signal
-        fclose(m_file);
-        m_file = nullptr;
-    }
-}
-
 ErrorCode
 FileReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, string& str) {
-    assert(nullptr != m_file);
-
     if (false == append) {
         str.clear();
     }
@@ -125,10 +88,6 @@ FileReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, 
 }
 
 ErrorCode FileReader::try_fstat(struct stat& stat_buffer) {
-    if (nullptr == m_file) {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
-    }
-
     auto return_value = fstat(fileno(m_file), &stat_buffer);
     if (0 != return_value) {
         return ErrorCode_errno;

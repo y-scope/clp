@@ -48,7 +48,6 @@ public:
      * Reads any new entries added to the dictionaries
      * @throw Same as LogTypeDictionary::read_from_file and VariableDictionary::read_from_file
      */
-    void refresh_dictionaries();
     LogTypeDictionaryReader const& get_logtype_dictionary() const;
     VariableDictionaryReader const& get_var_dictionary() const;
 

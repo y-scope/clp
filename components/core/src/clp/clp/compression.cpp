@@ -192,42 +192,43 @@ bool read_and_validate_grouped_file_list(
         string const& list_path,
         vector<FileToCompress>& grouped_files
 ) {
-    FileReader grouped_file_path_reader;
-    ErrorCode error_code = grouped_file_path_reader.try_open(list_path);
-    if (ErrorCode_Success != error_code) {
-        if (ErrorCode_FileNotFound == error_code) {
-            SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
-        } else if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR("Failed to read '{}', errno={}", list_path.c_str(), errno);
-        } else {
-            SPDLOG_ERROR("Failed to read '{}', error_code={}", list_path.c_str(), error_code);
-        }
-        return false;
-    }
+    FileReader grouped_file_path_reader(list_path);
+//    ErrorCode error_code = grouped_file_path_reader.try_open(list_path);
+//    if (ErrorCode_Success != error_code) {
+//        if (ErrorCode_FileNotFound == error_code) {
+//            SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
+//        } else if (ErrorCode_errno == error_code) {
+//            SPDLOG_ERROR("Failed to read '{}', errno={}", list_path.c_str(), errno);
+//        } else {
+//            SPDLOG_ERROR("Failed to read '{}', error_code={}", list_path.c_str(), error_code);
+//        }
+//        return false;
+//    }
 
-    FileReader grouped_file_id_reader;
     string grouped_file_ids_path = list_path.substr(0, list_path.length() - 4) + ".gid";
-    error_code = grouped_file_id_reader.try_open(grouped_file_ids_path);
-    if (ErrorCode_Success != error_code) {
-        if (ErrorCode_FileNotFound == error_code) {
-            SPDLOG_ERROR("'{}' does not exist.", grouped_file_ids_path.c_str());
-        } else if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR("Failed to read '{}', errno={}", grouped_file_ids_path.c_str(), errno);
-        } else {
-            SPDLOG_ERROR(
-                    "Failed to read '{}', error_code={}",
-                    grouped_file_ids_path.c_str(),
-                    error_code
-            );
-        }
-        return false;
-    }
+    FileReader grouped_file_id_reader(grouped_file_ids_path);
+//    error_code = grouped_file_id_reader.try_open(grouped_file_ids_path);
+//    if (ErrorCode_Success != error_code) {
+//        if (ErrorCode_FileNotFound == error_code) {
+//            SPDLOG_ERROR("'{}' does not exist.", grouped_file_ids_path.c_str());
+//        } else if (ErrorCode_errno == error_code) {
+//            SPDLOG_ERROR("Failed to read '{}', errno={}", grouped_file_ids_path.c_str(), errno);
+//        } else {
+//            SPDLOG_ERROR(
+//                    "Failed to read '{}', error_code={}",
+//                    grouped_file_ids_path.c_str(),
+//                    error_code
+//            );
+//        }
+//        return false;
+//    }
 
     // Read list
     bool all_paths_valid = true;
     string path;
     string path_without_prefix;
     group_id_t group_id;
+    ErrorCode error_code;
     while (true) {
         // Read path
         error_code = grouped_file_path_reader.try_read_to_delimiter('\n', false, false, path);
@@ -294,8 +295,6 @@ bool read_and_validate_grouped_file_list(
         return false;
     }
 
-    grouped_file_path_reader.close();
-    grouped_file_id_reader.close();
 
     // Validate the list contained at least one file
     if (grouped_files.empty()) {

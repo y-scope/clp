@@ -25,7 +25,7 @@ public:
         char const* what() const noexcept override { return "FileReader operation failed"; }
     };
 
-    FileReader() : m_file(nullptr), m_getdelim_buf_len(0), m_getdelim_buf(nullptr) {}
+    FileReader(std::string const& path);
 
     ~FileReader();
 
@@ -72,28 +72,6 @@ public:
      */
     ErrorCode
     try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override;
-
-    // Methods
-    bool is_open() const { return m_file != nullptr; }
-
-    /**
-     * Tries to open a file
-     * @param path
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_FileNotFound if the file was not found
-     * @return ErrorCode_errno otherwise
-     */
-    ErrorCode try_open(std::string const& path);
-    /**
-     * Opens a file
-     * @param path
-     * @throw FileReader::OperationFailed on failure
-     */
-    void open(std::string const& path);
-    /**
-     * Closes the file if it's open
-     */
-    void close();
 
     [[nodiscard]] std::string const& get_path() const { return m_path; }
 

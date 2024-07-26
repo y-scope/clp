@@ -8,8 +8,6 @@
 
 namespace clp {
 void open_dictionary_for_reading(
-        std::string const& dictionary_path,
-        std::string const& segment_index_path,
         size_t decompressor_file_read_buffer_capacity,
         FileReader& dictionary_file_reader,
         streaming_compression::Decompressor& dictionary_decompressor,

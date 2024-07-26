@@ -203,8 +203,8 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 
     m_max_id = max_id;
 
-    FileReader dictionary_file_reader;
-    FileReader segment_index_file_reader;
+    FileReader dictionary_file_reader(dictionary_path);
+    FileReader segment_index_file_reader(segment_index_path);
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor dictionary_decompressor;
     streaming_compression::passthrough::Decompressor segment_index_decompressor;
@@ -216,8 +216,6 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 #endif
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
     open_dictionary_for_reading(
-            dictionary_path,
-            segment_index_path,
             cDecompressorFileReadBufferCapacity,
             dictionary_file_reader,
             dictionary_decompressor,
@@ -249,9 +247,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
     m_next_id = num_dictionary_entries;
 
     segment_index_decompressor.close();
-    segment_index_file_reader.close();
     dictionary_decompressor.close();
-    dictionary_file_reader.close();
 
     m_dictionary_file_writer.open(
             dictionary_path,
