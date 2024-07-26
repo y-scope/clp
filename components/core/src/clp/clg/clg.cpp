@@ -469,7 +469,7 @@ int main(int argc, char const* argv[]) {
     if (command_line_args.get_search_strings_file_path().empty()) {
         search_strings.push_back(command_line_args.get_search_string());
     } else {
-        FileReader file_reader(command_line_args.get_search_strings_file_path());
+        FileReader file_reader{command_line_args.get_search_strings_file_path()};
         string line;
         while (file_reader.read_to_delimiter('\n', false, false, line)) {
             if (!line.empty()) {
@@ -562,7 +562,7 @@ int main(int argc, char const* argv[]) {
             use_heuristic = false;
 
             char buf[max_map_schema_length];
-            FileReader file_reader(schema_file_path);
+            FileReader file_reader{schema_file_path};
 
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);
