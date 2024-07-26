@@ -11,7 +11,7 @@ import {
 import {
     QUERY_LOAD_STATE,
     QUERY_STATE_DESCRIPTIONS,
-} from "../api/query.js";
+} from "../typings/query.js";
 
 import "./Loading.css";
 
@@ -37,6 +37,7 @@ const LoadingStep = ({
     let color = isActive ?
         "primary" :
         "neutral";
+
     if (isError) {
         color = "danger";
     }

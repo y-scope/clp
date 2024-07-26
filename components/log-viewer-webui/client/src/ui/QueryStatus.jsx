@@ -4,10 +4,10 @@ import {
     useState,
 } from "react";
 
-import {
-    QUERY_LOAD_STATE,
-    submitExtractIrJob,
-} from "../api/query.js";
+import {AxiosError} from "axios";
+
+import {submitExtractIrJob} from "../api/query.js";
+import {QUERY_LOAD_STATE} from "../typings/query.js";
 import Loading from "./Loading.jsx";
 
 
@@ -38,7 +38,35 @@ const QueryStatus = () => {
             setErrorMsg(error);
         }
 
-        submitExtractIrJob(origFileId, Number(logEventIdx), setQueryState, setErrorMsg).then();
+        submitExtractIrJob(
+            origFileId,
+            Number(logEventIdx),
+            () => {
+                setQueryState(QUERY_LOAD_STATE.WAITING);
+            }
+        )
+            .then(({data}) => {
+                setQueryState(QUERY_LOAD_STATE.LOADING);
+
+                const innerLogEventNum = logEventIdx - data.begin_msg_ix + 1;
+                window.location = `/log-viewer/index.html?filePath=/ir/${data.path}` +
+                    `#logEventIdx=${innerLogEventNum}`;
+            })
+            .catch((e) => {
+                let msg = "Unknown error.";
+                if (e instanceof AxiosError) {
+                    msg = e.message;
+                    if ("undefined" !== typeof e.response) {
+                        if ("undefined" !== typeof e.response.data.message) {
+                            msg = e.response.data.message;
+                        } else {
+                            msg = e.response.statusText;
+                        }
+                    }
+                }
+                console.error(msg, e);
+                setErrorMsg(msg);
+            });
     }, []);
 
     return (
