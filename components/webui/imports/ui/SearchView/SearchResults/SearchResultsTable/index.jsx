@@ -93,6 +93,10 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
+    // eslint-disable-next-line no-warning-comments
+    // TODO: remove this flag once "Extract IR" support is added for ClpStorageEngine "clp-s"
+    const isExtractIrSupported = ("clp" === Meteor.settings.public.ClpStorageEngine);
+
     return (
         <div className={"search-results-container"}>
             <Table
@@ -121,9 +125,10 @@ const SearchResultsTable = ({
                                 Log message
                             </div>
                         </th>
-                        <th className={"search-results-th"}>
-                            <div className={"search-results-table-header"}>&nbsp;</div>
-                        </th>
+                        {isExtractIrSupported &&
+                            <th className={"search-results-th"}>
+                                <div className={"search-results-table-header"}>&nbsp;</div>
+                            </th>}
                     </tr>
                 </thead>
                 <tbody>
@@ -135,24 +140,23 @@ const SearchResultsTable = ({
                                     "N/A"}
                             </td>
                             <td>
-                                <pre
-                                    className={"search-results-content search-results-message"}
-                                >
+                                <pre className={"search-results-content search-results-message"}>
                                     {result.message}
                                 </pre>
                             </td>
-                            <td>
-                                <a
-                                    rel={"noopener noreferrer"}
-                                    target={"_blank"}
-                                    title={"Go to the log context"}
-                                    href={`${Meteor.settings.public.LogViewerWebuiUrl
-                                    }?origFileId=${result.orig_file_id}` +
+                            {isExtractIrSupported &&
+                                <td>
+                                    <a
+                                        rel={"noopener noreferrer"}
+                                        target={"_blank"}
+                                        title={"Go to the log context"}
+                                        href={`${Meteor.settings.public.LogViewerWebuiUrl
+                                        }?origFileId=${result.orig_file_id}` +
                                         `&logEventIdx=${result.log_event_ix}`}
-                                >
-                                    <FontAwesomeIcon icon={faSquareUpRight}/>
-                                </a>
-                            </td>
+                                    >
+                                        <FontAwesomeIcon icon={faSquareUpRight}/>
+                                    </a>
+                                </td>}
                         </tr>
                     ))}
                 </tbody>
