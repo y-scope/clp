@@ -26,6 +26,8 @@ public:
     };
 
     struct TableMetadata {
+        TableMetadata(size_t offset, size_t size) : file_offset(offset), uncompressed_size(size) {}
+
         size_t file_offset;
         size_t uncompressed_size;
     };
