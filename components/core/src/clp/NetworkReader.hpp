@@ -18,6 +18,7 @@
 #include <curl/curl.h>
 
 #include "CurlDownloadHandler.hpp"
+#include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 #include "Thread.hpp"
@@ -70,23 +71,19 @@ public:
     static constexpr size_t cMinBufferSize{512};
 
     /**
-     * Initializes static resources for this class. This must be called before using the class.
-     * @return ErrorCode_Success on success.
-     * @return ErrorCode_Failure if libcurl initialization failed.
-     */
-    [[nodiscard]] static auto init() -> ErrorCode;
-
-    /**
-     * De-initializes any static resources.
-     */
-    static auto deinit() -> void;
-
-    /**
      * Constructs a reader to stream data from the given URL, starting at the given offset.
-     * TODO: the current implementation doesn't handle the case when the given offset is out of
-     * range. The file_pos will be set to an invalid state if this happens, which can be
-     * problematic if the other part of the program depends on this position. It can be fixed by
-     * capturing the error code 416 in the response header.
+     * NOTE: This class depends on `libcurl`, so an instance of `clp::CurlGlobalInstance` must
+     * remain alive for the entire lifespan of any instance of this class.
+     *
+     * This class maintains an instance of `CurlGlobalInstance` in case the user forgets to
+     * instantiate one, but it is better for performance if the user instantiates one. For instance,
+     * if the user doesn't instantiate a `CurlGlobalInstance` and only ever creates one
+     * `NetworkReader` at a time, then every construction and destruction of `NetworkReader` would
+     * cause `libcurl` to init and deinit. In contrast, if the user instantiates a
+     * `CurlGlobalInstance` before instantiating any `NetworkReader`s, then the `CurlGlobalInstance`
+     * maintained by this class will simply be a reference to the existing one rather than
+     * initializing and deinitializing `libcurl`.
+     *
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
@@ -246,8 +243,6 @@ private:
         bool m_disable_caching{false};
     };
 
-    static bool m_static_init_complete;
-
     /**
      * Submits a request to abort the ongoing curl download session.
      */
@@ -307,6 +302,8 @@ private:
     [[nodiscard]] auto at_least_one_byte_downloaded() const -> bool {
         return m_at_least_one_byte_downloaded.load();
     }
+
+    CurlGlobalInstance m_curl_global_instance;
 
     std::string m_src_url;
 
