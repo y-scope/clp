@@ -145,7 +145,6 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
     FileReader dictionary_file_reader{dictionary_path};
     FileReader segment_index_file_reader{segment_index_path};
 
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
     streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
@@ -155,6 +154,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     // Read dictionary header
     uint64_t num_dictionary_entries{};

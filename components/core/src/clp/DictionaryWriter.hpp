@@ -204,7 +204,6 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 
     FileReader dictionary_file_reader{dictionary_path};
 
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor dictionary_decompressor;
 #elif USE_ZSTD_COMPRESSION
@@ -212,6 +211,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     // Read dictionary header
     uint64_t num_dictionary_entries{};
