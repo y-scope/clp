@@ -79,12 +79,6 @@ const SearchResultsTable = ({
         }
     };
 
-    const handleSearchResultClick = (ev) => {
-        const {orig_file_id: origFileId, log_event_idx: logEventIdx} = ev.currentTarget.dataset;
-        window.open(`${Meteor.settings.public.LogViewerWebuiUrl
-        }?origFileId=${origFileId}&logEventIdx=${logEventIdx}`);
-    };
-
     useEffect(() => {
         document.documentElement.style.setProperty(
             "--search-results-message-line-height",
@@ -149,11 +143,12 @@ const SearchResultsTable = ({
                             </td>
                             <td>
                                 <a
-                                    className={"search-results-content-clickable"}
-                                    data-log_event_idx={result.log_event_ix}
-                                    data-orig_file_id={result.orig_file_id}
+                                    rel={"noopener noreferrer"}
+                                    target={"_blank"}
                                     title={"Go to the log context"}
-                                    onClick={handleSearchResultClick}
+                                    href={`${Meteor.settings.public.LogViewerWebuiUrl
+                                    }?origFileId=${result.orig_file_id}` +
+                                        `&logEventIdx=${result.log_event_ix}`}
                                 >
                                     <FontAwesomeIcon icon={faSquareUpRight}/>
                                 </a>
