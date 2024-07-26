@@ -34,6 +34,7 @@ set(
         ../FileWriter.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../ir/ClpString.hpp
         ../ir/LogEvent.hpp
         ../ir/LogEventSerializer.cpp
         ../ir/LogEventSerializer.hpp

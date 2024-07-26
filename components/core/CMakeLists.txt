@@ -347,6 +347,7 @@ set(SOURCE_FILES_unitTest
         src/clp/Grep.cpp
         src/clp/Grep.hpp
         src/clp/ir/constants.hpp
+        src/clp/ir/ClpString.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp
@@ -482,7 +483,8 @@ set(SOURCE_FILES_unitTest
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
-        )
+        src/clp/ir/ClpString.hpp
+)
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
         PRIVATE

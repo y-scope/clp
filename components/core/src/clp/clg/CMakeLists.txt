@@ -33,6 +33,7 @@ set(
         ../GlobalSQLiteMetadataDB.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../ir/ClpString.hpp
         ../ir/LogEvent.hpp
         ../ir/parsing.cpp
         ../ir/parsing.hpp
