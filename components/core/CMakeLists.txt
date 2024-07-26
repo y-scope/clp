@@ -483,8 +483,7 @@ set(SOURCE_FILES_unitTest
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
-        src/clp/ir/ClpString.hpp
-)
+        )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
         PRIVATE
