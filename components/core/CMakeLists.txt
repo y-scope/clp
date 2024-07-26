@@ -283,6 +283,8 @@ set(SOURCE_FILES_unitTest
         src/clp/CurlDownloadHandler.cpp
         src/clp/CurlDownloadHandler.hpp
         src/clp/CurlEasyHandle.hpp
+        src/clp/CurlGlobalInstance.cpp
+        src/clp/CurlGlobalInstance.hpp
         src/clp/CurlOperationFailed.hpp
         src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
