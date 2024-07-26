@@ -149,7 +149,7 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
 
     // Read file
     string line;
-    ErrorCode error_code{};
+    ErrorCode error_code{ErrorCode_Success};
     while (true) {
         error_code = file_reader->try_read_to_delimiter('\n', false, false, line);
         if (ErrorCode_Success != error_code) {
@@ -265,7 +265,7 @@ void load_lexer_from_file(
         }
 
         if (contains_delimiter) {
-            FileReader schema_reader(schema_ast->m_file_path);
+            FileReader schema_reader{schema_ast->m_file_path};
             // more detailed debugging based on looking at the file
             string line;
             for (uint32_t i = 0; i <= rule->m_line_num; i++) {

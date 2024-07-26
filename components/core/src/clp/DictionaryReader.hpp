@@ -142,8 +142,8 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
         std::string const& dictionary_path,
         std::string const& segment_index_path
 ) {
-    FileReader dictionary_file_reader(dictionary_path);
-    FileReader segment_index_file_reader(segment_index_path);
+    FileReader dictionary_file_reader{dictionary_path};
+    FileReader segment_index_file_reader{segment_index_path};
 
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 #if USE_PASSTHROUGH_COMPRESSION
@@ -269,13 +269,13 @@ template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::read_segment_ids(
         streaming_compression::Decompressor& segment_index_decompressor
 ) {
-    segment_id_t segment_id;
+    segment_id_t segment_id{};
     segment_index_decompressor.read_numeric_value(segment_id, false);
 
-    uint64_t num_ids;
+    uint64_t num_ids{};
     segment_index_decompressor.read_numeric_value(num_ids, false);
     for (uint64_t i = 0; i < num_ids; ++i) {
-        DictionaryIdType id;
+        DictionaryIdType id{};
         segment_index_decompressor.read_numeric_value(id, false);
         if (id >= m_entries.size()) {
             throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);

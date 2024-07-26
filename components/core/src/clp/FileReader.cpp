@@ -13,10 +13,9 @@ using std::string;
 
 namespace clp {
 FileReader::FileReader(string const& path)
-        : m_file{nullptr},
+        : m_file{fopen(path.c_str(), "rb")},
           m_getdelim_buf_len(0),
           m_getdelim_buf(nullptr) {
-    m_file = fopen(path.c_str(), "rb");
     if (nullptr == m_file) {
         if (ENOENT == errno) {
             throw OperationFailed(ErrorCode_FileNotFound, __FILE__, __LINE__);

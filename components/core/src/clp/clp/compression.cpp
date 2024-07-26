@@ -210,8 +210,8 @@ bool read_and_validate_grouped_file_list(
         return false;
     }
 
-    string grouped_file_ids_path = list_path.substr(0, list_path.length() - 4) + ".gid";
     unique_ptr<FileReader> grouped_file_id_reader;
+    string grouped_file_ids_path = list_path.substr(0, list_path.length() - 4) + ".gid";
     try {
         grouped_file_id_reader = make_unique<FileReader>(grouped_file_ids_path);
     } catch (FileReader::OperationFailed const& err) {
@@ -235,7 +235,7 @@ bool read_and_validate_grouped_file_list(
     string path;
     string path_without_prefix;
     group_id_t group_id;
-    ErrorCode error_code{};
+    ErrorCode error_code{ErrorCode_Success};
     while (true) {
         // Read path
         error_code = grouped_file_path_reader->try_read_to_delimiter('\n', false, false, path);

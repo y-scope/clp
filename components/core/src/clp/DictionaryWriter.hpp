@@ -202,7 +202,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 
     m_max_id = max_id;
 
-    FileReader dictionary_file_reader(dictionary_path);
+    FileReader dictionary_file_reader{dictionary_path};
 
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 #if USE_PASSTHROUGH_COMPRESSION
