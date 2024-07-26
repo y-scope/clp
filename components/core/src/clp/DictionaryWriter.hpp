@@ -214,8 +214,8 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 #endif
 
     // Read dictionary header
-    uint64_t num_dictionary_entries {};
-    if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)){
+    uint64_t num_dictionary_entries{};
+    if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 

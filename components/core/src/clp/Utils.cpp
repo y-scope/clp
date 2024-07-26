@@ -18,10 +18,10 @@
 #include "spdlog_with_specializations.hpp"
 
 using std::list;
-using std::string;
-using std::vector;
-using std::unique_ptr;
 using std::make_unique;
+using std::string;
+using std::unique_ptr;
+using std::vector;
 
 namespace clp {
 ErrorCode create_directory(string const& path, mode_t mode, bool exist_ok) {

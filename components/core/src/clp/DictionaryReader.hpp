@@ -102,10 +102,8 @@ protected:
     /**
      * Reads any new entries from disk
      */
-    void read_new_entries(
-            std::string const& dictionary_path,
-            std::string const& segment_index_path
-    );
+    void
+    read_new_entries(std::string const& dictionary_path, std::string const& segment_index_path);
 
     // Variables
     bool m_is_open;
@@ -147,7 +145,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
     FileReader dictionary_file_reader(dictionary_path);
     FileReader segment_index_file_reader(segment_index_path);
 
-constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
     streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
@@ -159,8 +157,8 @@ constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 #endif
 
     // Read dictionary header
-    uint64_t num_dictionary_entries {};
-    if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)){
+    uint64_t num_dictionary_entries{};
+    if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
@@ -182,7 +180,7 @@ constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
     }
 
     // Read segment index header
-    uint64_t num_segments {};
+    uint64_t num_segments{};
     if (false == segment_index_file_reader.read_numeric_value(num_segments, false)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
@@ -194,7 +192,10 @@ constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     // Read new segments from index
     if (num_segments > m_num_segments_read_from_index) {
-        segment_index_decompressor.open(segment_index_file_reader, cDecompressorFileReadBufferCapacity);
+        segment_index_decompressor.open(
+                segment_index_file_reader,
+                cDecompressorFileReadBufferCapacity
+        );
         for (size_t i = m_num_segments_read_from_index; i < num_segments; ++i) {
             read_segment_ids(segment_index_decompressor);
         }

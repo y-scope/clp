@@ -12,7 +12,10 @@
 using std::string;
 
 namespace clp {
-FileReader::FileReader(string const& path) : m_file{nullptr}, m_getdelim_buf_len(0), m_getdelim_buf(nullptr) {
+FileReader::FileReader(string const& path)
+        : m_file{nullptr},
+          m_getdelim_buf_len(0),
+          m_getdelim_buf(nullptr) {
     m_file = fopen(path.c_str(), "rb");
     if (nullptr == m_file) {
         if (ENOENT == errno) {
@@ -22,6 +25,7 @@ FileReader::FileReader(string const& path) : m_file{nullptr}, m_getdelim_buf_len
     }
     m_path = path;
 }
+
 FileReader::~FileReader() {
     // NOTE: We don't check errors for fclose since it seems the only reason it could fail is if
     // it was interrupted by a signal

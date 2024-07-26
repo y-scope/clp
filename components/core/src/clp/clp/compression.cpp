@@ -20,11 +20,11 @@ using clp::streaming_archive::writer::split_archive;
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::make_unique;
 using std::out_of_range;
 using std::string;
-using std::vector;
 using std::unique_ptr;
-using std::make_unique;
+using std::vector;
 
 namespace clp::clp {
 // Local prototypes
@@ -221,7 +221,11 @@ bool read_and_validate_grouped_file_list(
         } else if (ErrorCode_errno == error_code) {
             SPDLOG_ERROR("Failed to read '{}', errno={}", grouped_file_ids_path.c_str(), errno);
         } else {
-            SPDLOG_ERROR("Failed to read '{}', error_code={}", grouped_file_ids_path.c_str(), error_code);
+            SPDLOG_ERROR(
+                    "Failed to read '{}', error_code={}",
+                    grouped_file_ids_path.c_str(),
+                    error_code
+            );
         }
         return false;
     }
@@ -297,7 +301,6 @@ bool read_and_validate_grouped_file_list(
         }
         return false;
     }
-
 
     // Validate the list contained at least one file
     if (grouped_files.empty()) {
