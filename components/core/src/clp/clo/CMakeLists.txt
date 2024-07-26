@@ -9,8 +9,6 @@ set(
         ../database_utils.cpp
         ../database_utils.hpp
         ../Defs.h
-        ../dictionary_utils.cpp
-        ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
         ../EncodedVariableInterpreter.cpp
