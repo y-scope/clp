@@ -277,8 +277,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     file_reader.open(test_file_path);
     std::string test_string;
 
-    clp::FileReader ref_file_reader;
-    ref_file_reader.open(test_file_path);
+    clp::FileReader ref_file_reader(test_file_path);
     std::string ref_string;
 
     // Validate that a FileReader and a BufferedFileReader return the same strings (split by
@@ -292,7 +291,6 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
         REQUIRE(test_string == ref_string);
     }
 
-    ref_file_reader.close();
     file_reader.close();
     boost::filesystem::remove(test_file_path);
 }

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <set>
 
 #include <boost/algorithm/string.hpp>
@@ -19,6 +20,8 @@
 using std::list;
 using std::string;
 using std::vector;
+using std::unique_ptr;
+using std::make_unique;
 
 namespace clp {
 ErrorCode create_directory(string const& path, mode_t mode, bool exist_ok) {
@@ -137,13 +140,18 @@ string get_unambiguous_path(string const& path) {
 }
 
 ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
-    FileReader file_reader(list_path);
+    unique_ptr<FileReader> file_reader;
+    try {
+        file_reader = make_unique<FileReader>(list_path);
+    } catch (FileReader::OperationFailed const& err) {
+        return err.get_error_code();
+    }
 
     // Read file
     string line;
-    ErrorCode error_code;
+    ErrorCode error_code{};
     while (true) {
-        error_code = file_reader.try_read_to_delimiter('\n', false, false, line);
+        error_code = file_reader->try_read_to_delimiter('\n', false, false, line);
         if (ErrorCode_Success != error_code) {
             break;
         }

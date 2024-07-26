@@ -42,10 +42,8 @@ TEST_CASE("memory_mapped_file_view_basic", "[ReadOnlyMemoryMappedFile]") {
     auto const test_input_path{
             get_test_dir() / std::filesystem::path{"test_network_reader_src"} / "random.log"
     };
-    clp::FileReader file_reader;
-    file_reader.open(test_input_path.string());
+    clp::FileReader file_reader(test_input_path.string());
     auto const expected{read_content(file_reader)};
-    file_reader.close();
 
     clp::ReadOnlyMemoryMappedFile const mmap_file{test_input_path.string()};
     auto const view{mmap_file.get_view()};

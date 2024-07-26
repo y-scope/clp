@@ -173,31 +173,6 @@ static bool open_archive(string const& archive_path, Archive& archive_reader) {
         }
     }
 
-    try {
-        archive_reader.refresh_dictionaries();
-    } catch (TraceableException& e) {
-        error_code = e.get_error_code();
-        if (ErrorCode_errno == error_code) {
-            SPDLOG_ERROR(
-                    "Reading dictionaries failed: {}:{} {}, errno={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    errno
-            );
-            return false;
-        } else {
-            SPDLOG_ERROR(
-                    "Reading dictionaries failed: {}:{} {}, error_code={}",
-                    e.get_filename(),
-                    e.get_line_number(),
-                    e.what(),
-                    error_code
-            );
-            return false;
-        }
-    }
-
     return true;
 }
 
@@ -494,15 +469,13 @@ int main(int argc, char const* argv[]) {
     if (command_line_args.get_search_strings_file_path().empty()) {
         search_strings.push_back(command_line_args.get_search_string());
     } else {
-        FileReader file_reader;
-        file_reader.open(command_line_args.get_search_strings_file_path());
+        FileReader file_reader(command_line_args.get_search_strings_file_path());
         string line;
         while (file_reader.read_to_delimiter('\n', false, false, line)) {
             if (!line.empty()) {
                 search_strings.push_back(line);
             }
         }
-        file_reader.close();
     }
 
     // Validate archives directory
@@ -589,8 +562,7 @@ int main(int argc, char const* argv[]) {
             use_heuristic = false;
 
             char buf[max_map_schema_length];
-            FileReader file_reader;
-            file_reader.try_open(schema_file_path);
+            FileReader file_reader(schema_file_path);
 
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);

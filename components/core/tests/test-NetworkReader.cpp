@@ -66,10 +66,8 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
 }  // namespace
 
 TEST_CASE("network_reader_basic", "[NetworkReader]") {
-    clp::FileReader ref_reader;
-    ref_reader.open(get_test_input_local_path());
+    clp::FileReader ref_reader{get_test_input_local_path()};
     auto const expected{get_content(ref_reader)};
-    ref_reader.close();
 
     REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
     clp::NetworkReader reader{get_test_input_remote_url()};
@@ -84,12 +82,10 @@ TEST_CASE("network_reader_basic", "[NetworkReader]") {
 
 TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
     constexpr size_t cOffset{319};
-    clp::FileReader ref_reader;
-    ref_reader.open(get_test_input_local_path());
+    clp::FileReader ref_reader{get_test_input_local_path()};
     ref_reader.seek_from_begin(cOffset);
     auto const expected{get_content(ref_reader)};
     auto const ref_end_pos{ref_reader.get_pos()};
-    ref_reader.close();
 
     REQUIRE((clp::ErrorCode_Success == clp::NetworkReader::init()));
 

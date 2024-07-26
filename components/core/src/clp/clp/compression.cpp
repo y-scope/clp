@@ -1,6 +1,7 @@
 #include "compression.hpp"
 
 #include <iostream>
+#include <memory>
 
 #include <archive_entry.h>
 #include <boost/filesystem/operations.hpp>
@@ -22,6 +23,8 @@ using std::endl;
 using std::out_of_range;
 using std::string;
 using std::vector;
+using std::unique_ptr;
+using std::make_unique;
 
 namespace clp::clp {
 // Local prototypes
@@ -192,46 +195,46 @@ bool read_and_validate_grouped_file_list(
         string const& list_path,
         vector<FileToCompress>& grouped_files
 ) {
-    FileReader grouped_file_path_reader(list_path);
-//    ErrorCode error_code = grouped_file_path_reader.try_open(list_path);
-//    if (ErrorCode_Success != error_code) {
-//        if (ErrorCode_FileNotFound == error_code) {
-//            SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
-//        } else if (ErrorCode_errno == error_code) {
-//            SPDLOG_ERROR("Failed to read '{}', errno={}", list_path.c_str(), errno);
-//        } else {
-//            SPDLOG_ERROR("Failed to read '{}', error_code={}", list_path.c_str(), error_code);
-//        }
-//        return false;
-//    }
+    unique_ptr<FileReader> grouped_file_path_reader;
+    try {
+        grouped_file_path_reader = make_unique<FileReader>(list_path);
+    } catch (FileReader::OperationFailed const& err) {
+        auto const error_code = err.get_error_code();
+        if (ErrorCode_FileNotFound == error_code) {
+            SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
+        } else if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR("Failed to read '{}', errno={}", list_path.c_str(), errno);
+        } else {
+            SPDLOG_ERROR("Failed to read '{}', error_code={}", list_path.c_str(), error_code);
+        }
+        return false;
+    }
 
     string grouped_file_ids_path = list_path.substr(0, list_path.length() - 4) + ".gid";
-    FileReader grouped_file_id_reader(grouped_file_ids_path);
-//    error_code = grouped_file_id_reader.try_open(grouped_file_ids_path);
-//    if (ErrorCode_Success != error_code) {
-//        if (ErrorCode_FileNotFound == error_code) {
-//            SPDLOG_ERROR("'{}' does not exist.", grouped_file_ids_path.c_str());
-//        } else if (ErrorCode_errno == error_code) {
-//            SPDLOG_ERROR("Failed to read '{}', errno={}", grouped_file_ids_path.c_str(), errno);
-//        } else {
-//            SPDLOG_ERROR(
-//                    "Failed to read '{}', error_code={}",
-//                    grouped_file_ids_path.c_str(),
-//                    error_code
-//            );
-//        }
-//        return false;
-//    }
+    unique_ptr<FileReader> grouped_file_id_reader;
+    try {
+        grouped_file_id_reader = make_unique<FileReader>(grouped_file_ids_path);
+    } catch (FileReader::OperationFailed const& err) {
+        auto const error_code = err.get_error_code();
+        if (ErrorCode_FileNotFound == error_code) {
+            SPDLOG_ERROR("'{}' does not exist.", grouped_file_ids_path.c_str());
+        } else if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR("Failed to read '{}', errno={}", grouped_file_ids_path.c_str(), errno);
+        } else {
+            SPDLOG_ERROR("Failed to read '{}', error_code={}", grouped_file_ids_path.c_str(), error_code);
+        }
+        return false;
+    }
 
     // Read list
     bool all_paths_valid = true;
     string path;
     string path_without_prefix;
     group_id_t group_id;
-    ErrorCode error_code;
+    ErrorCode error_code{};
     while (true) {
         // Read path
-        error_code = grouped_file_path_reader.try_read_to_delimiter('\n', false, false, path);
+        error_code = grouped_file_path_reader->try_read_to_delimiter('\n', false, false, path);
         if (ErrorCode_Success != error_code) {
             break;
         }
@@ -243,7 +246,7 @@ bool read_and_validate_grouped_file_list(
         }
 
         // Read group ID
-        error_code = grouped_file_id_reader.try_read_numeric_value(group_id);
+        error_code = grouped_file_id_reader->try_read_numeric_value(group_id);
         if (ErrorCode_Success != error_code) {
             if (ErrorCode_EndOfFile == error_code) {
                 SPDLOG_ERROR("There are more grouped file paths than IDs.");
