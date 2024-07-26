@@ -142,19 +142,10 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
         std::string const& dictionary_path,
         std::string const& segment_index_path
 ) {
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+
     FileReader dictionary_file_reader{dictionary_path};
     FileReader segment_index_file_reader{segment_index_path};
-
-#if USE_PASSTHROUGH_COMPRESSION
-    streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
-    streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
-#elif USE_ZSTD_COMPRESSION
-    streaming_compression::zstd::Decompressor dictionary_decompressor;
-    streaming_compression::zstd::Decompressor segment_index_decompressor;
-#else
-    static_assert(false, "Unsupported compression mode.");
-#endif
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     // Read dictionary header
     uint64_t num_dictionary_entries{};
@@ -171,12 +162,21 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
     if (num_dictionary_entries > m_entries.size()) {
         auto prev_num_dictionary_entries = m_entries.size();
         m_entries.resize(num_dictionary_entries);
+
+#if USE_PASSTHROUGH_COMPRESSION
+        streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
+#elif USE_ZSTD_COMPRESSION
+        streaming_compression::zstd::Decompressor dictionary_decompressor;
+#else
+        static_assert(false, "Unsupported compression mode.");
+#endif
         dictionary_decompressor.open(dictionary_file_reader, cDecompressorFileReadBufferCapacity);
         for (size_t i = prev_num_dictionary_entries; i < num_dictionary_entries; ++i) {
             auto& entry = m_entries[i];
 
             entry.read_from_file(dictionary_decompressor);
         }
+        dictionary_decompressor.close();
     }
 
     // Read segment index header
@@ -192,6 +192,13 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
 
     // Read new segments from index
     if (num_segments > m_num_segments_read_from_index) {
+#if USE_PASSTHROUGH_COMPRESSION
+        streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
+#elif USE_ZSTD_COMPRESSION
+        streaming_compression::zstd::Decompressor segment_index_decompressor;
+#else
+        static_assert(false, "Unsupported compression mode.");
+#endif
         segment_index_decompressor.open(
                 segment_index_file_reader,
                 cDecompressorFileReadBufferCapacity
@@ -199,6 +206,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
         for (size_t i = m_num_segments_read_from_index; i < num_segments; ++i) {
             read_segment_ids(segment_index_decompressor);
         }
+        segment_index_decompressor.close();
     }
 }
 

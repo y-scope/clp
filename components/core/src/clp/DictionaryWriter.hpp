@@ -240,10 +240,9 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
         ;
         m_data_size += entry.get_data_size();
     }
+    dictionary_decompressor.close();
 
     m_next_id = num_dictionary_entries;
-
-    dictionary_decompressor.close();
 
     m_dictionary_file_writer.open(
             dictionary_path,
