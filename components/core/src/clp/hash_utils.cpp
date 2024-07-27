@@ -9,41 +9,115 @@
 #include <openssl/sha.h>
 
 #include "ErrorCode.hpp"
-#include "spdlog_with_specializations.hpp"
+#include "TraceableException.hpp"
 
 using std::span;
 using std::string;
 using std::vector;
 
-namespace clp {
-auto EvpDigestContext::digest_update(span<unsigned char const> input) -> ErrorCode {
-    if (m_is_digest_finalized) {
-        return ErrorCode_Unsupported;
+namespace {
+/**
+ * A C++ wrapper for OpenSSL's EVP message digest context (EVP_MD_CTX).
+ */
+class EvpDigestContext {
+public:
+    // Types
+    class OperationFailed : public clp::TraceableException {
+    public:
+        // Constructors
+        OperationFailed(clp::ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+
+        // Methods
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return "EvpDigestContext operation failed";
+        }
+    };
+
+    // Constructors
+    /**
+     * @param type The type of digest (hash algorithm).
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_NoMem if
+     * `EVP_MD_CTX_create` fails.
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if
+     * `EVP_DigestInit_ex` fails.
+     */
+    EvpDigestContext(EVP_MD const* type)
+            : m_md_ctx{EVP_MD_CTX_create()},
+              m_digest_nid{EVP_MD_type(type)} {
+        if (nullptr == m_md_ctx) {
+            throw OperationFailed(clp::ErrorCode_NoMem, __FILENAME__, __LINE__);
+        }
+        // Set impl to nullptr to use the default implementation of digest type
+        if (1 != EVP_DigestInit_ex(m_md_ctx, type, nullptr)) {
+            throw OperationFailed(clp::ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
     }
+
+    // Disable copy constructor and assignment operator
+    EvpDigestContext(EvpDigestContext const&) = delete;
+    auto operator=(EvpDigestContext const&) -> EvpDigestContext& = delete;
+
+    // Disable move constructor and assignment operator
+    EvpDigestContext(EvpDigestContext&&) = delete;
+    auto operator=(EvpDigestContext&&) -> EvpDigestContext& = delete;
+
+    // Destructor
+    ~EvpDigestContext() { EVP_MD_CTX_destroy(m_md_ctx); }
+
+    // Methods
+    /**
+     * Hashes `input` into the digest.
+     * @param input
+     * @return ErrorCode_Success on success.
+     * @return ErrorCode_Unsupported if context is already finalized.
+     * @return ErrorCode_Failure if `EVP_DigestUpdate` fails.
+     */
+    [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> clp::ErrorCode;
+
+    /**
+     * Writes the digest into `hash` and clears the digest.
+     * @param hash Returns the hashing result.
+     * @return ErrorCode_Success on success.
+     * @return ErrorCode_Unsupported if context is already finalized.
+     * @return ErrorCode_Corrupt if the hashing result has an unexpected length.
+     * @return ErrorCode_Failure if `EVP_DigestFinal_ex` fails.
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if
+     * `EVP_DigestInit_ex` fails.
+     */
+    [[nodiscard]] auto digest_final(std::vector<unsigned char>& hash) -> clp::ErrorCode;
+
+private:
+    EVP_MD_CTX* m_md_ctx{nullptr};
+    int m_digest_nid{};
+};
+
+auto EvpDigestContext::digest_update(span<unsigned char const> input) -> clp::ErrorCode {
     if (1 != EVP_DigestUpdate(m_md_ctx, input.data(), input.size())) {
-        return ErrorCode_Failure;
+        return clp::ErrorCode_Failure;
     }
-    return ErrorCode_Success;
+    return clp::ErrorCode_Success;
 }
 
-auto EvpDigestContext::digest_final_ex(std::vector<unsigned char>& hash) -> ErrorCode {
-    if (m_is_digest_finalized) {
-        return ErrorCode_Unsupported;
-    }
-
+auto EvpDigestContext::digest_final(std::vector<unsigned char>& hash) -> clp::ErrorCode {
     hash.resize(EVP_MD_CTX_size(m_md_ctx));
     unsigned int length{};
     if (1 != EVP_DigestFinal_ex(m_md_ctx, hash.data(), &length)) {
-        return ErrorCode_Failure;
+        return clp::ErrorCode_Failure;
     }
     if (hash.size() != length) {
-        return ErrorCode_Corrupt;
+        return clp::ErrorCode_Corrupt;
     }
-    m_is_digest_finalized = true;
-    return ErrorCode_Success;
-}
 
-auto convert_hash_to_hex_string(span<unsigned char> input) -> string {
+    if (1 != EVP_DigestInit_ex(m_md_ctx, EVP_get_digestbynid(m_digest_nid), nullptr)) {
+        throw OperationFailed(clp::ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    return clp::ErrorCode_Success;
+}
+}  // namespace
+
+namespace clp {
+auto convert_to_hex_string(std::span<unsigned char> input) -> string {
     string hex_string;
     for (auto const c : input) {
         hex_string += fmt::format("{:02x}", c);
@@ -56,13 +130,12 @@ auto get_hmac_sha256_hash(
         span<unsigned char const> key,
         vector<unsigned char>& hash
 ) -> ErrorCode {
-    hash.resize(SHA256_DIGEST_LENGTH);
-    unsigned int hash_length{0};
-
     if (key.size() > INT32_MAX) {
-        SPDLOG_ERROR("Input key exceeds maximum length");
         return ErrorCode_BadParam;
     }
+
+    hash.resize(SHA256_DIGEST_LENGTH);
+    unsigned int hash_length{0};
     auto const key_length{static_cast<int>(key.size())};
     if (nullptr
         == HMAC(EVP_sha256(),
@@ -73,13 +146,11 @@ auto get_hmac_sha256_hash(
                 hash.data(),
                 &hash_length))
     {
-        SPDLOG_ERROR("Failed to get HMAC hashes");
         return ErrorCode_Failure;
     }
 
-    if (hash_length != SHA256_DIGEST_LENGTH) {
-        SPDLOG_ERROR("Unexpected hash length");
-        return ErrorCode_Failure;
+    if (hash.size() != hash_length) {
+        return ErrorCode_Corrupt;
     }
 
     return ErrorCode_Success;
@@ -91,14 +162,11 @@ auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& has
     if (auto const error_code = evp_ctx_manager.digest_update(input);
         ErrorCode_Success != error_code)
     {
-        SPDLOG_ERROR("Failed to digest input");
         return error_code;
     }
 
-    if (auto const error_code = evp_ctx_manager.digest_final_ex(hash);
-        ErrorCode_Success != error_code)
+    if (auto const error_code = evp_ctx_manager.digest_final(hash); ErrorCode_Success != error_code)
     {
-        SPDLOG_ERROR("Failed to Finalize digest");
         return error_code;
     }
 
