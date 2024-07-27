@@ -1,6 +1,7 @@
 #include "regex_utils/regex_translation_utils.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -15,6 +16,8 @@
 namespace clp::regex_utils {
 using clp::string_utils::is_alphabet;
 using std::error_code;
+using std::nullopt;
+using std::optional;
 using std::string;
 using std::string_view;
 
@@ -49,22 +52,28 @@ public:
     };
 
     // Constructor
-    TranslatorState(string_view::const_iterator it) : m_it{it} {};
+    TranslatorState() = default;
 
     // Getters
     [[nodiscard]] auto get_state() const -> RegexPatternState { return m_state; }
 
-    [[nodiscard]] auto get_marked_iterator() const -> string_view::const_iterator { return m_it; }
+    [[nodiscard]] auto get_charset_start() const -> optional<string_view::const_iterator> {
+        return m_charset_start;
+    }
 
     // Setters
     auto set_next_state(RegexPatternState const& state) -> void { m_state = state; }
 
-    void mark_iterator(string_view::const_iterator it) { m_it = it; }
+    auto set_charset_start(string_view::const_iterator charset_start) -> void {
+        m_charset_start = charset_start;
+    }
+
+    auto invalidate_charset_start() -> void { m_charset_start = nullopt; }
 
 private:
     // Members
     RegexPatternState m_state{RegexPatternState::Normal};
-    string_view::const_iterator m_it;
+    optional<string_view::const_iterator> m_charset_start{nullopt};
 };
 
 /**
@@ -120,8 +129,8 @@ using StateTransitionFuncSig
  *
  * In most cases, only a trival character set containing a single character is reducable. However,
  * if the output wildcard query will be analyzed in case-insensitive mode, character set patterns
- * such as [aA] [Bb] are also reducable.
-* On error returns either IncompleteCharsetStructure or UnsupportedCharsetPattern.
+ * such as [aA] [Bb] are also reducable. Does not support empty charsets.
+ * On error, returns IncompleteCharsetStructure, UnsupportedCharsetPattern, or IllegalState.
  */
 [[nodiscard]] StateTransitionFuncSig charset_state_transition;
 
@@ -188,7 +197,7 @@ auto normal_state_transition(
             state.set_next_state(TranslatorState::RegexPatternState::Escaped);
             break;
         case '[':
-            state.mark_iterator(it + 1);
+            state.set_charset_start(it + 1);
             state.set_next_state(TranslatorState::RegexPatternState::Charset);
             break;
         case cRegexEndAnchor:
@@ -257,17 +266,22 @@ auto charset_state_transition(
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
-    auto const ch{*it};
-    string_view::const_iterator charset_start{state.get_marked_iterator()};
-    auto const charset_len{it - charset_start};
+    auto const charset_start_opt{state.get_charset_start()};
+    if (false == charset_start_opt.has_value()) {
+        return ErrorCode::IllegalState;
+    }
+    string_view::const_iterator const charset_start = charset_start_opt.value();
 
+    auto const ch{*it};
+    if (cEscapeChar == ch) {
+        state.set_next_state(TranslatorState::RegexPatternState::CharsetEscaped);
+        return ErrorCode::Success;
+    }
     if (']' != ch) {
-        if (cEscapeChar == ch) {
-            state.set_next_state(TranslatorState::RegexPatternState::CharsetEscaped);
-        }
         return ErrorCode::Success;
     }
 
+    auto const charset_len{it - charset_start};
     if (0 == charset_len || charset_len > 2) {
         return ErrorCode::UnsupportedCharsetPattern;
     }
@@ -294,6 +308,7 @@ auto charset_state_transition(
     }
 
     append_char_to_wildcard(parsed_char, wildcard_str);
+    state.invalidate_charset_start();
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
     return ErrorCode::Success;
 }
@@ -365,7 +380,7 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
 
     string_view::const_iterator it{regex_str.cbegin()};
     string wildcard_str;
-    TranslatorState state{it};
+    TranslatorState state;
 
     // If there is no starting anchor character, append multichar wildcard prefix
     if (cRegexStartAnchor == *it) {
