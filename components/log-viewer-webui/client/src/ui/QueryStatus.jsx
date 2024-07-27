@@ -36,6 +36,7 @@ const QueryStatus = () => {
 
             console.error(error);
             setErrorMsg(error);
+            return;
         }
 
         submitExtractIrJob(
