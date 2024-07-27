@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <fmt/format.h>
+#include <openssl/err.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
@@ -17,6 +18,15 @@ using std::vector;
 
 namespace {
 /**
+ * Gets the OpenSSL error string as a c++ string
+ * @return The string representing the OpenSSL error
+ */
+auto get_openssl_error_string() -> string {
+    auto const openssl_err = ERR_get_error();
+    return {ERR_error_string(openssl_err, nullptr)};
+}
+
+/**
  * A C++ wrapper for OpenSSL's EVP message digest context (EVP_MD_CTX).
  */
 class EvpDigestContext {
@@ -26,12 +36,29 @@ public:
     public:
         // Constructors
         OperationFailed(clp::ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : OperationFailed(
+                          error_code,
+                          filename,
+                          line_number,
+                          "EvpDigestContext operation failed"
+                  ) {}
+
+        OperationFailed(
+                clp::ErrorCode error_code,
+                char const* const filename,
+                int line_number,
+                std::string message
+        )
+                : TraceableException(error_code, filename, line_number),
+                  m_message(std::move(message)) {}
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "EvpDigestContext operation failed";
+            return m_message.c_str();
         }
+
+    private:
+        string m_message;
     };
 
     // Constructors
@@ -50,7 +77,12 @@ public:
         }
         // Set impl to nullptr to use the default implementation of digest type
         if (1 != EVP_DigestInit_ex(m_md_ctx, type, nullptr)) {
-            throw OperationFailed(clp::ErrorCode_Failure, __FILENAME__, __LINE__);
+            throw OperationFailed(
+                    clp::ErrorCode_Failure,
+                    __FILENAME__,
+                    __LINE__,
+                    get_openssl_error_string()
+            );
         }
     }
 
@@ -70,7 +102,6 @@ public:
      * Hashes `input` into the digest.
      * @param input
      * @return ErrorCode_Success on success.
-     * @return ErrorCode_Unsupported if context is already finalized.
      * @return ErrorCode_Failure if `EVP_DigestUpdate` fails.
      */
     [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> clp::ErrorCode;
@@ -79,7 +110,6 @@ public:
      * Writes the digest into `hash` and clears the digest.
      * @param hash Returns the hashing result.
      * @return ErrorCode_Success on success.
-     * @return ErrorCode_Unsupported if context is already finalized.
      * @return ErrorCode_Corrupt if the hashing result has an unexpected length.
      * @return ErrorCode_Failure if `EVP_DigestFinal_ex` fails.
      * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if
@@ -110,7 +140,12 @@ auto EvpDigestContext::digest_final(std::vector<unsigned char>& hash) -> clp::Er
     }
 
     if (1 != EVP_DigestInit_ex(m_md_ctx, EVP_get_digestbynid(m_digest_nid), nullptr)) {
-        throw OperationFailed(clp::ErrorCode_Failure, __FILENAME__, __LINE__);
+        throw OperationFailed(
+                clp::ErrorCode_Failure,
+                __FILENAME__,
+                __LINE__,
+                get_openssl_error_string()
+        );
     }
     return clp::ErrorCode_Success;
 }
