@@ -14,7 +14,7 @@ const QUERY_LOAD_STATE = Object.freeze({
 });
 
 /**
- * Descriptions for query states.
+ * Descriptions for query loading states.
  */
 const QUERY_STATE_DESCRIPTIONS = Object.freeze({
     [QUERY_LOAD_STATE.SUBMITTING]: {

@@ -149,7 +149,7 @@ const SearchResultsTable = ({
                                     <a
                                         rel={"noopener noreferrer"}
                                         target={"_blank"}
-                                        title={"Go to the log context"}
+                                        title={"View log event in context"}
                                         href={`${Meteor.settings.public.LogViewerWebuiUrl
                                         }?origFileId=${result.orig_file_id}` +
                                         `&logEventIdx=${result.log_event_ix}`}
