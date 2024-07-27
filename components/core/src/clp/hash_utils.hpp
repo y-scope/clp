@@ -13,7 +13,7 @@
 
 namespace clp {
 /**
- * A C++ wrapper for openssl's EVP digest message digest context (EVP_MD_CTX).
+ * A C++ wrapper for OpenSSL's EVP message digest context (EVP_MD_CTX).
  */
 class EvpDigestContext {
 public:
@@ -26,17 +26,15 @@ public:
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "EvpCtxManager operation failed";
+            return "EvpDigestContext operation failed";
         }
     };
 
     // Constructors
     /**
-     * Creates and initializes a hash context by calling EVP_MD_CTX_create
-     * and EVP_DigestInit_ex from OpenSSL library
-     * @param type the type of digest (hash algorithm) from OpenSSL library.
-     * @throw EvpCtxManager::ErrorCode_Failure if EVP_MD_CTX_create fails.
-     * @throw EvpCtxManager::ErrorCode_NotInit if EVP_DigestInit_ex fails.
+     * @param type The type of digest (hash algorithm).
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if `EVP_MD_CTX_create` fails.
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_NotInit if `EVP_DigestInit_ex` fails.
      */
     EvpDigestContext(EVP_MD const* type) : m_md_ctx{EVP_MD_CTX_create()} {
         if (nullptr == m_md_ctx) {
@@ -48,11 +46,11 @@ public:
         }
     }
 
-    // Disable copy constructor/assignment operator
+    // Disable copy constructor and assignment operator
     EvpDigestContext(EvpDigestContext const&) = delete;
     auto operator=(EvpDigestContext const&) -> EvpDigestContext& = delete;
 
-    // disable move constructor/assignment operator
+    // Disable move constructor and assignment operator
     EvpDigestContext(EvpDigestContext&&) = delete;
     auto operator=(EvpDigestContext&&) -> EvpDigestContext& = delete;
 
@@ -61,21 +59,21 @@ public:
 
     // Methods
     /**
-     * Calls EVP_DigestUpdate to digest the input and update the hash context
+     * Hashes `input` into the digest.
      * @param input
      * @return ErrorCode_Success on success.
      * @return ErrorCode_Unsupported if context is already finalized.
-     * @return ErrorCode_Failure if EVP_DigestUpdate fails.
+     * @return ErrorCode_Failure if `EVP_DigestUpdate` fails.
      */
     [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> ErrorCode;
 
     /**
-     * Calls EVP_DigestFinal_ex to generate the final hash result
+     * Writes the digest into `hash`.
      * @param hash Returns the hashing result.
      * @return ErrorCode_Success on success.
      * @return ErrorCode_Unsupported if context is already finalized.
      * @return ErrorCode_Corrupt if the hashing result has an unexpected length.
-     * @return ErrorCode_Failure if EVP_DigestFinal_ex fails.
+     * @return ErrorCode_Failure if `EVP_DigestFinal_ex` fails.
      */
     [[nodiscard]] auto digest_final_ex(std::vector<unsigned char>& hash) -> ErrorCode;
 
@@ -85,19 +83,18 @@ private:
 };
 
 /**
- * Converts input hash into a hex string.
  * @param input
- * @return input hash as a hex string
+ * @return `input` as a hex string (without the "0x" prefix).
  */
 [[nodiscard]] auto convert_hash_to_hex_string(std::span<unsigned char> input) -> std::string;
 
 /**
- * Gets the HMAC-SHA256 hash of input with key.
+ * Gets the HMAC-SHA256 hash of `input` with `key`.
  * @param input
  * @param key
- * @param hash Returns the hashing result.
+ * @param hash Returns the HMAC.
  * @return ErrorCode_Success on success.
- * @return ErrorCode_BadParam if input key exceeds maximum length.
+ * @return ErrorCode_BadParam if `key` is longer than `INT32_MAX`.
  * @return ErrorCode_Failure if hash generation fails.
  */
 [[nodiscard]] auto get_hmac_sha256_hash(
@@ -107,9 +104,9 @@ private:
 ) -> ErrorCode;
 
 /**
- * Gets the SHA256 hash of the input.
+ * Gets the SHA256 hash of `input`.
  * @param input
- * @param hash Returns the hashing result.
+ * @param hash Returns the hash.
  * @return ErrorCode_Success on success.
  * @return Same as digest_final_ex and digest_update on failure.
  * @throw EvpCtxManager::OperationFailed if EvpCtxManager can not be initialized.

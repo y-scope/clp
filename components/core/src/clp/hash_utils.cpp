@@ -16,7 +16,7 @@ using std::string;
 using std::vector;
 
 namespace clp {
-auto EvpDigestContext::digest_update(std::span<unsigned char const> input) -> ErrorCode {
+auto EvpDigestContext::digest_update(span<unsigned char const> input) -> ErrorCode {
     if (m_is_digest_finalized) {
         return ErrorCode_Unsupported;
     }
@@ -31,12 +31,12 @@ auto EvpDigestContext::digest_final_ex(std::vector<unsigned char>& hash) -> Erro
         return ErrorCode_Unsupported;
     }
 
-    hash.resize(SHA256_DIGEST_LENGTH);
+    hash.resize(EVP_MD_CTX_size(m_md_ctx));
     unsigned int length{};
     if (1 != EVP_DigestFinal_ex(m_md_ctx, hash.data(), &length)) {
         return ErrorCode_Failure;
     }
-    if (SHA256_DIGEST_LENGTH != length) {
+    if (hash.size() != length) {
         return ErrorCode_Corrupt;
     }
     m_is_digest_finalized = true;
