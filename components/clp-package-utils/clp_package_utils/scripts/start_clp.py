@@ -60,7 +60,7 @@ from clp_package_utils.general import (
 )
 
 # Constants
-COMPONENT_NAMES = [
+COMPONENT_NAMES = (
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
@@ -73,7 +73,7 @@ COMPONENT_NAMES = [
     REDUCER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
-]
+)
 
 # Setup logging
 # Create logger
