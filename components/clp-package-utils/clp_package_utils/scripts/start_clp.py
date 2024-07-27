@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -981,6 +981,24 @@ def add_num_workers_argument(parser):
     )
 
 
+def component_should_start(
+    target: str,
+    exclude: List[str],
+    component_names: Tuple[str, ...],
+) -> bool:
+    """
+    Determines whether a component should start based on the target and exclusion list.
+    :param target: The target name specified by the user.
+    :param exclude: A list of component names that should be excluded from starting.
+    :param component_names: A tuple of components to which the target component corresponds
+                            or depends on.
+    :return: True if the component should start, False otherwise.
+    """
+    return target in (ALL_TARGET_NAME, *component_names) and all(
+        name not in exclude for name in component_names
+    )
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -993,7 +1011,9 @@ def main(argv):
         help="CLP package configuration file.",
     )
 
-    args_parser.add_argument("--exclude", "-no", nargs="+", default=[], help="Exclude component(s) from being started.")
+    args_parser.add_argument(
+        "--exclude", "-no", nargs="+", default=[], help="Exclude component(s) from being started."
+    )
 
     component_args_parser = args_parser.add_subparsers(dest="target")
     component_args_parser.add_parser(CONTROLLER_TARGET_NAME)
@@ -1018,6 +1038,8 @@ def main(argv):
     exclude = parsed_args.exclude
     if parsed_args.target:
         target = parsed_args.target
+    if 0 != len(exclude):
+        logger.info(f"Starting all components except: {exclude}")
 
     try:
         check_dependencies()
@@ -1098,37 +1120,82 @@ def main(argv):
         conf_dir = clp_home / "etc"
 
         # Start components
-        if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME) and DB_COMPONENT_NAME not in exclude:
+        if component_should_start(target, exclude, (DB_COMPONENT_NAME,)):
             start_db(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME) and CONTROLLER_TARGET_NAME not in exclude and DB_COMPONENT_NAME not in exclude:
+        if component_should_start(
+            target,
+            exclude,
+            (
+                CONTROLLER_TARGET_NAME,
+                DB_COMPONENT_NAME,
+            ),
+        ):
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME) and CONTROLLER_TARGET_NAME not in exclude and QUEUE_COMPONENT_NAME not in exclude:
+        if component_should_start(
+            target,
+            exclude,
+            (
+                CONTROLLER_TARGET_NAME,
+                QUEUE_COMPONENT_NAME,
+            ),
+        ):
             start_queue(instance_id, clp_config)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME) and CONTROLLER_TARGET_NAME not in exclude and REDIS_COMPONENT_NAME not in exclude:
+        if component_should_start(
+            target,
+            exclude,
+            (
+                CONTROLLER_TARGET_NAME,
+                REDIS_COMPONENT_NAME,
+            ),
+        ):
             start_redis(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME) and RESULTS_CACHE_COMPONENT_NAME not in exclude:
+        if component_should_start(
+            target,
+            exclude,
+            (
+                CONTROLLER_TARGET_NAME,
+                RESULTS_CACHE_COMPONENT_NAME,
+            ),
+        ):
             start_results_cache(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+        if component_should_start(
+            target,
+            exclude,
+            (
+                CONTROLLER_TARGET_NAME,
+                RESULTS_CACHE_COMPONENT_NAME,
+            ),
+        ):
             create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
-        if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        ) and CONTROLLER_TARGET_NAME not in exclude and COMPRESSION_SCHEDULER_COMPONENT_NAME not in exclude:
+        if component_should_start(
+            target,
+            exclude,
+            (
+                CONTROLLER_TARGET_NAME,
+                COMPRESSION_SCHEDULER_COMPONENT_NAME,
+            ),
+        ):
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME) and CONTROLLER_TARGET_NAME not in exclude and QUERY_SCHEDULER_COMPONENT_NAME not in exclude:
+        if component_should_start(
+            target,
+            exclude,
+            (
+                CONTROLLER_TARGET_NAME,
+                QUERY_SCHEDULER_COMPONENT_NAME,
+            ),
+        ):
             start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME) and COMPRESSION_WORKER_COMPONENT_NAME not in exclude:
+        if component_should_start(target, exclude, (COMPRESSION_WORKER_COMPONENT_NAME,)):
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_workers, mounts
             )
-        if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME) and QUERY_WORKER_COMPONENT_NAME not in exclude:
+        if component_should_start(target, exclude, (QUERY_WORKER_COMPONENT_NAME,)):
             start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
-        if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME) and REDUCER_COMPONENT_NAME not in exclude:
+        if component_should_start(target, exclude, (REDUCER_COMPONENT_NAME,)):
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
-        if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME) and WEBUI_COMPONENT_NAME not in exclude:
+        if component_should_start(target, exclude, (WEBUI_COMPONENT_NAME,)):
             start_webui(instance_id, clp_config, mounts)
-        if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME) and LOG_VIEWER_WEBUI_COMPONENT_NAME not in exclude:
+        if component_should_start(target, exclude, (LOG_VIEWER_WEBUI_COMPONENT_NAME,)):
             start_log_viewer_webui(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
