@@ -331,6 +331,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/WildcardToken.hpp
         src/clp/ffi/utils.cpp
         src/clp/ffi/utils.hpp
+        src/clp/ffi/Value.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
         src/clp/FileReader.cpp
