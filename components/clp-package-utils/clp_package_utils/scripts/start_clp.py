@@ -1050,7 +1050,7 @@ def main(argv):
     if 0 != len(excluded_components):
         for component in excluded_components:
             if component not in COMPONENT_NAMES:
-                raise ValueError(f"Unrecognized component {component} in --exclude list")
+                raise ValueError(f"Unrecognized component {component} in --exclude list.")
         logger.info(f"Starting all components except: {excluded_components}")
 
     try:
