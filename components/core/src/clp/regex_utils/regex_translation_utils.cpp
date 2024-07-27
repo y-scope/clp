@@ -115,14 +115,13 @@ using StateTransitionFuncSig
 [[nodiscard]] StateTransitionFuncSig escaped_state_transition;
 
 /**
- * Attempts to reduce regex character sets into a single character so that the regex string is still
- * translatable to wildcard.
+ * Reduces a regex character set into a single character so that the regex string is still
+ * translatable into a wildcard string.
  *
  * In most cases, only a trival character set containing a single character is reducable. However,
  * if the output wildcard query will be analyzed in case-insensitive mode, character set patterns
  * such as [aA] [Bb] are also reducable.
- * Throws two possible kinds of error codes, with IncompleteCharsetStructure having a higher
- * precedence over UnsupportedCharsetPattern.
+* On error returns either IncompleteCharsetStructure or UnsupportedCharsetPattern.
  */
 [[nodiscard]] StateTransitionFuncSig charset_state_transition;
 
@@ -131,7 +130,7 @@ using StateTransitionFuncSig
  *
  * Allows the charset state to accurately capture the appearance of a closing bracket `]`.
  */
-[[nodiscard]] StateTransitionFuncSig charsetescaped_state_transition;
+[[nodiscard]] StateTransitionFuncSig charset_escaped_state_transition;
 
 /**
  * Disallows the appearances of other characters after encountering an end anchor in the string.
@@ -153,7 +152,7 @@ using StateTransitionFuncSig
  * @param ch The literal to be appended.
  * @param wildcard_str The wildcard string to be updated.
  */
-inline auto append_single_char_to_wildcard(char const ch, string& wildcard_str) -> void {
+inline auto append_char_to_wildcard(char const ch, string& wildcard_str) -> void {
     if (cWildcardMetaCharsLut.at(ch)) {
         wildcard_str += cEscapeChar;
     }
@@ -189,7 +188,7 @@ auto normal_state_transition(
             state.set_next_state(TranslatorState::RegexPatternState::Escaped);
             break;
         case '[':
-            state.mark_iterator(it + 1);  // Mark the first character of character set
+            state.mark_iterator(it + 1);
             state.set_next_state(TranslatorState::RegexPatternState::Charset);
             break;
         case cRegexEndAnchor:
@@ -247,7 +246,7 @@ auto escaped_state_transition(
     if (false == cRegexEscapeSeqMetaCharsLut.at(ch)) {
         return ErrorCode::IllegalEscapeSequence;
     }
-    append_single_char_to_wildcard(ch, wildcard_str);
+    append_char_to_wildcard(ch, wildcard_str);
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
     return ErrorCode::Success;
 }
@@ -259,11 +258,10 @@ auto charset_state_transition(
         RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
     auto const ch{*it};
-    string_view::const_iterator charset_start{state.get_marked_iterator()};  // avoid casting to ptr
+    string_view::const_iterator charset_start{state.get_marked_iterator()};
     auto const charset_len{it - charset_start};
 
     if (']' != ch) {
-        // Only process charset until a closing bracket is reached.
         if (cEscapeChar == ch) {
             state.set_next_state(TranslatorState::RegexPatternState::CharsetEscaped);
         }
@@ -271,11 +269,9 @@ auto charset_state_transition(
     }
 
     if (0 == charset_len || charset_len > 2) {
-        // Does not support empty charset or pattern that is longer than two characters.
         return ErrorCode::UnsupportedCharsetPattern;
     }
 
-    // Passed the length check. Now check for accepted charset patterns.
     auto const ch0{*charset_start};
     auto const ch1{*(charset_start + 1)};
     char parsed_char{};
@@ -287,30 +283,27 @@ auto charset_state_transition(
         parsed_char = ch0;
     } else {  // 2 == charset_len
         if (cEscapeChar == ch0 && cRegexCharsetEscapeSeqMetaCharsLut.at(ch1)) {
-            // 2-char escape sequence
             parsed_char = ch1;
         } else if (config.case_insensitive_wildcard()
                    && matching_upper_lower_case_char_pair(ch0, ch1))
         {
-            // case-insensitive patterns like [aA] [Bb] etc.
             parsed_char = ch0 > ch1 ? ch0 : ch1;  // choose the lower case character
         } else {
             return ErrorCode::UnsupportedCharsetPattern;
         }
     }
 
-    append_single_char_to_wildcard(parsed_char, wildcard_str);
+    append_char_to_wildcard(parsed_char, wildcard_str);
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
     return ErrorCode::Success;
 }
 
-auto charsetescaped_state_transition(
+auto charset_escaped_state_transition(
         TranslatorState& state,
         [[maybe_unused]] string_view::const_iterator& it,
         [[maybe_unused]] string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
-    // Defer the handling of escape sequences to entire character set analysis..
     state.set_next_state(TranslatorState::RegexPatternState::Charset);
     return ErrorCode::Success;
 }
@@ -397,7 +390,7 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
                 ec = charset_state_transition(state, it, wildcard_str, config);
                 break;
             case TranslatorState::RegexPatternState::CharsetEscaped:
-                ec = charsetescaped_state_transition(state, it, wildcard_str, config);
+                ec = charset_escaped_state_transition(state, it, wildcard_str, config);
                 break;
             case TranslatorState::RegexPatternState::End:
                 ec = end_state_transition(state, it, wildcard_str, config);
