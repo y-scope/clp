@@ -1,37 +1,37 @@
 /**
- * @typedef {number} QueryLoadState
+ * @typedef {number} QueryLoadingState
  */
-let enumQueryLoadState;
+let enumQueryLoadingState;
 /**
  * Enum of query loading state.
  *
- * @enum {QueryLoadState}
+ * @enum {QueryLoadingState}
  */
-const QUERY_LOAD_STATE = Object.freeze({
-    SUBMITTING: (enumQueryLoadState = 0),
-    WAITING: ++enumQueryLoadState,
-    LOADING: ++enumQueryLoadState,
+const QUERY_LOADING_STATES = Object.freeze({
+    SUBMITTING: (enumQueryLoadingState = 0),
+    WAITING: ++enumQueryLoadingState,
+    LOADING: ++enumQueryLoadingState,
 });
 
 /**
  * Descriptions for query loading states.
  */
-const QUERY_STATE_DESCRIPTIONS = Object.freeze({
-    [QUERY_LOAD_STATE.SUBMITTING]: {
+const QUERY_LOADING_STATE_DESCRIPTIONS = Object.freeze({
+    [QUERY_LOADING_STATES.SUBMITTING]: {
         label: "Submitting query Job",
         description: "Parsing arguments and submitting job to the server.",
     },
-    [QUERY_LOAD_STATE.WAITING]: {
+    [QUERY_LOADING_STATES.WAITING]: {
         label: "Waiting for job to finish",
         description: "The job is running. Waiting for the job to finish.",
     },
-    [QUERY_LOAD_STATE.LOADING]: {
+    [QUERY_LOADING_STATES.LOADING]: {
         label: "Loading Log Viewer",
         description: "The query has been completed and the results are being loaded.",
     },
 });
 
 export {
-    QUERY_LOAD_STATE,
-    QUERY_STATE_DESCRIPTIONS,
+    QUERY_LOADING_STATE_DESCRIPTIONS,
+    QUERY_LOADING_STATES,
 };

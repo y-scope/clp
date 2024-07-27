@@ -9,8 +9,8 @@ import {
 } from "@mui/joy";
 
 import {
-    QUERY_LOAD_STATE,
-    QUERY_STATE_DESCRIPTIONS,
+    QUERY_LOADING_STATE_DESCRIPTIONS,
+    QUERY_LOADING_STATES,
 } from "../typings/query.js";
 
 import "./Loading.css";
@@ -78,9 +78,9 @@ const LoadingStep = ({
  */
 const Loading = ({currentState, errorMsg}) => {
     const steps = [];
-    Object.values(QUERY_LOAD_STATE).forEach((state) => {
+    Object.values(QUERY_LOADING_STATES).forEach((state) => {
         const isActive = (currentState === state);
-        const stateDescription = QUERY_STATE_DESCRIPTIONS[state];
+        const stateDescription = QUERY_LOADING_STATE_DESCRIPTIONS[state];
         steps.push(
             <LoadingStep
                 description={stateDescription.description}

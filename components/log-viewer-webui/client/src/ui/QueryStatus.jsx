@@ -7,7 +7,7 @@ import {
 import {AxiosError} from "axios";
 
 import {submitExtractIrJob} from "../api/query.js";
-import {QUERY_LOAD_STATE} from "../typings/query.js";
+import {QUERY_LOADING_STATES} from "../typings/query.js";
 import Loading from "./Loading.jsx";
 
 
@@ -17,7 +17,7 @@ import Loading from "./Loading.jsx";
  * @return {React.ReactElement}
  */
 const QueryStatus = () => {
-    const [queryState, setQueryState] = useState(QUERY_LOAD_STATE.SUBMITTING);
+    const [queryState, setQueryState] = useState(QUERY_LOADING_STATES.SUBMITTING);
     const [errorMsg, setErrorMsg] = useState(null);
     const isFirstRun = useRef(true);
 
@@ -43,11 +43,11 @@ const QueryStatus = () => {
             origFileId,
             Number(logEventIdx),
             () => {
-                setQueryState(QUERY_LOAD_STATE.WAITING);
+                setQueryState(QUERY_LOADING_STATES.WAITING);
             }
         )
             .then(({data}) => {
-                setQueryState(QUERY_LOAD_STATE.LOADING);
+                setQueryState(QUERY_LOADING_STATES.LOADING);
 
                 const innerLogEventNum = logEventIdx - data.begin_msg_ix + 1;
                 window.location = `/log-viewer/index.html?filePath=/ir/${data.path}` +
