@@ -542,9 +542,7 @@ tasks:
     internal: true
     vars:
       VERSIONED_PACKAGE_NAME:
-        sh: |
-          source /etc/os-release
-          echo "clp-{{.FLAVOUR}}-${ID}-${VERSION_CODENAME}-$(arch)-v{{.G_PACKAGE_VERSION}}"
+        sh: "echo clp-{{.FLAVOUR}}-$(arch)-v{{.G_PACKAGE_VERSION}}"
       OUTPUT_DIR: "{{.G_BUILD_DIR}}/{{.VERSIONED_PACKAGE_NAME}}"
       OUTPUT_FILE: "{{.OUTPUT_DIR}}.tar.gz"
     requires:
