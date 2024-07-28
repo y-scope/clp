@@ -1,3 +1,6 @@
+// eslint-disable-next-line no-magic-numbers
+const EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE = 128 * 1024 * 1024;
+
 /**
  * Creates query routes.
  *
@@ -7,30 +10,33 @@
  */
 const routes = async (fastify, options) => {
     fastify.post("/query/extract-ir", async (req, resp) => {
-        const {orig_file_id: origFileId, msg_ix: msgIdx} = req.body;
-        const sanitizedMsgIdx = Number(msgIdx);
+        const {origFileId, logEventIdx} = req.body;
+        const sanitizedLogEventIdx = Number(logEventIdx);
 
-        let irMetadata =
-            await fastify.dbManager.getExtractedIrFileMetadata(origFileId, sanitizedMsgIdx);
+        let irMetadata = await fastify.dbManager.getExtractedIrFileMetadata(
+            origFileId,
+            sanitizedLogEventIdx
+        );
 
         if (null === irMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractIrJob({
                 file_split_id: null,
-                msg_ix: sanitizedMsgIdx,
+                msg_ix: sanitizedLogEventIdx,
                 orig_file_id: origFileId,
-                // eslint-disable-next-line no-magic-numbers
-                target_uncompressed_size: 128 * 1024 * 1024,
+                target_uncompressed_size: EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE,
             });
 
             if (null === extractResult) {
                 const err = new Error("Unable to extract IR for file with " +
-                    `orig_file_id=${origFileId} at msg_ix=${sanitizedMsgIdx}`);
+                    `origFileId=${origFileId} at logEventIdx=${sanitizedLogEventIdx}`);
 
                 err.statusCode = 400;
                 throw err;
             }
-            irMetadata =
-                await fastify.dbManager.getExtractedIrFileMetadata(origFileId, sanitizedMsgIdx);
+            irMetadata = await fastify.dbManager.getExtractedIrFileMetadata(
+                origFileId,
+                sanitizedLogEventIdx
+            );
         }
 
         return irMetadata;

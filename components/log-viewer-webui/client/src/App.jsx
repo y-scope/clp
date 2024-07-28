@@ -1,3 +1,9 @@
+import {CssVarsProvider} from "@mui/joy/styles/CssVarsProvider";
+
+import LOCAL_STORAGE_KEY from "./typings/LOCAL_STORAGE_KEY.js";
+import QueryStatus from "./ui/QueryStatus.jsx";
+
+
 /**
  * Renders the main application.
  *
@@ -5,7 +11,9 @@
  */
 const App = () => {
     return (
-        <h1>Hello world!</h1>
+        <CssVarsProvider modeStorageKey={LOCAL_STORAGE_KEY.UI_THEME}>
+            <QueryStatus/>
+        </CssVarsProvider>
     );
 };
 

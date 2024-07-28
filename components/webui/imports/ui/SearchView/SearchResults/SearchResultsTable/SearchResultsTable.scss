@@ -27,6 +27,8 @@
 }
 
 .search-results-content {
+  overflow: auto;
+
   font-size: 0.875rem;
   line-height: var(--search-results-message-line-height);
 }

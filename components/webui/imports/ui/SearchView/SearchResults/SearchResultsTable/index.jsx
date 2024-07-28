@@ -1,3 +1,4 @@
+import {Meteor} from "meteor/meteor";
 import {useEffect} from "react";
 import Table from "react-bootstrap/Table";
 
@@ -7,6 +8,7 @@ import {
     faSort,
     faSortDown,
     faSortUp,
+    faSquareUpRight,
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
@@ -35,7 +37,7 @@ const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
  * @param {boolean} props.hasMoreResultsInTotal
  * @param {number} props.maxLinesPerResult
  * @param {Function} props.onLoadMoreResults
- * @param {object} props.searchResults
+ * @param {object[]} props.searchResults
  * @param {Function} props.setFieldToSortBy
  * @return {React.ReactElement}
  */
@@ -91,24 +93,9 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
-    const rows = [];
-    for (let i = 0; i < searchResults.length; ++i) {
-        const searchResult = searchResults[i];
-        rows.push(
-            <tr key={searchResult._id}>
-                <td className={"search-results-content search-results-timestamp"}>
-                    {searchResult.timestamp ?
-                        dayjs.utc(searchResult.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
-                        "N/A"}
-                </td>
-                <td>
-                    <pre className={"search-results-content search-results-message"}>
-                        {searchResult.message}
-                    </pre>
-                </td>
-            </tr>
-        );
-    }
+    // eslint-disable-next-line no-warning-comments
+    // TODO: remove this flag once "Extract IR" support is added for ClpStorageEngine "clp-s"
+    const isExtractIrSupported = ("clp" === Meteor.settings.public.ClpStorageEngine);
 
     return (
         <div className={"search-results-container"}>
@@ -123,7 +110,6 @@ const SearchResultsTable = ({
                         <th
                             className={"search-results-th search-results-th-sortable"}
                             data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                            key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>
@@ -134,16 +120,45 @@ const SearchResultsTable = ({
                         </th>
                         <th
                             className={"search-results-th"}
-                            key={"message"}
                         >
                             <div className={"search-results-table-header"}>
                                 Log message
                             </div>
                         </th>
+                        {isExtractIrSupported &&
+                            <th className={"search-results-th"}>
+                                <div className={"search-results-table-header"}>&nbsp;</div>
+                            </th>}
                     </tr>
                 </thead>
                 <tbody>
-                    {rows}
+                    {searchResults.map((result) => (
+                        <tr key={result._id}>
+                            <td className={"search-results-content search-results-timestamp"}>
+                                {result.timestamp ?
+                                    dayjs.utc(result.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
+                                    "N/A"}
+                            </td>
+                            <td>
+                                <pre className={"search-results-content search-results-message"}>
+                                    {result.message}
+                                </pre>
+                            </td>
+                            {isExtractIrSupported &&
+                                <td>
+                                    <a
+                                        rel={"noopener noreferrer"}
+                                        target={"_blank"}
+                                        title={"View log event in context"}
+                                        href={`${Meteor.settings.public.LogViewerWebuiUrl
+                                        }?origFileId=${result.orig_file_id}` +
+                                        `&logEventIdx=${result.log_event_ix}`}
+                                    >
+                                        <FontAwesomeIcon icon={faSquareUpRight}/>
+                                    </a>
+                                </td>}
+                        </tr>
+                    ))}
                 </tbody>
             </Table>
             <SearchResultsLoadSensor
