@@ -20,6 +20,7 @@ using std::string;
 using std::string_view;
 using std::vector;
 
+namespace clp::aws {
 namespace {
 /**
  * Gets the timestamp string specified by AWS Signature Version 4 format
@@ -46,16 +47,15 @@ namespace {
  * @param method HTTP method
  * @return The converted string
  */
-[[nodiscard]] auto get_method_string(clp::aws::AwsAuthenticationSigner::HttpMethod method
-) -> string {
+[[nodiscard]] auto get_method_string(AwsAuthenticationSigner::HttpMethod method) -> string {
     switch (method) {
-        case clp::aws::AwsAuthenticationSigner::HttpMethod::GET:
+        case AwsAuthenticationSigner::HttpMethod::GET:
             return "GET";
-        case clp::aws::AwsAuthenticationSigner::HttpMethod::PUT:
+        case AwsAuthenticationSigner::HttpMethod::PUT:
             return "PUT";
-        case clp::aws::AwsAuthenticationSigner::HttpMethod::POST:
+        case AwsAuthenticationSigner::HttpMethod::POST:
             return "POST";
-        case clp::aws::AwsAuthenticationSigner::HttpMethod::DELETE:
+        case AwsAuthenticationSigner::HttpMethod::DELETE:
             return "DELETE";
         default:
             throw std::runtime_error("Invalid HTTP method");
@@ -68,36 +68,36 @@ namespace {
  * @param timestamp_string
  * @param canonical_request
  * @param string_to_sign Returns the string to sign
- * @return clp::ErrorCode_Success on success
- * On failure, same as clp::get_sha256_hash
+ * @return ErrorCode_Success on success
+ * On failure, same as get_sha256_hash
  */
 [[nodiscard]] auto get_string_to_sign(
         string_view scope,
         string_view timestamp_string,
         string_view canonical_request,
         string& string_to_sign
-) -> clp::ErrorCode {
+) -> ErrorCode {
     vector<unsigned char> signed_canonical_request;
-    if (auto error_code = clp::get_sha256_hash(
+    if (auto error_code = get_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(canonical_request.data()),
                  canonical_request.size()},
                 signed_canonical_request
         );
-        clp::ErrorCode_Success != error_code)
+        ErrorCode_Success != error_code)
     {
         return error_code;
     }
-    auto const signed_canonical_request_str = clp::convert_hash_to_hex_string(
+    auto const signed_canonical_request_str = convert_hash_to_hex_string(
             {signed_canonical_request.data(), signed_canonical_request.size()}
     );
     string_to_sign = fmt::format(
             "{}\n{}\n{}\n{}",
-            clp::aws::cAws4HmacSha256,
+            cAws4HmacSha256,
             timestamp_string,
             scope,
             signed_canonical_request_str
     );
-    return clp::ErrorCode_Success;
+    return ErrorCode_Success;
 }
 
 /**
@@ -129,13 +129,7 @@ namespace {
  * @return The scope as a string
  */
 [[nodiscard]] auto get_scope(string_view date_string, string_view region) -> string {
-    return fmt::format(
-            "{}/{}/{}/{}",
-            date_string,
-            region,
-            clp::aws::cS3Service,
-            clp::aws::cAws4Request
-    );
+    return fmt::format("{}/{}/{}/{}", date_string, region, cS3Service, cAws4Request);
 }
 
 /**
@@ -146,8 +140,8 @@ namespace {
  * @return Canonical request
  */
 [[nodiscard]] auto get_canonical_request(
-        clp::aws::AwsAuthenticationSigner::HttpMethod method,
-        clp::aws::S3Url const& url,
+        AwsAuthenticationSigner::HttpMethod method,
+        S3Url const& url,
         string_view query_string
 ) -> string {
     return fmt::format(
@@ -155,15 +149,14 @@ namespace {
             get_method_string(method),
             encode_uri(url.get_path(), false),
             query_string,
-            clp::aws::cDefaultSignedHeaders,
+            cDefaultSignedHeaders,
             url.get_host(),
-            clp::aws::cDefaultSignedHeaders,
-            clp::aws::cUnsignedPayload
+            cDefaultSignedHeaders,
+            cUnsignedPayload
     );
 }
 }  // namespace
 
-namespace clp::aws {
 S3Url::S3Url(string const& url) {
     // Regular expression to match Virtual-hosted-style HTTP URL format
     std::regex const host_style_url_regex(
@@ -349,5 +342,4 @@ auto AwsAuthenticationSigner::generate_canonical_query_string(
             cDefaultSignedHeaders
     );
 }
-
 }  // namespace clp::aws
