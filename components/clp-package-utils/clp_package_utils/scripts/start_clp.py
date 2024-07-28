@@ -786,6 +786,9 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         },
         "public": {
             "ClpStorageEngine": clp_config.package.storage_engine,
+            "LogViewerWebuiUrl": (
+                f"http://{clp_config.log_viewer_webui.host}:{clp_config.log_viewer_webui.port}",
+            ),
         },
     }
     meteor_settings = read_and_update_settings_json(settings_json_path, meteor_settings_updates)
