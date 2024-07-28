@@ -16,6 +16,7 @@ using std::span;
 using std::string;
 using std::vector;
 
+namespace clp {
 namespace {
 /**
  * Gets the OpenSSL error string as a c++ string
@@ -35,7 +36,7 @@ public:
     class OperationFailed : public clp::TraceableException {
     public:
         // Constructors
-        OperationFailed(clp::ErrorCode error_code, char const* const filename, int line_number)
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : OperationFailed(
                           error_code,
                           filename,
@@ -44,7 +45,7 @@ public:
                   ) {}
 
         OperationFailed(
-                clp::ErrorCode error_code,
+                ErrorCode error_code,
                 char const* const filename,
                 int line_number,
                 std::string message
@@ -73,12 +74,12 @@ public:
             : m_md_ctx{EVP_MD_CTX_create()},
               m_digest_nid{EVP_MD_type(type)} {
         if (nullptr == m_md_ctx) {
-            throw OperationFailed(clp::ErrorCode_NoMem, __FILENAME__, __LINE__);
+            throw OperationFailed(ErrorCode_NoMem, __FILENAME__, __LINE__);
         }
         // Set impl to nullptr to use the default implementation of digest type
         if (1 != EVP_DigestInit_ex(m_md_ctx, type, nullptr)) {
             throw OperationFailed(
-                    clp::ErrorCode_Failure,
+                    ErrorCode_Failure,
                     __FILENAME__,
                     __LINE__,
                     get_openssl_error_string()
@@ -104,7 +105,7 @@ public:
      * @return ErrorCode_Success on success.
      * @return ErrorCode_Failure if `EVP_DigestUpdate` fails.
      */
-    [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> clp::ErrorCode;
+    [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> ErrorCode;
 
     /**
      * Writes the digest into `hash` and clears the digest.
@@ -115,43 +116,42 @@ public:
      * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if
      * `EVP_DigestInit_ex` fails.
      */
-    [[nodiscard]] auto digest_final(std::vector<unsigned char>& hash) -> clp::ErrorCode;
+    [[nodiscard]] auto digest_final(std::vector<unsigned char>& hash) -> ErrorCode;
 
 private:
     EVP_MD_CTX* m_md_ctx{nullptr};
     int m_digest_nid{};
 };
 
-auto EvpDigestContext::digest_update(span<unsigned char const> input) -> clp::ErrorCode {
+auto EvpDigestContext::digest_update(span<unsigned char const> input) -> ErrorCode {
     if (1 != EVP_DigestUpdate(m_md_ctx, input.data(), input.size())) {
-        return clp::ErrorCode_Failure;
+        return ErrorCode_Failure;
     }
-    return clp::ErrorCode_Success;
+    return ErrorCode_Success;
 }
 
-auto EvpDigestContext::digest_final(std::vector<unsigned char>& hash) -> clp::ErrorCode {
+auto EvpDigestContext::digest_final(std::vector<unsigned char>& hash) -> ErrorCode {
     hash.resize(EVP_MD_CTX_size(m_md_ctx));
     unsigned int length{};
     if (1 != EVP_DigestFinal_ex(m_md_ctx, hash.data(), &length)) {
-        return clp::ErrorCode_Failure;
+        return ErrorCode_Failure;
     }
     if (hash.size() != length) {
-        return clp::ErrorCode_Corrupt;
+        return ErrorCode_Corrupt;
     }
 
     if (1 != EVP_DigestInit_ex(m_md_ctx, EVP_get_digestbynid(m_digest_nid), nullptr)) {
         throw OperationFailed(
-                clp::ErrorCode_Failure,
+                ErrorCode_Failure,
                 __FILENAME__,
                 __LINE__,
                 get_openssl_error_string()
         );
     }
-    return clp::ErrorCode_Success;
+    return ErrorCode_Success;
 }
 }  // namespace
 
-namespace clp {
 auto convert_to_hex_string(std::span<unsigned char> input) -> string {
     string hex_string;
     for (auto const c : input) {
