@@ -37,8 +37,9 @@ namespace clp {
  * @param input
  * @param hash Returns the hash.
  * @return ErrorCode_Success on success.
+ * @return The error code specified by EvpDigestContext constructor
+ * if the EvpDigestContext instance fails to initialize.
  * @return Same as `digest_final` and `digest_update` on failure.
- * @throw EvpDigestContext::OperationFailed if `EvpDigestContext` cannot be initialized.
  */
 [[nodiscard]] auto get_sha256_hash(
         std::span<unsigned char const> input,

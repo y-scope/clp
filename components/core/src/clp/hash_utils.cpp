@@ -1,5 +1,6 @@
 #include "hash_utils.hpp"
 
+#include <memory>
 #include <span>
 #include <string>
 #include <vector>
@@ -12,8 +13,10 @@
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
+using std::make_unique;
 using std::span;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 namespace clp {
@@ -192,15 +195,20 @@ auto get_hmac_sha256_hash(
 }
 
 auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& hash) -> ErrorCode {
-    EvpDigestContext evp_ctx_manager{EVP_sha256()};
-
-    if (auto const error_code = evp_ctx_manager.digest_update(input);
+    unique_ptr<EvpDigestContext> evp_ctx_manager;
+    try {
+        evp_ctx_manager = make_unique<EvpDigestContext>(EVP_sha256());
+    } catch (EvpDigestContext::OperationFailed const& err) {
+        return err.get_error_code();
+    }
+    if (auto const error_code = evp_ctx_manager->digest_update(input);
         ErrorCode_Success != error_code)
     {
         return error_code;
     }
 
-    if (auto const error_code = evp_ctx_manager.digest_final(hash); ErrorCode_Success != error_code)
+    if (auto const error_code = evp_ctx_manager->digest_final(hash);
+        ErrorCode_Success != error_code)
     {
         return error_code;
     }
