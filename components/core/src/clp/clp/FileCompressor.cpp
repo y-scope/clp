@@ -121,10 +121,11 @@ bool FileCompressor::compress_file(
     PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
     Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
 
-    m_file_reader.open(file_to_compress.get_path());
+    FileReader file_reader{file_to_compress.get_path()};
+    BufferedFileReader buffered_file_reader{file_reader};
 
     // Check that file is UTF-8 encoded
-    if (auto error_code = m_file_reader.try_refill_buffer_if_empty();
+    if (auto error_code = buffered_file_reader.try_refill_buffer_if_empty();
         ErrorCode_Success != error_code && ErrorCode_EndOfFile != error_code)
     {
         if (ErrorCode_errno == error_code) {
@@ -144,7 +145,7 @@ bool FileCompressor::compress_file(
     }
     char const* utf8_validation_buf{nullptr};
     size_t peek_size{0};
-    m_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
+    buffered_file_reader.peek_buffered_data(utf8_validation_buf, peek_size);
     bool succeeded = true;
     auto const utf8_validation_buf_len = std::min(peek_size, cUtfMaxValidationLen);
     if (is_utf8_encoded({utf8_validation_buf, utf8_validation_buf_len})) {
@@ -156,7 +157,7 @@ bool FileCompressor::compress_file(
                     file_to_compress.get_path_for_compression(),
                     file_to_compress.get_group_id(),
                     archive_writer,
-                    m_file_reader
+                    buffered_file_reader
             );
         } else {
             parse_and_encode_with_library(
@@ -166,7 +167,7 @@ bool FileCompressor::compress_file(
                     file_to_compress.get_path_for_compression(),
                     file_to_compress.get_group_id(),
                     archive_writer,
-                    m_file_reader
+                    buffered_file_reader
             );
         }
     } else {
@@ -177,14 +178,13 @@ bool FileCompressor::compress_file(
                     target_encoded_file_size,
                     file_to_compress,
                     archive_writer,
+                    buffered_file_reader,
                     use_heuristic
             ))
         {
             succeeded = false;
         }
     }
-
-    m_file_reader.close();
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
@@ -274,6 +274,7 @@ bool FileCompressor::try_compressing_as_archive(
         size_t target_encoded_file_size,
         FileToCompress const& file_to_compress,
         streaming_archive::writer::Archive& archive_writer,
+        ReaderInterface& file_reader,
         bool use_heuristic
 ) {
     auto file_boost_path = boost::filesystem::path(file_to_compress.get_path_for_compression());
@@ -289,7 +290,7 @@ bool FileCompressor::try_compressing_as_archive(
     }
 
     // Check if it's an archive
-    auto error_code = m_libarchive_reader.try_open(m_file_reader, filename_if_compressed);
+    auto error_code = m_libarchive_reader.try_open(file_reader, filename_if_compressed);
     if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR(
                 "Cannot compress {} - failed to open with libarchive.",

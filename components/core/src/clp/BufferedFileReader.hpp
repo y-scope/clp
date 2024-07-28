@@ -73,11 +73,9 @@ public:
      * @param base_buffer_size The size for the fixed-size buffer used when no checkpoint is set. It
      * must be a multiple of BufferedFileReader::cMinBufferSize.
      */
-    explicit BufferedFileReader(size_t base_buffer_size);
+    explicit BufferedFileReader(ReaderInterface& reader_interface, size_t base_buffer_size);
 
-    BufferedFileReader() : BufferedFileReader(cDefaultBufferSize) {}
-
-    ~BufferedFileReader();
+    BufferedFileReader(ReaderInterface& reader_interface) : BufferedFileReader(reader_interface, cDefaultBufferSize) {}
 
     // Disable copy/move construction/assignment
     BufferedFileReader(BufferedFileReader const&) = delete;
@@ -87,26 +85,7 @@ public:
 
     // Methods
     /**
-     * Tries to open a file
-     * @param path
-     * @return ErrorCode_Success on success
-     * @return ErrorCode_FileNotFound if the file was not found
-     * @return ErrorCode_errno otherwise
-     */
-    [[nodiscard]] auto try_open(std::string const& path) -> ErrorCode;
-
-    auto open(std::string const& path) -> void;
-
-    /**
-     * Closes the file if it's open
-     */
-    auto close() -> void;
-
-    [[nodiscard]] auto get_path() const -> std::string const& { return m_path; }
-
-    /**
      * Tries to fill the internal buffer if it's empty
-     * @return ErrorCode_NotInit if the file is not opened
      * @return ErrorCode_errno on error reading from the underlying file
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
@@ -124,7 +103,6 @@ public:
      * NOTE: Any subsequent read or seek operations may invalidate the returned buffer.
      * @param buf Returns a pointer to the remaining content in the buffer
      * @param peek_size Returns the size of the remaining content in the buffer
-     * @return ErrorCode_NotInit if the file is not opened
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto
@@ -158,7 +136,6 @@ public:
     // Methods implementing the ReaderInterface
     /**
      * @param pos Returns the position of the read head in the file
-     * @return ErrorCode_NotInit if the file isn't open
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
@@ -168,7 +145,6 @@ public:
      * is set, callers can only seek forwards in the file; When a checkpoint is set, callers can
      * seek to any position in the file that's after and including the checkpoint.
      * @param pos
-     * @return ErrorCode_NotInit if the file isn't open
      * @return ErrorCode_Unsupported if a checkpoint is set and the requested position is less than
      * the checkpoint, or no checkpoint is set and the requested position is less the current read
      * head's position.
@@ -185,7 +161,6 @@ public:
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
-     * @return ErrorCode_NotInit if the file is not open
      * @return ErrorCode_BadParam if buf is null
      * @return ErrorCode_errno on error reading from the underlying file
      * @return ErrorCode_EndOfFile on EOF
@@ -200,7 +175,6 @@ public:
      * @param keep_delimiter Whether to include the delimiter in the output string
      * @param append Whether to append to the given string or replace its contents
      * @param str Returns the content read
-     * @return ErrorCode_NotInit if the file is not open
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_errno on error reading from the underlying file
      * @return Same as BufferReader::try_read_to_delimiter if it fails
@@ -248,9 +222,10 @@ private:
     static constexpr size_t cDefaultBufferSize = (16 * cMinBufferSize);
 
     // Variables
-    int m_fd{-1};
-    std::string m_path;
     size_t m_file_pos{0};
+
+    // ReaderInterfaceSpecific
+    ReaderInterface& m_file_reader;
 
     // Buffer specific data
     std::vector<char> m_buffer;

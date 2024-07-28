@@ -11,6 +11,7 @@ using clp::BufferedFileReader;
 using clp::ErrorCode_EndOfFile;
 using clp::ErrorCode_Success;
 using clp::ErrorCode_Unsupported;
+using clp::FileReader;
 using clp::FileWriter;
 
 static constexpr size_t cNumAlphabets = 'z' - 'a';
@@ -34,8 +35,8 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
     auto read_buf_uniq_ptr = std::make_unique<std::array<char, test_data_size>>();
     auto& read_buf = *read_buf_uniq_ptr;
     size_t const base_buffer_size = BufferedFileReader::cMinBufferSize << 4;
-    BufferedFileReader reader{base_buffer_size};
-    reader.open(test_file_path);
+    FileReader file_reader{test_file_path};
+    BufferedFileReader reader{file_reader, base_buffer_size};
 
     size_t num_bytes_read{0};
     size_t buf_pos{0};
@@ -253,7 +254,6 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(reader.get_pos() == buf_pos);
     }
 
-    reader.close();
     boost::filesystem::remove(test_file_path);
 }
 
@@ -273,8 +273,8 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     file_writer.write(test_data.data(), test_data_size);
     file_writer.close();
 
-    BufferedFileReader file_reader;
-    file_reader.open(test_file_path);
+    FileReader file_reader{test_file_path};
+    BufferedFileReader reader{file_reader};
     std::string test_string;
 
     clp::FileReader ref_file_reader{test_file_path};
@@ -291,6 +291,5 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
         REQUIRE(test_string == ref_string);
     }
 
-    file_reader.close();
     boost::filesystem::remove(test_file_path);
 }

@@ -100,6 +100,7 @@ private:
             size_t target_encoded_file_size,
             FileToCompress const& file_to_compress,
             streaming_archive::writer::Archive& archive_writer,
+            ReaderInterface& file_reader,
             bool use_heuristic
     );
 
@@ -150,7 +151,6 @@ private:
 
     // Variables
     boost::uuids::random_generator& m_uuid_generator;
-    BufferedFileReader m_file_reader;
     LibarchiveReader m_libarchive_reader;
     LibarchiveFileReader m_libarchive_file_reader;
     MessageParser m_message_parser;

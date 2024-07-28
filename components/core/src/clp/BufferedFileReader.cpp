@@ -22,101 +22,38 @@ namespace {
  * @return ErrorCode_EndOfFile on EOF
  * @return ErrorCode_Success on success
  */
-auto read_into_buffer(int fd, char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
-        -> ErrorCode;
+auto read_into_buffer(ReaderInterface& reader, char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+-> ErrorCode;
 
-auto read_into_buffer(int fd, char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
-        -> ErrorCode {
+auto read_into_buffer(ReaderInterface& reader, char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+-> ErrorCode {
     num_bytes_read = 0;
-    while (true) {
-        auto const bytes_read = ::read(fd, buf, num_bytes_to_read);
-        if (0 == bytes_read) {
-            break;
-        }
-        if (bytes_read < 0) {
-            return ErrorCode_errno;
-        }
-
-        buf += bytes_read;
-        num_bytes_read += bytes_read;
-        num_bytes_to_read -= bytes_read;
-        if (num_bytes_read == num_bytes_to_read) {
-            return ErrorCode_Success;
-        }
-    }
+    auto const error_code =  reader.try_read(buf, num_bytes_to_read, num_bytes_read);
     if (0 == num_bytes_read) {
         return ErrorCode_EndOfFile;
     }
-    return ErrorCode_Success;
+    return error_code;
 }
 }  // namespace
 
-BufferedFileReader::BufferedFileReader(size_t base_buffer_size) {
+BufferedFileReader::BufferedFileReader(ReaderInterface& reader_interface, size_t base_buffer_size): m_file_reader{reader_interface} {
     if (base_buffer_size % cMinBufferSize != 0) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     m_base_buffer_size = base_buffer_size;
     m_buffer.resize(m_base_buffer_size);
-}
 
-BufferedFileReader::~BufferedFileReader() {
-    close();
-}
-
-auto BufferedFileReader::try_open(string const& path) -> ErrorCode {
-    // Cleanup in case caller forgot to call close before calling this function
-    close();
-
-    m_fd = ::open(path.c_str(), O_RDONLY);
-    if (-1 == m_fd) {
-        if (ENOENT == errno) {
-            return ErrorCode_FileNotFound;
-        }
-        return ErrorCode_errno;
+    // TODO: anyway to get rid of this?
+    if (0 != m_file_reader.get_pos()) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    m_path = path;
     m_file_pos = 0;
     m_buffer_begin_pos = 0;
     m_buffer_reader.emplace(m_buffer.data(), 0);
     m_highest_read_pos = 0;
-    return ErrorCode_Success;
-}
-
-void BufferedFileReader::open(string const& path) {
-    auto const error_code = try_open(path);
-    if (ErrorCode_Success != error_code) {
-        if (ErrorCode_FileNotFound == error_code) {
-            throw OperationFailed(
-                    error_code,
-                    __FILENAME__,
-                    __LINE__,
-                    "File not found: " + boost::filesystem::weakly_canonical(path).string()
-            );
-        }
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
-    }
-}
-
-auto BufferedFileReader::close() -> void {
-    if (-1 == m_fd) {
-        return;
-    }
-
-    if (m_checkpoint_pos.has_value()) {
-        m_buffer.resize(m_base_buffer_size);
-        m_checkpoint_pos.reset();
-    }
-
-    // NOTE: We don't check errors for close since, in the read case, it seems the only reason it
-    // could fail is if it was interrupted by a signal
-    ::close(m_fd);
-    m_fd = -1;
 }
 
 auto BufferedFileReader::try_refill_buffer_if_empty() -> ErrorCode {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
     if (m_buffer_reader->get_buffer_size() > 0) {
         return ErrorCode_Success;
     }
@@ -131,10 +68,7 @@ void BufferedFileReader::refill_buffer_if_empty() {
 }
 
 auto BufferedFileReader::try_peek_buffered_data(char const*& buf, size_t& peek_size) const
-        -> ErrorCode {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
+-> ErrorCode {
     m_buffer_reader->peek_buffer(buf, peek_size);
     return ErrorCode_Success;
 }
@@ -171,17 +105,11 @@ auto BufferedFileReader::clear_checkpoint() -> void {
 }
 
 auto BufferedFileReader::try_get_pos(size_t& pos) -> ErrorCode {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
     pos = m_file_pos;
     return ErrorCode_Success;
 }
 
 auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
     if (pos == m_file_pos) {
         return ErrorCode_Success;
     }
@@ -196,9 +124,9 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
         if (false == m_checkpoint_pos.has_value()) {
             // If checkpoint is not set, simply move the file_pos and invalidate
             // the buffer reader
-            auto offset = lseek(m_fd, static_cast<off_t>(pos), SEEK_SET);
-            if (-1 == offset) {
-                return ErrorCode_errno;
+            if(auto const error_code = m_file_reader.try_seek_from_begin(pos);
+               error_code != ErrorCode_Success) {
+                return error_code;
             }
             m_buffer_reader.emplace(m_buffer.data(), 0);
             m_buffer_begin_pos = pos;
@@ -224,10 +152,7 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
 }
 
 auto BufferedFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
-        -> ErrorCode {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
+-> ErrorCode {
     if (nullptr == buf) {
         return ErrorCode_BadParam;
     }
@@ -271,9 +196,6 @@ auto BufferedFileReader::try_read_to_delimiter(
         bool append,
         string& str
 ) -> ErrorCode {
-    if (-1 == m_fd) {
-        return ErrorCode_NotInit;
-    }
     if (false == append) {
         str.clear();
     }
@@ -288,7 +210,7 @@ auto BufferedFileReader::try_read_to_delimiter(
                     found_delim,
                     num_bytes_read
             );
-            ret_code != ErrorCode_Success && ret_code != ErrorCode_EndOfFile)
+                ret_code != ErrorCode_Success && ret_code != ErrorCode_EndOfFile)
         {
             return ret_code;
         }
@@ -343,7 +265,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
 
     size_t num_bytes_read{0};
     auto error_code
-            = read_into_buffer(m_fd, &m_buffer[next_buffer_pos], num_bytes_to_read, num_bytes_read);
+            = read_into_buffer(m_file_reader, &m_buffer[next_buffer_pos], num_bytes_to_read, num_bytes_read);
     if (error_code != ErrorCode_Success && ErrorCode_EndOfFile != error_code) {
         return error_code;
     }
