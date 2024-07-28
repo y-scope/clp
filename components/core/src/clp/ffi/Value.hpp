@@ -4,9 +4,13 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <variant>
+
+#include <outcome/single-header/outcome.hpp>
 
 #include "../ir/ClpString.hpp"
 
@@ -63,7 +67,27 @@ struct is_valid_type<Type, std::tuple<Types...>> : std::disjunction<std::is_same
  * @tparam Type
  */
 template <typename Type>
-constexpr bool is_valid_primitive_value_type = is_valid_type<Type, PrimitiveValueTypeTuple>::value;
+constexpr bool cIsValidPrimitiveValueType = is_valid_type<Type, PrimitiveValueTypeTuple>::value;
+
+/**
+ * Concept that defines primitive value types.
+ */
+template <typename Type>
+concept PrimitiveValueType = cIsValidPrimitiveValueType<Type>;
+
+/**
+ * Concept that defines copy-constructable primitive value types.
+ */
+template <typename Type>
+concept CopyConstructablePrimitiveValueType
+        = cIsValidPrimitiveValueType<Type> && std::is_copy_constructible_v<Type>;
+
+/**
+ * Concept that defines move-constructable primitive value types.
+ */
+template <typename Type>
+concept MoveConstructablePrimitiveValueType
+        = cIsValidPrimitiveValueType<Type> && std::is_move_constructible_v<Type>;
 
 /**
  * Template struct that converts a given type into an immutable view type. By default, the immutable
@@ -109,6 +133,57 @@ struct ImmutableViewTypeConverter<ValueFourByteEncodingClpString> {
 
 class Value {
 public:
+    // Constructors
+    Value() = default;
+
+    template <MoveConstructablePrimitiveValueType PrimitiveValue>
+    Value(PrimitiveValue&& value) : m_value{std::forward(value)} {}
+
+    template <CopyConstructablePrimitiveValueType PrimitiveValue>
+    Value(PrimitiveValue const& value) : m_value{value} {}
+
+    // Disable copy constructor and assignment operator
+    Value(Value const&) = delete;
+    auto operator=(Value const&) -> Value& = delete;
+
+    // Default move constructor and assignment operator
+    Value(Value&&) = default;
+    auto operator=(Value&&) -> Value& = default;
+
+    // Destructor
+    ~Value() = default;
+
+    // Methods
+    /**
+     * @tparam PrimitiveValue
+     * @return Whether the underlying value is the given `PrimitiveValue` type.
+     */
+    template <PrimitiveValueType PrimitiveValue>
+    [[nodiscard]] auto is() const -> bool {
+        return std::holds_alternative<PrimitiveValue>(m_value);
+    }
+
+    /**
+     * @tparam PrimitiveValue
+     * @return An immutable view of the underlying value if its type matches `PrimitiveValue` type.
+     * @return `std::errc::wrong_protocol_type` if the type doesn't match.
+     */
+    template <PrimitiveValueType PrimitiveValue>
+    [[nodiscard]] auto get_immutable_view(
+    ) const -> OUTCOME_V2_NAMESPACE::std_result<ImmutableViewType<PrimitiveValue>> {
+        if (false == is<PrimitiveValue>()) {
+            return std::errc::wrong_protocol_type;
+        }
+        return std::get<PrimitiveValue>(m_value);
+    }
+
+    /**
+     * @return Whether the underlying value is null.
+     */
+    [[nodiscard]] auto is_null() const -> bool {
+        return std::holds_alternative<std::monostate>(m_value);
+    }
+
 private:
     PrimitiveValueTypeVariant m_value{std::monostate{}};
 };
