@@ -1273,11 +1273,11 @@ void Grep::get_substring_variable_types(
     // Generate substring DFA from NFA.
     // TODO: log-surgeon needs to be refactored to allow direct usage of DFA/NFA.
     // TODO: DFA creation isn't optimized at all.
-    unique_ptr<RegexDFA<RegexDFAByteState>> dfa2 = lexer.nfa_to_dfa(nfa);
-    unique_ptr<RegexDFA<RegexDFAByteState>> const& dfa1 = lexer.get_dfa();
+    auto const search_string_dfa = ByteLexer::nfa_to_dfa(nfa);
+    auto const& schema_dfa = lexer.get_dfa();
 
     // Get variable types in the intersection of substring and compression DFAs.
-    variable_types = dfa1->get_intersect(dfa2);
+    variable_types = schema_dfa->get_intersect(search_string_dfa);
 }
 
 void Grep::generate_sub_queries(
