@@ -66,8 +66,8 @@ private:
  * @param input
  * @param hash Returns the hash.
  * @return ErrorCode_Success on success.
- * @throw HashUtilsOperationFailed if `EvpDigestContext` fails to initialize.
  * @return Same as `digest_final` and `digest_update` on failure.
+ * @throw HashUtilsOperationFailed if `EvpDigestContext` fails to initialize.
  */
 [[nodiscard]] auto get_sha256_hash(
         std::span<unsigned char const> input,
