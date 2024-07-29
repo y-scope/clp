@@ -1085,10 +1085,10 @@ void Grep::generate_query_substring_logtypes(
                 // we must consider that wildcards could potentially be delimiters, and that the
                 // start and end of a log are also treated as delimiters.
                 bool has_preceding_delimiter
-                        = j == 0 || is_greedy_wildcard[j] || is_non_greedy_wildcard[j - 1]
+                        = 0 == j || is_greedy_wildcard[j] || is_non_greedy_wildcard[j - 1]
                           || lexer.is_delimiter(processed_search_string[j - 1]);
                 bool has_proceeding_delimiter
-                        = i == processed_search_string.size() - 1 || is_greedy_wildcard[i]
+                        = processed_search_string.size() - 1 == i || is_greedy_wildcard[i]
                           || is_non_greedy_wildcard[i + 1]
                           || (false == is_escape[i + 1]
                               && lexer.is_delimiter(processed_search_string[i + 1]))
@@ -1196,16 +1196,16 @@ Grep::get_wildcard_and_escape_locations(std::string const& processed_search_stri
             is_escape.push_back(false);
             is_escaped = false;
         } else {
-            if (c == '\\') {
+            if ('\\' == c) {
                 is_escaped = true;
                 is_greedy_wildcard.push_back(false);
                 is_non_greedy_wildcard.push_back(false);
                 is_escape.push_back(true);
-            } else if (c == '*') {
+            } else if ('*' == c) {
                 is_greedy_wildcard.push_back(true);
                 is_non_greedy_wildcard.push_back(false);
                 is_escape.push_back(false);
-            } else if (c == '?') {
+            } else if ('?' == c) {
                 is_greedy_wildcard.push_back(false);
                 is_non_greedy_wildcard.push_back(true);
                 is_escape.push_back(false);
@@ -1310,7 +1310,7 @@ void Grep::generate_sub_queries(
                 // dictionary, create a duplicate logtype that will compare against segment as the
                 // variable may be encoded there instead.
                 if (false == is_dict_var && var_has_wildcard
-                    && (schema_type == "int" || schema_type == "float"))
+                    && ("int" == schema_type == || "float" == schema_type))
                 {
                     QueryLogtype new_query_logtype = query_logtype;
                     new_query_logtype.set_var_is_potentially_in_dict(i, true);
@@ -1318,12 +1318,12 @@ void Grep::generate_sub_queries(
                     query_logtypes.insert(new_query_logtype);
                 }
                 if (is_dict_var) {
-                    if (schema_type == "int") {
+                    if ("int" == schema_type) {
                         LogTypeDictionaryEntry::add_int_var(logtype_string);
-                    } else if (schema_type == "float") {
+                    } else if ("float" == schema_type) {
                         LogTypeDictionaryEntry::add_float_var(logtype_string);
                     }
-                } else if (schema_type == "int"
+                } else if ("int" == schema_type
                            && EncodedVariableInterpreter::
                                    convert_string_to_representable_integer_var(
                                            raw_string,
@@ -1331,7 +1331,7 @@ void Grep::generate_sub_queries(
                                    ))
                 {
                     LogTypeDictionaryEntry::add_int_var(logtype_string);
-                } else if (schema_type == "float"
+                } else if ("float" == schema_type
                            && EncodedVariableInterpreter::convert_string_to_representable_float_var(
                                    raw_string,
                                    encoded_var
