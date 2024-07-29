@@ -1236,7 +1236,6 @@ void Grep::get_substring_variable_types(
     // generate the NFA and DFA for the regex, and intersect the substring DFA with
     // the compression DFA.
     std::string regex_search_string;
-    uint32_t pos = 0;
     for (uint32_t i = substr_start; i <= substr_end; i++) {
         if (is_escape[i]) {
             continue;
@@ -1254,7 +1253,6 @@ void Grep::get_substring_variable_types(
         } else {
             regex_search_string += c;
         }
-        pos++;
     }
 
     // Generated substring NFA from regex.
