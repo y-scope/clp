@@ -94,10 +94,10 @@ def chown_recursively(
 ):
     """
     Recursively changes the owner of the given path to the given user ID and group ID.
-    :param path: 
-    :param user_id: 
-    :param group_id: 
-    """    
+    :param path:
+    :param user_id:
+    :param group_id:
+    """
     chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
 
