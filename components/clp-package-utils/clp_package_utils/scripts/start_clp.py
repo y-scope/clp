@@ -292,7 +292,9 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         # directories writable by that user.
         # NOTE: This doesn't affect the host user's access to the directories since they're `root`.
         container_user = "rabbitmq"
-        chown_recursively(queue_logs_dir, 999, 999)
+        default_container_user_id = 999
+        default_container_group_id = 999
+        chown_recursively(queue_logs_dir, default_container_user_id, default_container_group_id)
 
     # fmt: off
     cmd = [
@@ -365,10 +367,10 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
         # directories writable by that user.
         # NOTE: This doesn't affect the host user's access to the directories since they're `root`.
         container_user = "redis"
-        container_user_id = 999
-        container_group_id = 999
-        chown_recursively(redis_data_dir, container_user_id, container_group_id)
-        chown_recursively(redis_logs_dir, container_user_id, container_group_id)
+        default_container_user_id = 999
+        default_container_group_id = 999
+        chown_recursively(redis_data_dir, default_container_user_id, default_container_group_id)
+        chown_recursively(redis_logs_dir, default_container_user_id, default_container_group_id)
 
     # fmt: off
     cmd = [
@@ -438,10 +440,10 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         # directories writable by that user.
         # NOTE: This doesn't affect the host user's access to the directories since they're `root`.
         container_user = "mongodb"
-        container_user_id = 999
-        container_group_id = 999
-        chown_recursively(data_dir, container_user_id, container_group_id)
-        chown_recursively(logs_dir, container_user_id, container_group_id)
+        default_container_user_id = 999
+        default_container_group_id = 999
+        chown_recursively(data_dir, default_container_user_id, default_container_group_id)
+        chown_recursively(logs_dir, default_container_user_id, default_container_group_id)
 
     # fmt: off
     cmd = [
