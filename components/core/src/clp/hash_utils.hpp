@@ -9,8 +9,37 @@
 #include <openssl/evp.h>
 
 #include "ErrorCode.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
+// Types
+class HashUtilsOperationFailed : public TraceableException {
+public:
+    // Constructors
+    HashUtilsOperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+            : HashUtilsOperationFailed(
+                      error_code,
+                      filename,
+                      line_number,
+                      "HashUtils operation failed"
+              ) {}
+
+    HashUtilsOperationFailed(
+            ErrorCode error_code,
+            char const* const filename,
+            int line_number,
+            std::string message
+    )
+            : TraceableException(error_code, filename, line_number),
+              m_message(std::move(message)) {}
+
+    // Methods
+    [[nodiscard]] auto what() const noexcept -> char const* override { return m_message.c_str(); }
+
+private:
+    std::string m_message;
+};
+
 /**
  * @param input
  * @return `input` as a hex string (without the "0x" prefix).
@@ -37,8 +66,7 @@ namespace clp {
  * @param input
  * @param hash Returns the hash.
  * @return ErrorCode_Success on success.
- * @return The error code specified by EvpDigestContext constructor
- * if the EvpDigestContext instance fails to initialize.
+ * @throw HashUtilsOperationFailed if `EvpDigestContext` fails to initialize.
  * @return Same as `digest_final` and `digest_update` on failure.
  */
 [[nodiscard]] auto get_sha256_hash(

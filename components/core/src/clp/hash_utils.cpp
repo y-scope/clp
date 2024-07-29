@@ -68,10 +68,9 @@ public:
     // Constructors
     /**
      * @param type The type of digest (hash algorithm).
-     * @throw EvpDigestContext::OperationFailed with ErrorCode_NoMem if
-     * `EVP_MD_CTX_create` fails.
-     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if
-     * `EVP_DigestInit_ex` fails.
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_NoMem if `EVP_MD_CTX_create` fails.
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if `EVP_DigestInit_ex`
+     * fails.
      */
     EvpDigestContext(EVP_MD const* type)
             : m_md_ctx{EVP_MD_CTX_create()},
@@ -199,7 +198,7 @@ auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& has
     try {
         evp_ctx_manager = make_unique<EvpDigestContext>(EVP_sha256());
     } catch (EvpDigestContext::OperationFailed const& err) {
-        return err.get_error_code();
+        throw HashUtilsOperationFailed(err.get_error_code(), __FILENAME__, __LINE__, err.what());
     }
     if (auto const error_code = evp_ctx_manager->digest_update(input);
         ErrorCode_Success != error_code)
