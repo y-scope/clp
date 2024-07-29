@@ -550,7 +550,7 @@ int main(int argc, char const* argv[]) {
     uint32_t const max_map_schema_length = 100'000;
     std::map<std::string, log_surgeon::lexers::ByteLexer> lexer_map;
     log_surgeon::lexers::ByteLexer one_time_use_lexer;
-    log_surgeon::lexers::ByteLexer* lexer_ptr;
+    log_surgeon::lexers::ByteLexer* lexer_ptr{nullptr};
 
     string archive_id;
     Archive archive_reader;
