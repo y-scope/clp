@@ -95,12 +95,15 @@ public:
 protected:
     // Methods
     /**
-     * Reads a segment's worth of IDs from the segment index
+     * Reads a segment's worth of IDs from the segment index from the `segment_index_decompressor`
+     * @param segment_index_decompressor
      */
     void read_segment_ids(streaming_compression::Decompressor& segment_index_decompressor);
 
     /**
      * Reads any new entries from disk
+     * @param dictionary_path
+     * @param segment_index_path
      */
     void
     read_new_entries(std::string const& dictionary_path, std::string const& segment_index_path);

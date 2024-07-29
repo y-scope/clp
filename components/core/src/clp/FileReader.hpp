@@ -33,7 +33,6 @@ public:
     /**
      * Tries to get the current position of the read head in the file
      * @param pos Position of the read head in the file
-     * @return ErrorCode_NotInit if the file is not open
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
@@ -41,7 +40,6 @@ public:
     /**
      * Tries to seek from the beginning of the file to the given position
      * @param pos
-     * @return ErrorCode_NotInit if the file is not open
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
@@ -52,7 +50,6 @@ public:
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
-     * @return ErrorCode_NotInit if the file is not open
      * @return ErrorCode_BadParam if buf is invalid
      * @return ErrorCode_errno on error
      * @return ErrorCode_EndOfFile on EOF
