@@ -207,7 +207,7 @@ static bool search_archive(
     if (boost::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
         // Create forward lexer
-        lexer.reset(new log_surgeon::lexers::ByteLexer());
+        lexer = std::make_unique<log_surgeon::lexers::ByteLexer>();
         load_lexer_from_file(schema_file_path.string(), false, *lexer);
     }
 
