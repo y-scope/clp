@@ -1065,13 +1065,13 @@ void Grep::generate_query_substring_logtypes(
                 // example "* ab?cd *" can never match "* <has#><has#> *".
                 uint32_t substr_start = j;
                 uint32_t substr_end = i;
-                bool prev_star = j > 0 && is_greedy_wildcard[j - 1];
-                bool next_star
+                bool prev_char_is_star = j > 0 && is_greedy_wildcard[j - 1];
+                bool next_char_is_star
                         = i < processed_search_string.back() - 1 && is_greedy_wildcard[i + 1];
-                if (prev_star) {
+                if (prev_char_is_star) {
                     substr_start--;
                 }
-                if (next_star) {
+                if (next_char_is_star) {
                     substr_end++;
                 }
 
@@ -1122,8 +1122,10 @@ void Grep::generate_query_substring_logtypes(
                         // "*<var>"/"<var>*"/"*<var>*" instead of just <var>. We don't need to do
                         // this if the wildcard was borrowed from the neighboring substring, as the
                         // neighboring substring will handle these cases for us.
-                        bool start_star = is_greedy_wildcard[substr_start] && false == prev_star;
-                        bool end_star = is_greedy_wildcard[substr_end] && false == next_star;
+                        bool start_star
+                                = is_greedy_wildcard[substr_start] && false == prev_char_is_star;
+                        bool end_star
+                                = is_greedy_wildcard[substr_end] && false == next_char_is_star;
                         possible_substr_types.emplace_back();
                         QueryLogtype& suffix = possible_substr_types.back();
                         if (start_star) {
