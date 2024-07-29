@@ -53,12 +53,15 @@ static bool open_archive(string const& archive_path, Archive& archive_reader);
  * @param search_strings
  * @param command_line_args
  * @param archive
+ * @param lexer
+ * @param use_heuristic
  * @return true on success, false otherwise
  */
 static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
         Archive& archive,
+        log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 );
 /**
