@@ -1018,7 +1018,7 @@ void Grep::generate_query_substring_logtypes(
         vector<std::set<QueryLogtype>>& query_substr_logtypes
 ) {
     // We need to differentiate between literal '*'/'?' and wildcards
-    auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escaped]
+    auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escape]
             = get_wildcard_and_escape_locations(processed_search_string);
 
     // Consider each substr(j,i) of the processed_search_string and determine if it could have been
@@ -1310,7 +1310,7 @@ void Grep::generate_sub_queries(
                 // dictionary, create a duplicate logtype that will compare against segment as the
                 // variable may be encoded there instead.
                 if (false == is_dict_var && var_has_wildcard
-                    && ("int" == schema_type == || "float" == schema_type))
+                    && ("int" == schema_type || "float" == schema_type))
                 {
                     QueryLogtype new_query_logtype = query_logtype;
                     new_query_logtype.set_var_is_potentially_in_dict(i, true);
