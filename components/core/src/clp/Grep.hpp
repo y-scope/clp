@@ -228,7 +228,7 @@ public:
      * @param schema_search_string
      * @param is_greedy_wildcard
      * @param is_non_greedy_wildcard
-     * @param is_cancel
+     * @param is_escape
      * @param lexer
      * @param contains_wildcard
      * @param variable_types
@@ -239,7 +239,7 @@ public:
             std::string& schema_search_string,
             std::vector<bool>& is_greedy_wildcard,
             std::vector<bool>& is_non_greedy_wildcard,
-            std::vector<bool>& is_cancel,
+            std::vector<bool>& is_escape,
             log_surgeon::lexers::ByteLexer& lexer,
             bool& contains_wildcard,
             std::set<uint32_t>& variable_types
