@@ -1296,10 +1296,10 @@ void Grep::generate_sub_queries(
         std::string logtype_string;
         bool has_vars = true;
         for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
-            auto const& logtype_value = query_logtype.get_logtype_value(i);
+            auto const logtype_value = query_logtype.get_logtype_value(i);
             auto const& raw_string = query_logtype.get_query_string(i);
-            auto const& is_dict_var = query_logtype.get_is_potentially_in_dict(i);
-            auto const& var_has_wildcard = query_logtype.get_has_wildcard(i);
+            auto const is_dict_var = query_logtype.get_is_potentially_in_dict(i);
+            auto const var_has_wildcard = query_logtype.get_has_wildcard(i);
             if (std::holds_alternative<char>(logtype_value)) {
                 logtype_string.push_back(std::get<char>(logtype_value));
             } else {
@@ -1362,10 +1362,10 @@ void Grep::generate_sub_queries(
         // checking is slower than decompressing.
         SubQuery sub_query;
         for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
-            auto const& logtype_value = query_logtype.get_logtype_value(i);
+            auto const logtype_value = query_logtype.get_logtype_value(i);
             auto const& raw_string = query_logtype.get_query_string(i);
-            auto const& is_dict_var = query_logtype.get_is_potentially_in_dict(i);
-            auto const& var_has_wildcard = query_logtype.get_has_wildcard(i);
+            auto const is_dict_var = query_logtype.get_is_potentially_in_dict(i);
+            auto const var_has_wildcard = query_logtype.get_has_wildcard(i);
             if (std::holds_alternative<int>(logtype_value)) {
                 auto& schema_type = lexer.m_id_symbol[std::get<int>(logtype_value)];
                 encoded_variable_t encoded_var;
