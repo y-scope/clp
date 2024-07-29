@@ -1038,7 +1038,7 @@ void Grep::generate_query_substring_logtypes(
             continue;
         }
         bool j_is_escaped = false;
-        for (uint32_t j = 0; j <= i; ++j) {
+        for (size_t j = 0; j <= i; ++j) {
             if (j_is_escaped) {
                 j_is_escaped = false;
                 continue;
