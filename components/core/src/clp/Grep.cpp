@@ -1067,7 +1067,7 @@ void Grep::generate_query_substring_logtypes(
                 uint32_t substr_end = i;
                 bool prev_char_is_star = j > 0 && is_greedy_wildcard[j - 1];
                 bool next_char_is_star
-                        = i < processed_search_string.back() - 1 && is_greedy_wildcard[i + 1];
+                        = i < processed_search_string.length() - 1 && is_greedy_wildcard[i + 1];
                 if (prev_char_is_star) {
                     substr_start--;
                 }
