@@ -63,13 +63,13 @@ namespace {
 }
 
 /**
- * Gets the string to sign specified by AWS Signature Version 4 format
+ * Gets the string to sign specified by AWS Signature Version 4 format.
  * @param scope
  * @param timestamp_string
  * @param canonical_request
  * @param string_to_sign Returns the string to sign
  * @return ErrorCode_Success on success
- * On failure, same as get_sha256_hash
+ * @return Same as `get_sha256_hash` on failure.
  */
 [[nodiscard]] auto get_string_to_sign(
         string_view scope,

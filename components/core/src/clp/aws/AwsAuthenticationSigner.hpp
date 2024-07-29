@@ -10,7 +10,7 @@
 
 namespace clp::aws {
 /**
- * Class for parsing S3 URL. The format of S3 URL is specie
+ * Class for parsing an S3 URL.
  */
 class S3Url {
 public:
@@ -59,9 +59,7 @@ private:
 };
 
 /**
- * Class for signing AWS requests. The class is based on AWS Signature Version 4.
- * A detailed explanation on how the signature is generated can be found at
- * https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+ * Class for signing AWS requests based on AWS Signature Version 4.
  */
 class AwsAuthenticationSigner {
 public:
@@ -83,12 +81,12 @@ public:
 
     // Methods
     /**
-     * Generates a presigned URL using AWS Signature Version 4
-     * @param s3_url S3 URL
-     * @param presigned_url Returns the generated presigned url
+     * Generates a presigned URL based on AWS Signature Version 4
+     * @param s3_url
+     * @param presigned_url Returns the generated presigned url.
      * @param method HTTP method
      * @return ErrorCode_Success on success.
-     * On failure, same as get_string_to_sign and AwsAuthenticationSigner::get_signature
+     * @return same as `get_string_to_sign` and `AwsAuthenticationSigner::get_signature` on failure.
      *
      */
     [[nodiscard]] auto
@@ -96,10 +94,10 @@ public:
 
 private:
     /**
-     * Generates the canonical query string
+     * Generates the canonical query string.
      * @param scope
      * @param timestamp_string
-     * @return the canonical query string
+     * @return the canonical query string.
      */
     [[nodiscard]] auto generate_canonical_query_string(
             std::string_view scope,
@@ -107,12 +105,12 @@ private:
     ) -> std::string;
 
     /**
-     * Gets the signature signing key for the request
+     * Gets the signature signing key for the request.
      * @param region
      * @param date_string
      * @param signing_key Returns the signing key
      * @return ErrorCode_Success on success.
-     * Same as get_hmac_sha256_hash on Failure.
+     * @return Same as `get_hmac_sha256_hash` on Failure.
      */
     [[nodiscard]] auto get_signing_key(
             std::string_view region,
@@ -121,13 +119,13 @@ private:
     ) -> ErrorCode;
 
     /**
-     * Signs the string_to_sign and returns the request signature by reference
+     * Signs the string_to_sign and returns the request signature by reference.
      * @param region
      * @param date_string
      * @param string_to_sign StringToSign specified by the AWS Signature Version 4
      * @param signature Returns the signature
      * @return ErrorCode_Success on success.
-     * Same as get_hmac_sha256_hash on Failure.
+     * @return Same as `get_hmac_sha256_hash` on Failure.
      */
     [[nodiscard]] ErrorCode get_signature(
             std::string_view region,
