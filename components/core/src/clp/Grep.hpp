@@ -213,21 +213,22 @@ public:
     );
 
     /**
-     * Mark the locations of non-cancelled wildcards '*', '?', and cancel characters '\'
+     * Mark the locations of non-escaped wildcards '*', '?', and escape characters '\'.
+     * @param processed_search_string
+     * @return a tuple containing greedy wildcard, non-greedy wildcard, and escape character
+     * locations.
+     */
+    static std::tuple<std::vector<bool>, std::vector<bool>, std::vector<bool>>
+    get_wildcard_and_escape_locations(std::string const& processed_search_string);
+
+    /**
+     * Perform DFA intersect to determine the type of variables the string can match.
+     * @param substr_start
+     * @param substr_end
+     * @param schema_search_string
      * @param is_greedy_wildcard
      * @param is_non_greedy_wildcard
      * @param is_cancel
-     */
-    static void get_wildcard_and_cancel_locations(
-            std::string const& processed_search_string,
-            std::vector<bool>& is_greedy_wildcard,
-            std::vector<bool>& is_non_greedy_wildcard,
-            std::vector<bool>& is_cancel
-    );
-
-    /**
-     * Perform DFA intersect to determine the type of variables the string can match
-     * @param current_string
      * @param lexer
      * @param contains_wildcard
      * @param variable_types

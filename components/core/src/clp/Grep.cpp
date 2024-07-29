@@ -1018,15 +1018,8 @@ void Grep::generate_query_substring_logtypes(
         vector<std::set<QueryLogtype>>& query_substr_logtypes
 ) {
     // We need to differentiate between literal '*'/'?' and wildcards
-    std::vector<bool> is_greedy_wildcard;
-    std::vector<bool> is_non_greedy_wildcard;
-    std::vector<bool> is_cancel;
-    get_wildcard_and_cancel_locations(
-            processed_search_string,
-            is_greedy_wildcard,
-            is_non_greedy_wildcard,
-            is_cancel
-    );
+    auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escaped]
+            = get_wildcard_and_escape_locations(processed_search_string);
 
     // Consider each substr(j,i) of the processed_search_string and determine if it could have been
     // compressed as static-text, a variable, or some combination of variables/static-text
@@ -1036,21 +1029,21 @@ void Grep::generate_query_substring_logtypes(
     // possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that are unique from any
     // previously checked combination. Each entry in query_substr_logtypes is used to build the
     // following entry, with the last entry having all possible logtypes for the full query itself.
-    bool i_is_cancelled = false;
-    for (uint32_t i = 0; i < processed_search_string.size(); i++) {
-        if (i_is_cancelled) {
-            i_is_cancelled = false;
+    bool i_is_escaped = false;
+    for (size_t i = 0; i < processed_search_string.size(); i++) {
+        if (i_is_escaped) {
+            i_is_escaped = false;
         } else if ('\\' == processed_search_string[i]) {
-            i_is_cancelled = true;
+            i_is_escaped = true;
             continue;
         }
-        bool j_is_cancelled = false;
+        bool j_is_escaped = false;
         for (uint32_t j = 0; j <= i; ++j) {
-            if (j_is_cancelled) {
-                j_is_cancelled = false;
+            if (j_is_escaped) {
+                j_is_escaped = false;
                 continue;
             } else if ('\\' == processed_search_string[j]) {
-                j_is_cancelled = true;
+                j_is_escaped = true;
             }
             std::vector<QueryLogtype> possible_substr_types;
             // Don't allow an isolated wildcard to be considered a variable
@@ -1097,9 +1090,9 @@ void Grep::generate_query_substring_logtypes(
                 bool has_proceeding_delimiter
                         = i == processed_search_string.size() - 1 || is_greedy_wildcard[i]
                           || is_non_greedy_wildcard[i + 1]
-                          || (false == is_cancel[i + 1]
+                          || (false == is_escape[i + 1]
                               && lexer.is_delimiter(processed_search_string[i + 1]))
-                          || (is_cancel[i + 1] && i <= processed_search_string.size() - 2
+                          || (is_escape[i + 1] && i <= processed_search_string.size() - 2
                               && lexer.is_delimiter(processed_search_string[i + 2]));
                 if (has_preceding_delimiter && has_proceeding_delimiter) {
                     get_substring_variable_types(
@@ -1108,7 +1101,7 @@ void Grep::generate_query_substring_logtypes(
                             processed_search_string,
                             is_greedy_wildcard,
                             is_non_greedy_wildcard,
-                            is_cancel,
+                            is_escape,
                             lexer,
                             contains_wildcard,
                             variable_types
@@ -1187,43 +1180,43 @@ void Grep::generate_query_substring_logtypes(
     }
 }
 
-void Grep::get_wildcard_and_cancel_locations(
-        std::string const& processed_search_string,
-        std::vector<bool>& is_greedy_wildcard,
-        std::vector<bool>& is_non_greedy_wildcard,
-        std::vector<bool>& is_cancel
-) {
+std::tuple<std::vector<bool>, std::vector<bool>, std::vector<bool>>
+Grep::get_wildcard_and_escape_locations(std::string const& processed_search_string) {
+    std::vector<bool> is_greedy_wildcard;
+    std::vector<bool> is_non_greedy_wildcard;
+    std::vector<bool> is_escape;
     is_greedy_wildcard.reserve(processed_search_string.size());
     is_non_greedy_wildcard.reserve(processed_search_string.size());
-    is_cancel.reserve(processed_search_string.size());
-    bool is_cancelled = false;
+    is_escape.reserve(processed_search_string.size());
+    bool is_escaped = false;
     for (auto c : processed_search_string) {
-        if (is_cancelled) {
+        if (is_escaped) {
             is_greedy_wildcard.push_back(false);
             is_non_greedy_wildcard.push_back(false);
-            is_cancel.push_back(false);
-            is_cancelled = false;
+            is_escape.push_back(false);
+            is_escaped = false;
         } else {
             if (c == '\\') {
-                is_cancelled = true;
+                is_escaped = true;
                 is_greedy_wildcard.push_back(false);
                 is_non_greedy_wildcard.push_back(false);
-                is_cancel.push_back(true);
+                is_escape.push_back(true);
             } else if (c == '*') {
                 is_greedy_wildcard.push_back(true);
                 is_non_greedy_wildcard.push_back(false);
-                is_cancel.push_back(false);
+                is_escape.push_back(false);
             } else if (c == '?') {
                 is_greedy_wildcard.push_back(false);
                 is_non_greedy_wildcard.push_back(true);
-                is_cancel.push_back(false);
+                is_escape.push_back(false);
             } else {
                 is_greedy_wildcard.push_back(false);
                 is_non_greedy_wildcard.push_back(false);
-                is_cancel.push_back(false);
+                is_escape.push_back(false);
             }
         }
     }
+    return {std::move(is_greedy_wildcard), std::move(is_non_greedy_wildcard), std::move(is_escape)};
 }
 
 void Grep::get_substring_variable_types(
@@ -1232,7 +1225,7 @@ void Grep::get_substring_variable_types(
         std::string& schema_search_string,
         std::vector<bool>& is_greedy_wildcard,
         std::vector<bool>& is_non_greedy_wildcard,
-        std::vector<bool>& is_cancel,
+        std::vector<bool>& is_escape,
         ByteLexer& lexer,
         bool& contains_wildcard,
         set<uint32_t>& variable_types
@@ -1243,7 +1236,7 @@ void Grep::get_substring_variable_types(
     std::string regex_search_string;
     uint32_t pos = 0;
     for (uint32_t i = substr_start; i <= substr_end; i++) {
-        if (is_cancel[i]) {
+        if (is_escape[i]) {
             continue;
         }
         auto const& c = schema_search_string[i];
