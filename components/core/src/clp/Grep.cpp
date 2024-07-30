@@ -1030,16 +1030,16 @@ void Grep::generate_query_substring_logtypes(
     // are unique from any previously checked combination. Each entry in query_substr_logtypes is
     // used to build the following entry, with the last entry having all possible logtypes for the
     // full query itself.
-    for (size_t end_idx = 0; end_idx < processed_search_string.size(); ++end_idx) {
+    for (size_t end_idx = 1; end_idx <= processed_search_string.size(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
         // "* text\* *"). Also skip strings that end with a greedy wildcard because we are going
         // to duplicate its wildcard in the next iteration (e.g., for string "abc text* def", we
         // ignore combinations of "abc " + "text*" + " def" in favor of "abc " + "text*" + "* def"
         // as the latter will contain all logtypes capture by the former.
-        if (is_escape[end_idx] || is_greedy_wildcard[end_idx]) {
+        if (is_escape[end_idx - 1] || is_greedy_wildcard[end_idx - 1]) {
             continue;
         }
-        for (size_t begin_idx = 0; begin_idx <= end_idx; ++begin_idx) {
+        for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
             // "*text" from string "* \*text *"). Also, similar to above, we ignore substrings that
             // begin with a greedy wilcard.
@@ -1048,9 +1048,9 @@ void Grep::generate_query_substring_logtypes(
             }
             std::vector<QueryLogtype> possible_substr_types;
             // Don't allow an isolated wildcard to be considered a variable
-            if (end_idx == begin_idx && is_greedy_wildcard[begin_idx]) {
+            if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
                 possible_substr_types.emplace_back('*', "*", false);
-            } else if (end_idx == begin_idx && is_non_greedy_wildcard[begin_idx]) {
+            } else if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
                 possible_substr_types.emplace_back('?', "?", false);
             } else {
                 set<uint32_t> variable_types;
@@ -1065,10 +1065,10 @@ void Grep::generate_query_substring_logtypes(
                 // during compression. Note, non-greedy wildcards do not need to be considered, for
                 // example "* ab?cd *" can never match "* <has#><has#> *".
                 uint32_t substr_start = begin_idx;
-                uint32_t substr_end = end_idx;
+                uint32_t substr_end = end_idx - 1;
                 bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
-                bool next_char_is_star = end_idx < processed_search_string.length() - 1
-                                         && is_greedy_wildcard[end_idx + 1];
+                bool next_char_is_star
+                        = end_idx < processed_search_string.length() && is_greedy_wildcard[end_idx];
                 if (prev_char_is_star) {
                     substr_start--;
                 }
@@ -1095,12 +1095,12 @@ void Grep::generate_query_substring_logtypes(
                 // is a delimiter, we avoid counting the escape character. Second, if a literal '*'
                 // or '?' is a delimiter, then it will appear after the escape character.
                 bool has_proceeding_delimiter
-                        = processed_search_string.size() - 1 == end_idx
-                          || is_greedy_wildcard[end_idx + 1] || is_non_greedy_wildcard[end_idx + 1]
-                          || (false == is_escape[end_idx + 1]
-                              && lexer.is_delimiter(processed_search_string[end_idx + 1]))
-                          || (is_escape[end_idx + 1]
-                              && lexer.is_delimiter(processed_search_string[end_idx + 2]));
+                        = processed_search_string.size() == end_idx || is_greedy_wildcard[end_idx]
+                          || is_non_greedy_wildcard[end_idx]
+                          || (false == is_escape[end_idx]
+                              && lexer.is_delimiter(processed_search_string[end_idx]))
+                          || (is_escape[end_idx]
+                              && lexer.is_delimiter(processed_search_string[end_idx + 1]));
                 if (has_preceding_delimiter && has_proceeding_delimiter) {
                     get_substring_variable_types(
                             substr_start,
@@ -1160,7 +1160,7 @@ void Grep::generate_query_substring_logtypes(
                 if (variable_types.empty() || contains_wildcard) {
                     possible_substr_types.emplace_back();
                     auto& possible_substr_type = possible_substr_types.back();
-                    for (uint32_t idx = begin_idx; idx <= end_idx; idx++) {
+                    for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
                         char const& c = processed_search_string[idx];
                         std::string char_string({c});
                         possible_substr_type.append_value(c, char_string, false);
@@ -1177,13 +1177,13 @@ void Grep::generate_query_substring_logtypes(
                     for (auto& suffix : possible_substr_types) {
                         QueryLogtype query_logtype = prefix;
                         query_logtype.append_logtype(suffix);
-                        query_substr_logtypes[end_idx].insert(query_logtype);
+                        query_substr_logtypes[end_idx - 1].insert(query_logtype);
                     }
                 }
             } else {
                 // Handle the case where substr(0,n) == substr(begin_idx,end_idx).
                 for (auto& possible_substr_type : possible_substr_types) {
-                    query_substr_logtypes[end_idx].insert(possible_substr_type);
+                    query_substr_logtypes[end_idx - 1].insert(possible_substr_type);
                 }
             }
         }
