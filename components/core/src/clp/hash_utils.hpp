@@ -1,9 +1,9 @@
 #ifndef CLP_HASH_UTILS_HPP
 #define CLP_HASH_UTILS_HPP
 
-#include <cstddef>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "ErrorCode.hpp"
@@ -52,6 +52,7 @@ private:
  * @return ErrorCode_Success on success.
  * @return ErrorCode_BadParam if `key` is longer than `INT32_MAX`.
  * @return ErrorCode_Failure if hash generation fails.
+  * @return ErrorCode_Corrupt if `hash` has an unexpected length.
  */
 [[nodiscard]] auto get_hmac_sha256_hash(
         std::span<unsigned char const> input,
