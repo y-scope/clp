@@ -1,5 +1,5 @@
-#ifndef CLP_IR_CLPSTRING_HPP
-#define CLP_IR_CLPSTRING_HPP
+#ifndef CLP_IR_ENCODEDTEXTAST_HPP
+#define CLP_IR_ENCODEDTEXTAST_HPP
 
 #include <string>
 #include <utility>
@@ -9,14 +9,14 @@
 
 namespace clp::ir {
 /**
- * A class representing a CLP string encoded using CLP's IR.
- * @tparam encoded_variable_t The type of encoded variables in the event.
+ * Class that defines CLP IR's encoded text strings, which consists of a logtype and variables.
+ * @tparam encoded_variable_t The type of encoded variables.
  */
 template <typename encoded_variable_t>
-class ClpString {
+class EncodedTextAst {
 public:
     // Constructor
-    explicit ClpString(
+    explicit EncodedTextAst(
             std::string logtype,
             std::vector<std::string> dict_vars,
             std::vector<encoded_variable_t> encoded_vars
@@ -26,15 +26,15 @@ public:
               m_encoded_vars{std::move(encoded_vars)} {}
 
     // Disable copy constructor and assignment operator
-    ClpString(ClpString const&) = delete;
-    auto operator=(ClpString const&) -> ClpString& = delete;
+    EncodedTextAst(EncodedTextAst const&) = delete;
+    auto operator=(EncodedTextAst const&) -> EncodedTextAst& = delete;
 
     // Default move constructor and assignment operator
-    ClpString(ClpString&&) = default;
-    auto operator=(ClpString&&) -> ClpString& = default;
+    EncodedTextAst(EncodedTextAst&&) = default;
+    auto operator=(EncodedTextAst&&) -> EncodedTextAst& = default;
 
     // Destructor
-    ~ClpString() = default;
+    ~EncodedTextAst() = default;
 
     // Methods
     [[nodiscard]] auto get_logtype() const -> std::string const& { return m_logtype; }
@@ -54,8 +54,8 @@ private:
     std::vector<encoded_variable_t> m_encoded_vars;
 };
 
-using EightByteEncodingClpString = ClpString<eight_byte_encoded_variable_t>;
-using FourByteEncodingClpString = ClpString<four_byte_encoded_variable_t>;
+using EightByteEncodedTextAst = EncodedTextAst<eight_byte_encoded_variable_t>;
+using FourByteEncodedTextAst = EncodedTextAst<four_byte_encoded_variable_t>;
 }  // namespace clp::ir
 
-#endif  // CLP_IR_CLPSTRING_HPP
+#endif  // CLP_IR_ENCODEDTEXTAST_HPP
