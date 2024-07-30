@@ -134,4 +134,17 @@ auto make_error_code(ErrorCode<ErrorCodeEnum> error) -> std::error_code {
 }
 }  // namespace clp::error_handling
 
+/**
+ * The macro to create a specialization of `std::is_error_code_enum` for a given type T. Only types
+ * that are marked with this macro will be considered as a valid CLP error code enum, and thus used
+ * to specialize `ErrorCode` and `ErrorCategory` templates.
+ */
+// NOLINTBEGIN(bugprone-macro-parentheses, cppcoreguidelines-macro-usage)
+#define CLP_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(T) \
+    template <> \
+    struct std::is_error_code_enum<clp::error_handling::ErrorCode<T>> : std::true_type { \
+        static_assert(std::is_enum_v<T>); \
+    };
+// NOLINTEND(bugprone-macro-parentheses, cppcoreguidelines-macro-usage)
+
 #endif  // CLP_ERROR_HANDLING_ERRORCODE_HPP

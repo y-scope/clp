@@ -38,13 +38,8 @@ constexpr std::array cFailureConditions{std::errc::not_connected, std::errc::tim
 constexpr std::array cNoneFailureConditions{std::errc::broken_pipe, std::errc::address_in_use};
 }  // namespace
 
-namespace std {
-template <>
-struct is_error_code_enum<BinaryErrorCode> : std::true_type {};
-
-template <>
-struct is_error_code_enum<AlwaysSuccessErrorCode> : std::true_type {};
-}  // namespace std
+CLP_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(AlwaysSuccessErrorCodeEnum);
+CLP_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(BinaryErrorCodeEnum);
 
 template <>
 auto AlwaysSuccessErrorCategory::name() const noexcept -> char const* {
