@@ -21,7 +21,7 @@ vars:
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Versions
-  G_PACKAGE_VERSION: "0.2.0-dev"
+  G_PACKAGE_VERSION: "0.1.2"
 
 tasks:
   default:
