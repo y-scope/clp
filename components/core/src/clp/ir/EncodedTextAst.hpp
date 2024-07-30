@@ -9,8 +9,8 @@
 
 namespace clp::ir {
 /**
- * Class that defines CLP IR's encoded text strings, which consists of a logtype and variables.
- * @tparam encoded_variable_t The type of encoded variables.
+ * A parsed and encoded unstructured text string.
+ * @tparam encoded_variable_t The type of encoded variables in the string.
  */
 template <typename encoded_variable_t>
 class EncodedTextAst {
