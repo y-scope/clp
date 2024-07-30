@@ -1,12 +1,15 @@
 #include "hash_utils.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
@@ -22,8 +25,8 @@ using std::vector;
 namespace clp {
 namespace {
 /**
- * Gets the OpenSSL error string as a c++ string
- * @return The string representing the OpenSSL error
+ * Pops the first OpenSSL error from its error queue and gets its string representation.
+ * @return The string representing the first OpenSSL error from its error queue.
  */
 auto get_openssl_error_string() -> string {
     auto const openssl_err = ERR_get_error();
@@ -51,7 +54,7 @@ public:
                 ErrorCode error_code,
                 char const* const filename,
                 int line_number,
-                std::string message
+                string message
         )
                 : TraceableException(error_code, filename, line_number),
                   m_message(std::move(message)) {}
@@ -69,10 +72,9 @@ public:
     /**
      * @param type The type of digest (hash algorithm).
      * @throw EvpDigestContext::OperationFailed with ErrorCode_NoMem if `EVP_MD_CTX_create` fails.
-     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if `EVP_DigestInit_ex`
-     * fails.
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if `EVP_DigestInit_ex` fails.
      */
-    EvpDigestContext(EVP_MD const* type)
+    explicit EvpDigestContext(EVP_MD const* type)
             : m_md_ctx{EVP_MD_CTX_create()},
               m_digest_nid{EVP_MD_type(type)} {
         if (nullptr == m_md_ctx) {
@@ -107,18 +109,17 @@ public:
      * @return ErrorCode_Success on success.
      * @return ErrorCode_Failure if `EVP_DigestUpdate` fails.
      */
-    [[nodiscard]] auto digest_update(std::span<unsigned char const> input) -> ErrorCode;
+    [[nodiscard]] auto digest_update(span<unsigned char const> input) -> ErrorCode;
 
     /**
      * Writes the digest into `hash` and clears the digest.
      * @param hash Returns the hashing result.
      * @return ErrorCode_Success on success.
-     * @return ErrorCode_Corrupt if the hashing result has an unexpected length.
+     * @return ErrorCode_Corrupt if `hash` has an unexpected length.
      * @return ErrorCode_Failure if `EVP_DigestFinal_ex` fails.
-     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if
-     * `EVP_DigestInit_ex` fails.
+     * @throw EvpDigestContext::OperationFailed with ErrorCode_Failure if `EVP_DigestInit_ex` fails.
      */
-    [[nodiscard]] auto digest_final(std::vector<unsigned char>& hash) -> ErrorCode;
+    [[nodiscard]] auto digest_final(vector<unsigned char>& hash) -> ErrorCode;
 
 private:
     EVP_MD_CTX* m_md_ctx{nullptr};
@@ -132,7 +133,7 @@ auto EvpDigestContext::digest_update(span<unsigned char const> input) -> ErrorCo
     return ErrorCode_Success;
 }
 
-auto EvpDigestContext::digest_final(std::vector<unsigned char>& hash) -> ErrorCode {
+auto EvpDigestContext::digest_final(vector<unsigned char>& hash) -> ErrorCode {
     hash.resize(EVP_MD_CTX_size(m_md_ctx));
     unsigned int length{};
     if (1 != EVP_DigestFinal_ex(m_md_ctx, hash.data(), &length)) {
@@ -154,7 +155,7 @@ auto EvpDigestContext::digest_final(std::vector<unsigned char>& hash) -> ErrorCo
 }
 }  // namespace
 
-auto convert_to_hex_string(std::span<unsigned char> input) -> string {
+auto convert_to_hex_string(span<unsigned char> input) -> string {
     string hex_string;
     for (auto const c : input) {
         hex_string += fmt::format("{:02x}", c);
@@ -200,6 +201,7 @@ auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& has
     } catch (EvpDigestContext::OperationFailed const& err) {
         throw HashUtilsOperationFailed(err.get_error_code(), __FILENAME__, __LINE__, err.what());
     }
+
     if (auto const error_code = evp_ctx_manager->digest_update(input);
         ErrorCode_Success != error_code)
     {

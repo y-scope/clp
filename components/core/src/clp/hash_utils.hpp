@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include <openssl/evp.h>
-
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
@@ -21,7 +19,7 @@ public:
                       error_code,
                       filename,
                       line_number,
-                      "HashUtils operation failed"
+                      "clp::hash_utils operation failed"
               ) {}
 
     HashUtilsOperationFailed(
@@ -67,7 +65,7 @@ private:
  * @param hash Returns the hash.
  * @return ErrorCode_Success on success.
  * @return Same as `digest_final` and `digest_update` on failure.
- * @throw HashUtilsOperationFailed if `EvpDigestContext` fails to initialize.
+ * @throw HashUtilsOperationFailed if an OpenSSL EVP digest couldn't be created.
  */
 [[nodiscard]] auto get_sha256_hash(
         std::span<unsigned char const> input,
