@@ -347,6 +347,7 @@ set(SOURCE_FILES_unitTest
         src/clp/Grep.cpp
         src/clp/Grep.hpp
         src/clp/ir/constants.hpp
+        src/clp/ir/EncodedTextAst.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp
