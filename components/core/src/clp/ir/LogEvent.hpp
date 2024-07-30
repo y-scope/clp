@@ -21,13 +21,11 @@ public:
     LogEvent(
             epoch_time_ms_t timestamp,
             UtcOffset utc_offset,
-            std::string logtype,
-            std::vector<std::string> dict_vars,
-            std::vector<encoded_variable_t> encoded_vars
+            EncodedTextAst<encoded_variable_t> message
     )
             : m_timestamp{timestamp},
               m_utc_offset{utc_offset},
-              m_message{std::move(logtype), std::move(dict_vars), std::move(encoded_vars)} {}
+              m_message{std::move(message)} {}
 
     // Methods
     [[nodiscard]] auto get_timestamp() const -> epoch_time_ms_t { return m_timestamp; }
