@@ -56,23 +56,23 @@ public:
     // Getters
     [[nodiscard]] auto get_state() const -> RegexPatternState { return m_state; }
 
-    [[nodiscard]] auto get_charset_start_it() const -> optional<string_view::const_iterator> {
-        return m_charset_start_it;
+    [[nodiscard]] auto get_charset_begin_it() const -> optional<string_view::const_iterator> {
+        return m_charset_begin_it;
     }
 
     // Setters
     auto set_next_state(RegexPatternState const& state) -> void { m_state = state; }
 
-    auto set_charset_start_it(string_view::const_iterator charset_start_it) -> void {
-        m_charset_start_it = charset_start_it;
+    auto set_charset_begin_it(string_view::const_iterator charset_begin_it) -> void {
+        m_charset_begin_it = charset_begin_it;
     }
 
-    auto invalidate_charset_start_it() -> void { m_charset_start_it.reset(); }
+    auto invalidate_charset_begin_it() -> void { m_charset_begin_it.reset(); }
 
 private:
     // Members
     RegexPatternState m_state{RegexPatternState::Normal};
-    optional<string_view::const_iterator> m_charset_start_it;
+    optional<string_view::const_iterator> m_charset_begin_it;
 };
 
 /**
@@ -162,13 +162,11 @@ using StateTransitionFuncSig
 auto append_char_to_wildcard(char ch, string& wildcard_str) -> void;
 
 /**
- * Detects if the two input arguments are a matching pair of upper and lowercase characters.
- *
  * @param ch0
  * @param ch1
- * @return True if the input chars are a matching pair.
+ * @return Whether the given chars are the same, but with opposing letter cases, e.g. 'A' vs. 'a'.
  */
-[[nodiscard]] auto matching_upper_lower_case_char_pair(char ch0, char ch1) -> bool;
+[[nodiscard]] auto is_same_char_opposite_case(char ch0, char ch1) -> bool;
 
 auto normal_state_transition(
         TranslatorState& state,
@@ -185,7 +183,7 @@ auto normal_state_transition(
             state.set_next_state(TranslatorState::RegexPatternState::Escaped);
             break;
         case '[':
-            state.set_charset_start_it(it + 1);
+            state.set_charset_begin_it(it + 1);
             state.set_next_state(TranslatorState::RegexPatternState::Charset);
             break;
         case cRegexEndAnchor:
@@ -254,11 +252,11 @@ auto charset_state_transition(
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
-    auto const charset_start_it_opt{state.get_charset_start_it()};
-    if (false == charset_start_it_opt.has_value()) {
+    auto const charset_begin_it_opt{state.get_charset_begin_it()};
+    if (false == charset_begin_it_opt.has_value()) {
         return ErrorCode::IllegalState;
     }
-    string_view::const_iterator const charset_start_it = charset_start_it_opt.value();
+    string_view::const_iterator const charset_begin_it = charset_begin_it_opt.value();
 
     auto const ch{*it};
     if (cEscapeChar == ch) {
@@ -269,13 +267,13 @@ auto charset_state_transition(
         return ErrorCode::Success;
     }
 
-    auto const charset_len{it - charset_start_it};
+    auto const charset_len{it - charset_begin_it};
     if (0 == charset_len || charset_len > 2) {
         return ErrorCode::UnsupportedCharsetPattern;
     }
 
-    auto const ch0{*charset_start_it};
-    auto const ch1{*(charset_start_it + 1)};
+    auto const ch0{*charset_begin_it};
+    auto const ch1{*(charset_begin_it + 1)};
     char parsed_char{};
 
     if (1 == charset_len) {
@@ -286,9 +284,7 @@ auto charset_state_transition(
     } else {  // 2 == charset_len
         if (cEscapeChar == ch0 && cRegexCharsetEscapeSeqMetaCharsLut.at(ch1)) {
             parsed_char = ch1;
-        } else if (config.case_insensitive_wildcard()
-                   && matching_upper_lower_case_char_pair(ch0, ch1))
-        {
+        } else if (config.case_insensitive_wildcard() && is_same_char_opposite_case(ch0, ch1)) {
             parsed_char = ch0 > ch1 ? ch0 : ch1;  // choose the lower case character
         } else {
             return ErrorCode::UnsupportedCharsetPattern;
@@ -296,7 +292,7 @@ auto charset_state_transition(
     }
 
     append_char_to_wildcard(parsed_char, wildcard_str);
-    state.invalidate_charset_start_it();
+    state.invalidate_charset_begin_it();
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
     return ErrorCode::Success;
 }
@@ -357,7 +353,7 @@ auto append_char_to_wildcard(char ch, string& wildcard_str) -> void {
     wildcard_str += ch;
 }
 
-auto matching_upper_lower_case_char_pair(char ch0, char ch1) -> bool {
+auto is_same_char_opposite_case(char ch0, char ch1) -> bool {
     int const upper_lower_case_ascii_offset{'a' - 'A'};
     return (is_alphabet(ch0) && is_alphabet(ch1)
             && (((ch0 - ch1) == upper_lower_case_ascii_offset)
