@@ -1036,14 +1036,14 @@ void Grep::generate_query_substring_logtypes(
         // to duplicate its wildcard in the next iteration (e.g., for string "abc text* def", we
         // ignore combinations of "abc " + "text*" + " def" in favor of "abc " + "text*" + "* def"
         // as the latter will contain all logtypes capture by the former.
-        if (is_escape[end_idx - 1] || is_greedy_wildcard[end_idx - 1]) {
+        if (is_escape[end_idx - 1]) { // || is_greedy_wildcard[end_idx - 1]) {
             continue;
         }
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
             // "*text" from string "* \*text *"). Also, similar to above, we ignore substrings that
             // begin with a greedy wilcard.
-            if ((begin_idx > 0 && is_escape[begin_idx - 1]) || (is_greedy_wildcard[begin_idx])) {
+            if ((begin_idx > 0 && is_escape[begin_idx - 1])) { // || (is_greedy_wildcard[begin_idx])) {
                 continue;
             }
             std::vector<QueryLogtype> possible_substr_types;
@@ -1295,10 +1295,12 @@ void Grep::generate_sub_queries(
         bool ignore_case,
         vector<SubQuery>& sub_queries
 ) {
-    while (false == query_logtypes.empty()) {
+    for (QueryLogtype const& query_logtype : query_logtypes) {
+    //while (false == query_logtypes.empty()) {
         // Note: you need to keep the node handle to avoid deleting the object.
-        auto query_logtype_nh = query_logtypes.extract(query_logtypes.begin());
-        auto const& query_logtype = query_logtype_nh.value();
+        //auto query_logtype_nh = query_logtypes.extract(query_logtypes.begin());
+        //
+        //auto const& query_logtype = query_logtype_nh.value();
 
         // Convert each query logtype into a set of logtype strings. Logtype strings are used in the
         // sub query as they have the correct format for comparing against the archive. Also, a
@@ -1376,13 +1378,13 @@ void Grep::generate_sub_queries(
             auto const logtype_value = query_logtype.get_logtype_value(i);
             auto const& raw_string = query_logtype.get_query_string(i);
             auto const is_encoded_with_wildcard = query_logtype.get_is_encoded_with_wildcard(i);
-            auto const var_has_wildcard = query_logtype.get_has_wildcard(i);
+            auto const has_wildcard = query_logtype.get_has_wildcard(i);
             if (std::holds_alternative<int>(logtype_value)) {
                 auto& schema_type = lexer.m_id_symbol[std::get<int>(logtype_value)];
                 encoded_variable_t encoded_var;
                 if (is_encoded_with_wildcard) {
                     sub_query.mark_wildcard_match_required();
-                } else if (schema_type == "int"
+                } else if (false == has_wildcard && schema_type == "int"
                            && EncodedVariableInterpreter::
                                    convert_string_to_representable_integer_var(
                                            raw_string,
@@ -1390,7 +1392,7 @@ void Grep::generate_sub_queries(
                                    ))
                 {
                     sub_query.add_non_dict_var(encoded_var);
-                } else if (schema_type == "float"
+                } else if (false == has_wildcard && schema_type == "float"
                            && EncodedVariableInterpreter::convert_string_to_representable_float_var(
                                    raw_string,
                                    encoded_var
@@ -1399,7 +1401,7 @@ void Grep::generate_sub_queries(
                     sub_query.add_non_dict_var(encoded_var);
                 } else {
                     auto& var_dict = archive.get_var_dictionary();
-                    if (var_has_wildcard) {
+                    if (has_wildcard) {
                         // Find matches
                         std::unordered_set<VariableDictionaryEntry const*> var_dict_entries;
                         var_dict.get_entries_matching_wildcard_string(
