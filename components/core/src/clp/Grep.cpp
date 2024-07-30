@@ -1021,15 +1021,16 @@ void Grep::generate_query_substring_logtypes(
     auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escape]
             = get_wildcard_and_escape_locations(processed_search_string);
 
-    // Consider each substr(j,end_idx) of the processed_search_string and determine if it could have
-    // been compressed as static-text, a variable, or some combination of variables/static-text Then
-    // we populate each entry in query_substr_logtypes which corresponds to the logtype for
-    // substr(0,n). To do this, for each combination of substr(j,end_idx) that reconstructs
-    // substr(0,n) (e.g., substring "*1 34", can be reconstructed from substrings "*1", " ", "34"),
-    // store all possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that are unique from
-    // any previously checked combination. Each entry in query_substr_logtypes is used to build the
-    // following entry, with the last entry having all possible logtypes for the full query itself.
-    for (size_t end_idx = 0; end_idx < processed_search_string.size(); end_idx++) {
+    // Consider each substr(begin_idx,end_idx) of the processed_search_string and determine if it
+    // could have been compressed as static-text, a variable, or some combination of
+    // variables/static-text Then we populate each entry in query_substr_logtypes which corresponds
+    // to the logtype for substr(0,n). To do this, for each combination of substr(begin_idx,end_idx)
+    // that reconstructs substr(0,n) (e.g., substring "*1 34", can be reconstructed from substrings
+    // "*1", " ", "34"), store all possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that
+    // are unique from any previously checked combination. Each entry in query_substr_logtypes is
+    // used to build the following entry, with the last entry having all possible logtypes for the
+    // full query itself.
+    for (size_t end_idx = 0; end_idx < processed_search_string.size(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
         // "* text\* *"). Also skip strings that end with a greedy wildcard because we are going
         // to duplicate its wildcard in the next iteration (e.g., for string "abc text* def", we
@@ -1038,18 +1039,18 @@ void Grep::generate_query_substring_logtypes(
         if (is_escape[end_idx] || is_greedy_wildcard[end_idx]) {
             continue;
         }
-        for (size_t j = 0; j <= end_idx; ++j) {
+        for (size_t begin_idx = 0; begin_idx <= end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
             // "*text" from string "* \*text *"). Also, similar to above, we ignore substrings that
             // begin with a greedy wilcard.
-            if ((j > 0 && is_escape[j - 1]) || (is_greedy_wildcard[j])) {
+            if ((begin_idx > 0 && is_escape[begin_idx - 1]) || (is_greedy_wildcard[begin_idx])) {
                 continue;
             }
             std::vector<QueryLogtype> possible_substr_types;
             // Don't allow an isolated wildcard to be considered a variable
-            if (end_idx == j && is_greedy_wildcard[j]) {
+            if (end_idx == begin_idx && is_greedy_wildcard[begin_idx]) {
                 possible_substr_types.emplace_back('*', "*", false);
-            } else if (end_idx == j && is_non_greedy_wildcard[j]) {
+            } else if (end_idx == begin_idx && is_non_greedy_wildcard[begin_idx]) {
                 possible_substr_types.emplace_back('?', "?", false);
             } else {
                 set<uint32_t> variable_types;
@@ -1063,9 +1064,9 @@ void Grep::generate_query_substring_logtypes(
                 // of a logtype with the form "* <has#><has#> *", which is a valid possibility
                 // during compression. Note, non-greedy wildcards do not need to be considered, for
                 // example "* ab?cd *" can never match "* <has#><has#> *".
-                uint32_t substr_start = j;
+                uint32_t substr_start = begin_idx;
                 uint32_t substr_end = end_idx;
-                bool prev_char_is_star = j > 0 && is_greedy_wildcard[j - 1];
+                bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
                 bool next_char_is_star = end_idx < processed_search_string.length() - 1
                                          && is_greedy_wildcard[end_idx + 1];
                 if (prev_char_is_star) {
@@ -1085,8 +1086,9 @@ void Grep::generate_query_substring_logtypes(
 
                 // Preceding delimiter counts the start of log, a wildcard, or an actual delimiter.
                 bool has_preceding_delimiter
-                        = 0 == j || is_greedy_wildcard[j - 1] || is_non_greedy_wildcard[j - 1]
-                          || lexer.is_delimiter(processed_search_string[j - 1]);
+                        = 0 == begin_idx || is_greedy_wildcard[begin_idx - 1]
+                          || is_non_greedy_wildcard[begin_idx - 1]
+                          || lexer.is_delimiter(processed_search_string[begin_idx - 1]);
 
                 // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter.
                 // However, we have to be careful about a proceeding escape character. First, if '\'
@@ -1158,7 +1160,7 @@ void Grep::generate_query_substring_logtypes(
                 if (variable_types.empty() || contains_wildcard) {
                     possible_substr_types.emplace_back();
                     auto& possible_substr_type = possible_substr_types.back();
-                    for (uint32_t k = j; k <= end_idx; k++) {
+                    for (uint32_t k = begin_idx; k <= end_idx; k++) {
                         char const& c = processed_search_string[k];
                         std::string char_string({c});
                         possible_substr_type.append_value(c, char_string, false);
@@ -1166,11 +1168,12 @@ void Grep::generate_query_substring_logtypes(
                 }
             }
 
-            // Use the completed set of variable types for each substr(j,i) to construct all
-            // possible logtypes for each substr(0,n), for all n.
-            if (j > 0) {
-                // handle the case where substr(0,n) is composed of multiple substr(j,i)
-                for (auto const& prefix : query_substr_logtypes[j - 1]) {
+            // Use the completed set of variable types for each substr(begin_idx,end_idx) to
+            // construct all possible logtypes for each substr(0,n), for all n.
+            if (begin_idx > 0) {
+                // Handle the case where substr(0,n) is composed of multiple
+                // substr(begin_idx,end_idx).
+                for (auto const& prefix : query_substr_logtypes[begin_idx - 1]) {
                     for (auto& suffix : possible_substr_types) {
                         QueryLogtype query_logtype = prefix;
                         query_logtype.append_logtype(suffix);
@@ -1178,7 +1181,7 @@ void Grep::generate_query_substring_logtypes(
                     }
                 }
             } else {
-                // handle the case where substr(0,n) == substr(j,i)
+                // Handle the case where substr(0,n) == substr(begin_idx,end_idx).
                 for (auto& possible_substr_type : possible_substr_types) {
                     query_substr_logtypes[end_idx].insert(possible_substr_type);
                 }
