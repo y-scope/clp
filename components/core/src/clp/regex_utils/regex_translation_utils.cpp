@@ -16,7 +16,6 @@
 namespace clp::regex_utils {
 using clp::string_utils::is_alphabet;
 using std::error_code;
-using std::nullopt;
 using std::optional;
 using std::string;
 using std::string_view;
@@ -57,23 +56,23 @@ public:
     // Getters
     [[nodiscard]] auto get_state() const -> RegexPatternState { return m_state; }
 
-    [[nodiscard]] auto get_charset_start() const -> optional<string_view::const_iterator> {
-        return m_charset_start;
+    [[nodiscard]] auto get_charset_start_it() const -> optional<string_view::const_iterator> {
+        return m_charset_start_it;
     }
 
     // Setters
     auto set_next_state(RegexPatternState const& state) -> void { m_state = state; }
 
-    auto set_charset_start(string_view::const_iterator charset_start) -> void {
-        m_charset_start = charset_start;
+    auto set_charset_start_it(string_view::const_iterator charset_start_it) -> void {
+        m_charset_start_it = charset_start_it;
     }
 
-    auto invalidate_charset_start() -> void { m_charset_start = nullopt; }
+    auto invalidate_charset_start_it() -> void { m_charset_start_it.reset(); }
 
 private:
     // Members
     RegexPatternState m_state{RegexPatternState::Normal};
-    optional<string_view::const_iterator> m_charset_start{nullopt};
+    optional<string_view::const_iterator> m_charset_start_it;
 };
 
 /**
@@ -152,7 +151,6 @@ using StateTransitionFuncSig
  */
 [[nodiscard]] StateTransitionFuncSig final_state_cleanup;
 
-// Other helpers
 /**
  * Appends a single character as a literal to the wildcard string.
  *
@@ -161,26 +159,16 @@ using StateTransitionFuncSig
  * @param ch The literal to be appended.
  * @param wildcard_str The wildcard string to be updated.
  */
-inline auto append_char_to_wildcard(char const ch, string& wildcard_str) -> void {
-    if (cWildcardMetaCharsLut.at(ch)) {
-        wildcard_str += cEscapeChar;
-    }
-    wildcard_str += ch;
-}
+auto append_char_to_wildcard(char ch, string& wildcard_str) -> void;
 
 /**
  * Detects if the two input arguments are a matching pair of upper and lowercase characters.
  *
  * @param ch0
  * @param ch1
- * @return True if the input is a matching pair.
+ * @return True if the input chars are a matching pair.
  */
-inline auto matching_upper_lower_case_char_pair(char const ch0, char const ch1) -> bool {
-    int const upper_lower_case_ascii_offset{'a' - 'A'};
-    return (is_alphabet(ch0) && is_alphabet(ch1)
-            && (((ch0 - ch1) == upper_lower_case_ascii_offset)
-                || ((ch1 - ch0) == upper_lower_case_ascii_offset)));
-}
+[[nodiscard]] auto matching_upper_lower_case_char_pair(char ch0, char ch1) -> bool;
 
 auto normal_state_transition(
         TranslatorState& state,
@@ -197,7 +185,7 @@ auto normal_state_transition(
             state.set_next_state(TranslatorState::RegexPatternState::Escaped);
             break;
         case '[':
-            state.set_charset_start(it + 1);
+            state.set_charset_start_it(it + 1);
             state.set_next_state(TranslatorState::RegexPatternState::Charset);
             break;
         case cRegexEndAnchor:
@@ -266,11 +254,11 @@ auto charset_state_transition(
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
 ) -> error_code {
-    auto const charset_start_opt{state.get_charset_start()};
-    if (false == charset_start_opt.has_value()) {
+    auto const charset_start_it_opt{state.get_charset_start_it()};
+    if (false == charset_start_it_opt.has_value()) {
         return ErrorCode::IllegalState;
     }
-    string_view::const_iterator const charset_start = charset_start_opt.value();
+    string_view::const_iterator const charset_start_it = charset_start_it_opt.value();
 
     auto const ch{*it};
     if (cEscapeChar == ch) {
@@ -281,13 +269,13 @@ auto charset_state_transition(
         return ErrorCode::Success;
     }
 
-    auto const charset_len{it - charset_start};
+    auto const charset_len{it - charset_start_it};
     if (0 == charset_len || charset_len > 2) {
         return ErrorCode::UnsupportedCharsetPattern;
     }
 
-    auto const ch0{*charset_start};
-    auto const ch1{*(charset_start + 1)};
+    auto const ch0{*charset_start_it};
+    auto const ch1{*(charset_start_it + 1)};
     char parsed_char{};
 
     if (1 == charset_len) {
@@ -308,7 +296,7 @@ auto charset_state_transition(
     }
 
     append_char_to_wildcard(parsed_char, wildcard_str);
-    state.invalidate_charset_start();
+    state.invalidate_charset_start_it();
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
     return ErrorCode::Success;
 }
@@ -350,7 +338,6 @@ auto final_state_cleanup(
         case TranslatorState::RegexPatternState::Charset:
         case TranslatorState::RegexPatternState::CharsetEscaped:
             return ErrorCode::IncompleteCharsetStructure;
-            break;
         default:
             break;
     }
@@ -363,6 +350,19 @@ auto final_state_cleanup(
     return ErrorCode::Success;
 }
 
+auto append_char_to_wildcard(char ch, string& wildcard_str) -> void {
+    if (cWildcardMetaCharsLut.at(ch)) {
+        wildcard_str += cEscapeChar;
+    }
+    wildcard_str += ch;
+}
+
+auto matching_upper_lower_case_char_pair(char ch0, char ch1) -> bool {
+    int const upper_lower_case_ascii_offset{'a' - 'A'};
+    return (is_alphabet(ch0) && is_alphabet(ch1)
+            && (((ch0 - ch1) == upper_lower_case_ascii_offset)
+                || ((ch1 - ch0) == upper_lower_case_ascii_offset)));
+}
 }  // namespace
 
 auto regex_to_wildcard(string_view regex_str) -> OUTCOME_V2_NAMESPACE::std_result<string> {
