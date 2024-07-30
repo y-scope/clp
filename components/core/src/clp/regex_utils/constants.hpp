@@ -44,6 +44,9 @@ constexpr auto cRegexEscapeSeqMetaCharsLut = create_char_bit_array("*+?|^$.{}[](
 // The set of wildcard metacharacters that must remain escaped in the translated string to be
 // treated as a literal.
 constexpr auto cWildcardMetaCharsLut = create_char_bit_array("?*\\");
+// The set of metacharacters that can be preceded with an escape backslash in the regex character
+// set to be treated as a literal.
+constexpr auto cRegexCharsetEscapeSeqMetaCharsLut = create_char_bit_array("^-]\\");
 }  // namespace clp::regex_utils
 
 #endif  // CLP_REGEX_UTILS_CONSTANTS_HPP
