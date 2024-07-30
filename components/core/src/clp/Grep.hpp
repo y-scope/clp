@@ -63,8 +63,8 @@ public:
             bool var_contains_wildcard
     );
 
-    void set_var_is_potentially_in_dict(uint32_t i, bool value) {
-        m_is_potentially_in_dict[i] = value;
+    void set_is_encoded_with_wildcard(uint32_t i, bool value) {
+        m_is_encoded_with_wildcard[i] = value;
     }
 
     [[nodiscard]] uint32_t get_logtype_size() const { return m_logtype.size(); }
@@ -75,8 +75,8 @@ public:
 
     [[nodiscard]] std::string const& get_query_string(uint32_t i) const { return m_query[i]; }
 
-    [[nodiscard]] bool get_is_potentially_in_dict(uint32_t i) const {
-        return m_is_potentially_in_dict[i];
+    [[nodiscard]] bool get_is_encoded_with_wildcard(uint32_t i) const {
+        return m_is_encoded_with_wildcard[i];
     }
 
     [[nodiscard]] bool get_has_wildcard(uint32_t i) const { return m_has_wildcard[i]; }
@@ -84,7 +84,7 @@ public:
 private:
     std::vector<std::variant<char, int>> m_logtype;
     std::vector<std::string> m_query;
-    std::vector<bool> m_is_potentially_in_dict;
+    std::vector<bool> m_is_encoded_with_wildcard;
     std::vector<bool> m_has_wildcard;
 };
 
