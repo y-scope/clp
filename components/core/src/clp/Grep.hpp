@@ -202,9 +202,11 @@ public:
 
     /**
      * Generates all possible logtypes that can match each substr(0,n) of the search string.
+     * Requires that processed_search_string is valid, meaning that only wildcards are escaped
+     * and the string does not end with an escape character.
      * @param processed_search_string
      * @param lexer
-     * @param query_matrix
+     * @param query_substring_logtypes
      */
     static void generate_query_substring_logtypes(
             std::string& processed_search_string,

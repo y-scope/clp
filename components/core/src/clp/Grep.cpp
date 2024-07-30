@@ -1029,21 +1029,21 @@ void Grep::generate_query_substring_logtypes(
     // possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that are unique from any
     // previously checked combination. Each entry in query_substr_logtypes is used to build the
     // following entry, with the last entry having all possible logtypes for the full query itself.
-    bool i_is_escaped = false;
     for (size_t i = 0; i < processed_search_string.size(); i++) {
-        if (i_is_escaped) {
-            i_is_escaped = false;
-        } else if ('\\' == processed_search_string[i]) {
-            i_is_escaped = true;
+        // Skip strings that end with an escape character (e.g., substring " text\" from string
+        // "* text\* *"). Also skip strings that end with a greedy wildcard because we are going
+        // to duplicate its wildcard in the next iteration (e.g., for string "abc text* def", we
+        // ignore combinations of "abc " + "text*" + " def" in favor of "abc " + "text*" + "* def"
+        // as the latter will contain all logtypes capture by the former.
+        if (is_escape[i] || is_greedy_wildcard[i]) {
             continue;
         }
-        bool j_is_escaped = false;
         for (size_t j = 0; j <= i; ++j) {
-            if (j_is_escaped) {
-                j_is_escaped = false;
+            // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
+            // "*text" from string "* \*text *"). Also, similar to above, we ignore substrings that
+            // begin with a greedy wilcard.
+            if ((j > 0 && is_escape[j - 1]) || (is_greedy_wildcard[j])) {
                 continue;
-            } else if ('\\' == processed_search_string[j]) {
-                j_is_escaped = true;
             }
             std::vector<QueryLogtype> possible_substr_types;
             // Don't allow an isolated wildcard to be considered a variable
@@ -1081,19 +1081,24 @@ void Grep::generate_query_substring_logtypes(
                 bool contains_wildcard = false;
 
                 // If the substring isn't surrounded by delimiters there is no reason to consider
-                // the case where it is a variable as CLP would not compress it as such. Note:
-                // we must consider that wildcards could potentially be delimiters, and that the
-                // start and end of a log are also treated as delimiters.
+                // the case where it is a variable as CLP would not compress it as such.
+
+                // Preceding delimiter counts the start of log, a wildcard, or an actual delimiter.
                 bool has_preceding_delimiter
-                        = 0 == j || is_greedy_wildcard[j] || is_non_greedy_wildcard[j - 1]
+                        = 0 == j || is_greedy_wildcard[j - 1] || is_non_greedy_wildcard[j - 1]
                           || lexer.is_delimiter(processed_search_string[j - 1]);
+
+                // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter.
+                // However, we have to be careful about a proceeding escape character. First, if '\'
+                // is a delimiter, we avoid counting the escape character. Second, if a literal '*'
+                // or '?' is a delimiter, then it will appear after the escape character.
                 bool has_proceeding_delimiter
-                        = processed_search_string.size() - 1 == i || is_greedy_wildcard[i]
+                        = processed_search_string.size() - 1 == i || is_greedy_wildcard[i + 1]
                           || is_non_greedy_wildcard[i + 1]
                           || (false == is_escape[i + 1]
                               && lexer.is_delimiter(processed_search_string[i + 1]))
-                          || (is_escape[i + 1] && i <= processed_search_string.size() - 2
-                              && lexer.is_delimiter(processed_search_string[i + 2]));
+                          || (is_escape[i + 1] && lexer.is_delimiter(processed_search_string[i + 2])
+                          );
                 if (has_preceding_delimiter && has_proceeding_delimiter) {
                     get_substring_variable_types(
                             substr_start,
