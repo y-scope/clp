@@ -201,8 +201,7 @@ auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& has
         throw HashUtilsOperationFailed(err.get_error_code(), __FILENAME__, __LINE__, err.what());
     }
 
-    if (false == evp_ctx_manager->digest_update(input))
-    {
+    if (false == evp_ctx_manager->digest_update(input)) {
         return ErrorCode_Failure;
     }
 
