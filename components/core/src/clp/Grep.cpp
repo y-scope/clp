@@ -1160,8 +1160,8 @@ void Grep::generate_query_substring_logtypes(
                 if (variable_types.empty() || contains_wildcard) {
                     possible_substr_types.emplace_back();
                     auto& possible_substr_type = possible_substr_types.back();
-                    for (uint32_t k = begin_idx; k <= end_idx; k++) {
-                        char const& c = processed_search_string[k];
+                    for (uint32_t idx = begin_idx; idx <= end_idx; idx++) {
+                        char const& c = processed_search_string[idx];
                         std::string char_string({c});
                         possible_substr_type.append_value(c, char_string, false);
                     }
