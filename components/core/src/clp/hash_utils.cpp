@@ -30,7 +30,14 @@ namespace {
  */
 auto get_openssl_error_string() -> string {
     auto const openssl_err = ERR_get_error();
-    return {ERR_error_string(openssl_err, nullptr)};
+    if (0 == openssl_err) {
+        return {};
+    }
+    auto* openssl_err_str = ERR_error_string(openssl_err, nullptr);
+    if (nullptr == openssl_err_str) {
+        return {"Error has no string representation, error_code: " + std::to_string(openssl_err)};
+    }
+    return {openssl_err_str};
 }
 
 /**
