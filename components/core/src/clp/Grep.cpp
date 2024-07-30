@@ -1065,7 +1065,7 @@ void Grep::generate_query_substring_logtypes(
                 // during compression. Note, non-greedy wildcards do not need to be considered, for
                 // example "* ab?cd *" can never match "* <has#><has#> *".
                 uint32_t substr_start = begin_idx;
-                uint32_t substr_end = end_idx - 1;
+                uint32_t substr_end = end_idx;
                 bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
                 bool next_char_is_star
                         = end_idx < processed_search_string.length() && is_greedy_wildcard[end_idx];
@@ -1132,7 +1132,7 @@ void Grep::generate_query_substring_logtypes(
                         bool start_star
                                 = is_greedy_wildcard[substr_start] && false == prev_char_is_star;
                         bool end_star
-                                = is_greedy_wildcard[substr_end] && false == next_char_is_star;
+                                = is_greedy_wildcard[substr_end - 1] && false == next_char_is_star;
                         possible_substr_types.emplace_back();
                         QueryLogtype& suffix = possible_substr_types.back();
                         if (start_star) {
@@ -1141,7 +1141,7 @@ void Grep::generate_query_substring_logtypes(
                         suffix.append_value(
                                 id,
                                 processed_search_string
-                                        .substr(substr_start, substr_end - substr_start + 1),
+                                        .substr(substr_start, substr_end - substr_start),
                                 contains_wildcard
                         );
                         if (end_star) {
@@ -1244,15 +1244,15 @@ void Grep::get_substring_variable_types(
     // generate the NFA and DFA for the regex, and intersect the substring DFA with
     // the compression DFA.
     std::string regex_search_string;
-    for (uint32_t i = substr_start; i <= substr_end; i++) {
-        if (is_escape[i]) {
+    for (uint32_t idx = substr_start; idx < substr_end; idx++) {
+        if (is_escape[idx]) {
             continue;
         }
-        auto const& c = schema_search_string[i];
-        if (is_greedy_wildcard[i]) {
+        auto const& c = schema_search_string[idx];
+        if (is_greedy_wildcard[idx]) {
             contains_wildcard = true;
             regex_search_string += ".*";
-        } else if (is_non_greedy_wildcard[i]) {
+        } else if (is_non_greedy_wildcard[idx]) {
             contains_wildcard = true;
             regex_search_string += ".";
         } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {
