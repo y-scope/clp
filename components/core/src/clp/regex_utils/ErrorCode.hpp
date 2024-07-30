@@ -21,6 +21,8 @@ enum class ErrorCode : uint8_t {
     IllegalDollarSign,
     IllegalEscapeSequence,
     UnmatchedParenthesis,
+    IncompleteCharsetStructure,
+    UnsupportedCharsetPattern,
 };
 
 /**

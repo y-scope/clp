@@ -41,7 +41,7 @@ set(
         ../GlobalSQLiteMetadataDB.cpp
         ../GlobalSQLiteMetadataDB.hpp
         ../ir/constants.hpp
-        ../ir/ClpString.hpp
+        ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
         ../ir/LogEventDeserializer.cpp
         ../ir/LogEventDeserializer.hpp

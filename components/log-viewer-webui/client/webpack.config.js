@@ -22,6 +22,14 @@ const plugins = [
 ];
 
 const config = {
+    devServer: {
+        proxy: [
+            {
+                context: ["/"],
+                target: "http://localhost:3000",
+            },
+        ],
+    },
     devtool: isProduction ?
         "source-map" :
         "eval-source-map",

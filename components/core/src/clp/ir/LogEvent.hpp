@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "ClpString.hpp"
+#include "EncodedTextAst.hpp"
 #include "time_types.hpp"
 #include "types.hpp"
 
@@ -21,34 +21,26 @@ public:
     LogEvent(
             epoch_time_ms_t timestamp,
             UtcOffset utc_offset,
-            std::string logtype,
-            std::vector<std::string> dict_vars,
-            std::vector<encoded_variable_t> encoded_vars
+            EncodedTextAst<encoded_variable_t> message
     )
             : m_timestamp{timestamp},
               m_utc_offset{utc_offset},
-              m_message{std::move(logtype), std::move(dict_vars), std::move(encoded_vars)} {}
+              m_message{std::move(message)} {}
 
     // Methods
     [[nodiscard]] auto get_timestamp() const -> epoch_time_ms_t { return m_timestamp; }
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
 
-    [[nodiscard]] auto get_logtype() const -> std::string const& { return m_message.get_logtype(); }
-
-    [[nodiscard]] auto get_dict_vars() const -> std::vector<std::string> const& {
-        return m_message.get_dict_vars();
-    }
-
-    [[nodiscard]] auto get_encoded_vars() const -> std::vector<encoded_variable_t> const& {
-        return m_message.get_encoded_vars();
+    [[nodiscard]] auto get_message() const -> EncodedTextAst<encoded_variable_t> const& {
+        return m_message;
     }
 
 private:
     // Variables
     epoch_time_ms_t m_timestamp{0};
     UtcOffset m_utc_offset{0};
-    ClpString<encoded_variable_t> m_message;
+    EncodedTextAst<encoded_variable_t> m_message;
 };
 }  // namespace clp::ir
 
