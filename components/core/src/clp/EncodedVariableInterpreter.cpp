@@ -234,7 +234,8 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         size_t& raw_num_bytes
 ) {
     logtype_dict_entry.clear();
-    logtype_dict_entry.reserve_constant_length(log_event.get_logtype().length());
+    auto const& log_message = log_event.get_message();
+    logtype_dict_entry.reserve_constant_length(log_message.get_logtype().length());
 
     raw_num_bytes = 0;
 
@@ -284,9 +285,9 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
     };
 
     ffi::ir_stream::generic_decode_message<false>(
-            log_event.get_logtype(),
-            log_event.get_encoded_vars(),
-            log_event.get_dict_vars(),
+            log_message.get_logtype(),
+            log_message.get_encoded_vars(),
+            log_message.get_dict_vars(),
             constant_handler,
             encoded_int_handler,
             encoded_float_handler,

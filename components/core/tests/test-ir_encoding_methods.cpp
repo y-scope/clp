@@ -912,7 +912,7 @@ TEMPLATE_TEST_CASE(
         REQUIRE(log_event.get_utc_offset() == ref_log_event.get_utc_offset());
         // We only compare the logtype since decoding messages from logtype + variables is not yet
         // supported by our public interfaces
-        REQUIRE(log_event.get_logtype() == encoded_logtypes.at(log_event_idx));
+        REQUIRE(log_event.get_message().get_logtype() == encoded_logtypes.at(log_event_idx));
         ++log_event_idx;
     }
     auto result = log_event_deserializer.deserialize_log_event();
