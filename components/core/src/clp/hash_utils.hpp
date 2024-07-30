@@ -52,7 +52,7 @@ private:
  * @return ErrorCode_Success on success.
  * @return ErrorCode_BadParam if `key` is longer than `INT32_MAX`.
  * @return ErrorCode_Failure if hash generation fails.
-  * @return ErrorCode_Corrupt if `hash` has an unexpected length.
+ * @return ErrorCode_Corrupt if `hash` has an unexpected length.
  */
 [[nodiscard]] auto get_hmac_sha256_hash(
         std::span<unsigned char const> input,
@@ -65,7 +65,8 @@ private:
  * @param input
  * @param hash Returns the hash.
  * @return ErrorCode_Success on success.
- * @return Same as `digest_final` and `digest_update` on failure.
+ * @return ErrorCode_Failure if digest_update` fails.
+ * @return Same as `digest_final` if `digest_final` fails.
  * @throw HashUtilsOperationFailed if an OpenSSL EVP digest couldn't be created.
  */
 [[nodiscard]] auto get_sha256_hash(

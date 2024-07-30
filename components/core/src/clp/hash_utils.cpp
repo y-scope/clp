@@ -106,10 +106,9 @@ public:
     /**
      * Hashes `input` into the digest.
      * @param input
-     * @return ErrorCode_Success on success.
-     * @return ErrorCode_Failure if `EVP_DigestUpdate` fails.
+     * @return Whether `EVP_DigestUpdate` succeeded.
      */
-    [[nodiscard]] auto digest_update(span<unsigned char const> input) -> ErrorCode;
+    [[nodiscard]] auto digest_update(span<unsigned char const> input) -> bool;
 
     /**
      * Writes the digest into `hash` and clears the digest.
@@ -126,11 +125,11 @@ private:
     int m_digest_nid{};
 };
 
-auto EvpDigestContext::digest_update(span<unsigned char const> input) -> ErrorCode {
+auto EvpDigestContext::digest_update(span<unsigned char const> input) -> bool {
     if (1 != EVP_DigestUpdate(m_md_ctx, input.data(), input.size())) {
-        return ErrorCode_Failure;
+        return false;
     }
-    return ErrorCode_Success;
+    return true;
 }
 
 auto EvpDigestContext::digest_final(vector<unsigned char>& hash) -> ErrorCode {
@@ -202,10 +201,9 @@ auto get_sha256_hash(span<unsigned char const> input, vector<unsigned char>& has
         throw HashUtilsOperationFailed(err.get_error_code(), __FILENAME__, __LINE__, err.what());
     }
 
-    if (auto const error_code = evp_ctx_manager->digest_update(input);
-        ErrorCode_Success != error_code)
+    if (false == evp_ctx_manager->digest_update(input))
     {
-        return error_code;
+        return ErrorCode_Failure;
     }
 
     if (auto const error_code = evp_ctx_manager->digest_final(hash);
