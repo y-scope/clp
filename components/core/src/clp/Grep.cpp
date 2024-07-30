@@ -1295,7 +1295,11 @@ void Grep::generate_sub_queries(
         bool ignore_case,
         vector<SubQuery>& sub_queries
 ) {
-    for (QueryLogtype const& query_logtype : query_logtypes) {
+    while (false == query_logtypes.empty()) {
+        // Note: you need to keep the node handle to avoid deleting the object.
+        auto query_logtype_nh = query_logtypes.extract(query_logtypes.begin());
+        auto const& query_logtype = query_logtype_nh.value();
+
         // Convert each query logtype into a set of logtype strings. Logtype strings are used in the
         // sub query as they have the correct format for comparing against the archive. Also, a
         // single query logtype might represent multiple logtype strings. While static text converts
@@ -1320,9 +1324,8 @@ void Grep::generate_sub_queries(
                 if (false == is_dict_var && var_has_wildcard
                     && ("int" == schema_type || "float" == schema_type))
                 {
-                    QueryLogtype new_query_logtype = query_logtype;
+                    auto new_query_logtype = query_logtype;
                     new_query_logtype.set_var_is_potentially_in_dict(i, true);
-                    // TODO: sketchy, but works cause < operator inserts it after current iterator
                     query_logtypes.insert(new_query_logtype);
                 }
                 if (is_dict_var) {
