@@ -65,8 +65,8 @@ private:
  * @param input
  * @param hash Returns the hash.
  * @return ErrorCode_Success on success.
- * @return ErrorCode_Failure if digest_update` fails.
- * @return Same as `digest_final` if `digest_final` fails.
+ * @return ErrorCode_Failure if `EvpDigestContext::digest_update` fails.
+ * @return Same as `EvpDigestContext::digest_final` if `EvpDigestContext::digest_final` fails.
  * @throw HashUtilsOperationFailed if an OpenSSL EVP digest couldn't be created.
  */
 [[nodiscard]] auto get_sha256_hash(
