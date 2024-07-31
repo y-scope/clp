@@ -20,8 +20,6 @@ JsonFileIterator::JsonFileIterator(
         SPDLOG_ERROR("Failed to open {} for reading - {}", file_name, e.what());
         return;
     }
-
-    read_new_json();
 }
 
 JsonFileIterator::~JsonFileIterator() {
