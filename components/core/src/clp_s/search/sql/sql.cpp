@@ -4,11 +4,10 @@
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
 
+#include "../EmptyExpr.hpp"
 #include "SqlBaseVisitor.h"
 #include "SqlLexer.h"
 #include "SqlParser.h"
-
-#include "../EmptyExpr.hpp"
 
 using namespace antlr4;
 using namespace sql;
@@ -39,9 +38,7 @@ private:
 
 class ParseTreeVisitor : public SqlBaseVisitor {
 public:
-    std::any visitStart(SqlParser::StartContext* ctx) override {
-        return EmptyExpr::create();
-    }
+    std::any visitStart(SqlParser::StartContext* ctx) override { return EmptyExpr::create(); }
 };
 
 std::shared_ptr<Expression> parse_sql_expression(std::istream& in) {
