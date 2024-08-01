@@ -63,19 +63,35 @@ TEMPLATE_TEST_CASE(
     vector<TestLogEvent> test_log_events;
 
     auto const ts_1 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    string log_event_1 = "Here is the first string with a small int " + var_strs[var_ix++];
-    log_event_1 += " and a medium int " + var_strs[var_ix++];
-    log_event_1 += " and a very large int " + var_strs[var_ix++];
-    log_event_1 += " and a small float " + var_strs[var_ix++];
-    log_event_1 += "\n";
+    vector<string> const log_event_1_tokens
+            = {"Here is the first string with a small int ",
+               "4938",
+               " and a medium int ",
+               std::to_string(INT32_MAX),
+               " and a very large int ",
+               std::to_string(INT64_MAX),
+               " and a small float ",
+               "0.1",
+               "\n"};
+    auto const log_event_1
+            = std::accumulate(log_event_1_tokens.begin(), log_event_1_tokens.end(), string(""));
     test_log_events.push_back({ts_1, log_event_1});
 
     auto const ts_2 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    auto log_event_2 = "Here is the second string with a medium float " + var_strs[var_ix++];
-    log_event_2 += " and a weird float " + var_strs[var_ix++];
-    log_event_2 += " and a string with numbers " + var_strs[var_ix++];
-    log_event_2 += " and another string with numbers " + var_strs[var_ix++];
-    log_event_2 += "\n";
+    vector<string> const log_event_2_tokens
+            = {"Here is the second string with a medium float ",
+               "-25.519686",
+               " and a large float ",
+               "-25.5196868642755",
+               " and a weird float ",
+               "-00.00",
+               " and a string with numbers ",
+               "bin/python2.7.3",
+               " and another string with numbers ",
+               "abc123",
+               "\n"};
+    auto const log_event_2
+            = std::accumulate(log_event_2_tokens.begin(), log_event_2_tokens.end(), string(""));
     test_log_events.push_back({ts_2, log_event_2});
 
     string ir_test_file = "ir_serializer_test";

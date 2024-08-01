@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include "../ffi/ir_stream/encoding_methods.hpp"
+#include "../ffi/encoding_methods.hpp"
 #include "ffi/ir_stream/decoding_methods.hpp"
 
 using clp::ffi::decode_float_var;
@@ -17,20 +17,20 @@ using std::string;
 namespace clp::ir {
 template <typename encoded_variable_t>
 auto EncodedTextAst<encoded_variable_t>::decode_and_unparse() const -> optional<string> {
-    string decoded_message;
+    string decoded_string;
 
     auto constant_handler = [&](string const& value, size_t begin_pos, size_t length) {
-        decoded_message.append(value, begin_pos, length);
+        decoded_string.append(value, begin_pos, length);
     };
 
     auto encoded_int_handler
-            = [&](encoded_variable_t value) { decoded_message.append(decode_integer_var(value)); };
+            = [&](encoded_variable_t value) { decoded_string.append(decode_integer_var(value)); };
 
     auto encoded_float_handler = [&](encoded_variable_t encoded_float) {
-        decoded_message.append(decode_float_var(encoded_float));
+        decoded_string.append(decode_float_var(encoded_float));
     };
 
-    auto dict_var_handler = [&](string const& dict_var) { decoded_message.append(dict_var); };
+    auto dict_var_handler = [&](string const& dict_var) { decoded_string.append(dict_var); };
 
     try {
         generic_decode_message<true>(
@@ -45,7 +45,7 @@ auto EncodedTextAst<encoded_variable_t>::decode_and_unparse() const -> optional<
     } catch (DecodingException const& e) {
         return std::nullopt;
     }
-    return std::make_optional<string>(decoded_message);
+    return std::make_optional<string>(decoded_string);
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
