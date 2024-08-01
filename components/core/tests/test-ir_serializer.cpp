@@ -1,7 +1,7 @@
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -45,21 +45,6 @@ TEMPLATE_TEST_CASE(
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
-    LogEventSerializer<TestType> serializer;
-
-    // Test encoding with serializer
-    vector<string> var_strs
-            = {"4938",
-               std::to_string(INT32_MAX),
-               std::to_string(INT64_MAX),
-               "0.1",
-               "-25.519686",
-               "-25.5196868642755",
-               "-00.00",
-               "bin/python2.7.3",
-               "abc123"};
-    size_t var_ix{0};
-
     vector<TestLogEvent> test_log_events;
 
     auto const ts_1 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
@@ -97,6 +82,7 @@ TEMPLATE_TEST_CASE(
     string ir_test_file = "ir_serializer_test";
     ir_test_file += cIrFileExtension;
 
+    LogEventSerializer<TestType> serializer;
     REQUIRE(serializer.open(ir_test_file));
     // Test serializing log events
     for (auto const& test_log_event : test_log_events) {
