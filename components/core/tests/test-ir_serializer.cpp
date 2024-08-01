@@ -14,39 +14,21 @@
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/streaming_compression/zstd/Decompressor.hpp"
 
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
-using std::string;
-using std::vector;
-
-using clp::ffi::ir_stream::deserialize_log_event;
-
-using std::chrono::milliseconds;
-using std::chrono::system_clock;
-using std::is_same_v;
-
 using clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success;
 using clp::ir::cIrFileExtension;
+using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
+using clp::ir::four_byte_encoded_variable_t;
 using clp::ir::LogEventDeserializer;
 using clp::ir::LogEventSerializer;
 using clp::streaming_compression::zstd::Decompressor;
+using std::chrono::milliseconds;
+using std::chrono::system_clock;
+using std::is_same_v;
+using std::string;
+using std::vector;
 
 namespace {
-template <typename encoded_variable_t>
-auto match_encoding_type(bool is_four_bytes_encoding) -> bool {
-    static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
-    );
-
-    if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-        return false == is_four_bytes_encoding;
-    } else {
-        return is_four_bytes_encoding;
-    }
-}
-
 struct TestLogEvent {
     epoch_time_ms_t timestamp;
     string msg;
@@ -58,7 +40,7 @@ struct TestLogEvent {
  * does not support eight bytes encoding yet.
  */
 TEMPLATE_TEST_CASE(
-        "Serialize log events",
+        "Encode and serialize log events",
         "[ir][serialize-log-event]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
@@ -80,23 +62,21 @@ TEMPLATE_TEST_CASE(
 
     vector<TestLogEvent> test_log_events;
 
-    auto const first_ts
-            = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    string first_log_event = "Here is the first string with a small int " + var_strs[var_ix++];
-    first_log_event += " and a medium int " + var_strs[var_ix++];
-    first_log_event += " and a very large int " + var_strs[var_ix++];
-    first_log_event += " and a small float " + var_strs[var_ix++];
-    first_log_event += "\n";
-    test_log_events.push_back({first_ts, first_log_event});
+    auto const ts_1 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    string log_event_1 = "Here is the first string with a small int " + var_strs[var_ix++];
+    log_event_1 += " and a medium int " + var_strs[var_ix++];
+    log_event_1 += " and a very large int " + var_strs[var_ix++];
+    log_event_1 += " and a small float " + var_strs[var_ix++];
+    log_event_1 += "\n";
+    test_log_events.push_back({ts_1, log_event_1});
 
-    auto const second_ts
-            = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    auto second_log_event = "Here is the second string with a medium float " + var_strs[var_ix++];
-    second_log_event += " and a weird float " + var_strs[var_ix++];
-    second_log_event += " and a string with numbers " + var_strs[var_ix++];
-    second_log_event += " and another string with numbers " + var_strs[var_ix++];
-    second_log_event += "\n";
-    test_log_events.push_back({second_ts, second_log_event});
+    auto const ts_2 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+    auto log_event_2 = "Here is the second string with a medium float " + var_strs[var_ix++];
+    log_event_2 += " and a weird float " + var_strs[var_ix++];
+    log_event_2 += " and a string with numbers " + var_strs[var_ix++];
+    log_event_2 += " and another string with numbers " + var_strs[var_ix++];
+    log_event_2 += "\n";
+    test_log_events.push_back({ts_2, log_event_2});
 
     string ir_test_file = "ir_serializer_test";
     ir_test_file += cIrFileExtension;
@@ -112,28 +92,30 @@ TEMPLATE_TEST_CASE(
     ir_reader.open(ir_test_file);
 
     bool uses_four_byte_encoding{false};
-    REQUIRE(IRErrorCode_Success
-            == clp::ffi::ir_stream::get_encoding_type(ir_reader, uses_four_byte_encoding));
+    REQUIRE(
+            (IRErrorCode_Success
+             == clp::ffi::ir_stream::get_encoding_type(ir_reader, uses_four_byte_encoding))
+    );
     REQUIRE((is_same_v<TestType, four_byte_encoded_variable_t> == uses_four_byte_encoding));
 
     auto result = LogEventDeserializer<TestType>::create(ir_reader);
-    REQUIRE(false == result.has_error());
-    auto& deserializer_inst = result.value();
+    REQUIRE((false == result.has_error()));
+    auto& deserializer = result.value();
 
     // Decode and deserialize all expected log events
     for (auto const& test_log_event : test_log_events) {
-        auto deserialized_result = deserializer_inst.deserialize_log_event();
-        REQUIRE(false == deserialized_result.has_error());
+        auto deserialized_result = deserializer.deserialize_log_event();
+        REQUIRE((false == deserialized_result.has_error()));
 
         auto& log_event = deserialized_result.value();
         auto const decoded_message = log_event.get_message().decode_and_unparse();
         REQUIRE(decoded_message.has_value());
 
-        REQUIRE(decoded_message.value() == test_log_event.msg);
-        REQUIRE(log_event.get_timestamp() == test_log_event.timestamp);
+        REQUIRE((decoded_message.value() == test_log_event.msg));
+        REQUIRE((log_event.get_timestamp() == test_log_event.timestamp));
     }
     // Try decoding a nonexistent log event
-    auto deserialized_result = deserializer_inst.deserialize_log_event();
+    auto deserialized_result = deserializer.deserialize_log_event();
     REQUIRE(deserialized_result.has_error());
 
     std::filesystem::remove(ir_test_file);

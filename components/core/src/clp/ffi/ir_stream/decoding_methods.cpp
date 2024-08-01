@@ -9,7 +9,6 @@
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
 using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::LogEvent;
 using std::is_same_v;
 using std::string;
 using std::vector;

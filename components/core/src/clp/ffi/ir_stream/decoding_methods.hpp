@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "../../ir/LogEvent.hpp"
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
