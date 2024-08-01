@@ -291,6 +291,8 @@ set(SOURCE_FILES_unitTest
         src/clp/CurlDownloadHandler.cpp
         src/clp/CurlDownloadHandler.hpp
         src/clp/CurlEasyHandle.hpp
+        src/clp/CurlGlobalInstance.cpp
+        src/clp/CurlGlobalInstance.hpp
         src/clp/CurlOperationFailed.hpp
         src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
@@ -355,6 +357,7 @@ set(SOURCE_FILES_unitTest
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
+        src/clp/ir/EncodedTextAst.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp

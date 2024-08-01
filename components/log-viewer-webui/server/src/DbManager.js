@@ -131,17 +131,17 @@ class DbManager {
 
     /**
      * Gets the metadata for an IR file extracted from part of an original file, where the original
-     * file has the given ID and the extracted part contains the given message index.
+     * file has the given ID and the extracted part contains the given log event index.
      *
      * @param {string} origFileId
-     * @param {number} msgIdx
+     * @param {number} logEventIdx
      * @return {Promise<object>} A promise that resolves to the extracted IR file's metadata.
      */
-    async getExtractedIrFileMetadata (origFileId, msgIdx) {
+    async getExtractedIrFileMetadata (origFileId, logEventIdx) {
         return await this.#irFilesCollection.findOne({
             orig_file_id: origFileId,
-            begin_msg_ix: {$lte: msgIdx},
-            end_msg_ix: {$gt: msgIdx},
+            begin_msg_ix: {$lte: logEventIdx},
+            end_msg_ix: {$gt: logEventIdx},
         });
     }
 

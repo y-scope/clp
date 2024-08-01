@@ -7,7 +7,7 @@
 #include "../src/clp/hash_utils.hpp"
 #include "../src/clp/type_utils.hpp"
 
-using clp::convert_hash_to_hex_string;
+using clp::convert_to_hex_string;
 using clp::ErrorCode_Success;
 using clp::get_hmac_sha256_hash;
 using clp::get_sha256_hash;
@@ -20,7 +20,7 @@ TEST_CASE("test_sha256", "[hash_utils]") {
     constexpr string_view cReferenceSha256{
             "c3a1d9f04ada1198c4c63bf51d9933fc2cc216429275cadabdcb2178775add0c"
     };
-    vector<unsigned char> hash{};
+    vector<unsigned char> hash;
 
     REQUIRE(ErrorCode_Success
             == get_sha256_hash(
@@ -28,7 +28,7 @@ TEST_CASE("test_sha256", "[hash_utils]") {
                      cInputString.size()},
                     hash
             ));
-    REQUIRE(convert_hash_to_hex_string(hash) == cReferenceSha256);
+    REQUIRE(convert_to_hex_string(hash) == cReferenceSha256);
 }
 
 TEST_CASE("test_hmac", "[hash_utils]") {
@@ -37,7 +37,7 @@ TEST_CASE("test_hmac", "[hash_utils]") {
     constexpr string_view cReferenceHmacSha256{
             "38373057694c1038a6895212bea46849eb7a59b73a2ec175883ae095fb91ffda"
     };
-    vector<unsigned char> hmac_hash{};
+    vector<unsigned char> hmac_hash;
 
     REQUIRE(ErrorCode_Success
             == get_hmac_sha256_hash(
@@ -47,5 +47,5 @@ TEST_CASE("test_hmac", "[hash_utils]") {
                      cInputKey.size()},
                     hmac_hash
             ));
-    REQUIRE(convert_hash_to_hex_string(hmac_hash) == cReferenceHmacSha256);
+    REQUIRE(convert_to_hex_string(hmac_hash) == cReferenceHmacSha256);
 }
