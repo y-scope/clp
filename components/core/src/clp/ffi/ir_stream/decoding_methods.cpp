@@ -411,38 +411,6 @@ auto deserialize_log_event(
     return IRErrorCode_Success;
 }
 
-template <typename encoded_variable_t>
-auto deserialize_log_event(LogEvent<encoded_variable_t> const& log_event, string& decoded_message)
-        -> IRErrorCode {
-    auto constant_handler = [&](string const& value, size_t begin_pos, size_t length) {
-        decoded_message.append(value, begin_pos, length);
-    };
-
-    auto encoded_int_handler
-            = [&](encoded_variable_t value) { decoded_message.append(decode_integer_var(value)); };
-
-    auto encoded_float_handler = [&](encoded_variable_t encoded_float) {
-        decoded_message.append(decode_float_var(encoded_float));
-    };
-
-    auto dict_var_handler = [&](string const& dict_var) { decoded_message.append(dict_var); };
-
-    try {
-        generic_decode_message<true>(
-                log_event.get_logtype(),
-                log_event.get_encoded_vars(),
-                log_event.get_dict_vars(),
-                constant_handler,
-                encoded_int_handler,
-                encoded_float_handler,
-                dict_var_handler
-        );
-    } catch (DecodingException const& e) {
-        return IRErrorCode_Decode_Error;
-    }
-    return IRErrorCode_Success;
-}
-
 IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding) {
     char buffer[cProtocol::MagicNumberLength];
     auto error_code = reader.try_read_exact_length(buffer, cProtocol::MagicNumberLength);
@@ -600,15 +568,5 @@ template auto deserialize_log_event<eight_byte_encoded_variable_t>(
         vector<eight_byte_encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
         epoch_time_ms_t& timestamp_or_timestamp_delta
-) -> IRErrorCode;
-
-template auto deserialize_log_event<eight_byte_encoded_variable_t>(
-        LogEvent<eight_byte_encoded_variable_t> const& log_event,
-        string& decoded_message
-) -> IRErrorCode;
-
-template auto deserialize_log_event<four_byte_encoded_variable_t>(
-        LogEvent<four_byte_encoded_variable_t> const& log_event,
-        string& decoded_message
 ) -> IRErrorCode;
 }  // namespace clp::ffi::ir_stream

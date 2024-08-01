@@ -10,6 +10,7 @@
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ir/constants.hpp"
+#include "../src/clp/ir/EncodedTextAst.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/LogEventSerializer.hpp"
 #include "../src/clp/ir/types.hpp"
@@ -122,18 +123,17 @@ TEMPLATE_TEST_CASE(
     auto& deserializer_inst = result.value();
 
     for (auto const& test_log_event : test_log_events) {
-        string decoded_message{};
         // Deserialize the first log event from the IR
         auto deserialized_result = deserializer_inst.deserialize_log_event();
         REQUIRE(false == deserialized_result.has_error());
 
         // Deserialize the log event
-        auto log_event = deserialized_result.value();
-        REQUIRE(clp::ffi::ir_stream::IRErrorCode::IRErrorCode_Success
-                == deserialize_log_event(log_event, decoded_message));
+        auto& log_event = deserialized_result.value();
+        auto const decoded_message = log_event.get_message().decode_and_unparse();
+        REQUIRE(decoded_message.has_value());
 
         // Compare decoded message and timestamp
-        REQUIRE(decoded_message == test_log_event.msg);
+        REQUIRE(decoded_message.value() == test_log_event.msg);
         REQUIRE(log_event.get_timestamp() == test_log_event.timestamp);
     }
     // Try decoding non-existing message

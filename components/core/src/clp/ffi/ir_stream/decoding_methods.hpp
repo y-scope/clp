@@ -91,20 +91,6 @@ auto deserialize_log_event(
 ) -> IRErrorCode;
 
 /**
- * Deserializes a log event from the given LogEvent object
- * @tparam encoded_variable_t
- * @param log_event
- * @param decoded_message
- * @return IRErrorCode_Success on success
- * @return IRErrorCode_Decode_Error if the log_event is invalid
- */
-template <typename encoded_variable_t>
-auto deserialize_log_event(
-        ir::LogEvent<encoded_variable_t> const& log_event,
-        std::string& decoded_message
-) -> IRErrorCode;
-
-/**
  * Decodes the IR message calls the given methods to handle each component of the message
  * @tparam unescape_logtype Whether to remove the escape characters from the logtype before calling
  * \p ConstantHandler

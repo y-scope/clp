@@ -357,6 +357,7 @@ set(SOURCE_FILES_unitTest
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
+        src/clp/ir/EncodedTextAst.cpp
         src/clp/ir/EncodedTextAst.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
