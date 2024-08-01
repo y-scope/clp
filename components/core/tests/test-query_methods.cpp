@@ -165,7 +165,7 @@ TEMPLATE_TEST_CASE(
         message += " and a very large int " + var_strs[var_ix++];
         message += " and a small double " + var_strs[var_ix++];
         message += " and a medium double " + var_strs[var_ix++];
-        message += " and a large double " + var_strs[var_ix++];
+        message += " and a high precison double " + var_strs[var_ix++];
         message += " and a weird double " + var_strs[var_ix++];
         message += " and a string with numbers " + var_strs[var_ix++];
         message += " and another string with numbers " + var_strs[var_ix++];

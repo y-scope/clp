@@ -81,7 +81,7 @@ TEMPLATE_TEST_CASE(
     vector<string> const log_event_2_tokens
             = {"Here is the second string with a medium float ",
                "-25.519686",
-               " and a large float ",
+               " and a high precision float ",
                "-25.5196868642755",
                " and a weird float ",
                "-00.00",
