@@ -1032,18 +1032,14 @@ void Grep::generate_query_substring_logtypes(
     // full query itself.
     for (size_t end_idx = 1; end_idx <= processed_search_string.size(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
-        // "* text\* *"). Also skip strings that end with a greedy wildcard because we are going
-        // to duplicate its wildcard in the next iteration (e.g., for string "abc text* def", we
-        // ignore combinations of "abc " + "text*" + " def" in favor of "abc " + "text*" + "* def"
-        // as the latter will contain all logtypes capture by the former.
-        if (is_escape[end_idx - 1]) { // || is_greedy_wildcard[end_idx - 1]) {
+        // "* text\* *").
+        if (is_escape[end_idx - 1]) {
             continue;
         }
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
-            // "*text" from string "* \*text *"). Also, similar to above, we ignore substrings that
-            // begin with a greedy wilcard.
-            if ((begin_idx > 0 && is_escape[begin_idx - 1])) { // || (is_greedy_wildcard[begin_idx])) {
+            // "*text" from string "* \*text *").
+            if ((begin_idx > 0 && is_escape[begin_idx - 1])) {
                 continue;
             }
             std::vector<QueryLogtype> possible_substr_types;
@@ -1058,12 +1054,21 @@ void Grep::generate_query_substring_logtypes(
                 // If the substring is preceded or proceeded by a greedy wildcard then it's possible
                 // the substring could be extended to match a var, so the wildcards are added to the
                 // substring. If we don't consider this case we could miss combinations. Take for
-                // example "* ab*cd *", "ab*" and "*cd" may both match a has# style variable
-                // ("\w*\d+\w*"). If we decompose the string into either substrings "* " + "ab*" +
-                // "cd" + " *" or "* " + "ab" + "*cd" + " *", neither would capture the possibility
-                // of a logtype with the form "* <has#><has#> *", which is a valid possibility
-                // during compression. Note, non-greedy wildcards do not need to be considered, for
-                // example "* ab?cd *" can never match "* <has#><has#> *".
+                // example "a*b", "a*" and "*b" can both match a has# style variable ("\w*\d+\w*").
+                // If we decompose the string into either substrings "a*" + "b" or "a" + "*b",
+                // neither would capture the possibility of a logtype with the form "<has#>*<has#>",
+                // which is a valid possibility during compression. Instead we desire to decompose
+                // the string into "a*" + "*" + "*b". Note, non-greedy wildcards do not need to be
+                // considered, for example "a?b" can never match "<has#>?<has#>" or "<has#><has#>".
+
+                // As we extend substrings adjacent to wildcards, the substrings that begin or end
+                // with wildcards are redundant (e.g., for string "a*b", a decomposition of the form
+                // "a*" + "b" is a subset of the more general "a*" + "*" + "*b". Note, as this needs
+                // "*", the "*" substring is not redundant. This is already handled above).
+                if (is_greedy_wildcard[begin_idx] || is_greedy_wildcard[end_idx - 1]) {
+                    continue;
+                }
+
                 uint32_t substr_start = begin_idx;
                 uint32_t substr_end = end_idx;
                 bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
@@ -1075,16 +1080,9 @@ void Grep::generate_query_substring_logtypes(
                 if (next_char_is_star) {
                     substr_end++;
                 }
-
-                // If the substring contains a wildcard, we need to consider the case that it can
-                // simultaneously match multiple variables and static text, and we need a different
-                // approach to compare against the archive.
-                bool contains_wildcard = false;
-
                 // If the substring isn't surrounded by delimiters there is no reason to consider
-                // the case where it is a variable as CLP would not compress it as such.
-
-                // Preceding delimiter counts the start of log, a wildcard, or an actual delimiter.
+                // the case where it is a variable as CLP would not compress it as such. Preceding
+                // delimiter counts the start of log, a wildcard, or an actual delimiter.
                 bool has_preceding_delimiter
                         = 0 == begin_idx || is_greedy_wildcard[begin_idx - 1]
                           || is_non_greedy_wildcard[begin_idx - 1]
@@ -1101,6 +1099,12 @@ void Grep::generate_query_substring_logtypes(
                               && lexer.is_delimiter(processed_search_string[end_idx]))
                           || (is_escape[end_idx]
                               && lexer.is_delimiter(processed_search_string[end_idx + 1]));
+
+                // If the substring contains a wildcard, we need to consider the case that it can
+                // simultaneously match multiple variables and static text, and we need a different
+                // approach to compare against the archive.
+                bool contains_wildcard = false;
+
                 if (has_preceding_delimiter && has_proceeding_delimiter) {
                     get_substring_variable_types(
                             substr_start,
@@ -1296,11 +1300,11 @@ void Grep::generate_sub_queries(
         vector<SubQuery>& sub_queries
 ) {
     for (QueryLogtype const& query_logtype : query_logtypes) {
-    //while (false == query_logtypes.empty()) {
-        // Note: you need to keep the node handle to avoid deleting the object.
-        //auto query_logtype_nh = query_logtypes.extract(query_logtypes.begin());
+        // while (false == query_logtypes.empty()) {
+        //  Note: you need to keep the node handle to avoid deleting the object.
+        // auto query_logtype_nh = query_logtypes.extract(query_logtypes.begin());
         //
-        //auto const& query_logtype = query_logtype_nh.value();
+        // auto const& query_logtype = query_logtype_nh.value();
 
         // Convert each query logtype into a set of logtype strings. Logtype strings are used in the
         // sub query as they have the correct format for comparing against the archive. Also, a
