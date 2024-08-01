@@ -498,7 +498,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x86_64{{ end }}"
       METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
-      METEOR_RELEASE: "2.15"
+      METEOR_RELEASE: "2.16"
     run: "once"
     preconditions:
       - sh: >-
