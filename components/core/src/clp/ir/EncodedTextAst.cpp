@@ -1,5 +1,6 @@
 #include "EncodedTextAst.hpp"
 
+#include <cstddef>
 #include <optional>
 #include <string>
 

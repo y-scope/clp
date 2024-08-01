@@ -7,10 +7,8 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ir/constants.hpp"
-#include "../src/clp/ir/EncodedTextAst.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/LogEventSerializer.hpp"
 #include "../src/clp/ir/types.hpp"
@@ -84,7 +82,7 @@ TEMPLATE_TEST_CASE(
 
     auto const first_ts
             = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    string first_log_event = "here is first string with a small int " + var_strs[var_ix++];
+    string first_log_event = "Here is the first string with a small int " + var_strs[var_ix++];
     first_log_event += " and a medium int " + var_strs[var_ix++];
     first_log_event += " and a very large int " + var_strs[var_ix++];
     first_log_event += " and a small float " + var_strs[var_ix++];
@@ -93,7 +91,7 @@ TEMPLATE_TEST_CASE(
 
     auto const second_ts
             = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-    auto second_log_event = "here is second string with a medium float " + var_strs[var_ix++];
+    auto second_log_event = "Here is the second string with a medium float " + var_strs[var_ix++];
     second_log_event += " and a weird float " + var_strs[var_ix++];
     second_log_event += " and a string with numbers " + var_strs[var_ix++];
     second_log_event += " and another string with numbers " + var_strs[var_ix++];
@@ -116,27 +114,25 @@ TEMPLATE_TEST_CASE(
     bool uses_four_byte_encoding{false};
     REQUIRE(IRErrorCode_Success
             == clp::ffi::ir_stream::get_encoding_type(ir_reader, uses_four_byte_encoding));
-    REQUIRE(match_encoding_type<TestType>(uses_four_byte_encoding));
+    REQUIRE((is_same_v<TestType, four_byte_encoded_variable_t> == uses_four_byte_encoding));
 
     auto result = LogEventDeserializer<TestType>::create(ir_reader);
     REQUIRE(false == result.has_error());
     auto& deserializer_inst = result.value();
 
+    // Decode and deserialize all expected log events
     for (auto const& test_log_event : test_log_events) {
-        // Deserialize the first log event from the IR
         auto deserialized_result = deserializer_inst.deserialize_log_event();
         REQUIRE(false == deserialized_result.has_error());
 
-        // Deserialize the log event
         auto& log_event = deserialized_result.value();
         auto const decoded_message = log_event.get_message().decode_and_unparse();
         REQUIRE(decoded_message.has_value());
 
-        // Compare decoded message and timestamp
         REQUIRE(decoded_message.value() == test_log_event.msg);
         REQUIRE(log_event.get_timestamp() == test_log_event.timestamp);
     }
-    // Try decoding non-existing message
+    // Try decoding a nonexistent log event
     auto deserialized_result = deserializer_inst.deserialize_log_event();
     REQUIRE(deserialized_result.has_error());
 

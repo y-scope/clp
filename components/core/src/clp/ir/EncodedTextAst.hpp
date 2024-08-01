@@ -49,8 +49,8 @@ public:
     }
 
     /**
-     * Decodes the EncodedTextAst and returns the decoded message as a string.
-     * @return The decoded message on success.
+     * Decodes and un-parses the EncodedTextAst into its string form.
+     * @return The string corresponding to the EncodedTextAst on success.
      * @return std::nullopt if decoding fails.
      */
     [[nodiscard]] auto decode_and_unparse() const -> std::optional<std::string>;
