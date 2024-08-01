@@ -35,10 +35,6 @@ struct TestLogEvent {
 };
 }  // namespace
 
-/*
- * The test case only covers four byte encoding because decompressor
- * does not support eight bytes encoding yet.
- */
 TEMPLATE_TEST_CASE(
         "Encode and serialize log events",
         "[ir][serialize-log-event]",
