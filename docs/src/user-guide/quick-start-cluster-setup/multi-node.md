@@ -22,15 +22,15 @@ worker components. The tables below list the components and their functions.
 :::{table} Controller components
 :align: left
 
-| Component             | Description                                                      |
-|-----------------------|------------------------------------------------------------------|
-| database              | Database for archive metadata, compression jobs, and search jobs |
-| queue                 | Task queue for schedulers                                        |
-| redis                 | Task result storage for workers                                  |
-| compression_scheduler | Scheduler for compression jobs                                   |
-| search_scheduler      | Scheduler for search jobs                                        |
-| results_cache         | Storage for the workers to return search results to the UI       |
-| webui                 | Web server for the UI                                            |
+| Component             | Description                                                     |
+|-----------------------|-----------------------------------------------------------------|
+| database              | Database for archive metadata, compression jobs, and query jobs |
+| queue                 | Task queue for schedulers                                       |
+| redis                 | Task result storage for workers                                 |
+| compression_scheduler | Scheduler for compression jobs                                  |
+| query_scheduler       | Scheduler for search/aggregation jobs                           |
+| results_cache         | Storage for the workers to return search results to the UI      |
+| webui                 | Web server for the UI                                           |
 :::
 
 :::{table} Worker components
@@ -39,12 +39,12 @@ worker components. The tables below list the components and their functions.
 | Component          | Description                                                  |
 |--------------------|--------------------------------------------------------------|
 | compression_worker | Worker processes for compression jobs                        |
-| search_worker      | Worker processes for search/aggregation jobs                 |
+| query_worker       | Worker processes for search/aggregation jobs                 |
 | reducer            | Reducers for performing the final stages of aggregation jobs |
 :::
 
 :::{note}
-Running additional workers increases the parallelism of compression and search jobs.
+Running additional workers increases the parallelism of compression and search/aggregation jobs.
 :::
 
 ## Configuring CLP
@@ -92,12 +92,12 @@ but all components in a group must be started before starting a component in the
 **Group 2 components:**
 
 * `compression_scheduler`
-* `search_scheduler`
+* `query_scheduler`
 
 **Group 3 components:**
 
 * `compression_worker`
-* `search_worker`
+* `query_worker`
 * `reducer`
 
 For each component, on the host where you want to run the component, run:

@@ -286,6 +286,36 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             extraction_options.add(input_options);
 
+            po::options_description decompression_options("Decompression Options");
+            // clang-format off
+            decompression_options.add_options()(
+                    "ordered",
+                    po::bool_switch(&m_ordered_decompression),
+                    "Enable decompression in ascending timestamp order for this archive"
+            )(
+                    "ordered-chunk-size",
+                    po::value<size_t>(&m_ordered_chunk_size)
+                            ->default_value(m_ordered_chunk_size),
+                    "Number of records to include in each output file when decompressing records "
+                    "in ascending timestamp order"
+            );
+            // clang-format on
+            extraction_options.add(decompression_options);
+
+            po::options_description output_metadata_options("Output Metadata Options");
+            // clang-format off
+            output_metadata_options.add_options()(
+                    "mongodb-uri",
+                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
+                    "MongoDB URI for the database to write decompression metadata to"
+            )(
+                    "mongodb-collection",
+                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
+                    "MongoDB collection to write decompression metadata to"
+            );
+            // clang-format on
+            extraction_options.add(output_metadata_options);
+
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
             positional_options.add("output-dir", 1);
@@ -316,6 +346,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 po::options_description visible_options;
                 visible_options.add(general_options);
                 visible_options.add(input_options);
+                visible_options.add(decompression_options);
+                visible_options.add(output_metadata_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
@@ -326,6 +358,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_output_dir.empty()) {
                 throw std::invalid_argument("No output directory specified");
+            }
+
+            if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
+                throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
+                );
+            }
+
+            // We use xor to check that these arguments are either both specified or both
+            // unspecified.
+            if (m_mongodb_uri.empty() ^ m_mongodb_collection.empty()) {
+                throw std::invalid_argument(
+                        "mongodb-uri and mongodb-collection must both be non-empty"
+                );
+            }
+
+            if (false == m_mongodb_uri.empty() && false == m_ordered_decompression) {
+                throw std::invalid_argument(
+                        "Recording decompression metadata only supported for ordered decompression"
+                );
             }
         } else if ((char)Command::Search == command_input) {
             std::string archives_dir;

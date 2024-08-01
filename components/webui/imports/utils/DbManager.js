@@ -6,7 +6,7 @@ import {
     initCompressionDbManager,
     initStatsDbManager,
 } from "/imports/api/ingestion/server/publications";
-import {initSearchJobsDbManager} from "/imports/api/search/server/methods";
+import {initQueryJobsDbManager} from "/imports/api/search/server/methods";
 import {logger} from "/imports/utils/logger";
 
 
@@ -32,7 +32,7 @@ let dbConnPool = null;
  * @param {string} tableNames.clpArchivesTableName
  * @param {string} tableNames.clpFilesTableName
  * @param {string} tableNames.compressionJobsTableName
- * @param {string} tableNames.searchJobsTableName
+ * @param {string} tableNames.queryJobsTableName
  * @return {Promise<void>}
  * @throws {Error} on error.
  */
@@ -46,7 +46,7 @@ const initDbManagers = async ({
     clpArchivesTableName,
     clpFilesTableName,
     compressionJobsTableName,
-    searchJobsTableName,
+    queryJobsTableName,
 }) => {
     if (null !== dbConnPool) {
         throw Error("This method should not be called twice.");
@@ -76,8 +76,8 @@ const initDbManagers = async ({
         initCompressionDbManager(dbConnPool, {
             compressionJobsTableName,
         });
-        initSearchJobsDbManager(dbConnPool, {
-            searchJobsTableName,
+        initQueryJobsDbManager(dbConnPool, {
+            queryJobsTableName,
         });
         initStatsDbManager(dbConnPool, {
             clpArchivesTableName,

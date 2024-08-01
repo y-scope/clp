@@ -4,7 +4,7 @@
 #include "../Defs.h"
 
 namespace clp::streaming_archive {
-constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevVersionFlag | 8;
+constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevVersionFlag | 9;
 constexpr char cSegmentsDirname[] = "s";
 constexpr char cSegmentListFilename[] = "segment_list.txt";
 constexpr char cLogTypeDictFilename[] = "logtype.dict";

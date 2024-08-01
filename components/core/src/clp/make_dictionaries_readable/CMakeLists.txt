@@ -4,6 +4,8 @@ set(
         ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
+        ../FileDescriptor.cpp
+        ../FileDescriptor.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
@@ -17,6 +19,8 @@ set(
         ../ParsedMessage.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
+        ../ReadOnlyMemoryMappedFile.cpp
+        ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
         ../streaming_compression/Decompressor.hpp
         ../streaming_compression/passthrough/Decompressor.cpp

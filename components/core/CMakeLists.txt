@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.16.3)
 project(CLP LANGUAGES CXX C)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -146,6 +146,14 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
 endif()
 
+# Find OpenSSL
+find_package(OpenSSL REQUIRED)
+if (OPENSSL_FOUND)
+    message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
+else ()
+    message(FATAL_ERROR "OpenSSL not found")
+endif ()
+
 # Add log surgeon
 add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
@@ -209,6 +217,7 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
+add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
 add_subdirectory(src/clp/clg)
@@ -282,6 +291,8 @@ set(SOURCE_FILES_unitTest
         src/clp/CurlDownloadHandler.cpp
         src/clp/CurlDownloadHandler.hpp
         src/clp/CurlEasyHandle.hpp
+        src/clp/CurlGlobalInstance.cpp
+        src/clp/CurlGlobalInstance.hpp
         src/clp/CurlOperationFailed.hpp
         src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
@@ -305,6 +316,10 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
+        src/clp/ffi/ir_stream/Serializer.cpp
+        src/clp/ffi/ir_stream/Serializer.hpp
+        src/clp/ffi/ir_stream/utils.cpp
+        src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
         src/clp/ffi/SchemaTreeNode.hpp
@@ -322,6 +337,10 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/ffi/utils.cpp
+        src/clp/ffi/utils.hpp
+        src/clp/FileDescriptor.cpp
+        src/clp/FileDescriptor.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -335,7 +354,10 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/hash_utils.cpp
+        src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
+        src/clp/ir/EncodedTextAst.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp
@@ -379,6 +401,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Query.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
+        src/clp/ReadOnlyMemoryMappedFile.cpp
+        src/clp/ReadOnlyMemoryMappedFile.hpp
         src/clp/spdlog_with_specializations.hpp
         src/clp/SQLiteDB.cpp
         src/clp/SQLiteDB.hpp
@@ -425,11 +449,13 @@ set(SOURCE_FILES_unitTest
         src/clp/StringReader.hpp
         src/clp/Thread.cpp
         src/clp/Thread.hpp
+        src/clp/time_types.hpp
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp
-        src/clp/time_types.hpp
         src/clp/type_utils.hpp
+        src/clp/utf8_utils.cpp
+        src/clp/utf8_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -449,21 +475,25 @@ set(SOURCE_FILES_unitTest
         tests/test-encoding_methods.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
+        tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
+        tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
+        tests/test-regex_utils.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
+        tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
@@ -482,8 +512,10 @@ target_link_libraries(unitTest
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog
+        OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
+        clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd

@@ -3,8 +3,9 @@ import msgpack from "@msgpack/msgpack";
 import {sleep} from "/imports/utils/misc";
 
 import {
-    SEARCH_JOB_STATUS,
-    SEARCH_JOB_STATUS_WAITING_STATES,
+    QUERY_JOB_STATUS,
+    QUERY_JOB_STATUS_WAITING_STATES,
+    QUERY_JOB_TYPE,
 } from "../constants";
 
 
@@ -14,32 +15,33 @@ import {
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
 
 /**
- * Enum of the `search_jobs` table's column names.
+ * Enum of the `query_jobs` table's column names.
  *
  * @enum {string}
  */
-const SEARCH_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
+const QUERY_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
     ID: "id",
     STATUS: "status",
-    SEARCH_CONFIG: "search_config",
+    TYPE: "type",
+    JOB_CONFIG: "job_config",
 });
 
 /**
- * Class for submitting and monitoring search jobs in the database.
+ * Class for submitting and monitoring query jobs in the database.
  */
-class SearchJobsDbManager {
+class QueryJobsDbManager {
     #sqlDbConnPool;
 
-    #searchJobsTableName;
+    #queryJobsTableName;
 
     /**
      * @param {import("mysql2/promise").Pool} sqlDbConnPool
      * @param {object} tableNames
-     * @param {string} tableNames.searchJobsTableName
+     * @param {string} tableNames.queryJobsTableName
      */
-    constructor (sqlDbConnPool, {searchJobsTableName}) {
+    constructor (sqlDbConnPool, {queryJobsTableName}) {
         this.#sqlDbConnPool = sqlDbConnPool;
-        this.#searchJobsTableName = searchJobsTableName;
+        this.#queryJobsTableName = queryJobsTableName;
     }
 
     /**
@@ -51,10 +53,12 @@ class SearchJobsDbManager {
      */
     async submitSearchJob (searchConfig) {
         const [queryInsertResults] = await this.#sqlDbConnPool.query(
-            `INSERT INTO ${this.#searchJobsTableName}
-                 (${SEARCH_JOBS_TABLE_COLUMN_NAMES.SEARCH_CONFIG})
-             VALUES (?)`,
-            [Buffer.from(msgpack.encode(searchConfig))],
+            `INSERT INTO ${this.#queryJobsTableName}
+                 (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG}, 
+                  ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
+             VALUES (?, ?)`,
+            [Buffer.from(msgpack.encode(searchConfig)),
+                QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION],
         );
 
         return queryInsertResults.insertId;
@@ -88,11 +92,11 @@ class SearchJobsDbManager {
      */
     async submitQueryCancellation (jobId) {
         await this.#sqlDbConnPool.query(
-            `UPDATE ${this.#searchJobsTableName}
-             SET ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${SEARCH_JOB_STATUS.CANCELLING}
-             WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?
-             AND ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS}
-             IN (${SEARCH_JOB_STATUS.PENDING}, ${SEARCH_JOB_STATUS.RUNNING})`,
+            `UPDATE ${this.#queryJobsTableName}
+             SET ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${QUERY_JOB_STATUS.CANCELLING}
+             WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
+             AND ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
+             IN (${QUERY_JOB_STATUS.PENDING}, ${QUERY_JOB_STATUS.RUNNING})`,
             jobId,
         );
     }
@@ -111,9 +115,9 @@ class SearchJobsDbManager {
             try {
                 const [queryRows] = await this.#sqlDbConnPool.query(
                     `
-                    SELECT ${SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS}
-                    FROM ${this.#searchJobsTableName}
-                    WHERE ${SEARCH_JOBS_TABLE_COLUMN_NAMES.ID} = ?
+                    SELECT ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
+                    FROM ${this.#queryJobsTableName}
+                    WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
                     `,
                     jobId,
                 );
@@ -125,14 +129,14 @@ class SearchJobsDbManager {
             if (0 === rows.length) {
                 throw new Error(`Job ${jobId} not found in database.`);
             }
-            const status = rows[0][SEARCH_JOBS_TABLE_COLUMN_NAMES.STATUS];
+            const status = rows[0][QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
 
-            if (false === SEARCH_JOB_STATUS_WAITING_STATES.includes(status)) {
-                if (SEARCH_JOB_STATUS.CANCELLED === status) {
+            if (false === QUERY_JOB_STATUS_WAITING_STATES.includes(status)) {
+                if (QUERY_JOB_STATUS.CANCELLED === status) {
                     throw new Error(`Job ${jobId} was cancelled.`);
-                } else if (SEARCH_JOB_STATUS.SUCCEEDED !== status) {
+                } else if (QUERY_JOB_STATUS.SUCCEEDED !== status) {
                     throw new Error(`Job ${jobId} exited with unexpected status=${status}: ` +
-                        `${Object.keys(SEARCH_JOB_STATUS)[status]}.`);
+                        `${Object.keys(QUERY_JOB_STATUS)[status]}.`);
                 }
                 break;
             }
@@ -142,4 +146,4 @@ class SearchJobsDbManager {
     }
 }
 
-export default SearchJobsDbManager;
+export default QueryJobsDbManager;

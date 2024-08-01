@@ -58,28 +58,42 @@ const isOperationInProgress = (s) => (
 );
 
 /* eslint-disable sort-keys */
-let enumSearchJobStatus;
+let enumQueryJobStatus;
 /**
- * Enum of job statuses, matching the `SearchJobStatus` class in
- * `job_orchestration.search_scheduler.constants`.
+ * Enum of job statuses, matching the `QueryJobStatus` class in
+ * `job_orchestration.query_scheduler.constants`.
  *
  * @enum {number}
  */
-const SEARCH_JOB_STATUS = Object.freeze({
-    PENDING: (enumSearchJobStatus = 0),
-    RUNNING: ++enumSearchJobStatus,
-    SUCCEEDED: ++enumSearchJobStatus,
-    FAILED: ++enumSearchJobStatus,
-    CANCELLING: ++enumSearchJobStatus,
-    CANCELLED: ++enumSearchJobStatus,
+const QUERY_JOB_STATUS = Object.freeze({
+    PENDING: (enumQueryJobStatus = 0),
+    RUNNING: ++enumQueryJobStatus,
+    SUCCEEDED: ++enumQueryJobStatus,
+    FAILED: ++enumQueryJobStatus,
+    CANCELLING: ++enumQueryJobStatus,
+    CANCELLED: ++enumQueryJobStatus,
 });
 /* eslint-enable sort-keys */
 
-const SEARCH_JOB_STATUS_WAITING_STATES = [
-    SEARCH_JOB_STATUS.PENDING,
-    SEARCH_JOB_STATUS.RUNNING,
-    SEARCH_JOB_STATUS.CANCELLING,
+const QUERY_JOB_STATUS_WAITING_STATES = [
+    QUERY_JOB_STATUS.PENDING,
+    QUERY_JOB_STATUS.RUNNING,
+    QUERY_JOB_STATUS.CANCELLING,
 ];
+
+/* eslint-disable sort-keys */
+let enumQueryType;
+/**
+ * Enum of job type, matching the `QueryJobType` class in
+ * `job_orchestration.query_scheduler.constants`.
+ *
+ * @enum {number}
+ */
+const QUERY_JOB_TYPE = Object.freeze({
+    SEARCH_OR_AGGREGATION: (enumQueryType = 0),
+    EXTRACT_IR: ++enumQueryType,
+});
+/* eslint-enable sort-keys */
 
 /**
  * Enum of Mongo Collection sort orders.
@@ -112,8 +126,9 @@ export {
     isSearchSignalReq,
     isSearchSignalResp,
     MONGO_SORT_ORDER,
-    SEARCH_JOB_STATUS,
-    SEARCH_JOB_STATUS_WAITING_STATES,
+    QUERY_JOB_STATUS,
+    QUERY_JOB_STATUS_WAITING_STATES,
+    QUERY_JOB_TYPE,
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_RESULTS_FIELDS,
     SEARCH_SIGNAL,
