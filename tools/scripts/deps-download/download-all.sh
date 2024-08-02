@@ -5,7 +5,7 @@ set -e
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 project_root_dir="$script_dir"/../../../
-component_root_dir="${project_root_dir}/component"
+component_root_dir="${project_root_dir}/components"
 shared_script_dir="${project_root_dir}/tools/scripts"
 download_dep_script="${shared_script_dir}/download-dep.py"
 
