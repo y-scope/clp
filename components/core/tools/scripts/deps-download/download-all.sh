@@ -8,7 +8,7 @@ project_root_dir="$script_dir"/../../../../../
 core_root_dir="${project_root_dir}"/components/core
 download_dep_script="${project_root_dir}"/tools/scripts/download-dep.py
 
-mkdir -p "${component_root_dir}"/submodules
+mkdir -p "${core_root_dir}"/submodules
 
 # We don't use a git submodule for sqlite3 since that would require building the
 # sqlite amalgamation
