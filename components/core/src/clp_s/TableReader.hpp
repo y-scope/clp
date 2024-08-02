@@ -66,7 +66,7 @@ public:
      */
     void read_table(size_t table_id, std::shared_ptr<char[]>& buf, size_t& buf_size);
 
-    size_t get_uncompressed_table_size(size_t table_id) const {
+    [[nodiscard]] size_t get_uncompressed_table_size(size_t table_id) const {
         return m_table_metadata.at(table_id).uncompressed_size;
     }
 

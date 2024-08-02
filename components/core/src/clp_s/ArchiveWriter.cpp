@@ -161,7 +161,6 @@ size_t ArchiveWriter::store_tables() {
      * of the metadata in the "schema_metadata" vector as we compress the tables. The metadata is
      * flushed once all of the schema tables have been compressed.
      */
-
     using schema_map_it = decltype(m_id_to_schema_writer)::iterator;
     std::vector<schema_map_it> schemas;
     std::vector<std::tuple<size_t, size_t>> table_metadata;
