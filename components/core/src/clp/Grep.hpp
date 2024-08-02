@@ -214,6 +214,27 @@ public:
     );
 
     /**
+     * Generates the possible static-text and variable types for the given substring.
+     * @param processed_search_string
+     * @param begin_idx
+     * @param end_idx
+     * @param is_greedy_wildcard
+     * @param is_non_greedy_wildcard
+     * @param is_escape
+     * @param lexer
+     * @return a vector containing the possible substring types
+     */
+    static std::vector<QueryLogtype> get_possible_substr_types(
+            std::string& processed_search_string,
+            size_t begin_idx,
+            size_t end_idx,
+            std::vector<bool>& is_greedy_wildcard,
+            std::vector<bool>& is_non_greedy_wildcard,
+            std::vector<bool>& is_escape,
+            log_surgeon::lexers::ByteLexer& lexer
+    );
+
+    /**
      * Mark the locations of non-escaped wildcards '*', '?', and escape characters '\'.
      * @param processed_search_string
      * @return a tuple containing greedy wildcard, non-greedy wildcard, and escape character

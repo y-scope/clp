@@ -1048,116 +1048,17 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
             if (begin_idx > 0 && is_escape[begin_idx - 1]) {
                 continue;
             }
-            std::vector<QueryLogtype> possible_substr_types;
-
-            // Don't allow an isolated wildcard to be considered a variable
-            if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
-                possible_substr_types.emplace_back('*', "*", false);
-            } else if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
-                possible_substr_types.emplace_back('?', "?", false);
-            } else {
-                // As we extend substrings adjacent to wildcards, the substrings that begin or end
-                // with wildcards are redundant (e.g., for string "a*b", a decomposition of the form
-                // "a*" + "b" is a subset of the more general "a*" + "*" + "*b". Note, as this needs
-                // "*", the "*" substring is not redundant. This is already handled above). More
-                // detail about this is given below.
-                if (is_greedy_wildcard[begin_idx] || is_greedy_wildcard[end_idx - 1]) {
-                    continue;
-                }
-
-                // If the substring isn't surrounded by delimiters there is no reason to consider
-                // the case where it is a variable as CLP would not compress it as such. Preceding
-                // delimiter counts the start of log, a wildcard, or an actual delimiter.
-                bool has_preceding_delimiter
-                        = 0 == begin_idx || is_greedy_wildcard[begin_idx - 1]
-                          || is_non_greedy_wildcard[begin_idx - 1]
-                          || lexer.is_delimiter(processed_search_string[begin_idx - 1]);
-
-                // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter.
-                // However, we have to be careful about a proceeding escape character. First, if '\'
-                // is a delimiter, we avoid counting the escape character. Second, if a literal '*'
-                // or '?' is a delimiter, then it will appear after the escape character.
-                bool has_proceeding_delimiter
-                        = processed_search_string.size() == end_idx || is_greedy_wildcard[end_idx]
-                          || is_non_greedy_wildcard[end_idx]
-                          || (false == is_escape[end_idx]
-                              && lexer.is_delimiter(processed_search_string[end_idx]))
-                          || (is_escape[end_idx]
-                              && lexer.is_delimiter(processed_search_string[end_idx + 1]));
-
-                // If the substring contains a wildcard, we need to consider the case that it can
-                // simultaneously match multiple variables and static text, and we need a different
-                // approach to compare against the archive.
-                bool contains_wildcard = false;
-                set<uint32_t> variable_types;
-                if (has_preceding_delimiter && has_proceeding_delimiter) {
-                    // If the substring is preceded or proceeded by a greedy wildcard then it's
-                    // possible the substring could be extended to match a var, so the wildcards are
-                    // added to the substring. If we don't consider this case we could miss
-                    // combinations. Take for example "a*b", "a*" and "*b" can both match a has#
-                    // style variable ("\w*\d+\w*"). If we decompose the string into either
-                    // substrings "a*" + "b" or "a" + "*b", neither would capture the possibility of
-                    // a logtype with the form "<has#>*<has#>", which is a valid possibility during
-                    // compression. Instead we desire to decompose the string into "a*" + "*" +
-                    // "*b". Note, non-greedy wildcards do not need to be considered, for example
-                    // "a?b" can never match "<has#>?<has#>" or "<has#><has#>".
-                    uint32_t substr_start = begin_idx;
-                    uint32_t substr_end = end_idx;
-                    bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
-                    bool next_char_is_greedy_wildcard = end_idx < processed_search_string.length()
-                                                        && is_greedy_wildcard[end_idx];
-                    if (prev_char_is_star) {
-                        substr_start--;
-                    }
-                    if (next_char_is_greedy_wildcard) {
-                        substr_end++;
-                    }
-                    auto [variable_types, contains_wildcard] = get_substring_variable_types(
-                            string_view(processed_search_string)
-                                    .substr(substr_start, substr_end - substr_start),
-                            substr_start,
-                            is_greedy_wildcard,
-                            is_non_greedy_wildcard,
-                            is_escape,
-                            lexer
-                    );
-                    bool already_added_var = false;
-                    // Use the variable types to determine the possible_substr_types
-                    for (int id : variable_types) {
-                        auto& schema_type = lexer.m_id_symbol[id];
-                        if (schema_type != "int" && schema_type != "float") {
-                            if (already_added_var) {
-                                continue;
-                            }
-                            already_added_var = true;
-                        }
-                        possible_substr_types.emplace_back();
-                        QueryLogtype& suffix = possible_substr_types.back();
-                        suffix.append_value(
-                                id,
-                                processed_search_string
-                                        .substr(substr_start, substr_end - substr_start),
-                                contains_wildcard
-                        );
-
-                        // If the substring has no wildcards, we can safely exclude lower priority
-                        // variable types.
-                        if (false == contains_wildcard) {
-                            break;
-                        }
-                    }
-                }
-                // If the substring matches no variables, or has a wildcard, it is potentially
-                // static-text.
-                if (variable_types.empty() || contains_wildcard) {
-                    possible_substr_types.emplace_back();
-                    auto& possible_substr_type = possible_substr_types.back();
-                    for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                        char const& c = processed_search_string[idx];
-                        std::string char_string({c});
-                        possible_substr_type.append_value(c, char_string, false);
-                    }
-                }
+            auto possible_substr_types = get_possible_substr_types(
+                    processed_search_string,
+                    begin_idx,
+                    end_idx,
+                    is_greedy_wildcard,
+                    is_non_greedy_wildcard,
+                    is_escape,
+                    lexer
+            );
+            if (possible_substr_types.empty()) {
+                continue;
             }
 
             // Use the completed set of variable types for each substr(begin_idx,end_idx) to
@@ -1191,12 +1092,134 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
     return query_logtypes;
 }
 
+vector<QueryLogtype> Grep::get_possible_substr_types(
+        string& processed_search_string,
+        size_t begin_idx,
+        size_t end_idx,
+        vector<bool>& is_greedy_wildcard,
+        vector<bool>& is_non_greedy_wildcard,
+        vector<bool>& is_escape,
+        ByteLexer& lexer
+) {
+    vector<QueryLogtype> possible_substr_types;
+
+    // Don't allow an isolated wildcard to be considered a variable
+    if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
+        possible_substr_types.emplace_back('*', "*", false);
+    } else if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
+        possible_substr_types.emplace_back('?', "?", false);
+    } else {
+        // As we extend substrings adjacent to wildcards, the substrings that begin or end
+        // with wildcards are redundant (e.g., for string "a*b", a decomposition of the form
+        // "a*" + "b" is a subset of the more general "a*" + "*" + "*b". Note, as this needs
+        // "*", the "*" substring is not redundant. This is already handled above). More
+        // detail about this is given below.
+        if (is_greedy_wildcard[begin_idx] || is_greedy_wildcard[end_idx - 1]) {
+            return possible_substr_types;
+        }
+
+        // If the substring isn't surrounded by delimiters there is no reason to consider
+        // the case where it is a variable as CLP would not compress it as such. Preceding
+        // delimiter counts the start of log, a wildcard, or an actual delimiter.
+        bool has_preceding_delimiter
+                = 0 == begin_idx || is_greedy_wildcard[begin_idx - 1]
+                  || is_non_greedy_wildcard[begin_idx - 1]
+                  || lexer.is_delimiter(processed_search_string[begin_idx - 1]);
+
+        // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter.
+        // However, we have to be careful about a proceeding escape character. First, if '\'
+        // is a delimiter, we avoid counting the escape character. Second, if a literal '*'
+        // or '?' is a delimiter, then it will appear after the escape character.
+        bool has_proceeding_delimiter
+                = processed_search_string.size() == end_idx || is_greedy_wildcard[end_idx]
+                  || is_non_greedy_wildcard[end_idx]
+                  || (false == is_escape[end_idx]
+                      && lexer.is_delimiter(processed_search_string[end_idx]))
+                  || (is_escape[end_idx] && lexer.is_delimiter(processed_search_string[end_idx + 1])
+                  );
+
+        // If the substring contains a wildcard, we need to consider the case that it can
+        // simultaneously match multiple variables and static text, and we need a different
+        // approach to compare against the archive.
+        bool contains_wildcard = false;
+        set<uint32_t> variable_types;
+        if (has_preceding_delimiter && has_proceeding_delimiter) {
+            // If the substring is preceded or proceeded by a greedy wildcard then it's
+            // possible the substring could be extended to match a var, so the wildcards are
+            // added to the substring. If we don't consider this case we could miss
+            // combinations. Take for example "a*b", "a*" and "*b" can both match a has#
+            // style variable ("\w*\d+\w*"). If we decompose the string into either
+            // substrings "a*" + "b" or "a" + "*b", neither would capture the possibility of
+            // a logtype with the form "<has#>*<has#>", which is a valid possibility during
+            // compression. Instead we desire to decompose the string into "a*" + "*" +
+            // "*b". Note, non-greedy wildcards do not need to be considered, for example
+            // "a?b" can never match "<has#>?<has#>" or "<has#><has#>".
+            uint32_t substr_start = begin_idx;
+            uint32_t substr_end = end_idx;
+            bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
+            bool next_char_is_greedy_wildcard
+                    = end_idx < processed_search_string.length() && is_greedy_wildcard[end_idx];
+            if (prev_char_is_star) {
+                substr_start--;
+            }
+            if (next_char_is_greedy_wildcard) {
+                substr_end++;
+            }
+            auto [variable_types, contains_wildcard] = get_substring_variable_types(
+                    string_view(processed_search_string)
+                            .substr(substr_start, substr_end - substr_start),
+                    substr_start,
+                    is_greedy_wildcard,
+                    is_non_greedy_wildcard,
+                    is_escape,
+                    lexer
+            );
+            bool already_added_var = false;
+            // Use the variable types to determine the possible_substr_types
+            for (int id : variable_types) {
+                auto& schema_type = lexer.m_id_symbol[id];
+                if (schema_type != "int" && schema_type != "float") {
+                    if (already_added_var) {
+                        continue;
+                    }
+                    already_added_var = true;
+                }
+                possible_substr_types.emplace_back();
+                QueryLogtype& suffix = possible_substr_types.back();
+                suffix.append_value(
+                        id,
+                        processed_search_string.substr(substr_start, substr_end - substr_start),
+                        contains_wildcard
+                );
+
+                // If the substring has no wildcards, we can safely exclude lower priority
+                // variable types.
+                if (false == contains_wildcard) {
+                    break;
+                }
+            }
+        }
+        // If the substring matches no variables, or has a wildcard, it is potentially
+        // static-text.
+        if (variable_types.empty() || contains_wildcard) {
+            possible_substr_types.emplace_back();
+            auto& possible_substr_type = possible_substr_types.back();
+            for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
+                char const& c = processed_search_string[idx];
+                std::string char_string({c});
+                possible_substr_type.append_value(c, char_string, false);
+            }
+        }
+    }
+    return possible_substr_types;
+}
+
 tuple<vector<bool>, vector<bool>, vector<bool>> Grep::get_wildcard_and_escape_locations(
         std::string const& processed_search_string
 ) {
-    std::vector<bool> is_greedy_wildcard;
-    std::vector<bool> is_non_greedy_wildcard;
-    std::vector<bool> is_escape;
+    vector<bool> is_greedy_wildcard;
+    vector<bool> is_non_greedy_wildcard;
+    vector<bool> is_escape;
     is_greedy_wildcard.reserve(processed_search_string.size());
     is_non_greedy_wildcard.reserve(processed_search_string.size());
     is_escape.reserve(processed_search_string.size());
@@ -1231,12 +1254,12 @@ tuple<vector<bool>, vector<bool>, vector<bool>> Grep::get_wildcard_and_escape_lo
     return {std::move(is_greedy_wildcard), std::move(is_non_greedy_wildcard), std::move(is_escape)};
 }
 
-tuple<set<uint32_t>, set<uint32_t>> Grep::get_substring_variable_types(
+tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
         string_view search_substr,
         uint32_t substr_offset,
-        std::vector<bool>& is_greedy_wildcard,
-        std::vector<bool>& is_non_greedy_wildcard,
-        std::vector<bool>& is_escape,
+        vector<bool>& is_greedy_wildcard,
+        vector<bool>& is_non_greedy_wildcard,
+        vector<bool>& is_escape,
         ByteLexer& lexer
 ) {
     // To determine if a substring could be a variable we convert it to regex,
