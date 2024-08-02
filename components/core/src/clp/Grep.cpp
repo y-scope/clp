@@ -1179,6 +1179,10 @@ vector<QueryLogtype> Grep::get_possible_substr_types(
             for (int id : variable_types) {
                 auto& schema_type = lexer.m_id_symbol[id];
                 if (schema_type != "int" && schema_type != "float") {
+                    // LogSurgeon differentiates between all variable types. For example, LogSurgeon
+                    // might report thet types has#, userID, and int. However, CLP only supports
+                    // dict, int, and float variables. So there is no benefit in duplicating the
+                    // dict variable option for both has# and userID in the example.
                     if (already_added_var) {
                         continue;
                     }
