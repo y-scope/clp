@@ -1131,30 +1131,14 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
                             }
                             already_added_var = true;
                         }
-
-                        // If the substring had preceding or proceeding greedy wildcards, even when
-                        // it may match a variable, it may match more. So we want to store it as
-                        // "*<var>"/"<var>*"/"*<var>*" instead of just <var>. We don't need to do
-                        // this if the wildcard was borrowed from the neighboring substring, as the
-                        // neighboring substring will handle these cases for us.
-                        bool start_star
-                                = is_greedy_wildcard[substr_start] && false == prev_char_is_star;
-                        bool end_star = is_greedy_wildcard[substr_end - 1]
-                                        && false == next_char_is_greedy_wildcard;
                         possible_substr_types.emplace_back();
                         QueryLogtype& suffix = possible_substr_types.back();
-                        if (start_star) {
-                            suffix.append_value('*', "*", false);
-                        }
                         suffix.append_value(
                                 id,
                                 processed_search_string
                                         .substr(substr_start, substr_end - substr_start),
                                 contains_wildcard
                         );
-                        if (end_star) {
-                            suffix.append_value('*', "*", false);
-                        }
 
                         // If the substring has no wildcards, we can safely exclude lower priority
                         // variable types.
