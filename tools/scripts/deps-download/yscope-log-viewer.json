@@ -4,7 +4,7 @@
   "targets": [
     {
       "source": "yscope-log-viewer-df996eac000823d02f9cd0b9eb4bb732dd634ae5",
-      "destination": "log-viewer-webui/yscope-log-viewer"
+      "destination": "components/log-viewer-webui/yscope-log-viewer"
     }
   ]
 }

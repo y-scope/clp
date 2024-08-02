@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/y-scope/yscope-dev-utils/archive/ff1611e6.zip",
+  "unzip": true,
+  "targets": [
+    {
+      "source": "yscope-dev-utils-ff1611e6f9b116da27dc7f8f71797829c22d0b1a",
+      "destination": "tools/yscope-dev-utils"
+    }
+  ]
+}
