@@ -5,12 +5,10 @@ set -e
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 project_root_dir="$script_dir"/../../../../../
-core_root_dir="$script_dir"/../../../
-shared_script_dir="${project_root_dir}/tools/scripts"
-download_dep_script="${shared_script_dir}/download-dep.py"
+core_root_dir="${project_root_dir}"/components/core
+download_dep_script="${project_root_dir}"/tools/scripts/download-dep.py
 
-cd "${component_root_dir}"
-mkdir -p submodules
+mkdir -p "${component_root_dir}"/submodules
 
 # We don't use a git submodule for sqlite3 since that would require building the
 # sqlite amalgamation
