@@ -32,14 +32,13 @@ def hash_file(algo: str, path: pathlib.Path):
 
 
 def main(argv):
-    script_dir = pathlib.Path(__file__).parent.resolve()
-    project_root_dir = script_dir.parent.parent.parent
-
     args_parser = argparse.ArgumentParser(description="Download dependency.")
     args_parser.add_argument("config-file", help="Dependency configuration file.")
+    args_parser.add_argument("output-dir", help="Directory to output the files.")
 
-    parsed_args = vars(args_parser.parse_args(argv[1:]))
-    config_file_path = pathlib.Path(parsed_args["config-file"]).resolve()
+    parsed_args = args_parser.parse_args(argv[1:])
+    config_file_path = pathlib.Path(parsed_args.config_file).resolve()
+    output_dir = pathlib.Path(parsed_args.output_dir).resolve()
 
     # Load configurations
     with open(config_file_path) as f:
@@ -69,7 +68,7 @@ def main(argv):
 
     for target in config["targets"]:
         target_source_path = extraction_dir / target["source"]
-        target_dest_path = project_root_dir / target["destination"]
+        target_dest_path = output_dir / target["destination"]
 
         target_dest_parent = target_dest_path.parent
 
