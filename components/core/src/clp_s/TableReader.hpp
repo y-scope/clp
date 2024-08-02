@@ -35,11 +35,13 @@ public:
     /**
      * Reads table metadata from the provided compression stream. Must be invoked before reading
      * tables.
+     * @param decompressor an open ZstdDecompressor pointing to the table metadata
      */
     void read_metadata(ZstdDecompressor& decompressor);
 
     /**
      * Opens a file reader for the tables section. Must be invoked before reading tables.
+     * @param tables_file_path the path to the tables file for the archive being read
      */
     void open_tables(std::string const& tables_file_path);
 
@@ -60,9 +62,10 @@ public:
      * being decompressed.
      *
      * @param table_id
-     * @param buf
-     * @param buf_size
-     * @return a shared_ptr to a buffer containing the requested table
+     * @param buf a shared ptr to the buffer where the table will be read. The buffer gets resized
+     * if it is too small to contain the requested table.
+     * @param buf_size the size of the underlying buffer owned by buf -- passed and updated by
+     * reference
      */
     void read_table(size_t table_id, std::shared_ptr<char[]>& buf, size_t& buf_size);
 
@@ -83,7 +86,7 @@ private:
     FileReader m_tables_reader;
     ZstdDecompressor m_tables_decompressor;
     TableReaderState m_state{TableReaderState::Uninitialized};
-    size_t m_previous_table_id{0ULL};
+    size_t m_prev_table_id{0ULL};
 };
 
 }  // namespace clp_s

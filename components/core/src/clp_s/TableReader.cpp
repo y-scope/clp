@@ -64,7 +64,7 @@ void TableReader::close() {
             throw OperationFailed(ErrorCodeNotReady, __FILE__, __LINE__);
     }
     m_tables_reader.close();
-    m_previous_table_id = 0;
+    m_prev_table_id = 0;
     m_table_metadata.clear();
     m_state = TableReaderState::Uninitialized;
 }
@@ -80,14 +80,14 @@ void TableReader::read_table(size_t table_id, std::shared_ptr<char[]>& buf, size
             m_state = TableReaderState::ReadingTables;
             break;
         case TableReaderState::ReadingTables:
-            if (m_previous_table_id >= table_id) {
+            if (m_prev_table_id >= table_id) {
                 throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
             }
             break;
         default:
             throw OperationFailed(ErrorCodeNotReady, __FILE__, __LINE__);
     }
-    m_previous_table_id = table_id;
+    m_prev_table_id = table_id;
 
     auto& [file_offset, uncompressed_size] = m_table_metadata[table_id];
     m_tables_reader.try_seek_from_begin(file_offset);

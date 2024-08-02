@@ -180,6 +180,10 @@ private:
      * a row for the same table_id a cached buffer is returned. This function allows the caller to
      * ask for the same buffer to be reused to read multiple different tables: this can save memory
      * allocations, but can only be used when tables are read one at a time.
+     * @param table_id
+     * @param reuse_buffer when true the same buffer is reused across invocations, overwriting data
+     * returned previous calls to read_table
+     * @return a buffer containing the decompressed table identified by table_id
      */
     std::shared_ptr<char[]> read_table(size_t table_id, bool reuse_buffer);
 
