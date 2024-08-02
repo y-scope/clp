@@ -206,12 +206,11 @@ public:
      * and the string does not end with an escape character.
      * @param processed_search_string
      * @param lexer
-     * @param query_substring_logtypes
+     * @return a vector of all QueryLogtypes that can match the query in processed_search_string.
      */
-    static void generate_query_substring_logtypes(
+    static std::vector<QueryLogtype> generate_query_substring_logtypes(
             std::string& processed_search_string,
-            log_surgeon::lexers::ByteLexer& lexer,
-            std::vector<std::set<QueryLogtype>>& query_substring_logtypes
+            log_surgeon::lexers::ByteLexer& lexer
     );
 
     /**
@@ -246,17 +245,34 @@ public:
             bool& contains_wildcard,
             std::set<uint32_t>& variable_types
     );
+
+    /**
+     * Generates the logtype string for each query logtype to compare against the logtype dictionary
+     * in the archive. In this proccess, we also expand query_logtypes to contain all variations of
+     * each logtype that has variables with wildcards that can be encoded. E.g. "*123" can be
+     * in the segmenent as an encoded integer or in the dictionary, so both cases must be checked.
+     * @param query_logtypes
+     * @param lexer
+     * @return A vector of query logtype strings.
+     */
+    static std::vector<std::string> generate_logtype_strings(
+            std::vector<QueryLogtype>& query_logtypes,
+            log_surgeon::lexers::ByteLexer& lexer
+    );
+
     /**
      * Compare all possible query logtypes against the archive to determine all possible sub queries
      * that can match against messages in the archive.
      * @param query_logtypes
+     * @param logtype_strings
      * @param archive
      * @param lexer
      * @param ignore_case
      * @param sub_queries
      */
     static void generate_sub_queries(
-            std::set<QueryLogtype>& query_logtypes,
+            std::vector<QueryLogtype>& query_logtypes,
+            std::vector<std::string>& logtype_strings,
             streaming_archive::reader::Archive const& archive,
             log_surgeon::lexers::ByteLexer& lexer,
             bool ignore_case,

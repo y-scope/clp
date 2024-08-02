@@ -674,13 +674,12 @@ std::optional<Query> Grep::process_raw_query(
         // creates all possible logtypes that can match substring(0,n) of the query, which includes
         // all possible logtypes that can match the query itself. Then these logtypes, and their
         // corresponding variables are compared against the archive.
-        static vector<set<QueryLogtype>> query_substr_logtypes(processed_search_string.size());
 
         // TODO: remove this when subqueries can handle '?' wildcards
-        string search_string_for_sub_queries{processed_search_string};
         // Replace '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
         // message uses the original wildcards, so correctness will be maintained.
+        string search_string_for_sub_queries{processed_search_string};
         std::replace(
                 search_string_for_sub_queries.begin(),
                 search_string_for_sub_queries.end(),
@@ -689,20 +688,25 @@ std::optional<Query> Grep::process_raw_query(
         );
 
         // Get the possible logtypes for the query (but only do it once across all archives).
-        static bool query_substr_logtypes_set = false;
-        if (false == query_substr_logtypes_set) {
-            generate_query_substring_logtypes(
-                    search_string_for_sub_queries,
-                    lexer,
-                    query_substr_logtypes
-            );
-            query_substr_logtypes_set = true;
+        static bool query_substr_logtypes_is_set = false;
+        static vector<QueryLogtype> query_logtypes;
+        static vector<string> logtype_strings;
+        // TODO: this needs to be redone if the schema changes.
+        if (false == query_substr_logtypes_is_set) {
+            query_logtypes
+                    = generate_query_substring_logtypes(search_string_for_sub_queries, lexer);
+            query_substr_logtypes_is_set = true;
+            logtype_strings = generate_logtype_strings(query_logtypes, lexer);
         }
-
-        // The last entry of the query_substr_logtypes is the logtypes for the query itself. Use
-        // this to determine all subqueries that may match against the current archive.
-        auto& query_logtypes = query_substr_logtypes.back();
-        generate_sub_queries(query_logtypes, archive, lexer, ignore_case, sub_queries);
+        // Use the logtypes to determine all subqueries that may match against the current archive.
+        generate_sub_queries(
+                query_logtypes,
+                logtype_strings,
+                archive,
+                lexer,
+                ignore_case,
+                sub_queries
+        );
     }
 
     if (sub_queries.empty()) {
@@ -1012,11 +1016,11 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
     return num_matches;
 }
 
-void Grep::generate_query_substring_logtypes(
-        string& processed_search_string,
-        ByteLexer& lexer,
-        vector<std::set<QueryLogtype>>& query_substr_logtypes
-) {
+vector<QueryLogtype>
+Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLexer& lexer) {
+    // Store substring logtypes in a set to avoid duplicates
+    vector<set<QueryLogtype>> query_substr_logtypes(processed_search_string.size());
+
     // We need to differentiate between literal '*'/'?' and wildcards
     auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escape]
             = get_wildcard_and_escape_locations(processed_search_string);
@@ -1192,6 +1196,15 @@ void Grep::generate_query_substring_logtypes(
             }
         }
     }
+    // The last entry of the query_substr_logtypes is the logtypes for the query itself. Convert
+    // this into a vector so we can easily add logtypes when needed.
+    auto& query_logtypes_set = query_substr_logtypes.back();
+    vector<QueryLogtype> query_logtypes;
+    query_logtypes.reserve(query_logtypes_set.size());
+    for (auto it = query_logtypes_set.begin(); it != query_logtypes_set.end();) {
+        query_logtypes.push_back(std::move(query_logtypes_set.extract(it++).value()));
+    }
+    return query_logtypes;
 }
 
 std::tuple<std::vector<bool>, std::vector<bool>, std::vector<bool>>
@@ -1292,27 +1305,17 @@ void Grep::get_substring_variable_types(
     variable_types = schema_dfa->get_intersect(search_string_dfa);
 }
 
-void Grep::generate_sub_queries(
-        set<QueryLogtype>& query_logtypes,
-        Archive const& archive,
-        ByteLexer& lexer,
-        bool ignore_case,
-        vector<SubQuery>& sub_queries
-) {
+vector<string>
+Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& lexer) {
+    vector<string> logtype_strings;
+    logtype_strings.reserve(query_logtypes.size());
     for (QueryLogtype const& query_logtype : query_logtypes) {
-        // while (false == query_logtypes.empty()) {
-        //  Note: you need to keep the node handle to avoid deleting the object.
-        // auto query_logtype_nh = query_logtypes.extract(query_logtypes.begin());
-        //
-        // auto const& query_logtype = query_logtype_nh.value();
-
         // Convert each query logtype into a set of logtype strings. Logtype strings are used in the
         // sub query as they have the correct format for comparing against the archive. Also, a
         // single query logtype might represent multiple logtype strings. While static text converts
         // one-to-one, wildcard variables that may be encoded have different logtype strings when
         // comparing against the dictionary than they do when comparing against the segment.
-        std::string logtype_string;
-        bool has_vars = true;
+        auto& logtype_string = logtype_strings.emplace_back();
         for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
             auto const logtype_value = query_logtype.get_logtype_value(i);
             auto const& raw_string = query_logtype.get_query_string(i);
@@ -1332,7 +1335,7 @@ void Grep::generate_sub_queries(
                 {
                     auto new_query_logtype = query_logtype;
                     new_query_logtype.set_is_encoded_with_wildcard(i, true);
-                    query_logtypes.insert(new_query_logtype);
+                    query_logtypes.push_back(new_query_logtype);
                 }
                 if (is_encoded_with_wildcard) {
                     if ("int" == schema_type) {
@@ -1360,9 +1363,23 @@ void Grep::generate_sub_queries(
                 }
             }
         }
+    }
+    return logtype_strings;
+}
 
-        // Check if the logtype string exists in the logtype dictionary. If not, then this logtype
-        // string does not form a useful sub query.
+void Grep::generate_sub_queries(
+        vector<QueryLogtype>& query_logtypes,
+        vector<string>& logtype_strings,
+        Archive const& archive,
+        ByteLexer& lexer,
+        bool ignore_case,
+        vector<SubQuery>& sub_queries
+) {
+    for (uint32_t i = 0; i < query_logtypes.size(); i++) {
+        auto const& query_logtype = query_logtypes[i];
+        auto const& logtype_string = logtype_strings[i];
+        // Check if the logtype string exists in the logtype dictionary. If not, then this
+        // logtype string does not form a useful sub query.
         std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
         archive.get_logtype_dictionary().get_entries_matching_wildcard_string(
                 logtype_string,
@@ -1378,6 +1395,7 @@ void Grep::generate_sub_queries(
         // encoded in the segment, we just assume it exists in the segment, as we estimate that
         // checking is slower than decompressing.
         SubQuery sub_query;
+        bool has_vars = true;
         for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
             auto const logtype_value = query_logtype.get_logtype_value(i);
             auto const& raw_string = query_logtype.get_query_string(i);
