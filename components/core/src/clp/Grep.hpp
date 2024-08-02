@@ -231,18 +231,16 @@ public:
      * @param is_non_greedy_wildcard
      * @param is_escape
      * @param lexer
-     * @param contains_wildcard
-     * @param variable_types
+     * @return a tuple containing the set of variable types and a if the substring contains
+     * wildcards.
      */
-    static void get_substring_variable_types(
+    static std::tuple<std::set<uint32_t>, bool> get_substring_variable_types(
             std::string_view search_substr,
             uint32_t substr_offset,
             std::vector<bool>& is_greedy_wildcard,
             std::vector<bool>& is_non_greedy_wildcard,
             std::vector<bool>& is_escape,
-            log_surgeon::lexers::ByteLexer& lexer,
-            bool& contains_wildcard,
-            std::set<uint32_t>& variable_types
+            log_surgeon::lexers::ByteLexer& lexer
     );
 
     /**

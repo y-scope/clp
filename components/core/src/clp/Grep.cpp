@@ -34,6 +34,7 @@ using log_surgeon::SchemaVarAST;
 using std::set;
 using std::string;
 using std::string_view;
+using std::tuple;
 using std::unique_ptr;
 using std::variant;
 using std::vector;
@@ -1048,41 +1049,22 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
                 continue;
             }
             std::vector<QueryLogtype> possible_substr_types;
+
             // Don't allow an isolated wildcard to be considered a variable
             if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
                 possible_substr_types.emplace_back('*', "*", false);
             } else if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
                 possible_substr_types.emplace_back('?', "?", false);
             } else {
-                // If the substring is preceded or proceeded by a greedy wildcard then it's possible
-                // the substring could be extended to match a var, so the wildcards are added to the
-                // substring. If we don't consider this case we could miss combinations. Take for
-                // example "a*b", "a*" and "*b" can both match a has# style variable ("\w*\d+\w*").
-                // If we decompose the string into either substrings "a*" + "b" or "a" + "*b",
-                // neither would capture the possibility of a logtype with the form "<has#>*<has#>",
-                // which is a valid possibility during compression. Instead we desire to decompose
-                // the string into "a*" + "*" + "*b". Note, non-greedy wildcards do not need to be
-                // considered, for example "a?b" can never match "<has#>?<has#>" or "<has#><has#>".
-
                 // As we extend substrings adjacent to wildcards, the substrings that begin or end
                 // with wildcards are redundant (e.g., for string "a*b", a decomposition of the form
                 // "a*" + "b" is a subset of the more general "a*" + "*" + "*b". Note, as this needs
-                // "*", the "*" substring is not redundant. This is already handled above).
+                // "*", the "*" substring is not redundant. This is already handled above). More
+                // detail about this is given below.
                 if (is_greedy_wildcard[begin_idx] || is_greedy_wildcard[end_idx - 1]) {
                     continue;
                 }
 
-                uint32_t substr_start = begin_idx;
-                uint32_t substr_end = end_idx;
-                bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
-                bool next_char_is_star
-                        = end_idx < processed_search_string.length() && is_greedy_wildcard[end_idx];
-                if (prev_char_is_star) {
-                    substr_start--;
-                }
-                if (next_char_is_star) {
-                    substr_end++;
-                }
                 // If the substring isn't surrounded by delimiters there is no reason to consider
                 // the case where it is a variable as CLP would not compress it as such. Preceding
                 // delimiter counts the start of log, a wildcard, or an actual delimiter.
@@ -1109,15 +1091,35 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
                 bool contains_wildcard = false;
                 set<uint32_t> variable_types;
                 if (has_preceding_delimiter && has_proceeding_delimiter) {
-                    get_substring_variable_types(
-                            string_view(processed_search_string).substr(substr_start, substr_end - substr_start),
+                    // If the substring is preceded or proceeded by a greedy wildcard then it's
+                    // possible the substring could be extended to match a var, so the wildcards are
+                    // added to the substring. If we don't consider this case we could miss
+                    // combinations. Take for example "a*b", "a*" and "*b" can both match a has#
+                    // style variable ("\w*\d+\w*"). If we decompose the string into either
+                    // substrings "a*" + "b" or "a" + "*b", neither would capture the possibility of
+                    // a logtype with the form "<has#>*<has#>", which is a valid possibility during
+                    // compression. Instead we desire to decompose the string into "a*" + "*" +
+                    // "*b". Note, non-greedy wildcards do not need to be considered, for example
+                    // "a?b" can never match "<has#>?<has#>" or "<has#><has#>".
+                    uint32_t substr_start = begin_idx;
+                    uint32_t substr_end = end_idx;
+                    bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
+                    bool next_char_is_greedy_wildcard = end_idx < processed_search_string.length()
+                                                        && is_greedy_wildcard[end_idx];
+                    if (prev_char_is_star) {
+                        substr_start--;
+                    }
+                    if (next_char_is_greedy_wildcard) {
+                        substr_end++;
+                    }
+                    auto [variable_types, contains_wildcard] = get_substring_variable_types(
+                            string_view(processed_search_string)
+                                    .substr(substr_start, substr_end - substr_start),
                             substr_start,
                             is_greedy_wildcard,
                             is_non_greedy_wildcard,
                             is_escape,
-                            lexer,
-                            contains_wildcard,
-                            variable_types
+                            lexer
                     );
                     bool already_added_var = false;
                     // Use the variable types to determine the possible_substr_types
@@ -1137,8 +1139,8 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
                         // neighboring substring will handle these cases for us.
                         bool start_star
                                 = is_greedy_wildcard[substr_start] && false == prev_char_is_star;
-                        bool end_star
-                                = is_greedy_wildcard[substr_end - 1] && false == next_char_is_star;
+                        bool end_star = is_greedy_wildcard[substr_end - 1]
+                                        && false == next_char_is_greedy_wildcard;
                         possible_substr_types.emplace_back();
                         QueryLogtype& suffix = possible_substr_types.back();
                         if (start_star) {
@@ -1205,8 +1207,9 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
     return query_logtypes;
 }
 
-std::tuple<std::vector<bool>, std::vector<bool>, std::vector<bool>>
-Grep::get_wildcard_and_escape_locations(std::string const& processed_search_string) {
+tuple<vector<bool>, vector<bool>, vector<bool>> Grep::get_wildcard_and_escape_locations(
+        std::string const& processed_search_string
+) {
     std::vector<bool> is_greedy_wildcard;
     std::vector<bool> is_non_greedy_wildcard;
     std::vector<bool> is_escape;
@@ -1244,20 +1247,19 @@ Grep::get_wildcard_and_escape_locations(std::string const& processed_search_stri
     return {std::move(is_greedy_wildcard), std::move(is_non_greedy_wildcard), std::move(is_escape)};
 }
 
-void Grep::get_substring_variable_types(
+tuple<set<uint32_t>, set<uint32_t>> Grep::get_substring_variable_types(
         string_view search_substr,
         uint32_t substr_offset,
         std::vector<bool>& is_greedy_wildcard,
         std::vector<bool>& is_non_greedy_wildcard,
         std::vector<bool>& is_escape,
-        ByteLexer& lexer,
-        bool& contains_wildcard,
-        set<uint32_t>& variable_types
+        ByteLexer& lexer
 ) {
     // To determine if a substring could be a variable we convert it to regex,
     // generate the NFA and DFA for the regex, and intersect the substring DFA with
     // the compression DFA.
     std::string regex_search_string;
+    bool contains_wildcard = false;
     for (uint32_t idx = 0; idx < search_substr.size(); idx++) {
         if (is_escape[substr_offset + idx]) {
             continue;
@@ -1299,7 +1301,7 @@ void Grep::get_substring_variable_types(
     auto const& schema_dfa = lexer.get_dfa();
 
     // Get variable types in the intersection of substring and compression DFAs.
-    variable_types = schema_dfa->get_intersect(search_string_dfa);
+    return {schema_dfa->get_intersect(search_string_dfa), contains_wildcard};
 }
 
 vector<string>
