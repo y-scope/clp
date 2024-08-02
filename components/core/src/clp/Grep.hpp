@@ -223,10 +223,10 @@ public:
     get_wildcard_and_escape_locations(std::string const& processed_search_string);
 
     /**
-     * Perform DFA intersect to determine the type of variables the string can match.
-     * @param substr_start
-     * @param substr_end
-     * @param schema_search_string
+     * Perform DFA intersect to determine the type of variables the string can match. Also stores
+     * if the string contains wildcards.
+     * @param search_substr
+     * @param substr_offset
      * @param is_greedy_wildcard
      * @param is_non_greedy_wildcard
      * @param is_escape
@@ -235,9 +235,8 @@ public:
      * @param variable_types
      */
     static void get_substring_variable_types(
-            uint32_t substr_start,
-            uint32_t substr_end,
-            std::string& schema_search_string,
+            std::string_view search_substr,
+            uint32_t substr_offset,
             std::vector<bool>& is_greedy_wildcard,
             std::vector<bool>& is_non_greedy_wildcard,
             std::vector<bool>& is_escape,

@@ -33,6 +33,7 @@ using log_surgeon::SchemaAST;
 using log_surgeon::SchemaVarAST;
 using std::set;
 using std::string;
+using std::string_view;
 using std::unique_ptr;
 using std::variant;
 using std::vector;
@@ -432,7 +433,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
     size_t last_token_end_pos = 0;
     string logtype;
     auto escape_handler
-            = [](std::string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
+            = [](string_view constant, size_t char_to_escape_pos, string& logtype) -> void {
         auto const escape_char{enum_to_underlying_type(ir::VariablePlaceholder::Escape)};
         auto const next_char_pos{char_to_escape_pos + 1};
         // NOTE: We don't want to add additional escapes for wildcards that have been escaped. E.g.,
@@ -447,7 +448,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
     for (auto const& query_token : query_tokens) {
         // Append from end of last token to beginning of this token, to logtype
         ir::append_constant_to_logtype(
-                static_cast<std::string_view>(processed_search_string)
+                static_cast<string_view>(processed_search_string)
                         .substr(last_token_end_pos,
                                 query_token.get_begin_pos() - last_token_end_pos),
                 escape_handler,
@@ -481,7 +482,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
     if (last_token_end_pos < processed_search_string.length()) {
         // Append from end of last token to end
         ir::append_constant_to_logtype(
-                static_cast<std::string_view>(processed_search_string)
+                static_cast<string_view>(processed_search_string)
                         .substr(last_token_end_pos, string::npos),
                 escape_handler,
                 logtype
@@ -808,7 +809,7 @@ bool Grep::get_bounds_of_next_potential_var(
         // - it could be a multi-digit hex value, or
         // - it's directly preceded by an equals sign and contains an alphabet without a wildcard
         //   between the equals sign and the first alphabet of the token
-        auto variable = static_cast<std::string_view>(value).substr(begin_pos, end_pos - begin_pos);
+        auto variable = static_cast<string_view>(value).substr(begin_pos, end_pos - begin_pos);
         if (contains_decimal_digit || ir::could_be_multi_digit_hex_value(variable)) {
             is_var = true;
         } else if (begin_pos > 0 && '=' == value[begin_pos - 1] && contains_alphabet) {
@@ -1043,7 +1044,7 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
             // "*text" from string "* \*text *").
-            if ((begin_idx > 0 && is_escape[begin_idx - 1])) {
+            if (begin_idx > 0 && is_escape[begin_idx - 1]) {
                 continue;
             }
             std::vector<QueryLogtype> possible_substr_types;
@@ -1053,8 +1054,6 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
             } else if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
                 possible_substr_types.emplace_back('?', "?", false);
             } else {
-                set<uint32_t> variable_types;
-
                 // If the substring is preceded or proceeded by a greedy wildcard then it's possible
                 // the substring could be extended to match a var, so the wildcards are added to the
                 // substring. If we don't consider this case we could miss combinations. Take for
@@ -1108,12 +1107,11 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
                 // simultaneously match multiple variables and static text, and we need a different
                 // approach to compare against the archive.
                 bool contains_wildcard = false;
-
+                set<uint32_t> variable_types;
                 if (has_preceding_delimiter && has_proceeding_delimiter) {
                     get_substring_variable_types(
+                            string_view(processed_search_string).substr(substr_start, substr_end - substr_start),
                             substr_start,
-                            substr_end,
-                            processed_search_string,
                             is_greedy_wildcard,
                             is_non_greedy_wildcard,
                             is_escape,
@@ -1247,9 +1245,8 @@ Grep::get_wildcard_and_escape_locations(std::string const& processed_search_stri
 }
 
 void Grep::get_substring_variable_types(
-        uint32_t substr_start,
-        uint32_t substr_end,
-        std::string& schema_search_string,
+        string_view search_substr,
+        uint32_t substr_offset,
         std::vector<bool>& is_greedy_wildcard,
         std::vector<bool>& is_non_greedy_wildcard,
         std::vector<bool>& is_escape,
@@ -1261,15 +1258,15 @@ void Grep::get_substring_variable_types(
     // generate the NFA and DFA for the regex, and intersect the substring DFA with
     // the compression DFA.
     std::string regex_search_string;
-    for (uint32_t idx = substr_start; idx < substr_end; idx++) {
-        if (is_escape[idx]) {
+    for (uint32_t idx = 0; idx < search_substr.size(); idx++) {
+        if (is_escape[substr_offset + idx]) {
             continue;
         }
-        auto const& c = schema_search_string[idx];
-        if (is_greedy_wildcard[idx]) {
+        auto const& c = search_substr[idx];
+        if (is_greedy_wildcard[substr_offset + idx]) {
             contains_wildcard = true;
             regex_search_string += ".*";
-        } else if (is_non_greedy_wildcard[idx]) {
+        } else if (is_non_greedy_wildcard[substr_offset + idx]) {
             contains_wildcard = true;
             regex_search_string += ".";
         } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {
