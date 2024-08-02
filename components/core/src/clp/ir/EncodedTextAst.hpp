@@ -1,6 +1,7 @@
 #ifndef CLP_IR_ENCODEDTEXTAST_HPP
 #define CLP_IR_ENCODEDTEXTAST_HPP
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,6 +47,13 @@ public:
     [[nodiscard]] auto get_encoded_vars() const -> std::vector<encoded_variable_t> const& {
         return m_encoded_vars;
     }
+
+    /**
+     * Decodes and un-parses the EncodedTextAst into its string form.
+     * @return The string corresponding to the EncodedTextAst on success.
+     * @return std::nullopt if decoding fails.
+     */
+    [[nodiscard]] auto decode_and_unparse() const -> std::optional<std::string>;
 
 private:
     // Variables
