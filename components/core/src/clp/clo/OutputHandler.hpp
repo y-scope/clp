@@ -5,6 +5,7 @@
 
 #include <queue>
 #include <string>
+#include <string_view>
 
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
@@ -14,6 +15,7 @@
 #include "../../reducer/Pipeline.hpp"
 #include "../Defs.h"
 #include "../streaming_archive/MetadataDB.hpp"
+#include "../streaming_archive/reader/Message.hpp"
 #include "../TraceableException.hpp"
 
 namespace clp::clo {
@@ -28,14 +30,19 @@ public:
     // Methods
     /**
      * Adds a query result to a batch or sends it to the destination.
-     * @param original_path The original path of the log event.
-     * @param message The content of the log event.
-     * @param timestamp The timestamp of the log event.
-     * @return ErrorCode_Success if the result was added successfully, an error code otherwise.
+     * @param orig_file_path Path of the original file that contains the result.
+     * @param orig_file_id ID of the original file that contains the result.
+     * @param encoded_message The encoded result.
+     * @param decompressed_message The decompressed result.
+     * @return ErrorCode_Success if the result was added successfully, or an error code if specified
+     * by the derived class.
      */
-    virtual ErrorCode
-    add_result(std::string const& original_path, std::string const& message, epochtime_t timestamp)
-            = 0;
+    virtual ErrorCode add_result(
+            std::string_view orig_file_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
+    ) = 0;
 
     /**
      * Flushes any buffered output. Called once at the end of search.
@@ -49,7 +56,7 @@ public:
      * metadata about the file
      */
     [[nodiscard]] virtual bool can_skip_file(
-            [[maybe_unused]] clp::streaming_archive::MetadataDB::FileIterator const& it
+            [[maybe_unused]] ::clp::streaming_archive::MetadataDB::FileIterator const& it
     ) {
         return false;
     }
@@ -82,15 +89,17 @@ public:
     // Methods inherited from Client
     /**
      * Sends a result to the network destination.
-     * @param original_path
-     * @param message
-     * @param timestamp
+     * @param orig_file_path Path of the original file that contains the result.
+     * @param orig_file_id ID of the original file that contains the result.
+     * @param encoded_message The encoded result.
+     * @param decompressed_message The decompressed result.
      * @return Same as networking::try_send
      */
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view orig_file_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override;
 
     /**
@@ -114,14 +123,24 @@ public:
     // Types
     struct QueryResult {
         // Constructors
-        QueryResult(std::string original_path, std::string message, epochtime_t timestamp)
-                : original_path(std::move(original_path)),
-                  message(std::move(message)),
-                  timestamp(timestamp) {}
+        QueryResult(
+                std::string_view orig_file_path,
+                std::string_view orig_file_id,
+                size_t log_event_ix,
+                epochtime_t timestamp,
+                std::string_view decompressed_message
+        )
+                : orig_file_path(orig_file_path),
+                  orig_file_id(orig_file_id),
+                  log_event_ix(log_event_ix),
+                  timestamp(timestamp),
+                  decompressed_message(decompressed_message) {}
 
-        std::string original_path;
-        std::string message;
+        std::string orig_file_path;
+        std::string orig_file_id;
+        int64_t log_event_ix;
         epochtime_t timestamp;
+        std::string decompressed_message;
     };
 
     struct QueryResultGreaterTimestampComparator {
@@ -154,17 +173,11 @@ public:
     );
 
     // Methods inherited from OutputHandler
-    /**
-     * Adds a result to the batch.
-     * @param original_path
-     * @param message
-     * @param timestamp
-     * @return ErrorCode_Success
-     */
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view orig_file_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override;
 
     /**
@@ -174,7 +187,7 @@ public:
      */
     ErrorCode flush() override;
 
-    [[nodiscard]] bool can_skip_file(clp::streaming_archive::MetadataDB::FileIterator const& it
+    [[nodiscard]] bool can_skip_file(::clp::streaming_archive::MetadataDB::FileIterator const& it
     ) override {
         return is_latest_results_full() && get_smallest_timestamp() > it.get_end_ts();
     }
@@ -216,17 +229,11 @@ public:
     explicit CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
-    /**
-     * Adds a result.
-     * @param original_path
-     * @param message
-     * @param timestamp
-     * @return ErrorCode_Success
-     */
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view orig_file_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override;
 
     /**
@@ -254,11 +261,13 @@ public:
 
     // Methods inherited from OutputHandler
     ErrorCode add_result(
-            std::string const& original_path,
-            std::string const& message,
-            epochtime_t timestamp
+            std::string_view orig_file_path,
+            std::string_view orig_file_id,
+            streaming_archive::reader::Message const& encoded_message,
+            std::string_view decompressed_message
     ) override {
-        int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
+        int64_t bucket = (encoded_message.get_ts_in_milli() / m_count_by_time_bucket_size)
+                         * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
         return ErrorCode::ErrorCode_Success;
     }

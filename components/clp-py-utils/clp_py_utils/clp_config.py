@@ -22,16 +22,18 @@ REDIS_COMPONENT_NAME = "redis"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
-SEARCH_SCHEDULER_COMPONENT_NAME = "search_scheduler"
+QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
-SEARCH_WORKER_COMPONENT_NAME = "search_worker"
+QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
+LOG_VIEWER_WEBUI_COMPONENT_NAME = "log_viewer_webui"
 
 # Target names
 ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"
 
-SEARCH_JOBS_TABLE_NAME = "search_jobs"
+QUERY_JOBS_TABLE_NAME = "query_jobs"
+QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
@@ -152,6 +154,20 @@ def _validate_logging_level(cls, field):
         )
 
 
+def _validate_host(cls, field):
+    if "" == field:
+        raise ValueError(f"{cls.__name__}.host cannot be empty.")
+
+
+def _validate_port(cls, field):
+    min_valid_port = 0
+    max_valid_port = 2**16 - 1
+    if min_valid_port > field or max_valid_port < field:
+        raise ValueError(
+            f"{cls.__name__}.port is not within valid range " f"{min_valid_port}-{max_valid_port}."
+        )
+
+
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
@@ -162,7 +178,7 @@ class CompressionScheduler(BaseModel):
         return field
 
 
-class SearchScheduler(BaseModel):
+class QueryScheduler(BaseModel):
     host = "localhost"
     port = 7000
     jobs_poll_delay: float = 0.1  # seconds
@@ -196,7 +212,7 @@ class CompressionWorker(BaseModel):
         return field
 
 
-class SearchWorker(BaseModel):
+class QueryWorker(BaseModel):
     logging_level: str = "INFO"
 
     @validator("logging_level")
@@ -208,7 +224,7 @@ class SearchWorker(BaseModel):
 class Redis(BaseModel):
     host: str = "localhost"
     port: int = 6379
-    search_backend_database: int = 0
+    query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
     password: typing.Optional[str]
@@ -253,7 +269,8 @@ class Reducer(BaseModel):
 class ResultsCache(BaseModel):
     host: str = "localhost"
     port: int = 27017
-    db_name: str = "clp-search"
+    db_name: str = "clp-query-results"
+    ir_collection_name: str = "ir-files"
 
     @validator("host")
     def validate_host(cls, field):
@@ -265,6 +282,12 @@ class ResultsCache(BaseModel):
     def validate_db_name(cls, field):
         if "" == field:
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
+        return field
+
+    @validator("ir_collection_name")
+    def validate_ir_collection_name(cls, field):
+        if "" == field:
+            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.ir_collection_name cannot be empty.")
         return field
 
     def get_uri(self):
@@ -320,6 +343,32 @@ class ArchiveOutput(BaseModel):
         return d
 
 
+class IrOutput(BaseModel):
+    directory: pathlib.Path = pathlib.Path("var") / "data" / "ir"
+    target_uncompressed_size: int = 128 * 1024 * 1024
+
+    @validator("directory")
+    def validate_directory(cls, field):
+        if "" == field:
+            raise ValueError("directory can not be empty")
+        return field
+
+    @validator("target_uncompressed_size")
+    def validate_target_uncompressed_size(cls, field):
+        if field <= 0:
+            raise ValueError("target_uncompressed_size must be greater than 0")
+        return field
+
+    def make_config_paths_absolute(self, clp_home: pathlib.Path):
+        self.directory = make_config_path_absolute(clp_home, self.directory)
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        # Turn directory (pathlib.Path) into a primitive string
+        d["directory"] = str(d["directory"])
+        return d
+
+
 class WebUi(BaseModel):
     host: str = "localhost"
     port: int = 4000
@@ -327,24 +376,32 @@ class WebUi(BaseModel):
 
     @validator("host")
     def validate_host(cls, field):
-        if "" == field:
-            raise ValueError(f"{WEBUI_COMPONENT_NAME}.host cannot be empty.")
+        _validate_host(cls, field)
         return field
 
     @validator("port")
     def validate_port(cls, field):
-        min_valid_port = 0
-        max_valid_port = 2**16 - 1
-        if min_valid_port > field or max_valid_port < field:
-            raise ValueError(
-                f"{WEBUI_COMPONENT_NAME}.port is not within valid range "
-                f"{min_valid_port}-{max_valid_port}."
-            )
+        _validate_port(cls, field)
         return field
 
     @validator("logging_level")
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
+        return field
+
+
+class LogViewerWebUi(BaseModel):
+    host: str = "localhost"
+    port: int = 3000
+
+    @validator("host")
+    def validate_host(cls, field):
+        _validate_host(cls, field)
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        _validate_port(cls, field)
         return field
 
 
@@ -360,13 +417,15 @@ class CLPConfig(BaseModel):
     reducer: Reducer() = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
-    search_scheduler: SearchScheduler = SearchScheduler()
+    query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
-    search_worker: SearchWorker = SearchWorker()
+    query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
+    log_viewer_webui: LogViewerWebUi = LogViewerWebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
+    ir_output: IrOutput = IrOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
@@ -376,6 +435,7 @@ class CLPConfig(BaseModel):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
+        self.ir_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
@@ -394,6 +454,12 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.archive_output.directory)
         except ValueError as ex:
             raise ValueError(f"archive_output.directory is invalid: {ex}")
+
+    def validate_ir_output_dir(self):
+        try:
+            validate_path_could_be_dir(self.ir_output.directory)
+        except ValueError as ex:
+            raise ValueError(f"ir_output.directory is invalid: {ex}")
 
     def validate_data_dir(self):
         try:
@@ -462,6 +528,7 @@ class CLPConfig(BaseModel):
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
+        d["ir_output"] = self.ir_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
         d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)

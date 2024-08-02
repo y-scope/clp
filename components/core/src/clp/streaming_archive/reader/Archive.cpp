@@ -168,12 +168,49 @@ bool Archive::decompress_message(
         Message const& compressed_msg,
         string& decompressed_msg
 ) {
+    if (false == decompress_message_without_ts(compressed_msg, decompressed_msg)) {
+        return false;
+    }
+
+    // Determine which timestamp pattern to use
+    auto const& timestamp_patterns = file.get_timestamp_patterns();
+    if (!timestamp_patterns.empty()
+        && compressed_msg.get_ix_in_file_split()
+                   >= timestamp_patterns[file.get_current_ts_pattern_ix()].first)
+    {
+        while (true) {
+            if (file.get_current_ts_pattern_ix() >= timestamp_patterns.size() - 1) {
+                // Already at last timestamp pattern
+                break;
+            }
+            auto next_patt_start_message_num
+                    = timestamp_patterns[file.get_current_ts_pattern_ix() + 1].first;
+            if (compressed_msg.get_ix_in_file_split() < next_patt_start_message_num) {
+                // Not yet time for next timestamp pattern
+                break;
+            }
+            file.increment_current_ts_pattern_ix();
+        }
+        timestamp_patterns[file.get_current_ts_pattern_ix()].second.insert_formatted_timestamp(
+                compressed_msg.get_ts_in_milli(),
+                decompressed_msg
+        );
+    }
+
+    return true;
+}
+
+bool Archive::decompress_message_without_ts(
+        Message const& compressed_msg,
+        string& decompressed_msg
+) {
     decompressed_msg.clear();
 
     // Build original message content
-    logtype_dictionary_id_t const logtype_id = compressed_msg.get_logtype_id();
+    auto const logtype_id = compressed_msg.get_logtype_id();
     auto const& logtype_entry = m_logtype_dictionary.get_entry(logtype_id);
-    if (!EncodedVariableInterpreter::decode_variables_into_message(
+    if (false
+        == EncodedVariableInterpreter::decode_variables_into_message(
                 logtype_entry,
                 m_var_dictionary,
                 compressed_msg.get_vars(),
@@ -186,31 +223,6 @@ bool Archive::decompress_message(
                 compressed_msg.get_logtype_id()
         );
         return false;
-    }
-
-    // Determine which timestamp pattern to use
-    auto const& timestamp_patterns = file.get_timestamp_patterns();
-    if (!timestamp_patterns.empty()
-        && compressed_msg.get_message_number()
-                   >= timestamp_patterns[file.get_current_ts_pattern_ix()].first)
-    {
-        while (true) {
-            if (file.get_current_ts_pattern_ix() >= timestamp_patterns.size() - 1) {
-                // Already at last timestamp pattern
-                break;
-            }
-            auto next_patt_start_message_num
-                    = timestamp_patterns[file.get_current_ts_pattern_ix() + 1].first;
-            if (compressed_msg.get_message_number() < next_patt_start_message_num) {
-                // Not yet time for next timestamp pattern
-                break;
-            }
-            file.increment_current_ts_pattern_ix();
-        }
-        timestamp_patterns[file.get_current_ts_pattern_ix()].second.insert_formatted_timestamp(
-                compressed_msg.get_ts_in_milli(),
-                decompressed_msg
-        );
     }
 
     return true;

@@ -1,13 +1,31 @@
 #ifndef CLP_CLP_UTILS_HPP
 #define CLP_CLP_UTILS_HPP
 
+#include <filesystem>
+#include <memory>
 #include <string>
 
 #include <boost/filesystem/path.hpp>
 
+#include "../GlobalMetadataDB.hpp"
+#include "../GlobalMetadataDBConfig.hpp"
+#include "ErrorCode.hpp"
 #include "FileToCompress.hpp"
+#include "TraceableException.hpp"
 
 namespace clp::clp {
+// Types
+class ClpOperationFailed : public TraceableException {
+public:
+    // Constructors
+    ClpOperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+            : TraceableException(error_code, filename, line_number) {}
+
+    // Methods
+    [[nodiscard]] char const* what() const noexcept override { return "CLP operation failed"; }
+};
+
+// Methods
 /**
  * Recursively finds all files and empty directories at the given path
  * @param path_prefix_to_remove
@@ -22,14 +40,6 @@ bool find_all_files_and_empty_directories(
         std::vector<FileToCompress>& file_paths,
         std::vector<std::string>& empty_directory_paths
 );
-
-/**
- * Checks if the given sequence is valid UTF-8
- * @param sequence_length
- * @param sequence
- * @return true if valid, false otherwise
- */
-bool is_utf8_sequence(size_t sequence_length, char const* sequence);
 
 /**
  * Reads a list of input paths
@@ -61,6 +71,17 @@ bool remove_prefix_and_clean_up_path(
  * @return true if they all exist, false otherwise
  */
 bool validate_paths_exist(std::vector<std::string> const& paths);
+
+/**
+ * Chooses and initializes the relevant global metadata DB class based on the given config.
+ * @param global_metadata_db_config
+ * @param archives_dir
+ * @return The relevant global metadata DB class.
+ */
+std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
+        GlobalMetadataDBConfig const& global_metadata_db_config,
+        std::filesystem::path const& archives_dir
+);
 }  // namespace clp::clp
 
 #endif  // CLP_CLP_UTILS_HPP

@@ -6,12 +6,16 @@ import secrets
 import socket
 import subprocess
 import typing
+import uuid
+from enum import auto
+from typing import List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
     DB_COMPONENT_NAME,
+    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -24,8 +28,12 @@ from clp_py_utils.core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
+from strenum import KebabCaseStrEnum
 
 # CONSTANTS
+EXTRACT_FILE_CMD = "x"
+EXTRACT_IR_CMD = "i"
+
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
@@ -36,6 +44,13 @@ DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
 class DockerMountType(enum.IntEnum):
     BIND = 0
+
+
+class JobType(KebabCaseStrEnum):
+    COMPRESSION = auto()
+    FILE_EXTRACTION = auto()
+    IR_EXTRACTION = auto()
+    SEARCH = auto()
 
 
 class DockerMount:
@@ -69,6 +84,7 @@ class CLPDockerMounts:
         self.data_dir: typing.Optional[DockerMount] = None
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
+        self.ir_output_dir: typing.Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -88,6 +104,14 @@ def get_clp_home():
         raise ValueError("CLP_HOME set to nonexistent path.")
 
     return clp_home.resolve()
+
+
+def generate_container_name(job_type: JobType) -> str:
+    """
+    :param job_type:
+    :return: A unique container name for the given job type.
+    """
+    return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
 def check_dependencies():
@@ -176,12 +200,15 @@ def is_path_already_mounted(
     return host_path_relative_to_mounted_root == container_path_relative_to_mounted_root
 
 
-def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
+def generate_container_config(
+    clp_config: CLPConfig, clp_home: pathlib.Path
+) -> Tuple[CLPConfig, CLPDockerMounts]:
     """
     Copies the given config and sets up mounts mapping the relevant host paths into the container
 
     :param clp_config:
     :param clp_home:
+    :return: The container config and the mounts.
     """
     container_clp_config = clp_config.copy(deep=True)
 
@@ -224,7 +251,71 @@ def generate_container_config(clp_config: CLPConfig, clp_home: pathlib.Path):
             container_clp_config.archive_output.directory,
         )
 
+    container_clp_config.ir_output.directory = pathlib.Path("/") / "mnt" / "ir-output"
+    if not is_path_already_mounted(
+        clp_home,
+        CONTAINER_CLP_HOME,
+        clp_config.ir_output.directory,
+        container_clp_config.ir_output.directory,
+    ):
+        docker_mounts.ir_output_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.ir_output.directory,
+            container_clp_config.ir_output.directory,
+        )
+
     return container_clp_config, docker_mounts
+
+
+def dump_container_config(
+    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
+) -> Tuple[pathlib.Path, pathlib.Path]:
+    """
+    Writes the given config to the logs directory so that it's accessible in the container.
+    :param container_clp_config: The config to write.
+    :param clp_config: The corresponding config on the host (used to determine the logs directory).
+    :param container_name:
+    :return: The path to the config file in the container and on the host.
+    """
+    container_config_filename = f".{container_name}-config.yml"
+    config_file_path_on_host = clp_config.logs_directory / container_config_filename
+    config_file_path_on_container = container_clp_config.logs_directory / container_config_filename
+    with open(config_file_path_on_host, "w") as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
+    return config_file_path_on_container, config_file_path_on_host
+
+
+def generate_container_start_cmd(
+    container_name: str, container_mounts: List[Optional[DockerMount]], container_image: str
+) -> List[str]:
+    """
+    Generates the command to start a container with the given mounts and name.
+    :param container_name:
+    :param container_mounts:
+    :param container_image:
+    :return: The command.
+    """
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-i",
+        "--rm",
+        "--network", "host",
+        "-w", str(CONTAINER_CLP_HOME),
+        "-e", f"PYTHONPATH={clp_site_packages_dir}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+        "--name", container_name,
+        "--log-driver", "local"
+    ]
+    for mount in container_mounts:
+        if mount:
+            container_start_cmd.append("--mount")
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(container_image)
+
+    return container_start_cmd
 
 
 def validate_config_key_existence(config, key):
@@ -235,7 +326,7 @@ def validate_config_key_existence(config, key):
     return value
 
 
-def validate_and_load_config_file(
+def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
 ):
     if config_file_path.exists():
@@ -391,6 +482,7 @@ def validate_results_cache_config(
 def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
     clp_config.validate_archive_output_dir()
+    clp_config.validate_ir_output_dir()
 
 
 def validate_webui_config(
@@ -407,3 +499,16 @@ def validate_webui_config(
         raise ValueError(f"{WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_log_viewer_webui_config(clp_config: CLPConfig, settings_json_path: pathlib.Path):
+    if not settings_json_path.exists():
+        raise ValueError(
+            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
+        )
+
+    validate_port(
+        f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port",
+        clp_config.log_viewer_webui.host,
+        clp_config.log_viewer_webui.port,
+    )

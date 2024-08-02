@@ -79,10 +79,10 @@ public:
     bool register_with_scheduler(boost::asio::ip::tcp::resolver::results_type const& endpoints);
 
     /**
-     * Synchronously sends a generic acknowledgement to the search scheduler.
+     * Synchronously sends a generic acknowledgement to the query scheduler.
      * @return Whether the acknowledgement was sent successfully.
      */
-    bool ack_search_scheduler();
+    bool ack_query_scheduler();
 
     /**
      * Increments the number of active receiver tasks which may receive some results.
@@ -124,7 +124,7 @@ public:
 
     /**
      * If all results have been received then this function tries to publish the pipeline's results
-     * to the results cache and notify the search scheduler.
+     * to the results cache and notify the query scheduler.
      * @return true if not all results have been received yet, or the results were published
      * successfully.
      * @return false otherwise.

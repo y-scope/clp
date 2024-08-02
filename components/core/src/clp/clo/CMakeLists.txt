@@ -4,6 +4,8 @@ set(
         ../BufferReader.hpp
         ../cli_utils.cpp
         ../cli_utils.hpp
+        ../clp/FileDecompressor.cpp
+        ../clp/FileDecompressor.hpp
         ../database_utils.cpp
         ../database_utils.hpp
         ../Defs.h
@@ -20,13 +22,23 @@ set(
         ../ffi/ir_stream/decoding_methods.cpp
         ../ffi/ir_stream/decoding_methods.hpp
         ../ffi/ir_stream/decoding_methods.inc
+        ../ffi/ir_stream/encoding_methods.cpp
+        ../ffi/ir_stream/encoding_methods.hpp
+        ../ffi/ir_stream/utils.cpp
+        ../ffi/ir_stream/utils.hpp
+        ../FileDescriptor.cpp
+        ../FileDescriptor.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../ir/EncodedTextAst.cpp
+        ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
+        ../ir/LogEventSerializer.cpp
+        ../ir/LogEventSerializer.hpp
         ../ir/parsing.cpp
         ../ir/parsing.hpp
         ../ir/parsing.inc
@@ -49,6 +61,8 @@ set(
         ../Query.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
+        ../ReadOnlyMemoryMappedFile.cpp
+        ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
         ../SQLiteDB.cpp
         ../SQLiteDB.hpp
@@ -111,6 +125,7 @@ set(
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
+        constants.hpp
         OutputHandler.cpp
         OutputHandler.hpp
 )

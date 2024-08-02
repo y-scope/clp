@@ -1,26 +1,34 @@
 #include "ArchiveReader.hpp"
 
+#include <filesystem>
+#include <string_view>
+
 #include "archive_constants.hpp"
 #include "ReaderUtils.hpp"
 
+using std::string_view;
+
 namespace clp_s {
-void ArchiveReader::open(std::string const& archive_path) {
+void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
-    m_archive_path = archive_path;
+    m_archive_id = archive_id;
+    std::filesystem::path archive_path{archives_dir};
+    archive_path /= m_archive_id;
+    auto const archive_path_str = archive_path.string();
 
-    m_var_dict = ReaderUtils::get_variable_dictionary_reader(m_archive_path);
-    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(m_archive_path);
-    m_array_dict = ReaderUtils::get_array_dictionary_reader(m_archive_path);
-    m_timestamp_dict = ReaderUtils::get_timestamp_dictionary_reader(m_archive_path);
+    m_var_dict = ReaderUtils::get_variable_dictionary_reader(archive_path_str);
+    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(archive_path_str);
+    m_array_dict = ReaderUtils::get_array_dictionary_reader(archive_path_str);
+    m_timestamp_dict = ReaderUtils::get_timestamp_dictionary_reader(archive_path_str);
 
-    m_schema_tree = ReaderUtils::read_schema_tree(m_archive_path);
-    m_schema_map = ReaderUtils::read_schemas(m_archive_path);
+    m_schema_tree = ReaderUtils::read_schema_tree(archive_path_str);
+    m_schema_map = ReaderUtils::read_schemas(archive_path_str);
 
-    m_tables_file_reader.open(m_archive_path + constants::cArchiveTablesFile);
-    m_table_metadata_file_reader.open(m_archive_path + constants::cArchiveTableMetadataFile);
+    m_tables_file_reader.open(archive_path_str + constants::cArchiveTablesFile);
+    m_table_metadata_file_reader.open(archive_path_str + constants::cArchiveTableMetadataFile);
 }
 
 void ArchiveReader::read_metadata() {
@@ -92,14 +100,40 @@ SchemaReader& ArchiveReader::read_table(
         throw OperationFailed(ErrorCodeFileNotFound, __FILENAME__, __LINE__);
     }
 
-    auto& schema_reader
-            = create_schema_reader(schema_id, should_extract_timestamp, should_marshal_records);
+    initialize_schema_reader(
+            m_schema_reader,
+            schema_id,
+            should_extract_timestamp,
+            should_marshal_records
+    );
 
     m_tables_file_reader.try_seek_from_begin(m_id_to_table_metadata[schema_id].offset);
     m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
-    schema_reader.load(m_tables_decompressor, m_id_to_table_metadata[schema_id].uncompressed_size);
+    m_schema_reader.load(
+            m_tables_decompressor,
+            m_id_to_table_metadata[schema_id].uncompressed_size
+    );
     m_tables_decompressor.close_for_reuse();
-    return schema_reader;
+    return m_schema_reader;
+}
+
+std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::read_all_tables() {
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+
+    std::vector<std::shared_ptr<SchemaReader>> readers;
+    readers.reserve(m_id_to_table_metadata.size());
+    for (auto const& [id, table_metadata] : m_id_to_table_metadata) {
+        auto schema_reader = std::make_shared<SchemaReader>();
+        initialize_schema_reader(*schema_reader, id, true, true);
+
+        m_tables_file_reader.try_seek_from_begin(table_metadata.offset);
+        m_tables_decompressor.open(m_tables_file_reader, cDecompressorFileReadBufferCapacity);
+        schema_reader->load(m_tables_decompressor, table_metadata.uncompressed_size);
+        m_tables_decompressor.close_for_reuse();
+
+        readers.push_back(std::move(schema_reader));
+    }
+    return readers;
 }
 
 BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int32_t column_id) {
@@ -192,13 +226,14 @@ void ArchiveReader::append_unordered_reader_columns(
     }
 }
 
-SchemaReader& ArchiveReader::create_schema_reader(
+void ArchiveReader::initialize_schema_reader(
+        SchemaReader& reader,
         int32_t schema_id,
         bool should_extract_timestamp,
         bool should_marshal_records
 ) {
     auto& schema = (*m_schema_map)[schema_id];
-    m_schema_reader.reset(
+    reader.reset(
             m_schema_tree,
             schema_id,
             schema.get_ordered_schema_view(),
@@ -218,7 +253,7 @@ SchemaReader& ArchiveReader::create_schema_reader(
                     Schema::get_unordered_object_type(column_id)
             );
             append_unordered_reader_columns(
-                    m_schema_reader,
+                    reader,
                     mst_subtree_root_node_id,
                     sub_schema,
                     should_marshal_records
@@ -231,21 +266,20 @@ SchemaReader& ArchiveReader::create_schema_reader(
             // column id is the root of the unordered object, so we can pass it directly to
             // append_unordered_reader_columns.
             append_unordered_reader_columns(
-                    m_schema_reader,
+                    reader,
                     column_id,
                     std::span<int32_t>(),
                     should_marshal_records
             );
             continue;
         }
-        BaseColumnReader* column_reader = append_reader_column(m_schema_reader, column_id);
+        BaseColumnReader* column_reader = append_reader_column(reader, column_id);
 
         if (should_extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0)
         {
-            m_schema_reader.mark_column_as_timestamp(column_reader);
+            reader.mark_column_as_timestamp(column_reader);
         }
     }
-    return m_schema_reader;
 }
 
 void ArchiveReader::store(FileWriter& writer) {

@@ -245,6 +245,7 @@ int main(int argc, char const* argv[]) {
     }
 
     clp_s::TimestampPattern::init();
+    mongocxx::instance const mongocxx_instance{};
 
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
@@ -269,12 +270,20 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        clp_s::JsonConstructorOption option;
+        clp_s::JsonConstructorOption option{};
         option.output_dir = command_line_arguments.get_output_dir();
+        option.ordered = command_line_arguments.get_ordered_decompression();
+        option.archives_dir = archives_dir;
+        option.ordered_chunk_size = command_line_arguments.get_ordered_chunk_size();
+        if (false == command_line_arguments.get_mongodb_uri().empty()) {
+            option.metadata_db
+                    = {command_line_arguments.get_mongodb_uri(),
+                       command_line_arguments.get_mongodb_collection()};
+        }
         try {
             auto const& archive_id = command_line_arguments.get_archive_id();
             if (false == archive_id.empty()) {
-                option.archives_dir = std::filesystem::path{archives_dir} / archive_id;
+                option.archive_id = archive_id;
                 decompress_archive(option);
             } else {
                 for (auto const& entry : std::filesystem::directory_iterator(archives_dir)) {
@@ -283,7 +292,7 @@ int main(int argc, char const* argv[]) {
                         continue;
                     }
 
-                    option.archives_dir = entry.path();
+                    option.archive_id = entry.path().filename();
                     decompress_archive(option);
                 }
             }
@@ -292,8 +301,6 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
     } else {
-        mongocxx::instance const mongocxx_instance{};
-
         auto const& query = command_line_arguments.get_query();
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);
@@ -330,10 +337,7 @@ int main(int argc, char const* argv[]) {
         auto const& archive_id = command_line_arguments.get_archive_id();
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         if (false == archive_id.empty()) {
-            std::filesystem::path const archives_dir_path{archives_dir};
-            std::string const archive_path{archives_dir_path / archive_id};
-
-            archive_reader->open(archive_path);
+            archive_reader->open(archives_dir, archive_id);
             if (false
                 == search_archive(command_line_arguments, archive_reader, expr, reducer_socket_fd))
             {
@@ -347,7 +351,8 @@ int main(int argc, char const* argv[]) {
                     continue;
                 }
 
-                archive_reader->open(entry.path());
+                auto const archive_id = entry.path().filename().string();
+                archive_reader->open(archives_dir, archive_id);
                 if (false
                     == search_archive(
                             command_line_arguments,

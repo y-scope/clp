@@ -1,0 +1,14 @@
+{
+    "SqlDbHost": "localhost",
+    "SqlDbPort": 3306,
+    "SqlDbName": "clp-db",
+    "SqlDbQueryJobsTableName": "query_jobs",
+    "MongoDbHost": "localhost",
+    "MongoDbPort": 27017,
+    "MongoDbName": "clp-query-results",
+    "MongoDbIrFilesCollectionName": "ir-files",
+
+    "ClientDir": "../client/dist",
+    "IrFilesDir": "../../../build/clp-package/var/data/ir",
+    "LogViewerDir": "../yscope-log-viewer/dist"
+}

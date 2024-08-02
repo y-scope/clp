@@ -1,12 +1,17 @@
 #include "utils.hpp"
 
-#include <iostream>
+#include <filesystem>
+#include <memory>
 
 #include <boost/filesystem.hpp>
 
 #include "../ErrorCode.hpp"
+#include "../GlobalMySQLMetadataDB.hpp"
+#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../Utils.hpp"
+#include "streaming_archive/Constants.hpp"
+#include "TraceableException.hpp"
 
 using std::string;
 using std::vector;
@@ -76,40 +81,6 @@ bool find_all_files_and_empty_directories(
                 exception.what()
         );
         return false;
-    }
-
-    return true;
-}
-
-bool is_utf8_sequence(size_t sequence_length, char const* sequence) {
-    size_t num_utf8_bytes_to_read = 0;
-    for (size_t i = 0; i < sequence_length; ++i) {
-        auto byte = sequence[i];
-
-        if (num_utf8_bytes_to_read > 0) {
-            // Validate that byte matches 0b10xx_xxxx
-            if ((byte & 0xC0) != 0x80) {
-                return false;
-            }
-            --num_utf8_bytes_to_read;
-        } else {
-            if (byte & 0x80) {
-                // Check if byte is valid UTF-8 length-indicator
-                if ((byte & 0xF8) == 0xF0) {
-                    // Matches 0b1111_0xxx
-                    num_utf8_bytes_to_read = 3;
-                } else if ((byte & 0xF0) == 0xE0) {
-                    // Matches 0b1110_xxxx
-                    num_utf8_bytes_to_read = 2;
-                } else if ((byte & 0xE0) == 0xC0) {
-                    // Matches 0b110x_xxxx
-                    num_utf8_bytes_to_read = 1;
-                } else {
-                    // Invalid UTF-8 length-indicator
-                    return false;
-                }
-            }  // else byte is ASCII
-        }
     }
 
     return true;
@@ -199,5 +170,30 @@ bool validate_paths_exist(vector<string> const& paths) {
     }
 
     return all_paths_exist;
+}
+
+std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
+        GlobalMetadataDBConfig const& global_metadata_db_config,
+        std::filesystem::path const& archives_dir
+) {
+    switch (global_metadata_db_config.get_metadata_db_type()) {
+        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
+            auto global_metadata_db_path
+                    = archives_dir
+                      / static_cast<char const*>(streaming_archive::cMetadataDBFileName);
+            return std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
+        }
+        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+            return std::make_unique<GlobalMySQLMetadataDB>(
+                    global_metadata_db_config.get_metadata_db_host(),
+                    global_metadata_db_config.get_metadata_db_port(),
+                    global_metadata_db_config.get_metadata_db_username(),
+                    global_metadata_db_config.get_metadata_db_password(),
+                    global_metadata_db_config.get_metadata_db_name(),
+                    global_metadata_db_config.get_metadata_table_prefix()
+            );
+        default:
+            throw ClpOperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+    }
 }
 }  // namespace clp::clp
