@@ -7,8 +7,8 @@
 
 namespace clp_s::search::sql {
 /**
- * Generate a search AST from an SQL expression in an input stream
- * @param in input stream containing an SQL expression followed by EOF
+ * Parses an SQL expression from the given stream to generate a search AST.
+ * @param in Input stream containing an SQL expression followed by EOF
  * @return a search AST on success, nullptr otherwise
  */
 std::shared_ptr<Expression> parse_sql_expression(std::istream& in);

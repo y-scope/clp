@@ -1,6 +1,4 @@
 #include <sstream>
-#include <string>
-#include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <spdlog/spdlog.h>
@@ -11,9 +9,7 @@
 
 using clp_s::search::EmptyExpr;
 using clp_s::search::sql::parse_sql_expression;
-using std::string;
 using std::stringstream;
-using std::vector;
 
 TEST_CASE("Test parsing SQL", "[SQL]") {
     // Suppress logging

@@ -1,3 +1,4 @@
+#include <any>
 #include <iostream>
 #include <string>
 
@@ -58,7 +59,8 @@ std::shared_ptr<Expression> parse_sql_expression(std::istream& in) {
     if (lexer_error_listener.error()) {
         SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
         return {};
-    } else if (parser_error_listener.error()) {
+    }
+    if (parser_error_listener.error()) {
         SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
         return {};
     }
