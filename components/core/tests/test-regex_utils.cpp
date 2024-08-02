@@ -41,9 +41,50 @@ TEST_CASE("regex_to_wildcard_escaped_metachar", "[regex_utils][re2wc][escaped_me
     );
 }
 
+TEST_CASE("regex_to_wildcard_charset", "[regex_utils][re2wc][charset]") {
+    REQUIRE((regex_to_wildcard("x[y]z").value() == "xyz"));
+    REQUIRE((regex_to_wildcard("x[\\^]z").value() == "x^z"));
+    REQUIRE((regex_to_wildcard("x[\\]]z").value() == "x]z"));
+    REQUIRE((regex_to_wildcard("x[-]z").value() == "x-z"));
+    REQUIRE((regex_to_wildcard("x[\\-]z").value() == "x-z"));
+    REQUIRE((regex_to_wildcard("x[\\\\]z").value() == "x\\\\z"));
+    REQUIRE((regex_to_wildcard("[a][b][\\^][-][\\-][\\]][\\\\][c][d]").value() == "ab^--]\\\\cd"));
+
+    REQUIRE((regex_to_wildcard("x[]y").error() == ErrorCode::UnsupportedCharsetPattern));
+    REQUIRE((regex_to_wildcard("x[a-z]y").error() == ErrorCode::UnsupportedCharsetPattern));
+    REQUIRE((regex_to_wildcard("x[^^]y").error() == ErrorCode::UnsupportedCharsetPattern));
+    REQUIRE((regex_to_wildcard("x[^0-9]y").error() == ErrorCode::UnsupportedCharsetPattern));
+    REQUIRE((regex_to_wildcard("[xX][yY]").error() == ErrorCode::UnsupportedCharsetPattern));
+    REQUIRE((regex_to_wildcard("ch:[a-zA-Z0-9]").error() == ErrorCode::UnsupportedCharsetPattern));
+
+    REQUIRE((regex_to_wildcard("[\\").error() == ErrorCode::IncompleteCharsetStructure));
+    REQUIRE((regex_to_wildcard("[\\\\").error() == ErrorCode::IncompleteCharsetStructure));
+    REQUIRE((regex_to_wildcard("[xX").error() == ErrorCode::IncompleteCharsetStructure));
+    REQUIRE((regex_to_wildcard("ch:[a-zA-Z0-9").error() == ErrorCode::IncompleteCharsetStructure));
+}
+
+TEST_CASE("regex_to_wildcard_case_insensitive_config", "[regex_utils][re2wc][case_insensitive]") {
+    RegexToWildcardTranslatorConfig const config{/*case_insensitive_wildcard=*/true, false};
+    REQUIRE((regex_to_wildcard("[xX][yY]", config).value() == "xy"));
+    REQUIRE((regex_to_wildcard("[Yy][Xx]", config).value() == "yx"));
+    REQUIRE((regex_to_wildcard("[aA][Bb][Cc]", config).value() == "abc"));
+    REQUIRE((regex_to_wildcard("[aA][Bb][\\^][-][\\]][Cc][dD]", config).value() == "ab^-]cd"));
+
+    REQUIRE((regex_to_wildcard("[xX").error() == ErrorCode::IncompleteCharsetStructure));
+    REQUIRE(
+            (regex_to_wildcard("[aA][Bb][^[-[\\[Cc[dD", config).error()
+             == ErrorCode::IncompleteCharsetStructure)
+    );
+    REQUIRE((regex_to_wildcard("ch:[a-zA-Z0-9]").error() == ErrorCode::UnsupportedCharsetPattern));
+    REQUIRE(
+            (regex_to_wildcard("[aA][Bb][^[-[\\[Cc[dD]", config).error()
+             == ErrorCode::UnsupportedCharsetPattern)
+    );
+}
+
 TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][re2wc][anchor_config]") {
     // Test anchors and prefix/suffix wildcards
-    RegexToWildcardTranslatorConfig const config{false, true};
+    RegexToWildcardTranslatorConfig const config{false, /*add_prefix_suffix_wildcards=*/true};
     REQUIRE(((regex_to_wildcard("^", config).value() == "*")));
     REQUIRE((regex_to_wildcard("$", config).value() == "*"));
     REQUIRE((regex_to_wildcard("^xyz$", config).value() == "xyz"));

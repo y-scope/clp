@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.16.3)
 project(CLP LANGUAGES CXX C)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -145,6 +145,14 @@ if(CURL_FOUND)
 else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
 endif()
+
+# Find OpenSSL
+find_package(OpenSSL REQUIRED)
+if (OPENSSL_FOUND)
+    message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
+else ()
+    message(FATAL_ERROR "OpenSSL not found")
+endif ()
 
 # Add log surgeon
 add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
@@ -346,7 +354,11 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/hash_utils.cpp
+        src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
+        src/clp/ir/EncodedTextAst.cpp
+        src/clp/ir/EncodedTextAst.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp
@@ -464,8 +476,10 @@ set(SOURCE_FILES_unitTest
         tests/test-encoding_methods.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-Grep.cpp
+        tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
+        tests/test-ir_serializer.cpp
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
@@ -501,6 +515,7 @@ target_link_libraries(unitTest
         MariaDBClient::MariaDBClient
         spdlog::spdlog
         sql
+        OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
         clp::regex_utils
