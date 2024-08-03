@@ -312,6 +312,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/Serializer.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
+        src/clp/ffi/KeyValuePairLogEvent.cpp
+        src/clp/ffi/KeyValuePairLogEvent.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
         src/clp/ffi/SchemaTreeNode.hpp
