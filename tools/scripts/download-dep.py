@@ -22,24 +22,29 @@ logger.addHandler(logging_console_handler)
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Download dependency.")
-    args_parser.add_argument("git_root", help="root of repository")
+    args_parser.add_argument("git_dir", help="path to the .git directory")
     args_parser.add_argument("source_url", help="Directory to output the files.")
     args_parser.add_argument("source_name", help="Name of the source file.")
     args_parser.add_argument("dest_dir", help="Destination directory to output the files.")
-    args_parser.add_argument("--extract", action='store_true', help="Whether to source needs to be extracted.")
+    args_parser.add_argument("--extract", action='store_true', help="Extract the source file.")
+    args_parser.add_argument("--no-git", action='store_true', help="Do not use git submodule update")
 
     parsed_args = args_parser.parse_args(argv[1:])
-    git_root = pathlib.Path(parsed_args.git_root)
+    git_dir = pathlib.Path(parsed_args.git_dir)
     source_url = parsed_args.source_url
     source_name = parsed_args.source_name
     target_dest_path = pathlib.Path(parsed_args.dest_dir).resolve()
     extract_source = parsed_args.extract
 
-    if git_root.exists() and git_root.is_dir():
-        cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]
-        print(" ".join(cmd))
-        subprocess.run(["git", "submodule", "update", "--init", str(target_dest_path)])
-        return 0
+    if git_dir.exists() and git_dir.is_dir():
+        if not parsed_args.no_git:
+            cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]
+            try:
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError:
+                logger.exception(f"Failed to update the submodule {target_dest_path}")
+                return -1
+            return 0
 
 
     parsed_url = urllib.parse.urlparse(source_url)
@@ -60,18 +65,15 @@ def main(argv):
 
     # Remove destination
     if target_dest_path.exists():
-        print(f"removing {target_dest_path}")
         shutil.rmtree(target_dest_path, ignore_errors=True)
     else:
         # Create destination parent
         target_dest_parent = target_dest_path.parent
-        print(f"mkdiring {target_dest_parent}")
         target_dest_parent.mkdir(parents=True, exist_ok=True)
 
     target_source_path = extraction_dir / source_name
     # Copy destination to target
     if extract_source:
-        print(f"copying {target_source_path} to {target_dest_path}")
         shutil.copytree(target_source_path, target_dest_path)
     else:
         shutil.copy(target_source_path, target_dest_path)

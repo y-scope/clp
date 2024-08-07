@@ -1,34 +1,193 @@
 version: "3"
 vars:
-    DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/download-dep.py"
+    G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/download-dep.py"
 
 tasks:
   default:
     deps: ["clp-submodules", "core-submodules"]
 
   clp-submodules:
-    deps: ["yscope-log-viewer"]
+    deps:
+      - "yscope-log-viewer"
 
   core-submodules:
     deps:
+      - "abseil-cpp"
+      - "antlr4"
+      - "Catch2"
+      - "date"
+      - "json"
+      - "log-surgeon"
+      - "outcome"
+      - "simdjson"
+      - "sqlite3"
+      - "yaml-cpp"
 
-  yscope-log-viewer:
+  abseil-cpp:
     internal: true
     deps:
       - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
           CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-          SOURCE_URL: "https://github.com/y-scope/yscope-log-viewer/archive/df996ea.zip"
-          SOURCE_NAME: "yscope-log-viewer-df996eac000823d02f9cd0b9eb4bb732dd634ae5"
+          SOURCE_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip"
+          SOURCE_NAME: "abseil-cpp-20230802.1"
           FLAGS: "--extract"
-          DESTINATION: "{{.ROOT_DIR}}/component/log-viewer-webui/yscope-log-viewer"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/abseil-cpp"
 
+  antlr4:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
+          SOURCE_NAME: "antlr-4.13.1-complete.jar"
+          FLAGS: "--no-git"
+          DESTINATION: "{{.G_CORE_DIR}}/third-party/antlr/antlr-4.13.1-complete.jar"
+
+  Catch2:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.7.zip"
+          SOURCE_NAME: "Catch2-2.13.7"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/Catch2"
+
+  date:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.zip"
+          SOURCE_NAME: "date-3.0.1"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/date"
+
+  json:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.zip"
+          SOURCE_NAME: "json-3.11.3"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/json"
+
+  log-surgeon:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/y-scope/log-surgeon/archive/895f464.zip"
+          SOURCE_NAME: "log-surgeon-895f46489b1911ab3b3aac3202afd56c96e8cd98"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/log-surgeon"
+
+  outcome:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.9.zip"
+          SOURCE_NAME: "outcome-2.2.9"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/outcome"
+
+  simdjson:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.zip"
+          SOURCE_NAME: "simdjson-3.6.3"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/simdjson"
+
+  # We don't use a git submodule for sqlite3 since that would require building the
+  # sqlite amalgamation
+  sqlite3:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://www.sqlite.org/2021/sqlite-amalgamation-3360000.zip"
+          SOURCE_NAME: "sqlite-amalgamation-3360000"
+          FLAGS: "--extract --no-git"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/sqlite3"
+
+  yaml-cpp:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.zip"
+          SOURCE_NAME: "yaml-cpp-yaml-cpp-0.7.0"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/yaml-cpp"
 
   download-dependency:
     internal: true
-    label: "{{.TASK}}-{{.TAR_NAME}}"
+    label: "{{.TASK}}-{{.SOURCE_NAME}}"
     requires:
       vars: ["CHECKSUM_FILE", "SOURCE_URL", "SOURCE_NAME", "DESTINATION", "FLAGS"]
     sources:
@@ -43,12 +202,12 @@ tasks:
           DATA_DIR: "{{.DESTINATION}}"
     cmds:
       - >-
-        python3 "{{.DEP_DOWNLOAD_SCRIPT}}"
-        '{{.ROOT_DIR}}'
+        python3 "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+        '{{.ROOT_DIR}}/.git'
         '{{.SOURCE_URL}}'
         '{{.SOURCE_NAME}}'
         '{{.DESTINATION}}'
-        '{{.FLAGS}}'
+        {{.FLAGS}}
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
