@@ -8,7 +8,6 @@
 
 #include "ArrayBackedPosIntSet.hpp"
 #include "Defs.h"
-#include "dictionary_utils.hpp"
 #include "FileWriter.hpp"
 #include "spdlog_with_specializations.hpp"
 #include "streaming_compression/passthrough/Compressor.hpp"
@@ -203,35 +202,31 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
 
     m_max_id = max_id;
 
-    FileReader dictionary_file_reader;
-    FileReader segment_index_file_reader;
+    FileReader dictionary_file_reader{dictionary_path};
+
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor dictionary_decompressor;
-    streaming_compression::passthrough::Decompressor segment_index_decompressor;
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Decompressor dictionary_decompressor;
-    streaming_compression::zstd::Decompressor segment_index_decompressor;
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-    open_dictionary_for_reading(
-            dictionary_path,
-            segment_index_path,
-            cDecompressorFileReadBufferCapacity,
-            dictionary_file_reader,
-            dictionary_decompressor,
-            segment_index_file_reader,
-            segment_index_decompressor
-    );
 
-    auto num_dictionary_entries = read_dictionary_header(dictionary_file_reader);
+    // Read dictionary header
+    uint64_t num_dictionary_entries{};
+    if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+
+    // Validate dictionary header
     if (num_dictionary_entries > m_max_id) {
         SPDLOG_ERROR("DictionaryWriter ran out of IDs.");
         throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);
     }
     // Loads entries from the given dictionary file
     EntryType entry;
+    dictionary_decompressor.open(dictionary_file_reader, cDecompressorFileReadBufferCapacity);
     for (size_t i = 0; i < num_dictionary_entries; ++i) {
         entry.clear();
         entry.read_from_file(dictionary_decompressor);
@@ -245,13 +240,9 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
         ;
         m_data_size += entry.get_data_size();
     }
+    dictionary_decompressor.close();
 
     m_next_id = num_dictionary_entries;
-
-    segment_index_decompressor.close();
-    segment_index_file_reader.close();
-    dictionary_decompressor.close();
-    dictionary_file_reader.close();
 
     m_dictionary_file_writer.open(
             dictionary_path,

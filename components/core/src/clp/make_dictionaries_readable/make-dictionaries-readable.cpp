@@ -55,7 +55,6 @@ int main(int argc, char const* argv[]) {
                                       / clp::streaming_archive::cLogTypeSegmentIndexFilename;
     clp::LogTypeDictionaryReader logtype_dict;
     logtype_dict.open(logtype_dict_path.string(), logtype_segment_index_path.string());
-    logtype_dict.read_new_entries();
 
     // Write readable dictionary
     auto readable_logtype_dict_path = boost::filesystem::path(command_line_args.get_output_dir())
@@ -139,7 +138,6 @@ int main(int argc, char const* argv[]) {
                                   / clp::streaming_archive::cVarSegmentIndexFilename;
     clp::VariableDictionaryReader var_dict;
     var_dict.open(var_dict_path.string(), var_segment_index_path.string());
-    var_dict.read_new_entries();
 
     // Write readable dictionary
     auto readable_var_dict_path = boost::filesystem::path(command_line_args.get_output_dir())
