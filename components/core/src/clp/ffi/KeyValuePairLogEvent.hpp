@@ -3,8 +3,8 @@
 
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <utility>
-#include <vector>
 
 #include <outcome/single-header/outcome.hpp>
 
@@ -23,63 +23,19 @@ namespace clp::ffi {
 class KeyValuePairLogEvent {
 public:
     // Types
-    /**
-     * Class for an instance of CLP key value pair.
-     */
-    class KeyValuePair {
-    public:
-        // Constructors
-        /**
-         * Constructs a key-value pair with the given key id and value.
-         * @param key_id
-         * @param value
-         */
-        explicit KeyValuePair(SchemaTreeNode::id_t key_id, Value value)
-                : m_key_id{key_id},
-                  m_value{std::move(value)} {}
-
-        /**
-         * Constructs a key-value pair with the given key id and a empty value.
-         * @param key_id
-         */
-        explicit KeyValuePair(SchemaTreeNode::id_t key_id)
-                : m_key_id{key_id},
-                  m_value{std::nullopt} {}
-
-        // Disable copy constructor and assignment operator
-        KeyValuePair(KeyValuePair const&) = delete;
-        auto operator=(KeyValuePair const&) -> KeyValuePair& = delete;
-
-        // Default move constructor and assignment operator
-        KeyValuePair(KeyValuePair&&) = default;
-        auto operator=(KeyValuePair&&) -> KeyValuePair& = default;
-
-        // Destructor
-        ~KeyValuePair() = default;
-
-        // Methods
-        [[nodiscard]] auto get_key_id() const -> SchemaTreeNode::id_t { return m_key_id; }
-
-        [[nodiscard]] auto get_value() const -> std::optional<Value> const& { return m_value; }
-
-    private:
-        SchemaTreeNode::id_t m_key_id;
-        std::optional<Value> m_value;
-    };
+    using KeyValuePairs = std::unordered_map<SchemaTreeNode::id_t, std::optional<Value>>;
 
     // Factory functions
     /**
      * Creates a key-value pair log event from valid given inputs.
      * @param schema_tree
-     * @param key_value_pair
+     * @param kv_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
      * failure:
      */
-    [[nodiscard]] static auto create(
-            std::shared_ptr<SchemaTree> schema_tree,
-            std::vector<KeyValuePair> m_key_value_pairs,
-            UtcOffset utc_offset
+    [[nodiscard]] static auto
+    create(std::shared_ptr<SchemaTree> schema_tree, KeyValuePairs kv_pairs, UtcOffset utc_offset
     ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
 
     // Disable copy constructor and assignment operator
@@ -96,9 +52,7 @@ public:
     // Methods
     [[nodiscard]] auto get_schema_tree() const -> SchemaTree const& { return *m_schema_tree; }
 
-    [[nodiscard]] auto get_key_value_pairs() const -> std::vector<KeyValuePair> const& {
-        return m_key_value_pairs;
-    }
+    [[nodiscard]] auto get_key_value_pairs() const -> KeyValuePairs const& { return m_kv_pairs; }
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
 
@@ -106,15 +60,15 @@ private:
     // Constructor
     KeyValuePairLogEvent(
             std::shared_ptr<SchemaTree> schema_tree,
-            std::vector<KeyValuePair> key_value_pairs,
+            KeyValuePairs key_value_pairs,
             UtcOffset utc_offset
     )
             : m_schema_tree{std::move(schema_tree)},
-              m_key_value_pairs{std::move(key_value_pairs)},
+              m_kv_pairs{std::move(key_value_pairs)},
               m_utc_offset{utc_offset} {}
 
     std::shared_ptr<SchemaTree> m_schema_tree;
-    std::vector<KeyValuePair> m_key_value_pairs;
+    KeyValuePairs m_kv_pairs;
     UtcOffset m_utc_offset{0};
 };
 }  // namespace clp::ffi
