@@ -75,7 +75,8 @@ public:
      */
     explicit BufferedFileReader(ReaderInterface& reader_interface, size_t base_buffer_size);
 
-    BufferedFileReader(ReaderInterface& reader_interface) : BufferedFileReader(reader_interface, cDefaultBufferSize) {}
+    BufferedFileReader(ReaderInterface& reader_interface)
+            : BufferedFileReader(reader_interface, cDefaultBufferSize) {}
 
     // Disable copy/move construction/assignment
     BufferedFileReader(BufferedFileReader const&) = delete;
