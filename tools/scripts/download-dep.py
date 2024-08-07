@@ -23,11 +23,11 @@ logger.addHandler(logging_console_handler)
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Download dependency.")
     args_parser.add_argument("git_dir", help="path to the .git directory")
-    args_parser.add_argument("source_url", help="Directory to output the files.")
+    args_parser.add_argument("source_url", help="Url of the source file.")
     args_parser.add_argument("source_name", help="Name of the source file.")
-    args_parser.add_argument("dest_dir", help="Destination directory to output the files.")
+    args_parser.add_argument("dest_dir", help="Destination to output the files.")
     args_parser.add_argument("--extract", action='store_true', help="Extract the source file.")
-    args_parser.add_argument("--no-git", action='store_true', help="Do not use git submodule update")
+    args_parser.add_argument("--no-submodule", action='store_false', dest="use_submodule", help="Do not use git submodule update")
 
     parsed_args = args_parser.parse_args(argv[1:])
     git_dir = pathlib.Path(parsed_args.git_dir)
@@ -37,7 +37,7 @@ def main(argv):
     extract_source = parsed_args.extract
 
     if git_dir.exists() and git_dir.is_dir():
-        if not parsed_args.no_git:
+        if parsed_args.use_submodule:
             cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]
             try:
                 subprocess.run(cmd, check=True)

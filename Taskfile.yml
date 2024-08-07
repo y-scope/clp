@@ -177,7 +177,6 @@ tasks:
     vars:
       SRC_DIR: "components/core"
     sources:
-      - "{{.G_BUILD_DIR}}/core-submodules.md5"
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
@@ -189,7 +188,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-    deps: ["core-submodules", "init"]
+    deps: ["submodules:core-submodules", "init"]
     cmds:
       - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
@@ -323,55 +322,6 @@ tasks:
           NODEJS_VERSION: "v14.21.3"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
-  clp-submodules:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.ROOT_DIR}}"
-    sources:
-      - "{{.TASKFILE}}"
-      - "tools/scripts/deps-download/**/*"
-    dir: "{{.ROOT_DIR}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}" # Here is an issue
-    cmds:
-      - "tools/scripts/deps-download/download-all.sh"
-      # This command must be last
-      - task: "utils:compute-checksum"
-        vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-
-  core-submodules:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "submodules"
-    sources:
-      - "{{.TASKFILE}}"
-      - ".gitmodules"
-      - "tools/scripts/deps-download/**/*"
-    dir: "components/core"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-    cmds:
-      - "tools/scripts/deps-download/download-all.sh"
-      # This command must be last
-      - task: "utils:compute-checksum"
-        vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-
   download-and-extract-tar:
     internal: true
     label: "{{.TASK}}-{{.TAR_NAME}}"
@@ -429,7 +379,6 @@ tasks:
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
     sources:
-      - "{{.G_BUILD_DIR}}/clp-submodules.md5"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
       - "client/package.json"
@@ -448,7 +397,7 @@ tasks:
       - "{{.PACKAGE_CHECKSUM_FILE}}"
       - "{{.SERVER_CHECKSUM_FILE}}"
     deps:
-      - "clp-submodules"
+      - "submodules:clp-submodules"
       - "nodejs-22"
       - task: "utils:validate-checksum"
         vars:

@@ -7,21 +7,21 @@ tasks:
     deps: ["clp-submodules", "core-submodules"]
 
   clp-submodules:
-    deps:
-      - "yscope-log-viewer"
+    cmds:
+      - task: "yscope-log-viewer"
 
   core-submodules:
-    deps:
-      - "abseil-cpp"
-      - "antlr4"
-      - "Catch2"
-      - "date"
-      - "json"
-      - "log-surgeon"
-      - "outcome"
-      - "simdjson"
-      - "sqlite3"
-      - "yaml-cpp"
+    cmds:
+      - task: "abseil-cpp"
+      - task: "antlr4"
+      - task: "Catch2"
+      - task: "date"
+      - task: "json"
+      - task: "log-surgeon"
+      - task: "outcome"
+      - task: "simdjson"
+      - task: "sqlite3"
+      - task: "yaml-cpp"
 
   abseil-cpp:
     internal: true
@@ -52,7 +52,7 @@ tasks:
           CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
           SOURCE_URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
           SOURCE_NAME: "antlr-4.13.1-complete.jar"
-          FLAGS: "--no-git"
+          FLAGS: "--no-submodule"
           DESTINATION: "{{.G_CORE_DIR}}/third-party/antlr/antlr-4.13.1-complete.jar"
 
   Catch2:
@@ -166,7 +166,7 @@ tasks:
           CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
           SOURCE_URL: "https://www.sqlite.org/2021/sqlite-amalgamation-3360000.zip"
           SOURCE_NAME: "sqlite-amalgamation-3360000"
-          FLAGS: "--extract --no-git"
+          FLAGS: "--extract --no-submodule"
           DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/sqlite3"
 
   yaml-cpp:
@@ -184,6 +184,22 @@ tasks:
           SOURCE_NAME: "yaml-cpp-yaml-cpp-0.7.0"
           FLAGS: "--extract"
           DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/yaml-cpp"
+
+  yscope-log-viewer:
+    internal: true
+    deps:
+      - ":init"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "download-dependency"
+        vars:
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/y-scope/yscope-log-viewer/archive/df996ea.zip"
+          SOURCE_NAME: "yscope-log-viewer-df996eac000823d02f9cd0b9eb4bb732dd634ae5"
+          FLAGS: "--extract"
+          DESTINATION: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
 
   download-dependency:
     internal: true
