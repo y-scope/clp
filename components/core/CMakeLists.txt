@@ -310,6 +310,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
         src/clp/ffi/ir_stream/byteswap.hpp
+        src/clp/ffi/ir_stream/Deserializer.cpp
+        src/clp/ffi/ir_stream/Deserializer.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
         src/clp/ffi/ir_stream/decoding_methods.hpp
         src/clp/ffi/ir_stream/decoding_methods.inc
@@ -500,9 +502,7 @@ set(SOURCE_FILES_unitTest
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
-        src/clp/ffi/ir_stream/Deserializer.cpp
-        src/clp/ffi/ir_stream/Deserializer.hpp
-)
+        )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
 target_include_directories(unitTest
         PRIVATE

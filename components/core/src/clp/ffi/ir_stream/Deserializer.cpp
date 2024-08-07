@@ -175,16 +175,15 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @param reader
  * @param tag The tag of the value.
  * @param key_id The key ID of the value.
- * @param kv_pairs Outputs the key-value pair constructed by the deserialized value, appended at the
- * end.
+ * @param kv_pairs Outputs the key-value pair constructed by the deserialized value.
  * @return `IRErrorCode::IRErrorCode_Success` on success.
  * @return `IRErrorCode` indicating relevant errors.
  */
-[[nodiscard]] auto deserialize_value_and_append_as_kv_pair(
+[[nodiscard]] auto deserialize_value_and_insert_to_kv_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
         SchemaTreeNode::id_t key_id,
-        std::vector<KeyValuePairLogEvent::KeyValuePair>& kv_pairs
+        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
 ) -> IRErrorCode;
 
 /**
@@ -192,18 +191,17 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @tparam encoded_variable_t
  * @param reader
  * @param key_id The key ID of the encoded text AST value.
- * @param kv_pairs Outputs the key-value pair constructed by the deserialized encoded text AST,
- * appended at the end.
+ * @param kv_pairs Outputs the key-value pair constructed by the deserialized encoded text AST.
  * @return `IRErrorCode::IRErrorCode_Success` on success.
  * @return `IRErrorCode` indicating relevant errors.
  */
 template <typename encoded_variable_t>
 requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
          || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
-[[nodiscard]] auto deserialize_encoded_text_ast_and_append_as_kv_pair(
+[[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_kv_pairs(
         ReaderInterface& reader,
         SchemaTreeNode::id_t key_id,
-        std::vector<KeyValuePairLogEvent::KeyValuePair>& kv_pairs
+        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
 ) -> IRErrorCode;
 
 /**
@@ -220,7 +218,7 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::vector<SchemaTreeNode::id_t> const& schema,
-        std::vector<KeyValuePairLogEvent::KeyValuePair>& kv_pairs
+        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
 ) -> IRErrorCode;
 
 // Implementations
@@ -463,11 +461,11 @@ auto deserialize_schema(
     return IRErrorCode::IRErrorCode_Success;
 }
 
-auto deserialize_value_and_append_as_kv_pair(
+auto deserialize_value_and_insert_to_kv_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
         SchemaTreeNode::id_t key_id,
-        std::vector<KeyValuePairLogEvent::KeyValuePair>& kv_pairs
+        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
 ) -> IRErrorCode {
     switch (tag) {
         case cProtocol::Payload::ValueInt8:
@@ -480,7 +478,7 @@ auto deserialize_value_and_append_as_kv_pair(
             {
                 return err;
             }
-            kv_pairs.emplace_back(key_id, Value{value_int});
+            kv_pairs.emplace(key_id, Value{value_int});
             break;
         }
         case cProtocol::Payload::ValueFloat: {
@@ -488,14 +486,14 @@ auto deserialize_value_and_append_as_kv_pair(
             if (false == deserialize_int(reader, val)) {
                 return IRErrorCode::IRErrorCode_Incomplete_IR;
             }
-            kv_pairs.emplace_back(key_id, Value{bit_cast<value_float_t>(val)});
+            kv_pairs.emplace(key_id, Value{bit_cast<value_float_t>(val)});
             break;
         }
         case cProtocol::Payload::ValueTrue:
-            kv_pairs.emplace_back(key_id, Value{true});
+            kv_pairs.emplace(key_id, Value{true});
             break;
         case cProtocol::Payload::ValueFalse:
-            kv_pairs.emplace_back(key_id, Value{false});
+            kv_pairs.emplace(key_id, Value{false});
             break;
         case cProtocol::Payload::StrLenUByte:
         case cProtocol::Payload::StrLenUShort:
@@ -506,11 +504,11 @@ auto deserialize_value_and_append_as_kv_pair(
             {
                 return err;
             }
-            kv_pairs.emplace_back(key_id, Value{std::move(value_str)});
+            kv_pairs.emplace(key_id, Value{std::move(value_str)});
             break;
         }
         case cProtocol::Payload::ValueEightByteEncodingClpStr:
-            if (auto const err = deserialize_encoded_text_ast_and_append_as_kv_pair<
+            if (auto const err = deserialize_encoded_text_ast_and_insert_to_kv_pairs<
                         ir::eight_byte_encoded_variable_t>(reader, key_id, kv_pairs);
                 IRErrorCode::IRErrorCode_Success != err)
             {
@@ -518,7 +516,7 @@ auto deserialize_value_and_append_as_kv_pair(
             }
             break;
         case cProtocol::Payload::ValueFourByteEncodingClpStr:
-            if (auto const err = deserialize_encoded_text_ast_and_append_as_kv_pair<
+            if (auto const err = deserialize_encoded_text_ast_and_insert_to_kv_pairs<
                         ir::four_byte_encoded_variable_t>(reader, key_id, kv_pairs);
                 IRErrorCode::IRErrorCode_Success != err)
             {
@@ -526,10 +524,10 @@ auto deserialize_value_and_append_as_kv_pair(
             }
             break;
         case cProtocol::Payload::ValueNull:
-            kv_pairs.emplace_back(key_id, Value{});
+            kv_pairs.emplace(key_id, Value{});
             break;
         case cProtocol::Payload::ValueEmpty:
-            kv_pairs.emplace_back(key_id);
+            kv_pairs.emplace(key_id, std::nullopt);
             break;
         default:
             return IRErrorCode::IRErrorCode_Corrupted_IR;
@@ -540,10 +538,10 @@ auto deserialize_value_and_append_as_kv_pair(
 template <typename encoded_variable_t>
 requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
          || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
-[[nodiscard]] auto deserialize_encoded_text_ast_and_append_as_kv_pair(
+[[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_kv_pairs(
         ReaderInterface& reader,
         SchemaTreeNode::id_t key_id,
-        std::vector<KeyValuePairLogEvent::KeyValuePair>& kv_pairs
+        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
 ) -> IRErrorCode {
     encoded_tag_t tag{};
     if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err) {
@@ -560,7 +558,7 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
         return err;
     }
 
-    kv_pairs.emplace_back(
+    kv_pairs.emplace(
             key_id,
             Value{ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars}}
     );
@@ -571,24 +569,29 @@ auto deserialize_value_and_construct_kv_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::vector<SchemaTreeNode::id_t> const& schema,
-        std::vector<KeyValuePairLogEvent::KeyValuePair>& kv_pairs
+        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
 ) -> IRErrorCode {
     kv_pairs.clear();
-    size_t key_id_idx{0};
-    while (true) {
+    kv_pairs.reserve(schema.size());
+    for (auto const key_id : schema) {
+        if (kv_pairs.contains(key_id)) {
+            // The key should be unique in a schema
+            return IRErrorCode_Corrupted_IR;
+        }
+
         if (auto const err
-            = deserialize_value_and_append_as_kv_pair(reader, tag, schema[key_id_idx], kv_pairs);
+            = deserialize_value_and_insert_to_kv_pairs(reader, tag, key_id, kv_pairs);
             IRErrorCode::IRErrorCode_Success != err)
         {
             return err;
         }
-        ++key_id_idx;
-        if (schema.size() == key_id_idx) {
-            break;
-        }
-        if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err)
-        {
-            return err;
+
+        if (schema.size() != kv_pairs.size()) {
+            if (auto const err = deserialize_tag(reader, tag);
+                IRErrorCode::IRErrorCode_Success != err)
+            {
+                return err;
+            }
         }
     }
     return IRErrorCode::IRErrorCode_Success;
@@ -672,10 +675,10 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
         return ir_error_code_to_errc(err);
     }
 
-    std::vector<KeyValuePairLogEvent::KeyValuePair> key_value_pairs;
+    KeyValuePairLogEvent::KeyValuePairs kv_pairs;
     if (false == schema.empty()) {
         if (auto const err
-            = deserialize_value_and_construct_kv_pairs(reader, tag, schema, key_value_pairs);
+            = deserialize_value_and_construct_kv_pairs(reader, tag, schema, kv_pairs);
             IRErrorCode::IRErrorCode_Success != err)
         {
             return ir_error_code_to_errc(err);
@@ -686,9 +689,7 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
         }
     }
 
-    auto result{
-            KeyValuePairLogEvent::create(m_schema_tree, std::move(key_value_pairs), m_utc_offset)
-    };
+    auto result{KeyValuePairLogEvent::create(m_schema_tree, std::move(kv_pairs), m_utc_offset)};
     if (false == result.has_error()) {
         revert_manager.mark_as_success();
     }
