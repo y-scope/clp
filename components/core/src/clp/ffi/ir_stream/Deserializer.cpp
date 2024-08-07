@@ -454,10 +454,6 @@ auto deserialize_schema(
         }
     }
 
-    if (schema.empty()) {
-        // There should be at least one key ID deserialized
-        return IRErrorCode::IRErrorCode_Corrupted_IR;
-    }
     return IRErrorCode::IRErrorCode_Success;
 }
 
