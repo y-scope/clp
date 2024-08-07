@@ -13,6 +13,8 @@ from source.
 
 ### Source Dependencies
 
+#TODO: update this
+
 We use both git submodules and third-party source packages. To download all, you can run this
 script:
 

@@ -16,6 +16,8 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 
 ## Setup
 
+#TODO: update this
+
 Download CLP core's source dependencies:
 
 ```shell

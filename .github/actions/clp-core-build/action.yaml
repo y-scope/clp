@@ -19,8 +19,10 @@ runs:
   using: "composite"
   steps:
     - shell: "bash"
-      working-directory: "./components/core"
-      run: "./tools/scripts/deps-download/download-all.sh"
+      run: "./tools/scripts/init.sh"
+
+    - shell: "bash"
+      run: "task submodules:core-submodules"
 
     - if: "inputs.use_published_image == 'false'"
       uses: "actions/download-artifact@v4"

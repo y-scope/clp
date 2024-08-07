@@ -47,10 +47,13 @@ jobs:
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
 
-      - name: "Download source dependencies"
+      - name: "Download yscope-dev-utils"
         shell: "bash"
-        working-directory: "./components/core"
-        run: "./tools/scripts/deps-download/download-all.sh"
+        run: "./tools/scripts/init.sh"
+
+      - name: "Download core dependencies"
+        shell: "bash"
+        run: "task submodules:core-submodules"
 
       - name: "Build CLP-core and run unit tests"
         shell: "bash"
