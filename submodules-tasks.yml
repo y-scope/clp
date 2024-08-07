@@ -1,4 +1,6 @@
 version: "3"
+vars:
+    DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/download-dep.py"
 
 tasks:
   default:
@@ -8,59 +10,47 @@ tasks:
     deps: ["yscope-log-viewer"]
 
   core-submodules:
-    cmds:
-      - "echo hello"
+    deps:
 
   yscope-log-viewer:
     internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      SOURCE_URL: "df996ea"
-      GIT_REPO_BASE_URL: "https://github.com/y-scope/yscope-log-viewer/archive"
-      OUTPUT_DIR: "{{.ROOT_DIR}}/component/log-viewer-webui/yscope-log-viewer"
     deps:
       - ":init"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          TAR_NAME: "{{.COMMIT_HASH}}.zip"
-          EXTRACTED_DIR_NAME: "yscope-log-viewer-df996eac000823d02f9cd0b9eb4bb732dd634ae5"
-          URL_PREFIX: "{{.GIT_REPO_BASE_URL}}"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          SOURCE_URL: "https://github.com/y-scope/yscope-log-viewer/archive/df996ea.zip"
+          SOURCE_NAME: "yscope-log-viewer-df996eac000823d02f9cd0b9eb4bb732dd634ae5"
+          FLAGS: "--extract"
+          DESTINATION: "{{.ROOT_DIR}}/component/log-viewer-webui/yscope-log-viewer"
+
 
   download-dependency:
     internal: true
     label: "{{.TASK}}-{{.TAR_NAME}}"
-    vars:
-      DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/download-dep.py"
-      OUTPUT_TMP_DIR: "{{.OUTPUT_DIR}}-tmp"
-      EXTRACTED_DIR: "{{.OUTPUT_TMP_DIR}}/{{.EXTRACTED_DIR_NAME}}"
-      TAR_PATH: "{{.OUTPUT_TMP_DIR}}/{{.TAR_NAME}}"
     requires:
-      vars: ["CHECKSUM_FILE", "EXTRACTED_DIR_NAME", "TAR_NAME", "OUTPUT_DIR", "URL_PREFIX"]
+      vars: ["CHECKSUM_FILE", "SOURCE_URL", "SOURCE_NAME", "DESTINATION", "FLAGS"]
     sources:
       - "{{.TASKFILE}}"
-      - "{{.DOWNLOAD_SCRIPT}}"
+      - "{{.DEP_DOWNLOAD_SCRIPT}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          DATA_DIR: "{{.DESTINATION}}"
     cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_TMP_DIR}}'"
-      - "mkdir -p '{{.OUTPUT_TMP_DIR}}'"
       - >-
-        curl --fail --location --show-error
-        "{{.URL_PREFIX}}/{{.TAR_NAME}}"
-        --output "{{.TAR_PATH}}"
-      - "unzip '{{.TAR_PATH}}' -d '{{.OUTPUT_TMP_DIR}}'"
-      - "mv '{{.EXTRACTED_DIR}}' '{{.OUTPUT_DIR}}'"
-      - "rm -rf '{{.OUTPUT_TMP_DIR}}'"
+        python3 "{{.DEP_DOWNLOAD_SCRIPT}}"
+        '{{.ROOT_DIR}}'
+        '{{.SOURCE_URL}}'
+        '{{.SOURCE_NAME}}'
+        '{{.DESTINATION}}'
+        '{{.FLAGS}}'
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          DATA_DIR: "{{.DESTINATION}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"

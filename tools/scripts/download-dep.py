@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-import hashlib
-import json
 import logging
-import mmap
+import subprocess
 import pathlib
 import shutil
 import sys
@@ -22,31 +20,29 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def hash_file(algo: str, path: pathlib.Path):
-    if "sha3_256" == algo:
-        hasher = hashlib.sha3_256()
-        with open(path, 'rb') as f:
-            with mmap.mmap(f.fileno(), 0, prot=mmap.PROT_READ) as mapped_file:
-                hasher.update(mapped_file)
-        return hasher.hexdigest()
-
-
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Download dependency.")
-    args_parser.add_argument("output_dir", help="Directory to output the files.")
-    args_parser.add_argument("config_file", help="Dependency configuration file.")
-    args_parser.add_argument("output_dir", help="Directory to output the files.")
+    args_parser.add_argument("git_root", help="root of repository")
+    args_parser.add_argument("source_url", help="Directory to output the files.")
+    args_parser.add_argument("source_name", help="Name of the source file.")
+    args_parser.add_argument("dest_dir", help="Destination directory to output the files.")
+    args_parser.add_argument("--extract", action='store_true', help="Whether to source needs to be extracted.")
 
     parsed_args = args_parser.parse_args(argv[1:])
-    config_file_path = pathlib.Path(parsed_args.config_file).resolve()
-    output_dir = pathlib.Path(parsed_args.output_dir).resolve()
+    git_root = pathlib.Path(parsed_args.git_root)
+    source_url = parsed_args.source_url
+    source_name = parsed_args.source_name
+    target_dest_path = pathlib.Path(parsed_args.dest_dir).resolve()
+    extract_source = parsed_args.extract
 
-    # Load configurations
-    with open(config_file_path) as f:
-        config = json.load(f)
+    if git_root.exists() and git_root.is_dir():
+        cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]
+        print(" ".join(cmd))
+        subprocess.run(["git", "submodule", "update", "--init", str(target_dest_path)])
+        return 0
 
-    target_url = config["url"]
-    parsed_url = urllib.parse.urlparse(target_url)
+
+    parsed_url = urllib.parse.urlparse(source_url)
     filename = pathlib.Path(parsed_url.path).name
 
     extraction_dir = pathlib.Path("/") / "tmp" / str(uuid.uuid4())
@@ -54,37 +50,31 @@ def main(argv):
 
     # Download file
     file_path = extraction_dir / filename
-    urllib.request.urlretrieve(target_url, file_path)
-    if config["unzip"]:
+    urllib.request.urlretrieve(source_url, file_path)
+    if extract_source:
+        logger.debug(f"Extracting {file_path} to {extraction_dir}")
         # NOTE: We need to convert file_path to a str since unpack_archive only
         # accepts a path-like object on Python versions >= 3.7
         shutil.unpack_archive(str(file_path), extraction_dir)
 
-    if "hash" in config:
-        # Verify hash
-        hash = hash_file(config["hash"]["algo"], file_path)
-        if hash != config["hash"]["digest"]:
-            logger.fatal("Hash mismatch.")
-            return -1
 
-    for target in config["targets"]:
-        target_source_path = extraction_dir / target["source"]
-        target_dest_path = output_dir / target["destination"]
-
+    # Remove destination
+    if target_dest_path.exists():
+        print(f"removing {target_dest_path}")
+        shutil.rmtree(target_dest_path, ignore_errors=True)
+    else:
+        # Create destination parent
         target_dest_parent = target_dest_path.parent
+        print(f"mkdiring {target_dest_parent}")
+        target_dest_parent.mkdir(parents=True, exist_ok=True)
 
-        # Remove destination
-        if target_dest_path.exists():
-            shutil.rmtree(target_dest_path, ignore_errors=True)
-        else:
-            # Create destination parent
-            target_dest_parent.mkdir(parents=True, exist_ok=True)
-
-        # Copy destination to target
-        if config["unzip"]:
-            shutil.copytree(target_source_path, target_dest_path)
-        else:
-            shutil.copy(target_source_path, target_dest_path)
+    target_source_path = extraction_dir / source_name
+    # Copy destination to target
+    if extract_source:
+        print(f"copying {target_source_path} to {target_dest_path}")
+        shutil.copytree(target_source_path, target_dest_path)
+    else:
+        shutil.copy(target_source_path, target_dest_path)
 
     shutil.rmtree(extraction_dir)
 
