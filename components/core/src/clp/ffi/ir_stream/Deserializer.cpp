@@ -275,7 +275,7 @@ auto deserialize_schema_tree_node_parent_id(
         SchemaTreeNode::id_t& parent_id
 ) -> IRErrorCode {
     encoded_tag_t tag{};
-    if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != tag) {
+    if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err) {
         return err;
     }
     if (cProtocol::Payload::SchemaTreeNodeParentIdUByte == tag) {
@@ -583,7 +583,7 @@ auto deserialize_value_and_construct_kv_pairs(
             return err;
         }
         ++key_id_idx;
-        if (kv_pairs.size() == key_id_idx) {
+        if (schema.size() == key_id_idx) {
             break;
         }
         if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err)
@@ -673,11 +673,17 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
     }
 
     std::vector<KeyValuePairLogEvent::KeyValuePair> key_value_pairs;
-    if (auto const err
-        = deserialize_value_and_construct_kv_pairs(reader, tag, schema, key_value_pairs);
-        IRErrorCode::IRErrorCode_Success != err)
-    {
-        return ir_error_code_to_errc(err);
+    if (false == schema.empty()) {
+        if (auto const err
+            = deserialize_value_and_construct_kv_pairs(reader, tag, schema, key_value_pairs);
+            IRErrorCode::IRErrorCode_Success != err)
+        {
+            return ir_error_code_to_errc(err);
+        }
+    } else {
+        if (cProtocol::Payload::ValueEmpty != tag) {
+            return ir_error_code_to_errc(IRErrorCode::IRErrorCode_Corrupted_IR);
+        }
     }
 
     auto result{
