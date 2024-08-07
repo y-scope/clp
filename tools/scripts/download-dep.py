@@ -33,6 +33,7 @@ def hash_file(algo: str, path: pathlib.Path):
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Download dependency.")
+    args_parser.add_argument("output_dir", help="Directory to output the files.")
     args_parser.add_argument("config_file", help="Dependency configuration file.")
     args_parser.add_argument("output_dir", help="Directory to output the files.")
 
