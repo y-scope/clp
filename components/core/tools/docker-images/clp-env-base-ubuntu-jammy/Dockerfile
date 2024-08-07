@@ -8,7 +8,7 @@ ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
 RUN ./tools/scripts/lib_install/ubuntu-jammy/install-all.sh
 
 # Install Task
-RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
 # Remove cached files
 RUN apt-get clean \

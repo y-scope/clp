@@ -8,7 +8,7 @@ RUN apt-get update \
     libssl-dev
 
 # Install Task
-RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
 # Remove cached files
 RUN apt-get clean \
