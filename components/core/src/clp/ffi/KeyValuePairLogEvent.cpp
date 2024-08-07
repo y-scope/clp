@@ -49,17 +49,14 @@ auto is_valid_value_type(SchemaTreeNode::Type type, Value const& value) -> bool 
 
 auto KeyValuePairLogEvent::create(
         std::shared_ptr<SchemaTree> schema_tree,
-        std::vector<KeyValuePair> m_key_value_pairs,
+        KeyValuePairs kv_pairs,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
     try {
-        for (auto const& kv_pair : m_key_value_pairs) {
-            auto const key_id{kv_pair.get_key_id()};
-            auto const& value{kv_pair.get_value()};
+        for (auto const& [key_id, value] : kv_pairs) {
             auto const type{schema_tree->get_node(key_id).get_type()};
-
-            // Check for empty values
             if (false == value.has_value()) {
+                // Empty value
                 if (SchemaTreeNode::Type::Obj != type) {
                     return std::errc::protocol_error;
                 }
@@ -70,6 +67,6 @@ auto KeyValuePairLogEvent::create(
     } catch (SchemaTree::OperationFailed const& ex) {
         return std::errc::protocol_error;
     }
-    return KeyValuePairLogEvent{std::move(schema_tree), std::move(m_key_value_pairs), utc_offset};
+    return KeyValuePairLogEvent{std::move(schema_tree), std::move(kv_pairs), utc_offset};
 }
 }  // namespace clp::ffi
