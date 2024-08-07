@@ -9,7 +9,9 @@
 
 #include <json/single_include/nlohmann/json.hpp>
 
+#include "../../ErrorCode.hpp"
 #include "../../ir/types.hpp"
+#include "../../ReaderInterface.hpp"
 #include "byteswap.hpp"
 #include "encoding_methods.hpp"
 #include "protocol_constants.hpp"
@@ -91,6 +93,37 @@ template <typename encoded_variable_t>
         succeeded = eight_byte_encoding::serialize_message(str, logtype, output_buf);
     }
     return succeeded;
+}
+
+/**
+ * Deserializes an integer from the given reader
+ * @tparam integer_t Type of the integer to deserialize
+ * @param reader
+ * @param value Returns the deserialized integer
+ * @return true on success, false if the reader doesn't contain enough data to deserialize
+ */
+template <typename integer_t>
+[[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;
+
+template <typename integer_t>
+auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
+    integer_t value_little_endian;
+    if (reader.try_read_numeric_value(value_little_endian) != clp::ErrorCode_Success) {
+        return false;
+    }
+
+    constexpr auto cReadSize = sizeof(integer_t);
+    static_assert(cReadSize == 1 || cReadSize == 2 || cReadSize == 4 || cReadSize == 8);
+    if constexpr (cReadSize == 1) {
+        value = value_little_endian;
+    } else if constexpr (cReadSize == 2) {
+        value = bswap_16(value_little_endian);
+    } else if constexpr (cReadSize == 4) {
+        value = bswap_32(value_little_endian);
+    } else if constexpr (cReadSize == 8) {
+        value = bswap_64(value_little_endian);
+    }
+    return true;
 }
 }  // namespace clp::ffi::ir_stream
 #endif
