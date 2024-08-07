@@ -16,6 +16,9 @@ RUN update-alternatives --set cpp /usr/bin/cpp-10
 
 RUN ./tools/scripts/lib_install/ubuntu-focal/install-packages-from-source.sh
 
+# Install Task
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
+
 # Remove cached files
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

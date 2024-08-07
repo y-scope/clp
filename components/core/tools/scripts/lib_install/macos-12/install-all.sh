@@ -20,5 +20,4 @@ brew install \
   msgpack-cxx \
   spdlog \
   pkg-config \
-  zstd \
-  go-task
+  zstd
