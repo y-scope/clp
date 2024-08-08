@@ -2,7 +2,9 @@
 #define CLP_TYPE_UTILS_HPP
 
 #include <cstring>
+#include <tuple>
 #include <type_traits>
+#include <variant>
 
 namespace clp {
 /**
@@ -67,6 +69,30 @@ std::enable_if_t<sizeof(Destination) == sizeof(Source), Destination*>
 size_checked_pointer_cast(Source* src) {
     return reinterpret_cast<Destination*>(src);
 }
+
+/**
+ * Template that converts a tuple of types into a variant.
+ * @tparam Tuple A tuple of types
+ */
+template <typename Tuple>
+struct tuple_to_variant;
+
+template <typename... Types>
+struct tuple_to_variant<std::tuple<Types...>> {
+    using Type = std::variant<std::monostate, Types...>;
+};
+
+/**
+ * Template to validate if the given type is in the given tuple of types.
+ * @tparam Type
+ * @tparam Tuple
+ */
+template <typename Type, typename Tuple>
+struct is_in_type_tuple;
+
+template <typename Type, typename... Types>
+struct is_in_type_tuple<Type, std::tuple<Types...>>
+        : std::disjunction<std::is_same<Type, Types>...> {};
 }  // namespace clp
 
 #endif  // CLP_TYPE_UTILS_HPP

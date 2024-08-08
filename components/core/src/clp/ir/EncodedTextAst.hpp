@@ -38,6 +38,8 @@ public:
     ~EncodedTextAst() = default;
 
     // Methods
+    auto operator==(EncodedTextAst const&) const -> bool = default;
+
     [[nodiscard]] auto get_logtype() const -> std::string const& { return m_logtype; }
 
     [[nodiscard]] auto get_dict_vars() const -> std::vector<std::string> const& {
