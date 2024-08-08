@@ -219,7 +219,6 @@ tasks:
     cmds:
       - >-
         python3 "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-        '{{.ROOT_DIR}}/.git'
         '{{.SOURCE_URL}}'
         '{{.SOURCE_NAME}}'
         '{{.DESTINATION}}'

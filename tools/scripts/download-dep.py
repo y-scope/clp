@@ -2,7 +2,8 @@
 import argparse
 import logging
 import subprocess
-import pathlib
+import os
+from pathlib import Path
 import shutil
 import sys
 import uuid
@@ -22,20 +23,22 @@ logger.addHandler(logging_console_handler)
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Download dependency.")
-    args_parser.add_argument("git_dir", help="path to the .git directory")
-    args_parser.add_argument("source_url", help="Url of the source file.")
+    args_parser.add_argument("source_url", help="Url to the source file.")
     args_parser.add_argument("source_name", help="Name of the source file.")
-    args_parser.add_argument("dest_dir", help="Destination to output the files.")
+    args_parser.add_argument("dest_dir", help="Destination to output the downloaded files.")
     args_parser.add_argument("--extract", action='store_true', help="Extract the source file.")
-    args_parser.add_argument("--no-submodule", action='store_false', dest="use_submodule", help="Do not use git submodule update")
+    args_parser.add_argument(
+        "--no-submodule", action='store_false', dest="use_submodule", help="Do not use git submodule update"
+    )
 
     parsed_args = args_parser.parse_args(argv[1:])
-    git_dir = pathlib.Path(parsed_args.git_dir)
     source_url = parsed_args.source_url
     source_name = parsed_args.source_name
-    target_dest_path = pathlib.Path(parsed_args.dest_dir).resolve()
+    target_dest_path = Path(parsed_args.dest_dir).resolve()
     extract_source = parsed_args.extract
 
+    script_path = Path(os.path.realpath(__file__))
+    git_dir = script_path.parent / ".." / ".."/ ".git"
     if git_dir.exists() and git_dir.is_dir():
         if parsed_args.use_submodule:
             cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]
@@ -48,9 +51,9 @@ def main(argv):
 
 
     parsed_url = urllib.parse.urlparse(source_url)
-    filename = pathlib.Path(parsed_url.path).name
+    filename = Path(parsed_url.path).name
 
-    extraction_dir = pathlib.Path("/") / "tmp" / str(uuid.uuid4())
+    extraction_dir = Path("/") / "tmp" / str(uuid.uuid4())
     extraction_dir.mkdir(parents=True, exist_ok=True)
 
     # Download file
@@ -67,8 +70,11 @@ def main(argv):
         target_dest_parent = target_dest_path.parent
         target_dest_parent.mkdir(parents=True, exist_ok=True)
 
-    # Copy source to destination
     target_source_path = extraction_dir / source_name
+    if not target_source_path.exists():
+        logger.error(f"Source file {target_source_path} does not exist, abort")
+        return -1
+
     if extract_source:
         shutil.copytree(target_source_path, target_dest_path)
     else:
