@@ -57,22 +57,18 @@ def main(argv):
     file_path = extraction_dir / filename
     urllib.request.urlretrieve(source_url, file_path)
     if extract_source:
-        logger.debug(f"Extracting {file_path} to {extraction_dir}")
         # NOTE: We need to convert file_path to a str since unpack_archive only
         # accepts a path-like object on Python versions >= 3.7
         shutil.unpack_archive(str(file_path), extraction_dir)
 
-
-    # Remove destination
     if target_dest_path.exists():
         shutil.rmtree(target_dest_path, ignore_errors=True)
     else:
-        # Create destination parent
         target_dest_parent = target_dest_path.parent
         target_dest_parent.mkdir(parents=True, exist_ok=True)
 
+    # Copy source to destination
     target_source_path = extraction_dir / source_name
-    # Copy destination to target
     if extract_source:
         shutil.copytree(target_source_path, target_dest_path)
     else:
