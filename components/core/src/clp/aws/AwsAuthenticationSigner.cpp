@@ -1,12 +1,5 @@
 #include "AwsAuthenticationSigner.hpp"
 
-#include "../ErrorCode.hpp"
-#include "../hash_utils.hpp"
-#include "../type_utils.hpp"
-#include "constants.hpp"
-
-using clp::size_checked_pointer_cast;
-
 #include <chrono>
 #include <regex>
 #include <span>
@@ -15,6 +8,12 @@ using clp::size_checked_pointer_cast;
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 
+#include "../ErrorCode.hpp"
+#include "../hash_utils.hpp"
+#include "../type_utils.hpp"
+#include "constants.hpp"
+
+using clp::size_checked_pointer_cast;
 using std::span;
 using std::string;
 using std::string_view;
@@ -87,7 +86,7 @@ namespace {
     {
         return error_code;
     }
-    auto const signed_canonical_request_str = convert_hash_to_hex_string(
+    auto const signed_canonical_request_str = convert_to_hex_string(
             {signed_canonical_request.data(), signed_canonical_request.size()}
     );
     string_to_sign = fmt::format(
@@ -101,12 +100,12 @@ namespace {
 }
 
 /**
- * Encode the uri as specified by AWS Signature Version 4's UriEncode()
- * @param uri
+ * Encodes the Uri as specified by AWS Signature Version 4's UriEncode()
+ * @param Uri
  * @param encode_slash
- * @return The encoded URI
+ * @return The encoded Uri
  */
-[[nodiscard]] auto encode_uri(string_view uri, bool encode_slash = true) -> string {
+[[nodiscard]] auto encode_uri(string_view uri, bool encode_slash) -> string {
     string encoded_uri;
 
     for (auto const c : uri) {
@@ -135,18 +134,14 @@ namespace {
 /**
  * Gets the canonical request string
  * @param method HTTP method
- * @param url S3 URL
+ * @param url S3 Url
  * @param query_string Query string
  * @return Canonical request
  */
-[[nodiscard]] auto get_canonical_request(
-        AwsAuthenticationSigner::HttpMethod method,
-        S3Url const& url,
-        string_view query_string
-) -> string {
+[[nodiscard]] auto get_canonical_request(S3Url const& url, string_view query_string) -> string {
     return fmt::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
-            get_method_string(method),
+            get_method_string(AwsAuthenticationSigner::HttpMethod::GET),
             encode_uri(url.get_path(), false),
             query_string,
             cDefaultSignedHeaders,
@@ -158,11 +153,11 @@ namespace {
 }  // namespace
 
 S3Url::S3Url(string const& url) {
-    // Regular expression to match Virtual-hosted-style HTTP URL format
+    // Virtual-hosted-style HTTP URL format
     std::regex const host_style_url_regex(
             R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)"
     );
-    // Regular expression to match Path-style HTTP URL format
+    // Path-style HTTP URL format
     std::regex const path_style_url_regex(
             R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)"
     );
@@ -191,10 +186,6 @@ S3Url::S3Url(string const& url) {
     m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
 }
 
-auto S3Url::get_compression_path() const -> string {
-    return fmt::format("/{}/{}{}", m_region, m_bucket, m_path);
-}
-
 auto AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& presigned_url)
         -> ErrorCode {
     auto const s3_region = s3_url.get_region();
@@ -206,8 +197,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string
     auto const scope = get_scope(date_string, s3_region);
     auto const canonical_query_string = generate_canonical_query_string(scope, timestamp_string);
 
-    auto const canonical_request
-            = get_canonical_request(HttpMethod::GET, s3_url, canonical_query_string);
+    auto const canonical_request = get_canonical_request(s3_url, canonical_query_string);
 
     string string_to_sign{};
     if (auto error_code
@@ -223,7 +213,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string
     {
         return error_code;
     }
-    auto const signature_str = convert_hash_to_hex_string({signature.data(), signature.size()});
+    auto const signature_str = convert_to_hex_string({signature.data(), signature.size()});
 
     presigned_url = fmt::format(
             "https://{}{}?{}&{}={}",
@@ -333,7 +323,7 @@ auto AwsAuthenticationSigner::generate_canonical_query_string(
             cXAmzAlgorithm,
             cAws4HmacSha256,
             cXAmzCredential,
-            encode_uri(uri),
+            encode_uri(uri, true),
             cXAmzDate,
             timestamp_string,
             cXAmzExpires,

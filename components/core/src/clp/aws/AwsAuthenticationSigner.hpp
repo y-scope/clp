@@ -49,8 +49,6 @@ public:
 
     [[nodiscard]] auto get_path() const -> std::string_view { return m_path; }
 
-    [[nodiscard]] auto get_compression_path() const -> std::string;
-
 private:
     std::string m_host;
     std::string m_bucket;
