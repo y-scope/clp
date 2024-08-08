@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 import logging
-import subprocess
 import os
-from pathlib import Path
 import shutil
+import subprocess
 import sys
-import uuid
 import urllib.parse
 import urllib.request
+import uuid
+from pathlib import Path
 
 # Setup logging
 # Create logger
@@ -26,9 +26,12 @@ def main(argv):
     args_parser.add_argument("source_url", help="Url to the source file.")
     args_parser.add_argument("source_name", help="Name of the source file.")
     args_parser.add_argument("dest_dir", help="Destination to output the downloaded files.")
-    args_parser.add_argument("--extract", action='store_true', help="Extract the source file.")
+    args_parser.add_argument("--extract", action="store_true", help="Extract the source file.")
     args_parser.add_argument(
-        "--no-submodule", action='store_false', dest="use_submodule", help="Do not use git submodule update"
+        "--no-submodule",
+        action="store_false",
+        dest="use_submodule",
+        help="Do not use git submodule update",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -38,7 +41,7 @@ def main(argv):
     extract_source = parsed_args.extract
 
     script_path = Path(os.path.realpath(__file__))
-    git_dir = script_path.parent / ".." / ".."/ ".git"
+    git_dir = script_path.parent / ".." / ".." / ".git"
     if git_dir.exists() and git_dir.is_dir():
         if parsed_args.use_submodule:
             cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]
@@ -48,7 +51,6 @@ def main(argv):
                 logger.exception(f"Failed to update the submodule {target_dest_path}")
                 return -1
             return 0
-
 
     parsed_url = urllib.parse.urlparse(source_url)
     filename = Path(parsed_url.path).name
