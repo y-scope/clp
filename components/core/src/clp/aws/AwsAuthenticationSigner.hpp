@@ -90,7 +90,7 @@ public:
      *
      */
     [[nodiscard]] auto
-    generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) -> ErrorCode;
+    generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) const -> ErrorCode;
 
 private:
     /**
@@ -102,7 +102,7 @@ private:
     [[nodiscard]] auto generate_canonical_query_string(
             std::string_view scope,
             std::string_view timestamp_string
-    ) -> std::string;
+    ) const -> std::string;
 
     /**
      * Gets the signature signing key for the request.
@@ -116,7 +116,7 @@ private:
             std::string_view region,
             std::string_view date_string,
             std::vector<unsigned char>& signing_key
-    ) -> ErrorCode;
+    ) const -> ErrorCode;
 
     /**
      * Signs the string_to_sign and returns the request signature by reference.

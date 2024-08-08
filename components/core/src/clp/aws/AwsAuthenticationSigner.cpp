@@ -186,8 +186,10 @@ S3Url::S3Url(string const& url) {
     m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
 }
 
-auto AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& presigned_url)
-        -> ErrorCode {
+auto AwsAuthenticationSigner::generate_presigned_url(
+        S3Url const& s3_url,
+        string& presigned_url
+) const -> ErrorCode {
     auto const s3_region = s3_url.get_region();
 
     auto const now = std::chrono::system_clock::now();
@@ -231,7 +233,7 @@ auto AwsAuthenticationSigner::get_signature(
         string_view date_string,
         string_view string_to_sign,
         vector<unsigned char>& signature
-) -> ErrorCode {
+) const -> ErrorCode {
     vector<unsigned char> signing_key{};
     if (auto error_code = get_signing_key(region, date_string, signing_key);
         ErrorCode_Success != error_code)
@@ -257,7 +259,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         string_view region,
         string_view date_string,
         vector<unsigned char>& signing_key
-) -> ErrorCode {
+) const -> ErrorCode {
     string key{cAws4};
     key += m_secret_access_key;
 
@@ -315,7 +317,7 @@ auto AwsAuthenticationSigner::get_signing_key(
 auto AwsAuthenticationSigner::generate_canonical_query_string(
         string_view scope,
         string_view timestamp_string
-) -> string {
+) const -> string {
     string uri{m_access_key_id + "/"};
     uri += scope;
     return fmt::format(
