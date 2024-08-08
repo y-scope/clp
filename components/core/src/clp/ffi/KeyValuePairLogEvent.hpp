@@ -33,6 +33,9 @@ public:
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
      * failure:
+     * - std::errc::operation_not_permitted if the key ID doesn't represent a valid node in the
+     *   schema tree.
+     * - std::errc::protocol_error if the schema tree node type doesn't match the value's type.
      */
     [[nodiscard]] static auto
     create(std::shared_ptr<SchemaTree> schema_tree, KeyValuePairs kv_pairs, UtcOffset utc_offset

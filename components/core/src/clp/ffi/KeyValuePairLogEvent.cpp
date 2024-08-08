@@ -65,7 +65,7 @@ auto KeyValuePairLogEvent::create(
             }
         }
     } catch (SchemaTree::OperationFailed const& ex) {
-        return std::errc::protocol_error;
+        return std::errc::operation_not_permitted;
     }
     return KeyValuePairLogEvent{std::move(schema_tree), std::move(kv_pairs), utc_offset};
 }
