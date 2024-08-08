@@ -8,6 +8,7 @@
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ffi/ir_stream/protocol_constants.hpp"
+#include "EncodedTextAst.hpp"
 #include "types.hpp"
 
 namespace clp::ir {
@@ -124,7 +125,11 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
         timestamp = m_prev_msg_timestamp;
     }
 
-    return LogEvent<encoded_variable_t>{timestamp, m_utc_offset, logtype, dict_vars, encoded_vars};
+    return LogEvent<encoded_variable_t>{
+            timestamp,
+            m_utc_offset,
+            EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars}
+    };
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
