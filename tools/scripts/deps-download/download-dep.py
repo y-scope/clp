@@ -25,7 +25,7 @@ def main(argv):
     args_parser = argparse.ArgumentParser(description="Download dependency.")
     args_parser.add_argument("source_url", help="Url to the source file.")
     args_parser.add_argument("source_name", help="Name of the source file.")
-    args_parser.add_argument("dest_dir", help="Destination to output the downloaded files.")
+    args_parser.add_argument("dest_dir", help="Destination to output the downloaded dependency.")
     args_parser.add_argument("--extract", action="store_true", help="Extract the source file.")
     args_parser.add_argument(
         "--no-submodule",
@@ -35,9 +35,9 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    target_dest_path = Path(parsed_args.dest_dir).resolve()
     source_url = parsed_args.source_url
     source_name = parsed_args.source_name
-    target_dest_path = Path(parsed_args.dest_dir).resolve()
     extract_source = parsed_args.extract
 
     script_path = Path(os.path.realpath(__file__))
@@ -52,19 +52,18 @@ def main(argv):
                 return -1
             return 0
 
+    work_dir = Path("/") / "tmp" / str(uuid.uuid4())
+    work_dir.mkdir(parents=True, exist_ok=True)
+
     parsed_url = urllib.parse.urlparse(source_url)
     filename = Path(parsed_url.path).name
-
-    extraction_dir = Path("/") / "tmp" / str(uuid.uuid4())
-    extraction_dir.mkdir(parents=True, exist_ok=True)
-
+    file_path = work_dir / filename
     # Download file
-    file_path = extraction_dir / filename
     urllib.request.urlretrieve(source_url, file_path)
     if extract_source:
         # NOTE: We need to convert file_path to a str since unpack_archive only
         # accepts a path-like object on Python versions >= 3.7
-        shutil.unpack_archive(str(file_path), extraction_dir)
+        shutil.unpack_archive(str(file_path), work_dir)
 
     if target_dest_path.exists():
         shutil.rmtree(target_dest_path, ignore_errors=True)
@@ -72,7 +71,7 @@ def main(argv):
         target_dest_parent = target_dest_path.parent
         target_dest_parent.mkdir(parents=True, exist_ok=True)
 
-    target_source_path = extraction_dir / source_name
+    target_source_path = work_dir / source_name
     if not target_source_path.exists():
         logger.error(f"Source file {target_source_path} does not exist, abort")
         return -1
@@ -82,7 +81,7 @@ def main(argv):
     else:
         shutil.copy(target_source_path, target_dest_path)
 
-    shutil.rmtree(extraction_dir)
+    shutil.rmtree(work_dir)
 
     return 0
 
