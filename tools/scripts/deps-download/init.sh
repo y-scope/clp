@@ -5,7 +5,7 @@ set -e
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 project_root_dir="$script_dir"/../../../
-download_dep_script="${project_root_dir}"/tools/scripts/download-dep.py
+download_dep_script="$script_dir"/download-dep.py
 
 python3 "${download_dep_script}" \
   https://github.com/y-scope/yscope-dev-utils/archive/ff1611e6.zip \
