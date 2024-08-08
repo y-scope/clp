@@ -13,13 +13,16 @@
 #include "../ir/EncodedTextAst.hpp"
 #include "../TraceableException.hpp"
 
+// NOTE: In this file, "primitive" doesn't refer to a C++ fundamental type (e.g. int) but instead
+// refers to a value in a kv-pair that has no children (i.e. not an object/array).
+
 namespace clp::ffi {
 using value_int_t = int64_t;
 using value_float_t = double;
 using value_bool_t = bool;
 
 /**
- * Tuple of all the valid primitive value types.
+ * Tuple of all primitive value types.
  */
 using PrimitiveValueTypeTuple = std::tuple<
         value_int_t,
@@ -42,12 +45,12 @@ struct tuple_to_variant<std::tuple<Types...>> {
 };
 
 /**
- * Variant type defined by the tuple of all primitive value types.
+ * Variant for all primitive value types.
  */
 using PrimitiveValueTypeVariant = typename tuple_to_variant<PrimitiveValueTypeTuple>::type;
 
 /**
- * Template to validate if the given type is in the type tuple.
+ * Template to validate if the given type is in the given tuple of types.
  * @tparam Type
  * @tparam Tuple
  */
@@ -59,7 +62,7 @@ struct is_valid_type<Type, std::tuple<Types...>> : std::disjunction<std::is_same
 };
 
 /**
- * Template to validate whether the given type is a valid primitive value type.
+ * Template to validate whether the given type is a primitive value type.
  * @tparam Type
  */
 template <typename Type>
@@ -72,7 +75,7 @@ template <typename Type>
 concept PrimitiveValueType = cIsValidPrimitiveValueType<Type>;
 
 /**
- * Concept that defines primitive value types that are C++ fundamental types.
+ * Concept that defines primitive value types that are also C++ fundamental types.
  */
 template <typename Type>
 concept FundamentalValueType = cIsValidPrimitiveValueType<Type> && std::is_fundamental_v<Type>;
@@ -97,7 +100,7 @@ struct ImmutableViewTypeConverter {
 };
 
 /**
- * Specializes `std::string`'s immutable view type to `std::string_view`.
+ * Specializes `std::string`'s immutable view type as a `std::string_view`.
  */
 template <>
 struct ImmutableViewTypeConverter<std::string> {
@@ -105,7 +108,7 @@ struct ImmutableViewTypeConverter<std::string> {
 };
 
 /**
- * Specializes `clp::ir::EightByteEncodedTextAst`'s immutable view type its const reference.
+ * Specializes `clp::ir::EightByteEncodedTextAst`'s immutable view type as its const reference.
  */
 template <>
 struct ImmutableViewTypeConverter<clp::ir::EightByteEncodedTextAst> {
@@ -113,7 +116,7 @@ struct ImmutableViewTypeConverter<clp::ir::EightByteEncodedTextAst> {
 };
 
 /**
- * Specializes `clp::ir::FourByteEncodedTextAst`'s immutable view type its const reference.
+ * Specializes `clp::ir::FourByteEncodedTextAst`'s immutable view type as its const reference.
  */
 template <>
 struct ImmutableViewTypeConverter<clp::ir::FourByteEncodedTextAst> {
@@ -153,22 +156,21 @@ public:
     Value() = default;
 
     /**
-     * Move constructs from the given rvalue.
-     * @tparam PrimitiveValue The type of the rvalue, which must be a move constructable
-     * non-reference type.
+     * Constructs a `Value` by moving the given primitive value.
+     * @tparam T The type of the value, which must be an rvalue to a move-constructable primitive
+     * value type.
      * @value
      */
     template <MoveConstructableValueType PrimitiveValue>
     requires(false == std::is_reference_v<PrimitiveValue>)
-    Value(PrimitiveValue&& value) : m_value{std::forward<PrimitiveValue>(value)} {}
+    explicit Value(PrimitiveValue&& value) : m_value{std::forward<PrimitiveValue>(value)} {}
 
     /**
-     * Constructs from the given fundamental-type value.
-     * @tparam PrimitiveValue The type of the given value, which must be a C++ fundamental type.
+     * @tparam T The type of the given value, which must be a fundamental primitive value type.
      * @value
      */
     template <FundamentalValueType PrimitiveValue>
-    Value(PrimitiveValue value) : m_value{value} {}
+    explicit Value(PrimitiveValue value) : m_value{value} {}
 
     // Disable copy constructor and assignment operator
     Value(Value const&) = delete;
@@ -183,8 +185,8 @@ public:
 
     // Methods
     /**
-     * @tparam PrimitiveValue
-     * @return Whether the underlying value is the given `PrimitiveValue` type.
+     * @tparam T
+     * @return Whether the underlying value is the given type.
      */
     template <PrimitiveValueType PrimitiveValue>
     [[nodiscard]] auto is() const -> bool {
@@ -192,9 +194,9 @@ public:
     }
 
     /**
-     * @tparam PrimitiveValue
-     * @return An immutable view of the underlying value if its type matches `PrimitiveValue` type.
-     * @throw `OperationFailed` if the given type doesn't match the underlying value's type.
+     * @tparam T
+     * @return An immutable view of the underlying value if its type matches the given type.
+     * @throw OperationFailed if the given type doesn't match the underlying value's type.
      */
     template <PrimitiveValueType PrimitiveValue>
     [[nodiscard]] auto get_immutable_view() const -> ImmutableViewType<PrimitiveValue> {
@@ -203,7 +205,7 @@ public:
                     clp::ErrorCode_BadParam,
                     __FILE__,
                     __LINE__,
-                    "The underlying value does not match the query type."
+                    "The underlying value does not match the given type."
             );
         }
         return std::get<PrimitiveValue>(m_value);

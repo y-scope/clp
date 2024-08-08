@@ -25,7 +25,7 @@ using std::vector;
 
 namespace {
 /**
- * Parses and encodes the given string into an instance of `EncodedTextAst`.
+ * Parses and encodes the given string as an instance of `EncodedTextAst`.
  * @tparam encoded_variable_t
  * @param text
  * @return The encoded result.
