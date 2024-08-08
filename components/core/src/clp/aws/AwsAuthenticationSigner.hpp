@@ -47,12 +47,14 @@ public:
 
     [[nodiscard]] auto get_region() const -> std::string_view { return m_region; }
 
+    [[nodiscard]] auto get_bucket() const -> std::string_view { return m_bucket; }
+
     [[nodiscard]] auto get_path() const -> std::string_view { return m_path; }
 
 private:
     std::string m_host;
-    std::string m_bucket;
     std::string m_region;
+    std::string m_bucket;
     std::string m_path;
 };
 
