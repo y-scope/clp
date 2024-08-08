@@ -38,21 +38,23 @@ requires(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
 ) -> clp::ir::EncodedTextAst<encoded_variable_t>;
 
 /**
- * Tests querying the underlying type of the given value against the given type.
+ * Tests that `Value::is` returns true for the given type and false for all others.
  * @tparam Type The type to query.
  * @param value The value to test against.
  */
 template <typename Type>
-auto test_type_probing(Value const& value) -> void;
+auto test_value_is(Value const& value) -> void;
 
 /**
- * Tests querying the typed value against the given type.
+ * Tests `Value::get_immutable_view` either:
+ * 1. returns the expected value with the expected type for the given type and value;
+ * 2. throws for any other type.
  * @tparam Type The type to query.
  * @param value The value to test against.
  * @param typed_value The typed value to compare with.
  */
 template <typename Type>
-auto test_typed_value_probing(Value const& value, Type const& typed_value) -> void;
+auto test_value_get_immutable_view(Value const& value, Type const& typed_value) -> void;
 
 // Implementation
 
@@ -78,7 +80,7 @@ auto get_encoded_text_ast(std::string_view text) -> clp::ir::EncodedTextAst<enco
 
 template <typename Type>
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-auto test_type_probing(Value const& value) -> void {
+auto test_value_is(Value const& value) -> void {
     REQUIRE((std::is_same_v<std::monostate, Type> == value.is_null()));
     REQUIRE((std::is_same_v<value_int_t, Type> == value.is<value_int_t>()));
     REQUIRE((std::is_same_v<value_float_t, Type> == value.is<value_float_t>()));
@@ -90,24 +92,24 @@ auto test_type_probing(Value const& value) -> void {
 
 template <typename Type>
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-auto test_typed_value_probing(Value const& value, Type const& typed_value) -> void {
+auto test_value_get_immutable_view(Value const& value, Type const& typed_value) -> void {
     if constexpr (std::is_same_v<value_int_t, Type>) {
         REQUIRE((value.get_immutable_view<Type>() == typed_value));
-        REQUIRE((std::is_same_v<value_int_t, decltype(value.get_immutable_view<Type>())>));
+        REQUIRE((std::is_same_v<Type, decltype(value.get_immutable_view<Type>())>));
     } else {
         REQUIRE_THROWS(value.get_immutable_view<value_int_t>());
     }
 
     if constexpr (std::is_same_v<value_float_t, Type>) {
         REQUIRE((value.get_immutable_view<Type>() == typed_value));
-        REQUIRE((std::is_same_v<value_float_t, decltype(value.get_immutable_view<Type>())>));
+        REQUIRE((std::is_same_v<Type, decltype(value.get_immutable_view<Type>())>));
     } else {
         REQUIRE_THROWS(value.get_immutable_view<value_float_t>());
     }
 
     if constexpr (std::is_same_v<value_bool_t, Type>) {
         REQUIRE((value.get_immutable_view<Type>() == typed_value));
-        REQUIRE((std::is_same_v<value_bool_t, decltype(value.get_immutable_view<Type>())>));
+        REQUIRE((std::is_same_v<Type, decltype(value.get_immutable_view<Type>())>));
     } else {
         REQUIRE_THROWS(value.get_immutable_view<value_bool_t>());
     }
@@ -120,12 +122,7 @@ auto test_typed_value_probing(Value const& value, Type const& typed_value) -> vo
     }
 
     if constexpr (std::is_same_v<EightByteEncodedTextAst, Type>) {
-        REQUIRE((value.get_immutable_view<Type>().get_logtype() == typed_value.get_logtype()));
-        REQUIRE((value.get_immutable_view<Type>().get_dict_vars() == typed_value.get_dict_vars()));
-        REQUIRE(
-                (value.get_immutable_view<Type>().get_encoded_vars()
-                 == typed_value.get_encoded_vars())
-        );
+        REQUIRE((value.get_immutable_view<Type>() == typed_value));
         REQUIRE((std::is_same_v<
                  EightByteEncodedTextAst const&,
                  decltype(value.get_immutable_view<Type>())>));
@@ -134,12 +131,7 @@ auto test_typed_value_probing(Value const& value, Type const& typed_value) -> vo
     }
 
     if constexpr (std::is_same_v<FourByteEncodedTextAst, Type>) {
-        REQUIRE((value.get_immutable_view<Type>().get_logtype() == typed_value.get_logtype()));
-        REQUIRE((value.get_immutable_view<Type>().get_dict_vars() == typed_value.get_dict_vars()));
-        REQUIRE(
-                (value.get_immutable_view<Type>().get_encoded_vars()
-                 == typed_value.get_encoded_vars())
-        );
+        REQUIRE((value.get_immutable_view<Type>() == typed_value));
         REQUIRE((std::is_same_v<
                  FourByteEncodedTextAst const&,
                  decltype(value.get_immutable_view<Type>())>));
@@ -151,35 +143,35 @@ auto test_typed_value_probing(Value const& value, Type const& typed_value) -> vo
 
 TEST_CASE("ffi_Value_basic", "[ffi][Value]") {
     Value const null_value;
-    test_type_probing<std::monostate>(null_value);
-    test_typed_value_probing<std::monostate>(null_value, std::monostate{});
+    test_value_is<std::monostate>(null_value);
+    test_value_get_immutable_view<std::monostate>(null_value, std::monostate{});
 
     constexpr value_int_t cIntVal{1000};
     Value const int_value{cIntVal};
-    test_type_probing<value_int_t>(int_value);
-    test_typed_value_probing<value_int_t>(int_value, cIntVal);
+    test_value_is<value_int_t>(int_value);
+    test_value_get_immutable_view<value_int_t>(int_value, cIntVal);
 
     constexpr value_float_t cFloatValue{1000.0001};
     Value const float_value{cFloatValue};
-    test_type_probing<value_float_t>(float_value);
-    test_typed_value_probing<value_float_t>(float_value, cFloatValue);
+    test_value_is<value_float_t>(float_value);
+    test_value_get_immutable_view<value_float_t>(float_value, cFloatValue);
 
     constexpr value_bool_t cBoolVal{false};
     Value const bool_value{cBoolVal};
-    test_type_probing<value_bool_t>(bool_value);
-    test_typed_value_probing<value_bool_t>(bool_value, cBoolVal);
+    test_value_is<value_bool_t>(bool_value);
+    test_value_get_immutable_view<value_bool_t>(bool_value, cBoolVal);
 
     constexpr std::string_view cStringVal{"This is a test string message"};
     Value const string_value{string{cStringVal}};
-    test_type_probing<string>(string_value);
-    test_typed_value_probing<string>(string_value, string{cStringVal});
+    test_value_is<string>(string_value);
+    test_value_get_immutable_view<string>(string_value, string{cStringVal});
 
     constexpr std::string_view cStringToEncode{"uid=0, CPU usage: 99.99%, \"user_name\"=YScope"};
     Value const eight_byte_encoded_text_ast_value{
             get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)
     };
-    test_type_probing<EightByteEncodedTextAst>(eight_byte_encoded_text_ast_value);
-    test_typed_value_probing<EightByteEncodedTextAst>(
+    test_value_is<EightByteEncodedTextAst>(eight_byte_encoded_text_ast_value);
+    test_value_get_immutable_view<EightByteEncodedTextAst>(
             eight_byte_encoded_text_ast_value,
             get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)
     );
@@ -187,8 +179,8 @@ TEST_CASE("ffi_Value_basic", "[ffi][Value]") {
     Value const four_byte_encoded_text_ast_value{
             get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)
     };
-    test_type_probing<FourByteEncodedTextAst>(four_byte_encoded_text_ast_value);
-    test_typed_value_probing<FourByteEncodedTextAst>(
+    test_value_is<FourByteEncodedTextAst>(four_byte_encoded_text_ast_value);
+    test_value_get_immutable_view<FourByteEncodedTextAst>(
             four_byte_encoded_text_ast_value,
             get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)
     );
