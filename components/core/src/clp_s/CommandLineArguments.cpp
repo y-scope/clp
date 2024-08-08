@@ -399,6 +399,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "output-handler-args",
                     po::value<std::vector<std::string>>()
+            )(
+                    "projection",
+                    po::value<std::vector<std::string>>(&m_projection_columns)->multitoken(),
+                    "The set of projected columns that will be marshalled for matching results"
             );
             // clang-format on
             po::positional_options_description positional_options;
