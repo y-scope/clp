@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 
 #include "../ir/EncodedTextAst.hpp"
@@ -25,6 +26,12 @@ namespace {
  * @return Whether the given type and the value matches.
  */
 [[nodiscard]] auto is_valid_value_type(SchemaTreeNode::Type type, Value const& value) -> bool;
+
+// TODO: Add docstring and rename
+[[nodiscard]] auto get_sub_schema_tree_bitmap(
+        SchemaTree const& schema_tree,
+        KeyValuePairLogEvent::KeyValuePairs const& kv_pairs
+) -> std::vector<bool>;
 
 auto is_valid_value_type(SchemaTreeNode::Type type, Value const& value) -> bool {
     switch (type) {
@@ -68,5 +75,11 @@ auto KeyValuePairLogEvent::create(
         return std::errc::protocol_error;
     }
     return KeyValuePairLogEvent{std::move(schema_tree), std::move(kv_pairs), utc_offset};
+}
+
+auto KeyValuePairLogEvent::serialize_to_json(
+) const -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json> {
+    auto root = nlohmann::json::object();
+    return std::errc::protocol_not_supported;
 }
 }  // namespace clp::ffi
