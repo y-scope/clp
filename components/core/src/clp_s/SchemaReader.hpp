@@ -11,6 +11,7 @@
 #include "FileReader.hpp"
 #include "JsonSerializer.hpp"
 #include "SchemaTree.hpp"
+#include "search/Projection.hpp"
 #include "ZstdDecompressor.hpp"
 
 namespace clp_s {
@@ -71,6 +72,7 @@ public:
      * to accept append_column calls for the new schema.
      *
      * @param schema_tree
+     * @param projection
      * @param schema_id
      * @param ordered_schema
      * @param num_messages
@@ -78,6 +80,7 @@ public:
      */
     void reset(
             std::shared_ptr<SchemaTree> schema_tree,
+            std::shared_ptr<search::Projection> projection,
             int32_t schema_id,
             std::span<int32_t> ordered_schema,
             uint64_t num_messages,
@@ -100,6 +103,7 @@ public:
         m_local_schema_tree.clear();
         m_json_serializer.clear();
         m_global_schema_tree = std::move(schema_tree);
+        m_projection = std::move(projection);
         m_should_marshal_records = should_marshal_records;
     }
 
@@ -291,6 +295,7 @@ private:
     JsonSerializer m_json_serializer;
     bool m_should_marshal_records{true};
     bool m_serializer_initialized{false};
+    std::shared_ptr<search::Projection> m_projection;
 
     std::map<int32_t, std::pair<size_t, std::span<int32_t>>> m_global_id_to_unordered_object;
 };

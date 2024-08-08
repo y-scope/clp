@@ -12,6 +12,7 @@
 #include "DictionaryReader.hpp"
 #include "ReaderUtils.hpp"
 #include "SchemaReader.hpp"
+#include "search/Projection.hpp"
 #include "TimestampDictionaryReader.hpp"
 #include "Utils.hpp"
 
@@ -133,6 +134,10 @@ public:
      */
     [[nodiscard]] std::vector<int32_t> const& get_schema_ids() const { return m_schema_ids; }
 
+    void set_projection(std::shared_ptr<search::Projection> projection) {
+        m_projection = projection;
+    }
+
 private:
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.
@@ -182,6 +187,7 @@ private:
     std::shared_ptr<ReaderUtils::SchemaMap> m_schema_map;
     std::vector<int32_t> m_schema_ids;
     std::map<int32_t, SchemaReader::TableMetadata> m_id_to_table_metadata;
+    std::shared_ptr<search::Projection> m_projection{new search::Projection{}};
 
     FileReader m_tables_file_reader;
     FileReader m_table_metadata_file_reader;
