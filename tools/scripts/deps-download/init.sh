@@ -4,7 +4,7 @@
 set -e
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-project_root_dir="$script_dir"/../../
+project_root_dir="$script_dir"/../../../
 download_dep_script="${project_root_dir}"/tools/scripts/download-dep.py
 
 python3 "${download_dep_script}" \

@@ -1,6 +1,6 @@
 version: "3"
 vars:
-    G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/download-dep.py"
+    G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/deps-download/download-dep.py"
 
 tasks:
   default:

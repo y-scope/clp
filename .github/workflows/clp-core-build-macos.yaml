@@ -51,12 +51,9 @@ jobs:
         shell: "bash"
         run: "./tools/scripts/init.sh"
 
-      - name: "Install coreutils (for md5sum) and task"
-        run: "brew install coreutils go-task"
-
       - name: "Download core dependencies"
         shell: "bash"
-        run: "task submodules:core-submodules"
+        run: "task submodules:core"
 
       - name: "Build CLP-core and run unit tests"
         shell: "bash"

@@ -51,7 +51,7 @@ runs:
         --volume "$GITHUB_WORKSPACE":/mnt/workspace
         --workdir /mnt/workspace
         ${{steps.get_image_props.outputs.qualified_image_name}}
-        task submodules:core-submodules
+        task submodules:core
       shell: "bash"
 
     - run: >-

@@ -41,7 +41,7 @@ def main(argv):
     extract_source = parsed_args.extract
 
     script_path = Path(os.path.realpath(__file__))
-    git_dir = script_path.parent / ".." / ".." / ".git"
+    git_dir = script_path.parent / ".." / ".." / ".." / ".git"
     if git_dir.exists() and git_dir.is_dir():
         if parsed_args.use_submodule:
             cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]

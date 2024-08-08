@@ -20,4 +20,6 @@ brew install \
   msgpack-cxx \
   spdlog \
   pkg-config \
-  zstd
+  zstd \
+  coreutils \
+  go-task
