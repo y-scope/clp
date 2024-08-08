@@ -1,62 +1,19 @@
 #ifndef CLP_FFI_ENCODING_METHODS_HPP
 #define CLP_FFI_ENCODING_METHODS_HPP
 
+#include <cstddef>
+#include <cstdint>
+#include <span>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <vector>
 
-#include "../ir/parsing.hpp"
 #include "../ir/types.hpp"
-#include "../TraceableException.hpp"
 
 // TODO Some of the methods in this file are mostly duplicated from code that exists elsewhere in
 //  the repo. They should be consolidated in a future commit.
 namespace clp::ffi {
-class EncodingException : public TraceableException {
-public:
-    // Constructors
-    EncodingException(
-            ErrorCode error_code,
-            char const* const filename,
-            int line_number,
-            std::string message
-    )
-            : TraceableException(error_code, filename, line_number),
-              m_message(std::move(message)) {}
-
-    // Methods
-    [[nodiscard]] char const* what() const noexcept override { return m_message.c_str(); }
-
-private:
-    std::string m_message;
-};
-
-// Constants
-/*
- * These constants can be used by callers to store the version of the schemas and encoding methods
- * they're using. At some point, we may update and/or add built-in schemas/encoding methods. So
- * callers must store the versions they used for encoding to ensure that they can choose the same
- * versions for decoding.
- *
- * We use versions which look like package names in anticipation of users writing their own custom
- * schemas and encoding methods.
- */
-static constexpr char cVariableEncodingMethodsVersion[]
-        = "com.yscope.clp.VariableEncodingMethodsV1";
-static constexpr char cVariablesSchemaVersion[] = "com.yscope.clp.VariablesSchemaV2";
-
-static constexpr char cTooFewDictionaryVarsErrorMessage[]
-        = "There are fewer dictionary variables than dictionary variable placeholders in the "
-          "logtype.";
-static constexpr char cTooFewEncodedVarsErrorMessage[]
-        = "There are fewer encoded variables than encoded variable placeholders in the logtype.";
-static constexpr char cUnexpectedEscapeCharacterMessage[]
-        = "Unexpected escape character without escaped value at the end of the logtype.";
-
-constexpr size_t cMaxDigitsInRepresentableEightByteFloatVar = 16;
-constexpr size_t cMaxDigitsInRepresentableFourByteFloatVar = 8;
-constexpr uint64_t cEightByteEncodedFloatDigitsBitMask = (1ULL << 54) - 1;
-constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
-
 /**
  * Encodes the given string into a representable float variable if possible
  * @tparam encoded_variable_t Type of the encoded variable
@@ -65,16 +22,17 @@ constexpr uint32_t cFourByteEncodedFloatDigitsBitMask = (1UL << 25) - 1;
  * @return true on success, false otherwise
  */
 template <typename encoded_variable_t>
-bool encode_float_string(std::string_view str, encoded_variable_t& encoded_var);
+[[nodiscard]] auto
+encode_float_string(std::string_view str, encoded_variable_t& encoded_var) -> bool;
 
 /**
  * Encodes the given four-byte encoded float using the eight-byte encoding
  * @param four_byte_encoded_var
  * @return The float using the eight-byte encoding
  */
-ir::eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
+[[nodiscard]] auto encode_four_byte_float_as_eight_byte(
         ir::four_byte_encoded_variable_t four_byte_encoded_var
-);
+) -> ir::eight_byte_encoded_variable_t;
 
 /**
  * Encodes a float value with the given properties into an encoded variable.
@@ -87,7 +45,7 @@ ir::eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
  * @return The encoded variable
  */
 template <typename encoded_variable_t>
-encoded_variable_t encode_float_properties(
+[[nodiscard]] auto encode_float_properties(
         bool is_negative,
         std::conditional_t<
                 std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>,
@@ -95,7 +53,7 @@ encoded_variable_t encode_float_properties(
                 uint64_t> digits,
         size_t num_digits,
         size_t decimal_point_pos
-);
+) -> encoded_variable_t;
 
 /**
  * Decodes an encoded float variable into its properties
@@ -107,7 +65,7 @@ encoded_variable_t encode_float_properties(
  * @param decimal_point_pos Returns the position of the decimal point from the right of the value
  */
 template <typename encoded_variable_t>
-void decode_float_properties(
+auto decode_float_properties(
         encoded_variable_t encoded_var,
         bool& is_negative,
         std::conditional_t<
@@ -116,7 +74,7 @@ void decode_float_properties(
                 uint64_t>& digits,
         uint8_t& num_digits,
         uint8_t& decimal_point_pos
-);
+) -> void;
 
 /**
  * Decodes the given encoded float variable into a string
@@ -125,7 +83,7 @@ void decode_float_properties(
  * @return The decoded value as a string
  */
 template <typename encoded_variable_t>
-std::string decode_float_var(encoded_variable_t encoded_var);
+[[nodiscard]] auto decode_float_var(encoded_variable_t encoded_var) -> std::string;
 
 /**
  * Encodes the given string into a representable integer variable if possible
@@ -135,16 +93,17 @@ std::string decode_float_var(encoded_variable_t encoded_var);
  * @return true if successfully converted, false otherwise
  */
 template <typename encoded_variable_t>
-bool encode_integer_string(std::string_view str, encoded_variable_t& encoded_var);
+[[nodiscard]] auto
+encode_integer_string(std::string_view str, encoded_variable_t& encoded_var) -> bool;
 
 /**
  * Encodes the given four-byte encoded integer using the eight-byte encoding
  * @param four_byte_encoded_var
  * @return The integer using the eight-byte encoding
  */
-ir::eight_byte_encoded_variable_t encode_four_byte_integer_as_eight_byte(
+[[nodiscard]] auto encode_four_byte_integer_as_eight_byte(
         ir::four_byte_encoded_variable_t four_byte_encoded_var
-);
+) -> ir::eight_byte_encoded_variable_t;
 
 /**
  * Decodes the given encoded integer variable into a string
@@ -153,7 +112,7 @@ ir::eight_byte_encoded_variable_t encode_four_byte_integer_as_eight_byte(
  * @return The decoded value as a string
  */
 template <typename encoded_variable_t>
-std::string decode_integer_var(encoded_variable_t encoded_var);
+[[nodiscard]] auto decode_integer_var(encoded_variable_t encoded_var) -> std::string;
 
 /**
  * Encodes the given message and calls the given methods to handle specific components of the
@@ -177,13 +136,13 @@ template <
         typename ConstantHandler,
         typename EncodedVariableHandler,
         typename DictionaryVariableHandler>
-bool encode_message_generically(
+[[nodiscard]] auto encode_message_generically(
         std::string_view message,
         std::string& logtype,
         ConstantHandler constant_handler,
         EncodedVariableHandler encoded_variable_handler,
         DictionaryVariableHandler dictionary_variable_handler
-);
+) -> bool;
 
 /**
  * Encodes the given message. The simplistic interface is to make it efficient to transfer data
@@ -197,12 +156,12 @@ bool encode_message_generically(
  * @return false if the message contains variable placeholders, true otherwise
  */
 template <typename encoded_variable_t>
-bool encode_message(
+[[nodiscard]] auto encode_message(
         std::string_view message,
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
         std::vector<int32_t>& dictionary_var_bounds
-);
+) -> bool;
 
 /**
  * Decodes the message from the given logtype, encoded variables, and dictionary variables. The
@@ -211,23 +170,19 @@ bool encode_message(
  * @tparam encoded_variable_t Type of the encoded variable
  * @param logtype
  * @param encoded_vars
- * @param encoded_vars_length
  * @param all_dictionary_vars The message's dictionary variables, stored back-to-back in a single
  * byte-array
  * @param dictionary_var_end_offsets The end-offset of each dictionary variable in
  * ``all_dictionary_vars``
- * @param dictionary_var_end_offsets_length
  * @return The decoded message
  */
 template <typename encoded_variable_t>
-std::string decode_message(
+[[nodiscard]] auto decode_message(
         std::string_view logtype,
-        encoded_variable_t* encoded_vars,
-        size_t encoded_vars_length,
+        std::span<encoded_variable_t> encoded_vars,
         std::string_view all_dictionary_vars,
-        int32_t const* dictionary_var_end_offsets,
-        size_t dictionary_var_end_offsets_length
-);
+        std::span<int32_t const> dictionary_var_end_offsets
+) -> std::string;
 
 /**
  * Checks if any encoded variable matches the given wildcard query
@@ -239,16 +194,14 @@ std::string decode_message(
  * @param wildcard_query
  * @param logtype
  * @param encoded_vars
- * @param encoded_vars_length
  * @return true if a match was found, false otherwise
  */
 template <ir::VariablePlaceholder var_placeholder, typename encoded_variable_t>
-bool wildcard_query_matches_any_encoded_var(
+[[nodiscard]] auto wildcard_query_matches_any_encoded_var(
         std::string_view wildcard_query,
         std::string_view logtype,
-        encoded_variable_t* encoded_vars,
-        size_t encoded_vars_length
-);
+        std::span<encoded_variable_t> encoded_vars
+) -> bool;
 
 /**
  * Checks whether the given wildcard strings match the given encoded variables (from a message).
@@ -262,7 +215,6 @@ bool wildcard_query_matches_any_encoded_var(
  * @tparam encoded_variable_t Type of the encoded variable
  * @param logtype The message's logtype
  * @param encoded_vars The message's encoded variables
- * @param encoded_vars_length The number of encoded variables in \p encoded_vars
  * @param wildcard_var_placeholders String of variable placeholders, where each one indicates how
  * the corresponding wildcard string should be interpreted.
  * @param wildcard_var_queries The wildcard strings to compare with the encoded variables. Callers
@@ -271,15 +223,16 @@ bool wildcard_query_matches_any_encoded_var(
  * @return Whether the wildcard strings match the encoded variables
  */
 template <typename encoded_variable_t>
-bool wildcard_match_encoded_vars(
+[[nodiscard]] auto wildcard_match_encoded_vars(
         std::string_view logtype,
-        encoded_variable_t* encoded_vars,
-        size_t encoded_vars_length,
+        std::span<encoded_variable_t> encoded_vars,
         std::string_view wildcard_var_placeholders,
         std::vector<std::string_view> const& wildcard_var_queries
-);
+) -> bool;
 }  // namespace clp::ffi
 
+// TODO Refactor nested headers
+// NOLINTNEXTLINE(misc-include-cleaner)
 #include "encoding_methods.inc"
 
 #endif  // CLP_FFI_ENCODING_METHODS_HPP
