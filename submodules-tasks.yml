@@ -4,13 +4,13 @@ vars:
 
 tasks:
   default:
-    deps: ["clp-submodules", "core-submodules"]
+    deps: ["log-viewer", "core"]
 
-  clp-submodules:
+  log-viewer:
     cmds:
       - task: "yscope-log-viewer"
 
-  core-submodules:
+  core:
     cmds:
       - task: "abseil-cpp"
       - task: "antlr4"
@@ -25,181 +25,258 @@ tasks:
 
   abseil-cpp:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/abseil-cpp"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip"
           SOURCE_NAME: "abseil-cpp-20230802.1"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/abseil-cpp"
+          DESTINATION: "{{.DESTINATION}}"
 
   antlr4:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_DIR}}/third-party/antlr/antlr-4.13.1-complete.jar"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
           SOURCE_NAME: "antlr-4.13.1-complete.jar"
           FLAGS: "--no-submodule"
-          DESTINATION: "{{.G_CORE_DIR}}/third-party/antlr/antlr-4.13.1-complete.jar"
+          DESTINATION: "{{.DESTINATION}}"
 
   Catch2:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/Catch2"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.7.zip"
           SOURCE_NAME: "Catch2-2.13.7"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/Catch2"
+          DESTINATION: "{{.DESTINATION}}"
 
   date:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/date"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.zip"
           SOURCE_NAME: "date-3.0.1"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/date"
+          DESTINATION: "{{.DESTINATION}}"
 
   json:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/json"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.zip"
           SOURCE_NAME: "json-3.11.3"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/json"
+          DESTINATION: "{{.DESTINATION}}"
 
   log-surgeon:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/log-surgeon"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/y-scope/log-surgeon/archive/895f464.zip"
           SOURCE_NAME: "log-surgeon-895f46489b1911ab3b3aac3202afd56c96e8cd98"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/log-surgeon"
+          DESTINATION: "{{.DESTINATION}}"
 
   outcome:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/outcome"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.9.zip"
           SOURCE_NAME: "outcome-2.2.9"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/outcome"
+          DESTINATION: "{{.DESTINATION}}"
 
   simdjson:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/simdjson"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.zip"
           SOURCE_NAME: "simdjson-3.6.3"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/simdjson"
+          DESTINATION: "{{.DESTINATION}}"
 
   # We don't use a git submodule for sqlite3 since that would require building the
   # sqlite amalgamation
   sqlite3:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/sqlite3"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://www.sqlite.org/2021/sqlite-amalgamation-3360000.zip"
           SOURCE_NAME: "sqlite-amalgamation-3360000"
           FLAGS: "--extract --no-submodule"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/sqlite3"
+          DESTINATION: "{{.DESTINATION}}"
 
   yaml-cpp:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/yaml-cpp"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.zip"
           SOURCE_NAME: "yaml-cpp-yaml-cpp-0.7.0"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/yaml-cpp"
+          DESTINATION: "{{.DESTINATION}}"
 
   yscope-log-viewer:
     internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      DESTINATION: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
     deps:
       - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          DATA_DIR: "{{.DESTINATION}}"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
-          CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           SOURCE_URL: "https://github.com/y-scope/yscope-log-viewer/archive/df996ea.zip"
           SOURCE_NAME: "yscope-log-viewer-df996eac000823d02f9cd0b9eb4bb732dd634ae5"
           FLAGS: "--extract"
-          DESTINATION: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
+          DESTINATION: "{{.DESTINATION}}"
 
   download-dependency:
     internal: true
@@ -212,10 +289,6 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DESTINATION}}"
     cmds:
       - >-
         python3 "{{.G_DEP_DOWNLOAD_SCRIPT}}"
