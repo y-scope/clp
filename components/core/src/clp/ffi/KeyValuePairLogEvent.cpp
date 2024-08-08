@@ -23,7 +23,7 @@ namespace {
 /**
  * @param type
  * @param value
- * @return Whether the given type and the value matches.
+ * @return Whether the given schema tree node type matches the given value's type.
  */
 [[nodiscard]] auto is_valid_value_type(SchemaTreeNode::Type type, Value const& value) -> bool;
 
@@ -72,7 +72,7 @@ auto KeyValuePairLogEvent::create(
             }
         }
     } catch (SchemaTree::OperationFailed const& ex) {
-        return std::errc::protocol_error;
+        return std::errc::operation_not_permitted;
     }
     return KeyValuePairLogEvent{std::move(schema_tree), std::move(kv_pairs), utc_offset};
 }
