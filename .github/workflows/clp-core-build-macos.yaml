@@ -49,7 +49,7 @@ jobs:
 
       - name: "Download yscope-dev-utils"
         shell: "bash"
-        run: "./tools/scripts/init.sh"
+        run: "./tools/scripts/deps-download/init.sh"
 
       - name: "Download core dependencies"
         shell: "bash"

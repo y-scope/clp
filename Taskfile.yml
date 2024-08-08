@@ -1,9 +1,9 @@
 version: "3"
 
 includes:
-  submodules: "submodules-tasks.yml"
   docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
+  submodules: "submodules-tasks.yml"
   utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
 
 vars:

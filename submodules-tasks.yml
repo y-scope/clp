@@ -4,7 +4,9 @@ vars:
 
 tasks:
   default:
-    deps: ["log-viewer", "core"]
+    cmds:
+      - task: "core"
+      - task: "log-viewer"
 
   log-viewer:
     cmds:
