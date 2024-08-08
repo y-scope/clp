@@ -3,6 +3,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -36,6 +37,25 @@ requires(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
 [[nodiscard]] auto get_encoded_text_ast(std::string_view text
 ) -> clp::ir::EncodedTextAst<encoded_variable_t>;
 
+/**
+ * Tests querying the underlying type of the given value against the given type.
+ * @tparam Type The type to query.
+ * @param value The value to test against.
+ */
+template <typename Type>
+auto test_type_probing(Value const& value) -> void;
+
+/**
+ * Tests querying the typed value against the given type.
+ * @tparam Type The type to query.
+ * @param value The value to test against.
+ * @param typed_value The typed value to compare with.
+ */
+template <typename Type>
+auto test_typed_value_probing(Value const& value, Type const& typed_value) -> void;
+
+// Implementation
+
 template <typename encoded_variable_t>
 requires(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
          || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -55,118 +75,121 @@ auto get_encoded_text_ast(std::string_view text) -> clp::ir::EncodedTextAst<enco
 
     return clp::ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars};
 }
+
+template <typename Type>
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+auto test_type_probing(Value const& value) -> void {
+    REQUIRE((std::is_same_v<std::monostate, Type> == value.is_null()));
+    REQUIRE((std::is_same_v<value_int_t, Type> == value.is<value_int_t>()));
+    REQUIRE((std::is_same_v<value_float_t, Type> == value.is<value_float_t>()));
+    REQUIRE((std::is_same_v<value_bool_t, Type> == value.is<value_bool_t>()));
+    REQUIRE((std::is_same_v<string, Type> == value.is<string>()));
+    REQUIRE((std::is_same_v<EightByteEncodedTextAst, Type> == value.is<EightByteEncodedTextAst>()));
+    REQUIRE((std::is_same_v<FourByteEncodedTextAst, Type> == value.is<FourByteEncodedTextAst>()));
+}
+
+template <typename Type>
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+auto test_typed_value_probing(Value const& value, Type const& typed_value) -> void {
+    if constexpr (std::is_same_v<value_int_t, Type>) {
+        REQUIRE((value.get_immutable_view<Type>() == typed_value));
+        REQUIRE((std::is_same_v<value_int_t, decltype(value.get_immutable_view<Type>())>));
+    } else {
+        REQUIRE_THROWS(value.get_immutable_view<value_int_t>());
+    }
+
+    if constexpr (std::is_same_v<value_float_t, Type>) {
+        REQUIRE((value.get_immutable_view<Type>() == typed_value));
+        REQUIRE((std::is_same_v<value_float_t, decltype(value.get_immutable_view<Type>())>));
+    } else {
+        REQUIRE_THROWS(value.get_immutable_view<value_float_t>());
+    }
+
+    if constexpr (std::is_same_v<value_bool_t, Type>) {
+        REQUIRE((value.get_immutable_view<Type>() == typed_value));
+        REQUIRE((std::is_same_v<value_bool_t, decltype(value.get_immutable_view<Type>())>));
+    } else {
+        REQUIRE_THROWS(value.get_immutable_view<value_bool_t>());
+    }
+
+    if constexpr (std::is_same_v<string, Type>) {
+        REQUIRE((value.get_immutable_view<Type>() == typed_value));
+        REQUIRE((std::is_same_v<std::string_view, decltype(value.get_immutable_view<Type>())>));
+    } else {
+        REQUIRE_THROWS(value.get_immutable_view<string>());
+    }
+
+    if constexpr (std::is_same_v<EightByteEncodedTextAst, Type>) {
+        REQUIRE((value.get_immutable_view<Type>().get_logtype() == typed_value.get_logtype()));
+        REQUIRE((value.get_immutable_view<Type>().get_dict_vars() == typed_value.get_dict_vars()));
+        REQUIRE(
+                (value.get_immutable_view<Type>().get_encoded_vars()
+                 == typed_value.get_encoded_vars())
+        );
+        REQUIRE((std::is_same_v<
+                 EightByteEncodedTextAst const&,
+                 decltype(value.get_immutable_view<Type>())>));
+    } else {
+        REQUIRE_THROWS(value.get_immutable_view<EightByteEncodedTextAst>());
+    }
+
+    if constexpr (std::is_same_v<FourByteEncodedTextAst, Type>) {
+        REQUIRE((value.get_immutable_view<Type>().get_logtype() == typed_value.get_logtype()));
+        REQUIRE((value.get_immutable_view<Type>().get_dict_vars() == typed_value.get_dict_vars()));
+        REQUIRE(
+                (value.get_immutable_view<Type>().get_encoded_vars()
+                 == typed_value.get_encoded_vars())
+        );
+        REQUIRE((std::is_same_v<
+                 FourByteEncodedTextAst const&,
+                 decltype(value.get_immutable_view<Type>())>));
+    } else {
+        REQUIRE_THROWS(value.get_immutable_view<FourByteEncodedTextAst>());
+    }
+}
 }  // namespace
 
 TEST_CASE("ffi_Value_basic", "[ffi][Value]") {
     Value const null_value;
-    REQUIRE(null_value.is_null());
-    REQUIRE_FALSE(null_value.is<value_int_t>());
-    REQUIRE_FALSE(null_value.is<value_float_t>());
-    REQUIRE_FALSE(null_value.is<value_bool_t>());
-    REQUIRE_FALSE(null_value.is<string>());
-    REQUIRE_FALSE(null_value.is<EightByteEncodedTextAst>());
-    REQUIRE_FALSE(null_value.is<FourByteEncodedTextAst>());
-    REQUIRE_THROWS(null_value.get_immutable_view<value_int_t>());
-    REQUIRE_THROWS(null_value.get_immutable_view<value_float_t>());
-    REQUIRE_THROWS(null_value.get_immutable_view<value_bool_t>());
-    REQUIRE_THROWS(null_value.get_immutable_view<string>());
-    REQUIRE_THROWS(null_value.get_immutable_view<EightByteEncodedTextAst>());
-    REQUIRE_THROWS(null_value.get_immutable_view<FourByteEncodedTextAst>());
+    test_type_probing<std::monostate>(null_value);
+    test_typed_value_probing<std::monostate>(null_value, std::monostate{});
 
     constexpr value_int_t cIntVal{1000};
     Value const int_value{cIntVal};
-    REQUIRE(int_value.is<value_int_t>());
-    REQUIRE((int_value.get_immutable_view<value_int_t>() == cIntVal));
-    REQUIRE_FALSE(int_value.is_null());
-    REQUIRE_FALSE(int_value.is<value_float_t>());
-    REQUIRE_FALSE(int_value.is<value_bool_t>());
-    REQUIRE_FALSE(int_value.is<string>());
-    REQUIRE_FALSE(int_value.is<EightByteEncodedTextAst>());
-    REQUIRE_FALSE(int_value.is<FourByteEncodedTextAst>());
-    REQUIRE_THROWS(int_value.get_immutable_view<value_float_t>());
-    REQUIRE_THROWS(int_value.get_immutable_view<value_bool_t>());
-    REQUIRE_THROWS(int_value.get_immutable_view<string>());
-    REQUIRE_THROWS(int_value.get_immutable_view<EightByteEncodedTextAst>());
-    REQUIRE_THROWS(int_value.get_immutable_view<FourByteEncodedTextAst>());
+    test_type_probing<value_int_t>(int_value);
+    test_typed_value_probing<value_int_t>(int_value, cIntVal);
 
     constexpr value_float_t cFloatValue{1000.0001};
     Value const float_value{cFloatValue};
-    REQUIRE(float_value.is<value_float_t>());
-    REQUIRE((float_value.get_immutable_view<value_float_t>() == cFloatValue));
-    REQUIRE_FALSE(float_value.is_null());
-    REQUIRE_FALSE(float_value.is<value_int_t>());
-    REQUIRE_FALSE(float_value.is<value_bool_t>());
-    REQUIRE_FALSE(float_value.is<string>());
-    REQUIRE_FALSE(float_value.is<EightByteEncodedTextAst>());
-    REQUIRE_FALSE(float_value.is<FourByteEncodedTextAst>());
-    REQUIRE_THROWS(float_value.get_immutable_view<value_int_t>());
-    REQUIRE_THROWS(float_value.get_immutable_view<value_bool_t>());
-    REQUIRE_THROWS(float_value.get_immutable_view<string>());
-    REQUIRE_THROWS(float_value.get_immutable_view<EightByteEncodedTextAst>());
-    REQUIRE_THROWS(float_value.get_immutable_view<FourByteEncodedTextAst>());
+    test_type_probing<value_float_t>(float_value);
+    test_typed_value_probing<value_float_t>(float_value, cFloatValue);
 
     constexpr value_bool_t cBoolVal{false};
     Value const bool_value{cBoolVal};
-    REQUIRE(bool_value.is<value_bool_t>());
-    REQUIRE((bool_value.get_immutable_view<value_bool_t>() == cBoolVal));
-    REQUIRE_FALSE(bool_value.is_null());
-    REQUIRE_FALSE(bool_value.is<value_int_t>());
-    REQUIRE_FALSE(bool_value.is<value_float_t>());
-    REQUIRE_FALSE(bool_value.is<string>());
-    REQUIRE_FALSE(bool_value.is<EightByteEncodedTextAst>());
-    REQUIRE_FALSE(bool_value.is<FourByteEncodedTextAst>());
-    REQUIRE_THROWS(bool_value.get_immutable_view<value_int_t>());
-    REQUIRE_THROWS(bool_value.get_immutable_view<value_float_t>());
-    REQUIRE_THROWS(bool_value.get_immutable_view<string>());
-    REQUIRE_THROWS(bool_value.get_immutable_view<EightByteEncodedTextAst>());
-    REQUIRE_THROWS(bool_value.get_immutable_view<FourByteEncodedTextAst>());
+    test_type_probing<value_bool_t>(bool_value);
+    test_typed_value_probing<value_bool_t>(bool_value, cBoolVal);
 
     constexpr std::string_view cStringVal{"This is a test string message"};
     Value const string_value{string{cStringVal}};
-    REQUIRE(string_value.is<string>());
-    REQUIRE((string_value.get_immutable_view<string>() == cStringVal));
-    REQUIRE_FALSE(string_value.is_null());
-    REQUIRE_FALSE(string_value.is<value_int_t>());
-    REQUIRE_FALSE(string_value.is<value_float_t>());
-    REQUIRE_FALSE(string_value.is<value_bool_t>());
-    REQUIRE_FALSE(string_value.is<EightByteEncodedTextAst>());
-    REQUIRE_FALSE(string_value.is<FourByteEncodedTextAst>());
-    REQUIRE_THROWS(string_value.get_immutable_view<value_int_t>());
-    REQUIRE_THROWS(string_value.get_immutable_view<value_float_t>());
-    REQUIRE_THROWS(string_value.get_immutable_view<value_bool_t>());
-    REQUIRE_THROWS(string_value.get_immutable_view<EightByteEncodedTextAst>());
-    REQUIRE_THROWS(string_value.get_immutable_view<FourByteEncodedTextAst>());
+    test_type_probing<string>(string_value);
+    test_typed_value_probing<string>(string_value, string{cStringVal});
 
     constexpr std::string_view cStringToEncode{"uid=0, CPU usage: 99.99%, \"user_name\"=YScope"};
     Value const eight_byte_encoded_text_ast_value{
             get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)
     };
-    REQUIRE(eight_byte_encoded_text_ast_value.is<EightByteEncodedTextAst>());
-    REQUIRE_FALSE(eight_byte_encoded_text_ast_value.is_null());
-    REQUIRE_FALSE(eight_byte_encoded_text_ast_value.is<value_int_t>());
-    REQUIRE_FALSE(eight_byte_encoded_text_ast_value.is<value_float_t>());
-    REQUIRE_FALSE(eight_byte_encoded_text_ast_value.is<value_bool_t>());
-    REQUIRE_FALSE(eight_byte_encoded_text_ast_value.is<string>());
-    REQUIRE_FALSE(eight_byte_encoded_text_ast_value.is<FourByteEncodedTextAst>());
-    REQUIRE_THROWS(eight_byte_encoded_text_ast_value.get_immutable_view<value_int_t>());
-    REQUIRE_THROWS(eight_byte_encoded_text_ast_value.get_immutable_view<value_float_t>());
-    REQUIRE_THROWS(eight_byte_encoded_text_ast_value.get_immutable_view<value_bool_t>());
-    REQUIRE_THROWS(eight_byte_encoded_text_ast_value.get_immutable_view<string>());
-    REQUIRE_THROWS(eight_byte_encoded_text_ast_value.get_immutable_view<FourByteEncodedTextAst>());
+    test_type_probing<EightByteEncodedTextAst>(eight_byte_encoded_text_ast_value);
+    test_typed_value_probing<EightByteEncodedTextAst>(
+            eight_byte_encoded_text_ast_value,
+            get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)
+    );
 
     Value const four_byte_encoded_text_ast_value{
             get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)
     };
-    REQUIRE(four_byte_encoded_text_ast_value.is<FourByteEncodedTextAst>());
-    REQUIRE_FALSE(four_byte_encoded_text_ast_value.is_null());
-    REQUIRE_FALSE(four_byte_encoded_text_ast_value.is<value_int_t>());
-    REQUIRE_FALSE(four_byte_encoded_text_ast_value.is<value_float_t>());
-    REQUIRE_FALSE(four_byte_encoded_text_ast_value.is<value_bool_t>());
-    REQUIRE_FALSE(four_byte_encoded_text_ast_value.is<string>());
-    REQUIRE_FALSE(four_byte_encoded_text_ast_value.is<EightByteEncodedTextAst>());
-    REQUIRE_THROWS(four_byte_encoded_text_ast_value.get_immutable_view<value_int_t>());
-    REQUIRE_THROWS(four_byte_encoded_text_ast_value.get_immutable_view<value_float_t>());
-    REQUIRE_THROWS(four_byte_encoded_text_ast_value.get_immutable_view<value_bool_t>());
-    REQUIRE_THROWS(four_byte_encoded_text_ast_value.get_immutable_view<string>());
-    REQUIRE_THROWS(four_byte_encoded_text_ast_value.get_immutable_view<EightByteEncodedTextAst>());
+    test_type_probing<FourByteEncodedTextAst>(four_byte_encoded_text_ast_value);
+    test_typed_value_probing<FourByteEncodedTextAst>(
+            four_byte_encoded_text_ast_value,
+            get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)
+    );
 }
