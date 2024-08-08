@@ -127,12 +127,12 @@ private:
      * @return ErrorCode_Success on success.
      * @return Same as `get_hmac_sha256_hash` on Failure.
      */
-    [[nodiscard]] ErrorCode get_signature(
+    [[nodiscard]] auto get_signature(
             std::string_view region,
             std::string_view date_string,
             std::string_view string_to_sign,
             std::vector<unsigned char>& signature
-    );
+    ) const -> ErrorCode;
 
     // Variables
     std::string m_access_key_id;
