@@ -22,7 +22,7 @@ namespace {
 /**
  * @param type
  * @param value
- * @return Whether the given type and the value matches.
+ * @return Whether the given schema tree node type matches the given value's type.
  */
 [[nodiscard]] auto is_valid_value_type(SchemaTreeNode::Type type, Value const& value) -> bool;
 
