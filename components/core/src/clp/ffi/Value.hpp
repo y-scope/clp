@@ -105,7 +105,7 @@ struct ImmutableViewTypeConverter<clp::ir::FourByteEncodedTextAst> {
  * @tparam T
  */
 template <typename T>
-using ImmutableViewType = ImmutableViewTypeConverter<T>::Type;
+using ImmutableViewType = typename ImmutableViewTypeConverter<T>::Type;
 
 class Value {
 public:
