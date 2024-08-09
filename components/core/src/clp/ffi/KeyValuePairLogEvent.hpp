@@ -36,6 +36,8 @@ public:
      * - std::errc::operation_not_permitted if the key ID doesn't represent a valid node in the
      *   schema tree.
      * - std::errc::protocol_error if the schema tree node type doesn't match the value's type.
+     * - std::errc::protocol_not_supported if the same key appears more than once under a parent
+     *   node.
      */
     [[nodiscard]] static auto
     create(std::shared_ptr<SchemaTree> schema_tree, KeyValuePairs kv_pairs, UtcOffset utc_offset
