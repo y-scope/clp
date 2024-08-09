@@ -75,7 +75,13 @@ public:
 
     void begin_document() { m_json_string += "{"; }
 
-    void end_document() { m_json_string[m_json_string.size() - 1] = '}'; }
+    void end_document() {
+        if ('{' != m_json_string.back()) {
+            m_json_string[m_json_string.size() - 1] = '}';
+        } else {
+            m_json_string += '}';
+        }
+    }
 
     void end_object() {
         if (m_op_list[m_op_list_index - 2] != BeginObject

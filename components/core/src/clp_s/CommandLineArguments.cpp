@@ -425,6 +425,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "archive-id",
                 po::value<std::string>(&m_archive_id)->value_name("ID"),
                 "Limit search to the archive with the given ID"
+            )(
+                    "projection",
+                    po::value<std::vector<std::string>>(&m_projection_columns)
+                        ->multitoken()
+                        ->value_name("COLUMN_A COLUMN_B ..."),
+                    "The set of projected columns that will be marshalled for matching results"
             );
             // clang-format on
             search_options.add(match_options);
