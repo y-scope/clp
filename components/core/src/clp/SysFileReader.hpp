@@ -3,11 +3,10 @@
 
 #include <sys/stat.h>
 
-#include <cstdio>
-#include <string>
+#include <string_view>
 
-#include "Defs.h"
 #include "ErrorCode.hpp"
+#include "FileDescriptor.hpp"
 #include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
@@ -25,9 +24,9 @@ public:
         char const* what() const noexcept override { return "FileReader operation failed"; }
     };
 
-    SysFileReader(std::string const& path);
-
-    ~SysFileReader();
+    SysFileReader(std::string_view const& path)
+            : m_fd{path, FileDescriptor::OpenMode::ReadOnly},
+              m_path{path} {}
 
     // Explicitly disable copy constructor and assignment operator
     SysFileReader(SysFileReader const&) = delete;
@@ -77,7 +76,7 @@ public:
     [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode;
 
 private:
-    int m_fd{-1};
+    FileDescriptor m_fd;
     std::string m_path;
 };
 }  // namespace clp
