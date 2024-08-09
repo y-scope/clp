@@ -446,6 +446,8 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/zstd/Decompressor.hpp
         src/clp/StringReader.cpp
         src/clp/StringReader.hpp
+        src/clp/SysFileReader.cpp
+        src/clp/SysFileReader.hpp
         src/clp/Thread.cpp
         src/clp/Thread.hpp
         src/clp/time_types.hpp

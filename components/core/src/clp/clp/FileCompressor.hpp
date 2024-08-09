@@ -55,14 +55,14 @@ private:
 
     // Methods
     auto parse_and_encode(
-        size_t target_data_size_of_dicts,
-        streaming_archive::writer::Archive::UserConfig& archive_user_config,
-        size_t target_encoded_file_size,
-        std::string const& path_for_compression,
-        group_id_t group_id,
-        streaming_archive::writer::Archive& archive_writer,
-        ReaderInterface& reader,
-        bool use_heuristic
+            size_t target_data_size_of_dicts,
+            streaming_archive::writer::Archive::UserConfig& archive_user_config,
+            size_t target_encoded_file_size,
+            std::string const& path_for_compression,
+            group_id_t group_id,
+            streaming_archive::writer::Archive& archive_writer,
+            ReaderInterface& reader,
+            bool use_heuristic
     ) -> void;
 
     /**

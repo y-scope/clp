@@ -6,37 +6,42 @@
 #include "../src/clp/BufferedFileReader.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/FileWriter.hpp"
+#include "../src/clp/SysFileReader.hpp"
 
 using clp::BufferedFileReader;
+using clp::ErrorCode;
 using clp::ErrorCode_EndOfFile;
 using clp::ErrorCode_Success;
 using clp::ErrorCode_Unsupported;
 using clp::FileReader;
 using clp::FileWriter;
+using clp::ReaderInterface;
+using clp::SysFileReader;
+using std::make_unique;
+using std::string;
 
 static constexpr size_t cNumAlphabets = 'z' - 'a';
 
 TEST_CASE("Test reading data", "[BufferedFileReader]") {
     // Initialize data for testing
     size_t const test_data_size = 4L * 1024 * 1024 + 1;  // 4MB + 1
-    auto test_data_uniq_ptr = std::make_unique<std::array<char, test_data_size>>();
+    auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& test_data = *test_data_uniq_ptr;
     for (size_t i = 0; i < test_data.size(); ++i) {
         test_data[i] = static_cast<char>('a' + (i % (cNumAlphabets)));
     }
 
-    std::string const test_file_path{"BufferedFileReader.test"};
+    string const test_file_path{"BufferedFileReader.test"};
     // Write to test file
     FileWriter file_writer;
     file_writer.open(test_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
     file_writer.write(test_data.cbegin(), test_data_size);
     file_writer.close();
 
-    auto read_buf_uniq_ptr = std::make_unique<std::array<char, test_data_size>>();
+    auto read_buf_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& read_buf = *read_buf_uniq_ptr;
     size_t const base_buffer_size = BufferedFileReader::cMinBufferSize << 4;
-    FileReader file_reader{test_file_path};
-    BufferedFileReader reader{file_reader, base_buffer_size};
+    BufferedFileReader reader(make_unique<SysFileReader>(test_file_path), base_buffer_size);
 
     size_t num_bytes_read{0};
     size_t buf_pos{0};
@@ -260,33 +265,32 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
 TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     // Initialize data for testing
     size_t const test_data_size = 1L * 1024 * 1024 + 1;  // 1MB
-    auto test_data_uniq_ptr = std::make_unique<std::array<char, test_data_size>>();
+    auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& test_data = *test_data_uniq_ptr;
     for (size_t i = 0; i < test_data.size(); ++i) {
         test_data[i] = static_cast<char>('a' + (std::rand() % (cNumAlphabets)));
     }
 
     // Write to test file
-    std::string const test_file_path{"BufferedFileReader.delimiter.test"};
+    string const test_file_path{"BufferedFileReader.delimiter.test"};
     FileWriter file_writer;
     file_writer.open(test_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
     file_writer.write(test_data.data(), test_data_size);
     file_writer.close();
 
-    FileReader file_reader{test_file_path};
-    BufferedFileReader reader{file_reader};
-    std::string test_string;
+    BufferedFileReader reader(make_unique<SysFileReader>(test_file_path));
+    string test_string;
 
-    clp::FileReader ref_file_reader{test_file_path};
-    std::string ref_string;
+    FileReader ref_file_reader{test_file_path};
+    string ref_string;
 
     // Validate that a FileReader and a BufferedFileReader return the same strings (split by
     // delimiters)
-    clp::ErrorCode error_code{ErrorCode_Success};
+    ErrorCode error_code{ErrorCode_Success};
     auto delimiter = (char)('a' + (std::rand() % (cNumAlphabets)));
     while (ErrorCode_EndOfFile != error_code) {
         error_code = ref_file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
-        auto error_code2 = file_reader.try_read_to_delimiter(delimiter, true, false, test_string);
+        auto error_code2 = reader.try_read_to_delimiter(delimiter, true, false, test_string);
         REQUIRE(error_code2 == error_code);
         REQUIRE(test_string == ref_string);
     }

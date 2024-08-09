@@ -73,10 +73,13 @@ public:
      * @param base_buffer_size The size for the fixed-size buffer used when no checkpoint is set. It
      * must be a multiple of BufferedFileReader::cMinBufferSize.
      */
-    explicit BufferedFileReader(ReaderInterface& reader_interface, size_t base_buffer_size);
+    explicit BufferedFileReader(
+            std::unique_ptr<ReaderInterface> reader_interface,
+            size_t base_buffer_size
+    );
 
-    BufferedFileReader(ReaderInterface& reader_interface)
-            : BufferedFileReader(reader_interface, cDefaultBufferSize) {}
+    BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
+            : BufferedFileReader(std::move(reader_interface), cDefaultBufferSize) {}
 
     // Disable copy/move construction/assignment
     BufferedFileReader(BufferedFileReader const&) = delete;
@@ -226,7 +229,7 @@ private:
     size_t m_file_pos{0};
 
     // ReaderInterfaceSpecific
-    ReaderInterface& m_file_reader;
+    std::unique_ptr<ReaderInterface> m_file_reader;
 
     // Buffer specific data
     std::vector<char> m_buffer;

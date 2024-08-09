@@ -6,6 +6,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include "../glt/streaming_archive/writer/Archive.hpp"
 #include "math_utils.hpp"
 
 using std::string;
@@ -23,20 +24,20 @@ namespace {
  * @return ErrorCode_Success on success
  */
 auto read_into_buffer(
-        ReaderInterface& reader,
+        ReaderInterface* reader,
         char* buf,
         size_t num_bytes_to_read,
         size_t& num_bytes_read
 ) -> ErrorCode;
 
 auto read_into_buffer(
-        ReaderInterface& reader,
+        ReaderInterface* reader,
         char* buf,
         size_t num_bytes_to_read,
         size_t& num_bytes_read
 ) -> ErrorCode {
     num_bytes_read = 0;
-    auto const error_code = reader.try_read(buf, num_bytes_to_read, num_bytes_read);
+    auto const error_code = reader->try_read(buf, num_bytes_to_read, num_bytes_read);
     if (0 == num_bytes_read) {
         return ErrorCode_EndOfFile;
     }
@@ -44,8 +45,11 @@ auto read_into_buffer(
 }
 }  // namespace
 
-BufferedFileReader::BufferedFileReader(ReaderInterface& reader_interface, size_t base_buffer_size)
-        : m_file_reader{reader_interface} {
+BufferedFileReader::BufferedFileReader(
+        std::unique_ptr<ReaderInterface> reader_interface,
+        size_t base_buffer_size
+)
+        : m_file_reader(std::move(reader_interface)) {
     if (base_buffer_size % cMinBufferSize != 0) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
@@ -53,7 +57,7 @@ BufferedFileReader::BufferedFileReader(ReaderInterface& reader_interface, size_t
     m_buffer.resize(m_base_buffer_size);
 
     // TODO: anyway to get rid of this?
-    if (0 != m_file_reader.get_pos()) {
+    if (0 != m_file_reader->get_pos()) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     m_file_pos = 0;
@@ -133,7 +137,7 @@ auto BufferedFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
         if (false == m_checkpoint_pos.has_value()) {
             // If checkpoint is not set, simply move the file_pos and invalidate
             // the buffer reader
-            if (auto const error_code = m_file_reader.try_seek_from_begin(pos);
+            if (auto const error_code = m_file_reader->try_seek_from_begin(pos);
                 error_code != ErrorCode_Success)
             {
                 return error_code;
@@ -275,7 +279,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
 
     size_t num_bytes_read{0};
     auto error_code = read_into_buffer(
-            m_file_reader,
+            m_file_reader.get(),
             &m_buffer[next_buffer_pos],
             num_bytes_to_read,
             num_bytes_read

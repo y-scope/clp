@@ -32,8 +32,11 @@ using log_surgeon::Reader;
 using log_surgeon::ReaderParser;
 using std::cout;
 using std::endl;
+using std::make_unique;
+using std::move;
 using std::set;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 // Local prototypes
@@ -116,13 +119,12 @@ bool FileCompressor::compress_file(
         streaming_archive::writer::Archive& archive_writer,
         bool use_heuristic
 ) {
-    std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
+    string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
 
     PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
     Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
 
-    FileReader file_reader{file_to_compress.get_path()};
-    BufferedFileReader buffered_file_reader{file_reader};
+    BufferedFileReader buffered_file_reader(make_unique<FileReader>(file_to_compress.get_path()));
 
     // Check that file is UTF-8 encoded
     if (auto error_code = buffered_file_reader.try_refill_buffer_if_empty();
@@ -304,7 +306,7 @@ bool FileCompressor::try_compressing_as_archive(
 
     // Determine path without extension (used if file is a single compressed file, e.g., syslog.gz
     // -> syslog)
-    std::string filename_if_compressed;
+    string filename_if_compressed;
     if (file_boost_path.has_stem()) {
         filename_if_compressed = file_boost_path.stem().string();
     } else {

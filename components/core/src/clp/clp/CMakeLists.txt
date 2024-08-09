@@ -128,6 +128,8 @@ set(
         ../streaming_compression/zstd/Decompressor.hpp
         ../StringReader.cpp
         ../StringReader.hpp
+        ../SysFileReader.cpp
+        ../SysFileReader.hpp
         ../time_types.hpp
         ../TimestampPattern.cpp
         ../TimestampPattern.hpp
