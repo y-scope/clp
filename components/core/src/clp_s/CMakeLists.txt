@@ -78,6 +78,8 @@ set(
         SchemaTree.hpp
         SchemaWriter.cpp
         SchemaWriter.hpp
+        TableReader.cpp
+        TableReader.hpp
         TimestampDictionaryReader.cpp
         TimestampDictionaryReader.hpp
         TimestampDictionaryWriter.cpp
