@@ -551,22 +551,23 @@ void QueryLogtype::append_logtype(QueryLogtype& suffix) {
             suffix.m_is_encoded_with_wildcard.begin(),
             suffix.m_is_encoded_with_wildcard.end()
     );
-    m_has_wildcard.insert(
-            m_has_wildcard.end(),
-            suffix.m_has_wildcard.begin(),
-            suffix.m_has_wildcard.end()
+    m_var_has_wildcard.insert(
+            m_var_has_wildcard.end(),
+            suffix.m_var_has_wildcard.begin(),
+            suffix.m_var_has_wildcard.end()
     );
 }
 
 void QueryLogtype::append_value(
         std::variant<char, int> const& val,
         std::string const& string,
-        bool var_contains_wildcard
+        bool var_contains_wildcard,
+        bool is_encoded_with_wildcard
 ) {
-    m_has_wildcard.push_back(var_contains_wildcard);
+    m_var_has_wildcard.push_back(var_contains_wildcard);
     m_logtype.push_back(val);
     m_query.push_back(string);
-    m_is_encoded_with_wildcard.push_back(false);
+    m_is_encoded_with_wildcard.push_back(is_encoded_with_wildcard);
 }
 
 std::optional<Query> Grep::process_raw_query(
@@ -722,6 +723,20 @@ std::optional<Query> Grep::process_raw_query(
             processed_search_string,
             std::move(sub_queries)
     };
+}
+
+std::ostream& operator<<(std::ostream& os, QueryLogtype const& query_logtype) {
+    os << "\"";
+    for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
+        if (std::holds_alternative<char>(query_logtype.get_logtype_value(idx))) {
+            os << std::get<char>(query_logtype.get_logtype_value(idx));
+        } else {
+            os << "<" << std::get<int>(query_logtype.get_logtype_value(idx)) << ">("
+               << query_logtype.get_query_string(idx) << ")";
+        }
+    }
+    os << "\"";
+    return os;
 }
 
 bool Grep::get_bounds_of_next_potential_var(
@@ -1290,7 +1305,7 @@ tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
         }
     }
 
-    // Generated substring NFA from regex.
+    // Generate substring NFA from regex.
     log_surgeon::Schema substring_schema;
     // TODO: LogSurgeon should handle resetting this value.
     log_surgeon::NonTerminal::m_next_children_start = 0;
@@ -1330,7 +1345,7 @@ Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& 
             auto const logtype_value = query_logtype.get_logtype_value(i);
             auto const& raw_string = query_logtype.get_query_string(i);
             auto const is_encoded_with_wildcard = query_logtype.get_is_encoded_with_wildcard(i);
-            auto const has_wildcard = query_logtype.get_has_wildcard(i);
+            auto const var_has_wildcard = query_logtype.get_var_has_wildcard(i);
             if (std::holds_alternative<char>(logtype_value)) {
                 logtype_string.push_back(std::get<char>(logtype_value));
             } else {
@@ -1340,7 +1355,7 @@ Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& 
                 // If this logtype contains wildcard variables that are being compared against the
                 // dictionary, create a duplicate logtype that will compare against segment if the
                 // variable may be encoded there instead.
-                if (false == is_encoded_with_wildcard && has_wildcard
+                if (false == is_encoded_with_wildcard && var_has_wildcard
                     && ("int" == schema_type || "float" == schema_type))
                 {
                     auto new_query_logtype = query_logtype;
@@ -1353,7 +1368,7 @@ Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& 
                     } else if ("float" == schema_type) {
                         LogTypeDictionaryEntry::add_float_var(logtype_string);
                     }
-                } else if (false == has_wildcard && "int" == schema_type
+                } else if (false == var_has_wildcard && "int" == schema_type
                            && EncodedVariableInterpreter::
                                    convert_string_to_representable_integer_var(
                                            raw_string,
@@ -1361,7 +1376,7 @@ Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& 
                                    ))
                 {
                     LogTypeDictionaryEntry::add_int_var(logtype_string);
-                } else if (false == has_wildcard && "float" == schema_type
+                } else if (false == var_has_wildcard && "float" == schema_type
                            && EncodedVariableInterpreter::convert_string_to_representable_float_var(
                                    raw_string,
                                    encoded_var
@@ -1410,13 +1425,13 @@ void Grep::generate_sub_queries(
             auto const logtype_value = query_logtype.get_logtype_value(i);
             auto const& raw_string = query_logtype.get_query_string(i);
             auto const is_encoded_with_wildcard = query_logtype.get_is_encoded_with_wildcard(i);
-            auto const has_wildcard = query_logtype.get_has_wildcard(i);
+            auto const var_has_wildcard = query_logtype.get_var_has_wildcard(i);
             if (std::holds_alternative<int>(logtype_value)) {
                 auto& schema_type = lexer.m_id_symbol[std::get<int>(logtype_value)];
                 encoded_variable_t encoded_var;
                 if (is_encoded_with_wildcard) {
                     sub_query.mark_wildcard_match_required();
-                } else if (false == has_wildcard && schema_type == "int"
+                } else if (false == var_has_wildcard && schema_type == "int"
                            && EncodedVariableInterpreter::
                                    convert_string_to_representable_integer_var(
                                            raw_string,
@@ -1424,7 +1439,7 @@ void Grep::generate_sub_queries(
                                    ))
                 {
                     sub_query.add_non_dict_var(encoded_var);
-                } else if (false == has_wildcard && schema_type == "float"
+                } else if (false == var_has_wildcard && schema_type == "float"
                            && EncodedVariableInterpreter::convert_string_to_representable_float_var(
                                    raw_string,
                                    encoded_var
@@ -1433,7 +1448,7 @@ void Grep::generate_sub_queries(
                     sub_query.add_non_dict_var(encoded_var);
                 } else {
                     auto& var_dict = archive.get_var_dictionary();
-                    if (has_wildcard) {
+                    if (var_has_wildcard) {
                         // Find matches
                         std::unordered_set<VariableDictionaryEntry const*> var_dict_entries;
                         var_dict.get_entries_matching_wildcard_string(

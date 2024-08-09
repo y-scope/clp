@@ -34,6 +34,8 @@ public:
         append_value(val, string, var_contains_wildcard);
     }
 
+    bool operator==(QueryLogtype const& rhs) const = default;
+
     /**
      * @param rhs
      * @return true if the current logtype is shorter than rhs, false if the current logtype
@@ -56,11 +58,13 @@ public:
      * @param val
      * @param string
      * @param var_contains_wildcard
+     * @param is_encoded_with_wildcard
      */
     void append_value(
             std::variant<char, int> const& val,
             std::string const& string,
-            bool var_contains_wildcard
+            bool var_contains_wildcard,
+            bool is_encoded_with_wildcard = false
     );
 
     void set_is_encoded_with_wildcard(uint32_t i, bool value) {
@@ -79,14 +83,22 @@ public:
         return m_is_encoded_with_wildcard[i];
     }
 
-    [[nodiscard]] bool get_has_wildcard(uint32_t i) const { return m_has_wildcard[i]; }
+    [[nodiscard]] bool get_var_has_wildcard(uint32_t i) const { return m_var_has_wildcard[i]; }
 
 private:
     std::vector<std::variant<char, int>> m_logtype;
     std::vector<std::string> m_query;
     std::vector<bool> m_is_encoded_with_wildcard;
-    std::vector<bool> m_has_wildcard;
+    std::vector<bool> m_var_has_wildcard;
 };
+
+/**
+ * Convert input query logtype to string for output
+ * @param os
+ * @param query_logtype
+ * @return output stream with the query logtype
+ */
+std::ostream& operator<<(std::ostream& os, QueryLogtype const& query_logtype);
 
 class Grep {
 public:
