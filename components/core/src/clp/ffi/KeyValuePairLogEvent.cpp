@@ -69,6 +69,8 @@ public:
     // destructor
     ~SchemaTreeDfsIterator() {
         try {
+            // On exit, if the current node is the root, then move the entire tree to the `parent`
+            // to return. Otherwise, construct a subtree in the parent.
             if (m_schema_tree_node->get_id() == SchemaTree::cRootId) {
                 *m_parent = std::move(m_map);
             } else {
