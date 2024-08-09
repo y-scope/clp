@@ -13,6 +13,7 @@
 
 #include "../../Utils.hpp"
 #include "../AndExpr.hpp"
+#include "../antlr_common/ErrorListener.hpp"
 #include "../BooleanLiteral.hpp"
 #include "../ColumnDescriptor.hpp"
 #include "../DateLiteral.hpp"
@@ -25,31 +26,10 @@
 
 using namespace antlr4;
 using namespace kql;
+using clp_s::search::antlr_common::ErrorListener;
 
 namespace clp_s::search::kql {
-class ErrorListener : public BaseErrorListener {
-public:
-    void syntaxError(
-            Recognizer* recognizer,
-            Token* offending_symbol,
-            size_t line,
-            size_t char_position_in_line,
-            std::string const& msg,
-            std::exception_ptr e
-    ) override {
-        m_error = true;
-        m_error_message = msg;
-    }
-
-    bool error() const { return m_error; }
-
-    std::string const& message() const { return m_error_message; }
-
-private:
-    bool m_error{false};
-    std::string m_error_message;
-};
-
+namespace {
 class ParseTreeVisitor : public KqlBaseVisitor {
 private:
     static void
@@ -224,6 +204,7 @@ public:
         return base;
     }
 };
+}  // namespace
 
 std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
     ErrorListener lexer_error_listener;

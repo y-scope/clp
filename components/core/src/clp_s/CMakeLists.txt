@@ -1,4 +1,5 @@
 add_subdirectory(search/kql)
+add_subdirectory(search/sql)
 
 set(
         CLP_SOURCES

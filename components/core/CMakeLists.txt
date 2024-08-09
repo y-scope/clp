@@ -495,6 +495,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
+        tests/test-sql.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
@@ -515,6 +516,7 @@ target_link_libraries(unitTest
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog
+        sql
         OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
