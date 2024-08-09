@@ -5,6 +5,7 @@
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
 
+#include "../antlr_common/ErrorListener.hpp"
 #include "../EmptyExpr.hpp"
 #include "SqlBaseVisitor.h"
 #include "SqlLexer.h"
@@ -12,6 +13,7 @@
 
 using namespace antlr4;
 using namespace sql;
+using clp_s::search::antlr_common::ErrorListener;
 
 namespace clp_s::search::sql {
 class ErrorListener : public BaseErrorListener {
@@ -37,10 +39,12 @@ private:
     std::string m_error_message;
 };
 
+namespace {
 class ParseTreeVisitor : public SqlBaseVisitor {
 public:
     std::any visitStart(SqlParser::StartContext* ctx) override { return EmptyExpr::create(); }
 };
+}  // namespace
 
 std::shared_ptr<Expression> parse_sql_expression(std::istream& in) {
     ErrorListener lexer_error_listener;
