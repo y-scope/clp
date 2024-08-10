@@ -48,12 +48,18 @@ tasks:
           SOURCE_NAME: "abseil-cpp-20230802.1"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   antlr4:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
-      DESTINATION: "{{.G_CORE_DIR}}/third-party/antlr/antlr-4.13.1-complete.jar"
+      DESTINATION_DIR: "{{.G_CORE_DIR}}/third-party/antlr"
+      DESTINATION: "{{.DESTINATION_DIR}}/antlr-4.13.1-complete.jar"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.TASKFILE}}"
@@ -63,7 +69,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DESTINATION}}"
+          DATA_DIR: "{{.DESTINATION_DIR}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -72,6 +78,11 @@ tasks:
           SOURCE_NAME: "antlr-4.13.1-complete.jar"
           FLAGS: "--no-submodule"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION_DIR}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   Catch2:
     internal: true
@@ -96,6 +107,11 @@ tasks:
           SOURCE_NAME: "Catch2-2.13.7"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   date:
     internal: true
@@ -120,6 +136,11 @@ tasks:
           SOURCE_NAME: "date-3.0.1"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   json:
     internal: true
@@ -144,6 +165,11 @@ tasks:
           SOURCE_NAME: "json-3.11.3"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   log-surgeon:
     internal: true
@@ -168,6 +194,11 @@ tasks:
           SOURCE_NAME: "log-surgeon-895f46489b1911ab3b3aac3202afd56c96e8cd98"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   outcome:
     internal: true
@@ -192,6 +223,11 @@ tasks:
           SOURCE_NAME: "outcome-2.2.9"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   simdjson:
     internal: true
@@ -216,6 +252,11 @@ tasks:
           SOURCE_NAME: "simdjson-3.6.3"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   # We don't use a git submodule for sqlite3 since that would require building the
   # sqlite amalgamation
@@ -242,6 +283,11 @@ tasks:
           SOURCE_NAME: "sqlite-amalgamation-3360000"
           FLAGS: "--extract --no-submodule"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   yaml-cpp:
     internal: true
@@ -266,6 +312,11 @@ tasks:
           SOURCE_NAME: "yaml-cpp-yaml-cpp-0.7.0"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   yscope-log-viewer:
     internal: true
@@ -290,16 +341,18 @@ tasks:
           SOURCE_NAME: "yscope-log-viewer-df996eac000823d02f9cd0b9eb4bb732dd634ae5"
           FLAGS: "--extract"
           DESTINATION: "{{.DESTINATION}}"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          DATA_DIR: "{{.DESTINATION}}"
+          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+
 
   download-dependency:
     internal: true
     label: "{{.TASK | replace \":\" \"#\"}}-{{.SOURCE_NAME}}"
     requires:
-      vars: ["CHECKSUM_FILE", "SOURCE_URL", "SOURCE_NAME", "DESTINATION", "FLAGS"]
-    sources:
-      - "{{.TASKFILE}}"
-      - "{{.DEP_DOWNLOAD_SCRIPT}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
+      vars: ["SOURCE_URL", "SOURCE_NAME", "DESTINATION", "FLAGS"]
     deps:
       - ":init"
     cmds:
@@ -309,8 +362,3 @@ tasks:
         '{{.SOURCE_NAME}}'
         '{{.DESTINATION}}'
         {{.FLAGS}}
-      # This command must be last
-      - task: ":utils:compute-checksum"
-        vars:
-          DATA_DIR: "{{.DESTINATION}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
