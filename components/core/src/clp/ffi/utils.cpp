@@ -61,7 +61,9 @@ auto validate_and_append_escaped_utf8_string(string_view src, string& dst) -> bo
                 auto const byte{static_cast<uint8_t>(*it)};
                 if (cLargestControlCharacter >= byte) {
                     std::stringstream ss;
-                    ss << "\\u00" << std::hex << std::setw(2) << std::setfill('0') << byte;
+                    // Add `+` in front of byte so that stringstream treat it as a char instead of
+                    // a character (uint8_t is equivalent to unsigned char).
+                    ss << "\\u00" << std::hex << std::setw(2) << std::setfill('0') << +byte;
                     escaped_char = {ss.str().substr(0, cControlCharacterMaxSize)};
                 } else {
                     escape_required = false;
