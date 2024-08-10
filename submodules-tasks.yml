@@ -28,17 +28,18 @@ tasks:
   abseil-cpp:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/abseil-cpp"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -51,17 +52,18 @@ tasks:
   antlr4:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_DIR}}/third-party/antlr/antlr-4.13.1-complete.jar"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -74,17 +76,18 @@ tasks:
   Catch2:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/Catch2"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -97,17 +100,18 @@ tasks:
   date:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/date"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -120,17 +124,18 @@ tasks:
   json:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/json"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -143,17 +148,18 @@ tasks:
   log-surgeon:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/log-surgeon"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -166,17 +172,18 @@ tasks:
   outcome:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/outcome"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -189,17 +196,18 @@ tasks:
   simdjson:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/simdjson"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -214,17 +222,18 @@ tasks:
   sqlite3:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/sqlite3"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -237,17 +246,18 @@ tasks:
   yaml-cpp:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/yaml-cpp"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -260,17 +270,18 @@ tasks:
   yscope-log-viewer:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       DESTINATION: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.TASKFILE}}"
+    generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           DATA_DIR: "{{.DESTINATION}}"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.TASKFILE}}"
     cmds:
       - task: "download-dependency"
         vars:
@@ -282,7 +293,7 @@ tasks:
 
   download-dependency:
     internal: true
-    label: "{{.TASK}}-{{.SOURCE_NAME}}"
+    label: "{{.TASK | replace \":\" \"#\"}}-{{.SOURCE_NAME}}"
     requires:
       vars: ["CHECKSUM_FILE", "SOURCE_URL", "SOURCE_NAME", "DESTINATION", "FLAGS"]
     sources:
