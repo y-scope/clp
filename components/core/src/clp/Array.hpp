@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <span>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -46,9 +45,9 @@ public:
 
     // Constructors
     // NOLINTNEXTLINE(*-avoid-c-arrays)
-    explicit Array(size_t size) : m_ptr{std::make_unique<T[]>(size)}, m_size{size} {
+    explicit Array(size_t size) : m_data{std::make_unique<T[]>(size)}, m_size{size} {
         if constexpr (std::is_fundamental_v<T>) {
-            memset(m_ptr.get(), 0, m_size * sizeof(T));
+            memset(m_data.get(), 0, m_size * sizeof(T));
         }
     }
 
@@ -64,27 +63,53 @@ public:
     ~Array() = default;
 
     // Methods
+    /**
+     * @return Whether the array is empty.
+     */
     [[nodiscard]] auto empty() const -> bool { return 0 == size(); }
 
+    /**
+     * @return The size of the array.
+     */
     [[nodiscard]] auto size() const -> size_t { return m_size; }
 
+    /**
+     * @return The ptr of the underlying data buffer.
+     */
+    [[nodiscard]] auto data() -> T* { return m_data.get(); }
+
+    /**
+     * @return The ptr of the underlying data buffer.
+     */
+    [[nodiscard]] auto data() const -> T const* { return m_data.get(); }
+
+    /**
+     * @param idx
+     * @return The element at the given index.
+     * @throw `OperationFailed` if the given index is out of bound.
+     */
     [[nodiscard]] auto at(size_t idx) -> T& {
         assert_idx(idx);
-        return m_ptr[idx];
+        return m_data[idx];
     }
 
+    /**
+     * @param idx
+     * @return The element at the given index.
+     * @throw `OperationFailed` if the given index is out of bound.
+     */
     [[nodiscard]] auto at(size_t idx) const -> T const& {
         assert_idx(idx);
-        return m_ptr[idx];
+        return m_data[idx];
     }
 
-    [[nodiscard]] auto begin() -> Iterator { return m_ptr.get(); }
+    [[nodiscard]] auto begin() -> Iterator { return m_data.get(); }
 
-    [[nodiscard]] auto end() -> Iterator { return m_ptr.get() + m_size; }
+    [[nodiscard]] auto end() -> Iterator { return m_data.get() + m_size; }
 
-    [[nodiscard]] auto begin() const -> ConstIterator { return m_ptr.get(); }
+    [[nodiscard]] auto begin() const -> ConstIterator { return m_data.get(); }
 
-    [[nodiscard]] auto end() const -> ConstIterator { return m_ptr.get() + m_size; }
+    [[nodiscard]] auto end() const -> ConstIterator { return m_data.get() + m_size; }
 
 private:
     /**
@@ -104,7 +129,7 @@ private:
 
     // Variables
     // NOLINTNEXTLINE(*-avoid-c-arrays)
-    std::unique_ptr<T[]> m_ptr;
+    std::unique_ptr<T[]> m_data;
     size_t m_size;
 };
 }  // namespace clp
