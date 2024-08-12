@@ -48,15 +48,6 @@ runs:
     - run: >-
         docker run
         --user $(id -u):$(id -g)
-        --volume "$GITHUB_WORKSPACE":/mnt/workspace
-        --workdir /mnt/workspace
-        ${{steps.get_image_props.outputs.qualified_image_name}}
-        task submodules:core
-      shell: "bash"
-
-    - run: >-
-        docker run
-        --user $(id -u):$(id -g)
         --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp
         --workdir /mnt/clp
         ${{steps.get_image_props.outputs.qualified_image_name}}
