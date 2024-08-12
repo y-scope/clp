@@ -694,8 +694,10 @@ std::optional<Query> Grep::process_raw_query(
         static bool query_substr_logtypes_is_set = false;
         static vector<QueryLogtype> query_logtypes;
         static vector<string> logtype_strings;
+        // TODO: until we have per schema logic, we need to do everything for every archive.
+        bool per_schema_logic_implemented = false;
         // TODO: this needs to be redone if the schema changes.
-        if (false == query_substr_logtypes_is_set) {
+        if (per_schema_logic_implemented && false == query_substr_logtypes_is_set) {
             query_logtypes
                     = generate_query_substring_logtypes(search_string_for_sub_queries, lexer);
             query_substr_logtypes_is_set = true;
@@ -1228,8 +1230,7 @@ vector<QueryLogtype> Grep::get_possible_substr_types(
                 }
             }
         }
-        // If the substring matches no variables, or has a wildcard, it is potentially
-        // static-text.
+        // If the substring matches no variables, or has a wildcard, it is potentially static-text.
         if (variable_types.empty() || contains_wildcard) {
             possible_substr_types.emplace_back();
             auto& possible_substr_type = possible_substr_types.back();
