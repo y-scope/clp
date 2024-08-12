@@ -18,7 +18,10 @@ RUN ln -s /opt/rh/devtoolset-10/enable /etc/profile.d/devtoolset.sh
 #       cannot be forced to use a bash shell that loads .bashrc
 RUN cp ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/git /usr/bin/git
 
-# Install Task
+# NOTE:
+# 1. `task` doesn't have a apt/yum package so we use its install script.
+# 2. We don't want to install it using `install-prebuilt-packages.sh` since that would change the
+#    user's environment in a way that they couldn't easily undo.
 RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
 # Remove cached files

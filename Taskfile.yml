@@ -7,13 +7,13 @@ includes:
   utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
 
 vars:
-  # Source Paths
+  # Source paths
   G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
   G_CORE_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_SUBMODULE_DIR: "{{.G_CORE_DIR}}/submodules"
   G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/log-viewer-webui"
 
-  # Build Paths
+  # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"

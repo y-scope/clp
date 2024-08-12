@@ -32,6 +32,7 @@ tasks:
       DESTINATION: "{{.G_CORE_SUBMODULE_DIR}}/abseil-cpp"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: [ "{{.CHECKSUM_FILE}}" ]
     deps:
@@ -258,8 +259,8 @@ tasks:
           DATA_DIR: "{{.DESTINATION}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
-  # We don't use a git submodule for sqlite3 since that would require building the
-  # sqlite amalgamation
+  # We don't use a git submodule for sqlite3 since that would require building the sqlite
+  # amalgamation
   sqlite3:
     internal: true
     vars:
@@ -347,12 +348,11 @@ tasks:
           DATA_DIR: "{{.DESTINATION}}"
           OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
-
   download-dependency:
     internal: true
-    label: "{{.TASK | replace \":\" \"#\"}}-{{.SOURCE_NAME}}"
+    label: "{{.TASK}}-{{.SOURCE_NAME}}"
     requires:
-      vars: ["SOURCE_URL", "SOURCE_NAME", "DESTINATION", "FLAGS"]
+      vars: ["DESTINATION", "FLAGS", "SOURCE_NAME", "SOURCE_URL"]
     deps:
       - ":init"
     cmds:

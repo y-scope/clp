@@ -16,7 +16,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 
 ## Setup
 
-Download yscope-dev-utils dependency
+Initialize the project
 
 ```shell
 tools/scripts/deps-download/init.sh

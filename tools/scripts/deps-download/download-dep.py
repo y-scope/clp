@@ -23,9 +23,9 @@ logger.addHandler(logging_console_handler)
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Download dependency.")
-    args_parser.add_argument("source_url", help="Url to the source file.")
+    args_parser.add_argument("source_url", help="URL of the source file.")
     args_parser.add_argument("source_name", help="Name of the source file.")
-    args_parser.add_argument("dest_dir", help="Destination to output the downloaded dependency.")
+    args_parser.add_argument("dest_dir", help="Output directory for the download.")
     args_parser.add_argument("--extract", action="store_true", help="Extract the source file.")
     args_parser.add_argument(
         "--no-submodule",
@@ -44,7 +44,7 @@ def main(argv):
     git_dir = script_path.parent / ".." / ".." / ".." / ".git"
     if git_dir.exists() and git_dir.is_dir():
         if parsed_args.use_submodule:
-            cmd = ["git", "submodule", "update", "--init", str(target_dest_path)]
+            cmd = ["git", "submodule", "update", "--init", "--recursive", str(target_dest_path)]
             try:
                 subprocess.run(cmd, check=True)
             except subprocess.CalledProcessError:
@@ -73,7 +73,7 @@ def main(argv):
 
     target_source_path = work_dir / source_name
     if not target_source_path.exists():
-        logger.error(f"Source file {target_source_path} does not exist, abort")
+        logger.error(f"Source file {target_source_path} doesn't exist.")
         return -1
 
     if extract_source:
