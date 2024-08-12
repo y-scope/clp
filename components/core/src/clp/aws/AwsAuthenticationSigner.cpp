@@ -27,7 +27,7 @@ namespace {
 /**
  * Checks if the input is an unreserved character specified by AWS Signature Version 4 format.
  * @param c
- * @return True if `c` is an unreserved character
+ * @return Whther`c` is an unreserved character.
  */
 [[nodiscard]] auto is_unreserved_characters(char c) -> bool;
 
