@@ -51,7 +51,7 @@ runs:
         --volume "$GITHUB_WORKSPACE":/mnt/clp
         --workdir /mnt/clp
         ${{steps.get_image_props.outputs.qualified_image_name}}
-        bash -c "task submodules:core &&
+        bash -c "task deps:core &&
         /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.sh
         /mnt/clp/components/core
         /mnt/clp/components/core/build"

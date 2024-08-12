@@ -84,7 +84,7 @@ jobs:
               - "components/core/src/**"
               - "components/core/tests/**"
               - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
-              - "submodules-tasks.yml"
+              - "deps-tasks.yml"
               - "Taskfile.yml"
               - "tools/scripts/deps-download/**"
 

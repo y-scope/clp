@@ -26,7 +26,7 @@ We use both git submodules and third-party source packages. To download all, you
 command:
 
 ```shell
-task submodules:core
+task deps:core
 ```
 
 This will download:

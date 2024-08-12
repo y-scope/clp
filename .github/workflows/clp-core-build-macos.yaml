@@ -11,7 +11,7 @@ on:
       - "components/core/tools/scripts/lib_install/macos-12/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
-      - "submodules-tasks.yml"
+      - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
   push:
@@ -24,7 +24,7 @@ on:
       - "components/core/tools/scripts/lib_install/macos-12/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
-      - "submodules-tasks.yml"
+      - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
   workflow_dispatch:
@@ -56,7 +56,7 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      - run: "task submodules:core"
+      - run: "task deps:core"
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"

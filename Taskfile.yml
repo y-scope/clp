@@ -3,7 +3,7 @@ version: "3"
 includes:
   docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
-  submodules: "submodules-tasks.yml"
+  deps: "deps-tasks.yml"
   utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
 
 vars:
@@ -188,7 +188,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-    deps: ["init", "submodules:core"]
+    deps: ["init", "deps:core"]
     cmds:
       - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
@@ -397,7 +397,7 @@ tasks:
       - "{{.PACKAGE_CHECKSUM_FILE}}"
       - "{{.SERVER_CHECKSUM_FILE}}"
     deps:
-      - "submodules:log-viewer"
+      - "deps:log-viewer"
       - "nodejs-22"
       - task: "utils:validate-checksum"
         vars:
