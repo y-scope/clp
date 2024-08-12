@@ -217,7 +217,10 @@ TEST_CASE("get_possible_substr_types", "[schema_search]") {
     }
 }
 
-TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
+TEST_CASE(
+        "generate_query_substring_logtypes",
+        "[generate_query_substring_logtypes][schema_search]"
+) {
     ByteLexer lexer;
     clp::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 

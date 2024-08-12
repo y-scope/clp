@@ -695,9 +695,9 @@ std::optional<Query> Grep::process_raw_query(
         static vector<QueryLogtype> query_logtypes;
         static vector<string> logtype_strings;
         // TODO: until we have per schema logic, we need to do everything for every archive.
-        bool per_schema_logic_implemented = false;
+        bool execute_for_every_archive = true;
         // TODO: this needs to be redone if the schema changes.
-        if (per_schema_logic_implemented && false == query_substr_logtypes_is_set) {
+        if (execute_for_every_archive || false == query_substr_logtypes_is_set) {
             query_logtypes
                     = generate_query_substring_logtypes(search_string_for_sub_queries, lexer);
             query_substr_logtypes_is_set = true;
