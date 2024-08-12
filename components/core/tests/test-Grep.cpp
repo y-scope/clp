@@ -115,7 +115,9 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == false);
 }
 
-TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema_search]") {
+// 0:"$end", 1:"$UncaughtString", 2:"int", 3:"float", 4:hex, 5:firstTimestamp, 6:newLineTimestamp,
+// 7:timestamp, 8:hex, 9:hasNumber, 10:uniqueVariable, 11:test
+TEST_CASE("get_substring_variable_types", "[schema_search]") {
     ByteLexer lexer;
     clp::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
@@ -144,7 +146,8 @@ TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema
                                lexer.m_symbol_id["float"],
                                lexer.m_symbol_id["hex"],
                                lexer.m_symbol_id["hasNumber"],
-                               lexer.m_symbol_id["equals"]};
+                               lexer.m_symbol_id["uniqueVariable"],
+                               lexer.m_symbol_id["test"]};
                 }
                 // substrings of "10000"
                 if (2 <= begin_idx && 7 >= end_idx) {
@@ -228,42 +231,59 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
         expected_result[0].append_value('z', "z", false, false);
         expected_result[0].append_value(' ', " ", false, false);
         expected_result[0].append_value('*', "*", false, false);
-        // TODO: make expansion display correctly when REQUIRE fails if possible
         REQUIRE(query_logtypes == expected_result);
     }
 
     SECTION("hex") {
         std::string query = "* a *";
         auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(1);
+        std::vector<clp::QueryLogtype> expected_result(2);
+        // "* a *"
+        // TODO: Because substring "* a *" matches no variable, one possible subquery logtype is
+        // all static text. However, we know that if at least one of the other logtypes contains
+        // a non-wildcard variable, then there is no way this query matches all static text. This
+        // can also be extended to wildcard variables, for example "*10000" must match either
+        // int or has#, but this has to be handled carefully as "*a" could match a variale, but
+        // could also be static-text.
+        expected_result[0].append_value('*', "*", false, false);
+        expected_result[0].append_value(' ', " ", false, false);
+        expected_result[0].append_value('a', "a", false, false);
+        expected_result[0].append_value(' ', " ", false, false);
+        expected_result[0].append_value('*', "*", false, false);
         // "* <hex>(a) *"
-        expected_result[0].append_value('*', "*", false, false);
-        expected_result[0].append_value(' ', " ", false, false);
-        expected_result[0]
+        expected_result[1].append_value('*', "*", false, false);
+        expected_result[1].append_value(' ', " ", false, false);
+        expected_result[1]
                 .append_value(static_cast<int>(lexer.m_symbol_id["hex"]), "a", false, false);
-        expected_result[0].append_value(' ', " ", false, false);
-        expected_result[0].append_value('*', "*", false, false);
+        expected_result[1].append_value(' ', " ", false, false);
+        expected_result[1].append_value('*', "*", false, false);
         REQUIRE(query_logtypes == expected_result);
     }
 
     SECTION("int") {
         std::string query = "* 1 *";
         auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(1);
+        std::vector<clp::QueryLogtype> expected_result(2);
+        // "* 1 *"
+        expected_result[0].append_value('*', "*", false, false);
+        expected_result[0].append_value(' ', " ", false, false);
+        expected_result[0].append_value('1', "1", false, false);
+        expected_result[0].append_value(' ', " ", false, false);
+        expected_result[0].append_value('*', "*", false, false);
         // "* <int>(1) *"
-        expected_result[0].append_value('*', "*", false, false);
-        expected_result[0].append_value(' ', " ", false, false);
-        expected_result[0]
+        expected_result[1].append_value('*', "*", false, false);
+        expected_result[1].append_value(' ', " ", false, false);
+        expected_result[1]
                 .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "1", false, false);
-        expected_result[0].append_value(' ', " ", false, false);
-        expected_result[0].append_value('*', "*", false, false);
+        expected_result[1].append_value(' ', " ", false, false);
+        expected_result[1].append_value('*', "*", false, false);
         REQUIRE(query_logtypes == expected_result);
     }
 
     SECTION("Simple query") {
         std::string query = "* 10000 reply: *";
         auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(1);
+        std::vector<clp::QueryLogtype> expected_result(2);
         // "* <int>(10000) reply: *"
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0].append_value(' ', " ", false, false);
@@ -275,22 +295,39 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
         expected_result[0].append_value('p', "p", false, false);
         expected_result[0].append_value('l', "l", false, false);
         expected_result[0].append_value('y', "y", false, false);
+        expected_result[0].append_value(':', ":", false, false);
         expected_result[0].append_value(' ', " ", false, false);
         expected_result[0].append_value('*', "*", false, false);
+        // "* 10000 reply: *"
+        expected_result[1].append_value('*', "*", false, false);
+        expected_result[1].append_value(' ', " ", false, false);
+        expected_result[1].append_value('1', "1", false, false);
+        expected_result[1].append_value('0', "0", false, false);
+        expected_result[1].append_value('0', "0", false, false);
+        expected_result[1].append_value('0', "0", false, false);
+        expected_result[1].append_value('0', "0", false, false);
+        expected_result[1].append_value(' ', " ", false, false);
+        expected_result[1].append_value('r', "r", false, false);
+        expected_result[1].append_value('e', "e", false, false);
+        expected_result[1].append_value('p', "p", false, false);
+        expected_result[1].append_value('l', "l", false, false);
+        expected_result[1].append_value('y', "y", false, false);
+        expected_result[1].append_value(':', ":", false, false);
+        expected_result[1].append_value(' ', " ", false, false);
+        expected_result[1].append_value('*', "*", false, false);
         REQUIRE(query_logtypes == expected_result);
     }
 
     SECTION("Wildcard variable") {
-        std::string query = "* *10000* *";
+        std::string query = "* *10000 *";
         auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(3);
+        std::vector<clp::QueryLogtype> expected_result(8);
         // "* *<int>(*10000) *"
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0].append_value(' ', " ", false, false);
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0]
-                .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "*10000*", true, true);
-        expected_result[0].append_value('*', "*", false, false);
+                .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "*10000", true, false);
         expected_result[0].append_value(' ', " ", false, false);
         expected_result[0].append_value('*', "*", false, false);
         // "* *<float>(*10000) *"
@@ -298,8 +335,7 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
         expected_result[1].append_value(' ', " ", false, false);
         expected_result[1].append_value('*', "*", false, false);
         expected_result[1]
-                .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000*", true, true);
-        expected_result[1].append_value('*', "*", false, false);
+                .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000", true, false);
         expected_result[1].append_value(' ', " ", false, false);
         expected_result[1].append_value('*', "*", false, false);
         // "* *<hasNumber>(*10000) *"
@@ -308,13 +344,67 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
         expected_result[2].append_value('*', "*", false, false);
         expected_result[2].append_value(
                 static_cast<int>(lexer.m_symbol_id["hasNumber"]),
-                "*10000*",
+                "*10000",
                 true,
                 false
         );
-        expected_result[2].append_value('*', "*", false, false);
         expected_result[2].append_value(' ', " ", false, false);
         expected_result[2].append_value('*', "*", false, false);
+
+        // "*timestamp(* *)*<int>(*10000) *"
+        expected_result[3].append_value('*', "*", false, false);
+        expected_result[3]
+                .append_value(static_cast<int>(lexer.m_symbol_id["timestamp"]), "* *", true, false);
+        expected_result[3].append_value('*', "*", false, false);
+        expected_result[3]
+                .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "*10000", true, false);
+        expected_result[3].append_value(' ', " ", false, false);
+        expected_result[3].append_value('*', "*", false, false);
+        // "*timestamp(* *)*<float>(*10000) *"
+        expected_result[4].append_value('*', "*", false, false);
+        expected_result[4]
+                .append_value(static_cast<int>(lexer.m_symbol_id["timestamp"]), "* *", true, false);
+        expected_result[4].append_value('*', "*", false, false);
+        expected_result[4]
+                .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000", true, false);
+        expected_result[4].append_value(' ', " ", false, false);
+        expected_result[4].append_value('*', "*", false, false);
+        // "*timestamp(* *)*<hasNumber>(*10000) *"
+        expected_result[5].append_value('*', "*", false, false);
+        expected_result[5]
+                .append_value(static_cast<int>(lexer.m_symbol_id["timestamp"]), "* *", true, false);
+        expected_result[5].append_value('*', "*", false, false);
+        expected_result[5].append_value(
+                static_cast<int>(lexer.m_symbol_id["hasNumber"]),
+                "*10000",
+                true,
+                false
+        );
+        expected_result[5].append_value(' ', " ", false, false);
+        expected_result[5].append_value('*', "*", false, false);
+        // "* *10000 *"
+        expected_result[6].append_value('*', "*", false, false);
+        expected_result[6].append_value(' ', " ", false, false);
+        expected_result[6].append_value('*', "*", false, false);
+        expected_result[6].append_value('1', "1", false, false);
+        expected_result[6].append_value('0', "0", false, false);
+        expected_result[6].append_value('0', "0", false, false);
+        expected_result[6].append_value('0', "0", false, false);
+        expected_result[6].append_value('0', "0", false, false);
+        expected_result[6].append_value(' ', " ", false, false);
+        expected_result[6].append_value('*', "*", false, false);
+        // "*<timestamp>(* *)*10000 *"
+        expected_result[7].append_value('*', "*", false, false);
+        expected_result[7]
+                .append_value(static_cast<int>(lexer.m_symbol_id["timestamp"]), "* *", true, false);
+        expected_result[7].append_value('*', "*", false, false);
+        expected_result[7].append_value('1', "1", false, false);
+        expected_result[7].append_value('0', "0", false, false);
+        expected_result[7].append_value('0', "0", false, false);
+        expected_result[7].append_value('0', "0", false, false);
+        expected_result[7].append_value('0', "0", false, false);
+        expected_result[7].append_value(' ', " ", false, false);
+        expected_result[7].append_value('*', "*", false, false);
         REQUIRE(query_logtypes == expected_result);
     }
 }

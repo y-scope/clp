@@ -236,10 +236,6 @@ void load_lexer_from_file(
     for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<log_surgeon::SchemaVarAST*>(parser_ast.get());
 
-        if ("timestamp" == rule->m_name) {
-            continue;
-        }
-
         if (lexer.m_symbol_id.find(rule->m_name) == lexer.m_symbol_id.end()) {
             lexer.m_symbol_id[rule->m_name] = lexer.m_symbol_id.size();
             lexer.m_id_symbol[lexer.m_symbol_id[rule->m_name]] = rule->m_name;
@@ -260,7 +256,7 @@ void load_lexer_from_file(
             }
         }
 
-        if (contains_delimiter) {
+        if (contains_delimiter && "timestamp" != rule->m_name) {
             FileReader schema_reader;
             ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
             if (ErrorCode_Success != error_code) {

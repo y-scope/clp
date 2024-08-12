@@ -736,6 +736,16 @@ std::ostream& operator<<(std::ostream& os, QueryLogtype const& query_logtype) {
         }
     }
     os << "\"";
+    os << "(";
+    for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
+        os << query_logtype.get_var_has_wildcard(idx);
+    }
+    os << ")";
+    os << "(";
+    for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
+        os << query_logtype.get_is_encoded_with_wildcard(idx);
+    }
+    os << ")";
     return os;
 }
 
