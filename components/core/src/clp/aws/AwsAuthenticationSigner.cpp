@@ -11,17 +11,24 @@
 
 #include "../ErrorCode.hpp"
 #include "../hash_utils.hpp"
+#include "../string_utils/string_utils.hpp"
 #include "../type_utils.hpp"
 #include "constants.hpp"
 
-using clp::size_checked_pointer_cast;
-using std::span;
+using clp::string_utils::is_alphabet;
+using clp::string_utils::is_decimal_digit;
 using std::string;
 using std::string_view;
 using std::vector;
 
 namespace clp::aws {
 namespace {
+/**
+ * Checks if the input is an unreserved character specified by AWS Signature Version 4 format.
+ * @param c
+ * @return True if `c` is an unreserved character
+ */
+[[nodiscard]] auto is_unreserved_characters(char c) -> bool;
 
 /**
  * Gets the formatted timestamp string specified by AWS Signature Version 4 format.
@@ -79,12 +86,15 @@ namespace {
 [[nodiscard]] auto get_scope(string_view date, string_view region) -> string;
 
 /**
- * @param method
  * @param url
  * @param query_string
  * @return Formatted canonical request string.
  */
 [[nodiscard]] auto get_canonical_request(S3Url const& url, string_view query_string) -> string;
+
+auto is_unreserved_characters(char c) -> bool {
+    return is_alphabet(c) || is_decimal_digit(c) || c == '-' || c == '_' || c == '.' || c == '~';
+}
 
 auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp
 ) -> string {
@@ -137,9 +147,7 @@ auto encode_uri(string_view uri, bool encode_slash) -> string {
     string encoded_uri;
 
     for (auto const c : uri) {
-        if ((std::isalnum(c) != 0) || c == '-' || c == '_' || c == '.' || c == '~') {
-            encoded_uri += c;
-        } else if (c == '/' && false == encode_slash) {
+        if (is_unreserved_characters(c) || ('/' == c && false == encode_slash)) {
             encoded_uri += c;
         } else {
             encoded_uri += fmt::format("%{:02X}", c);
