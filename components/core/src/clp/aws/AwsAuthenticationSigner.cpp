@@ -247,8 +247,7 @@ auto AwsAuthenticationSigner::get_canonical_query_string(
         string_view scope,
         string_view timestamp
 ) const -> string {
-    string uri{m_access_key_id + "/"};
-    uri += scope;
+    auto const uri = fmt::format("{}{}", m_access_key_id, scope);
     return fmt::format(
             "{}={}&{}={}&{}={}&{}={}&{}={}",
             cXAmzAlgorithm,
