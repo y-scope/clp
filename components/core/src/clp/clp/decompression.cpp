@@ -111,6 +111,7 @@ bool decompress(
                 archive_ix->get_id(archive_id);
                 auto archive_path = archives_dir / archive_id;
                 archive_reader.open(archive_path.string());
+                archive_reader.refresh_dictionaries();
 
                 // Decompress all splits with the given path
                 auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_path(file_path);

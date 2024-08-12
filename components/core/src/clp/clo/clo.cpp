@@ -140,6 +140,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
 
         Archive archive_reader;
         archive_reader.open(archive_path.string());
+        archive_reader.refresh_dictionaries();
 
         auto const& file_split_id = command_line_args.get_file_split_id();
         auto file_metadata_ix_ptr = archive_reader.get_file_iterator_by_split_id(file_split_id);
