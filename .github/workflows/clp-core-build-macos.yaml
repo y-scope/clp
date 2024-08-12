@@ -11,6 +11,9 @@ on:
       - "components/core/tools/scripts/lib_install/macos-12/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+      - "submodules-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
   push:
     paths:
       - ".github/workflows/clp-core-build-macos.yaml"
@@ -21,6 +24,9 @@ on:
       - "components/core/tools/scripts/lib_install/macos-12/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+      - "submodules-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
   workflow_dispatch:
 
 concurrency:
@@ -47,13 +53,11 @@ jobs:
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
 
-      - name: "Download yscope-dev-utils"
+      - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
-        run: "./tools/scripts/deps-download/init.sh"
 
-      - name: "Download core dependencies"
+      - run: "task submodules:core"
         shell: "bash"
-        run: "task submodules:core"
 
       - name: "Build CLP-core and run unit tests"
         shell: "bash"

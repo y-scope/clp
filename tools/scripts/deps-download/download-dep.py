@@ -5,9 +5,9 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.parse
 import urllib.request
-import uuid
 from pathlib import Path
 
 # Setup logging
@@ -35,53 +35,51 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
-    target_dest_path = Path(parsed_args.dest_dir).resolve()
     source_url = parsed_args.source_url
     source_name = parsed_args.source_name
+    dest_dir = Path(parsed_args.dest_dir).resolve()
     extract_source = parsed_args.extract
 
     script_path = Path(os.path.realpath(__file__))
     git_dir = script_path.parent / ".." / ".." / ".." / ".git"
     if git_dir.exists() and git_dir.is_dir():
         if parsed_args.use_submodule:
-            cmd = ["git", "submodule", "update", "--init", "--recursive", str(target_dest_path)]
+            cmd = ["git", "submodule", "update", "--init", "--recursive", str(dest_dir)]
             try:
                 subprocess.run(cmd, check=True)
             except subprocess.CalledProcessError:
-                logger.exception(f"Failed to update the submodule {target_dest_path}")
+                logger.exception(f"Failed to update the submodule {dest_dir}")
                 return -1
             return 0
 
-    work_dir = Path("/") / "tmp" / str(uuid.uuid4())
-    work_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as work_dir_name:
+        work_dir = Path(work_dir_name)
 
-    parsed_url = urllib.parse.urlparse(source_url)
-    filename = Path(parsed_url.path).name
-    file_path = work_dir / filename
-    # Download file
-    urllib.request.urlretrieve(source_url, file_path)
-    if extract_source:
-        # NOTE: We need to convert file_path to a str since unpack_archive only
-        # accepts a path-like object on Python versions >= 3.7
-        shutil.unpack_archive(str(file_path), work_dir)
+        parsed_url = urllib.parse.urlparse(source_url)
+        filename = Path(parsed_url.path).name
+        file_path = work_dir / filename
+        # Download file
+        urllib.request.urlretrieve(source_url, file_path)
+        if extract_source:
+            # NOTE: We need to convert file_path to a str since unpack_archive only
+            # accepts a path-like object on Python versions >= 3.7
+            shutil.unpack_archive(str(file_path), work_dir)
 
-    if target_dest_path.exists():
-        shutil.rmtree(target_dest_path, ignore_errors=True)
-    else:
-        target_dest_parent = target_dest_path.parent
-        target_dest_parent.mkdir(parents=True, exist_ok=True)
+        if dest_dir.exists():
+            shutil.rmtree(dest_dir, ignore_errors=True)
+        else:
+            target_dest_parent = dest_dir.parent
+            target_dest_parent.mkdir(parents=True, exist_ok=True)
 
-    target_source_path = work_dir / source_name
-    if not target_source_path.exists():
-        logger.error(f"Source file {target_source_path} doesn't exist.")
-        return -1
+        target_source_path = work_dir / source_name
+        if not target_source_path.exists():
+            logger.error(f"Source file {target_source_path} doesn't exist.")
+            return -1
 
-    if extract_source:
-        shutil.copytree(target_source_path, target_dest_path)
-    else:
-        shutil.copy(target_source_path, target_dest_path)
-
-    shutil.rmtree(work_dir)
+        if extract_source:
+            shutil.copytree(target_source_path, dest_dir)
+        else:
+            shutil.copy(target_source_path, dest_dir)
 
     return 0
 

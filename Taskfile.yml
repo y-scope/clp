@@ -9,8 +9,8 @@ includes:
 vars:
   # Source paths
   G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
-  G_CORE_DIR: "{{.G_COMPONENTS_DIR}}/core"
-  G_CORE_SUBMODULE_DIR: "{{.G_CORE_DIR}}/submodules"
+  G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
+  G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
   G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/log-viewer-webui"
 
   # Build paths
@@ -188,7 +188,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-    deps: ["submodules:core", "init"]
+    deps: ["init", "submodules:core"]
     cmds:
       - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
