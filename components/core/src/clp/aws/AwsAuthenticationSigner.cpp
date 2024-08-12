@@ -6,6 +6,7 @@
 #include <span>
 #include <vector>
 
+#include <boost/regex.hpp>
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 
@@ -71,12 +72,12 @@ namespace {
 ) -> ErrorCode;
 
 /**
- * Encodes the URI as specified by AWS Signature Version 4's UriEncode.
+ * Encodes the Canonical URI as specified by AWS Signature Version 4's UriEncode.
  * @param uri
  * @param encode_slash
  * @return The encoded URI.
  */
-[[nodiscard]] auto encode_uri(string_view uri, bool encode_slash) -> string;
+[[nodiscard]] auto encode_uri(string_view uri, bool encode_forward_slash) -> string;
 
 /**
  * @param date
@@ -143,11 +144,11 @@ auto get_string_to_sign(
     return ErrorCode_Success;
 }
 
-auto encode_uri(string_view uri, bool encode_slash) -> string {
+auto encode_uri(string_view uri, bool encode_forward_slash) -> string {
     string encoded_uri;
 
     for (auto const c : uri) {
-        if (is_unreserved_characters(c) || ('/' == c && false == encode_slash)) {
+        if (is_unreserved_characters(c) || ('/' == c && false == encode_forward_slash)) {
             encoded_uri += c;
         } else {
             encoded_uri += fmt::format("%{:02X}", c);
@@ -162,10 +163,11 @@ auto get_scope(string_view date, string_view region) -> string {
 }
 
 auto get_canonical_request(S3Url const& url, string_view query_string) -> string {
+    auto const uri_to_encode = fmt::format("/{}", url.get_key());
     return fmt::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
             get_method_string(AwsAuthenticationSigner::HttpMethod::GET),
-            encode_uri(url.get_key(), false),
+            encode_uri(uri_to_encode, false),
             query_string,
             cDefaultSignedHeaders,
             url.get_host(),
@@ -176,24 +178,29 @@ auto get_canonical_request(S3Url const& url, string_view query_string) -> string
 }  // namespace
 
 S3Url::S3Url(string const& url) {
-    // Virtual-hosted-style HTTP URL format
-    std::regex const host_style_url_regex(
-            R"(https://([a-z0-9.-]+)\.s3(\.([a-z0-9-]+))?\.amazonaws\.com(/[^?]+).*)"
+    // Virtual-hosted-style HTTP URL format: https://[bucket].s3.[region].[endpoint]/[key]
+    boost::regex const host_style_url_regex(
+            R"(https://(?<bucket>[a-z0-9.-]+)\.s3(\.(?<region>[a-z0-9-]+))?)"
+            R"(\.(?<endpoint>[a-z0-9.-]+)/(?<key>[^?]+).*)"
     );
-    // Path-style HTTP URL format
-    std::regex const path_style_url_regex(
-            R"(https://s3(\.([a-z0-9-]+))?\.amazonaws\.com/([a-z0-9.-]+)(/[^?]+).*)"
+    // Path-style HTTP URL format: https://s3.[region].[endpoint]/[bucket]/[key]
+    boost::regex const path_style_url_regex(
+            R"(https://s3(\.(?<region>[a-z0-9-]+))?)"
+            R"(\.(?<endpoint>[a-z0-9.-]+)/(?<bucket>[a-z0-9.-]+)/(?<key>[^?]+).*)"
     );
 
-    std::smatch match;
-    if (std::regex_match(url, match, host_style_url_regex)) {
-        m_bucket = match[1].str();
-        m_region = match[3].str();
-        m_key = match[4].str();
-    } else if (std::regex_match(url, match, path_style_url_regex)) {
-        m_region = match[2].str();
-        m_bucket = match[3].str();
-        m_key = match[4].str();
+    boost::smatch match;
+    string end_point;
+    if (boost::regex_match(url, match, host_style_url_regex)) {
+        m_region = match["region"];
+        m_bucket = match["bucket"];
+        m_key = match["key"];
+        end_point = match["endpoint"];
+    } else if (boost::regex_match(url, match, path_style_url_regex)) {
+        m_region = match["region"];
+        m_bucket = match["bucket"];
+        m_key = match["key"];
+        end_point = match["endpoint"];
     } else {
         throw OperationFailed(
                 ErrorCode_BadParam,
@@ -203,10 +210,19 @@ S3Url::S3Url(string const& url) {
         );
     }
 
+    if ("amazonaws.com" != end_point) {
+        throw OperationFailed(
+                ErrorCode_BadParam,
+                __FILENAME__,
+                __LINE__,
+                "Invalid S3 endpoint: " + end_point
+        );
+    }
+
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.amazonaws.com", m_bucket, m_region);
+    m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, end_point);
 }
 
 auto AwsAuthenticationSigner::generate_presigned_url(
@@ -241,7 +257,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     auto const signature_str = convert_to_hex_string({signature.data(), signature.size()});
 
     presigned_url = fmt::format(
-            "https://{}{}?{}&{}={}",
+            "https://{}/{}?{}&{}={}",
             s3_url.get_host(),
             s3_url.get_key(),
             canonical_query_string,
@@ -255,7 +271,7 @@ auto AwsAuthenticationSigner::get_canonical_query_string(
         string_view scope,
         string_view timestamp
 ) const -> string {
-    auto const uri = fmt::format("{}{}", m_access_key_id, scope);
+    auto const uri = fmt::format("{}/{}", m_access_key_id, scope);
     return fmt::format(
             "{}={}&{}={}&{}={}&{}={}&{}={}",
             cXAmzAlgorithm,

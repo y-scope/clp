@@ -43,19 +43,19 @@ public:
     explicit S3Url(std::string const& url);
 
     // Methods
-    [[nodiscard]] auto get_host() const -> std::string_view { return m_host; }
-
     [[nodiscard]] auto get_region() const -> std::string_view { return m_region; }
 
     [[nodiscard]] auto get_bucket() const -> std::string_view { return m_bucket; }
 
     [[nodiscard]] auto get_key() const -> std::string_view { return m_key; }
 
+    [[nodiscard]] auto get_host() const -> std::string_view { return m_host; }
+
 private:
-    std::string m_host;
     std::string m_region;
     std::string m_bucket;
     std::string m_key;
+    std::string m_host;
 };
 
 /**
@@ -69,7 +69,7 @@ public:
     };
 
     // Default expire time of presigned URL in seconds
-    static constexpr std::chrono::seconds cDefaultExpireTime{86'400};  // 24 hours
+    static constexpr size_t cDefaultExpireTime{86'400};  // 24 hours
 
     // Constructors
     AwsAuthenticationSigner(std::string access_key_id, std::string secret_access_key)
