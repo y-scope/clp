@@ -407,6 +407,8 @@ TEST_CASE(
         expected_result[7].append_value('0', "0", false, false);
         expected_result[7].append_value(' ', " ", false, false);
         expected_result[7].append_value('*', "*", false, false);
+        /* TODO: Currently encoded vars are added in generate_logtype_strings(), but should be
+         * added in generate_query_substring_logtypes() for readability
         // "* *<int>(*10000) *" as encoded var
         expected_result[8].append_value('*', "*", false, false);
         expected_result[8].append_value(' ', " ", false, false);
@@ -441,6 +443,7 @@ TEST_CASE(
                 .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000", true, true);
         expected_result[11].append_value(' ', " ", false, false);
         expected_result[11].append_value('*', "*", false, false);
+        */
         REQUIRE(query_logtypes == expected_result);
     }
 }
