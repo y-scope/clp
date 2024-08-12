@@ -49,13 +49,6 @@ namespace {
 ) -> string;
 
 /**
- * Converts the given HTTP method to its string representation.
- * @param method
- * @return The converted string.
- */
-[[nodiscard]] auto get_method_string(AwsAuthenticationSigner::HttpMethod method) -> string;
-
-/**
  * Gets the string to sign required by AWS Signature Version 4 protocol.
  * @param scope
  * @param timestamp
@@ -104,15 +97,6 @@ auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const&
 
 auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp) -> string {
     return fmt::format("{:%Y%m%d}", timestamp);
-}
-
-auto get_method_string(AwsAuthenticationSigner::HttpMethod method) -> string {
-    switch (method) {
-        case AwsAuthenticationSigner::HttpMethod::GET:
-            return "GET";
-        default:
-            throw std::runtime_error("Invalid HTTP method");
-    }
 }
 
 auto get_string_to_sign(
@@ -166,7 +150,7 @@ auto get_canonical_request(S3Url const& url, string_view query_string) -> string
     auto const uri_to_encode = fmt::format("/{}", url.get_key());
     return fmt::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
-            get_method_string(AwsAuthenticationSigner::HttpMethod::GET),
+            AwsAuthenticationSigner::cHttpGetMethod,
             encode_uri(uri_to_encode, false),
             query_string,
             cDefaultSignedHeaders,

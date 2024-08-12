@@ -63,14 +63,10 @@ private:
  */
 class AwsAuthenticationSigner {
 public:
-    // Types
-    enum class HttpMethod : uint8_t {
-        GET
-    };
-
+    // Constants
     // Default expire time of presigned URL in seconds
     static constexpr size_t cDefaultExpireTime{86'400};  // 24 hours
-
+    static constexpr std::string_view cHttpGetMethod{"GET"};
     // Constructors
     AwsAuthenticationSigner(std::string access_key_id, std::string secret_access_key)
             : m_access_key_id{std::move(access_key_id)},
