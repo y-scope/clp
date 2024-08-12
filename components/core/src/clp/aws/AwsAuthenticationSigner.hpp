@@ -78,7 +78,6 @@ public:
      * Generates a presigned S3 URL using AWS Signature Version 4 protocol.
      * @param s3_url
      * @param presigned_url Returns the generated presigned URL.
-     * @param method HTTP method.
      * @return `ErrorCode_Success` on success.
      * @return Same as `get_sha256_hash` and `AwsAuthenticationSigner::get_signature` on failure.
      */
