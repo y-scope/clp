@@ -409,7 +409,7 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
         expected_result[8].append_value(' ', " ", false, false);
         expected_result[8].append_value('*', "*", false, false);
         expected_result[8]
-                .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "*10000", true, false);
+                .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "*10000", true, true);
         expected_result[8].append_value(' ', " ", false, false);
         expected_result[8].append_value('*', "*", false, false);
         // "* *<float>(*10000) *" as encoded var
@@ -417,7 +417,7 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
         expected_result[9].append_value(' ', " ", false, false);
         expected_result[9].append_value('*', "*", false, false);
         expected_result[9]
-                .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000", true, false);
+                .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000", true, true);
         expected_result[9].append_value(' ', " ", false, false);
         expected_result[9].append_value('*', "*", false, false);
         // "*timestamp(* *)*<int>(*10000) *" as encoded var
@@ -426,7 +426,7 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
                 .append_value(static_cast<int>(lexer.m_symbol_id["timestamp"]), "* *", true, false);
         expected_result[10].append_value('*', "*", false, false);
         expected_result[10]
-                .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "*10000", true, false);
+                .append_value(static_cast<int>(lexer.m_symbol_id["int"]), "*10000", true, true);
         expected_result[10].append_value(' ', " ", false, false);
         expected_result[10].append_value('*', "*", false, false);
         // "*timestamp(* *)*<float>(*10000) *" as encoded var
@@ -435,7 +435,7 @@ TEST_CASE("generate_query_substring_logtypes", "[schema_search]") {
                 .append_value(static_cast<int>(lexer.m_symbol_id["timestamp"]), "* *", true, false);
         expected_result[11].append_value('*', "*", false, false);
         expected_result[11]
-                .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000", true, false);
+                .append_value(static_cast<int>(lexer.m_symbol_id["float"]), "*10000", true, true);
         expected_result[11].append_value(' ', " ", false, false);
         expected_result[11].append_value('*', "*", false, false);
         REQUIRE(query_logtypes == expected_result);
