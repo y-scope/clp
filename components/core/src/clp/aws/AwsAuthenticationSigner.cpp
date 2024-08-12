@@ -265,7 +265,7 @@ auto AwsAuthenticationSigner::get_canonical_query_string(
             cXAmzDate,
             timestamp,
             cXAmzExpires,
-            cDefaultExpireTime,
+            cDefaultExpireTime.count(),
             cXAmzSignedHeaders,
             cDefaultSignedHeaders
     );

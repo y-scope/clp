@@ -65,7 +65,7 @@ class AwsAuthenticationSigner {
 public:
     // Constants
     // Default expire time of presigned URL in seconds
-    static constexpr size_t cDefaultExpireTime{86'400};  // 24 hours
+    static constexpr std::chrono::seconds cDefaultExpireTime{86'400};  // 24 hours
     static constexpr std::string_view cHttpGetMethod{"GET"};
     // Constructors
     AwsAuthenticationSigner(std::string access_key_id, std::string secret_access_key)
