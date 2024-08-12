@@ -17,9 +17,9 @@ public:
         m_error_message = msg;
     }
 
-    bool error() const { return m_error; }
+    [[nodiscard]] bool error() const { return m_error; }
 
-    std::string const& message() const { return m_error_message; }
+    [[nodiscard]] std::string const& message() const { return m_error_message; }
 
 private:
     bool m_error{false};
