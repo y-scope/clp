@@ -324,7 +324,7 @@ TEST_CASE(
     SECTION("Wildcard variable") {
         std::string query = "* *10000 *";
         auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(12);
+        std::vector<clp::QueryLogtype> expected_result(8);
         // "* *<int>(*10000) *"
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0].append_value(' ', " ", false, false);
