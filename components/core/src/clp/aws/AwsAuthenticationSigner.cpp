@@ -1,5 +1,6 @@
 #include "AwsAuthenticationSigner.hpp"
 
+#include <cctype>
 #include <chrono>
 #include <regex>
 #include <span>
@@ -22,9 +23,9 @@ using std::vector;
 namespace clp::aws {
 namespace {
 /**
- * Gets the timestamp string specified by AWS Signature Version 4 format
+ * Gets the formatted timestamp string specified by AWS Signature Version 4 format.
  * @param timestamp
- * @return The timestamp string
+ * @return The formatted timestamp string.
  */
 [[nodiscard]] auto get_timestamp_string(std::chrono::system_clock::time_point const& timestamp
 ) -> string {
@@ -32,9 +33,9 @@ namespace {
 }
 
 /**
- * Gets the date string specified by AWS Signature Version 4 format
+ * Gets the formatted date string specified by AWS Signature Version 4 format.
  * @param timestamp
- * @return The date string
+ * @return The formatted date string.
  */
 [[nodiscard]] auto get_date_string(std::chrono::system_clock::time_point const& timestamp
 ) -> string {
@@ -42,9 +43,9 @@ namespace {
 }
 
 /**
- * Converts an HttpMethod to a string
- * @param method HTTP method
- * @return The converted string
+ * Converts the given HTTP method to its string representation.
+ * @param method
+ * @return The converted string.
  */
 [[nodiscard]] auto get_method_string(AwsAuthenticationSigner::HttpMethod method) -> string {
     switch (method) {
@@ -62,12 +63,12 @@ namespace {
 }
 
 /**
- * Gets the string to sign specified by AWS Signature Version 4 format.
+ * Gets the string to sign required by AWS Signature Version 4 protocol.
  * @param scope
  * @param timestamp_string
  * @param canonical_request
- * @param string_to_sign Returns the string to sign
- * @return ErrorCode_Success on success
+ * @param string_to_sign Outputs the string to sign.
+ * @return `ErrorCode_Success` on success.
  * @return Same as `get_sha256_hash` on failure.
  */
 [[nodiscard]] auto get_string_to_sign(
@@ -77,7 +78,7 @@ namespace {
         string& string_to_sign
 ) -> ErrorCode {
     vector<unsigned char> signed_canonical_request;
-    if (auto error_code = get_sha256_hash(
+    if (auto const error_code = get_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(canonical_request.data()),
                  canonical_request.size()},
                 signed_canonical_request
@@ -100,10 +101,10 @@ namespace {
 }
 
 /**
- * Encodes the Uri as specified by AWS Signature Version 4's UriEncode()
- * @param Uri
+ * Encodes the URI as specified by AWS Signature Version 4's UriEncode.
+ * @param uri
  * @param encode_slash
- * @return The encoded Uri
+ * @return The encoded URI.
  */
 [[nodiscard]] auto encode_uri(string_view uri, bool encode_slash) -> string {
     string encoded_uri;
@@ -122,21 +123,19 @@ namespace {
 }
 
 /**
- * Gets the scope specified by AWS Signature Version 4 format
- * @param date_string
+ * @param date
  * @param region
- * @return The scope as a string
+ * @return The formatted scope required by ASW Signature Version 4 protocol.
  */
 [[nodiscard]] auto get_scope(string_view date_string, string_view region) -> string {
     return fmt::format("{}/{}/{}/{}", date_string, region, cS3Service, cAws4Request);
 }
 
 /**
- * Gets the canonical request string
- * @param method HTTP method
- * @param url S3 Url
- * @param query_string Query string
- * @return Canonical request
+ * @param method
+ * @param url
+ * @param query_string
+ * @return Formatted canonical request string.
  */
 [[nodiscard]] auto get_canonical_request(S3Url const& url, string_view query_string) -> string {
     return fmt::format(
@@ -201,16 +200,16 @@ auto AwsAuthenticationSigner::generate_presigned_url(
 
     auto const canonical_request = get_canonical_request(s3_url, canonical_query_string);
 
-    string string_to_sign{};
-    if (auto error_code
+    string string_to_sign;
+    if (auto const error_code
         = get_string_to_sign(scope, timestamp_string, canonical_request, string_to_sign);
         ErrorCode_Success != error_code)
     {
         return error_code;
     }
 
-    vector<unsigned char> signature{};
-    if (auto error_code = get_signature(s3_region, date_string, string_to_sign, signature);
+    vector<unsigned char> signature;
+    if (auto const error_code = get_signature(s3_region, date_string, string_to_sign, signature);
         ErrorCode_Success != error_code)
     {
         return error_code;
@@ -234,14 +233,14 @@ auto AwsAuthenticationSigner::get_signature(
         string_view string_to_sign,
         vector<unsigned char>& signature
 ) const -> ErrorCode {
-    vector<unsigned char> signing_key{};
-    if (auto error_code = get_signing_key(region, date_string, signing_key);
+    vector<unsigned char> signing_key;
+    if (auto const error_code = get_signing_key(region, date_string, signing_key);
         ErrorCode_Success != error_code)
     {
         return error_code;
     }
 
-    if (auto error_code = get_hmac_sha256_hash(
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(string_to_sign.data()),
                  string_to_sign.size()},
                 {size_checked_pointer_cast<unsigned char const>(signing_key.data()),
@@ -260,13 +259,12 @@ auto AwsAuthenticationSigner::get_signing_key(
         string_view date_string,
         vector<unsigned char>& signing_key
 ) const -> ErrorCode {
-    string key{cAws4};
-    key += m_secret_access_key;
+    auto const key = fmt::format("{}{}", cAws4, m_secret_access_key);
 
-    vector<unsigned char> date_key{};
-    vector<unsigned char> date_region_key{};
-    vector<unsigned char> date_region_service_key{};
-    if (auto error_code = get_hmac_sha256_hash(
+    vector<unsigned char> date_key;
+    vector<unsigned char> date_region_key;
+    vector<unsigned char> date_region_service_key;
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(date_string.data()),
                  date_string.size()},
                 {size_checked_pointer_cast<unsigned char const>(key.data()), key.size()},
@@ -277,7 +275,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
-    if (auto error_code = get_hmac_sha256_hash(
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(region.data()), region.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_key.data()), date_key.size()},
                 date_region_key
@@ -287,7 +285,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
-    if (auto error_code = get_hmac_sha256_hash(
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(cS3Service.data()),
                  cS3Service.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_region_key.data()),
@@ -299,7 +297,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
-    if (auto error_code = get_hmac_sha256_hash(
+    if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(cAws4Request.data()),
                  cAws4Request.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_region_service_key.data()),

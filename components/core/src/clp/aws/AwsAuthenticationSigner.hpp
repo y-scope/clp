@@ -1,8 +1,10 @@
 #ifndef CLP_AWS_AWSAUTHENTICATIONSIGNER_HPP
 #define CLP_AWS_AWSAUTHENTICATIONSIGNER_HPP
 
+#include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "../ErrorCode.hpp"
@@ -10,7 +12,7 @@
 
 namespace clp::aws {
 /**
- * Class for parsing an S3 URL.
+ * Class for a parsed S3 URL.
  */
 class S3Url {
 public:
@@ -27,8 +29,8 @@ public:
                 int line_number,
                 std::string message
         )
-                : TraceableException(error_code, filename, line_number),
-                  m_message(std::move(message)) {}
+                : TraceableException{error_code, filename, line_number},
+                  m_message{std::move(message)} {}
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
@@ -40,7 +42,7 @@ public:
     };
 
     // Constructor
-    S3Url(std::string const& url);
+    explicit S3Url(std::string const& url);
 
     // Methods
     [[nodiscard]] auto get_host() const -> std::string_view { return m_host; }
@@ -75,19 +77,18 @@ public:
     };
 
     // Constructors
-    AwsAuthenticationSigner(std::string_view access_key_id, std::string_view secret_access_key)
-            : m_access_key_id{access_key_id},
-              m_secret_access_key{secret_access_key} {}
+    AwsAuthenticationSigner(std::string access_key_id, std::string secret_access_key)
+            : m_access_key_id{std::move(access_key_id)},
+              m_secret_access_key{std::move(secret_access_key)} {}
 
     // Methods
     /**
-     * Generates a presigned URL based on AWS Signature Version 4
+     * Generates a presigned S3 URL using AWS Signature Version 4 protocol.
      * @param s3_url
-     * @param presigned_url Returns the generated presigned url.
-     * @param method HTTP method
-     * @return ErrorCode_Success on success.
-     * @return same as `get_string_to_sign` and `AwsAuthenticationSigner::get_signature` on failure.
-     *
+     * @param presigned_url Returns the generated presigned URL.
+     * @param method HTTP method.
+     * @return `ErrorCode_Success` on success.
+     * @return Same as `get_sha256_hash` and `AwsAuthenticationSigner::get_signature` on failure.
      */
     [[nodiscard]] auto
     generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) const -> ErrorCode;
@@ -97,7 +98,7 @@ private:
      * Generates the canonical query string.
      * @param scope
      * @param timestamp_string
-     * @return the canonical query string.
+     * @return The canonical query string.
      */
     [[nodiscard]] auto generate_canonical_query_string(
             std::string_view scope,
@@ -108,8 +109,8 @@ private:
      * Gets the signature signing key for the request.
      * @param region
      * @param date_string
-     * @param signing_key Returns the signing key
-     * @return ErrorCode_Success on success.
+     * @param signing_key Returns the signing key.
+     * @return `ErrorCode_Success` on success.
      * @return Same as `get_hmac_sha256_hash` on Failure.
      */
     [[nodiscard]] auto get_signing_key(
@@ -119,12 +120,12 @@ private:
     ) const -> ErrorCode;
 
     /**
-     * Signs the string_to_sign and returns the request signature by reference.
+     * Signs the `string_to_sign` with a generated signing key.
      * @param region
      * @param date_string
-     * @param string_to_sign StringToSign specified by the AWS Signature Version 4
-     * @param signature Returns the signature
-     * @return ErrorCode_Success on success.
+     * @param string_to_sign `StringToSign` required by AWS Signature Version 4 protocol.
+     * @param signature Returns the signature.
+     * @return `ErrorCode_Success` on success.
      * @return Same as `get_hmac_sha256_hash` on Failure.
      */
     [[nodiscard]] auto get_signature(
