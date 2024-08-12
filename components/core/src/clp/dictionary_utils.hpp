@@ -1,8 +1,8 @@
 #ifndef CLP_DICTIONARY_UTILS_HPP
 #define CLP_DICTIONARY_UTILS_HPP
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include "FileReader.hpp"
 #include "streaming_compression/Decompressor.hpp"

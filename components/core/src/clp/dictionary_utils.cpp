@@ -1,12 +1,13 @@
 #include "dictionary_utils.hpp"
 
 #include <memory>
-#include "FileReader.hpp"
 #include <utility>
 
-using std::unique_ptr;
+#include "FileReader.hpp"
+
 using std::make_unique;
 using std::move;
+using std::unique_ptr;
 
 namespace clp {
 void open_dictionary_for_reading(
