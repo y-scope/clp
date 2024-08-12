@@ -1190,7 +1190,7 @@ vector<QueryLogtype> Grep::get_possible_substr_types(
             if (next_char_is_greedy_wildcard) {
                 substr_end++;
             }
-            auto [variable_types, contains_wildcard] = get_substring_variable_types(
+            std::tie(variable_types, contains_wildcard) = get_substring_variable_types(
                     string_view(processed_search_string)
                             .substr(substr_start, substr_end - substr_start),
                     substr_start,
