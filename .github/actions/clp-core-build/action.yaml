@@ -48,11 +48,13 @@ runs:
     - run: >-
         docker run
         --user $(id -u):$(id -g)
-        --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp
+        --volume "$GITHUB_WORKSPACE":/mnt/clp
         --workdir /mnt/clp
         ${{steps.get_image_props.outputs.qualified_image_name}}
         bash -c "task submodules:core &&
-        /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build"
+        /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.sh 
+        /mnt/clp/components/core
+        /mnt/clp/components/core/build"
       shell: "bash"
 
     - if: "inputs.upload_binaries == 'true'"
