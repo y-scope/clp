@@ -7,6 +7,7 @@
 #include <boost/algorithm/string.hpp>
 #include <string_utils/string_utils.hpp>
 
+#include "dictionary_utils.hpp"
 #include "DictionaryEntry.hpp"
 #include "FileReader.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
@@ -54,6 +55,11 @@ public:
     void close();
 
     /**
+     * Reads any new entries from disk
+     */
+    void read_new_entries();
+
+    /**
      * Gets the dictionary's entries
      * @return All dictionary entries
      */
@@ -95,21 +101,23 @@ public:
 protected:
     // Methods
     /**
-     * Reads a segment's worth of IDs from the segment index from the `segment_index_decompressor`
-     * @param segment_index_decompressor
+     * Reads a segment's worth of IDs from the segment index
      */
-    void read_segment_ids(streaming_compression::Decompressor& segment_index_decompressor);
-
-    /**
-     * Reads any new entries from disk
-     * @param dictionary_path
-     * @param segment_index_path
-     */
-    void
-    read_new_entries(std::string const& dictionary_path, std::string const& segment_index_path);
+    void read_segment_ids();
 
     // Variables
     bool m_is_open;
+    std::unique_ptr<FileReader> m_dictionary_file_reader;
+    std::unique_ptr<FileReader> m_segment_index_file_reader;
+#if USE_PASSTHROUGH_COMPRESSION
+    streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
+    streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
+#elif USE_ZSTD_COMPRESSION
+    streaming_compression::zstd::Decompressor m_dictionary_decompressor;
+    streaming_compression::zstd::Decompressor m_segment_index_decompressor;
+#else
+    static_assert(false, "Unsupported compression mode.");
+#endif
     size_t m_num_segments_read_from_index;
     std::vector<EntryType> m_entries;
 };
@@ -123,7 +131,17 @@ void DictionaryReader<DictionaryIdType, EntryType>::open(
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
-    read_new_entries(dictionary_path, segment_index_path);
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+
+    open_dictionary_for_reading(
+            dictionary_path,
+            segment_index_path,
+            cDecompressorFileReadBufferCapacity,
+            m_dictionary_file_reader,
+            m_dictionary_decompressor,
+            m_segment_index_file_reader,
+            m_segment_index_decompressor
+    );
 
     m_is_open = true;
 }
@@ -134,6 +152,11 @@ void DictionaryReader<DictionaryIdType, EntryType>::close() {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
+    m_segment_index_decompressor.close();
+    m_segment_index_file_reader.reset();
+    m_dictionary_decompressor.close();
+    m_dictionary_file_reader.reset();
+
     m_num_segments_read_from_index = 0;
     m_entries.clear();
 
@@ -141,20 +164,13 @@ void DictionaryReader<DictionaryIdType, EntryType>::close() {
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
-        std::string const& dictionary_path,
-        std::string const& segment_index_path
-) {
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-
-    FileReader dictionary_file_reader{dictionary_path};
-    FileReader segment_index_file_reader{segment_index_path};
+void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries() {
+    if (false == m_is_open) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
 
     // Read dictionary header
-    uint64_t num_dictionary_entries{};
-    if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
+    auto num_dictionary_entries = read_dictionary_header(*m_dictionary_file_reader);
 
     // Validate dictionary header
     if (num_dictionary_entries < m_entries.size()) {
@@ -166,27 +182,15 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
         auto prev_num_dictionary_entries = m_entries.size();
         m_entries.resize(num_dictionary_entries);
 
-#if USE_PASSTHROUGH_COMPRESSION
-        streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
-#elif USE_ZSTD_COMPRESSION
-        streaming_compression::zstd::Decompressor dictionary_decompressor;
-#else
-        static_assert(false, "Unsupported compression mode.");
-#endif
-        dictionary_decompressor.open(dictionary_file_reader, cDecompressorFileReadBufferCapacity);
         for (size_t i = prev_num_dictionary_entries; i < num_dictionary_entries; ++i) {
             auto& entry = m_entries[i];
 
-            entry.read_from_file(dictionary_decompressor);
+            entry.read_from_file(m_dictionary_decompressor);
         }
-        dictionary_decompressor.close();
     }
 
     // Read segment index header
-    uint64_t num_segments{};
-    if (false == segment_index_file_reader.read_numeric_value(num_segments, false)) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
+    auto num_segments = read_segment_index_header(*m_segment_index_file_reader);
 
     // Validate segment index header
     if (num_segments < m_num_segments_read_from_index) {
@@ -195,21 +199,9 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(
 
     // Read new segments from index
     if (num_segments > m_num_segments_read_from_index) {
-#if USE_PASSTHROUGH_COMPRESSION
-        streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
-#elif USE_ZSTD_COMPRESSION
-        streaming_compression::zstd::Decompressor segment_index_decompressor;
-#else
-        static_assert(false, "Unsupported compression mode.");
-#endif
-        segment_index_decompressor.open(
-                segment_index_file_reader,
-                cDecompressorFileReadBufferCapacity
-        );
         for (size_t i = m_num_segments_read_from_index; i < num_segments; ++i) {
-            read_segment_ids(segment_index_decompressor);
+            read_segment_ids();
         }
-        segment_index_decompressor.close();
     }
 }
 
@@ -277,17 +269,15 @@ void DictionaryReader<DictionaryIdType, EntryType>::get_entries_matching_wildcar
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryReader<DictionaryIdType, EntryType>::read_segment_ids(
-        streaming_compression::Decompressor& segment_index_decompressor
-) {
-    segment_id_t segment_id{};
-    segment_index_decompressor.read_numeric_value(segment_id, false);
+void DictionaryReader<DictionaryIdType, EntryType>::read_segment_ids() {
+    segment_id_t segment_id;
+    m_segment_index_decompressor.read_numeric_value(segment_id, false);
 
-    uint64_t num_ids{};
-    segment_index_decompressor.read_numeric_value(num_ids, false);
+    uint64_t num_ids;
+    m_segment_index_decompressor.read_numeric_value(num_ids, false);
     for (uint64_t i = 0; i < num_ids; ++i) {
-        DictionaryIdType id{};
-        segment_index_decompressor.read_numeric_value(id, false);
+        DictionaryIdType id;
+        m_segment_index_decompressor.read_numeric_value(id, false);
         if (id >= m_entries.size()) {
             throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
         }

@@ -1,5 +1,7 @@
 set(
         MAKE_DICTIONARIES_READABLE_SOURCES
+        ../dictionary_utils.cpp
+        ../dictionary_utils.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
         ../FileDescriptor.cpp

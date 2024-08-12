@@ -73,6 +73,7 @@ bool decompress(
                 }
 
                 archive_reader.open(archive_path.string());
+                archive_reader.refresh_dictionaries();
 
                 archive_reader.decompress_empty_directories(command_line_args.get_output_dir());
 

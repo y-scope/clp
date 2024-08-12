@@ -4,10 +4,10 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
 #include "ArrayBackedPosIntSet.hpp"
 #include "Defs.h"
+#include "dictionary_utils.hpp"
 #include "FileWriter.hpp"
 #include "spdlog_with_specializations.hpp"
 #include "streaming_compression/passthrough/Compressor.hpp"
@@ -240,9 +240,10 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
         ;
         m_data_size += entry.get_data_size();
     }
-    dictionary_decompressor.close();
 
     m_next_id = num_dictionary_entries;
+
+    dictionary_decompressor.close();
 
     m_dictionary_file_writer.open(
             dictionary_path,
