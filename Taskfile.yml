@@ -177,6 +177,7 @@ tasks:
     vars:
       SRC_DIR: "components/core"
     sources:
+      - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
@@ -379,6 +380,7 @@ tasks:
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
     sources:
+      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
       - "client/package.json"

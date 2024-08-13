@@ -1,6 +1,24 @@
 version: "3"
 vars:
+    # Utility script path
     G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/deps-download/download-dep.py"
+
+    # Target checksum files
+    G_DEPS_CORE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#core.md5"
+    G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#log-viewer.md5"
+
+    # Submodules checksum files
+    G_ABSEIL_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#abseil-cpp.md5"
+    G_ANTLR4_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#antlr4.md5"
+    G_CATCH2_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#Catch2.md5"
+    G_DATE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#date.md5"
+    G_JSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#json.md5"
+    G_LOG_SURGEON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#log-surgeon.md5"
+    G_OUTCOME_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#outcome.md5"
+    G_SIMDJSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#simdjson.md5"
+    G_SQLITE3_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#sqlite3.md5"
+    G_YAML_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yaml-cpp.md5"
+    G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yscope-log-viewer.md5"
 
 tasks:
   default:
@@ -9,6 +27,59 @@ tasks:
       - task: "log-viewer"
 
   core:
+    vars:
+    sources:
+      - "{{.G_ABSEIL_CPP_CHECKSUM_FILE}}"
+      - "{{.G_ANTLR4_CHECKSUM_FILE}}"
+      - "{{.G_CATCH2_CHECKSUM_FILE}}"
+      - "{{.G_DATE_CHECKSUM_FILE}}"
+      - "{{.G_JSON_CHECKSUM_FILE}}"
+      - "{{.G_LOG_SURGEON_CHECKSUM_FILE}}"
+      - "{{.G_OUTCOME_CHECKSUM_FILE}}"
+      - "{{.G_SIMDJSON_CHECKSUM_FILE}}"
+      - "{{.G_SQLITE3_CHECKSUM_FILE}}"
+      - "{{.G_YAML_CPP_CHECKSUM_FILE}}"
+    generates: ["{{.G_DEPS_CORE_CHECKSUM_FILE}}"]
+    deps: ["all-internal-deps"]
+    cmds:
+      - >-
+        cat
+        "{{.G_ABSEIL_CPP_CHECKSUM_FILE}}"
+        "{{.G_ANTLR4_CHECKSUM_FILE}}"
+        "{{.G_CATCH2_CHECKSUM_FILE}}"
+        "{{.G_DATE_CHECKSUM_FILE}}"
+        "{{.G_JSON_CHECKSUM_FILE}}"
+        "{{.G_LOG_SURGEON_CHECKSUM_FILE}}"
+        "{{.G_OUTCOME_CHECKSUM_FILE}}"
+        "{{.G_SIMDJSON_CHECKSUM_FILE}}"
+        "{{.G_SQLITE3_CHECKSUM_FILE}}"
+        "{{.G_YAML_CPP_CHECKSUM_FILE}}"
+        >> "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
+
+  log-viewer:
+    sources:
+      - "{{.G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE}}"
+    generates: ["{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"]
+    deps: ["all-internal-deps"]
+    cmds:
+      - >-
+        cat
+        "{{.G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE}}"
+        >> "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"  
+
+  # Note: due to the limitation of `git submodule update`, the submodules can not be
+  # downloaded in parallel. This poses two requirements for the design:
+  # 1. The submodule tasks can not be specified as a list of `deps`, because task always
+  # run `deps` targets in parallel.
+  # 2. We need to enforce higher level tasks, such as `core` and `log-viewer`, to not
+  # run their submodules download in parallel.
+  # As a solution, we define an `all-internal-deps` task, which:
+  # 1. uses `cmds` to sequentially download `ALL` submodules required by the clp-package.
+  # 2. uses `run: once`, so it only executes once even if multiple higher level targets depend on it
+  # All higher level tasks must depend on this task instead of depending on individual submodules' task.
+  all-internal-deps:
+    internal: true
+    run: once
     cmds:
       - task: "abseil-cpp"
       - task: "antlr4"
@@ -20,15 +91,12 @@ tasks:
       - task: "simdjson"
       - task: "sqlite3"
       - task: "yaml-cpp"
-
-  log-viewer:
-    cmds:
       - task: "yscope-log-viewer"
 
   abseil-cpp:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_ABSEIL_CPP_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/abseil-cpp"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -57,7 +125,7 @@ tasks:
   antlr4:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_ANTLR4_CHECKSUM_FILE}}"
       DEST_DIR: "{{.G_CORE_COMPONENT_DIR}}/third-party/antlr"
       DEST: "{{.DEST_DIR}}/antlr-4.13.1-complete.jar"
     sources:
@@ -86,7 +154,7 @@ tasks:
   Catch2:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_CATCH2_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/Catch2"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -114,7 +182,7 @@ tasks:
   date:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_DATE_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/date"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -142,7 +210,7 @@ tasks:
   json:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_JSON_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/json"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -170,7 +238,7 @@ tasks:
   log-surgeon:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_LOG_SURGEON_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/log-surgeon"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -198,7 +266,7 @@ tasks:
   outcome:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_OUTCOME_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/outcome"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -226,7 +294,7 @@ tasks:
   simdjson:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_SIMDJSON_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/simdjson"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -256,7 +324,7 @@ tasks:
   sqlite3:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_SQLITE3_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/sqlite3"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -284,7 +352,7 @@ tasks:
   yaml-cpp:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_YAML_CPP_CHECKSUM_FILE}}"
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/yaml-cpp"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
@@ -312,7 +380,7 @@ tasks:
   yscope-log-viewer:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      CHECKSUM_FILE: "{{.G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE}}"
       DEST: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
