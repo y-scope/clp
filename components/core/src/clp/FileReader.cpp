@@ -12,8 +12,7 @@
 using std::string;
 
 namespace clp {
-FileReader::FileReader(string const& path)
-        : m_file{fopen(path.c_str(), "rb")} {
+FileReader::FileReader(string const& path) : m_file{fopen(path.c_str(), "rb")} {
     if (nullptr == m_file) {
         if (ENOENT == errno) {
             throw OperationFailed(ErrorCode_FileNotFound, __FILE__, __LINE__);
