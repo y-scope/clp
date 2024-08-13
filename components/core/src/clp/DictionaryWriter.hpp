@@ -237,7 +237,6 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
         }
 
         m_value_to_id[str_value] = entry.get_id();
-        ;
         m_data_size += entry.get_data_size();
     }
 
