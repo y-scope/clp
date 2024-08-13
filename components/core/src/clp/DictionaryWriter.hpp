@@ -4,10 +4,10 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
 #include "ArrayBackedPosIntSet.hpp"
 #include "Defs.h"
+#include "dictionary_utils.hpp"
 #include "FileWriter.hpp"
 #include "spdlog_with_specializations.hpp"
 #include "streaming_compression/passthrough/Compressor.hpp"
@@ -214,7 +214,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     // Read dictionary header
-    uint64_t num_dictionary_entries{};
+    uint64_t num_dictionary_entries{0};
     if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
@@ -237,12 +237,12 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
         }
 
         m_value_to_id[str_value] = entry.get_id();
-        ;
         m_data_size += entry.get_data_size();
     }
-    dictionary_decompressor.close();
 
     m_next_id = num_dictionary_entries;
+
+    dictionary_decompressor.close();
 
     m_dictionary_file_writer.open(
             dictionary_path,

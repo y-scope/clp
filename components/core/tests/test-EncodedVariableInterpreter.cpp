@@ -439,6 +439,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         // Open reader
         clp::VariableDictionaryReader var_dict_reader;
         var_dict_reader.open(cVarDictPath, cVarSegmentIndexPath);
+        var_dict_reader.read_new_entries();
 
         // Test searching
         string search_logtype = "here is a string with a small int ";

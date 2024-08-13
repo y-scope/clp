@@ -119,6 +119,11 @@ void Archive::close() {
     m_path.clear();
 }
 
+void Archive::refresh_dictionaries() {
+    m_logtype_dictionary.read_new_entries();
+    m_var_dictionary.read_new_entries();
+}
+
 ErrorCode Archive::open_file(File& file, MetadataDB::FileIterator const& file_metadata_ix) {
     return file.open_me(m_logtype_dictionary, file_metadata_ix, m_segment_manager);
 }

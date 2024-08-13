@@ -1,5 +1,6 @@
 #include "VariableDictionaryWriter.hpp"
 
+#include "dictionary_utils.hpp"
 #include "spdlog_with_specializations.hpp"
 
 namespace clp {

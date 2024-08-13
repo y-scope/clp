@@ -173,6 +173,31 @@ static bool open_archive(string const& archive_path, Archive& archive_reader) {
         }
     }
 
+    try {
+        archive_reader.refresh_dictionaries();
+    } catch (TraceableException& e) {
+        error_code = e.get_error_code();
+        if (ErrorCode_errno == error_code) {
+            SPDLOG_ERROR(
+                    "Reading dictionaries failed: {}:{} {}, errno={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    errno
+            );
+            return false;
+        } else {
+            SPDLOG_ERROR(
+                    "Reading dictionaries failed: {}:{} {}, error_code={}",
+                    e.get_filename(),
+                    e.get_line_number(),
+                    e.what(),
+                    error_code
+            );
+            return false;
+        }
+    }
+
     return true;
 }
 

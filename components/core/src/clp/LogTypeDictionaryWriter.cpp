@@ -1,5 +1,7 @@
 #include "LogTypeDictionaryWriter.hpp"
 
+#include "dictionary_utils.hpp"
+
 using std::string;
 
 namespace clp {
