@@ -482,6 +482,7 @@ static bool search_archive(
 
     Archive archive_reader;
     archive_reader.open(archive_path.string());
+    archive_reader.refresh_dictionaries();
 
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();

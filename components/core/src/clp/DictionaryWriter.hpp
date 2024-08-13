@@ -214,7 +214,7 @@ void DictionaryWriter<DictionaryIdType, EntryType>::open_and_preload(
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     // Read dictionary header
-    uint64_t num_dictionary_entries{};
+    uint64_t num_dictionary_entries{0};
     if (false == dictionary_file_reader.read_numeric_value(num_dictionary_entries, false)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
