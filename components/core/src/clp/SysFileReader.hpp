@@ -3,7 +3,9 @@
 
 #include <sys/stat.h>
 
+#include <string>
 #include <string_view>
+#include <utility>
 
 #include "ErrorCode.hpp"
 #include "FileDescriptor.hpp"
@@ -11,6 +13,15 @@
 #include "TraceableException.hpp"
 
 namespace clp {
+/**
+ * Class for performing reads from an on-disk file directly using C style system call.
+ * Unlike reader classes using FILE stream interface, This class operates on raw fd and does not
+ * internally buffer any data. Instead, the user of this class is expected to buffer and read the
+ * data efficiently.
+ *
+ * Note: If you don't plan to handle the data buffering yourself, do not use this class. Use
+ * FileReader instead.
+ */
 class SysFileReader : public ReaderInterface {
 public:
     // Types
@@ -24,16 +35,14 @@ public:
         char const* what() const noexcept override { return "FileReader operation failed"; }
     };
 
-    SysFileReader(std::string_view const& path)
-            : m_fd{path, FileDescriptor::OpenMode::ReadOnly},
-              m_path{path} {}
+    explicit SysFileReader(std::string path)
+            : m_path{std::move(path)},
+              m_fd{m_path, FileDescriptor::OpenMode::ReadOnly} {}
 
-    // Explicitly disable copy constructor and assignment operator
+    // Explicitly disable copy and move constructor and assignment operator
     SysFileReader(SysFileReader const&) = delete;
     SysFileReader& operator=(SysFileReader const&) = delete;
-
-    // Move constructor and assignment operator
-    SysFileReader(SysFileReader&&);
+    SysFileReader(SysFileReader&&) = delete;
     SysFileReader& operator=(SysFileReader&&) = delete;
 
     // Methods implementing the ReaderInterface
@@ -76,8 +85,8 @@ public:
     [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode;
 
 private:
-    FileDescriptor m_fd;
     std::string m_path;
+    FileDescriptor m_fd;
 };
 }  // namespace clp
 

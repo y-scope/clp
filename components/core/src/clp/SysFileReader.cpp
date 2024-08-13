@@ -5,18 +5,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <cassert>
-#include <cerrno>
-
 #include <boost/filesystem.hpp>
 
 using std::string;
 
 namespace clp {
-SysFileReader::SysFileReader(SysFileReader&& other)
-        : m_fd{std::move(other.m_fd)},
-          m_path{std::move(other.m_path)} {}
-
 auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
         -> ErrorCode {
     if (nullptr == buf) {
@@ -58,7 +51,7 @@ auto SysFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
 
 auto SysFileReader::try_get_pos(size_t& pos) -> ErrorCode {
     pos = lseek(m_fd.get_raw_fd(), 0, SEEK_CUR);
-    if ((off_t)-1 == pos) {
+    if (static_cast<off_t>(-1) == pos) {
         return ErrorCode_errno;
     }
 
@@ -66,8 +59,7 @@ auto SysFileReader::try_get_pos(size_t& pos) -> ErrorCode {
 }
 
 auto SysFileReader::try_fstat(struct stat& stat_buffer) const -> ErrorCode {
-    auto return_value = fstat(m_fd.get_raw_fd(), &stat_buffer);
-    if (0 != return_value) {
+    if (auto const return_value = fstat(m_fd.get_raw_fd(), &stat_buffer); 0 != return_value) {
         return ErrorCode_errno;
     }
     return ErrorCode_Success;

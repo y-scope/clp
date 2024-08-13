@@ -47,13 +47,6 @@ FileDescriptor::~FileDescriptor() {
     }
 }
 
-FileDescriptor::FileDescriptor(FileDescriptor&& other)
-        : m_fd{other.m_fd},
-          m_open_mode{other.m_open_mode},
-          m_close_failure_callback{other.m_close_failure_callback} {
-    other.m_fd = -1;
-}
-
 auto FileDescriptor::get_size() const -> size_t {
     struct stat stat_result {};
 

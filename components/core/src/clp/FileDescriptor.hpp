@@ -62,11 +62,9 @@ public:
     // Destructor
     ~FileDescriptor();
 
-    // Move constructor
-    FileDescriptor(FileDescriptor&&);
-
-    // Disable copy constructors and move/copy assignment operators
+    // Disable copy/move constructors/assignment operators
     FileDescriptor(FileDescriptor const&) = delete;
+    FileDescriptor(FileDescriptor&&) = delete;
     auto operator=(FileDescriptor const&) -> FileDescriptor& = delete;
     auto operator=(FileDescriptor&&) -> FileDescriptor& = delete;
 

@@ -6,7 +6,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include "../glt/streaming_archive/writer/Archive.hpp"
 #include "math_utils.hpp"
 
 using std::string;
