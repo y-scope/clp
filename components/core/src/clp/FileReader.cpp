@@ -78,7 +78,8 @@ FileReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, 
     if (false == append) {
         str.clear();
     }
-    // Note: If `m_getdelim_buf` is a null pointer or if `m_getdelim_buf_len` is insufficient in
+
+    // NOTE: If `m_getdelim_buf` is a null pointer or if `m_getdelim_buf_len` is insufficient in
     // size, `getdelim` will malloc or realloc enough memory, respectively, to hold the characters.
     ssize_t num_bytes_read = getdelim(&m_getdelim_buf, &m_getdelim_buf_len, delim, m_file);
     if (num_bytes_read < 1) {
