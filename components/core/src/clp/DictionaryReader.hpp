@@ -133,13 +133,13 @@ void DictionaryReader<DictionaryIdType, EntryType>::open(
 
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
-    m_dictionary_file_reader = move(make_unique<FileReader>(dictionary_path));
+    m_dictionary_file_reader = make_unique<FileReader>(dictionary_path);
 
     // Skip header and then open the decompressor
     m_dictionary_file_reader->seek_from_begin(sizeof(uint64_t));
     m_dictionary_decompressor.open(*m_dictionary_file_reader, cDecompressorFileReadBufferCapacity);
 
-    m_segment_index_file_reader = move(make_unique<FileReader>(segment_index_path));
+    m_segment_index_file_reader = make_unique<FileReader>(segment_index_path);
 
     // Skip header and then open the decompressor
     m_segment_index_file_reader->seek_from_begin(sizeof(uint64_t));

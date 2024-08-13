@@ -81,9 +81,9 @@ public:
     ErrorCode try_fstat(struct stat& stat_buffer);
 
 private:
-    FILE* m_file;
-    size_t m_getdelim_buf_len;
-    char* m_getdelim_buf;
+    FILE* m_file{nullptr};
+    size_t m_getdelim_buf_len{0};
+    char* m_getdelim_buf{nullptr};
     std::string m_path;
 };
 }  // namespace clp
