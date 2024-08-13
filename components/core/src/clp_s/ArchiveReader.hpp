@@ -10,9 +10,9 @@
 #include <boost/filesystem.hpp>
 
 #include "DictionaryReader.hpp"
+#include "PackedStreamReader.hpp"
 #include "ReaderUtils.hpp"
 #include "SchemaReader.hpp"
-#include "TableReader.hpp"
 #include "TimestampDictionaryReader.hpp"
 #include "Utils.hpp"
 
@@ -176,16 +176,16 @@ private:
     );
 
     /**
-     * Reads a table with given ID from the table reader. If read_table is called multiple times in
-     * a row for the same table_id a cached buffer is returned. This function allows the caller to
+     * Reads a table with given ID from the table reader. If read_stream is called multiple times in
+     * a row for the same stream_id a cached buffer is returned. This function allows the caller to
      * ask for the same buffer to be reused to read multiple different tables: this can save memory
      * allocations, but can only be used when tables are read one at a time.
-     * @param table_id
+     * @param stream_id
      * @param reuse_buffer when true the same buffer is reused across invocations, overwriting data
-     * returned previous calls to read_table
-     * @return a buffer containing the decompressed table identified by table_id
+     * returned previous calls to read_stream
+     * @return a buffer containing the decompressed stream identified by stream_id
      */
-    std::shared_ptr<char[]> read_table(size_t table_id, bool reuse_buffer);
+    std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
 
     bool m_is_open;
     std::string m_archive_id;
@@ -199,13 +199,13 @@ private:
     std::vector<int32_t> m_schema_ids;
     std::map<int32_t, SchemaReader::SchemaMetadata> m_id_to_schema_metadata;
 
-    TableReader m_table_reader;
+    PackedStreamReader m_stream_reader;
     FileReader m_table_metadata_file_reader;
     ZstdDecompressor m_table_metadata_decompressor;
     SchemaReader m_schema_reader;
-    std::shared_ptr<char[]> m_table_buffer{};
-    size_t m_table_buffer_size{0ULL};
-    size_t m_cur_table_id{0ULL};
+    std::shared_ptr<char[]> m_stream_buffer{};
+    size_t m_stream_buffer_size{0ULL};
+    size_t m_cur_stream_id{0ULL};
 };
 }  // namespace clp_s
 

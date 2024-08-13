@@ -28,7 +28,7 @@ void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
     m_schema_map = ReaderUtils::read_schemas(archive_path_str);
 
     m_table_metadata_file_reader.open(archive_path_str + constants::cArchiveTableMetadataFile);
-    m_table_reader.open_tables(archive_path_str + constants::cArchiveTablesFile);
+    m_stream_reader.open_packed_streams(archive_path_str + constants::cArchiveTablesFile);
 }
 
 void ArchiveReader::read_metadata() {
@@ -38,7 +38,7 @@ void ArchiveReader::read_metadata() {
             cDecompressorFileReadBufferCapacity
     );
 
-    m_table_reader.read_metadata(m_table_metadata_decompressor);
+    m_stream_reader.read_metadata(m_table_metadata_decompressor);
 
     size_t num_schemas;
     if (auto error = m_table_metadata_decompressor.try_read_numeric_value(num_schemas);
@@ -51,24 +51,24 @@ void ArchiveReader::read_metadata() {
     SchemaReader::SchemaMetadata prev_metadata{};
     int32_t prev_schema_id{};
     for (size_t i = 0; i < num_schemas; ++i) {
-        size_t table_id;
-        size_t table_offset;
+        size_t stream_id;
+        size_t stream_offset;
         int32_t schema_id;
         size_t num_messages;
 
-        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(table_id);
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(stream_id);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(table_offset);
+        if (auto error = m_table_metadata_decompressor.try_read_numeric_value(stream_offset);
             ErrorCodeSuccess != error)
         {
             throw OperationFailed(error, __FILENAME__, __LINE__);
         }
 
-        if (table_offset > m_table_reader.get_uncompressed_table_size(table_id)) {
+        if (stream_offset > m_stream_reader.get_uncompressed_stream_size(stream_id)) {
             throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
         }
 
@@ -86,25 +86,25 @@ void ArchiveReader::read_metadata() {
 
         if (prev_metadata_initialized) {
             size_t uncompressed_size{0};
-            if (table_id != prev_metadata.table_id) {
+            if (stream_id != prev_metadata.stream_id) {
                 uncompressed_size
-                        = m_table_reader.get_uncompressed_table_size(prev_metadata.table_id)
-                          - prev_metadata.table_offset;
+                        = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
+                          - prev_metadata.stream_offset;
             } else {
-                uncompressed_size = table_offset - prev_metadata.table_offset;
+                uncompressed_size = stream_offset - prev_metadata.stream_offset;
             }
             prev_metadata.uncompressed_size = uncompressed_size;
             m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
         } else {
             prev_metadata_initialized = true;
         }
-        prev_metadata = {table_id, table_offset, num_messages, 0};
+        prev_metadata = {stream_id, stream_offset, num_messages, 0};
         prev_schema_id = schema_id;
         m_schema_ids.push_back(schema_id);
     }
     prev_metadata.uncompressed_size
-            = m_table_reader.get_uncompressed_table_size(prev_metadata.table_id)
-              - prev_metadata.table_offset;
+            = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
+              - prev_metadata.stream_offset;
     m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
     m_table_metadata_decompressor.close();
 }
@@ -134,9 +134,9 @@ SchemaReader& ArchiveReader::read_schema_table(
     );
 
     auto& schema_metadata = m_id_to_schema_metadata[schema_id];
-    auto table_buffer = read_table(schema_metadata.table_id, true);
+    auto stream_buffer = read_stream(schema_metadata.stream_id, true);
     m_schema_reader
-            .load(table_buffer, schema_metadata.table_offset, schema_metadata.uncompressed_size);
+            .load(stream_buffer, schema_metadata.stream_offset, schema_metadata.uncompressed_size);
     return m_schema_reader;
 }
 
@@ -147,10 +147,10 @@ std::vector<std::shared_ptr<SchemaReader>> ArchiveReader::read_all_tables() {
         auto schema_reader = std::make_shared<SchemaReader>();
         initialize_schema_reader(*schema_reader, schema_id, true, true);
         auto& schema_metadata = m_id_to_schema_metadata[schema_id];
-        auto table_buffer = read_table(schema_metadata.table_id, false);
+        auto stream_buffer = read_stream(schema_metadata.stream_id, false);
         schema_reader->load(
-                table_buffer,
-                schema_metadata.table_offset,
+                stream_buffer,
+                schema_metadata.stream_offset,
                 schema_metadata.uncompressed_size
         );
         readers.push_back(std::move(schema_reader));
@@ -325,28 +325,28 @@ void ArchiveReader::close() {
     m_array_dict->close();
     m_timestamp_dict->close();
 
-    m_table_reader.close();
+    m_stream_reader.close();
     m_table_metadata_file_reader.close();
 
     m_id_to_schema_metadata.clear();
     m_schema_ids.clear();
-    m_cur_table_id = 0;
-    m_table_buffer.reset();
-    m_table_buffer_size = 0ULL;
+    m_cur_stream_id = 0;
+    m_stream_buffer.reset();
+    m_stream_buffer_size = 0ULL;
 }
 
-std::shared_ptr<char[]> ArchiveReader::read_table(size_t table_id, bool reuse_buffer) {
-    if (nullptr != m_table_buffer && m_cur_table_id == table_id) {
-        return m_table_buffer;
+std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_buffer) {
+    if (nullptr != m_stream_buffer && m_cur_stream_id == stream_id) {
+        return m_stream_buffer;
     }
 
     if (false == reuse_buffer) {
-        m_table_buffer.reset();
-        m_table_buffer_size = 0;
+        m_stream_buffer.reset();
+        m_stream_buffer_size = 0;
     }
 
-    m_table_reader.read_table(table_id, m_table_buffer, m_table_buffer_size);
-    m_cur_table_id = table_id;
-    return m_table_buffer;
+    m_stream_reader.read_stream(stream_id, m_stream_buffer, m_stream_buffer_size);
+    m_cur_stream_id = stream_id;
+    return m_stream_buffer;
 }
 }  // namespace clp_s

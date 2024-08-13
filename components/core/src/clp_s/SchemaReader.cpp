@@ -38,12 +38,12 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
 }
 
 void SchemaReader::load(
-        std::shared_ptr<char[]> table_buffer,
+        std::shared_ptr<char[]> stream_buffer,
         size_t offset,
         size_t uncompressed_size
 ) {
-    m_table_buffer = table_buffer;
-    BufferViewReader buffer_reader{m_table_buffer.get() + offset, uncompressed_size};
+    m_stream_buffer = stream_buffer;
+    BufferViewReader buffer_reader{m_stream_buffer.get() + offset, uncompressed_size};
     for (auto& reader : m_columns) {
         reader->load(buffer_reader, m_num_messages);
     }

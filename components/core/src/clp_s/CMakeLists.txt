@@ -65,6 +65,8 @@ set(
         JsonParser.cpp
         JsonParser.hpp
         JsonSerializer.hpp
+        PackedStreamReader.cpp
+        PackedStreamReader.hpp
         ParsedMessage.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
@@ -78,8 +80,6 @@ set(
         SchemaTree.hpp
         SchemaWriter.cpp
         SchemaWriter.hpp
-        TableReader.cpp
-        TableReader.hpp
         TimestampDictionaryReader.cpp
         TimestampDictionaryReader.hpp
         TimestampDictionaryWriter.cpp
