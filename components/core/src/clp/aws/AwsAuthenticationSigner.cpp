@@ -9,10 +9,10 @@
 #include <boost/regex.hpp>
 #include <fmt/chrono.h>
 #include <fmt/format.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../ErrorCode.hpp"
 #include "../hash_utils.hpp"
-#include "../string_utils/string_utils.hpp"
 #include "../type_utils.hpp"
 #include "constants.hpp"
 
@@ -173,17 +173,16 @@ S3Url::S3Url(string const& url) {
     };
 
     boost::smatch match;
-    string end_point;
     if (boost::regex_match(url, match, host_style_url_regex)) {
         m_region = match["region"];
         m_bucket = match["bucket"];
         m_key = match["key"];
-        end_point = match["endpoint"];
+        m_end_point = match["endpoint"];
     } else if (boost::regex_match(url, match, path_style_url_regex)) {
         m_region = match["region"];
         m_bucket = match["bucket"];
         m_key = match["key"];
-        end_point = match["endpoint"];
+        m_end_point = match["endpoint"];
     } else {
         throw OperationFailed(
                 ErrorCode_BadParam,
@@ -193,19 +192,19 @@ S3Url::S3Url(string const& url) {
         );
     }
 
-    if ("amazonaws.com" != end_point) {
+    if (cAwsEndpoint != m_end_point) {
         throw OperationFailed(
                 ErrorCode_BadParam,
                 __FILENAME__,
                 __LINE__,
-                "Invalid S3 endpoint: " + end_point
+                "Invalid S3 endpoint: " + m_end_point
         );
     }
 
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, end_point);
+    m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, m_end_point);
 }
 
 auto AwsAuthenticationSigner::generate_presigned_url(

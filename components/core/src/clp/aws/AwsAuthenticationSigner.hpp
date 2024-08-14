@@ -53,6 +53,7 @@ public:
 
 private:
     std::string m_region;
+    std::string m_end_point;
     std::string m_bucket;
     std::string m_key;
     std::string m_host;

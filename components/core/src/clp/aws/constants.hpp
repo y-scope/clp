@@ -4,6 +4,9 @@
 #include <string_view>
 
 namespace clp::aws {
+// Endpoint
+constexpr std::string_view cAwsEndpoint{"amazonaws.com"};
+
 // Query String Parameter Names
 constexpr std::string_view cXAmzAlgorithm{"X-Amz-Algorithm"};
 constexpr std::string_view cXAmzCredential{"X-Amz-Credential"};
