@@ -410,6 +410,8 @@ set(SOURCE_FILES_unitTest
         src/clp/SQLiteDB.hpp
         src/clp/SQLitePreparedStatement.cpp
         src/clp/SQLitePreparedStatement.hpp
+        src/clp/SysFileReader.cpp
+        src/clp/SysFileReader.hpp
         src/clp/Stopwatch.cpp
         src/clp/Stopwatch.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
@@ -495,6 +497,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
+        tests/test-SysFileReader.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
