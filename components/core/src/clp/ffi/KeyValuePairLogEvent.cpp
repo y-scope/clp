@@ -121,9 +121,7 @@ auto validate_node_id_value_pairs(
             auto const parent_node_id{node.get_parent_id()};
             auto const key_name{node.get_key_name()};
             if (parent_node_id_to_key_names.contains(parent_node_id)) {
-                if (parent_node_id_to_key_names.at(parent_node_id)
-                            .contains({key_name.begin(), key_name.end()}))
-                {
+                if (parent_node_id_to_key_names.at(parent_node_id).contains(key_name)) {
                     // Explicit key conflict: the key is duplicated under the same parent
                     ret_val.emplace(std::errc::protocol_not_supported);
                     break;
