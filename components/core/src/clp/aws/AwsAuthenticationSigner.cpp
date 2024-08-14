@@ -25,9 +25,8 @@ using std::vector;
 namespace clp::aws {
 namespace {
 /**
- * Checks if the input is an unreserved character specified by AWS Signature Version 4 format.
  * @param c
- * @return Whther`c` is an unreserved character.
+ * @return Whether `c` is an unreserved character AWS Signature Version 4 protocol specifies.
  */
 [[nodiscard]] auto is_unreserved_characters(char c) -> bool;
 
@@ -67,7 +66,7 @@ namespace {
 /**
  * Encodes the Canonical URI as specified by AWS Signature Version 4's UriEncode.
  * @param uri
- * @param encode_slash
+ * @param encode_forward_slash Whether to encode forward slash '/' as hex digits.
  * @return The encoded URI.
  */
 [[nodiscard]] auto encode_uri(string_view uri, bool encode_forward_slash) -> string;
@@ -163,15 +162,15 @@ auto get_canonical_request(S3Url const& url, string_view query_string) -> string
 
 S3Url::S3Url(string const& url) {
     // Virtual-hosted-style HTTP URL format: https://[bucket].s3.[region].[endpoint]/[key]
-    boost::regex const host_style_url_regex(
+    boost::regex const host_style_url_regex{
             R"(https://(?<bucket>[a-z0-9.-]+)\.s3(\.(?<region>[a-z0-9-]+))?)"
             R"(\.(?<endpoint>[a-z0-9.-]+)/(?<key>[^?]+).*)"
-    );
+    };
     // Path-style HTTP URL format: https://s3.[region].[endpoint]/[bucket]/[key]
-    boost::regex const path_style_url_regex(
+    boost::regex const path_style_url_regex{
             R"(https://s3(\.(?<region>[a-z0-9-]+))?)"
             R"(\.(?<endpoint>[a-z0-9.-]+)/(?<bucket>[a-z0-9.-]+)/(?<key>[^?]+).*)"
-    );
+    };
 
     boost::smatch match;
     string end_point;
@@ -279,8 +278,6 @@ auto AwsAuthenticationSigner::get_signing_key(
     auto const key = fmt::format("{}{}", cAws4, m_secret_access_key);
 
     vector<unsigned char> date_key;
-    vector<unsigned char> date_region_key;
-    vector<unsigned char> date_region_service_key;
     if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(date.data()), date.size()},
                 {size_checked_pointer_cast<unsigned char const>(key.data()), key.size()},
@@ -291,6 +288,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
+    vector<unsigned char> date_region_key;
     if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(region.data()), region.size()},
                 {size_checked_pointer_cast<unsigned char const>(date_key.data()), date_key.size()},
@@ -301,6 +299,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         return error_code;
     }
 
+    vector<unsigned char> date_region_service_key;
     if (auto const error_code = get_hmac_sha256_hash(
                 {size_checked_pointer_cast<unsigned char const>(cS3Service.data()),
                  cS3Service.size()},
