@@ -487,20 +487,6 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE((std::errc::protocol_not_supported == result.error()));
     }
 
-    // Test for out of bound node ID
-    KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs_out_of_bound;
-    node_id_value_pairs_out_of_bound.emplace(
-            static_cast<SchemaTreeNode::id_t>(schema_tree->get_size()),
-            Value{}
-    );
-    auto const out_of_bound_result{KeyValuePairLogEvent::create(
-            schema_tree,
-            std::move(node_id_value_pairs_out_of_bound),
-            UtcOffset{0}
-    )};
-    REQUIRE(out_of_bound_result.has_error());
-    REQUIRE((std::errc::operation_not_permitted == out_of_bound_result.error()));
-
     // Test for implicit key conflicts
     {
         auto implicit_conflict_pairs{clone_node_id_value_pairs(valid_node_id_value_pairs)};
@@ -526,4 +512,18 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE(result.has_error());
         REQUIRE((std::errc::protocol_not_supported == result.error()));
     }
+
+    // Test for out of bound node ID
+    KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs_out_of_bound;
+    node_id_value_pairs_out_of_bound.emplace(
+            static_cast<SchemaTreeNode::id_t>(schema_tree->get_size()),
+            Value{}
+    );
+    auto const out_of_bound_result{KeyValuePairLogEvent::create(
+            schema_tree,
+            std::move(node_id_value_pairs_out_of_bound),
+            UtcOffset{0}
+    )};
+    REQUIRE(out_of_bound_result.has_error());
+    REQUIRE((std::errc::operation_not_permitted == out_of_bound_result.error()));
 }
