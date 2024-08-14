@@ -61,18 +61,6 @@ public:
     void write_header_and_flush_to_disk();
 
     /**
-     * Opens dictionary, loads entries, and then sets it up for writing
-     * @param dictionary_path
-     * @param segment_index_path
-     * @param max_id
-     */
-    void open_and_preload(
-            std::string const& dictionary_path,
-            std::string const& segment_index_path,
-            variable_dictionary_id_t max_id
-    );
-
-    /**
      * Adds the given segment and IDs to the segment index
      * @param segment_id
      * @param ids
