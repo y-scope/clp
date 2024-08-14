@@ -339,6 +339,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/WildcardToken.hpp
         src/clp/ffi/utils.cpp
         src/clp/ffi/utils.hpp
+        src/clp/ffi/Value.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
         src/clp/FileReader.cpp
@@ -477,6 +478,7 @@ set(SOURCE_FILES_unitTest
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-ffi_SchemaTree.cpp
+        tests/test-ffi_Value.cpp
         tests/test-Grep.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp

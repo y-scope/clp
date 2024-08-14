@@ -198,8 +198,8 @@ bool read_and_validate_grouped_file_list(
     unique_ptr<FileReader> grouped_file_path_reader;
     try {
         grouped_file_path_reader = make_unique<FileReader>(list_path);
-    } catch (FileReader::OperationFailed const& err) {
-        auto const error_code = err.get_error_code();
+    } catch (FileReader::OperationFailed const& exception) {
+        auto const error_code = exception.get_error_code();
         if (ErrorCode_FileNotFound == error_code) {
             SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
         } else if (ErrorCode_errno == error_code) {
@@ -214,8 +214,8 @@ bool read_and_validate_grouped_file_list(
     string grouped_file_ids_path = list_path.substr(0, list_path.length() - 4) + ".gid";
     try {
         grouped_file_id_reader = make_unique<FileReader>(grouped_file_ids_path);
-    } catch (FileReader::OperationFailed const& err) {
-        auto const error_code = err.get_error_code();
+    } catch (FileReader::OperationFailed const& exception) {
+        auto const error_code = exception.get_error_code();
         if (ErrorCode_FileNotFound == error_code) {
             SPDLOG_ERROR("'{}' does not exist.", grouped_file_ids_path.c_str());
         } else if (ErrorCode_errno == error_code) {
