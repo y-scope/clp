@@ -15,10 +15,12 @@
 
 namespace clp::ffi {
 /**
- * Class for key-value pair log events. Each key-value pair log event contains the following items:
- *  - A list of key-value pairs
- *  - A reference to the schema tree
- *  - The UTC offset of the current log event
+ * A log event containing key-value pairs. Each event contains:
+ *  - A collection of node-id & value pairs, where each pair represents a leaf `SchemaTreeNode` in
+ *    the `SchemaTree`.
+ *   `SchemaTree` and the key is the node's ID.
+ * - A reference to the `SchemaTree`
+ * - The UTC offset of the current log event
  */
 class KeyValuePairLogEvent {
 public:
@@ -27,14 +29,13 @@ public:
 
     // Factory functions
     /**
-     * Creates a key-value pair log event from valid given inputs.
      * @param schema_tree
      * @param kv_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
      * failure:
-     * - std::errc::operation_not_permitted if the key ID doesn't represent a valid node in the
-     *   schema tree.
+     * - std::errc::operation_not_permitted if a key ID doesn't represent a valid node in the schema
+     *   tree.
      * - std::errc::protocol_error if the schema tree node type doesn't match the value's type.
      * - std::errc::protocol_not_supported if the same key appears more than once under a parent
      *   node.

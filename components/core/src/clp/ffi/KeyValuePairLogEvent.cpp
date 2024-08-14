@@ -64,7 +64,7 @@ auto KeyValuePairLogEvent::create(
             auto const& node{schema_tree->get_node(key_id)};
             auto const type{node.get_type()};
             if (false == value.has_value()) {
-                // Empty value
+                // Value is an empty object (`{}`, which is not the same as `null`)
                 if (SchemaTreeNode::Type::Obj != type) {
                     return std::errc::protocol_error;
                 }
