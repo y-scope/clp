@@ -159,7 +159,7 @@ auto is_leaf_node(
 }  // namespace
 
 auto KeyValuePairLogEvent::create(
-        std::shared_ptr<SchemaTree> schema_tree,
+        std::shared_ptr<SchemaTree const> schema_tree,
         NodeIdValuePairs node_id_value_pairs,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {

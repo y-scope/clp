@@ -41,7 +41,7 @@ public:
      *   node.
      */
     [[nodiscard]] static auto create(
-            std::shared_ptr<SchemaTree> schema_tree,
+            std::shared_ptr<SchemaTree const> schema_tree,
             NodeIdValuePairs node_id_value_pairs,
             UtcOffset utc_offset
     ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
@@ -69,7 +69,7 @@ public:
 private:
     // Constructor
     KeyValuePairLogEvent(
-            std::shared_ptr<SchemaTree> schema_tree,
+            std::shared_ptr<SchemaTree const> schema_tree,
             NodeIdValuePairs node_id_value_pairs,
             UtcOffset utc_offset
     )
@@ -78,7 +78,7 @@ private:
               m_utc_offset{utc_offset} {}
 
     // Variables
-    std::shared_ptr<SchemaTree> m_schema_tree;
+    std::shared_ptr<SchemaTree const> m_schema_tree;
     NodeIdValuePairs m_node_id_value_pairs;
     UtcOffset m_utc_offset{0};
 };
