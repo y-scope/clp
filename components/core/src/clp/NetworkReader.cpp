@@ -200,6 +200,7 @@ auto NetworkReader::buffer_downloaded_data(NetworkReader::BufferView data) -> si
 auto NetworkReader::DownloaderThread::thread_method() -> void {
     try {
         CurlDownloadHandler curl_handler{
+                {m_reader.m_curl_error_msg_buf.begin(), m_reader.m_curl_error_msg_buf.end()},
                 curl_progress_callback,
                 curl_write_callback,
                 static_cast<void*>(&m_reader),

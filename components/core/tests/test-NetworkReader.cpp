@@ -40,8 +40,10 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size = cDefaultRe
  * of the current test and logs the error code.
  * @parma expected
  * @param actual
+ * @param reader
  */
-auto assert_curl_error_code(CURLcode expected, CURLcode actual) -> void;
+auto assert_curl_error_code(CURLcode expected, CURLcode actual, clp::NetworkReader const& reader)
+        -> void;
 
 auto get_test_input_local_path() -> std::string {
     std::filesystem::path const current_file_path{__FILE__};
@@ -73,13 +75,16 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
     return buf;
 }
 
-auto assert_curl_error_code(CURLcode expected, CURLcode actual) -> void {
+auto assert_curl_error_code(CURLcode expected, CURLcode actual, clp::NetworkReader const& reader)
+        -> void {
     if (expected == actual) {
         return;
     }
+    auto const error_msg{reader.get_curl_error_msg()};
+    REQUIRE(error_msg.has_value());
     std::string const error_message{
-            "Unexpected CURL error code: " + std::to_string(actual)
-            + "; expected: " + std::to_string(expected)
+            "Unexpected CURL error code: " + std::to_string(actual) + "; expected: "
+            + std::to_string(expected) + "\nError message:\n" + std::string{error_msg.value()}
     };
     FAIL(error_message);
 }
@@ -95,7 +100,7 @@ TEST_CASE("network_reader_basic", "[NetworkReader]") {
     auto const ret_code{reader.get_curl_ret_code()};
     REQUIRE(ret_code.has_value());
     // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-    assert_curl_error_code(CURLE_OK, ret_code.value());
+    assert_curl_error_code(CURLE_OK, ret_code.value(), reader);
     REQUIRE((actual == expected));
 }
 
@@ -114,7 +119,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
         auto const ret_code{reader.get_curl_ret_code()};
         REQUIRE(ret_code.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        assert_curl_error_code(CURLE_OK, ret_code.value());
+        assert_curl_error_code(CURLE_OK, ret_code.value(), reader);
         REQUIRE((reader.get_pos() == ref_end_pos));
         REQUIRE((actual == expected));
     }
@@ -128,7 +133,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
         auto const ret_code{reader.get_curl_ret_code()};
         REQUIRE(ret_code.has_value());
         // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        assert_curl_error_code(CURLE_OK, ret_code.value());
+        assert_curl_error_code(CURLE_OK, ret_code.value(), reader);
         REQUIRE((reader.get_pos() == ref_end_pos));
         REQUIRE((actual == expected));
     }
@@ -169,7 +174,7 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     while (true) {
         auto const ret_code{reader.get_curl_ret_code()};
         if (ret_code.has_value()) {
-            assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, ret_code.value());
+            assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, ret_code.value(), reader);
             size_t pos{};
             REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
             break;

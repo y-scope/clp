@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <span>
 #include <string_view>
 
 #include <curl/curl.h>
@@ -37,6 +38,9 @@ public:
 
     // Constructor
     /**
+     * @param error_msg_buf A non-empty buffer to store error messages. The buffer must be at least
+     * `CURL_ERROR_SIZE` long.
+     * Doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
      * @param progress_callback
      * @param write_callback
      * @param arg Argument to pass to `progress_callback` and `write_callback`
@@ -49,6 +53,7 @@ public:
      * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
      */
     explicit CurlDownloadHandler(
+            std::span<char> error_msg_buf,
             ProgressCallback progress_callback,
             WriteCallback write_callback,
             void* arg,

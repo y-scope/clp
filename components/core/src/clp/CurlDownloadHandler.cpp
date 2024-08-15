@@ -1,14 +1,20 @@
 #include "CurlDownloadHandler.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <span>
 #include <string>
 #include <string_view>
 
 #include <curl/curl.h>
 
+#include "CurlOperationFailed.hpp"
+#include "ErrorCode.hpp"
+
 namespace clp {
 CurlDownloadHandler::CurlDownloadHandler(
+        std::span<char> error_msg_buf,
         ProgressCallback progress_callback,
         WriteCallback write_callback,
         void* arg,
@@ -18,6 +24,22 @@ CurlDownloadHandler::CurlDownloadHandler(
         std::chrono::seconds connection_timeout,
         std::chrono::seconds overall_timeout
 ) {
+    if (error_msg_buf.empty() || nullptr == error_msg_buf.data()
+        || error_msg_buf.size() < CURL_ERROR_SIZE)
+    {
+        throw CurlOperationFailed(
+                ErrorCode_Failure,
+                __FILE__,
+                __LINE__,
+                CURLE_FAILED_INIT,
+                "Invalid CURL error message buffer."
+        );
+    }
+
+    // Set up error message buffer
+    std::fill(error_msg_buf.begin(), error_msg_buf.end(), static_cast<char>(0));
+    m_easy_handle.set_option(CURLOPT_ERRORBUFFER, error_msg_buf.data());
+
     // Set up src url
     m_easy_handle.set_option(CURLOPT_URL, src_url.data());
 
