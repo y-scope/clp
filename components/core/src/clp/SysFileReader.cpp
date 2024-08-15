@@ -24,7 +24,7 @@ auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_by
         if (bytes_read < 0) {
             return ErrorCode_errno;
         }
-
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         buf += bytes_read;
         num_bytes_read += bytes_read;
         num_bytes_to_read -= bytes_read;
