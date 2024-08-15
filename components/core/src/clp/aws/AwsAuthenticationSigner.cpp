@@ -1,9 +1,8 @@
 #include "AwsAuthenticationSigner.hpp"
 
-#include <cctype>
 #include <chrono>
-#include <regex>
-#include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/regex.hpp>
@@ -172,13 +171,9 @@ S3Url::S3Url(string const& url) {
             R"(\.(?<endpoint>[a-z0-9.-]+)/(?<bucket>[a-z0-9.-]+)/(?<key>[^?]+).*)"
     };
 
-    boost::smatch match;
-    if (boost::regex_match(url, match, host_style_url_regex)) {
-        m_region = match["region"];
-        m_bucket = match["bucket"];
-        m_key = match["key"];
-        m_end_point = match["endpoint"];
-    } else if (boost::regex_match(url, match, path_style_url_regex)) {
+    if (boost::smatch match; boost::regex_match(url, match, host_style_url_regex)
+                             || boost::regex_match(url, match, path_style_url_regex))
+    {
         m_region = match["region"];
         m_bucket = match["bucket"];
         m_key = match["key"];
