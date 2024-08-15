@@ -3,6 +3,7 @@
 
 #include <sys/stat.h>
 
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -32,7 +33,9 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override { return "FileReader operation failed"; }
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return "FileReader operation failed";
+        }
     };
 
     explicit SysFileReader(std::string path)
@@ -41,11 +44,14 @@ public:
 
     // Explicitly disable copy constructor and assignment operator
     SysFileReader(SysFileReader const&) = delete;
-    SysFileReader& operator=(SysFileReader const&) = delete;
+    auto operator=(SysFileReader const&) -> SysFileReader& = delete;
 
     // Explicitly disable move constructor and assignment operator
     SysFileReader(SysFileReader&&) = delete;
-    SysFileReader& operator=(SysFileReader&&) = delete;
+    auto operator=(SysFileReader&&) -> SysFileReader& = delete;
+
+    // Destructor
+    ~SysFileReader() override = default;
 
     // Methods implementing the ReaderInterface
     /**

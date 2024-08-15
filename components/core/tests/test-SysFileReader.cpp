@@ -1,5 +1,4 @@
 #include <cstddef>
-#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -77,6 +76,6 @@ TEST_CASE("sys_file_reader_with_offset_and_seek", "[SysFileReader]") {
     auto const actual{get_content(reader)};
     auto const actual_end_pos{reader.get_pos()};
 
-    REQUIRE(actual_end_pos == ref_end_pos);
+    REQUIRE((actual_end_pos == ref_end_pos));
     REQUIRE((actual == expected));
 }

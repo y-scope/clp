@@ -1,8 +1,10 @@
 #include "SysFileReader.hpp"
 
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
+
+#include <cstddef>
+#include <cstdio>
 
 #include "ErrorCode.hpp"
 
