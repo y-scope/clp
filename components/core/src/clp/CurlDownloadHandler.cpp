@@ -1,6 +1,5 @@
 #include "CurlDownloadHandler.hpp"
 
-#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <span>
@@ -37,7 +36,10 @@ CurlDownloadHandler::CurlDownloadHandler(
     }
 
     // Set up error message buffer
-    std::fill(error_msg_buf.begin(), error_msg_buf.end(), static_cast<char>(0));
+    // According to the doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
+    // A successful call of setting `CURLOPT_ERRORBUFFER` will initialize the buffer to an empty
+    // string since 7.60.0. The minimum version we require is 7.68.0. Therefore, we don't need to
+    // manually clean up the passed-in buffer.
     m_easy_handle.set_option(CURLOPT_ERRORBUFFER, error_msg_buf.data());
 
     // Set up src url
