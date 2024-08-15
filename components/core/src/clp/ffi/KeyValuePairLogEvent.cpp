@@ -1,7 +1,6 @@
 #include "KeyValuePairLogEvent.hpp"
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -37,7 +36,7 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
  * sub-tree of their own.
  * @param schema_tree
  * @param node_id_value_pairs
- * @return `std::nullopt` if the inputs are valid, or an error code indicating the failure:
+ * @return success if the inputs are valid, or an error code indicating the failure:
  * - std::errc::operation_not_permitted if a node ID doesn't represent a valid node in the
  *   schema tree, or a non-leaf node ID is paired with a value.
  * - std::errc::protocol_error if the schema tree node type doesn't match the value's type.
@@ -47,7 +46,7 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
 [[nodiscard]] auto validate_node_id_value_pairs(
         SchemaTree const& schema_tree,
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
-) -> std::optional<std::errc>;
+) -> std::errc;
 
 /**
  * @param schema_tree
@@ -86,15 +85,13 @@ auto node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value)
 auto validate_node_id_value_pairs(
         SchemaTree const& schema_tree,
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
-) -> std::optional<std::errc> {
-    std::optional<std::errc> ret_val;
-    std::unordered_map<SchemaTreeNode::id_t, std::unordered_set<std::string_view>>
-            parent_node_id_to_key_names;
+) -> std::errc {
     try {
+        std::unordered_map<SchemaTreeNode::id_t, std::unordered_set<std::string_view>>
+                parent_node_id_to_key_names;
         for (auto const& [node_id, value] : node_id_value_pairs) {
             if (SchemaTree::cRootId == node_id) {
-                ret_val.emplace(std::errc::operation_not_permitted);
-                break;
+                return std::errc::operation_not_permitted;
             }
 
             auto const& node{schema_tree.get_node(node_id)};
@@ -102,12 +99,10 @@ auto validate_node_id_value_pairs(
             if (false == value.has_value()) {
                 // Value is an empty object (`{}`, which is not the same as `null`)
                 if (SchemaTreeNode::Type::Obj != node_type) {
-                    ret_val.emplace(std::errc::protocol_error);
-                    break;
+                    return std::errc::protocol_error;
                 }
             } else if (false == node_type_matches_value_type(node_type, value.value())) {
-                ret_val.emplace(std::errc::protocol_error);
-                break;
+                return std::errc::protocol_error;
             }
 
             if (SchemaTreeNode::Type::Obj == node_type
@@ -115,8 +110,7 @@ auto validate_node_id_value_pairs(
             {
                 // The node's value is `null` or `{}` but its descendants appear in
                 // `node_id_value_pairs`.
-                ret_val.emplace(std::errc::protocol_not_supported);
-                break;
+                return std::errc::operation_not_permitted;
             }
 
             auto const parent_node_id{node.get_parent_id()};
@@ -124,17 +118,16 @@ auto validate_node_id_value_pairs(
             if (parent_node_id_to_key_names.contains(parent_node_id)) {
                 if (parent_node_id_to_key_names.at(parent_node_id).contains(key_name)) {
                     // The key is duplicated under the same parent
-                    ret_val.emplace(std::errc::protocol_not_supported);
-                    break;
+                    return std::errc::protocol_not_supported;
                 }
             } else {
                 parent_node_id_to_key_names.emplace(parent_node_id, std::unordered_set{key_name});
             }
         }
     } catch (SchemaTree::OperationFailed const& ex) {
-        ret_val.emplace(std::errc::operation_not_permitted);
+        return std::errc::operation_not_permitted;
     }
-    return ret_val;
+    return std::errc{};
 }
 
 auto is_leaf_node(
@@ -165,10 +158,9 @@ auto KeyValuePairLogEvent::create(
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
     if (auto const ret_val{validate_node_id_value_pairs(*schema_tree, node_id_value_pairs)};
-        ret_val.has_value())
+        std::errc{} != ret_val)
     {
-        auto const err{ret_val.value()};
-        return err;
+        return ret_val;
     }
     return KeyValuePairLogEvent{std::move(schema_tree), std::move(node_id_value_pairs), utc_offset};
 }

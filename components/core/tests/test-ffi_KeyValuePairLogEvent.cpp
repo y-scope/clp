@@ -498,7 +498,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         )};
         // Node #3 is empty, but its descendants appear in the sub schema tree (node #5 & #10)
         REQUIRE(result.has_error());
-        REQUIRE((std::errc::protocol_not_supported == result.error()));
+        REQUIRE((std::errc::operation_not_permitted == result.error()));
     }
     {
         auto implicit_conflict_pairs{clone_node_id_value_pairs(valid_node_id_value_pairs)};
@@ -510,7 +510,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         )};
         // Node #4 is null, but its descendants appear in the sub schema tree (node #5 & #10)
         REQUIRE(result.has_error());
-        REQUIRE((std::errc::protocol_not_supported == result.error()));
+        REQUIRE((std::errc::operation_not_permitted == result.error()));
     }
 
     // Test for out of bound node ID
