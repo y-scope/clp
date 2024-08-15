@@ -70,5 +70,8 @@ CurlDownloadHandler::CurlDownloadHandler(
     if (false == m_http_headers.is_empty()) {
         m_easy_handle.set_option(CURLOPT_HTTPHEADER, m_http_headers.get_raw_list());
     }
+
+    // Set up failure on error
+    m_easy_handle.set_option(CURLOPT_FAILONERROR, static_cast<long>(true));
 }
 }  // namespace clp
