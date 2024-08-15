@@ -83,22 +83,6 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         KeyValuePairLogEvent::NodeIdValuePairs& invalid_node_id_value_pairs
 ) -> void;
 
-/**
- * Clones a `Value` instance. `Value` doesn't provide a copy constructor to encourage move
- * semantics. This helper is used to conveniently make a copy of an optional value.
- * @param value
- * @return A cloned copy of the input instance.
- */
-[[nodiscard]] auto clone_value(Value const& value) -> Value;
-
-/**
- * @param node_id_key_value_pairs
- * @return A cloned copy of a `KeyValuePairLogEvent::NodeIdValuePairs`.
- */
-[[nodiscard]] auto clone_node_id_value_pairs(
-        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_key_value_pairs
-) -> KeyValuePairLogEvent::NodeIdValuePairs;
-
 template <typename encoded_variable_t>
 requires(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
          || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -215,55 +199,6 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         invalid_node_id_value_pairs.emplace(node_id, Value{});
     }
 }
-
-auto clone_value(Value const& value) -> Value {
-    if (value.is_null()) {
-        return {};
-    }
-    if (value.is<value_int_t>()) {
-        return Value{value.get_immutable_view<value_int_t>()};
-    }
-    if (value.is<value_float_t>()) {
-        return Value{value.get_immutable_view<value_float_t>()};
-    }
-    if (value.is<value_bool_t>()) {
-        return Value{value.get_immutable_view<value_bool_t>()};
-    }
-    if (value.is<string>()) {
-        return Value{string{value.get_immutable_view<string>()}};
-    }
-    if (value.is<EightByteEncodedTextAst>()) {
-        auto const& encoded_ast{value.get_immutable_view<EightByteEncodedTextAst>()};
-        auto const logtype{encoded_ast.get_logtype()};
-        auto const dict_vars{encoded_ast.get_dict_vars()};
-        auto const encoded_vars{encoded_ast.get_encoded_vars()};
-        return Value{EightByteEncodedTextAst{logtype, dict_vars, encoded_vars}};
-    }
-    if (value.is<FourByteEncodedTextAst>()) {
-        auto const& encoded_ast{value.get_immutable_view<FourByteEncodedTextAst>()};
-        auto const logtype{encoded_ast.get_logtype()};
-        auto const dict_vars{encoded_ast.get_dict_vars()};
-        auto const encoded_vars{encoded_ast.get_encoded_vars()};
-        return Value{FourByteEncodedTextAst{logtype, dict_vars, encoded_vars}};
-    }
-    FAIL("Underlying value type not supported!");
-
-    // Control flow should never reach here. Adding a return to silent clang-tidy warnings.
-    return {};
-}
-
-auto clone_node_id_value_pairs(KeyValuePairLogEvent::NodeIdValuePairs const& node_id_key_value_pairs
-) -> KeyValuePairLogEvent::NodeIdValuePairs {
-    KeyValuePairLogEvent::NodeIdValuePairs result;
-    for (auto const& [node_id, optional_val] : node_id_key_value_pairs) {
-        if (optional_val.has_value()) {
-            result.emplace(node_id, clone_value(optional_val.value()));
-        } else {
-            result.emplace(node_id, std::nullopt);
-        }
-    }
-    return std::move(result);
-}
 }  // namespace
 
 TEST_CASE("ffi_Value_basic", "[ffi][Value]") {
@@ -347,8 +282,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE_NOTHROW(schema_tree->insert_node(locator));
     }
 
-    {
-        // Empty invalid_node_id_value_pairs
+    SECTION("Test empty id-value pairs") {
         KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
         auto const result{KeyValuePairLogEvent::create(
                 schema_tree,
@@ -358,172 +292,174 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE_FALSE(result.has_error());
     }
 
-    // Test for invalid types
-    KeyValuePairLogEvent::NodeIdValuePairs invalid_node_id_value_pairs;
-    // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-    // Int:
-    insert_invalid_node_id_value_pairs_with_node_type_errors(
-            *schema_tree,
-            2,
-            invalid_node_id_value_pairs
-    );
+    SECTION("Test mismatched types") {
+        KeyValuePairLogEvent::NodeIdValuePairs invalid_node_id_value_pairs;
+        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        // Int:
+        insert_invalid_node_id_value_pairs_with_node_type_errors(
+                *schema_tree,
+                2,
+                invalid_node_id_value_pairs
+        );
 
-    // Float:
-    insert_invalid_node_id_value_pairs_with_node_type_errors(
-            *schema_tree,
-            9,
-            invalid_node_id_value_pairs
-    );
+        // Float:
+        insert_invalid_node_id_value_pairs_with_node_type_errors(
+                *schema_tree,
+                9,
+                invalid_node_id_value_pairs
+        );
 
-    // Bool:
-    insert_invalid_node_id_value_pairs_with_node_type_errors(
-            *schema_tree,
-            6,
-            invalid_node_id_value_pairs
-    );
+        // Bool:
+        insert_invalid_node_id_value_pairs_with_node_type_errors(
+                *schema_tree,
+                6,
+                invalid_node_id_value_pairs
+        );
 
-    // Str:
-    insert_invalid_node_id_value_pairs_with_node_type_errors(
-            *schema_tree,
-            5,
-            invalid_node_id_value_pairs
-    );
+        // Str:
+        insert_invalid_node_id_value_pairs_with_node_type_errors(
+                *schema_tree,
+                5,
+                invalid_node_id_value_pairs
+        );
 
-    // UnstructuredArray:
-    insert_invalid_node_id_value_pairs_with_node_type_errors(
-            *schema_tree,
-            7,
-            invalid_node_id_value_pairs
-    );
+        // UnstructuredArray:
+        insert_invalid_node_id_value_pairs_with_node_type_errors(
+                *schema_tree,
+                7,
+                invalid_node_id_value_pairs
+        );
 
-    // Obj:
-    insert_invalid_node_id_value_pairs_with_node_type_errors(
-            *schema_tree,
-            3,
-            invalid_node_id_value_pairs
-    );
-    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        // Obj:
+        insert_invalid_node_id_value_pairs_with_node_type_errors(
+                *schema_tree,
+                3,
+                invalid_node_id_value_pairs
+        );
+        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
 
-    for (auto const& [node_id, optional_value] : invalid_node_id_value_pairs) {
-        KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pair_to_test;
-        if (optional_value.has_value()) {
-            node_id_value_pair_to_test.emplace(node_id, clone_value(optional_value.value()));
-        } else {
-            node_id_value_pair_to_test.emplace(node_id, std::nullopt);
+        for (auto const& [node_id, optional_value] : invalid_node_id_value_pairs) {
+            KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pair_to_test;
+            if (optional_value.has_value()) {
+                node_id_value_pair_to_test.emplace(node_id, optional_value.value());
+            } else {
+                node_id_value_pair_to_test.emplace(node_id, std::nullopt);
+            }
+            auto const result{KeyValuePairLogEvent::create(
+                    schema_tree,
+                    std::move(node_id_value_pair_to_test),
+                    UtcOffset{0}
+            )};
+            REQUIRE(result.has_error());
+            auto const& err{result.error()};
+            REQUIRE((std::errc::protocol_error == err));
         }
-        auto const result{KeyValuePairLogEvent::create(
-                schema_tree,
-                std::move(node_id_value_pair_to_test),
-                UtcOffset{0}
-        )};
-        REQUIRE(result.has_error());
-        auto const& err{result.error()};
-        REQUIRE((std::errc::protocol_error == err));
     }
 
-    // Test for valid pairs
-    KeyValuePairLogEvent::NodeIdValuePairs valid_node_id_value_pairs;
-    /*
-     * The sub schema tree of `valid_node_id_value_pairs`:
-     * <0:root:Obj>
-     *      |
-     *      |------------> <1:a:Obj>
-     *      |                  |
-     *      |--> <2:a:Int>     |--> <3:b:Obj>
-     *                                  |
-     *                                  |------------> <4:c:Obj>
-     *                                  |                  |
-     *                                  |--> <5:d:Str>     |--> <7:a:UnstructuredArray>
-     *                                  |                  |
-     *                                  |                  |--> <8:d:Str>
-     *                                  |                  |
-     *                                  |--> <10:e:Obj>    |
-     *                                                     |
-     *                                                     |--> <11:f:Obj>
-     */
-    // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-    valid_node_id_value_pairs.emplace(2, Value{static_cast<value_int_t>(0)});
-    valid_node_id_value_pairs.emplace(5, Value{string{"Test"}});
-    valid_node_id_value_pairs.emplace(
-            8,
-            Value{get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)}
-    );
-    valid_node_id_value_pairs.emplace(
-            7,
-            Value{get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)}
-    );
-    valid_node_id_value_pairs.emplace(10, Value{});
-    valid_node_id_value_pairs.emplace(11, std::nullopt);
-    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-
-    {
-        auto const result{KeyValuePairLogEvent::create(
-                schema_tree,
-                clone_node_id_value_pairs(valid_node_id_value_pairs),
-                UtcOffset{0}
-        )};
+    SECTION("Test valid id-value pairs") {
+        KeyValuePairLogEvent::NodeIdValuePairs valid_node_id_value_pairs;
+        /*
+         * The sub schema tree of `valid_node_id_value_pairs`:
+         * <0:root:Obj>
+         *      |
+         *      |------------> <1:a:Obj>
+         *      |                  |
+         *      |--> <2:a:Int>     |--> <3:b:Obj>
+         *                                  |
+         *                                  |------------> <4:c:Obj>
+         *                                  |                  |
+         *                                  |--> <5:d:Str>     |--> <7:a:UnstructuredArray>
+         *                                  |                  |
+         *                                  |                  |--> <8:d:Str>
+         *                                  |                  |
+         *                                  |--> <10:e:Obj>    |
+         *                                                     |
+         *                                                     |--> <11:f:Obj>
+         */
+        // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        valid_node_id_value_pairs.emplace(2, Value{static_cast<value_int_t>(0)});
+        valid_node_id_value_pairs.emplace(5, Value{string{"Test"}});
+        valid_node_id_value_pairs.emplace(
+                8,
+                Value{get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)}
+        );
+        valid_node_id_value_pairs.emplace(
+                7,
+                Value{get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)}
+        );
+        valid_node_id_value_pairs.emplace(10, Value{});
+        valid_node_id_value_pairs.emplace(11, std::nullopt);
+        // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+        auto const result{
+                KeyValuePairLogEvent::create(schema_tree, valid_node_id_value_pairs, UtcOffset{0})
+        };
         REQUIRE_FALSE(result.has_error());
+
+        SECTION("Test duplicated key conflict on node #3") {
+            auto conflict_pairs{valid_node_id_value_pairs};
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            conflict_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
+            auto const result{KeyValuePairLogEvent::create(
+                    schema_tree,
+                    std::move(conflict_pairs),
+                    UtcOffset{0}
+            )};
+            REQUIRE(result.has_error());
+            REQUIRE((std::errc::protocol_not_supported == result.error()));
+        }
+
+        SECTION("Test duplicated key conflict on node #4") {
+            auto conflict_pairs{valid_node_id_value_pairs};
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            conflict_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
+            auto const result{KeyValuePairLogEvent::create(
+                    schema_tree,
+                    std::move(conflict_pairs),
+                    UtcOffset{0}
+            )};
+            REQUIRE(result.has_error());
+            REQUIRE((std::errc::protocol_not_supported == result.error()));
+        }
+
+        SECTION("Test invalid sub-tree on node #3") {
+            auto implicit_conflict_pairs{valid_node_id_value_pairs};
+            implicit_conflict_pairs.emplace(3, std::nullopt);
+            auto const result{KeyValuePairLogEvent::create(
+                    schema_tree,
+                    std::move(implicit_conflict_pairs),
+                    UtcOffset{0}
+            )};
+            // Node #3 is empty, but its descendants appear in the sub schema tree (node #5 & #10)
+            REQUIRE(result.has_error());
+            REQUIRE((std::errc::operation_not_permitted == result.error()));
+        }
+
+        SECTION("Test invalid sub-tree on node #4") {
+            auto implicit_conflict_pairs{valid_node_id_value_pairs};
+            implicit_conflict_pairs.emplace(4, Value{});
+            auto const result{KeyValuePairLogEvent::create(
+                    schema_tree,
+                    std::move(implicit_conflict_pairs),
+                    UtcOffset{0}
+            )};
+            // Node #4 is null, but its descendants appear in the sub schema tree (node #5 & #10)
+            REQUIRE(result.has_error());
+            REQUIRE((std::errc::operation_not_permitted == result.error()));
+        }
     }
 
-    // Test for key conflicts
-    {
-        auto conflict_pairs{clone_node_id_value_pairs(valid_node_id_value_pairs)};
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        conflict_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
-        auto const result{
-                KeyValuePairLogEvent::create(schema_tree, std::move(conflict_pairs), UtcOffset{0})
-        };
-        REQUIRE(result.has_error());
-        REQUIRE((std::errc::protocol_not_supported == result.error()));
-    }
-    {
-        auto conflict_pairs{clone_node_id_value_pairs(valid_node_id_value_pairs)};
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        conflict_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
-        auto const result{
-                KeyValuePairLogEvent::create(schema_tree, std::move(conflict_pairs), UtcOffset{0})
-        };
-        REQUIRE(result.has_error());
-        REQUIRE((std::errc::protocol_not_supported == result.error()));
-    }
-
-    // Test for implicit key conflicts
-    {
-        auto implicit_conflict_pairs{clone_node_id_value_pairs(valid_node_id_value_pairs)};
-        implicit_conflict_pairs.emplace(3, std::nullopt);
-        auto const result{KeyValuePairLogEvent::create(
+    SECTION("Test out-of-bound node ID") {
+        KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs_out_of_bound;
+        node_id_value_pairs_out_of_bound.emplace(
+                static_cast<SchemaTreeNode::id_t>(schema_tree->get_size()),
+                Value{}
+        );
+        auto const out_of_bound_result{KeyValuePairLogEvent::create(
                 schema_tree,
-                std::move(implicit_conflict_pairs),
+                std::move(node_id_value_pairs_out_of_bound),
                 UtcOffset{0}
         )};
-        // Node #3 is empty, but its descendants appear in the sub schema tree (node #5 & #10)
-        REQUIRE(result.has_error());
-        REQUIRE((std::errc::operation_not_permitted == result.error()));
+        REQUIRE(out_of_bound_result.has_error());
+        REQUIRE((std::errc::operation_not_permitted == out_of_bound_result.error()));
     }
-    {
-        auto implicit_conflict_pairs{clone_node_id_value_pairs(valid_node_id_value_pairs)};
-        implicit_conflict_pairs.emplace(4, Value{});
-        auto const result{KeyValuePairLogEvent::create(
-                schema_tree,
-                std::move(implicit_conflict_pairs),
-                UtcOffset{0}
-        )};
-        // Node #4 is null, but its descendants appear in the sub schema tree (node #5 & #10)
-        REQUIRE(result.has_error());
-        REQUIRE((std::errc::operation_not_permitted == result.error()));
-    }
-
-    // Test for out of bound node ID
-    KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs_out_of_bound;
-    node_id_value_pairs_out_of_bound.emplace(
-            static_cast<SchemaTreeNode::id_t>(schema_tree->get_size()),
-            Value{}
-    );
-    auto const out_of_bound_result{KeyValuePairLogEvent::create(
-            schema_tree,
-            std::move(node_id_value_pairs_out_of_bound),
-            UtcOffset{0}
-    )};
-    REQUIRE(out_of_bound_result.has_error());
-    REQUIRE((std::errc::operation_not_permitted == out_of_bound_result.error()));
 }

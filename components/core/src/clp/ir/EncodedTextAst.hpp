@@ -26,12 +26,10 @@ public:
               m_dict_vars{std::move(dict_vars)},
               m_encoded_vars{std::move(encoded_vars)} {}
 
-    // Disable copy constructor and assignment operator
-    EncodedTextAst(EncodedTextAst const&) = delete;
-    auto operator=(EncodedTextAst const&) -> EncodedTextAst& = delete;
-
-    // Default move constructor and assignment operator
+    // Default copy/move constructor and assignment operator
+    EncodedTextAst(EncodedTextAst const&) = default;
     EncodedTextAst(EncodedTextAst&&) = default;
+    auto operator=(EncodedTextAst const&) -> EncodedTextAst& = default;
     auto operator=(EncodedTextAst&&) -> EncodedTextAst& = default;
 
     // Destructor
