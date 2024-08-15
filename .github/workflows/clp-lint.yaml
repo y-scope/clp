@@ -17,7 +17,9 @@ jobs:
   lint-check:
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-latest"]
+        # We use macos-13 since the macos-14/macos-latest runners use an M1 chip and Meteor doesn't
+        # support ARM yet.
+        os: ["macos-13", "ubuntu-latest"]
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
@@ -32,7 +34,7 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
-      - if: "matrix.os == 'macos-latest'"
+      - if: "matrix.os == 'macos-13'"
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
