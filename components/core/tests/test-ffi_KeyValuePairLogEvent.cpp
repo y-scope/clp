@@ -357,9 +357,9 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
     }
 
     SECTION("Test valid ID-value pairs") {
-        KeyValuePairLogEvent::NodeIdValuePairs valid_node_id_value_pairs;
+        KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
         /*
-         * The sub schema tree of `valid_node_id_value_pairs`:
+         * The sub schema tree of `node_id_value_pairs`:
          * <0:root:Obj>
          *      |
          *      |------------> <1:a:Obj>
@@ -377,67 +377,59 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
          *                                                     |--> <11:f:Obj>
          */
         // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        valid_node_id_value_pairs.emplace(2, Value{static_cast<value_int_t>(0)});
-        valid_node_id_value_pairs.emplace(5, Value{string{"Test"}});
-        valid_node_id_value_pairs.emplace(
+        node_id_value_pairs.emplace(2, Value{static_cast<value_int_t>(0)});
+        node_id_value_pairs.emplace(5, Value{string{"Test"}});
+        node_id_value_pairs.emplace(
                 8,
                 Value{get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)}
         );
-        valid_node_id_value_pairs.emplace(
+        node_id_value_pairs.emplace(
                 7,
                 Value{get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)}
         );
-        valid_node_id_value_pairs.emplace(10, Value{});
-        valid_node_id_value_pairs.emplace(11, std::nullopt);
+        node_id_value_pairs.emplace(10, Value{});
+        node_id_value_pairs.emplace(11, std::nullopt);
         // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
         auto const result{
-                KeyValuePairLogEvent::create(schema_tree, valid_node_id_value_pairs, UtcOffset{0})
+                KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
         };
         REQUIRE_FALSE(result.has_error());
 
         SECTION("Test duplicated key conflict on node #3") {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            valid_node_id_value_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
-            auto const result{KeyValuePairLogEvent::create(
-                    schema_tree,
-                    valid_node_id_value_pairs,
-                    UtcOffset{0}
-            )};
+            node_id_value_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
+            auto const result{
+                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
+            };
             REQUIRE(result.has_error());
             REQUIRE((std::errc::protocol_not_supported == result.error()));
         }
 
         SECTION("Test duplicated key conflict on node #4") {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            valid_node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
-            auto const result{KeyValuePairLogEvent::create(
-                    schema_tree,
-                    valid_node_id_value_pairs,
-                    UtcOffset{0}
-            )};
+            node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
+            auto const result{
+                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
+            };
             REQUIRE(result.has_error());
             REQUIRE((std::errc::protocol_not_supported == result.error()));
         }
 
         SECTION("Test invalid sub-tree on node #3") {
-            valid_node_id_value_pairs.emplace(3, std::nullopt);
-            auto const result{KeyValuePairLogEvent::create(
-                    schema_tree,
-                    valid_node_id_value_pairs,
-                    UtcOffset{0}
-            )};
+            node_id_value_pairs.emplace(3, std::nullopt);
+            auto const result{
+                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
+            };
             // Node #3 is empty, but its descendants appear in the sub schema tree (node #5 & #10)
             REQUIRE(result.has_error());
             REQUIRE((std::errc::operation_not_permitted == result.error()));
         }
 
         SECTION("Test invalid sub-tree on node #4") {
-            valid_node_id_value_pairs.emplace(4, Value{});
-            auto const result{KeyValuePairLogEvent::create(
-                    schema_tree,
-                    valid_node_id_value_pairs,
-                    UtcOffset{0}
-            )};
+            node_id_value_pairs.emplace(4, Value{});
+            auto const result{
+                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
+            };
             // Node #4 is null, but its descendants appear in the sub schema tree (node #5 & #10)
             REQUIRE(result.has_error());
             REQUIRE((std::errc::operation_not_permitted == result.error()));
