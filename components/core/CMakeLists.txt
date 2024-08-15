@@ -88,7 +88,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system)
+find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system regex)
 if(Boost_FOUND)
     message(STATUS "Found Boost ${Boost_VERSION}")
 else()
@@ -269,6 +269,9 @@ set(SOURCE_FILES_clp_s_unitTest
 )
 
 set(SOURCE_FILES_unitTest
+        src/clp/aws/AwsAuthenticationSigner.hpp
+        src/clp/aws/AwsAuthenticationSigner.cpp
+        src/clp/aws/constants.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -505,7 +508,7 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options
+        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
         ${CURL_LIBRARIES}
         fmt::fmt
         kql
