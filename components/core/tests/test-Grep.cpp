@@ -5,7 +5,6 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
-
 #include "../src/clp/Grep.hpp"
 #include "../src/clp/QueryInterpretation.hpp"
 #include "log_surgeon/LogParser.hpp"
