@@ -16,9 +16,8 @@
 namespace clp::ffi {
 /**
  * A log event containing key-value pairs. Each event contains:
- *  - A collection of node-id & value pairs, where each pair represents a leaf `SchemaTreeNode` in
- *    the `SchemaTree`.
- *   `SchemaTree` and the key is the node's ID.
+ * - A collection of node-ID & value pairs, where each pair represents a leaf `SchemaTreeNode` in
+ *   the `SchemaTree`.
  * - A reference to the `SchemaTree`
  * - The UTC offset of the current log event
  */
@@ -33,12 +32,7 @@ public:
      * @param node_id_value_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
-     * failure:
-     * - std::errc::operation_not_permitted if a node ID doesn't represent a valid node in the
-     *   schema tree, or a non-leaf node ID is paired with a value.
-     * - std::errc::protocol_error if the schema tree node type doesn't match the value's type.
-     * - std::errc::protocol_not_supported if the same key appears more than once under a parent
-     *   node.
+     * failure. See `valdiate_node_id_value_pairs` for the possible error codes.
      */
     [[nodiscard]] static auto create(
             std::shared_ptr<SchemaTree const> schema_tree,

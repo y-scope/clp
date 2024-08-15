@@ -71,8 +71,8 @@ template <typename Type>
 auto test_value_get_immutable_view(Value const& value, Type const& typed_value) -> void;
 
 /**
- * Generates invalid node ID value pairs with values that don't match type of the given schema tree
- * node.
+ * Generates invalid node-ID value pairs with values that don't match the type of the schema tree
+ * node with the given ID.
  * @param schema_tree
  * @param node_id
  * @param invalid_node_id_value_pairs Returns the pairs after insertion.

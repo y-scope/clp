@@ -33,7 +33,8 @@ namespace {
 node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> bool;
 
 /**
- * Validates whether the given node ID value pairs are valid in terms of the key-value pair IR spec.
+ * Validates whether the given node-ID value pairs are leaf nodes in the `SchemaTree` forming a
+ * sub-tree of their own.
  * @param schema_tree
  * @param node_id_value_pairs
  * @return `std::nullopt` if the inputs are valid, or an error code indicating the failure:
@@ -52,8 +53,8 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
  * @param schema_tree
  * @param node_id
  * @param node_id_value_pairs
- * @return Whether the given node is a leaf node in the sub schema tree defined by
- * `node_id_value_pairs`. A node is considered a leaf if none of its descendants appear in the
+ * @return Whether the given node is a leaf node in the sub-tree of the `SchemaTree` defined by
+ * `node_id_value_pairs`. A node is considered a leaf if none of its descendants appear in
  * `node_id_value_pairs`.
  */
 [[nodiscard]] auto is_leaf_node(
@@ -112,8 +113,8 @@ auto validate_node_id_value_pairs(
             if (SchemaTreeNode::Type::Obj == node_type
                 && false == is_leaf_node(schema_tree, node_id, node_id_value_pairs))
             {
-                // Implicit key conflict: A `null` or empty value is given but its descendants
-                // appear in the node ID value pairs
+                // The node's value is `null` or `{}` but its descendants appear in
+                // `node_id_value_pairs`.
                 ret_val.emplace(std::errc::protocol_not_supported);
                 break;
             }
@@ -122,7 +123,7 @@ auto validate_node_id_value_pairs(
             auto const key_name{node.get_key_name()};
             if (parent_node_id_to_key_names.contains(parent_node_id)) {
                 if (parent_node_id_to_key_names.at(parent_node_id).contains(key_name)) {
-                    // Explicit key conflict: the key is duplicated under the same parent
+                    // The key is duplicated under the same parent
                     ret_val.emplace(std::errc::protocol_not_supported);
                     break;
                 }
