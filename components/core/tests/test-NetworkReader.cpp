@@ -150,7 +150,12 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     while (true) {
         auto const ret_code{reader.get_curl_ret_code()};
         if (ret_code.has_value()) {
-            REQUIRE((CURLE_HTTP_RETURNED_ERROR == ret_code.value()));
+            if (CURLE_HTTP_RETURNED_ERROR != ret_code.value()) {
+                std::string const error_message{
+                        "Unexpected CURL error code: " + std::to_string(ret_code.value())
+                };
+                FAIL(error_message);
+            }
             size_t pos{};
             REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
             break;
