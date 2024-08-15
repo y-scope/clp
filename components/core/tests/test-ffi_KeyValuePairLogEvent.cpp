@@ -282,7 +282,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE_NOTHROW(schema_tree->insert_node(locator));
     }
 
-    SECTION("Test empty id-value pairs") {
+    SECTION("Test empty ID-value pairs") {
         KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
         auto const result{KeyValuePairLogEvent::create(
                 schema_tree,
@@ -356,7 +356,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         }
     }
 
-    SECTION("Test valid id-value pairs") {
+    SECTION("Test valid ID-value pairs") {
         KeyValuePairLogEvent::NodeIdValuePairs valid_node_id_value_pairs;
         /*
          * The sub schema tree of `valid_node_id_value_pairs`:
