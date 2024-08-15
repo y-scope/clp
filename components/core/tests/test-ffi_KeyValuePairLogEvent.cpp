@@ -396,12 +396,11 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE_FALSE(result.has_error());
 
         SECTION("Test duplicated key conflict on node #3") {
-            auto conflict_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            conflict_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
+            valid_node_id_value_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
             auto const result{KeyValuePairLogEvent::create(
                     schema_tree,
-                    std::move(conflict_pairs),
+                    valid_node_id_value_pairs,
                     UtcOffset{0}
             )};
             REQUIRE(result.has_error());
@@ -409,12 +408,11 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         }
 
         SECTION("Test duplicated key conflict on node #4") {
-            auto conflict_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            conflict_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
+            valid_node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
             auto const result{KeyValuePairLogEvent::create(
                     schema_tree,
-                    std::move(conflict_pairs),
+                    valid_node_id_value_pairs,
                     UtcOffset{0}
             )};
             REQUIRE(result.has_error());
@@ -422,11 +420,10 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         }
 
         SECTION("Test invalid sub-tree on node #3") {
-            auto implicit_conflict_pairs{valid_node_id_value_pairs};
-            implicit_conflict_pairs.emplace(3, std::nullopt);
+            valid_node_id_value_pairs.emplace(3, std::nullopt);
             auto const result{KeyValuePairLogEvent::create(
                     schema_tree,
-                    std::move(implicit_conflict_pairs),
+                    valid_node_id_value_pairs,
                     UtcOffset{0}
             )};
             // Node #3 is empty, but its descendants appear in the sub schema tree (node #5 & #10)
@@ -435,11 +432,10 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         }
 
         SECTION("Test invalid sub-tree on node #4") {
-            auto implicit_conflict_pairs{valid_node_id_value_pairs};
-            implicit_conflict_pairs.emplace(4, Value{});
+            valid_node_id_value_pairs.emplace(4, Value{});
             auto const result{KeyValuePairLogEvent::create(
                     schema_tree,
-                    std::move(implicit_conflict_pairs),
+                    valid_node_id_value_pairs,
                     UtcOffset{0}
             )};
             // Node #4 is null, but its descendants appear in the sub schema tree (node #5 & #10)

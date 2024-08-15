@@ -150,7 +150,6 @@ public:
     template <FundamentalPrimitiveValueType T>
     explicit Value(T value) : m_value{value} {}
 
-    // Default copy/move constructor and assignment operator
     Value(Value const&) = default;
     Value(Value&&) = default;
     auto operator=(Value const&) -> Value& = default;

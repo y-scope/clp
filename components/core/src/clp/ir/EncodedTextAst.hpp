@@ -26,7 +26,6 @@ public:
               m_dict_vars{std::move(dict_vars)},
               m_encoded_vars{std::move(encoded_vars)} {}
 
-    // Default copy/move constructor and assignment operator
     EncodedTextAst(EncodedTextAst const&) = default;
     EncodedTextAst(EncodedTextAst&&) = default;
     auto operator=(EncodedTextAst const&) -> EncodedTextAst& = default;
