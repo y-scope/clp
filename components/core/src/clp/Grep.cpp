@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <variant>
 
-#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/Schema.hpp>
 #include <string_utils/string_utils.hpp>
@@ -11,9 +10,7 @@
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
 #include "ir/types.hpp"
-#include "LogSurgeonReader.hpp"
 #include "StringReader.hpp"
-#include "Utils.hpp"
 
 using clp::ir::is_delim;
 using clp::streaming_archive::reader::Archive;
@@ -513,63 +510,6 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
 }
 }  // namespace
 
-bool QueryLogtype::operator<(QueryLogtype const& rhs) const {
-    if (m_logtype.size() < rhs.m_logtype.size()) {
-        return true;
-    } else if (m_logtype.size() > rhs.m_logtype.size()) {
-        return false;
-    }
-    for (uint32_t i = 0; i < m_logtype.size(); i++) {
-        if (m_logtype[i] < rhs.m_logtype[i]) {
-            return true;
-        } else if (m_logtype[i] > rhs.m_logtype[i]) {
-            return false;
-        }
-    }
-    for (uint32_t i = 0; i < m_query.size(); i++) {
-        if (m_query[i] < rhs.m_query[i]) {
-            return true;
-        } else if (m_query[i] > rhs.m_query[i]) {
-            return false;
-        }
-    }
-    for (uint32_t i = 0; i < m_is_encoded_with_wildcard.size(); i++) {
-        if (m_is_encoded_with_wildcard[i] < rhs.m_is_encoded_with_wildcard[i]) {
-            return true;
-        } else if (m_is_encoded_with_wildcard[i] > rhs.m_is_encoded_with_wildcard[i]) {
-            return false;
-        }
-    }
-    return false;
-}
-
-void QueryLogtype::append_logtype(QueryLogtype& suffix) {
-    m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
-    m_query.insert(m_query.end(), suffix.m_query.begin(), suffix.m_query.end());
-    m_is_encoded_with_wildcard.insert(
-            m_is_encoded_with_wildcard.end(),
-            suffix.m_is_encoded_with_wildcard.begin(),
-            suffix.m_is_encoded_with_wildcard.end()
-    );
-    m_var_has_wildcard.insert(
-            m_var_has_wildcard.end(),
-            suffix.m_var_has_wildcard.begin(),
-            suffix.m_var_has_wildcard.end()
-    );
-}
-
-void QueryLogtype::append_value(
-        std::variant<char, int> const& val,
-        std::string const& string,
-        bool var_contains_wildcard,
-        bool is_encoded_with_wildcard
-) {
-    m_var_has_wildcard.push_back(var_contains_wildcard);
-    m_logtype.push_back(val);
-    m_query.push_back(string);
-    m_is_encoded_with_wildcard.push_back(is_encoded_with_wildcard);
-}
-
 std::optional<Query> Grep::process_raw_query(
         Archive const& archive,
         string const& search_string,
@@ -691,21 +631,23 @@ std::optional<Query> Grep::process_raw_query(
         );
 
         // Get the possible logtypes for the query (but only do it once across all archives).
-        static bool query_substr_logtypes_is_set = false;
-        static vector<QueryLogtype> query_logtypes;
+        static bool query_substr_interpretations_is_set = false;
+        static vector<QueryInterpretation> query_interpretations;
         static vector<string> logtype_strings;
         // TODO: until we have per schema logic, we need to do everything for every archive.
         bool execute_for_every_archive = true;
         // TODO: this needs to be redone if the schema changes.
-        if (execute_for_every_archive || false == query_substr_logtypes_is_set) {
-            query_logtypes
-                    = generate_query_substring_logtypes(search_string_for_sub_queries, lexer);
-            query_substr_logtypes_is_set = true;
-            logtype_strings = generate_logtype_strings(query_logtypes, lexer);
+        if (execute_for_every_archive || false == query_substr_interpretations_is_set) {
+            query_interpretations = generate_query_substring_interpretations(
+                    search_string_for_sub_queries,
+                    lexer
+            );
+            query_substr_interpretations_is_set = true;
+            logtype_strings = generate_logtype_strings(query_interpretations, lexer);
         }
         // Use the logtypes to determine all subqueries that may match against the current archive.
         generate_sub_queries(
-                query_logtypes,
+                query_interpretations,
                 logtype_strings,
                 archive,
                 lexer,
@@ -725,30 +667,6 @@ std::optional<Query> Grep::process_raw_query(
             processed_search_string,
             std::move(sub_queries)
     };
-}
-
-std::ostream& operator<<(std::ostream& os, QueryLogtype const& query_logtype) {
-    os << "\"";
-    for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
-        if (std::holds_alternative<char>(query_logtype.get_logtype_value(idx))) {
-            os << std::get<char>(query_logtype.get_logtype_value(idx));
-        } else {
-            os << "<" << std::get<int>(query_logtype.get_logtype_value(idx)) << ">("
-               << query_logtype.get_query_string(idx) << ")";
-        }
-    }
-    os << "\"";
-    os << "(";
-    for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
-        os << query_logtype.get_var_has_wildcard(idx);
-    }
-    os << ")";
-    os << "(";
-    for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
-        os << query_logtype.get_is_encoded_with_wildcard(idx);
-    }
-    os << ")";
-    return os;
 }
 
 bool Grep::get_bounds_of_next_potential_var(
@@ -1045,10 +963,10 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
     return num_matches;
 }
 
-vector<QueryLogtype>
-Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLexer& lexer) {
+vector<QueryInterpretation>
+Grep::generate_query_substring_interpretations(string& processed_search_string, ByteLexer& lexer) {
     // Store substring logtypes in a set to avoid duplicates
-    vector<set<QueryLogtype>> query_substr_logtypes(processed_search_string.size());
+    vector<set<QueryInterpretation>> query_substr_interpretations(processed_search_string.size());
 
     // We need to differentiate between literal '*'/'?' and wildcards
     auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escape]
@@ -1056,13 +974,14 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
 
     // Consider each substr(begin_idx,end_idx) of the processed_search_string and determine if it
     // could have been compressed as static-text, a variable, or some combination of
-    // variables/static-text Then we populate each entry in query_substr_logtypes which corresponds
-    // to the logtype for substr(0,n). To do this, for each combination of substr(begin_idx,end_idx)
-    // that reconstructs substr(0,n) (e.g., substring "*1 34", can be reconstructed from substrings
+    // variables/static-text Then we populate each entry in query_substr_interpretations which
+    // corresponds to the logtype for substr(0,n). To do this, for each combination of
+    // substr(begin_idx,end_idx) that reconstructs substr(0,n) (e.g., substring "*1 34", can be
+    // reconstructed from substrings
     // "*1", " ", "34"), store all possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that
-    // are unique from any previously checked combination. Each entry in query_substr_logtypes is
-    // used to build the following entry, with the last entry having all possible logtypes for the
-    // full query itself.
+    // are unique from any previously checked combination. Each entry in
+    // query_substr_interpretations is used to build the following entry, with the last entry having
+    // all possible logtypes for the full query itself.
     for (size_t end_idx = 1; end_idx <= processed_search_string.size(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
         // "* text\* *").
@@ -1093,33 +1012,33 @@ Grep::generate_query_substring_logtypes(string& processed_search_string, ByteLex
             if (begin_idx > 0) {
                 // Handle the case where substr(0,n) is composed of multiple
                 // substr(begin_idx,end_idx).
-                for (auto const& prefix : query_substr_logtypes[begin_idx - 1]) {
+                for (auto const& prefix : query_substr_interpretations[begin_idx - 1]) {
                     for (auto& suffix : possible_substr_types) {
-                        QueryLogtype query_logtype = prefix;
+                        QueryInterpretation query_logtype = prefix;
                         query_logtype.append_logtype(suffix);
-                        query_substr_logtypes[end_idx - 1].insert(query_logtype);
+                        query_substr_interpretations[end_idx - 1].insert(query_logtype);
                     }
                 }
             } else {
                 // Handle the case where substr(0,n) == substr(begin_idx,end_idx).
                 for (auto& possible_substr_type : possible_substr_types) {
-                    query_substr_logtypes[end_idx - 1].insert(possible_substr_type);
+                    query_substr_interpretations[end_idx - 1].insert(possible_substr_type);
                 }
             }
         }
     }
-    // The last entry of the query_substr_logtypes is the logtypes for the query itself. Convert
-    // this into a vector so we can easily add logtypes when needed.
-    auto& query_logtypes_set = query_substr_logtypes.back();
-    vector<QueryLogtype> query_logtypes;
-    query_logtypes.reserve(query_logtypes_set.size());
-    for (auto it = query_logtypes_set.begin(); it != query_logtypes_set.end();) {
-        query_logtypes.push_back(std::move(query_logtypes_set.extract(it++).value()));
+    // The last entry of the query_substr_interpretations is the logtypes for the query itself.
+    // Convert this into a vector so we can easily add logtypes when needed.
+    auto& query_interpretations_set = query_substr_interpretations.back();
+    vector<QueryInterpretation> query_interpretations;
+    query_interpretations.reserve(query_interpretations_set.size());
+    for (auto it = query_interpretations_set.begin(); it != query_interpretations_set.end();) {
+        query_interpretations.push_back(std::move(query_interpretations_set.extract(it++).value()));
     }
-    return query_logtypes;
+    return query_interpretations;
 }
 
-vector<QueryLogtype> Grep::get_possible_substr_types(
+vector<QueryInterpretation> Grep::get_possible_substr_types(
         string& processed_search_string,
         size_t begin_idx,
         size_t end_idx,
@@ -1128,7 +1047,7 @@ vector<QueryLogtype> Grep::get_possible_substr_types(
         vector<bool>& is_escape,
         ByteLexer& lexer
 ) {
-    vector<QueryLogtype> possible_substr_types;
+    vector<QueryInterpretation> possible_substr_types;
 
     // Don't allow an isolated wildcard to be considered a variable
     if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
@@ -1216,7 +1135,7 @@ vector<QueryLogtype> Grep::get_possible_substr_types(
                     already_added_var = true;
                 }
                 possible_substr_types.emplace_back();
-                QueryLogtype& suffix = possible_substr_types.back();
+                QueryInterpretation& suffix = possible_substr_types.back();
                 suffix.append_value(
                         id,
                         processed_search_string.substr(substr_start, substr_end - substr_start),
@@ -1341,11 +1260,13 @@ tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
     return {schema_dfa->get_intersect(search_string_dfa), contains_wildcard};
 }
 
-vector<string>
-Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& lexer) {
+vector<string> Grep::generate_logtype_strings(
+        vector<QueryInterpretation>& query_interpretations,
+        ByteLexer& lexer
+) {
     vector<string> logtype_strings;
-    logtype_strings.reserve(query_logtypes.size());
-    for (QueryLogtype const& query_logtype : query_logtypes) {
+    logtype_strings.reserve(query_interpretations.size());
+    for (QueryInterpretation const& query_logtype : query_interpretations) {
         // Convert each query logtype into a set of logtype strings. Logtype strings are used in the
         // sub query as they have the correct format for comparing against the archive. Also, a
         // single query logtype might represent multiple logtype strings. While static text converts
@@ -1371,7 +1292,7 @@ Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& 
                 {
                     auto new_query_logtype = query_logtype;
                     new_query_logtype.set_is_encoded_with_wildcard(i, true);
-                    query_logtypes.push_back(new_query_logtype);
+                    query_interpretations.push_back(new_query_logtype);
                 }
                 if (is_encoded_with_wildcard) {
                     if ("int" == schema_type) {
@@ -1404,15 +1325,15 @@ Grep::generate_logtype_strings(vector<QueryLogtype>& query_logtypes, ByteLexer& 
 }
 
 void Grep::generate_sub_queries(
-        vector<QueryLogtype>& query_logtypes,
+        vector<QueryInterpretation>& query_interpretations,
         vector<string>& logtype_strings,
         Archive const& archive,
         ByteLexer& lexer,
         bool ignore_case,
         vector<SubQuery>& sub_queries
 ) {
-    for (uint32_t i = 0; i < query_logtypes.size(); i++) {
-        auto const& query_logtype = query_logtypes[i];
+    for (uint32_t i = 0; i < query_interpretations.size(); i++) {
+        auto const& query_logtype = query_interpretations[i];
         auto const& logtype_string = logtype_strings[i];
         // Check if the logtype string exists in the logtype dictionary. If not, then this
         // logtype string does not form a useful sub query.

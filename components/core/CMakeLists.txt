@@ -400,6 +400,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/QueryInterpretation.cpp
+        src/clp/QueryInterpretation.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp

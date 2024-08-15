@@ -3,102 +3,16 @@
 
 #include <optional>
 #include <string>
-#include <variant>
 
 #include <log_surgeon/Lexer.hpp>
 
 #include "Defs.h"
 #include "Query.hpp"
+#include "QueryInterpretation.hpp"
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
 
 namespace clp {
-
-/**
- * Represents a logtype that would match the given search query. The logtype is a sequence
- * containing values, where each value is either a static character or an integer representing
- * a variable type id. Also indicates if an integer/float variable is potentially in the dictionary
- * to handle cases containing wildcards. Note: long float and integers that cannot be encoded do not
- * fall under this case, as they are not potentially, but definitely in the dictionary, so will be
- * searched for in the dictionary regardless.
- */
-class QueryLogtype {
-public:
-    QueryLogtype() = default;
-
-    QueryLogtype(
-            std::variant<char, int> const& val,
-            std::string const& string,
-            bool var_contains_wildcard
-    ) {
-        append_value(val, string, var_contains_wildcard);
-    }
-
-    bool operator==(QueryLogtype const& rhs) const = default;
-
-    /**
-     * @param rhs
-     * @return true if the current logtype is shorter than rhs, false if the current logtype
-     * is longer. If equally long, true if the current logtype is lexicographically smaller than
-     * rhs, false if bigger. If the logtypes are identical, true if the current search query is
-     * lexicographically smaller than rhs, false if bigger. If the search queries are identical,
-     * true if the first mismatch in special character locations is a non-special character for the
-     * current logtype, false otherwise.
-     */
-    bool operator<(QueryLogtype const& rhs) const;
-
-    /**
-     * Append a logtype to the current logtype.
-     * @param suffix
-     */
-    void append_logtype(QueryLogtype& suffix);
-
-    /**
-     * Append a single value to the current logtype.
-     * @param val
-     * @param string
-     * @param var_contains_wildcard
-     * @param is_encoded_with_wildcard
-     */
-    void append_value(
-            std::variant<char, int> const& val,
-            std::string const& string,
-            bool var_contains_wildcard,
-            bool is_encoded_with_wildcard = false
-    );
-
-    void set_is_encoded_with_wildcard(uint32_t i, bool value) {
-        m_is_encoded_with_wildcard[i] = value;
-    }
-
-    [[nodiscard]] uint32_t get_logtype_size() const { return m_logtype.size(); }
-
-    [[nodiscard]] std::variant<char, int> get_logtype_value(uint32_t i) const {
-        return m_logtype[i];
-    }
-
-    [[nodiscard]] std::string const& get_query_string(uint32_t i) const { return m_query[i]; }
-
-    [[nodiscard]] bool get_is_encoded_with_wildcard(uint32_t i) const {
-        return m_is_encoded_with_wildcard[i];
-    }
-
-    [[nodiscard]] bool get_var_has_wildcard(uint32_t i) const { return m_var_has_wildcard[i]; }
-
-private:
-    std::vector<std::variant<char, int>> m_logtype;
-    std::vector<std::string> m_query;
-    std::vector<bool> m_is_encoded_with_wildcard;
-    std::vector<bool> m_var_has_wildcard;
-};
-
-/**
- * Convert input query logtype to string for output
- * @param os
- * @param query_logtype
- * @return output stream with the query logtype
- */
-std::ostream& operator<<(std::ostream& os, QueryLogtype const& query_logtype);
 
 class Grep {
 public:
@@ -218,9 +132,10 @@ public:
      * and the string does not end with an escape character.
      * @param processed_search_string
      * @param lexer
-     * @return a vector of all QueryLogtypes that can match the query in processed_search_string.
+     * @return a vector of all QueryInterpretations that can match the query in
+     * processed_search_string.
      */
-    static std::vector<QueryLogtype> generate_query_substring_logtypes(
+    static std::vector<QueryInterpretation> generate_query_substring_interpretations(
             std::string& processed_search_string,
             log_surgeon::lexers::ByteLexer& lexer
     );
@@ -236,7 +151,7 @@ public:
      * @param lexer
      * @return a vector containing the possible substring types
      */
-    static std::vector<QueryLogtype> get_possible_substr_types(
+    static std::vector<QueryInterpretation> get_possible_substr_types(
             std::string& processed_search_string,
             size_t begin_idx,
             size_t end_idx,
@@ -278,22 +193,23 @@ public:
 
     /**
      * Generates the logtype string for each query logtype to compare against the logtype dictionary
-     * in the archive. In this proccess, we also expand query_logtypes to contain all variations of
-     * each logtype that has variables with wildcards that can be encoded. E.g. "*123" can be
-     * in the segmenent as an encoded integer or in the dictionary, so both cases must be checked.
-     * @param query_logtypes
+     * in the archive. In this proccess, we also expand query_interpretations to contain all
+     * variations of each logtype that has variables with wildcards that can be encoded. E.g. "*123"
+     * can be in the segmenent as an encoded integer or in the dictionary, so both cases must be
+     * checked.
+     * @param query_interpretations
      * @param lexer
      * @return A vector of query logtype strings.
      */
     static std::vector<std::string> generate_logtype_strings(
-            std::vector<QueryLogtype>& query_logtypes,
+            std::vector<QueryInterpretation>& query_interpretations,
             log_surgeon::lexers::ByteLexer& lexer
     );
 
     /**
      * Compare all possible query logtypes against the archive to determine all possible sub queries
      * that can match against messages in the archive.
-     * @param query_logtypes
+     * @param query_interpretations
      * @param logtype_strings
      * @param archive
      * @param lexer
@@ -301,7 +217,7 @@ public:
      * @param sub_queries
      */
     static void generate_sub_queries(
-            std::vector<QueryLogtype>& query_logtypes,
+            std::vector<QueryInterpretation>& query_interpretations,
             std::vector<std::string>& logtype_strings,
             streaming_archive::reader::Archive const& archive,
             log_surgeon::lexers::ByteLexer& lexer,

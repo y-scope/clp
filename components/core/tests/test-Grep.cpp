@@ -5,7 +5,9 @@
 #include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
+
 #include "../src/clp/Grep.hpp"
+#include "../src/clp/QueryInterpretation.hpp"
 #include "log_surgeon/LogParser.hpp"
 
 using clp::Grep;
@@ -191,7 +193,7 @@ TEST_CASE("get_possible_substr_types", "[schema_search]") {
                         is_escape,
                         lexer
                 );
-                std::vector<clp::QueryLogtype> expected_result(0);
+                std::vector<clp::QueryInterpretation> expected_result(0);
                 if (2 == begin_idx && 7 == end_idx) {
                     expected_result.emplace_back();
                     expected_result[0].append_value(
@@ -218,16 +220,16 @@ TEST_CASE("get_possible_substr_types", "[schema_search]") {
 }
 
 TEST_CASE(
-        "generate_query_substring_logtypes",
-        "[generate_query_substring_logtypes][schema_search]"
+        "generate_query_substring_interpretations",
+        "[generate_query_substring_interpretations][schema_search]"
 ) {
     ByteLexer lexer;
     clp::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("Static text") {
         std::string query = "* z *";
-        auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(1);
+        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        std::vector<clp::QueryInterpretation> expected_result(1);
         // "* z *"
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0].append_value(' ', " ", false, false);
@@ -239,8 +241,8 @@ TEST_CASE(
 
     SECTION("hex") {
         std::string query = "* a *";
-        auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(2);
+        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        std::vector<clp::QueryInterpretation> expected_result(2);
         // "* a *"
         // TODO: Because substring "* a *" matches no variable, one possible subquery logtype is
         // all static text. However, we know that if at least one of the other logtypes contains
@@ -265,8 +267,8 @@ TEST_CASE(
 
     SECTION("int") {
         std::string query = "* 1 *";
-        auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(2);
+        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        std::vector<clp::QueryInterpretation> expected_result(2);
         // "* 1 *"
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0].append_value(' ', " ", false, false);
@@ -285,8 +287,8 @@ TEST_CASE(
 
     SECTION("Simple query") {
         std::string query = "* 10000 reply: *";
-        auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(2);
+        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        std::vector<clp::QueryInterpretation> expected_result(2);
         // "* <int>(10000) reply: *"
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0].append_value(' ', " ", false, false);
@@ -323,8 +325,8 @@ TEST_CASE(
 
     SECTION("Wildcard variable") {
         std::string query = "* *10000 *";
-        auto const query_logtypes = Grep::generate_query_substring_logtypes(query, lexer);
-        std::vector<clp::QueryLogtype> expected_result(8);
+        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        std::vector<clp::QueryInterpretation> expected_result(8);
         // "* *<int>(*10000) *"
         expected_result[0].append_value('*', "*", false, false);
         expected_result[0].append_value(' ', " ", false, false);
@@ -408,7 +410,7 @@ TEST_CASE(
         expected_result[7].append_value(' ', " ", false, false);
         expected_result[7].append_value('*', "*", false, false);
         /* TODO: Currently encoded vars are added in generate_logtype_strings(), but should be
-         * added in generate_query_substring_logtypes() for readability
+         * added in generate_query_substring_interpretations() for readability
         // "* *<int>(*10000) *" as encoded var
         expected_result[8].append_value('*', "*", false, false);
         expected_result[8].append_value(' ', " ", false, false);
