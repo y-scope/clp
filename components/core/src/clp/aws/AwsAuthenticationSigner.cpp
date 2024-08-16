@@ -5,7 +5,9 @@
 #include <string_view>
 #include <vector>
 
+// NOLINTNEXTLINE(misc-include-cleaner)
 #include <boost/regex.hpp>
+// NOLINTNEXTLINE(misc-include-cleaner)
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <string_utils/string_utils.hpp>
@@ -20,8 +22,19 @@ using clp::string_utils::is_decimal_digit;
 using std::string;
 using std::string_view;
 using std::vector;
+// NOLINTNEXTLINE(misc-include-cleaner)
+using BoostRegex = boost::regex;
 
 namespace clp::aws {
+namespace alias {
+// NOLINTNEXTLINE(misc-include-cleaner)
+using boost::regex_match;
+// NOLINTNEXTLINE(misc-include-cleaner)
+using boost::smatch;
+// NOLINTNEXTLINE(misc-include-cleaner)
+using fmt::format;
+}  // namespace alias
+
 namespace {
 /**
  * @param c
@@ -91,11 +104,11 @@ auto is_unreserved_characters(char c) -> bool {
 
 auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp
 ) -> string {
-    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
+    return alias::format("{:%Y%m%dT%H%M%SZ}", timestamp);
 }
 
 auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp) -> string {
-    return fmt::format("{:%Y%m%d}", timestamp);
+    return alias::format("{:%Y%m%d}", timestamp);
 }
 
 auto get_string_to_sign(
@@ -117,7 +130,7 @@ auto get_string_to_sign(
     auto const signed_canonical_request_str = convert_to_hex_string(
             {signed_canonical_request.data(), signed_canonical_request.size()}
     );
-    string_to_sign = fmt::format(
+    string_to_sign = alias::format(
             "{}\n{}\n{}\n{}",
             cAws4HmacSha256,
             timestamp,
@@ -134,7 +147,7 @@ auto encode_uri(string_view uri, bool is_object_key) -> string {
         if (is_unreserved_characters(c) || ('/' == c) && is_object_key) {
             encoded_uri += c;
         } else {
-            encoded_uri += fmt::format("%{:02X}", c);
+            encoded_uri += alias::format("%{:02X}", c);
         }
     }
 
@@ -142,12 +155,12 @@ auto encode_uri(string_view uri, bool is_object_key) -> string {
 }
 
 auto get_scope(string_view date, string_view region) -> string {
-    return fmt::format("{}/{}/{}/{}", date, region, cS3Service, cAws4Request);
+    return alias::format("{}/{}/{}/{}", date, region, cS3Service, cAws4Request);
 }
 
 auto get_canonical_request(S3Url const& url, string_view query_string) -> string {
-    auto const uri_to_encode = fmt::format("/{}", url.get_key());
-    return fmt::format(
+    auto const uri_to_encode = alias::format("/{}", url.get_key());
+    return alias::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
             AwsAuthenticationSigner::cHttpGetMethod,
             encode_uri(uri_to_encode, true),
@@ -162,18 +175,18 @@ auto get_canonical_request(S3Url const& url, string_view query_string) -> string
 
 S3Url::S3Url(string const& url) {
     // Virtual-hosted-style HTTP URL format: https://[bucket].s3.[region].[endpoint]/[key]
-    boost::regex const host_style_url_regex{
+    BoostRegex const host_style_url_regex{
             R"(https://(?<bucket>[a-z0-9.-]+)\.s3(\.(?<region>[a-z0-9-]+))?)"
             R"(\.(?<endpoint>[a-z0-9.-]+)/(?<key>[^?]+).*)"
     };
     // Path-style HTTP URL format: https://s3.[region].[endpoint]/[bucket]/[key]
-    boost::regex const path_style_url_regex{
+    BoostRegex const path_style_url_regex{
             R"(https://s3(\.(?<region>[a-z0-9-]+))?)"
             R"(\.(?<endpoint>[a-z0-9.-]+)/(?<bucket>[a-z0-9.-]+)/(?<key>[^?]+).*)"
     };
 
-    if (boost::smatch match; boost::regex_match(url, match, host_style_url_regex)
-                             || boost::regex_match(url, match, path_style_url_regex))
+    if (alias::smatch match; alias::regex_match(url, match, host_style_url_regex)
+                             || alias::regex_match(url, match, path_style_url_regex))
     {
         m_region = match["region"];
         m_bucket = match["bucket"];
@@ -200,7 +213,7 @@ S3Url::S3Url(string const& url) {
     if (m_region.empty()) {
         m_region = cDefaultRegion;
     }
-    m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, m_end_point);
+    m_host = alias::format("{}.s3.{}.{}", m_bucket, m_region, m_end_point);
 }
 
 auto AwsAuthenticationSigner::generate_presigned_url(
@@ -234,7 +247,7 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     }
     auto const signature_str = convert_to_hex_string({signature.data(), signature.size()});
 
-    presigned_url = fmt::format(
+    presigned_url = alias::format(
             "https://{}/{}?{}&{}={}",
             s3_url.get_host(),
             s3_url.get_key(),
@@ -249,8 +262,8 @@ auto AwsAuthenticationSigner::get_canonical_query_string(
         string_view scope,
         string_view timestamp
 ) const -> string {
-    auto const uri = fmt::format("{}/{}", m_access_key_id, scope);
-    return fmt::format(
+    auto const uri = alias::format("{}/{}", m_access_key_id, scope);
+    return alias::format(
             "{}={}&{}={}&{}={}&{}={}&{}={}",
             cXAmzAlgorithm,
             cAws4HmacSha256,
@@ -270,7 +283,7 @@ auto AwsAuthenticationSigner::get_signing_key(
         string_view date,
         vector<unsigned char>& signing_key
 ) const -> ErrorCode {
-    auto const key = fmt::format("{}{}", cAws4, m_secret_access_key);
+    auto const key = alias::format("{}{}", cAws4, m_secret_access_key);
 
     vector<unsigned char> date_key;
     if (auto const error_code = get_hmac_sha256_hash(
