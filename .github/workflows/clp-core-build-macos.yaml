@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   build-macos:
-    runseon: "macos-13"
+    runs-on: "macos-13"
     steps:
       - uses: "actions/checkout@v4"
         with:
