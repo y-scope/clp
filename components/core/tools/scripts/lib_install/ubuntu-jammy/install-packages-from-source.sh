@@ -9,6 +9,7 @@ set -u
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 lib_install_scripts_dir=$script_dir/..
 
+"$lib_install_scripts_dir"/install-curl.sh 8.9.1
 "$lib_install_scripts_dir"/fmtlib.sh 8.0.1
 "$lib_install_scripts_dir"/libarchive.sh 3.5.1
 "$lib_install_scripts_dir"/lz4.sh 1.8.2
