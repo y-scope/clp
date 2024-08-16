@@ -7,7 +7,6 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 
-#include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/ReaderInterface.hpp"
 #include "../src/clp/SysFileReader.hpp"

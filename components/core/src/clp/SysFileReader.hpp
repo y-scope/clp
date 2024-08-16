@@ -16,12 +16,12 @@
 namespace clp {
 /**
  * Class for performing reads from an on-disk file directly using C style system call.
- * Unlike reader classes using FILE stream interface, This class operates on raw fd and does not
- * internally buffer any data. Instead, the user of this class is expected to buffer and read the
- * data efficiently.
+ * Unlike reader classes using `FILE` stream interface, This class operates on raw file descriptor
+ * and does not internally buffer any data. Instead, the user of this class is expected to buffer
+ * and read the data efficiently.
  *
  * Note: If you don't plan to handle the data buffering yourself, do not use this class. Use
- * FileReader instead.
+ * `FileReader` instead.
  */
 class SysFileReader : public ReaderInterface {
 public:
@@ -81,7 +81,7 @@ public:
      */
     [[nodiscard]] auto
     try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
-
+    // Methods
     [[nodiscard]] auto get_path() const -> std::string_view { return m_path; }
 
     /**
