@@ -157,7 +157,7 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
 ) -> IRErrorCode;
 
 /**
- * Deserializes the schema (a vector of key IDs) of a log event.
+ * Deserializes the schema (a vector of node IDs) of a log event.
  * @param reader
  * @param tag Inputs the current tag and outputs the last read tag.
  * @param schema Outputs the deserialized schema.
@@ -171,54 +171,55 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
 ) -> IRErrorCode;
 
 /**
- * Deserializes the next value and pushes the result into the kv_pairs.
+ * Deserializes the next value and pushes the result into the `node_id_value_pairs`.
  * @param reader
  * @param tag The tag of the value.
- * @param key_id The key ID of the value.
- * @param kv_pairs Outputs the key-value pair constructed by the deserialized value.
+ * @param node_id The node ID of the value.
+ * @param node_id_value_pairs Outputs the ID-value pair constructed by the deserialized value.
  * @return `IRErrorCode::IRErrorCode_Success` on success.
  * @return `IRErrorCode` indicating relevant errors.
  */
-[[nodiscard]] auto deserialize_value_and_insert_to_kv_pairs(
+[[nodiscard]] auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
-        SchemaTreeNode::id_t key_id,
-        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
+        SchemaTreeNode::id_t node_id,
+        KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode;
 
 /**
- * Deserializes an encoded text AST and pushes the result into the kv_pairs.
+ * Deserializes an encoded text AST and pushes the result into the node_id_value_pairs.
  * @tparam encoded_variable_t
  * @param reader
- * @param key_id The key ID of the encoded text AST value.
- * @param kv_pairs Outputs the key-value pair constructed by the deserialized encoded text AST.
+ * @param node_id The node ID of the value.
+ * @param node_id_value_pairs Outputs the ID-value pair constructed by the deserialized encoded text
+ * AST.
  * @return `IRErrorCode::IRErrorCode_Success` on success.
  * @return `IRErrorCode` indicating relevant errors.
  */
 template <typename encoded_variable_t>
 requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
          || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
-[[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_kv_pairs(
+[[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
-        SchemaTreeNode::id_t key_id,
-        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
+        SchemaTreeNode::id_t node_id,
+        KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode;
 
 /**
- * Deserializes values and construct key-value pairs according to the given schema. The number of
+ * Deserializes values and construct ID-value pairs according to the given schema. The number of
  * values to deserialize is decided by the size of the given schema.
  * @param reader
  * @param tag The current tag.
  * @param schema The schema of the log event.
- * @param kv_pairs Outputs the constructed key-value pairs.
+ * @param node_id_value_pairs Outputs the constructed ID-value pairs.
  * @return `IRErrorCode::IRErrorCode_Success` on success.
  * @return `IRErrorCode` indicating relevant errors.
  */
-[[nodiscard]] auto deserialize_value_and_construct_kv_pairs(
+[[nodiscard]] auto deserialize_value_and_construct_node_id_value_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::vector<SchemaTreeNode::id_t> const& schema,
-        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
+        KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode;
 
 // Implementations
@@ -273,7 +274,7 @@ auto deserialize_schema_tree_node_parent_id(
         SchemaTreeNode::id_t& parent_id
 ) -> IRErrorCode {
     encoded_tag_t tag{};
-    if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err) {
+    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
         return err;
     }
     if (cProtocol::Payload::SchemaTreeNodeParentIdUByte == tag) {
@@ -301,6 +302,7 @@ auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t
         if (false == deserialize_int(reader, deserialized_val)) {
             return IRErrorCode::IRErrorCode_Incomplete_IR;
         }
+        // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
         val = deserialized_val;
     } else if (cProtocol::Payload::ValueInt16 == tag) {
         int16_t deserialized_val{};
@@ -362,13 +364,12 @@ auto deserialize_utc_offset_changes(
         UtcOffset& utc_offset
 ) -> IRErrorCode {
     while (cProtocol::Payload::UtcOffsetChange == tag) {
-        if (auto const err = deserialize_utc_offset_change(reader, utc_offset);
+        if (auto const err{deserialize_utc_offset_change(reader, utc_offset)};
             IRErrorCode::IRErrorCode_Success != err)
         {
             return err;
         }
-        if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err)
-        {
+        if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
             return err;
         }
     }
@@ -382,14 +383,14 @@ auto deserialize_schema_tree_nodes(
 ) -> IRErrorCode {
     while (is_schema_tree_node_tag(tag)) {
         // Get the type of the node
-        auto const type = schema_tree_node_tag_to_type(tag);
+        auto const type{schema_tree_node_tag_to_type(tag)};
         if (false == type.has_value()) {
             return IRErrorCode::IRErrorCode_Corrupted_IR;
         }
 
         // Get the parent ID of the node
         SchemaTreeNode::id_t parent_id{};
-        if (auto const err = deserialize_schema_tree_node_parent_id(reader, parent_id);
+        if (auto const err{deserialize_schema_tree_node_parent_id(reader, parent_id)};
             IRErrorCode_Success != err)
         {
             return err;
@@ -397,13 +398,13 @@ auto deserialize_schema_tree_nodes(
 
         // Get the key name of the node
         encoded_tag_t str_packet_tag{};
-        if (auto const err = deserialize_tag(reader, str_packet_tag);
+        if (auto const err{deserialize_tag(reader, str_packet_tag)};
             IRErrorCode::IRErrorCode_Success != err)
         {
             return err;
         }
         std::string key_name;
-        if (auto const err = deserialize_string(reader, str_packet_tag, key_name);
+        if (auto const err{deserialize_string(reader, str_packet_tag, key_name)};
             IRErrorCode::IRErrorCode_Success != err)
         {
             return err;
@@ -417,8 +418,7 @@ auto deserialize_schema_tree_nodes(
         std::ignore = schema_tree.insert_node(locator);
 
         // Read the next tag
-        if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err)
-        {
+        if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
             return err;
         }
     }
@@ -448,8 +448,7 @@ auto deserialize_schema(
             break;
         }
 
-        if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err)
-        {
+        if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
             return err;
         }
     }
@@ -457,11 +456,11 @@ auto deserialize_schema(
     return IRErrorCode::IRErrorCode_Success;
 }
 
-auto deserialize_value_and_insert_to_kv_pairs(
+auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
-        SchemaTreeNode::id_t key_id,
-        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
+        SchemaTreeNode::id_t node_id,
+        KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode {
     switch (tag) {
         case cProtocol::Payload::ValueInt8:
@@ -469,12 +468,12 @@ auto deserialize_value_and_insert_to_kv_pairs(
         case cProtocol::Payload::ValueInt32:
         case cProtocol::Payload::ValueInt64: {
             value_int_t value_int{};
-            if (auto const err = deserialize_int_val(reader, tag, value_int);
+            if (auto const err{deserialize_int_val(reader, tag, value_int)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
             }
-            kv_pairs.emplace(key_id, Value{value_int});
+            node_id_value_pairs.emplace(node_id, Value{value_int});
             break;
         }
         case cProtocol::Payload::ValueFloat: {
@@ -482,48 +481,48 @@ auto deserialize_value_and_insert_to_kv_pairs(
             if (false == deserialize_int(reader, val)) {
                 return IRErrorCode::IRErrorCode_Incomplete_IR;
             }
-            kv_pairs.emplace(key_id, Value{bit_cast<value_float_t>(val)});
+            node_id_value_pairs.emplace(node_id, Value{bit_cast<value_float_t>(val)});
             break;
         }
         case cProtocol::Payload::ValueTrue:
-            kv_pairs.emplace(key_id, Value{true});
+            node_id_value_pairs.emplace(node_id, Value{true});
             break;
         case cProtocol::Payload::ValueFalse:
-            kv_pairs.emplace(key_id, Value{false});
+            node_id_value_pairs.emplace(node_id, Value{false});
             break;
         case cProtocol::Payload::StrLenUByte:
         case cProtocol::Payload::StrLenUShort:
         case cProtocol::Payload::StrLenUInt: {
             std::string value_str;
-            if (auto const err = deserialize_string(reader, tag, value_str);
+            if (auto const err{deserialize_string(reader, tag, value_str)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
             }
-            kv_pairs.emplace(key_id, Value{std::move(value_str)});
+            node_id_value_pairs.emplace(node_id, Value{std::move(value_str)});
             break;
         }
         case cProtocol::Payload::ValueEightByteEncodingClpStr:
-            if (auto const err = deserialize_encoded_text_ast_and_insert_to_kv_pairs<
-                        ir::eight_byte_encoded_variable_t>(reader, key_id, kv_pairs);
+            if (auto const err{deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs<
+                        ir::eight_byte_encoded_variable_t>(reader, node_id, node_id_value_pairs)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
             }
             break;
         case cProtocol::Payload::ValueFourByteEncodingClpStr:
-            if (auto const err = deserialize_encoded_text_ast_and_insert_to_kv_pairs<
-                        ir::four_byte_encoded_variable_t>(reader, key_id, kv_pairs);
+            if (auto const err{deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs<
+                        ir::four_byte_encoded_variable_t>(reader, node_id, node_id_value_pairs)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
             }
             break;
         case cProtocol::Payload::ValueNull:
-            kv_pairs.emplace(key_id, Value{});
+            node_id_value_pairs.emplace(node_id, Value{});
             break;
         case cProtocol::Payload::ValueEmpty:
-            kv_pairs.emplace(key_id, std::nullopt);
+            node_id_value_pairs.emplace(node_id, std::nullopt);
             break;
         default:
             return IRErrorCode::IRErrorCode_Corrupted_IR;
@@ -534,56 +533,59 @@ auto deserialize_value_and_insert_to_kv_pairs(
 template <typename encoded_variable_t>
 requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
          || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
-[[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_kv_pairs(
+[[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
-        SchemaTreeNode::id_t key_id,
-        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
+        SchemaTreeNode::id_t node_id,
+        KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode {
     encoded_tag_t tag{};
-    if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err) {
+    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
         return err;
     }
 
     std::string logtype;
     std::vector<encoded_variable_t> encoded_vars;
     std::vector<std::string> dict_vars;
-    if (auto const err
-        = deserialize_encoded_text_ast(reader, tag, logtype, encoded_vars, dict_vars);
+    if (auto const err{deserialize_encoded_text_ast(reader, tag, logtype, encoded_vars, dict_vars)};
         IRErrorCode::IRErrorCode_Success != err)
     {
         return err;
     }
 
-    kv_pairs.emplace(
-            key_id,
+    node_id_value_pairs.emplace(
+            node_id,
             Value{ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars}}
     );
     return IRErrorCode::IRErrorCode_Success;
 }
 
-auto deserialize_value_and_construct_kv_pairs(
+auto deserialize_value_and_construct_node_id_value_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::vector<SchemaTreeNode::id_t> const& schema,
-        KeyValuePairLogEvent::KeyValuePairs& kv_pairs
+        KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode {
-    kv_pairs.clear();
-    kv_pairs.reserve(schema.size());
-    for (auto const key_id : schema) {
-        if (kv_pairs.contains(key_id)) {
+    node_id_value_pairs.clear();
+    node_id_value_pairs.reserve(schema.size());
+    for (auto const node_id : schema) {
+        if (node_id_value_pairs.contains(node_id)) {
             // The key should be unique in a schema
             return IRErrorCode_Corrupted_IR;
         }
 
-        if (auto const err
-            = deserialize_value_and_insert_to_kv_pairs(reader, tag, key_id, kv_pairs);
+        if (auto const err{deserialize_value_and_insert_to_node_id_value_pairs(
+                    reader,
+                    tag,
+                    node_id,
+                    node_id_value_pairs
+            )};
             IRErrorCode::IRErrorCode_Success != err)
         {
             return err;
         }
 
-        if (schema.size() != kv_pairs.size()) {
-            if (auto const err = deserialize_tag(reader, tag);
+        if (schema.size() != node_id_value_pairs.size()) {
+            if (auto const err{deserialize_tag(reader, tag)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
@@ -597,7 +599,7 @@ auto deserialize_value_and_construct_kv_pairs(
 auto Deserializer::create(clp::ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer> {
     bool is_four_byte_encoded{};
-    if (auto const err = get_encoding_type(reader, is_four_byte_encoded);
+    if (auto const err{get_encoding_type(reader, is_four_byte_encoded)};
         IRErrorCode::IRErrorCode_Success != err)
     {
         return ir_error_code_to_errc(err);
@@ -605,7 +607,7 @@ auto Deserializer::create(clp::ReaderInterface& reader
 
     std::vector<int8_t> metadata;
     encoded_tag_t metadata_type{};
-    if (auto const err = deserialize_preamble(reader, metadata_type, metadata);
+    if (auto const err{deserialize_preamble(reader, metadata_type, metadata)};
         IRErrorCode::IRErrorCode_Success != err)
     {
         return ir_error_code_to_errc(err);
@@ -619,7 +621,7 @@ auto Deserializer::create(clp::ReaderInterface& reader
     if (metadata_json.is_discarded()) {
         return std::errc::protocol_error;
     }
-    auto const version_iter = metadata_json.find(ffi::ir_stream::cProtocol::Metadata::VersionKey);
+    auto const version_iter{metadata_json.find(ffi::ir_stream::cProtocol::Metadata::VersionKey)};
     if (metadata_json.end() == version_iter || false == version_iter->is_string()) {
         return std::errc::protocol_error;
     }
@@ -637,7 +639,7 @@ auto Deserializer::create(clp::ReaderInterface& reader
 
 auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
-    auto const utc_offset_snapshot = m_utc_offset;
+    auto const utc_offset_snapshot{m_utc_offset};
     m_schema_tree->take_snapshot();
     RevertManager revert_manager{
             []() -> void {},
@@ -648,33 +650,37 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
     };
 
     encoded_tag_t tag{};
-    if (auto const err = deserialize_tag(reader, tag); IRErrorCode::IRErrorCode_Success != err) {
+    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
         return ir_error_code_to_errc(err);
     }
 
-    if (auto const err = deserialize_utc_offset_changes(reader, tag, m_utc_offset);
+    if (auto const err{deserialize_utc_offset_changes(reader, tag, m_utc_offset)};
         IRErrorCode::IRErrorCode_Success != err)
     {
         return ir_error_code_to_errc(err);
     }
 
-    if (auto const err = deserialize_schema_tree_nodes(reader, tag, *m_schema_tree);
+    if (auto const err{deserialize_schema_tree_nodes(reader, tag, *m_schema_tree)};
         IRErrorCode::IRErrorCode_Success != err)
     {
         return ir_error_code_to_errc(err);
     }
 
     std::vector<SchemaTreeNode::id_t> schema;
-    if (auto const err = deserialize_schema(reader, tag, schema);
+    if (auto const err{deserialize_schema(reader, tag, schema)};
         IRErrorCode::IRErrorCode_Success != err)
     {
         return ir_error_code_to_errc(err);
     }
 
-    KeyValuePairLogEvent::KeyValuePairs kv_pairs;
+    KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
     if (false == schema.empty()) {
-        if (auto const err
-            = deserialize_value_and_construct_kv_pairs(reader, tag, schema, kv_pairs);
+        if (auto const err{deserialize_value_and_construct_node_id_value_pairs(
+                    reader,
+                    tag,
+                    schema,
+                    node_id_value_pairs
+            )};
             IRErrorCode::IRErrorCode_Success != err)
         {
             return ir_error_code_to_errc(err);
@@ -685,7 +691,11 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
         }
     }
 
-    auto result{KeyValuePairLogEvent::create(m_schema_tree, std::move(kv_pairs), m_utc_offset)};
+    auto result{KeyValuePairLogEvent::create(
+            m_schema_tree,
+            std::move(node_id_value_pairs),
+            m_utc_offset
+    )};
     if (false == result.has_error()) {
         revert_manager.mark_as_success();
     }

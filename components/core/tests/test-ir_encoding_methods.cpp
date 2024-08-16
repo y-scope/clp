@@ -1137,7 +1137,7 @@ TEMPLATE_TEST_CASE(
         REQUIRE_FALSE(kv_log_event_result.has_error());
         auto const& kv_log_event = kv_log_event_result.value();
         auto const num_leaves_in_json_obj = count_num_leaves(json_obj);
-        auto const num_kv_pairs = kv_log_event.get_key_value_pairs().size();
+        auto const num_kv_pairs = kv_log_event.get_node_id_value_pairs().size();
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
     }
 }

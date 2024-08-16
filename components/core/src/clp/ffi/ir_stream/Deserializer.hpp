@@ -39,7 +39,7 @@ public:
 
     // Define default move constructor and assignment
     Deserializer(Deserializer&&) = default;
-    auto operator=(Deserializer&&) -> Deserializer& = delete;
+    auto operator=(Deserializer&&) -> Deserializer& = default;
 
     // Destructor
     ~Deserializer() = default;
