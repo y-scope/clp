@@ -34,7 +34,7 @@ public:
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "FileReader operation failed";
+            return "clp::SysFileReader operation failed";
         }
     };
 
@@ -55,21 +55,6 @@ public:
 
     // Methods implementing the ReaderInterface
     /**
-     * Tries to get the current position of the read head in the file
-     * @param pos Position of the read head in the file
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
-    /**
-     * Tries to seek from the beginning of the file to the given position
-     * @param pos
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
-
-    /**
      * Tries to read up to a given number of bytes from the file
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
@@ -81,16 +66,34 @@ public:
      */
     [[nodiscard]] auto
     try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
+
+    /**
+     * Tries to seek from the beginning of the file to the given position
+     * @param pos
+     * @return ErrorCode_errno on error
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
+
+    /**
+     * Tries to get the current position of the read head in the file
+     * @param pos Position of the read head in the file
+     * @return ErrorCode_errno on error
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
+
     // Methods
     [[nodiscard]] auto get_path() const -> std::string_view { return m_path; }
 
     /**
      * Tries to stat the current file
      * @param stat_buffer
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * @return Same as FileDescriptor::try_fstat
      */
-    [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode;
+    [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode {
+        return m_fd.try_fstat(stat_buffer);
+    }
 
 private:
     std::string m_path;

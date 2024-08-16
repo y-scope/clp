@@ -28,7 +28,7 @@ auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_by
         buf += bytes_read;
         num_bytes_read += bytes_read;
         num_bytes_to_read -= bytes_read;
-        if (num_bytes_read == num_bytes_to_read) {
+        if (0 == num_bytes_to_read) {
             return ErrorCode_Success;
         }
     }
@@ -54,13 +54,6 @@ auto SysFileReader::try_get_pos(size_t& pos) -> ErrorCode {
         return ErrorCode_errno;
     }
     pos = static_cast<size_t>(curr_offset);
-    return ErrorCode_Success;
-}
-
-auto SysFileReader::try_fstat(struct stat& stat_buffer) const -> ErrorCode {
-    if (auto const return_value = fstat(m_fd.get_raw_fd(), &stat_buffer); 0 != return_value) {
-        return ErrorCode_errno;
-    }
     return ErrorCode_Success;
 }
 }  // namespace clp

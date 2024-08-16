@@ -2,6 +2,7 @@
 #define CLP_FILEDESCRIPTOR_HPP
 
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include <cstddef>
 #include <string>
@@ -82,6 +83,14 @@ public:
      * @return The open mode.
      */
     [[nodiscard]] auto get_open_mode() const -> OpenMode { return m_open_mode; }
+
+    /**
+     * Tries to stat the current file
+     * @param stat_buffer
+     * @return ErrorCode_errno on error
+     * @return ErrorCode_Success on success
+     */
+    [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode;
 
 private:
     int m_fd{-1};

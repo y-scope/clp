@@ -60,4 +60,11 @@ auto FileDescriptor::get_size() const -> size_t {
     }
     return static_cast<size_t>(stat_result.st_size);
 }
+
+auto FileDescriptor::try_fstat(struct stat& stat_buffer) const -> ErrorCode {
+    if (auto const return_value = fstat(m_fd, &stat_buffer); 0 != return_value) {
+        return ErrorCode_errno;
+    }
+    return ErrorCode_Success;
+}
 }  // namespace clp
