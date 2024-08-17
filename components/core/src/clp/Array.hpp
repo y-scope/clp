@@ -11,8 +11,8 @@
 namespace clp {
 /**
  * Class for a runtime fix-sized array.
- * @tparam T The type of elements in the array. The type must be default initializable so that the
- * class doesn't need to implement an initializer list constructor.
+ * @tparam T The type of elements in the array. The type must be default initializable so that this
+ * class doesn't need to implement a constructor which takes an initializer list.
  */
 template <typename T>
 requires(std::is_fundamental_v<T> || std::default_initializable<T>)
