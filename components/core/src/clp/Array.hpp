@@ -13,11 +13,12 @@
 
 namespace clp {
 /**
- * Class for a run-time fix-sized array.
- * @tparam T The type of the element in the array. The type must be default constructable.
+ * Class for a runtime fix-sized array.
+ * @tparam T The type of elements in the array. The type must be default initializable so that the
+ * class doesn't need to implement an initializer list constructor.
  */
 template <typename T>
-requires(std::is_fundamental_v<T> || std::is_default_constructible_v<T>)
+requires(std::is_fundamental_v<T> || std::is_default_initializable<T>)
 class Array {
 public:
     // Types
@@ -74,12 +75,12 @@ public:
     [[nodiscard]] auto size() const -> size_t { return m_size; }
 
     /**
-     * @return The ptr of the underlying data buffer.
+     * @return A pointer to the underlying data buffer.
      */
     [[nodiscard]] auto data() -> T* { return m_data.get(); }
 
     /**
-     * @return The ptr of the underlying data buffer.
+     * @return A pointer to the underlying data buffer.
      */
     [[nodiscard]] auto data() const -> T const* { return m_data.get(); }
 

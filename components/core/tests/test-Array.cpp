@@ -37,8 +37,8 @@ TEST_CASE("array_fundamental", "[clp::Array]") {
     REQUIRE_THROWS(clp_array.at(idx));
 }
 
-TEST_CASE("array_default_constructable", "[clp::Array]") {
-    vector<std::string> const std_vector{"yscope", "clp", "clp::Array", "default_constructable"};
+TEST_CASE("array_default_initializable", "[clp::Array]") {
+    vector<std::string> const std_vector{"yscope", "clp", "clp::Array", "default_initializable"};
     Array<std::string> clp_array{std_vector.size()};
     std::copy(std_vector.cbegin(), std_vector.cend(), clp_array.begin());
     REQUIRE(std::equal(std_vector.begin(), std_vector.end(), clp_array.begin(), clp_array.end()));
