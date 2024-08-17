@@ -12,6 +12,12 @@ using std::vector;
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("array_fundamental", "[clp::Array]") {
+    Array<int> clp_array_empty{0};
+    REQUIRE(clp_array_empty.empty());
+    // NOLINTNEXTLINE(readability-container-size-empty)
+    REQUIRE((0 == clp_array_empty.size()));
+    REQUIRE((clp_array_empty.begin() == clp_array_empty.end()));
+
     constexpr size_t cBufferSize{1024};
 
     vector<int> std_vector;
@@ -38,6 +44,12 @@ TEST_CASE("array_fundamental", "[clp::Array]") {
 }
 
 TEST_CASE("array_default_initializable", "[clp::Array]") {
+    Array<std::string> clp_array_empty{0};
+    REQUIRE(clp_array_empty.empty());
+    // NOLINTNEXTLINE(readability-container-size-empty)
+    REQUIRE((0 == clp_array_empty.size()));
+    REQUIRE((clp_array_empty.begin() == clp_array_empty.end()));
+
     vector<std::string> const std_vector{"yscope", "clp", "clp::Array", "default_initializable"};
     Array<std::string> clp_array{std_vector.size()};
     std::copy(std_vector.cbegin(), std_vector.cend(), clp_array.begin());

@@ -1,15 +1,12 @@
 #ifndef CLP_ARRAY_HPP
 #define CLP_ARRAY_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <string>
+#include <stdexcept>
 #include <type_traits>
-#include <utility>
-
-#include "ErrorCode.hpp"
-#include "TraceableException.hpp"
 
 namespace clp {
 /**
@@ -18,31 +15,12 @@ namespace clp {
  * class doesn't need to implement an initializer list constructor.
  */
 template <typename T>
-requires(std::is_fundamental_v<T> || std::is_default_initializable<T>)
+requires(std::is_fundamental_v<T> || std::default_initializable<T>)
 class Array {
 public:
     // Types
     using Iterator = T*;
     using ConstIterator = T const*;
-
-    class OperationFailed : public TraceableException {
-    public:
-        OperationFailed(
-                ErrorCode error_code,
-                char const* const filename,
-                int line_number,
-                std::string message
-        )
-                : TraceableException{error_code, filename, line_number},
-                  m_message{std::move(message)} {}
-
-        [[nodiscard]] auto what() const noexcept -> char const* override {
-            return m_message.c_str();
-        }
-
-    private:
-        std::string m_message;
-    };
 
     // Constructors
     // NOLINTNEXTLINE(*-avoid-c-arrays)
@@ -90,7 +68,7 @@ public:
      * @throw `OperationFailed` if the given index is out of bound.
      */
     [[nodiscard]] auto at(size_t idx) -> T& {
-        assert_idx(idx);
+        assert_is_in_range(idx);
         return m_data[idx];
     }
 
@@ -100,7 +78,7 @@ public:
      * @throw `OperationFailed` if the given index is out of bound.
      */
     [[nodiscard]] auto at(size_t idx) const -> T const& {
-        assert_idx(idx);
+        assert_is_in_range(idx);
         return m_data[idx];
     }
 
@@ -115,16 +93,11 @@ public:
 private:
     /**
      * @param idx
-     * @throw `OperationFailed` if the given index is out of bound.
+     * @throw `std::out_of_range` if the given index is out of bound.
      */
-    auto assert_idx(size_t idx) -> void {
+    auto assert_is_in_range(size_t idx) -> void {
         if (idx >= m_size) {
-            throw OperationFailed(
-                    ErrorCode_OutOfBounds,
-                    __FILE__,
-                    __LINE__,
-                    "`clp::Array access out of bound.`"
-            );
+            throw std::out_of_range("clp::Array out-of-range access.");
         }
     }
 
