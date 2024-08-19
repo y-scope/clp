@@ -31,27 +31,28 @@
 namespace clp::ffi::ir_stream {
 namespace {
 /**
- * Class for automatically handling resource cleanup on success or failure.
- * @tparam SuccessHandler A callable object to be called when destructing with a success state.
- * @tparam FailureHandler A callable object to be called when destructing with a failure state.
+ * Class to perform different actions depending on whether a transaction succeeds or fails. The
+ * default state assumes the transaction fails.
+ * @tparam SuccessHandler A cleanup lambda to call on success.
+ * @tparam FailureHandler A cleanup lambda to call on failure.
  */
 template <typename SuccessHandler, typename FailureHandler>
 requires(std::is_invocable_v<SuccessHandler> && std::is_invocable_v<FailureHandler>)
-class RevertManager {
+class TransactionManager {
 public:
     // Constructor
-    RevertManager(SuccessHandler success_handler, FailureHandler failure_handler)
+    TransactionManager(SuccessHandler success_handler, FailureHandler failure_handler)
             : m_success_handler{success_handler},
               m_failure_handler{failure_handler} {}
 
     // Delete copy/move constructor and assignment
-    RevertManager(RevertManager const&) = delete;
-    RevertManager(RevertManager&&) = delete;
-    auto operator=(RevertManager const&) -> RevertManager& = delete;
-    auto operator=(RevertManager&&) -> RevertManager& = delete;
+    TransactionManager(TransactionManager const&) = delete;
+    TransactionManager(TransactionManager&&) = delete;
+    auto operator=(TransactionManager const&) -> TransactionManager& = delete;
+    auto operator=(TransactionManager&&) -> TransactionManager& = delete;
 
     // Destructor
-    ~RevertManager() {
+    ~TransactionManager() {
         if (m_success) {
             m_success_handler();
         } else {
@@ -61,9 +62,9 @@ public:
 
     // Methods
     /**
-     * Marks the state as success. By default, the object is in the failure state.
+     * Marks the transaction as successful.
      */
-    auto mark_as_success() -> void { m_success = true; }
+    auto mark_success() -> void { m_success = true; }
 
 private:
     // Variables
@@ -97,7 +98,7 @@ private:
  * @param reader
  * @param parent_id Returns the deserialized result.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_schema_tree_node_parent_id(
         ReaderInterface& reader,
@@ -119,7 +120,7 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @param tag A tag indicating the number of bytes used for the encoded length.
  * @param deserialized_str Returns the deserialized string.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_string(
         ReaderInterface& reader,
@@ -128,12 +129,12 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
 ) -> IRErrorCode;
 
 /**
- * Deserializes all the UTC offset packets until a non UTC offset packet tag is read.
+ * Deserializes all UTC offset packets until a non-UTC offset packet tag is read.
  * @param reader
- * @param tag Inputs the current tag and outputs the last read tag.
+ * @param tag Takes the current tag as input and returns the last tag read.
  * @param utc_offset Returns the deserialized UTC offset.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_utc_offset_changes(
         ReaderInterface& reader,
@@ -145,10 +146,10 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * Deserializes all the schema tree node packets and inserts them into the schema tree until a non
  * schema tree node tag is read.
  * @param reader
- * @param tag Inputs the current tag and outputs the last read tag.
+ * @param tag Takes the current tag as input and returns the last tag read.
  * @param schema_tree Returns the schema tree with all new nodes inserted.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_schema_tree_nodes(
         ReaderInterface& reader,
@@ -159,10 +160,10 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
 /**
  * Deserializes the schema (a vector of node IDs) of a log event.
  * @param reader
- * @param tag Inputs the current tag and outputs the last read tag.
+ * @param tag Takes the current tag as input and returns the last tag read.
  * @param schema Returns the deserialized schema.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_schema(
         ReaderInterface& reader,
@@ -177,7 +178,7 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @param node_id The node ID of the value.
  * @param node_id_value_pairs Returns the ID-value pair constructed by the deserialized value.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
@@ -194,7 +195,7 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @param node_id_value_pairs Returns the ID-value pair constructed by the deserialized encoded text
  * AST.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 template <typename encoded_variable_t>
 requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
@@ -213,7 +214,7 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
  * @param schema The schema of the log event.
  * @param node_id_value_pairs Returns the constructed ID-value pairs.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Relevant `IRErrorCode` to indicate errors.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_value_and_construct_node_id_value_pairs(
         ReaderInterface& reader,
@@ -639,7 +640,7 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
     auto const utc_offset_snapshot{m_utc_offset};
     m_schema_tree->take_snapshot();
-    RevertManager revert_manager{
+    TransactionManager revert_manager{
             []() -> void {},
             [&]() -> void {
                 m_utc_offset = utc_offset_snapshot;
@@ -695,7 +696,7 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
             m_utc_offset
     )};
     if (false == result.has_error()) {
-        revert_manager.mark_as_success();
+        revert_manager.mark_success();
     }
 
     return std::move(result);

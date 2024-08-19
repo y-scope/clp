@@ -98,8 +98,8 @@ auto deserialize_log_event(
  * @param encoded_vars Returns the encoded variables
  * @param dict_vars Returns the dictionary variables
  * @return IRErrorCode_Success on success
- * @return IRErrorCode_Corrupted_IR if reader contains invalid IR
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data
+ * @return IRErrorCode_Corrupted_IR if `reader` contains invalid IR
+ * @return IRErrorCode_Incomplete_IR if `reader` doesn't contain enough data
  */
 template <typename encoded_variable_t>
 auto deserialize_encoded_text_ast(

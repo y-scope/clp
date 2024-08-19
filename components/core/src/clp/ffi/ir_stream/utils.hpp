@@ -36,6 +36,16 @@ template <typename integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void;
 
 /**
+ * Deserializes an integer from the given reader
+ * @tparam integer_t Type of the integer to deserialize
+ * @param reader
+ * @param value Returns the deserialized integer
+ * @return Whether the reader contains enough data to deserialize.
+ */
+template <typename integer_t>
+[[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;
+
+/**
  * Serializes a string using CLP's encoding for unstructured text.
  * @tparam encoded_variable_t
  * @param str
@@ -74,37 +84,6 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {
     output_buf.insert(output_buf.end(), data_view.begin(), data_view.end());
 }
 
-template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_clp_string(
-        std::string_view str,
-        std::string& logtype,
-        std::vector<int8_t>& output_buf
-) -> bool {
-    static_assert(
-            (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)
-    );
-    bool succeeded{};
-    if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
-        output_buf.push_back(cProtocol::Payload::ValueFourByteEncodingClpStr);
-        succeeded = four_byte_encoding::serialize_message(str, logtype, output_buf);
-    } else {
-        output_buf.push_back(cProtocol::Payload::ValueEightByteEncodingClpStr);
-        succeeded = eight_byte_encoding::serialize_message(str, logtype, output_buf);
-    }
-    return succeeded;
-}
-
-/**
- * Deserializes an integer from the given reader
- * @tparam integer_t Type of the integer to deserialize
- * @param reader
- * @param value Returns the deserialized integer
- * @return true on success, false if the reader doesn't contain enough data to deserialize
- */
-template <typename integer_t>
-[[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;
-
 template <typename integer_t>
 auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
     integer_t value_little_endian;
@@ -124,6 +103,27 @@ auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
         value = bswap_64(value_little_endian);
     }
     return true;
+}
+
+template <typename encoded_variable_t>
+[[nodiscard]] auto serialize_clp_string(
+        std::string_view str,
+        std::string& logtype,
+        std::vector<int8_t>& output_buf
+) -> bool {
+    static_assert(
+            (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
+             || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)
+    );
+    bool succeeded{};
+    if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
+        output_buf.push_back(cProtocol::Payload::ValueFourByteEncodingClpStr);
+        succeeded = four_byte_encoding::serialize_message(str, logtype, output_buf);
+    } else {
+        output_buf.push_back(cProtocol::Payload::ValueEightByteEncodingClpStr);
+        succeeded = eight_byte_encoding::serialize_message(str, logtype, output_buf);
+    }
+    return succeeded;
 }
 }  // namespace clp::ffi::ir_stream
 #endif
