@@ -36,9 +36,9 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size = cDefaultRe
         -> std::vector<char>;
 
 /**
- * Asserts whether the given two `CURLcode` are the same. On failure, it will aborts the execution
- * of the current test and logs the error code.
- * @parma expected
+ * Asserts whether the given two `CURLcode` are the same. On failure, it aborts execution of the
+ * current test and logs the mismatched error codes.
+ * @param expected
  * @param actual
  * @param reader
  */
