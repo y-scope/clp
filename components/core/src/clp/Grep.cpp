@@ -1051,9 +1051,9 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
 
     // Don't allow an isolated wildcard to be considered a variable
     if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
-        possible_substr_types.emplace_back('*', "*", false);
+        possible_substr_types.emplace_back("*");
     } else if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
-        possible_substr_types.emplace_back('?', "?", false);
+        possible_substr_types.emplace_back("?");
     } else {
         // As we extend substrings adjacent to wildcards, the substrings that begin or end
         // with wildcards are redundant (e.g., for string "a*b", a decomposition of the form
@@ -1122,8 +1122,8 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
             );
             bool already_added_var = false;
             // Use the variable types to determine the possible_substr_types
-            for (int id : variable_types) {
-                auto& schema_type = lexer.m_id_symbol[id];
+            for (int variable_type : variable_types) {
+                auto& schema_type = lexer.m_id_symbol[variable_type];
                 if (schema_type != "int" && schema_type != "float") {
                     // LogSurgeon differentiates between all variable types. For example, LogSurgeon
                     // might report thet types has#, userID, and int. However, CLP only supports
@@ -1136,10 +1136,11 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
                 }
                 possible_substr_types.emplace_back();
                 QueryInterpretation& suffix = possible_substr_types.back();
-                suffix.append_value(
-                        id,
+                suffix.append_variable_token(
+                        variable_type,
                         processed_search_string.substr(substr_start, substr_end - substr_start),
-                        contains_wildcard
+                        contains_wildcard,
+                        false
                 );
 
                 // If the substring has no wildcards, we can safely exclude lower priority
@@ -1151,13 +1152,9 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
         }
         // If the substring matches no variables, or has a wildcard, it is potentially static-text.
         if (variable_types.empty() || contains_wildcard) {
-            possible_substr_types.emplace_back();
-            auto& possible_substr_type = possible_substr_types.back();
-            for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                char const& c = processed_search_string[idx];
-                std::string char_string({c});
-                possible_substr_type.append_value(c, char_string, false);
-            }
+            possible_substr_types.emplace_back(
+                    processed_search_string.substr(begin_idx, end_idx - begin_idx)
+            );
         }
     }
     return possible_substr_types;
@@ -1265,6 +1262,7 @@ vector<string> Grep::generate_logtype_strings(
         ByteLexer& lexer
 ) {
     vector<string> logtype_strings;
+    // TODO: this isn't the right size anymore as StaticQueryToken can contain strings
     logtype_strings.reserve(query_interpretations.size());
     for (QueryInterpretation const& query_logtype : query_interpretations) {
         // Convert each query logtype into a set of logtype strings. Logtype strings are used in the
@@ -1274,14 +1272,17 @@ vector<string> Grep::generate_logtype_strings(
         // comparing against the dictionary than they do when comparing against the segment.
         auto& logtype_string = logtype_strings.emplace_back();
         for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
-            auto const logtype_value = query_logtype.get_logtype_value(i);
-            auto const& raw_string = query_logtype.get_query_string(i);
-            auto const is_encoded_with_wildcard = query_logtype.get_is_encoded_with_wildcard(i);
-            auto const var_has_wildcard = query_logtype.get_var_has_wildcard(i);
-            if (std::holds_alternative<char>(logtype_value)) {
-                logtype_string.push_back(std::get<char>(logtype_value));
+            if (auto const& logtype_token = query_logtype.get_logtype_token(i);
+                std::holds_alternative<StaticQueryToken>(logtype_token))
+            {
+                logtype_string += std::get<StaticQueryToken>(logtype_token).get_query_stubstring();
             } else {
-                auto& schema_type = lexer.m_id_symbol[std::get<int>(logtype_value)];
+                auto const& variable_token = std::get<VariableQueryToken>(logtype_token);
+                auto const variable_type = variable_token.get_variable_type();
+                auto const& raw_string = variable_token.get_query_stubstring();
+                auto const is_encoded_with_wildcard = variable_token.get_is_encoded_with_wildcard();
+                auto const var_has_wildcard = variable_token.get_has_wildcard();
+                auto& schema_type = lexer.m_id_symbol[variable_type];
                 encoded_variable_t encoded_var;
 
                 // If this logtype contains wildcard variables that are being compared against the
@@ -1291,7 +1292,7 @@ vector<string> Grep::generate_logtype_strings(
                     && ("int" == schema_type || "float" == schema_type))
                 {
                     auto new_query_logtype = query_logtype;
-                    new_query_logtype.set_is_encoded_with_wildcard(i, true);
+                    new_query_logtype.set_variable_token_is_encoded(i, true);
                     query_interpretations.push_back(new_query_logtype);
                 }
                 if (is_encoded_with_wildcard) {
@@ -1354,12 +1355,15 @@ void Grep::generate_sub_queries(
         SubQuery sub_query;
         bool has_vars = true;
         for (uint32_t i = 0; i < query_logtype.get_logtype_size(); i++) {
-            auto const logtype_value = query_logtype.get_logtype_value(i);
-            auto const& raw_string = query_logtype.get_query_string(i);
-            auto const is_encoded_with_wildcard = query_logtype.get_is_encoded_with_wildcard(i);
-            auto const var_has_wildcard = query_logtype.get_var_has_wildcard(i);
-            if (std::holds_alternative<int>(logtype_value)) {
-                auto& schema_type = lexer.m_id_symbol[std::get<int>(logtype_value)];
+            if (auto const& logtype_token = query_logtype.get_logtype_token(i);
+                std::holds_alternative<VariableQueryToken>(logtype_token))
+            {
+                auto const& variable_token = std::get<VariableQueryToken>(logtype_token);
+                auto const variable_type = variable_token.get_variable_type();
+                auto const& raw_string = variable_token.get_query_stubstring();
+                auto const is_encoded_with_wildcard = variable_token.get_is_encoded_with_wildcard();
+                auto const var_has_wildcard = variable_token.get_has_wildcard();
+                auto& schema_type = lexer.m_id_symbol[variable_type];
                 encoded_variable_t encoded_var;
                 if (is_encoded_with_wildcard) {
                     sub_query.mark_wildcard_match_required();
