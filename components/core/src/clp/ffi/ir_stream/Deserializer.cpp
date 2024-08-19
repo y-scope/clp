@@ -31,9 +31,10 @@
 namespace clp::ffi::ir_stream {
 namespace {
 /**
- * Class for automatically handling resource cleanup on success or failure.
- * @tparam SuccessHandler A callable object to be called when destructing with a success state.
- * @tparam FailureHandler A callable object to be called when destructing with a failure state.
+ * Class to perform different actions depending on whether a transaction succeeds or fails. The
+ * default state assumes the trasnaction fails.
+ * @tparam SuccessHandler A cleanup lambda to call on success.
+ * @tparam FailureHandler A cleanup lambda to call on failure.
  */
 template <typename SuccessHandler, typename FailureHandler>
 requires(std::is_invocable_v<SuccessHandler> && std::is_invocable_v<FailureHandler>)
@@ -61,7 +62,7 @@ public:
 
     // Methods
     /**
-     * Marks the state as success. By default, the object is in the failure state.
+     * Marks the transaction as successful.
      */
     auto mark_as_success() -> void { m_success = true; }
 
@@ -128,12 +129,12 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
 ) -> IRErrorCode;
 
 /**
- * Deserializes all the UTC offset packets until a non UTC offset packet tag is read.
+ * Deserializes all UTC offset packets until a non-UTC offset packet tag is read.
  * @param reader
- * @param tag Inputs the current tag and outputs the last read tag.
- * @param utc_offset Outputs the deserialized UTC offset.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param tag Takes the current tag as input and returns the last tag read.
+ * @param utc_offset Returns the deserialized UTC offset.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return IRErrorCode indicating relevant errors.
  */
 [[nodiscard]] auto deserialize_utc_offset_changes(
         ReaderInterface& reader,

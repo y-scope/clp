@@ -12,21 +12,20 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * A class for deserializing log events from a CLP IR stream of kv-pair IR format.
+ * A deserializer for log events from a CLP kv-pair IR stream.
  *
  * This class:
  * - maintains all the necessary internal data structure to track deserialization state;
  * - provide APIs to deserialize log events from an IR stream.
  *
- * NOTE:
- * - This class is designed only to provide deserialization functionalities. Callers are responsible
- *   for maintaining a `ReaderInterface` to input IR bytes from an I/O stream.
+ * NOTE: This class is designed only to provide deserialization functionalities. Callers are
+ * responsible for maintaining a `ReaderInterface` to input IR bytes from an I/O stream.
  */
 class Deserializer {
 public:
     // Factory function
     /**
-     * Creates a CLP IR deserializer by reading preamble from given reader.
+     * Creates a deserializer by reading the stream's preamble from the given reader.
      * @param reader
      * @return A result containing the deserializer or an error code indicating the failure:
      */
@@ -46,7 +45,7 @@ public:
 
     // Methods
     /**
-     * Deserializes the stream from the given reader until the next log event.
+     * Deserializes the stream from the given reader up to and including the next log event.
      * @param reader
      * @return A result containing the deserialized log event or an error code indicating the
      * failure:
