@@ -19,6 +19,14 @@
 #include "../src/clp/ReaderInterface.hpp"
 
 namespace {
+constexpr bool cIsMacOS{
+#if defined(__APPLE__)
+        true
+#else
+        false
+#endif
+};
+
 constexpr size_t cDefaultReaderBufferSize{1024};
 
 [[nodiscard]] auto get_test_input_local_path() -> std::string;
@@ -80,13 +88,15 @@ auto assert_curl_error_code(CURLcode expected, CURLcode actual, clp::NetworkRead
     if (expected == actual) {
         return;
     }
-    auto const error_msg{reader.get_curl_error_msg()};
-    REQUIRE(error_msg.has_value());
-    std::string const error_message{
-            "Unexpected CURL error code: " + std::to_string(actual) + "; expected: "
-            + std::to_string(expected) + "\nError message:\n" + std::string{error_msg.value()}
+    std::string message_to_log{
+            "Unexpected CURL error code: " + std::to_string(actual)
+            + "; expected: " + std::to_string(expected)
     };
-    FAIL(error_message);
+    auto const curl_error_message{reader.get_curl_error_msg()};
+    if (curl_error_message.has_value()) {
+        message_to_log += "\nError message:\n" + std::string{curl_error_message.value()};
+    }
+    FAIL(message_to_log);
 }
 }  // namespace
 
@@ -174,7 +184,18 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     while (true) {
         auto const ret_code{reader.get_curl_ret_code()};
         if (ret_code.has_value()) {
-            assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, ret_code.value(), reader);
+            if constexpr (cIsMacOS) {
+                // On macOS, HTTP return code 416 seems to be handled as `CURLE_RECV_ERROR` in some
+                // `libcurl` versions.
+                auto const ret_val{ret_code.value()};
+                if (false == (CURLE_HTTP_RETURNED_ERROR == ret_val || CURLE_RECV_ERROR == ret_val))
+                {
+                    // The following assertion will fail. Calling it to log the CURL error message.
+                    assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, ret_code.value(), reader);
+                }
+            } else {
+                assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, ret_code.value(), reader);
+            }
             size_t pos{};
             REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
             break;
