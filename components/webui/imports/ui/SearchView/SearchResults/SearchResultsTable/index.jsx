@@ -5,10 +5,10 @@ import Table from "react-bootstrap/Table";
 import dayjs from "dayjs";
 
 import {
+    faFileLines,
     faSort,
     faSortDown,
     faSortUp,
-    faSquareUpRight,
 } from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 
@@ -125,10 +125,6 @@ const SearchResultsTable = ({
                                 Log message
                             </div>
                         </th>
-                        {isExtractIrSupported &&
-                            <th className={"search-results-th"}>
-                                <div className={"search-results-table-header"}>&nbsp;</div>
-                            </th>}
                     </tr>
                 </thead>
                 <tbody>
@@ -143,20 +139,23 @@ const SearchResultsTable = ({
                                 <pre className={"search-results-content search-results-message"}>
                                     {result.message}
                                 </pre>
+                                {isExtractIrSupported &&
+                                    <div className={"search-results-file-link"}>
+                                        <FontAwesomeIcon icon={faFileLines}/>
+                                        {" "}
+                                        <a
+                                            className={"search-results-file-link"}
+                                            rel={"noopener noreferrer"}
+                                            target={"_blank"}
+                                            title={"View log event in context"}
+                                            href={`${Meteor.settings.public.LogViewerWebuiUrl
+                                            }?origFileId=${result.orig_file_id}` +
+                                            `&logEventIdx=${result.log_event_ix}`}
+                                        >
+                                            {result.orig_file_path}
+                                        </a>
+                                    </div>}
                             </td>
-                            {isExtractIrSupported &&
-                                <td>
-                                    <a
-                                        rel={"noopener noreferrer"}
-                                        target={"_blank"}
-                                        title={"View log event in context"}
-                                        href={`${Meteor.settings.public.LogViewerWebuiUrl
-                                        }?origFileId=${result.orig_file_id}` +
-                                        `&logEventIdx=${result.log_event_ix}`}
-                                    >
-                                        <FontAwesomeIcon icon={faSquareUpRight}/>
-                                    </a>
-                                </td>}
                         </tr>
                     ))}
                 </tbody>
