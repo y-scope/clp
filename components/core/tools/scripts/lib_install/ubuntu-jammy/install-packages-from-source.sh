@@ -17,5 +17,3 @@ lib_install_scripts_dir=$script_dir/..
 "$lib_install_scripts_dir"/msgpack.sh 6.0.0
 "$lib_install_scripts_dir"/spdlog.sh 1.9.2
 "$lib_install_scripts_dir"/zstandard.sh 1.4.9
-
-"$lib_install_scripts_dir"/install-curl.sh 8.9.1
