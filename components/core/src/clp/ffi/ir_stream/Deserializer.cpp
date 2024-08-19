@@ -87,7 +87,7 @@ private:
 /**
  * @param tag
  * @return The corresponded schema tree node type on success.
- * @return `std::nullopt` if the tag doesn't match to any defined schema tree node types.
+ * @return std::nullopt if the tag doesn't match to any defined schema tree node types.
  */
 [[nodiscard]] auto schema_tree_node_tag_to_type(encoded_tag_t tag
 ) -> std::optional<SchemaTreeNode::Type>;
@@ -95,9 +95,9 @@ private:
 /**
  * Deserializes the parent ID of a schema tree node.
  * @param reader
- * @param parent_id Outputs the deserialized result.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param parent_id Returns the deserialized result.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 [[nodiscard]] auto deserialize_schema_tree_node_parent_id(
         ReaderInterface& reader,
@@ -108,7 +108,7 @@ private:
  * Deserializes an integer value packet.
  * @param reader
  * @param tag
- * @param val Outputs the deserialized value.
+ * @param val Returns the deserialized value.
  */
 [[nodiscard]] auto
 deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val) -> IRErrorCode;
@@ -117,9 +117,9 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * Deserializes a string packet.
  * @param reader
  * @param tag A tag indicating the number of bytes used for the encoded length.
- * @param deserialized_str Outputs the deserialized string.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param deserialized_str Returns the deserialized string.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 [[nodiscard]] auto deserialize_string(
         ReaderInterface& reader,
@@ -131,9 +131,9 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * Deserializes all the UTC offset packets until a non UTC offset packet tag is read.
  * @param reader
  * @param tag Inputs the current tag and outputs the last read tag.
- * @param utc_offset Outputs the deserialized UTC offset.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param utc_offset Returns the deserialized UTC offset.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 [[nodiscard]] auto deserialize_utc_offset_changes(
         ReaderInterface& reader,
@@ -146,9 +146,9 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * schema tree node tag is read.
  * @param reader
  * @param tag Inputs the current tag and outputs the last read tag.
- * @param schema_tree Outputs the schema tree with all new nodes inserted.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param schema_tree Returns the schema tree with all new nodes inserted.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 [[nodiscard]] auto deserialize_schema_tree_nodes(
         ReaderInterface& reader,
@@ -160,9 +160,9 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * Deserializes the schema (a vector of node IDs) of a log event.
  * @param reader
  * @param tag Inputs the current tag and outputs the last read tag.
- * @param schema Outputs the deserialized schema.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param schema Returns the deserialized schema.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 [[nodiscard]] auto deserialize_schema(
         ReaderInterface& reader,
@@ -175,9 +175,9 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @param reader
  * @param tag The tag of the value.
  * @param node_id The node ID of the value.
- * @param node_id_value_pairs Outputs the ID-value pair constructed by the deserialized value.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param node_id_value_pairs Returns the ID-value pair constructed by the deserialized value.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 [[nodiscard]] auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
@@ -191,10 +191,10 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @tparam encoded_variable_t
  * @param reader
  * @param node_id The node ID of the value.
- * @param node_id_value_pairs Outputs the ID-value pair constructed by the deserialized encoded text
+ * @param node_id_value_pairs Returns the ID-value pair constructed by the deserialized encoded text
  * AST.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 template <typename encoded_variable_t>
 requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
@@ -211,9 +211,9 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
  * @param reader
  * @param tag The current tag.
  * @param schema The schema of the log event.
- * @param node_id_value_pairs Outputs the constructed ID-value pairs.
- * @return `IRErrorCode::IRErrorCode_Success` on success.
- * @return `IRErrorCode` indicating relevant errors.
+ * @param node_id_value_pairs Returns the constructed ID-value pairs.
+ * @return IRErrorCode::IRErrorCode_Success on success.
+ * @return Relevant `IRErrorCode` to indicate errors.
  */
 [[nodiscard]] auto deserialize_value_and_construct_node_id_value_pairs(
         ReaderInterface& reader,
@@ -221,8 +221,6 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
         std::vector<SchemaTreeNode::id_t> const& schema,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode;
-
-// Implementations
 
 auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
     switch (ir_error_code) {
