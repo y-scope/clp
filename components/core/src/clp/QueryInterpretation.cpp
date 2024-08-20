@@ -53,19 +53,19 @@ void QueryInterpretation::generate_logtype_string(ByteLexer& lexer) {
             auto& schema_type = lexer.m_id_symbol[variable_type];
             encoded_variable_t encoded_var;
             if (is_encoded_with_wildcard) {
-                if ("int" == schema_type) {
+                if (cIntVarName == schema_type) {
                     LogTypeDictionaryEntry::add_int_var(m_logtype_string);
-                } else if ("float" == schema_type) {
+                } else if (cFloatVarName == schema_type) {
                     LogTypeDictionaryEntry::add_float_var(m_logtype_string);
                 }
-            } else if (false == var_has_wildcard && "int" == schema_type
+            } else if (false == var_has_wildcard && cIntVarName == schema_type
                        && EncodedVariableInterpreter::convert_string_to_representable_integer_var(
                                raw_string,
                                encoded_var
                        ))
             {
                 LogTypeDictionaryEntry::add_int_var(m_logtype_string);
-            } else if (false == var_has_wildcard && "float" == schema_type
+            } else if (false == var_has_wildcard && cFloatVarName == schema_type
                        && EncodedVariableInterpreter::convert_string_to_representable_float_var(
                                raw_string,
                                encoded_var

@@ -160,6 +160,9 @@ public:
 
     [[nodiscard]] std::string const& get_logtype_string() const { return m_logtype_string; }
 
+    static constexpr char  cIntVarName[] = "int";
+    static constexpr char cFloatVarName[] = "float";
+
 private:
     std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_logtype;
     std::string m_logtype_string;

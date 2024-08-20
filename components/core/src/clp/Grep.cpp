@@ -1032,10 +1032,17 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     // Don't allow an isolated wildcard to be considered a variable
     if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
         possible_substr_types.emplace_back("*");
+        // TODO: there must be a cleaner way to do this then repeating this 3 times
+        for (auto& possible_substr_type : possible_substr_types) {
+            possible_substr_type.generate_logtype_string(lexer);
+        }
         return possible_substr_types;
     }
     if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
         possible_substr_types.emplace_back("?");
+        for (auto& possible_substr_type : possible_substr_types) {
+            possible_substr_type.generate_logtype_string(lexer);
+        }
         return possible_substr_types;
     }
 
@@ -1104,7 +1111,8 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
         // Use the variable types to determine the possible_substr_types
         for (uint32_t const variable_type : variable_types) {
             if (auto& schema_type = lexer.m_id_symbol[variable_type];
-                schema_type != "int" && schema_type != "float")
+                schema_type != QueryInterpretation::cIntVarName
+                && schema_type != QueryInterpretation::cFloatVarName)
             {
                 // LogSurgeon differentiates between all variable types. For example, LogSurgeon
                 // might report thet types has#, userID, and int. However, CLP only supports dict,
@@ -1289,7 +1297,8 @@ void Grep::generate_sub_queries(
                 encoded_variable_t encoded_var;
                 if (is_encoded_with_wildcard) {
                     sub_query.mark_wildcard_match_required();
-                } else if (false == var_has_wildcard && schema_type == "int"
+                } else if (false == var_has_wildcard
+                           && schema_type == QueryInterpretation::cIntVarName
                            && EncodedVariableInterpreter::
                                    convert_string_to_representable_integer_var(
                                            raw_string,
@@ -1297,7 +1306,8 @@ void Grep::generate_sub_queries(
                                    ))
                 {
                     sub_query.add_non_dict_var(encoded_var);
-                } else if (false == var_has_wildcard && schema_type == "float"
+                } else if (false == var_has_wildcard
+                           && schema_type == QueryInterpretation::cFloatVarName
                            && EncodedVariableInterpreter::convert_string_to_representable_float_var(
                                    raw_string,
                                    encoded_var
