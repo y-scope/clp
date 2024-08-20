@@ -1001,9 +1001,9 @@ Grep::generate_query_substring_interpretations(string& processed_search_string, 
                 // substr(begin_idx,end_idx).
                 for (auto const& prefix : query_substr_interpretations[begin_idx - 1]) {
                     for (auto& suffix : possible_substr_types) {
-                        QueryInterpretation query_logtype = prefix;
-                        query_logtype.append_logtype(suffix);
-                        query_substr_interpretations[end_idx - 1].insert(query_logtype);
+                        QueryInterpretation query_interpretation = prefix;
+                        query_interpretation.append_logtype(suffix);
+                        query_substr_interpretations[end_idx - 1].insert(query_interpretation);
                     }
                 }
             } else {
