@@ -5,8 +5,11 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <span>
 
 #include "ErrorCode.hpp"
+
+using std::span;
 
 namespace clp {
 auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
@@ -16,16 +19,16 @@ auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_by
     }
 
     num_bytes_read = 0;
+    span dst_view{buf, num_bytes_to_read};
     while (true) {
-        auto const bytes_read = ::read(m_fd.get_raw_fd(), buf, num_bytes_to_read);
+        auto const bytes_read = ::read(m_fd.get_raw_fd(), dst_view.data(), num_bytes_to_read);
         if (0 == bytes_read) {
             break;
         }
         if (bytes_read < 0) {
             return ErrorCode_errno;
         }
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        buf += bytes_read;
+        dst_view = dst_view.subspan(num_bytes_to_read);
         num_bytes_read += bytes_read;
         num_bytes_to_read -= bytes_read;
         if (0 == num_bytes_to_read) {
