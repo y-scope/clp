@@ -1039,26 +1039,25 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
         return possible_substr_types;
     }
 
-    // As we extend substrings adjacent to wildcards, the substrings that begin or end
-    // with wildcards are redundant (e.g., for string "a*b", a decomposition of the form
-    // "a*" + "b" is a subset of the more general "a*" + "*" + "*b". Note, as this needs
-    // "*", the "*" substring is not redundant. This is already handled above). More
-    // detail about this is given below.
+    // As we extend substrings adjacent to wildcards, the substrings that begin or end with
+    // wildcards are redundant (e.g., for string "a*b", a decomposition of the form "a*" + "b" is a
+    // subset of the more general "a*" + "*" + "*b". Note, as this needs "*", the "*" substring is
+    // not redundant. This is already handled above). More detail about this is given below.
     if (is_greedy_wildcard[begin_idx] || is_greedy_wildcard[end_idx - 1]) {
         return possible_substr_types;
     }
 
-    // If the substring isn't surrounded by delimiters there is no reason to consider
-    // the case where it is a variable as CLP would not compress it as such. Preceding
-    // delimiter counts the start of log, a wildcard, or an actual delimiter.
+    // If the substring isn't surrounded by delimiters there is no reason to consider the case where
+    // it is a variable as CLP would not compress it as such. Preceding delimiter counts the start
+    // of log, a wildcard, or an actual delimiter.
     bool has_preceding_delimiter = 0 == begin_idx || is_greedy_wildcard[begin_idx - 1]
                                    || is_non_greedy_wildcard[begin_idx - 1]
                                    || lexer.is_delimiter(processed_search_string[begin_idx - 1]);
 
-    // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter.
-    // However, we have to be careful about a proceeding escape character. First, if '\'
-    // is a delimiter, we avoid counting the escape character. Second, if a literal '*'
-    // or '?' is a delimiter, then it will appear after the escape character.
+    // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter. However, we
+    // have to be careful about a proceeding escape character. First, if '\' is a delimiter, we
+    // avoid counting the escape character. Second, if a literal '*' or '?' is a delimiter, then it
+    // will appear after the escape character.
     bool has_proceeding_delimiter
             = processed_search_string.size() == end_idx || is_greedy_wildcard[end_idx]
               || is_non_greedy_wildcard[end_idx]
@@ -1066,22 +1065,21 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
                   && lexer.is_delimiter(processed_search_string[end_idx]))
               || (is_escape[end_idx] && lexer.is_delimiter(processed_search_string[end_idx + 1]));
 
-    // If the substring contains a wildcard, we need to consider the case that it can
-    // simultaneously match multiple variables and static text, and we need a different
-    // approach to compare against the archive.
+    // If the substring contains a wildcard, we need to consider the case that it can simultaneously
+    // match multiple variables and static text, and we need a different approach to compare against
+    // the archive.
     bool contains_wildcard = false;
     set<uint32_t> variable_types;
     if (has_preceding_delimiter && has_proceeding_delimiter) {
-        // If the substring is preceded or proceeded by a greedy wildcard then it's
-        // possible the substring could be extended to match a var, so the wildcards are
-        // added to the substring. If we don't consider this case we could miss
-        // combinations. Take for example "a*b", "a*" and "*b" can both match a has#
-        // style variable ("\w*\d+\w*"). If we decompose the string into either
-        // substrings "a*" + "b" or "a" + "*b", neither would capture the possibility of
-        // a logtype with the form "<has#>*<has#>", which is a valid possibility during
-        // compression. Instead we desire to decompose the string into "a*" + "*" +
-        // "*b". Note, non-greedy wildcards do not need to be considered, for example
-        // "a?b" can never match "<has#>?<has#>" or "<has#><has#>".
+        // If the substring is preceded or proceeded by a greedy wildcard then it's possible the
+        // substring could be extended to match a var, so the wildcards are added to the substring.
+        // If we don't consider this case we could miss combinations. Take for example "a*b", "a*"
+        // and "*b" can both match a has# style variable ("\w*\d+\w*"). If we decompose the string
+        // into either substrings "a*" + "b" or "a" + "*b", neither would capture the possibility of
+        // a logtype with the form "<has#>*<has#>", which is a valid possibility during compression.
+        // Instead we desire to decompose the string into "a*" + "*" + "*b". Note, non-greedy
+        // wildcards do not need to be considered, for example "a?b" can never match "<has#>?<has#>"
+        // or "<has#><has#>".
         uint32_t substr_start = begin_idx;
         uint32_t substr_end = end_idx;
         bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
@@ -1109,16 +1107,16 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
                 schema_type != "int" && schema_type != "float")
             {
                 // LogSurgeon differentiates between all variable types. For example, LogSurgeon
-                // might report thet types has#, userID, and int. However, CLP only supports
-                // dict, int, and float variables. So there is no benefit in duplicating the
-                // dict variable option for both has# and userID in the example.
+                // might report thet types has#, userID, and int. However, CLP only supports dict,
+                // int, and float variables. So there is no benefit in duplicating the dict variable
+                // option for both has# and userID in the example.
                 if (already_added_var) {
                     continue;
                 }
                 already_added_var = true;
             } else {
-                // If encoded variables have wildcards they require two different logtypes, one
-                // that compares against the dictionary and one that compares against segment.
+                // If encoded variables have wildcards they require two different logtypes, one that
+                // compares against the dictionary and one that compares against segment.
                 if (contains_wildcard) {
                     possible_substr_types.emplace_back(
                             variable_type,
@@ -1135,8 +1133,8 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
                     false
             );
 
-            // If the substring has no wildcards, we can safely exclude lower priority
-            // variable types.
+            // If the substring has no wildcards, we can safely exclude lower priority variable
+            // types.
             if (false == contains_wildcard) {
                 break;
             }
@@ -1203,9 +1201,8 @@ tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
         vector<bool>& is_escape,
         ByteLexer& lexer
 ) {
-    // To determine if a substring could be a variable we convert it to regex,
-    // generate the NFA and DFA for the regex, and intersect the substring DFA with
-    // the compression DFA.
+    // To determine if a substring could be a variable we convert it to regex, generate the NFA and
+    // DFA for the regex, and intersect the substring DFA with the compression DFA.
     std::string regex_search_string;
     bool contains_wildcard = false;
     for (uint32_t idx = 0; idx < search_substr.size(); idx++) {
@@ -1261,8 +1258,8 @@ void Grep::generate_sub_queries(
 ) {
     for (auto const& query_interpretation : query_interpretations) {
         auto const& logtype_string = query_interpretation.get_logtype_string();
-        // Check if the logtype string exists in the logtype dictionary. If not, then this
-        // logtype string does not form a useful sub query.
+        // Check if the logtype string exists in the logtype dictionary. If not, then this logtype
+        // string does not form a useful sub query.
         std::unordered_set<LogTypeDictionaryEntry const*> possible_logtype_entries;
         archive.get_logtype_dictionary().get_entries_matching_wildcard_string(
                 logtype_string,
@@ -1350,8 +1347,8 @@ void Grep::generate_sub_queries(
         }
         sub_query.set_possible_logtypes(possible_logtype_entries);
 
-        // Calculate the IDs of the segments that may contain results for the sub-query now
-        // that we've calculated the matching logtypes and variables
+        // Calculate the IDs of the segments that may contain results for the sub-query now that
+        // we've calculated the matching logtypes and variables
         sub_query.calculate_ids_of_matching_segments();
         sub_queries.push_back(std::move(sub_query));
     }
