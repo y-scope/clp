@@ -2,6 +2,7 @@
 #define CLP_AWS_AWSAUTHENTICATIONSIGNER_HPP
 
 #include <chrono>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>

@@ -77,12 +77,11 @@ namespace {
 
 /**
  * Encodes the Canonical URI as specified by AWS Signature Version 4's UriEncode.
- * This method encodes the forward slash character, '/', everywhere except in the object key.
  * @param uri
- * @param is_object_key
+ * @param encode_forward_slash Whether to encode forward slash '/' as hex digits.
  * @return The encoded URI.
  */
-[[nodiscard]] auto encode_uri(string_view uri, bool is_object_key) -> string;
+[[nodiscard]] auto encode_uri(string_view uri, bool encode_forward_slash) -> string;
 
 /**
  * @param date
@@ -140,11 +139,11 @@ auto get_string_to_sign(
     return ErrorCode_Success;
 }
 
-auto encode_uri(string_view uri, bool is_object_key) -> string {
+auto encode_uri(string_view uri, bool encode_forward_slash) -> string {
     string encoded_uri;
 
     for (auto const c : uri) {
-        if (is_unreserved_characters(c) || ('/' == c) && is_object_key) {
+        if (is_unreserved_characters(c) || ('/' == c && false == encode_forward_slash)) {
             encoded_uri += c;
         } else {
             encoded_uri += alias::format("%{:02X}", c);
@@ -163,7 +162,7 @@ auto get_canonical_request(S3Url const& url, string_view query_string) -> string
     return alias::format(
             "{}\n{}\n{}\n{}:{}\n\n{}\n{}",
             AwsAuthenticationSigner::cHttpGetMethod,
-            encode_uri(uri_to_encode, true),
+            encode_uri(uri_to_encode, false),
             query_string,
             cDefaultSignedHeaders,
             url.get_host(),
@@ -268,7 +267,7 @@ auto AwsAuthenticationSigner::get_canonical_query_string(
             cXAmzAlgorithm,
             cAws4HmacSha256,
             cXAmzCredential,
-            encode_uri(uri, false),
+            encode_uri(uri, true),
             cXAmzDate,
             timestamp,
             cXAmzExpires,
