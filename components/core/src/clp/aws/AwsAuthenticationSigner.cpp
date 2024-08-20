@@ -360,5 +360,4 @@ auto AwsAuthenticationSigner::get_signature(
     }
     return ErrorCode_Success;
 }
-
 }  // namespace clp::aws
