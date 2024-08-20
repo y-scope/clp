@@ -135,7 +135,7 @@ public:
      * @return a vector of all QueryInterpretations that can match the query in
      * processed_search_string.
      */
-    static std::vector<QueryInterpretation> generate_query_substring_interpretations(
+    static std::set<QueryInterpretation> generate_query_substring_interpretations(
             std::string& processed_search_string,
             log_surgeon::lexers::ByteLexer& lexer
     );
@@ -192,33 +192,16 @@ public:
     );
 
     /**
-     * Generates the logtype string for each query logtype to compare against the logtype dictionary
-     * in the archive. In this proccess, we also expand query_interpretations to contain all
-     * variations of each logtype that has variables with wildcards that can be encoded. E.g. "*123"
-     * can be in the segmenent as an encoded integer or in the dictionary, so both cases must be
-     * checked.
-     * @param query_interpretations
-     * @param lexer
-     * @return A vector of query logtype strings.
-     */
-    static std::vector<std::string> generate_logtype_strings(
-            std::vector<QueryInterpretation>& query_interpretations,
-            log_surgeon::lexers::ByteLexer& lexer
-    );
-
-    /**
      * Compare all possible query logtypes against the archive to determine all possible sub queries
      * that can match against messages in the archive.
      * @param query_interpretations
-     * @param logtype_strings
      * @param archive
      * @param lexer
      * @param ignore_case
      * @param sub_queries
      */
     static void generate_sub_queries(
-            std::vector<QueryInterpretation>& query_interpretations,
-            std::vector<std::string>& logtype_strings,
+            std::set<QueryInterpretation> const& query_interpretations,
             streaming_archive::reader::Archive const& archive,
             log_surgeon::lexers::ByteLexer& lexer,
             bool ignore_case,

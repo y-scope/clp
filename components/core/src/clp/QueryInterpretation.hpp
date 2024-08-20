@@ -6,6 +6,8 @@
 #include <variant>
 #include <vector>
 
+#include <log_surgeon/Lexer.hpp>
+
 namespace clp {
 /**
  * Represents a static substring in the query string as a token.
@@ -21,9 +23,9 @@ public:
 
     auto operator<=>(StaticQueryToken const& rhs) const = default;
 
-    void append(std::string const& query_substring) { m_query_substring += query_substring; }
+    void append(StaticQueryToken const& rhs);
 
-    [[nodiscard]] std::string const& get_query_stubstring() const { return m_query_substring; }
+    [[nodiscard]] std::string const& get_query_substring() const { return m_query_substring; }
 
 private:
     std::string m_query_substring;
@@ -49,13 +51,9 @@ public:
 
     auto operator<=>(VariableQueryToken const& rhs) const = default;
 
-    void set_has_wildcard(bool const has_wildcard) { m_has_wildcard = has_wildcard; }
-
-    void set_is_encoded(bool const is_encoded) { m_is_encoded = is_encoded; }
-
     [[nodiscard]] uint32_t get_variable_type() const { return m_variable_type; }
 
-    [[nodiscard]] std::string const& get_query_stubstring() const { return m_query_substring; }
+    [[nodiscard]] std::string const& get_query_substring() const { return m_query_substring; }
 
     [[nodiscard]] bool get_has_wildcard() const { return m_has_wildcard; }
 
@@ -113,36 +111,29 @@ public:
      */
     bool operator<(QueryInterpretation const& rhs) const;
 
-    void append_logtype(QueryInterpretation& suffix) {
-        auto const& first_new_token = suffix.m_logtype[0];
-        if (auto& prev_token = m_logtype.back();
-            false == m_logtype.empty() && std::holds_alternative<StaticQueryToken>(prev_token)
-            && false == suffix.m_logtype.empty()
-            && std::holds_alternative<StaticQueryToken>(first_new_token))
-        {
-            std::get<StaticQueryToken>(prev_token)
-                    .append(std::get<StaticQueryToken>(first_new_token).get_query_stubstring());
-            m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin() + 1, suffix.m_logtype.end());
-        } else {
-            m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
-        }
+    void clear() {
+        m_logtype.clear();
+        m_logtype_string = "";
     }
 
+    void append_logtype(QueryInterpretation& suffix);
+
     void append_static_token(std::string query_substring) {
+        StaticQueryToken static_query_token(std::move(query_substring));
         if (auto& prev_token = m_logtype.back();
             false == m_logtype.empty() && std::holds_alternative<StaticQueryToken>(prev_token))
         {
-            std::get<StaticQueryToken>(prev_token).append(query_substring);
+            std::get<StaticQueryToken>(prev_token).append(static_query_token);
         } else {
-            m_logtype.emplace_back(StaticQueryToken(std::move(query_substring)));
+            m_logtype.emplace_back(static_query_token);
         }
     }
 
     void append_variable_token(
-            uint32_t variable_type,
+            uint32_t const variable_type,
             std::string query_substring,
-            bool contains_wildcard,
-            bool is_encoded
+            bool const contains_wildcard,
+            bool const is_encoded
     ) {
         m_logtype.emplace_back(VariableQueryToken(
                 variable_type,
@@ -152,20 +143,26 @@ public:
         ));
     }
 
-    void set_variable_token_is_encoded(uint32_t const i, bool const value) {
-        std::get<VariableQueryToken>(m_logtype[i]).set_is_encoded(value);
-    }
+    /**
+     * Generates the logtype string to compare against the logtype dictionary in the archive. In
+     * this proccess.
+     * @param lexer
+     */
+    void generate_logtype_string(log_surgeon::lexers::ByteLexer& lexer);
 
     [[nodiscard]] uint32_t get_logtype_size() const { return m_logtype.size(); }
 
     [[nodiscard]] std::variant<StaticQueryToken, VariableQueryToken> const& get_logtype_token(
-            uint32_t i
+            uint32_t const i
     ) const {
         return m_logtype[i];
     }
 
+    [[nodiscard]] std::string const& get_logtype_string() const { return m_logtype_string; }
+
 private:
     std::vector<std::variant<StaticQueryToken, VariableQueryToken>> m_logtype;
+    std::string m_logtype_string;
 };
 
 /**
