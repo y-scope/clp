@@ -74,7 +74,8 @@ public:
 
 private:
     using id_to_pattern_t = std::map<uint64_t, TimestampPattern>;
-    using tokenized_column_to_range_t = std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>;
+    using tokenized_column_to_range_t
+            = std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>;
 
     // Variables
     bool m_is_open;
