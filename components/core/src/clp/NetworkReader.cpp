@@ -158,6 +158,13 @@ auto NetworkReader::try_get_pos(size_t& pos) -> ErrorCode {
                 // offset specified in the HTTP header.
                 return ErrorCode_Failure;
             }
+#if defined(__APPLE__)
+            if (CURLE_RECV_ERROR == curl_return_code.value()) {
+                // On macOS, HTTP return code 416 is handled as `CURLE_RECV_ERROR` in some `libcurl`
+                // versions.
+                return ErrorCode_Failure;
+            }
+#endif
         }
 
         if (false == at_least_one_byte_downloaded()) {
