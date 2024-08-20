@@ -1,6 +1,5 @@
 #include <cstddef>
 #include <filesystem>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -10,6 +9,9 @@
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/ReaderInterface.hpp"
 #include "../src/clp/SysFileReader.hpp"
+#include "../src/clp/Array.hpp"
+
+using clp::Array;
 
 namespace {
 // Reused code starts
@@ -39,12 +41,11 @@ auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
 
 auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vector<char> {
     std::vector<char> buf;
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-    auto const read_buf{std::make_unique<char[]>(read_buf_size)};
+    Array<char> read_buf{read_buf_size};
     for (bool has_more_content{true}; has_more_content;) {
         size_t num_bytes_read{};
-        has_more_content = reader.read(read_buf.get(), read_buf_size, num_bytes_read);
-        std::string_view const view{read_buf.get(), num_bytes_read};
+        has_more_content = reader.read(read_buf.data(), read_buf_size, num_bytes_read);
+        std::string_view const view{read_buf.data(), num_bytes_read};
         buf.insert(buf.cend(), view.cbegin(), view.cend());
     }
     return buf;
