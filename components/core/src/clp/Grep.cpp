@@ -1423,14 +1423,12 @@ void Grep::generate_sub_queries(
         if (false == has_vars) {
             continue;
         }
-        if (false == possible_logtype_entries.empty()) {
-            sub_query.set_possible_logtypes(possible_logtype_entries);
+        sub_query.set_possible_logtypes(possible_logtype_entries);
 
-            // Calculate the IDs of the segments that may contain results for the sub-query now
-            // that we've calculated the matching logtypes and variables
-            sub_query.calculate_ids_of_matching_segments();
-            sub_queries.push_back(std::move(sub_query));
-        }
+        // Calculate the IDs of the segments that may contain results for the sub-query now
+        // that we've calculated the matching logtypes and variables
+        sub_query.calculate_ids_of_matching_segments();
+        sub_queries.push_back(std::move(sub_query));
     }
 }
 }  // namespace clp
