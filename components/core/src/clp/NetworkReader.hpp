@@ -1,7 +1,6 @@
 #ifndef CLP_NETWORKREADER_HPP
 #define CLP_NETWORKREADER_HPP
 
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -228,7 +227,7 @@ public:
         {
             return std::nullopt;
         }
-        return std::string_view{m_curl_error_msg_buf.data()};
+        return std::string_view{m_curl_error_msg_buf->data()};
     }
 
 private:
@@ -350,7 +349,9 @@ private:
     std::atomic<State> m_state{State::InProgress};
     std::atomic<std::optional<CURLcode>> m_curl_ret_code;
 
-    std::array<char, CURL_ERROR_SIZE> m_curl_error_msg_buf{};
+    std::shared_ptr<CurlDownloadHandler::ErrorMsgBuf> m_curl_error_msg_buf{
+            std::make_shared<CurlDownloadHandler::ErrorMsgBuf>()
+    };
 };
 }  // namespace clp
 

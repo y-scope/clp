@@ -2,18 +2,16 @@
 
 #include <chrono>
 #include <cstddef>
-#include <span>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <curl/curl.h>
 
-#include "CurlOperationFailed.hpp"
-#include "ErrorCode.hpp"
-
 namespace clp {
 CurlDownloadHandler::CurlDownloadHandler(
-        std::span<char> error_msg_buf,
+        std::shared_ptr<ErrorMsgBuf> error_msg_buf,
         ProgressCallback progress_callback,
         WriteCallback write_callback,
         void* arg,
@@ -22,25 +20,16 @@ CurlDownloadHandler::CurlDownloadHandler(
         bool disable_caching,
         std::chrono::seconds connection_timeout,
         std::chrono::seconds overall_timeout
-) {
-    if (error_msg_buf.empty() || nullptr == error_msg_buf.data()
-        || error_msg_buf.size() < CURL_ERROR_SIZE)
-    {
-        throw CurlOperationFailed(
-                ErrorCode_Failure,
-                __FILE__,
-                __LINE__,
-                CURLE_FAILED_INIT,
-                "Invalid CURL error message buffer."
-        );
+)
+        : m_error_msg_buf{std::move(error_msg_buf)} {
+    if (nullptr != m_error_msg_buf) {
+        // Set up error message buffer
+        // According to the doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
+        // A successful call of setting `CURLOPT_ERRORBUFFER` will initialize the buffer to an empty
+        // string since 7.60.0. The minimum version we require is 7.68.0. Therefore, we don't need
+        // to manually clean up the passed-in buffer.
+        m_easy_handle.set_option(CURLOPT_ERRORBUFFER, m_error_msg_buf->data());
     }
-
-    // Set up error message buffer
-    // According to the doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
-    // A successful call of setting `CURLOPT_ERRORBUFFER` will initialize the buffer to an empty
-    // string since 7.60.0. The minimum version we require is 7.68.0. Therefore, we don't need to
-    // manually clean up the passed-in buffer.
-    m_easy_handle.set_option(CURLOPT_ERRORBUFFER, error_msg_buf.data());
 
     // Set up src url
     m_easy_handle.set_option(CURLOPT_URL, src_url.data());

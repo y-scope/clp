@@ -1,8 +1,10 @@
 #ifndef CLP_CURLDOWNLOADHANDLER_HPP
 #define CLP_CURLDOWNLOADHANDLER_HPP
 
+#include <array>
 #include <chrono>
 #include <cstddef>
+#include <memory>
 #include <span>
 #include <string_view>
 
@@ -29,6 +31,7 @@ public:
      * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
      */
     using WriteCallback = size_t (*)(char*, size_t, size_t, void*);
+    using ErrorMsgBuf = std::array<char, CURL_ERROR_SIZE>;
 
     // Constants
     // See https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
@@ -38,8 +41,7 @@ public:
 
     // Constructor
     /**
-     * @param error_msg_buf A non-empty buffer to store error messages. The buffer must be at least
-     * `CURL_ERROR_SIZE` long.
+     * @param error_msg_buf The buffer to store the CURL error message if it is not `nullptr`.
      * Doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
      * @param progress_callback
      * @param write_callback
@@ -53,7 +55,7 @@ public:
      * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
      */
     explicit CurlDownloadHandler(
-            std::span<char> error_msg_buf,
+            std::shared_ptr<ErrorMsgBuf> error_msg_buf,
             ProgressCallback progress_callback,
             WriteCallback write_callback,
             void* arg,
@@ -83,6 +85,7 @@ public:
 private:
     CurlEasyHandle m_easy_handle;
     CurlStringList m_http_headers;
+    std::shared_ptr<ErrorMsgBuf> m_error_msg_buf;
 };
 }  // namespace clp
 
