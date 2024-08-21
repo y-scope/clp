@@ -1,7 +1,9 @@
 #ifndef CLP_GREP_QUERY_INTERPRETATION_HPP
 #define CLP_GREP_QUERY_INTERPRETATION_HPP
 
+#include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -9,6 +11,109 @@
 #include <log_surgeon/Lexer.hpp>
 
 namespace clp {
+/**
+ * Stores a view into the SearchString class.
+ */
+class SearchStringView {
+public:
+    SearchStringView(
+            std::vector<bool> const& is_greedy_wildcard,
+            std::vector<bool> const& is_non_greedy_wildcard,
+            std::vector<bool> const& is_escape,
+            std::string const& processed_search_string,
+            uint32_t begin_idx,
+            uint32_t end_idx
+
+    )
+            : m_is_greedy_wildcard(is_greedy_wildcard),
+              m_is_non_greedy_wildcard(is_non_greedy_wildcard),
+              m_is_escape(is_escape),
+              m_processed_search_string(processed_search_string),
+              m_begin_idx(begin_idx),
+              m_end_idx(end_idx) {}
+
+    void extend_to_adjacent_wildcards();
+
+    [[nodiscard]] bool is_greedy_wildcard() const {
+        return 1 == length() && m_is_greedy_wildcard[m_begin_idx];
+    }
+
+    [[nodiscard]] bool is_non_greedy_wildcard() const {
+        return 1 == length() && m_is_non_greedy_wildcard[m_begin_idx];
+    }
+
+    [[nodiscard]] bool starts_or_ends_with_wildcard() const {
+        return m_is_greedy_wildcard[m_begin_idx] || m_is_greedy_wildcard[m_end_idx - 1];
+    }
+
+    [[nodiscard]] bool surrounded_by_delims(log_surgeon::lexers::ByteLexer const& lexer) const;
+
+    [[nodiscard]] uint32_t length() const { return m_end_idx - m_begin_idx; }
+
+    [[nodiscard]] bool get_value_is_greedy_wildcard(uint32_t const idx) const {
+        return m_is_greedy_wildcard[m_begin_idx + idx];
+    }
+
+    [[nodiscard]] bool get_value_is_non_greedy_wildcard(uint32_t const idx) const {
+        return m_is_non_greedy_wildcard[m_begin_idx + idx];
+    }
+
+    [[nodiscard]] bool get_value_is_escape(uint32_t const idx) const {
+        return m_is_escape[m_begin_idx + idx];
+    }
+
+    [[nodiscard]] char get_value(uint32_t const idx) const {
+        return m_processed_search_string[m_begin_idx + idx];
+    }
+
+    [[nodiscard]] std::string get_substr_copy() const {
+        return m_processed_search_string.substr(m_begin_idx, m_end_idx - m_begin_idx);
+    }
+
+private:
+    std::vector<bool> const& m_is_greedy_wildcard;
+    std::vector<bool> const& m_is_non_greedy_wildcard;
+    std::vector<bool> const& m_is_escape;
+    std::string const& m_processed_search_string;
+    uint32_t m_begin_idx;
+    uint32_t m_end_idx;
+};
+
+/**
+ * Stores metadata about the query.
+ */
+class SearchString {
+public:
+    explicit SearchString(std::string processed_search_string);
+
+    std::string substr(uint32_t const begin_idx, uint32_t const length) const {
+        return m_processed_search_string.substr(begin_idx, length);
+    }
+
+    [[nodiscard]] SearchStringView
+    create_view(uint32_t const start_idx, uint32_t const end_idx) const {
+        return SearchStringView{
+                m_is_greedy_wildcard,
+                m_is_non_greedy_wildcard,
+                m_is_escape,
+                m_processed_search_string,
+                start_idx,
+                end_idx
+        };
+    }
+
+    [[nodiscard]] uint32_t length() const { return m_processed_search_string.size(); }
+
+    [[nodiscard]] bool get_value_is_escape(uint32_t const idx) const { return m_is_escape[idx]; }
+
+private:
+    // std::vector<bool> is specialized so use std::vector<char> instead
+    std::vector<bool> m_is_greedy_wildcard;
+    std::vector<bool> m_is_non_greedy_wildcard;
+    std::vector<bool> m_is_escape;
+    std::string m_processed_search_string;
+};
+
 /**
  * Represents a static substring in the query string as a token.
  */
@@ -118,8 +223,8 @@ public:
 
     void append_logtype(QueryInterpretation& suffix);
 
-    void append_static_token(std::string query_substring) {
-        StaticQueryToken static_query_token(std::move(query_substring));
+    void append_static_token(std::string const& query_substring) {
+        StaticQueryToken static_query_token(query_substring);
         if (auto& prev_token = m_logtype.back();
             false == m_logtype.empty() && std::holds_alternative<StaticQueryToken>(prev_token))
         {
@@ -144,8 +249,7 @@ public:
     }
 
     /**
-     * Generates the logtype string to compare against the logtype dictionary in the archive. In
-     * this proccess.
+     * Generates the logtype string to compare against the logtype dictionary in the archive.
      * @param lexer
      */
     void generate_logtype_string(log_surgeon::lexers::ByteLexer& lexer);
@@ -160,7 +264,7 @@ public:
 
     [[nodiscard]] std::string const& get_logtype_string() const { return m_logtype_string; }
 
-    static constexpr char  cIntVarName[] = "int";
+    static constexpr char cIntVarName[] = "int";
     static constexpr char cFloatVarName[] = "float";
 
 private:

@@ -136,59 +136,32 @@ public:
      * processed_search_string.
      */
     static std::set<QueryInterpretation> generate_query_substring_interpretations(
-            std::string& processed_search_string,
+            SearchString const& processed_search_string,
             log_surgeon::lexers::ByteLexer& lexer
     );
 
     /**
      * Generates the possible static-text and variable types for the given substring.
-     * @param processed_search_string
-     * @param begin_idx
-     * @param end_idx
-     * @param is_greedy_wildcard
-     * @param is_non_greedy_wildcard
-     * @param is_escape
+     * @param search_string_view
      * @param lexer
      * @return a vector containing the possible substring types
      */
     static std::vector<QueryInterpretation> get_possible_substr_types(
-            std::string& processed_search_string,
-            size_t begin_idx,
-            size_t end_idx,
-            std::vector<bool>& is_greedy_wildcard,
-            std::vector<bool>& is_non_greedy_wildcard,
-            std::vector<bool>& is_escape,
+            SearchStringView const& search_string_view,
             log_surgeon::lexers::ByteLexer& lexer
     );
 
     /**
-     * Mark the locations of non-escaped wildcards '*', '?', and escape characters '\'.
-     * @param processed_search_string
-     * @return a tuple containing greedy wildcard, non-greedy wildcard, and escape character
-     * locations.
-     */
-    static std::tuple<std::vector<bool>, std::vector<bool>, std::vector<bool>>
-    get_wildcard_and_escape_locations(std::string const& processed_search_string);
-
-    /**
      * Perform DFA intersect to determine the type of variables the string can match. Also stores
      * if the string contains wildcards.
-     * @param search_substr
-     * @param substr_offset
-     * @param is_greedy_wildcard
-     * @param is_non_greedy_wildcard
-     * @param is_escape
+     * @param search_string_view
      * @param lexer
      * @return a tuple containing the set of variable types and a if the substring contains
      * wildcards.
      */
     static std::tuple<std::set<uint32_t>, bool> get_substring_variable_types(
-            std::string_view search_substr,
-            uint32_t substr_offset,
-            std::vector<bool>& is_greedy_wildcard,
-            std::vector<bool>& is_non_greedy_wildcard,
-            std::vector<bool>& is_escape,
-            log_surgeon::lexers::ByteLexer& lexer
+            SearchStringView search_string_view,
+            log_surgeon::lexers::ByteLexer const& lexer
     );
 
     /**

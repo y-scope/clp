@@ -12,6 +12,7 @@
 using clp::Grep;
 using clp::load_lexer_from_file;
 using clp::QueryInterpretation;
+using clp::SearchString;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;
@@ -119,30 +120,106 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
     REQUIRE(Grep::get_bounds_of_next_potential_var(str, begin_pos, end_pos, is_var) == false);
 }
 
+TEST_CASE("SearchString", "[SearchString][schema_search]") {
+    ByteLexer lexer;
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+
+    SearchString const search_string("* test\\* *");
+    REQUIRE(search_string.substr(0, search_string.length()) == "* test\\* *");
+    for (uint32_t idx = 0; idx < search_string.length(); idx++) {
+        CAPTURE(idx);
+        if (idx == 6) {
+            REQUIRE(search_string.get_value_is_escape(idx));
+        } else {
+            REQUIRE(false == search_string.get_value_is_escape(idx));
+        }
+    }
+
+    SECTION("surrounded_by_delims and starts_or_ends_with_wildcard") {
+        auto search_string_view1 = search_string.create_view(0, search_string.length());
+        REQUIRE(search_string_view1.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view1.starts_or_ends_with_wildcard());
+        auto search_string_view2 = search_string.create_view(1, search_string.length());
+        REQUIRE(search_string_view2.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view2.starts_or_ends_with_wildcard());
+        auto search_string_view3 = search_string.create_view(0, search_string.length() - 1);
+        REQUIRE(search_string_view3.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view3.starts_or_ends_with_wildcard());
+        auto search_string_view4 = search_string.create_view(2, search_string.length() - 2);
+        REQUIRE(search_string_view4.surrounded_by_delims(lexer));
+        REQUIRE(false == search_string_view4.starts_or_ends_with_wildcard());
+        auto search_string_view5 = search_string.create_view(3, search_string.length() - 3);
+        REQUIRE(false == search_string_view5.surrounded_by_delims(lexer));
+        REQUIRE(false == search_string_view5.starts_or_ends_with_wildcard());
+        auto search_string_view6 = search_string.create_view(1, search_string.length() - 1);
+        REQUIRE(search_string_view6.surrounded_by_delims(lexer));
+        REQUIRE(false == search_string_view6.starts_or_ends_with_wildcard());
+    }
+
+    SECTION("extend_to_adjacent_wildcards") {
+        auto search_string_view = search_string.create_view(1, search_string.length() - 1);
+        REQUIRE(8 == search_string_view.length());
+        search_string_view.extend_to_adjacent_wildcards();
+        REQUIRE(search_string_view.surrounded_by_delims(lexer));
+        REQUIRE(10 == search_string_view.length());
+        REQUIRE(search_string_view.get_substr_copy() == "* test\\* *");
+
+        auto search_string_view2 = search_string.create_view(2, search_string.length() - 2);
+        REQUIRE(6 == search_string_view2.length());
+        search_string_view2.extend_to_adjacent_wildcards();
+        REQUIRE(search_string_view2.surrounded_by_delims(lexer));
+        REQUIRE(6 == search_string_view2.length());
+        REQUIRE(search_string_view2.get_substr_copy() == "test\\*");
+    }
+
+    SECTION("getters") {
+        auto search_string_view = search_string.create_view(2, search_string.length());
+        REQUIRE(false == search_string_view.is_greedy_wildcard());
+        REQUIRE(false == search_string_view.is_non_greedy_wildcard());
+        REQUIRE('t' == search_string_view.get_value(0));
+        REQUIRE(false == search_string_view.get_value_is_escape(0));
+        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(0));
+        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(0));
+        REQUIRE('\\' == search_string_view.get_value(4));
+        REQUIRE(search_string_view.get_value_is_escape(4));
+        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(4));
+        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(4));
+        REQUIRE('*' == search_string_view.get_value(5));
+        REQUIRE(false == search_string_view.get_value_is_escape(5));
+        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(5));
+        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(5));
+        REQUIRE('*' == search_string_view.get_value(7));
+        REQUIRE(false == search_string_view.get_value_is_escape(7));
+        REQUIRE(search_string_view.get_value_is_greedy_wildcard(7));
+        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(7));
+    }
+
+    SECTION("Greedy Wildcard") {
+        auto search_string_view = search_string.create_view(0, 1);
+        REQUIRE(search_string_view.is_greedy_wildcard());
+        REQUIRE(false == search_string_view.is_non_greedy_wildcard());
+    }
+}
+
 // 0:"$end", 1:"$UncaughtString", 2:"int", 3:"float", 4:hex, 5:firstTimestamp, 6:newLineTimestamp,
 // 7:timestamp, 8:hex, 9:hasNumber, 10:uniqueVariable, 11:test
-TEST_CASE("get_substring_variable_types", "[schema_search]") {
+TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema_search]") {
     ByteLexer lexer;
-    clp::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("* 10000 reply: *") {
-        string query = "* 10000 reply: *";
-        auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escape]
-                = Grep::get_wildcard_and_escape_locations(query);
-        for (uint32_t end_idx = 1; end_idx <= query.size(); end_idx++) {
+        SearchString search_string("* 10000 reply: *");
+        for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
                 auto [variable_types, contains_wildcard] = Grep::get_substring_variable_types(
-                        query.substr(begin_idx, end_idx - begin_idx),
-                        begin_idx,
-                        is_greedy_wildcard,
-                        is_non_greedy_wildcard,
-                        is_escape,
+                        search_string.create_view(begin_idx, end_idx),
                         lexer
                 );
                 std::set<uint32_t> expected_variable_types;
                 // "*"
                 if ((0 == begin_idx && 1 == end_idx)
-                    || (query.size() - 1 == begin_idx && query.size() == end_idx))
+                    || (search_string.length() - 1 == begin_idx && search_string.length() == end_idx
+                    ))
                 {
                     expected_variable_types
                             = {lexer.m_symbol_id["timestamp"],
@@ -163,10 +240,10 @@ TEST_CASE("get_substring_variable_types", "[schema_search]") {
                     expected_variable_types = {lexer.m_symbol_id["hex"]};
                 }
                 bool expected_contains_wildcard = false;
-                if (0 == begin_idx || query.size() == end_idx) {
+                if (0 == begin_idx || search_string.length() == end_idx) {
                     expected_contains_wildcard = true;
                 }
-                CAPTURE(query.substr(begin_idx, end_idx - begin_idx));
+                CAPTURE(search_string.substr(begin_idx, end_idx - begin_idx));
                 CAPTURE(begin_idx);
                 CAPTURE(end_idx);
                 REQUIRE(variable_types == expected_variable_types);
@@ -176,23 +253,16 @@ TEST_CASE("get_substring_variable_types", "[schema_search]") {
     }
 }
 
-TEST_CASE("get_possible_substr_types", "[schema_search]") {
+TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_search]") {
     ByteLexer lexer;
-    clp::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("* 10000 reply: *") {
-        string query = "* 10000 reply: *";
-        auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escape]
-                = Grep::get_wildcard_and_escape_locations(query);
-        for (uint32_t end_idx = 1; end_idx <= query.size(); end_idx++) {
+        SearchString search_string("* 10000 reply: *");
+        for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
                 auto query_logtypes = Grep::get_possible_substr_types(
-                        query,
-                        begin_idx,
-                        end_idx,
-                        is_greedy_wildcard,
-                        is_non_greedy_wildcard,
-                        is_escape,
+                        search_string.create_view(begin_idx, end_idx),
                         lexer
                 );
                 vector<QueryInterpretation> expected_result(0);
@@ -204,13 +274,15 @@ TEST_CASE("get_possible_substr_types", "[schema_search]") {
                             false,
                             false
                     );
-                } else if ((0 != begin_idx && query.size() != end_idx)
+                    expected_result[0].generate_logtype_string(lexer);
+                } else if ((0 != begin_idx && search_string.length() != end_idx)
                            || (end_idx - begin_idx == 1))
                 {
                     expected_result.emplace_back();
                     for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                        expected_result[0].append_static_token(query.substr(idx, 1));
+                        expected_result[0].append_static_token(search_string.substr(idx, 1));
                     }
+                    expected_result[0].generate_logtype_string(lexer);
                 }
                 CAPTURE(begin_idx);
                 CAPTURE(end_idx);
@@ -225,11 +297,12 @@ TEST_CASE(
         "[generate_query_substring_interpretations][schema_search]"
 ) {
     ByteLexer lexer;
-    clp::load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("Static text") {
-        string query = "* z *";
-        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        SearchString search_string("* z *");
+        auto const query_logtypes
+                = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
         // "* z *"
         QueryInterpretation query_interpretation;
@@ -240,8 +313,9 @@ TEST_CASE(
     }
 
     SECTION("hex") {
-        string query = "* a *";
-        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        SearchString search_string("* a *");
+        auto const query_logtypes
+                = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
         // "* a *"
         // TODO: Because substring "* a *" matches no variable, one possible subquery logtype is
@@ -270,8 +344,9 @@ TEST_CASE(
     }
 
     SECTION("int") {
-        string query = "* 1 *";
-        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        SearchString search_string("* 1 *");
+        auto const query_logtypes
+                = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
         // "* 1 *"
         QueryInterpretation query_interpretation;
@@ -294,8 +369,9 @@ TEST_CASE(
     }
 
     SECTION("Simple query") {
-        string query = "* 10000 reply: *";
-        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        SearchString search_string("* 10000 reply: *");
+        auto const query_logtypes
+                = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
         // "* 10000 reply: *"
         QueryInterpretation query_interpretation;
@@ -318,8 +394,9 @@ TEST_CASE(
     }
 
     SECTION("Wildcard variable") {
-        string query = "* *10000 *";
-        auto const query_logtypes = Grep::generate_query_substring_interpretations(query, lexer);
+        SearchString search_string("* *10000 *");
+        auto const query_logtypes
+                = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
         // "* *10000 *"
         QueryInterpretation query_interpretation;

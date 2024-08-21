@@ -516,7 +516,7 @@ std::optional<Query> Grep::process_raw_query(
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        log_surgeon::lexers::ByteLexer& lexer,
+        ByteLexer& lexer,
         bool use_heuristic
 ) {
     // Add prefix and suffix '*' to make the search a sub-string match
@@ -536,12 +536,7 @@ std::optional<Query> Grep::process_raw_query(
         // Replace '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
         // message uses the original wildcards, so correctness will be maintained.
-        std::replace(
-                search_string_for_sub_queries.begin(),
-                search_string_for_sub_queries.end(),
-                '?',
-                '*'
-        );
+        std::ranges::replace(search_string_for_sub_queries, '?', '*');
         // Clean-up in case any instances of "?*" or "*?" were changed into "**"
         search_string_for_sub_queries
                 = clean_up_wildcard_search_string(search_string_for_sub_queries);
@@ -617,13 +612,7 @@ std::optional<Query> Grep::process_raw_query(
         // creates all possible logtypes that can match substring(0,n) of the query, which includes
         // all possible logtypes that can match the query itself. Then these logtypes, and their
         // corresponding variables are compared against the archive.
-
-        // TODO: remove this when subqueries can handle '?' wildcards
-        // Replace '?' wildcards with '*' wildcards since we currently have no support for
-        // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
-        // message uses the original wildcards, so correctness will be maintained.
-        string search_string_for_sub_queries{processed_search_string};
-        std::ranges::replace(search_string_for_sub_queries, '?', '*');
+        SearchString search_string_for_sub_queries{processed_search_string};
 
         // Get the possible logtypes for the query (but only do it once across all archives).
         static bool query_substr_interpretations_is_set = false;
@@ -950,14 +939,12 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
     return num_matches;
 }
 
-set<QueryInterpretation>
-Grep::generate_query_substring_interpretations(string& processed_search_string, ByteLexer& lexer) {
+set<QueryInterpretation> Grep::generate_query_substring_interpretations(
+        SearchString const& processed_search_string,
+        ByteLexer& lexer
+) {
     // Store substring logtypes in a set to avoid duplicates
-    vector<set<QueryInterpretation>> query_substr_interpretations(processed_search_string.size());
-
-    // We need to differentiate between literal '*'/'?' and wildcards
-    auto [is_greedy_wildcard, is_non_greedy_wildcard, is_escape]
-            = get_wildcard_and_escape_locations(processed_search_string);
+    vector<set<QueryInterpretation>> query_substr_interpretations(processed_search_string.length());
 
     // Consider each substr(begin_idx,end_idx) of the processed_search_string and determine if it
     // could have been compressed as static-text, a variable, or some combination of
@@ -969,25 +956,20 @@ Grep::generate_query_substring_interpretations(string& processed_search_string, 
     // are unique from any previously checked combination. Each entry in
     // query_substr_interpretations is used to build the following entry, with the last entry having
     // all possible logtypes for the full query itself.
-    for (size_t end_idx = 1; end_idx <= processed_search_string.size(); ++end_idx) {
+    for (size_t end_idx = 1; end_idx <= processed_search_string.length(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
         // "* text\* *").
-        if (is_escape[end_idx - 1]) {
+        if (processed_search_string.get_value_is_escape(end_idx - 1)) {
             continue;
         }
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
             // "*text" from string "* \*text *").
-            if (begin_idx > 0 && is_escape[begin_idx - 1]) {
+            if (begin_idx > 0 && processed_search_string.get_value_is_escape(begin_idx - 1)) {
                 continue;
             }
             auto possible_substr_types = get_possible_substr_types(
-                    processed_search_string,
-                    begin_idx,
-                    end_idx,
-                    is_greedy_wildcard,
-                    is_non_greedy_wildcard,
-                    is_escape,
+                    processed_search_string.create_view(begin_idx, end_idx),
                     lexer
             );
             if (possible_substr_types.empty()) {
@@ -1018,19 +1000,12 @@ Grep::generate_query_substring_interpretations(string& processed_search_string, 
     return query_substr_interpretations.back();
 }
 
-vector<QueryInterpretation> Grep::get_possible_substr_types(
-        string& processed_search_string,
-        size_t begin_idx,
-        size_t end_idx,
-        vector<bool>& is_greedy_wildcard,
-        vector<bool>& is_non_greedy_wildcard,
-        vector<bool>& is_escape,
-        ByteLexer& lexer
-) {
+vector<QueryInterpretation>
+Grep::get_possible_substr_types(SearchStringView const& search_string_view, ByteLexer& lexer) {
     vector<QueryInterpretation> possible_substr_types;
 
     // Don't allow an isolated wildcard to be considered a variable
-    if (end_idx - 1 == begin_idx && is_greedy_wildcard[begin_idx]) {
+    if (search_string_view.is_greedy_wildcard()) {
         possible_substr_types.emplace_back("*");
         // TODO: there must be a cleaner way to do this then repeating this 3 times
         for (auto& possible_substr_type : possible_substr_types) {
@@ -1038,7 +1013,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
         }
         return possible_substr_types;
     }
-    if (end_idx - 1 == begin_idx && is_non_greedy_wildcard[begin_idx]) {
+    if (search_string_view.is_non_greedy_wildcard()) {
         possible_substr_types.emplace_back("?");
         for (auto& possible_substr_type : possible_substr_types) {
             possible_substr_type.generate_logtype_string(lexer);
@@ -1050,34 +1025,18 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     // wildcards are redundant (e.g., for string "a*b", a decomposition of the form "a*" + "b" is a
     // subset of the more general "a*" + "*" + "*b". Note, as this needs "*", the "*" substring is
     // not redundant. This is already handled above). More detail about this is given below.
-    if (is_greedy_wildcard[begin_idx] || is_greedy_wildcard[end_idx - 1]) {
+    if (search_string_view.starts_or_ends_with_wildcard()) {
         return possible_substr_types;
     }
-
-    // If the substring isn't surrounded by delimiters there is no reason to consider the case where
-    // it is a variable as CLP would not compress it as such. Preceding delimiter counts the start
-    // of log, a wildcard, or an actual delimiter.
-    bool has_preceding_delimiter = 0 == begin_idx || is_greedy_wildcard[begin_idx - 1]
-                                   || is_non_greedy_wildcard[begin_idx - 1]
-                                   || lexer.is_delimiter(processed_search_string[begin_idx - 1]);
-
-    // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter. However, we
-    // have to be careful about a proceeding escape character. First, if '\' is a delimiter, we
-    // avoid counting the escape character. Second, if a literal '*' or '?' is a delimiter, then it
-    // will appear after the escape character.
-    bool has_proceeding_delimiter
-            = processed_search_string.size() == end_idx || is_greedy_wildcard[end_idx]
-              || is_non_greedy_wildcard[end_idx]
-              || (false == is_escape[end_idx]
-                  && lexer.is_delimiter(processed_search_string[end_idx]))
-              || (is_escape[end_idx] && lexer.is_delimiter(processed_search_string[end_idx + 1]));
 
     // If the substring contains a wildcard, we need to consider the case that it can simultaneously
     // match multiple variables and static text, and we need a different approach to compare against
     // the archive.
     bool contains_wildcard = false;
     set<uint32_t> variable_types;
-    if (has_preceding_delimiter && has_proceeding_delimiter) {
+    // If the substring isn't surrounded by delimiters there is no reason to consider the case where
+    // it is a variable as CLP would not compress it as such.
+    if (search_string_view.surrounded_by_delims(lexer)) {
         // If the substring is preceded or proceeded by a greedy wildcard then it's possible the
         // substring could be extended to match a var, so the wildcards are added to the substring.
         // If we don't consider this case we could miss combinations. Take for example "a*b", "a*"
@@ -1087,26 +1046,11 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
         // Instead we desire to decompose the string into "a*" + "*" + "*b". Note, non-greedy
         // wildcards do not need to be considered, for example "a?b" can never match "<has#>?<has#>"
         // or "<has#><has#>".
-        uint32_t substr_start = begin_idx;
-        uint32_t substr_end = end_idx;
-        bool prev_char_is_star = begin_idx > 0 && is_greedy_wildcard[begin_idx - 1];
-        bool next_char_is_greedy_wildcard
-                = end_idx < processed_search_string.length() && is_greedy_wildcard[end_idx];
-        if (prev_char_is_star) {
-            substr_start--;
-        }
-        if (next_char_is_greedy_wildcard) {
-            substr_end++;
-        }
-        std::tie(variable_types, contains_wildcard) = get_substring_variable_types(
-                string_view(processed_search_string)
-                        .substr(substr_start, substr_end - substr_start),
-                substr_start,
-                is_greedy_wildcard,
-                is_non_greedy_wildcard,
-                is_escape,
-                lexer
-        );
+        SearchStringView extended_search_string_view = search_string_view;
+        extended_search_string_view.extend_to_adjacent_wildcards();
+
+        std::tie(variable_types, contains_wildcard)
+                = get_substring_variable_types(extended_search_string_view, lexer);
         bool already_added_var = false;
         // Use the variable types to determine the possible_substr_types
         for (uint32_t const variable_type : variable_types) {
@@ -1128,7 +1072,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
                 if (contains_wildcard) {
                     possible_substr_types.emplace_back(
                             variable_type,
-                            processed_search_string.substr(substr_start, substr_end - substr_start),
+                            extended_search_string_view.get_substr_copy(),
                             contains_wildcard,
                             true
                     );
@@ -1136,7 +1080,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
             }
             possible_substr_types.emplace_back(
                     variable_type,
-                    processed_search_string.substr(substr_start, substr_end - substr_start),
+                    extended_search_string_view.get_substr_copy(),
                     contains_wildcard,
                     false
             );
@@ -1150,9 +1094,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     }
     // If the substring matches no variables, or has a wildcard, it is potentially static-text.
     if (variable_types.empty() || contains_wildcard) {
-        possible_substr_types.emplace_back(
-                processed_search_string.substr(begin_idx, end_idx - begin_idx)
-        );
+        possible_substr_types.emplace_back(search_string_view.get_substr_copy());
     }
     // TODO: this is doing 2^n the work, where n is the # of wildcard encoded variables
     for (auto& possible_substr_type : possible_substr_types) {
@@ -1161,67 +1103,21 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     return possible_substr_types;
 }
 
-tuple<vector<bool>, vector<bool>, vector<bool>> Grep::get_wildcard_and_escape_locations(
-        std::string const& processed_search_string
-) {
-    vector<bool> is_greedy_wildcard;
-    vector<bool> is_non_greedy_wildcard;
-    vector<bool> is_escape;
-    is_greedy_wildcard.reserve(processed_search_string.size());
-    is_non_greedy_wildcard.reserve(processed_search_string.size());
-    is_escape.reserve(processed_search_string.size());
-    bool is_escaped = false;
-    for (auto c : processed_search_string) {
-        if (is_escaped) {
-            is_greedy_wildcard.push_back(false);
-            is_non_greedy_wildcard.push_back(false);
-            is_escape.push_back(false);
-            is_escaped = false;
-        } else {
-            if ('\\' == c) {
-                is_escaped = true;
-                is_greedy_wildcard.push_back(false);
-                is_non_greedy_wildcard.push_back(false);
-                is_escape.push_back(true);
-            } else if ('*' == c) {
-                is_greedy_wildcard.push_back(true);
-                is_non_greedy_wildcard.push_back(false);
-                is_escape.push_back(false);
-            } else if ('?' == c) {
-                is_greedy_wildcard.push_back(false);
-                is_non_greedy_wildcard.push_back(true);
-                is_escape.push_back(false);
-            } else {
-                is_greedy_wildcard.push_back(false);
-                is_non_greedy_wildcard.push_back(false);
-                is_escape.push_back(false);
-            }
-        }
-    }
-    return {std::move(is_greedy_wildcard), std::move(is_non_greedy_wildcard), std::move(is_escape)};
-}
-
-tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
-        string_view search_substr,
-        uint32_t substr_offset,
-        vector<bool>& is_greedy_wildcard,
-        vector<bool>& is_non_greedy_wildcard,
-        vector<bool>& is_escape,
-        ByteLexer& lexer
-) {
+tuple<set<uint32_t>, bool>
+Grep::get_substring_variable_types(SearchStringView search_string_view, ByteLexer const& lexer) {
     // To determine if a substring could be a variable we convert it to regex, generate the NFA and
     // DFA for the regex, and intersect the substring DFA with the compression DFA.
     std::string regex_search_string;
     bool contains_wildcard = false;
-    for (uint32_t idx = 0; idx < search_substr.size(); idx++) {
-        if (is_escape[substr_offset + idx]) {
+    for (uint32_t idx = 0; idx < search_string_view.length(); idx++) {
+        if (search_string_view.get_value_is_escape(idx)) {
             continue;
         }
-        auto const& c = search_substr[idx];
-        if (is_greedy_wildcard[substr_offset + idx]) {
+        auto const& c = search_string_view.get_value(idx);
+        if (search_string_view.get_value_is_greedy_wildcard(idx)) {
             contains_wildcard = true;
             regex_search_string += ".*";
-        } else if (is_non_greedy_wildcard[substr_offset + idx]) {
+        } else if (search_string_view.get_value_is_non_greedy_wildcard(idx)) {
             contains_wildcard = true;
             regex_search_string += ".";
         } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {
