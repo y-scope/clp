@@ -55,7 +55,7 @@ public:
 
     // Methods implementing the ReaderInterface
     /**
-     * Tries to read up to a given number of bytes from the file
+     * Tries to read up to a given number of bytes from the file.
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
@@ -68,7 +68,7 @@ public:
     try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
 
     /**
-     * Tries to seek from the beginning of the file to the given position
+     * Tries to seek to the given position, relative to the beginning of the file.
      * @param pos
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
@@ -76,8 +76,7 @@ public:
     [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
 
     /**
-     * Tries to get the current position of the read head in the file
-     * @param pos Position of the read head in the file
+     @param pos Returns the position of the read head in the buffer.
      * @return ErrorCode_errno on error
      * @return ErrorCode_Success on success
      */
@@ -89,7 +88,7 @@ public:
     /**
      * Tries to stat the current file
      * @param stat_buffer
-     * @return Same as FileDescriptor::try_fstat
+     * @return Same as `FileDescriptor::try_fstat`
      */
     [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode {
         return m_fd.try_fstat(stat_buffer);

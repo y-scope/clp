@@ -85,10 +85,10 @@ public:
     [[nodiscard]] auto get_open_mode() const -> OpenMode { return m_open_mode; }
 
     /**
-     * Tries to stat the current file
-     * @param stat_buffer
-     * @return ErrorCode_errno on error
-     * @return ErrorCode_Success on success
+     * Obtains information about the open file associated with the underlying file descriptor.
+     * @param stat_buffer Returns the stat results.
+     * @return ErrorCode_Success on success.
+     * @return ErrorCode_errno on error.
      */
     [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode;
 

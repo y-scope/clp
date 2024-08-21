@@ -62,7 +62,7 @@ auto FileDescriptor::get_size() const -> size_t {
 }
 
 auto FileDescriptor::try_fstat(struct stat& stat_buffer) const -> ErrorCode {
-    if (auto const return_value = fstat(m_fd, &stat_buffer); 0 != return_value) {
+    if (0 != fstat(m_fd, &stat_buffer)) {
         return ErrorCode_errno;
     }
     return ErrorCode_Success;
