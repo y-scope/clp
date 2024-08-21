@@ -4,19 +4,19 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/clp/BufferedFileReader.hpp"
+#include "../src/clp/FileDescriptorReader.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/FileWriter.hpp"
-#include "../src/clp/FileDescriptorReader.hpp"
 
 using clp::BufferedFileReader;
 using clp::ErrorCode;
 using clp::ErrorCode_EndOfFile;
 using clp::ErrorCode_Success;
 using clp::ErrorCode_Unsupported;
+using clp::FileDescriptorReader;
 using clp::FileReader;
 using clp::FileWriter;
 using clp::ReaderInterface;
-using clp::FileDescriptorReader;
 using std::make_unique;
 using std::string;
 
