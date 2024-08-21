@@ -76,7 +76,7 @@ public:
     // Methods
     /**
      * Generates a presigned S3 URL using AWS Signature Version 4 protocol.
-     * Note: the current implementation only supports generating URL for HTTP GET operations.
+     * NOTE: the current implementation only supports generating URLs for HTTP GET operations.
      * @param s3_url
      * @param presigned_url Returns the generated presigned URL.
      * @return ErrorCode_Success on success.
