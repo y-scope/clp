@@ -13,7 +13,7 @@ add_library(
 )
 add_library(clp::regex_utils ALIAS regex_utils)
 target_include_directories(regex_utils
-        PRIVATE
+        PUBLIC
         ../
         "${PROJECT_SOURCE_DIR}/submodules"
 )
