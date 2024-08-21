@@ -52,7 +52,7 @@ namespace {
  * @param timestamp
  * @param canonical_request
  * @param string_to_sign Outputs the string to sign.
- * @return `ErrorCode_Success` on success.
+ * @return ErrorCode_Success on success.
  * @return Same as `get_sha256_hash` on failure.
  */
 [[nodiscard]] auto get_string_to_sign(

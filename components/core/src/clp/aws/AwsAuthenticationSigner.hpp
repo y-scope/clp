@@ -76,9 +76,10 @@ public:
     // Methods
     /**
      * Generates a presigned S3 URL using AWS Signature Version 4 protocol.
+     * Note: the current implementation only supports generating URL for HTTP GET operations.
      * @param s3_url
      * @param presigned_url Returns the generated presigned URL.
-     * @return `ErrorCode_Success` on success.
+     * @return ErrorCode_Success on success.
      * @return Same as `get_sha256_hash` and `AwsAuthenticationSigner::get_signature` on failure.
      */
     [[nodiscard]] auto
@@ -101,7 +102,7 @@ private:
      * @param region
      * @param date
      * @param signing_key Returns the signing key.
-     * @return `ErrorCode_Success` on success.
+     * @return ErrorCode_Success on success.
      * @return Same as `get_hmac_sha256_hash` on Failure.
      */
     [[nodiscard]] auto get_signing_key(
@@ -116,7 +117,7 @@ private:
      * @param date
      * @param string_to_sign `StringToSign` required by AWS Signature Version 4 protocol.
      * @param signature Returns the signature.
-     * @return `ErrorCode_Success` on success.
+     * @return ErrorCode_Success on success.
      * @return Same as `get_hmac_sha256_hash` on Failure.
      */
     [[nodiscard]] auto get_signature(
