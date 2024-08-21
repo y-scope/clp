@@ -270,8 +270,8 @@ set(SOURCE_FILES_clp_s_unitTest
 
 set(SOURCE_FILES_unitTest
         src/clp/Array.hpp
-        src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/AwsAuthenticationSigner.cpp
+        src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
