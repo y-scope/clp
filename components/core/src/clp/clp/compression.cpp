@@ -1,6 +1,7 @@
 #include "compression.hpp"
 
 #include <iostream>
+#include <memory>
 
 #include <archive_entry.h>
 #include <boost/filesystem/operations.hpp>
@@ -19,8 +20,10 @@ using clp::streaming_archive::writer::split_archive;
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::make_unique;
 using std::out_of_range;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 namespace clp::clp {
@@ -192,9 +195,11 @@ bool read_and_validate_grouped_file_list(
         string const& list_path,
         vector<FileToCompress>& grouped_files
 ) {
-    FileReader grouped_file_path_reader;
-    ErrorCode error_code = grouped_file_path_reader.try_open(list_path);
-    if (ErrorCode_Success != error_code) {
+    unique_ptr<FileReader> grouped_file_path_reader;
+    try {
+        grouped_file_path_reader = make_unique<FileReader>(list_path);
+    } catch (FileReader::OperationFailed const& exception) {
+        auto const error_code = exception.get_error_code();
         if (ErrorCode_FileNotFound == error_code) {
             SPDLOG_ERROR("'{}' does not exist.", list_path.c_str());
         } else if (ErrorCode_errno == error_code) {
@@ -205,10 +210,12 @@ bool read_and_validate_grouped_file_list(
         return false;
     }
 
-    FileReader grouped_file_id_reader;
+    unique_ptr<FileReader> grouped_file_id_reader;
     string grouped_file_ids_path = list_path.substr(0, list_path.length() - 4) + ".gid";
-    error_code = grouped_file_id_reader.try_open(grouped_file_ids_path);
-    if (ErrorCode_Success != error_code) {
+    try {
+        grouped_file_id_reader = make_unique<FileReader>(grouped_file_ids_path);
+    } catch (FileReader::OperationFailed const& exception) {
+        auto const error_code = exception.get_error_code();
         if (ErrorCode_FileNotFound == error_code) {
             SPDLOG_ERROR("'{}' does not exist.", grouped_file_ids_path.c_str());
         } else if (ErrorCode_errno == error_code) {
@@ -228,9 +235,10 @@ bool read_and_validate_grouped_file_list(
     string path;
     string path_without_prefix;
     group_id_t group_id;
+    ErrorCode error_code{ErrorCode_Success};
     while (true) {
         // Read path
-        error_code = grouped_file_path_reader.try_read_to_delimiter('\n', false, false, path);
+        error_code = grouped_file_path_reader->try_read_to_delimiter('\n', false, false, path);
         if (ErrorCode_Success != error_code) {
             break;
         }
@@ -242,7 +250,7 @@ bool read_and_validate_grouped_file_list(
         }
 
         // Read group ID
-        error_code = grouped_file_id_reader.try_read_numeric_value(group_id);
+        error_code = grouped_file_id_reader->try_read_numeric_value(group_id);
         if (ErrorCode_Success != error_code) {
             if (ErrorCode_EndOfFile == error_code) {
                 SPDLOG_ERROR("There are more grouped file paths than IDs.");
@@ -293,9 +301,6 @@ bool read_and_validate_grouped_file_list(
         }
         return false;
     }
-
-    grouped_file_path_reader.close();
-    grouped_file_id_reader.close();
 
     // Validate the list contained at least one file
     if (grouped_files.empty()) {
