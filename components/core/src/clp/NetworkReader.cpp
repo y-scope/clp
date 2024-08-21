@@ -160,8 +160,8 @@ auto NetworkReader::try_get_pos(size_t& pos) -> ErrorCode {
             }
 #if defined(__APPLE__)
             if (CURLE_RECV_ERROR == curl_return_code.value()) {
-                // On macOS, HTTP return code 416 is handled as `CURLE_RECV_ERROR` in some `libcurl`
-                // versions.
+                // On macOS, HTTP return code 416 is not handled as `CURL_HTTP_RETURNED_ERROR` in
+                // some `libcurl` versions.
                 return ErrorCode_Failure;
             }
 #endif

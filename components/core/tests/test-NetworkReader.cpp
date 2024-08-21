@@ -44,14 +44,14 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size = cDefaultRe
         -> std::vector<char>;
 
 /**
- * Asserts whether the given two `CURLcode` are the same. On failure, it aborts execution of the
- * current test and logs the mismatched error codes.
+ * Asserts whether the given `CURLcode` and the return code stored in the given `NetworkReader`
+ * instance are the same. A log message will be printed when the assertion fails.
  * @param expected
- * @param actual
  * @param reader
+ * @return Whether the the assertion succeeded.
  */
-auto assert_curl_error_code(CURLcode expected, CURLcode actual, clp::NetworkReader const& reader)
-        -> void;
+[[nodiscard]] auto
+assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader) -> bool;
 
 auto get_test_input_local_path() -> std::string {
     std::filesystem::path const current_file_path{__FILE__};
@@ -83,10 +83,15 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
     return buf;
 }
 
-auto assert_curl_error_code(CURLcode expected, CURLcode actual, clp::NetworkReader const& reader)
-        -> void {
+auto assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader) -> bool {
+    auto const ret_code{reader.get_curl_ret_code()};
+    if (false == ret_code.has_value()) {
+        WARN("The CURL error code hasn't been received yet in the given reader.");
+        return false;
+    }
+    auto const actual{ret_code.value()};
     if (expected == actual) {
-        return;
+        return true;
     }
     std::string message_to_log{
             "Unexpected CURL error code: " + std::to_string(actual)
@@ -96,7 +101,8 @@ auto assert_curl_error_code(CURLcode expected, CURLcode actual, clp::NetworkRead
     if (curl_error_message.has_value()) {
         message_to_log += "\nError message:\n" + std::string{curl_error_message.value()};
     }
-    FAIL(message_to_log);
+    WARN(message_to_log);
+    return false;
 }
 }  // namespace
 
@@ -107,10 +113,7 @@ TEST_CASE("network_reader_basic", "[NetworkReader]") {
     clp::CurlGlobalInstance const curl_global_instance;
     clp::NetworkReader reader{get_test_input_remote_url()};
     auto const actual{get_content(reader)};
-    auto const ret_code{reader.get_curl_ret_code()};
-    REQUIRE(ret_code.has_value());
-    // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-    assert_curl_error_code(CURLE_OK, ret_code.value(), reader);
+    REQUIRE(assert_curl_error_code(CURLE_OK, reader));
     REQUIRE((actual == expected));
 }
 
@@ -126,10 +129,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
         clp::CurlGlobalInstance const curl_global_instance;
         clp::NetworkReader reader{get_test_input_remote_url(), cOffset};
         auto const actual{get_content(reader)};
-        auto const ret_code{reader.get_curl_ret_code()};
-        REQUIRE(ret_code.has_value());
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        assert_curl_error_code(CURLE_OK, ret_code.value(), reader);
+        REQUIRE(assert_curl_error_code(CURLE_OK, reader));
         REQUIRE((reader.get_pos() == ref_end_pos));
         REQUIRE((actual == expected));
     }
@@ -140,10 +140,7 @@ TEST_CASE("network_reader_with_offset_and_seek", "[NetworkReader]") {
         clp::NetworkReader reader(get_test_input_remote_url());
         reader.seek_from_begin(cOffset);
         auto const actual{get_content(reader)};
-        auto const ret_code{reader.get_curl_ret_code()};
-        REQUIRE(ret_code.has_value());
-        // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-        assert_curl_error_code(CURLE_OK, ret_code.value(), reader);
+        REQUIRE(assert_curl_error_code(CURLE_OK, reader));
         REQUIRE((reader.get_pos() == ref_end_pos));
         REQUIRE((actual == expected));
     }
@@ -181,24 +178,20 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     constexpr size_t cIllegalOffset{UINT32_MAX};
     clp::CurlGlobalInstance const curl_global_instance;
     clp::NetworkReader reader{get_test_input_remote_url(), cIllegalOffset};
-    while (true) {
-        auto const ret_code{reader.get_curl_ret_code()};
-        if (ret_code.has_value()) {
-            if constexpr (cIsMacOS) {
-                // On macOS, HTTP return code 416 seems to be handled as `CURLE_RECV_ERROR` in some
-                // `libcurl` versions.
-                auto const ret_val{ret_code.value()};
-                if (false == (CURLE_HTTP_RETURNED_ERROR == ret_val || CURLE_RECV_ERROR == ret_val))
-                {
-                    // The following assertion will fail. Calling it to log the CURL error message.
-                    assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, ret_code.value(), reader);
-                }
-            } else {
-                assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, ret_code.value(), reader);
-            }
-            size_t pos{};
-            REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
-            break;
-        }
+    while (false == reader.get_curl_ret_code().has_value()) {
+        // Wait until the return code is ready
     }
+
+    if constexpr (cIsMacOS) {
+        // On macOS, HTTP return code 416 is not handled as `CURL_HTTP_RETURNED_ERROR` in some
+        // `libcurl` versions.
+        REQUIRE(
+                (assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, reader)
+                 || assert_curl_error_code(CURLE_RECV_ERROR, reader))
+        );
+    } else {
+        REQUIRE(assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, reader));
+    }
+    size_t pos{};
+    REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
 }
