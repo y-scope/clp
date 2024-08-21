@@ -269,6 +269,7 @@ set(SOURCE_FILES_clp_s_unitTest
 )
 
 set(SOURCE_FILES_unitTest
+        src/clp/Array.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -320,6 +321,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/Serializer.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
+        src/clp/ffi/KeyValuePairLogEvent.cpp
+        src/clp/ffi/KeyValuePairLogEvent.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
         src/clp/ffi/SchemaTreeNode.hpp
@@ -339,8 +342,11 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/WildcardToken.hpp
         src/clp/ffi/utils.cpp
         src/clp/ffi/utils.hpp
+        src/clp/ffi/Value.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
+        src/clp/FileDescriptorReader.cpp
+        src/clp/FileDescriptorReader.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -473,10 +479,13 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
+        tests/test-Array.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
+        tests/test-FileDescriptorReader.cpp
         tests/test-Grep.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
