@@ -2,7 +2,6 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <log_surgeon/Lexer.hpp>
-#include <log_surgeon/Schema.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
 #include "../src/clp/Grep.hpp"

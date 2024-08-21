@@ -1,7 +1,6 @@
 #ifndef CLP_GREP_QUERY_INTERPRETATION_HPP
 #define CLP_GREP_QUERY_INTERPRETATION_HPP
 
-#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -86,7 +85,7 @@ class SearchString {
 public:
     explicit SearchString(std::string processed_search_string);
 
-    std::string substr(uint32_t const begin_idx, uint32_t const length) const {
+    [[nodiscard]] std::string substr(uint32_t const begin_idx, uint32_t const length) const {
         return m_processed_search_string.substr(begin_idx, length);
     }
 

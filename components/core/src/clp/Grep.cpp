@@ -264,15 +264,6 @@ bool QueryToken::change_to_next_possible_type() {
     }
 }
 
-/**
- * Wraps the tokens returned from the log_surgeon lexer, and stores the variable ids of the tokens
- * in a search query in a set. This allows for optimized search performance.
- */
-class SearchToken : public log_surgeon::Token {
-public:
-    std::set<int> m_type_ids_set;
-};
-
 // Local prototypes
 /**
  * Process a QueryToken that is definitely a variable
@@ -1103,8 +1094,10 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
     return possible_substr_types;
 }
 
-tuple<set<uint32_t>, bool>
-Grep::get_substring_variable_types(SearchStringView search_string_view, ByteLexer const& lexer) {
+tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
+        SearchStringView const& search_string_view,
+        ByteLexer const& lexer
+) {
     // To determine if a substring could be a variable we convert it to regex, generate the NFA and
     // DFA for the regex, and intersect the substring DFA with the compression DFA.
     std::string regex_search_string;
@@ -1194,20 +1187,18 @@ void Grep::generate_sub_queries(
                 if (is_encoded_with_wildcard) {
                     sub_query.mark_wildcard_match_required();
                 } else if (false == var_has_wildcard
-                           && schema_type == QueryInterpretation::cIntVarName
-                           && EncodedVariableInterpreter::
-                                   convert_string_to_representable_integer_var(
-                                           raw_string,
-                                           encoded_var
-                                   ))
-                {
-                    sub_query.add_non_dict_var(encoded_var);
-                } else if (false == var_has_wildcard
-                           && schema_type == QueryInterpretation::cFloatVarName
-                           && EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                                   raw_string,
-                                   encoded_var
-                           ))
+                           && ((schema_type == QueryInterpretation::cIntVarName
+                                && EncodedVariableInterpreter::
+                                        convert_string_to_representable_integer_var(
+                                                raw_string,
+                                                encoded_var
+                                        ))
+                               || (schema_type == QueryInterpretation::cFloatVarName
+                                   && EncodedVariableInterpreter::
+                                           convert_string_to_representable_float_var(
+                                                   raw_string,
+                                                   encoded_var
+                                           ))))
                 {
                     sub_query.add_non_dict_var(encoded_var);
                 } else {
@@ -1239,7 +1230,7 @@ void Grep::generate_sub_queries(
                             // Not in dictionary
                             has_vars = false;
                         } else {
-                            encoded_variable_t encoded_var
+                            encoded_var
                                     = EncodedVariableInterpreter::encode_var_dict_id(entry->get_id()
                                     );
                             sub_query.add_dict_var(encoded_var, entry);

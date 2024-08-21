@@ -160,7 +160,7 @@ public:
      * wildcards.
      */
     static std::tuple<std::set<uint32_t>, bool> get_substring_variable_types(
-            SearchStringView search_string_view,
+            SearchStringView const& search_string_view,
             log_surgeon::lexers::ByteLexer const& lexer
     );
 
