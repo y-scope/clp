@@ -7,9 +7,9 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/clp/Array.hpp"
+#include "../src/clp/FileDescriptorReader.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/ReaderInterface.hpp"
-#include "../src/clp/SysFileReader.hpp"
 
 using clp::Array;
 
@@ -54,16 +54,16 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
 
 // Reused code ends
 
-TEST_CASE("sys_file_reader_basic", "[SysFileReader]") {
+TEST_CASE("file_descriptor_reader_basic", "[FileDescriptorReader]") {
     clp::FileReader ref_reader{get_test_input_local_path()};
     auto const expected{get_content(ref_reader)};
 
-    clp::SysFileReader reader{get_test_input_local_path()};
+    clp::FileDescriptorReader reader{get_test_input_local_path()};
     auto const actual{get_content(reader)};
     REQUIRE((actual == expected));
 }
 
-TEST_CASE("sys_file_reader_with_offset_and_seek", "[SysFileReader]") {
+TEST_CASE("file_descriptor_reader_with_offset_and_seek", "[FileDescriptorReader]") {
     constexpr size_t cOffset{319};
 
     clp::FileReader ref_reader{get_test_input_local_path()};
@@ -71,7 +71,7 @@ TEST_CASE("sys_file_reader_with_offset_and_seek", "[SysFileReader]") {
     auto const expected{get_content(ref_reader)};
     auto const ref_end_pos{ref_reader.get_pos()};
 
-    clp::SysFileReader reader(get_test_input_local_path());
+    clp::FileDescriptorReader reader(get_test_input_local_path());
     reader.seek_from_begin(cOffset);
     auto const actual{get_content(reader)};
     auto const actual_end_pos{reader.get_pos()};

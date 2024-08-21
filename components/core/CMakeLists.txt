@@ -345,6 +345,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/Value.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
+        src/clp/FileDescriptorReader.cpp
+        src/clp/FileDescriptorReader.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -413,8 +415,6 @@ set(SOURCE_FILES_unitTest
         src/clp/SQLiteDB.hpp
         src/clp/SQLitePreparedStatement.cpp
         src/clp/SQLitePreparedStatement.hpp
-        src/clp/SysFileReader.cpp
-        src/clp/SysFileReader.hpp
         src/clp/Stopwatch.cpp
         src/clp/Stopwatch.hpp
         src/clp/streaming_archive/ArchiveMetadata.cpp
@@ -483,6 +483,7 @@ set(SOURCE_FILES_unitTest
         tests/test-encoding_methods.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
+        tests/test-FileDescriptorReader.cpp
         tests/test-Grep.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
@@ -501,7 +502,6 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
-        tests/test-SysFileReader.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp

@@ -1,5 +1,5 @@
-#ifndef CLP_SYSFILEREADER_HPP
-#define CLP_SYSFILEREADER_HPP
+#ifndef CLP_FILEDESCRIPTORREADER_HPP
+#define CLP_FILEDESCRIPTORREADER_HPP
 
 #include <sys/stat.h>
 
@@ -15,15 +15,15 @@
 
 namespace clp {
 /**
- * Class for performing reads from an on-disk file directly using C style system call.
- * Unlike reader classes using `FILE` stream interface, This class operates on raw file descriptor
- * and does not internally buffer any data. Instead, the user of this class is expected to buffer
- * and read the data efficiently.
+ * Class for performing reads from an on-disk file directly using clp::FileDescriptor and C style
+ * system call. Unlike clp::FileReader that relies on `FILE` stream interface to buffer read data,
+ * This class does not internally buffer any data. Instead, the user of this class is expected to
+ * buffer and read the data efficiently.
  *
  * Note: If you don't plan to handle the data buffering yourself, do not use this class. Use
  * `FileReader` instead.
  */
-class SysFileReader : public ReaderInterface {
+class FileDescriptorReader : public ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -34,24 +34,24 @@ public:
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "clp::SysFileReader operation failed";
+            return "clp::FileDescriptorReader operation failed";
         }
     };
 
-    explicit SysFileReader(std::string path)
+    explicit FileDescriptorReader(std::string path)
             : m_path{std::move(path)},
               m_fd{m_path, FileDescriptor::OpenMode::ReadOnly} {}
 
     // Explicitly disable copy constructor and assignment operator
-    SysFileReader(SysFileReader const&) = delete;
-    auto operator=(SysFileReader const&) -> SysFileReader& = delete;
+    FileDescriptorReader(FileDescriptorReader const&) = delete;
+    auto operator=(FileDescriptorReader const&) -> FileDescriptorReader& = delete;
 
     // Explicitly disable move constructor and assignment operator
-    SysFileReader(SysFileReader&&) = delete;
-    auto operator=(SysFileReader&&) -> SysFileReader& = delete;
+    FileDescriptorReader(FileDescriptorReader&&) = delete;
+    auto operator=(FileDescriptorReader&&) -> FileDescriptorReader& = delete;
 
     // Destructor
-    ~SysFileReader() override = default;
+    ~FileDescriptorReader() override = default;
 
     // Methods implementing the ReaderInterface
     /**
@@ -100,4 +100,4 @@ private:
 };
 }  // namespace clp
 
-#endif  // CLP_SYSFILEREADER_HPP
+#endif  // CLP_FILEDESCRIPTORREADER_HPP

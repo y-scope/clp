@@ -1,4 +1,4 @@
-#include "SysFileReader.hpp"
+#include "FileDescriptorReader.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -12,7 +12,7 @@
 using std::span;
 
 namespace clp {
-auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+auto FileDescriptorReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
         -> ErrorCode {
     if (nullptr == buf) {
         return ErrorCode_BadParam;
@@ -37,7 +37,7 @@ auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_by
     return ErrorCode_Success;
 }
 
-auto SysFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
+auto FileDescriptorReader::try_seek_from_begin(size_t pos) -> ErrorCode {
     if (auto const offset = lseek(m_fd.get_raw_fd(), static_cast<off_t>(pos), SEEK_SET);
         static_cast<off_t>(-1) == offset)
     {
@@ -47,7 +47,7 @@ auto SysFileReader::try_seek_from_begin(size_t pos) -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto SysFileReader::try_get_pos(size_t& pos) -> ErrorCode {
+auto FileDescriptorReader::try_get_pos(size_t& pos) -> ErrorCode {
     auto const curr_offset = lseek(m_fd.get_raw_fd(), 0, SEEK_CUR);
     if (static_cast<off_t>(-1) == curr_offset) {
         return ErrorCode_errno;
