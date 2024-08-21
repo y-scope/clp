@@ -90,7 +90,7 @@ public:
      * @return ErrorCode_Success on success.
      * @return ErrorCode_errno on error.
      */
-    [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode;
+    [[nodiscard]] auto stat(struct stat& stat_buffer) const -> ErrorCode;
 
 private:
     int m_fd{-1};

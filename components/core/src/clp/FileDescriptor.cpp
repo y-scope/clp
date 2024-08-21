@@ -50,7 +50,7 @@ FileDescriptor::~FileDescriptor() {
 auto FileDescriptor::get_size() const -> size_t {
     struct stat stat_result {};
 
-    if (0 != fstat(m_fd, &stat_result)) {
+    if (0 != stat(stat_result)) {
         throw OperationFailed(
                 ErrorCode_errno,
                 __FILE__,
@@ -61,7 +61,7 @@ auto FileDescriptor::get_size() const -> size_t {
     return static_cast<size_t>(stat_result.st_size);
 }
 
-auto FileDescriptor::try_fstat(struct stat& stat_buffer) const -> ErrorCode {
+auto FileDescriptor::stat(struct stat& stat_buffer) const -> ErrorCode {
     if (0 != fstat(m_fd, &stat_buffer)) {
         return ErrorCode_errno;
     }

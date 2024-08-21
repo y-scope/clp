@@ -20,22 +20,18 @@ auto SysFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_by
 
     num_bytes_read = 0;
     span dst_view{buf, num_bytes_to_read};
-    while (true) {
-        auto const bytes_read = ::read(m_fd.get_raw_fd(), dst_view.data(), num_bytes_to_read);
+    while (false == dst_view.empty()) {
+        auto const bytes_read = ::read(m_fd.get_raw_fd(), dst_view.data(), dst_view.size());
         if (0 == bytes_read) {
             break;
         }
         if (bytes_read < 0) {
             return ErrorCode_errno;
         }
-        dst_view = dst_view.subspan(num_bytes_to_read);
         num_bytes_read += bytes_read;
-        num_bytes_to_read -= bytes_read;
-        if (0 == num_bytes_to_read) {
-            return ErrorCode_Success;
-        }
+        dst_view = dst_view.subspan(bytes_read);
     }
-    if (0 == num_bytes_read) {
+    if (dst_view.size() == num_bytes_to_read) {
         return ErrorCode_EndOfFile;
     }
     return ErrorCode_Success;

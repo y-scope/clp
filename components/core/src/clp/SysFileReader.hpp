@@ -86,12 +86,12 @@ public:
     [[nodiscard]] auto get_path() const -> std::string_view { return m_path; }
 
     /**
-     * Tries to stat the current file
-     * @param stat_buffer
-     * @return Same as `FileDescriptor::try_fstat`
+     * Obtains information about the open file associated with the underlying file descriptor.
+     * @param stat_buffer Returns the stat results.
+     * @return Same as `FileDescriptor::fstat`
      */
     [[nodiscard]] auto try_fstat(struct stat& stat_buffer) const -> ErrorCode {
-        return m_fd.try_fstat(stat_buffer);
+        return m_fd.stat(stat_buffer);
     }
 
 private:
