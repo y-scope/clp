@@ -24,7 +24,7 @@ enum LiteralType : uint32_t {
     UnknownT = ((uint32_t)1) << 31
 };
 
-typedef uint32_t LiteralTypeBitmask;
+using LiteralTypeBitmask = uint32_t;
 
 constexpr LiteralTypeBitmask cIntegralTypes = LiteralType::IntegerT | LiteralType::FloatT;
 constexpr LiteralTypeBitmask cAllTypes = TypesEnd - 1;

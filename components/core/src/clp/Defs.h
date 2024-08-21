@@ -7,19 +7,19 @@
 
 namespace clp {
 // Types
-typedef int64_t epochtime_t;
+using epochtime_t = int64_t;
 constexpr epochtime_t cEpochTimeMin = std::numeric_limits<epochtime_t>::min();
 constexpr epochtime_t cEpochTimeMax = std::numeric_limits<epochtime_t>::max();
 
-typedef uint64_t variable_dictionary_id_t;
+using variable_dictionary_id_t = uint64_t;
 constexpr variable_dictionary_id_t cVariableDictionaryIdMax
         = std::numeric_limits<variable_dictionary_id_t>::max();
 
-typedef int64_t logtype_dictionary_id_t;
+using logtype_dictionary_id_t = int64_t;
 constexpr logtype_dictionary_id_t cLogtypeDictionaryIdMax
         = std::numeric_limits<logtype_dictionary_id_t>::max();
 
-typedef uint16_t archive_format_version_t;
+using archive_format_version_t = uint16_t;
 // This flag is used to maintain two separate streams of archive format
 // versions:
 // - Development versions (which can change frequently as necessary) which
@@ -28,12 +28,12 @@ typedef uint16_t archive_format_version_t;
 //   as possible) which should not have the flag
 constexpr archive_format_version_t cArchiveFormatDevVersionFlag = 0x8000;
 
-typedef uint64_t segment_id_t;
+using segment_id_t = uint64_t;
 constexpr segment_id_t cInvalidSegmentId = std::numeric_limits<segment_id_t>::max();
 
-typedef int64_t encoded_variable_t;
+using encoded_variable_t = int64_t;
 
-typedef uint64_t group_id_t;
+using group_id_t = uint64_t;
 
 // Constants
 constexpr char cDefaultConfigFilename[] = ".clp.rc";

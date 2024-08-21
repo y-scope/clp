@@ -72,7 +72,7 @@ private:
     std::string m_token;
 };
 
-typedef std::vector<DescriptorToken> DescriptorList;
+using DescriptorList = std::vector<DescriptorToken>;
 
 DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
 

@@ -50,7 +50,7 @@ public:
 
 protected:
     // Types
-    typedef std::unordered_map<std::string, DictionaryIdType> value_to_id_t;
+    using value_to_id_t = std::unordered_map<std::string, DictionaryIdType>;
 
     // Variables
     bool m_is_open;

@@ -42,7 +42,7 @@ public:
      * @param decompressed_msg
      * @param custom_arg Custom argument for the output function
      */
-    typedef void (*OutputFunc)(
+    using OutputFunc = void (*)(
             std::string const& orig_file_path,
             streaming_archive::reader::Message const& compressed_msg,
             std::string const& decompressed_msg,

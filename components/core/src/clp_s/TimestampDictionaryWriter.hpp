@@ -107,7 +107,7 @@ private:
             ZstdCompressor& compressor
     );
 
-    typedef std::unordered_map<TimestampPattern const*, uint64_t> pattern_to_id_t;
+    using pattern_to_id_t = std::unordered_map<TimestampPattern const*, uint64_t>;
 
     // Variables
     bool m_is_open;

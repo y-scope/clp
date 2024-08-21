@@ -8,7 +8,7 @@
 #include "Literal.hpp"
 
 namespace clp_s::search {
-typedef std::variant<int64_t, double> Integral64;
+using Integral64 = std::variant<int64_t, double>;
 
 // FIXME: figure out why String types are part of this bitmask
 constexpr LiteralTypeBitmask cIntegralLiteralTypes = cIntegralTypes | VarStringT;

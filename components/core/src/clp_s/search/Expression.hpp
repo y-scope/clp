@@ -8,7 +8,7 @@
 #include "Value.hpp"
 
 namespace clp_s::search {
-typedef std::list<std::shared_ptr<Value>> OpList;
+using OpList = std::list<std::shared_ptr<Value>>;
 
 /**
  * Top level class for all logical expressions which represent filters
