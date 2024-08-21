@@ -15,9 +15,9 @@
 
 namespace clp {
 /**
- * Class for performing reads from an on-disk file directly using clp::FileDescriptor and C style
- * system call. Unlike clp::FileReader that relies on `FILE` stream interface to buffer read data,
- * This class does not internally buffer any data. Instead, the user of this class is expected to
+ * Class for performing direct reads from an on-disk file using clp::FileDescriptor and C-style
+ * system call. Unlike clp::FileReader, which uses on `FILE` stream interface to buffer read data,
+ * this class does not buffer data internally. Instead, the user of this class is expected to
  * buffer and read the data efficiently.
  *
  * Note: If you don't plan to handle the data buffering yourself, do not use this class. Use
