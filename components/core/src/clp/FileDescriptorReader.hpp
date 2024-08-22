@@ -15,13 +15,13 @@
 
 namespace clp {
 /**
- * Class for performing direct reads from an on-disk file using clp::FileDescriptor and C-style
- * system call. Unlike clp::FileReader, which uses on `FILE` stream interface to buffer read data,
+ * Class for performing direct reads from an on-disk file using `clp::FileDescriptor` and C-style
+ * system call. Unlike `clp::FileReader`, which uses on `FILE` stream interface to buffer read data,
  * this class does not buffer data internally. Instead, the user of this class is expected to
  * buffer and read the data efficiently.
  *
  * Note: If you don't plan to handle the data buffering yourself, do not use this class. Use
- * `FileReader` instead.
+ * `clp::FileReader` instead.
  */
 class FileDescriptorReader : public ReaderInterface {
 public:
@@ -38,6 +38,7 @@ public:
         }
     };
 
+    // Constructors
     explicit FileDescriptorReader(std::string path)
             : m_path{std::move(path)},
               m_fd{m_path, FileDescriptor::OpenMode::ReadOnly} {}

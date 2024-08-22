@@ -50,7 +50,7 @@ FileDescriptor::~FileDescriptor() {
 auto FileDescriptor::get_size() const -> size_t {
     struct stat stat_result {};
 
-    if (0 != stat(stat_result)) {
+    if (ErrorCode_Success != stat(stat_result)) {
         throw OperationFailed(
                 ErrorCode_errno,
                 __FILE__,
