@@ -13,6 +13,7 @@
 #include "CurlDownloadHandler.hpp"
 #include "CurlOperationFailed.hpp"
 #include "ErrorCode.hpp"
+#include "Platform.hpp"
 
 namespace clp {
 /**
@@ -158,6 +159,13 @@ auto NetworkReader::try_get_pos(size_t& pos) -> ErrorCode {
                 // offset specified in the HTTP header.
                 return ErrorCode_Failure;
             }
+            if constexpr (Platform::MacOs == cCurrentPlatform) {
+                // On macOS, HTTP response code 416 is not handled as `CURL_HTTP_RETURNED_ERROR` in
+                // some `libcurl` versions.
+                if (CURLE_RECV_ERROR == curl_return_code.value()) {
+                    return ErrorCode_Failure;
+                }
+            }
         }
 
         if (false == at_least_one_byte_downloaded()) {
@@ -200,6 +208,7 @@ auto NetworkReader::buffer_downloaded_data(NetworkReader::BufferView data) -> si
 auto NetworkReader::DownloaderThread::thread_method() -> void {
     try {
         CurlDownloadHandler curl_handler{
+                m_reader.m_curl_error_msg_buf,
                 curl_progress_callback,
                 curl_write_callback,
                 static_cast<void*>(&m_reader),
