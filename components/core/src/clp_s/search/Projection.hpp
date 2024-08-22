@@ -59,7 +59,7 @@ public:
      * @param node_id
      * @return true if the column should be included in the output, false otherwise
      */
-    bool matches_node(int32_t node_id) {
+    bool matches_node(int32_t node_id) const {
         return ProjectionMode::ReturnAllColumns == m_projection_mode
                || m_matching_nodes.contains(node_id);
     }
