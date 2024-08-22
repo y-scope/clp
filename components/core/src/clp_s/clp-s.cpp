@@ -187,10 +187,15 @@ bool search_archive(
                     ? ProjectionMode::ReturnAllColumns
                     : ProjectionMode::ReturnSelectedColumns
     );
-    for (auto const& column : command_line_arguments.get_projection_columns()) {
-        std::vector<std::string> descriptor_tokens;
-        StringUtils::tokenize_column_descriptor(column, descriptor_tokens);
-        projection->add_column(ColumnDescriptor::create(descriptor_tokens));
+    try {
+        for (auto const& column : command_line_arguments.get_projection_columns()) {
+            std::vector<std::string> descriptor_tokens;
+            StringUtils::tokenize_column_descriptor(column, descriptor_tokens);
+            projection->add_column(ColumnDescriptor::create(descriptor_tokens));
+        }
+    } catch (clp_s::TraceableException& e) {
+        SPDLOG_ERROR("{}", e.what());
+        return false;
     }
     projection->resolve_columns(archive_reader->get_schema_tree());
     archive_reader->set_projection(projection);
