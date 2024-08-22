@@ -16,7 +16,6 @@ using clp::ErrorCode_Unsupported;
 using clp::FileDescriptorReader;
 using clp::FileReader;
 using clp::FileWriter;
-using clp::ReaderInterface;
 using std::make_unique;
 using std::string;
 
@@ -288,6 +287,46 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     // delimiters)
     ErrorCode error_code{ErrorCode_Success};
     auto delimiter = (char)('a' + (std::rand() % (cNumAlphabets)));
+    while (ErrorCode_EndOfFile != error_code) {
+        error_code = ref_file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
+        auto error_code2 = reader.try_read_to_delimiter(delimiter, true, false, test_string);
+        REQUIRE(error_code2 == error_code);
+        REQUIRE(test_string == ref_string);
+    }
+
+    boost::filesystem::remove(test_file_path);
+}
+
+TEST_CASE("Test reading with beginning offset", "[BufferedFileReader]") {
+    // Initialize data for testing
+    size_t const test_data_size = 1L * 1024 * 1024 + 1;  // 1MB
+    size_t const cReaderBeginOffset = 6;
+    auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
+    auto& test_data = *test_data_uniq_ptr;
+    for (size_t i = 0; i < test_data.size(); ++i) {
+        test_data[i] = static_cast<char>('a' + (std::rand() % (cNumAlphabets)));
+    }
+
+    // Write to test file
+    string const test_file_path{"BufferedFileReader.offset.test"};
+    FileWriter file_writer;
+    file_writer.open(test_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
+    file_writer.write(test_data.data(), test_data_size);
+    file_writer.close();
+
+    // Instantiate BufferedFileReader and the reference FileReader from a non-zero pos
+    auto fd_reader = make_unique<FileDescriptorReader>(test_file_path);
+    fd_reader->seek_from_begin(cReaderBeginOffset);
+    BufferedFileReader reader{std::move(fd_reader)};
+
+    FileReader ref_file_reader{test_file_path};
+    ref_file_reader.seek_from_begin(cReaderBeginOffset);
+
+    ErrorCode error_code{ErrorCode_Success};
+    auto delimiter = (char)('a' + (std::rand() % (cNumAlphabets)));
+    string ref_string;
+    string test_string;
+    // Validate that a FileReader and a BufferedFileReader return the same strings.
     while (ErrorCode_EndOfFile != error_code) {
         error_code = ref_file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
         auto error_code2 = reader.try_read_to_delimiter(delimiter, true, false, test_string);

@@ -63,11 +63,7 @@ BufferedFileReader::BufferedFileReader(
     m_base_buffer_size = base_buffer_size;
     m_buffer.resize(m_base_buffer_size);
 
-    // TODO: anyway to get rid of this?
-    if (0 != m_file_reader->get_pos()) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
-    m_file_pos = 0;
+    m_file_pos = m_file_reader->get_pos();
     m_buffer_begin_pos = 0;
     m_buffer_reader = make_unique<BufferReader>(m_buffer.data(), 0);
     m_highest_read_pos = 0;
