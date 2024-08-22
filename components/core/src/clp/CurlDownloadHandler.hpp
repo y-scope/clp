@@ -5,7 +5,6 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <span>
 #include <string_view>
 
 #include <curl/curl.h>
