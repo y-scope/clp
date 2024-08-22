@@ -44,8 +44,8 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size = cDefaultRe
         -> std::vector<char>;
 
 /**
- * Asserts whether the given `CURLcode` and the return code stored in the given `NetworkReader`
- * instance are the same. A log message will be printed when the assertion fails.
+ * Asserts whether the given `CURLcode` and the CURL return code stored in the given `NetworkReader`
+ * instance are the same, and prints a log message if not.
  * @param expected
  * @param reader
  * @return Whether the the assertion succeeded.
@@ -86,7 +86,7 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vec
 auto assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader) -> bool {
     auto const ret_code{reader.get_curl_ret_code()};
     if (false == ret_code.has_value()) {
-        WARN("The CURL error code hasn't been received yet in the given reader.");
+        WARN("The CURL error code hasn't been set yet in the given reader.");
         return false;
     }
     auto const actual{ret_code.value()};
@@ -183,7 +183,7 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     }
 
     if constexpr (cIsMacOS) {
-        // On macOS, HTTP return code 416 is not handled as `CURL_HTTP_RETURNED_ERROR` in some
+        // On macOS, HTTP response code 416 is not handled as `CURL_HTTP_RETURNED_ERROR` in some
         // `libcurl` versions.
         REQUIRE(
                 (assert_curl_error_code(CURLE_HTTP_RETURNED_ERROR, reader)

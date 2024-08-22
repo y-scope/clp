@@ -41,7 +41,8 @@ public:
 
     // Constructor
     /**
-     * @param error_msg_buf The buffer to store the CURL error message if it is not `nullptr`.
+     * @param error_msg_buf The buffer to store the CURL error message or `nullptr` if it shouldn't
+     * be stored.
      * Doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
      * @param progress_callback
      * @param write_callback

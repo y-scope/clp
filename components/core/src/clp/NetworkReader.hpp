@@ -218,8 +218,7 @@ public:
 
     /**
      * @return The error message set by the underlying CURL handler.
-     * @return std::nullopt if the download is still in-progress, or a success error code is
-     * returned.
+     * @return std::nullopt if the download is still in-progress or no error has occured.
      */
     [[nodiscard]] auto get_curl_error_msg() const -> std::optional<std::string_view> {
         if (auto const ret_code{get_curl_ret_code()};

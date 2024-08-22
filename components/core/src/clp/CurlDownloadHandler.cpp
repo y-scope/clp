@@ -24,10 +24,10 @@ CurlDownloadHandler::CurlDownloadHandler(
         : m_error_msg_buf{std::move(error_msg_buf)} {
     if (nullptr != m_error_msg_buf) {
         // Set up error message buffer
-        // According to the doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
-        // A successful call of setting `CURLOPT_ERRORBUFFER` will initialize the buffer to an empty
-        // string since 7.60.0. The minimum version we require is 7.68.0. Therefore, we don't need
-        // to manually clean up the passed-in buffer.
+        // According to the docs (https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html), since 7.60.0,
+        // a successful call to set `CURLOPT_ERRORBUFFER` will initialize the buffer to an empty
+        // string 7.60.0. Since we require at least 7.68.0, we don't need to clear the provided
+        // buffer before it's used.
         m_easy_handle.set_option(CURLOPT_ERRORBUFFER, m_error_msg_buf->data());
     }
 
@@ -60,7 +60,7 @@ CurlDownloadHandler::CurlDownloadHandler(
         m_easy_handle.set_option(CURLOPT_HTTPHEADER, m_http_headers.get_raw_list());
     }
 
-    // Set up failure on error
+    // Set up failure on HTTP error reponse
     m_easy_handle.set_option(CURLOPT_FAILONERROR, static_cast<long>(true));
 }
 }  // namespace clp
