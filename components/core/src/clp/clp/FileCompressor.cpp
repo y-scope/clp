@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <set>
+#include <utility>
 
 #include <archive_entry.h>
 #include <boost/algorithm/string.hpp>

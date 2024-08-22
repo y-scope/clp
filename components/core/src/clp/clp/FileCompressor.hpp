@@ -54,6 +54,17 @@ private:
     static constexpr size_t cUtfMaxValidationLen = 4096;
 
     // Methods
+    /**
+     * Parses and encodes content from the given reader into the given archive_writer.
+     * @param target_data_size_of_dicts
+     * @param archive_user_config
+     * @param target_encoded_file_size
+     * @param path_for_compression
+     * @param group_id
+     * @param archive_writer
+     * @param reader
+     * @param use_heuristic
+     */
     auto parse_and_encode(
             size_t target_data_size_of_dicts,
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
@@ -65,16 +76,6 @@ private:
             bool use_heuristic
     ) -> void;
 
-    /**
-     * Parses and encodes content from the given reader into the given archive_writer
-     * @param target_data_size_of_dicts
-     * @param archive_user_config
-     * @param target_encoded_file_size
-     * @param path_for_compression
-     * @param group_id
-     * @param archive_writer
-     * @param reader
-     */
     void parse_and_encode_with_library(
             size_t target_data_size_of_dicts,
             streaming_archive::writer::Archive::UserConfig& archive_user_config,
