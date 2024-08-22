@@ -187,7 +187,9 @@ private:
     std::shared_ptr<ReaderUtils::SchemaMap> m_schema_map;
     std::vector<int32_t> m_schema_ids;
     std::map<int32_t, SchemaReader::TableMetadata> m_id_to_table_metadata;
-    std::shared_ptr<search::Projection> m_projection{new search::Projection{}};
+    std::shared_ptr<search::Projection> m_projection{
+            new search::Projection{search::ProjectionMode::ReturnAllColumns}
+    };
 
     FileReader m_tables_file_reader;
     FileReader m_table_metadata_file_reader;
