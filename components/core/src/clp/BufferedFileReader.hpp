@@ -1,9 +1,11 @@
 #ifndef CLP_BUFFEREDFILEREADER_HPP
 #define CLP_BUFFEREDFILEREADER_HPP
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "BufferReader.hpp"
@@ -76,6 +78,9 @@ public:
 
     BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
             : BufferedFileReader(std::move(reader_interface), cDefaultBufferSize) {}
+
+    // Destructor
+    ~BufferedFileReader() override = default;
 
     // Disable copy/move construction/assignment
     BufferedFileReader(BufferedFileReader const&) = delete;
@@ -228,7 +233,7 @@ private:
     // Buffer specific data
     std::vector<char> m_buffer;
     size_t m_base_buffer_size;
-    std::optional<BufferReader> m_buffer_reader;
+    std::unique_ptr<BufferReader> m_buffer_reader;
     size_t m_buffer_begin_pos{0};
 
     // Variables for checkpoint support
