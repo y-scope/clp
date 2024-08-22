@@ -22,6 +22,9 @@ public:
         char const* what() const noexcept override { return "ReaderInterface operation failed"; }
     };
 
+    // Destructor
+    virtual ~ReaderInterface() = default;
+
     // Methods
     virtual ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) = 0;
     virtual ErrorCode try_seek_from_begin(size_t pos) = 0;
