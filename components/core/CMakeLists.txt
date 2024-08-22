@@ -348,6 +348,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/Value.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
+        src/clp/FileDescriptorReader.cpp
+        src/clp/FileDescriptorReader.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -484,6 +486,7 @@ set(SOURCE_FILES_unitTest
         tests/test-encoding_methods.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
+        tests/test-FileDescriptorReader.cpp
         tests/test-Grep.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
