@@ -21,6 +21,7 @@ namespace clp {
 class CurlDownloadHandler {
 public:
     // Types
+    using ErrorMsgBuf = std::array<char, CURL_ERROR_SIZE>;
     /**
      * libcurl progress callback. This method must have C linkage. Doc:
      * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
@@ -31,7 +32,6 @@ public:
      * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
      */
     using WriteCallback = size_t (*)(char*, size_t, size_t, void*);
-    using ErrorMsgBuf = std::array<char, CURL_ERROR_SIZE>;
 
     // Constants
     // See https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html

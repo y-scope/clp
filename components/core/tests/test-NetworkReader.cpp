@@ -16,17 +16,10 @@
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/NetworkReader.hpp"
+#include "../src/clp/Platform.hpp"
 #include "../src/clp/ReaderInterface.hpp"
 
 namespace {
-constexpr bool cIsMacOS{
-#if defined(__APPLE__)
-        true
-#else
-        false
-#endif
-};
-
 constexpr size_t cDefaultReaderBufferSize{1024};
 
 [[nodiscard]] auto get_test_input_local_path() -> std::string;
@@ -182,7 +175,7 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
         // Wait until the return code is ready
     }
 
-    if constexpr (cIsMacOS) {
+    if constexpr (clp::Platform::MacOs == clp::cCurrentPlatform) {
         // On macOS, HTTP response code 416 is not handled as `CURL_HTTP_RETURNED_ERROR` in some
         // `libcurl` versions.
         REQUIRE(
