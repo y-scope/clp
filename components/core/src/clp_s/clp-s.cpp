@@ -182,7 +182,11 @@ bool search_archive(
     }
 
     // Populate projection
-    auto projection = std::make_shared<Projection>();
+    auto projection = std::make_shared<Projection>(
+            command_line_arguments.get_projection_columns().empty()
+                    ? ProjectionMode::ReturnAllColumns
+                    : ProjectionMode::ReturnSelectedColumns
+    );
     for (auto const& column : command_line_arguments.get_projection_columns()) {
         std::vector<std::string> descriptor_tokens;
         StringUtils::tokenize_column_descriptor(column, descriptor_tokens);

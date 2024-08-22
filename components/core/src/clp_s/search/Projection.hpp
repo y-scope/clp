@@ -30,6 +30,8 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    explicit Projection(ProjectionMode mode) : m_projection_mode{mode} {}
+
     /**
      * Add a column to the set of columns that should be included in the projected results
      * @param column
@@ -39,7 +41,9 @@ public:
         if (column->is_unresolved_descriptor()) {
             throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
         }
-        m_projection_mode = ProjectionMode::ReturnSelectedColumns;
+        if (ProjectionMode::ReturnAllColumns == m_projection_mode) {
+            throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__);
+        }
         m_selected_columns.push_back(column);
     }
 
