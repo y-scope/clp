@@ -1,5 +1,7 @@
 #include "Projection.hpp"
 
+#include "SearchUtils.hpp"
+
 namespace clp_s::search {
 void Projection::resolve_columns(std::shared_ptr<SchemaTree> tree) {
     for (auto& column : m_selected_columns) {
@@ -49,9 +51,9 @@ void Projection::resolve_column(
             }
 
             matched_any = true;
-            if (last_token) {
+            if (last_token && column->matches_type(node_to_literal_type(child_node.get_type()))) {
                 m_matching_nodes.insert(child_node_id);
-            } else {
+            } else if (false == last_token) {
                 cur_node_id = child_node_id;
                 break;
             }
