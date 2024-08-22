@@ -37,15 +37,7 @@ public:
      * @param column
      * @throws OperationFailed if column contains a wildcard
      */
-    void add_column(std::shared_ptr<ColumnDescriptor> column) {
-        if (column->is_unresolved_descriptor()) {
-            throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
-        }
-        if (ProjectionMode::ReturnAllColumns == m_projection_mode) {
-            throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__);
-        }
-        m_selected_columns.push_back(column);
-    }
+    void add_column(std::shared_ptr<ColumnDescriptor> column);
 
     /**
      * note to self: could try to generalize projection code/move it to schema tree, or just

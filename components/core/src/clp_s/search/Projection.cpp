@@ -1,8 +1,30 @@
 #include "Projection.hpp"
 
+#include <algorithm>
+
 #include "SearchUtils.hpp"
 
 namespace clp_s::search {
+void Projection::add_column(std::shared_ptr<ColumnDescriptor> column) {
+    if (column->is_unresolved_descriptor()) {
+        throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
+    }
+    if (ProjectionMode::ReturnAllColumns == m_projection_mode) {
+        throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__);
+    }
+    if (m_selected_columns.end()
+        != std::find_if(
+                m_selected_columns.begin(),
+                m_selected_columns.end(),
+                [column](auto const& rhs) -> bool { return *column == *rhs; }
+        ))
+    {
+        // no duplicate columns in projection
+        throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
+    }
+    m_selected_columns.push_back(column);
+}
+
 void Projection::resolve_columns(std::shared_ptr<SchemaTree> tree) {
     for (auto& column : m_selected_columns) {
         resolve_column(tree, column);
