@@ -40,7 +40,7 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void;
  * @tparam integer_t Type of the integer to deserialize
  * @param reader
  * @param value Returns the deserialized integer
- * @return Whether the reader contains enough data to deserialize.
+ * @return Whether the reader contained enough data to deserialize.
  */
 template <typename integer_t>
 [[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;

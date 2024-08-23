@@ -153,8 +153,8 @@ template <typename encoded_variable_t>
 ) -> bool;
 
 /**
- * Counts the number of leaves in a JSON tree. An object is considered as a leaf if it's a primitive
- * value, an empty map, or an array.
+ * Counts the number of leaves in a JSON tree. A node is considered as a leaf if it's a primitive
+ * value, an empty map (`{}`), or an array.
  * @param root
  * @return The number of leaves under the given root.
  */

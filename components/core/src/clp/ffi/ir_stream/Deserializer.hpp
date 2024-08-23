@@ -12,12 +12,8 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * A deserializer for log events from a CLP kv-pair IR stream.
- *
- * This class:
- * - maintains all the necessary internal data structure to track deserialization state;
- * - provides APIs to deserialize log events from an IR stream, ensuring that the internal state
- *   remains consistent when a failure happens (similar to a transactional system).
+ * A deserializer for log events from a CLP kv-pair IR stream. The class ensures any internal state
+ * remains consistent even when a deserialization failure occurs (i.e., it's transactional).
  *
  * NOTE: This class is designed only to provide deserialization functionalities. Callers are
  * responsible for maintaining a `ReaderInterface` to input IR bytes from an I/O stream.
