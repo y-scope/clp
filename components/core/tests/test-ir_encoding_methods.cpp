@@ -1046,7 +1046,8 @@ TEMPLATE_TEST_CASE(
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
-    // TODO: Test deserializing the serialized bytes once a KV-pair IR deserializer is implemented.
+    // TODO: Test validating the deserialized bytes once we've implemented a KeyValuePairLogEvent to
+    // JSON deserializer.
 
     vector<int8_t> ir_buf;
     vector<nlohmann::json> serialized_json_objects;
@@ -1123,7 +1124,6 @@ TEMPLATE_TEST_CASE(
         serialized_json_objects.emplace_back(recursive_obj);
     }
 
-    // Flush to the ir buf
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
     // Deserialize the results

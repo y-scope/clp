@@ -401,13 +401,11 @@ auto deserialize_schema_tree_nodes(
         SchemaTree& schema_tree
 ) -> IRErrorCode {
     while (is_schema_tree_node_tag(tag)) {
-        // Get the type of the node
         auto const type{schema_tree_node_tag_to_type(tag)};
         if (false == type.has_value()) {
             return IRErrorCode::IRErrorCode_Corrupted_IR;
         }
 
-        // Get the parent ID of the node
         SchemaTreeNode::id_t parent_id{};
         if (auto const err{deserialize_schema_tree_node_parent_id(reader, parent_id)};
             IRErrorCode_Success != err)
@@ -615,7 +613,7 @@ auto deserialize_value_and_construct_node_id_value_pairs(
 }
 }  // namespace
 
-auto Deserializer::create(clp::ReaderInterface& reader
+auto Deserializer::create(ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer> {
     bool is_four_byte_encoded{};
     if (auto const err{get_encoding_type(reader, is_four_byte_encoded)};
@@ -640,13 +638,13 @@ auto Deserializer::create(clp::ReaderInterface& reader
     if (metadata_json.is_discarded()) {
         return std::errc::protocol_error;
     }
-    auto const version_iter{metadata_json.find(ffi::ir_stream::cProtocol::Metadata::VersionKey)};
+    auto const version_iter{metadata_json.find(cProtocol::Metadata::VersionKey)};
     if (metadata_json.end() == version_iter || false == version_iter->is_string()) {
         return std::errc::protocol_error;
     }
     auto const version = version_iter->get_ref<nlohmann::json::string_t&>();
-    // TODO: when kv_pair format is formally released, we should replace the hard-coded version
-    //  check by a proper function.
+    // TODO: Just before the KV-pair IR format is formally released, we should replace this
+    // hard-coded version check with `ffi::ir_stream::validate_protocol_version`.
     if (std::string_view{static_cast<char const*>(cProtocol::Metadata::BetaVersionValue)}
         != version)
     {
