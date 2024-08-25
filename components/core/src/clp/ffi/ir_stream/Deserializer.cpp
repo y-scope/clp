@@ -31,8 +31,7 @@
 namespace clp::ffi::ir_stream {
 namespace {
 /**
- * A collection of schema tree leaf node IDs. It represents a the schema of a
- * `KeyValuePairLogEvent`.
+ * A collection of schema tree leaf node IDs. It represents the schema of a `KeyValuePairLogEvent`.
  */
 using Schema = std::vector<SchemaTreeNode::id_t>;
 
