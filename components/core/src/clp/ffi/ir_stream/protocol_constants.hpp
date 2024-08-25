@@ -73,6 +73,8 @@ constexpr int8_t SchemaTreeNodeParentIdUShort = 0x61;
 constexpr int8_t KeyIdUByte = 0x65;
 constexpr int8_t KeyIdUShort = 0x66;
 
+constexpr int8_t SchemaTreeNodeMask = 0x70;
+
 constexpr int8_t SchemaTreeNodeInt = 0x71;
 constexpr int8_t SchemaTreeNodeFloat = 0x72;
 constexpr int8_t SchemaTreeNodeBool = 0x73;
