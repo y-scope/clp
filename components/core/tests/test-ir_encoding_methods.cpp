@@ -1040,15 +1040,13 @@ TEMPLATE_TEST_CASE(
     );
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEMPLATE_TEST_CASE(
         "ffi_ir_stream_Serializer_serialize_msgpack",
         "[clp][ffi][ir_stream][Serializer]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
-    // TODO: Test validating the deserialized bytes once we've implemented a KeyValuePairLogEvent to
-    // JSON deserializer.
-
     vector<int8_t> ir_buf;
     vector<nlohmann::json> serialized_json_objects;
 
@@ -1140,4 +1138,7 @@ TEMPLATE_TEST_CASE(
         auto const num_kv_pairs = kv_log_event.get_node_id_value_pairs().size();
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
     }
+
+    // TODO: Test validating the deserialized bytes once we've implemented a KeyValuePairLogEvent to
+    // JSON deserializer.
 }
