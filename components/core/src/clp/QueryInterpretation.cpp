@@ -110,7 +110,21 @@ void QueryInterpretation::generate_logtype_string(ByteLexer& lexer) {
     // single query logtype might represent multiple logtype strings. While static text converts
     // one-to-one, wildcard variables that may be encoded have different logtype strings when
     // comparing against the dictionary than they do when comparing against the segment.
-    // TODO: Can m_logtype_string be reserved?
+
+    // Reserve size for m_logtype_string
+    uint32_t logtype_string_size = 0;
+    for (uint32_t i = 0; i < get_logtype_size(); i++) {
+        if (auto const& logtype_token = get_logtype_token(i);
+            std::holds_alternative<StaticQueryToken>(logtype_token))
+        {
+            logtype_string_size
+                    += std::get<StaticQueryToken>(logtype_token).get_query_substring().size();
+        } else {
+            logtype_string_size++;
+        }
+    }
+    m_logtype_string.reserve(logtype_string_size);
+
     for (uint32_t i = 0; i < get_logtype_size(); i++) {
         if (auto const& logtype_token = get_logtype_token(i);
             std::holds_alternative<StaticQueryToken>(logtype_token))
