@@ -87,8 +87,48 @@ bool SearchStringView::surrounded_by_delims(log_surgeon::lexers::ByteLexer const
     return has_preceding_delimiter && has_proceeding_delimiter;
 }
 
-void StaticQueryToken::append(StaticQueryToken const& rhs) {
-    m_query_substring += rhs.get_query_substring();
+bool VariableQueryToken::operator<(VariableQueryToken const& rhs) const {
+    if (m_variable_type < rhs.m_variable_type) {
+        return true;
+    }
+    if (m_variable_type > rhs.m_variable_type) {
+        return false;
+    }
+    if (m_query_substring < rhs.m_query_substring) {
+        return true;
+    }
+    if (m_query_substring > rhs.m_query_substring) {
+        return false;
+    }
+    if (m_has_wildcard < rhs.m_has_wildcard) {
+        return true;
+    }
+    if (m_has_wildcard > rhs.m_has_wildcard) {
+        return false;
+    }
+    return m_is_encoded < rhs.m_is_encoded;
+}
+
+bool VariableQueryToken::operator>(VariableQueryToken const& rhs) const {
+    if (m_variable_type > rhs.m_variable_type) {
+        return true;
+    }
+    if (m_variable_type < rhs.m_variable_type) {
+        return false;
+    }
+    if (m_query_substring > rhs.m_query_substring) {
+        return true;
+    }
+    if (m_query_substring < rhs.m_query_substring) {
+        return false;
+    }
+    if (m_has_wildcard > rhs.m_has_wildcard) {
+        return true;
+    }
+    if (m_has_wildcard < rhs.m_has_wildcard) {
+        return false;
+    }
+    return m_is_encoded > rhs.m_is_encoded;
 }
 
 void QueryInterpretation::append_logtype(QueryInterpretation& suffix) {
