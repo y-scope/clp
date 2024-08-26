@@ -527,7 +527,12 @@ std::optional<Query> Grep::process_raw_query(
         // Replace '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
         // message uses the original wildcards, so correctness will be maintained.
-        std::ranges::replace(search_string_for_sub_queries, '?', '*');
+        std::replace(
+                search_string_for_sub_queries.begin(),
+                search_string_for_sub_queries.end(),
+                '?',
+                '*'
+        );
         // Clean-up in case any instances of "?*" or "*?" were changed into "**"
         search_string_for_sub_queries
                 = clean_up_wildcard_search_string(search_string_for_sub_queries);
