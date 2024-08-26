@@ -976,12 +976,28 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
                     for (auto& suffix : possible_substr_types) {
                         QueryInterpretation query_interpretation = prefix;
                         query_interpretation.append_logtype(suffix);
+
+                        // For the interpretations of the query itself we need the logtype strings
+                        // TODO: this is doing 2^n the work for cases with encoded variables
+                        if (end_idx == processed_search_string.length()) {
+                            query_interpretation.generate_logtype_string(lexer);
+                        }
+
                         query_substr_interpretations[end_idx - 1].insert(query_interpretation);
                     }
                 }
             } else {
                 // Handle the case where substr(0,n) == substr(begin_idx,end_idx).
-                for (auto& possible_substr_type : possible_substr_types) {
+                while (false == possible_substr_types.empty()) {
+                    auto possible_substr_type{std::move(possible_substr_types.back())};
+                    possible_substr_types.pop_back();
+
+                    // For the interpretations of the query itself we need the logtype strings
+                    // TODO: this is doing 2^n the work for cases with encoded variables
+                    if (end_idx == processed_search_string.length()) {
+                        possible_substr_type.generate_logtype_string(lexer);
+                    }
+
                     query_substr_interpretations[end_idx - 1].insert(possible_substr_type);
                 }
             }
@@ -998,17 +1014,10 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
     // Don't allow an isolated wildcard to be considered a variable
     if (search_string_view.is_greedy_wildcard()) {
         possible_substr_types.emplace_back("*");
-        // TODO: there must be a cleaner way to do this then repeating this 3 times
-        for (auto& possible_substr_type : possible_substr_types) {
-            possible_substr_type.generate_logtype_string(lexer);
-        }
         return possible_substr_types;
     }
     if (search_string_view.is_non_greedy_wildcard()) {
         possible_substr_types.emplace_back("?");
-        for (auto& possible_substr_type : possible_substr_types) {
-            possible_substr_type.generate_logtype_string(lexer);
-        }
         return possible_substr_types;
     }
 
@@ -1086,10 +1095,6 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
     // If the substring matches no variables, or has a wildcard, it is potentially static-text.
     if (variable_types.empty() || contains_wildcard) {
         possible_substr_types.emplace_back(search_string_view.get_substr_copy());
-    }
-    // TODO: this is doing 2^n the work, where n is the # of wildcard encoded variables
-    for (auto& possible_substr_type : possible_substr_types) {
-        possible_substr_type.generate_logtype_string(lexer);
     }
     return possible_substr_types;
 }
