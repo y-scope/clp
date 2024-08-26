@@ -88,7 +88,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system)
+find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system regex)
 if(Boost_FOUND)
     message(STATUS "Found Boost ${Boost_VERSION}")
 else()
@@ -269,6 +269,10 @@ set(SOURCE_FILES_clp_s_unitTest
 )
 
 set(SOURCE_FILES_unitTest
+        src/clp/Array.hpp
+        src/clp/aws/AwsAuthenticationSigner.cpp
+        src/clp/aws/AwsAuthenticationSigner.hpp
+        src/clp/aws/constants.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -310,6 +314,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
         src/clp/ffi/ir_stream/byteswap.hpp
+        src/clp/ffi/ir_stream/Deserializer.cpp
+        src/clp/ffi/ir_stream/Deserializer.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
         src/clp/ffi/ir_stream/decoding_methods.hpp
         src/clp/ffi/ir_stream/decoding_methods.inc
@@ -320,6 +326,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/Serializer.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
+        src/clp/ffi/KeyValuePairLogEvent.cpp
+        src/clp/ffi/KeyValuePairLogEvent.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
         src/clp/ffi/SchemaTreeNode.hpp
@@ -339,8 +347,11 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/WildcardToken.hpp
         src/clp/ffi/utils.cpp
         src/clp/ffi/utils.hpp
+        src/clp/ffi/Value.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
+        src/clp/FileDescriptorReader.cpp
+        src/clp/FileDescriptorReader.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -473,10 +484,13 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
+        tests/test-Array.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
+        tests/test-FileDescriptorReader.cpp
         tests/test-Grep.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
@@ -507,7 +521,7 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options
+        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
         ${CURL_LIBRARIES}
         fmt::fmt
         kql

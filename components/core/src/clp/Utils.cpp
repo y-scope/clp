@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <set>
 
 #include <boost/algorithm/string.hpp>
@@ -17,7 +18,9 @@
 #include "spdlog_with_specializations.hpp"
 
 using std::list;
+using std::make_unique;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 namespace clp {
@@ -137,16 +140,18 @@ string get_unambiguous_path(string const& path) {
 }
 
 ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
-    FileReader file_reader;
-    ErrorCode error_code = file_reader.try_open(list_path);
-    if (ErrorCode_Success != error_code) {
-        return error_code;
+    unique_ptr<FileReader> file_reader;
+    try {
+        file_reader = make_unique<FileReader>(list_path);
+    } catch (FileReader::OperationFailed const& err) {
+        return err.get_error_code();
     }
 
     // Read file
     string line;
+    ErrorCode error_code{ErrorCode_Success};
     while (true) {
-        error_code = file_reader.try_read_to_delimiter('\n', false, false, line);
+        error_code = file_reader->try_read_to_delimiter('\n', false, false, line);
         if (ErrorCode_Success != error_code) {
             break;
         }
@@ -159,8 +164,6 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     if (ErrorCode_EndOfFile != error_code) {
         return error_code;
     }
-
-    file_reader.close();
 
     return ErrorCode_Success;
 }
@@ -257,38 +260,29 @@ void load_lexer_from_file(
         }
 
         if (contains_delimiter && "timestamp" != rule->m_name) {
-            FileReader schema_reader;
-            ErrorCode error_code = schema_reader.try_open(schema_ast->m_file_path);
-            if (ErrorCode_Success != error_code) {
-                throw std::runtime_error(
-                        schema_file_path + ":" + std::to_string(rule->m_line_num + 1) + ": error: '"
-                        + rule->m_name + "' has regex pattern which contains delimiter '"
-                        + char(delimiter_name) + "'.\n"
-                );
-            } else {
-                // more detailed debugging based on looking at the file
-                string line;
-                for (uint32_t i = 0; i <= rule->m_line_num; i++) {
-                    schema_reader.read_to_delimiter('\n', false, false, line);
-                }
-                int colon_pos = 0;
-                for (char i : line) {
-                    colon_pos++;
-                    if (i == ':') {
-                        break;
-                    }
-                }
-                string indent(10, ' ');
-                string spaces(colon_pos, ' ');
-                string arrows(line.size() - colon_pos, '^');
-
-                throw std::runtime_error(
-                        schema_file_path + ":" + std::to_string(rule->m_line_num + 1) + ": error: '"
-                        + rule->m_name + "' has regex pattern which contains delimiter '"
-                        + char(delimiter_name) + "'.\n" + indent + line + "\n" + indent + spaces
-                        + arrows + "\n"
-                );
+            FileReader schema_reader{schema_ast->m_file_path};
+            // more detailed debugging based on looking at the file
+            string line;
+            for (uint32_t i = 0; i <= rule->m_line_num; i++) {
+                schema_reader.read_to_delimiter('\n', false, false, line);
             }
+            int colon_pos = 0;
+            for (char i : line) {
+                colon_pos++;
+                if (i == ':') {
+                    break;
+                }
+            }
+            string indent(10, ' ');
+            string spaces(colon_pos, ' ');
+            string arrows(line.size() - colon_pos, '^');
+
+            throw std::runtime_error(
+                    schema_file_path + ":" + std::to_string(rule->m_line_num + 1) + ": error: '"
+                    + rule->m_name + "' has regex pattern which contains delimiter '"
+                    + char(delimiter_name) + "'.\n" + indent + line + "\n" + indent + spaces
+                    + arrows + "\n"
+            );
         }
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }

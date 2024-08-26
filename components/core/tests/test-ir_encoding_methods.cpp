@@ -14,6 +14,7 @@
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/Deserializer.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../src/clp/ffi/ir_stream/Serializer.hpp"
@@ -34,6 +35,7 @@ using clp::ffi::ir_stream::cProtocol::MagicNumberLength;
 using clp::ffi::ir_stream::deserialize_preamble;
 using clp::ffi::ir_stream::deserialize_tag;
 using clp::ffi::ir_stream::deserialize_utc_offset_change;
+using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -149,6 +151,14 @@ template <typename encoded_variable_t>
         vector<uint8_t> const& msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
 ) -> bool;
+
+/**
+ * Counts the number of leaves in a JSON tree. A node is considered as a leaf if it's a primitive
+ * value, an empty map (`{}`), or an array.
+ * @param root
+ * @return The number of leaves under the given root.
+ */
+[[nodiscard]] auto count_num_leaves(nlohmann::json const& root) -> size_t;
 
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
@@ -274,6 +284,30 @@ auto unpack_and_serialize_msgpack_bytes(
         return false;
     }
     return serializer.serialize_msgpack_map(msgpack_obj.via.map);
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+auto count_num_leaves(nlohmann::json const& root) -> size_t {
+    if (false == root.is_object()) {
+        return 0;
+    }
+
+    size_t num_leaves{0};
+    for (auto const& [key, val] : root.items()) {
+        if (val.is_primitive() || val.is_array()) {
+            ++num_leaves;
+        } else if (val.is_object()) {
+            if (val.empty()) {
+                ++num_leaves;
+            } else {
+                num_leaves += count_num_leaves(val);
+            }
+        } else {
+            FAIL("Unknown JSON object types.");
+        }
+    }
+
+    return num_leaves;
 }
 }  // namespace
 
@@ -1006,15 +1040,15 @@ TEMPLATE_TEST_CASE(
     );
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEMPLATE_TEST_CASE(
         "ffi_ir_stream_Serializer_serialize_msgpack",
         "[clp][ffi][ir_stream][Serializer]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
-    // TODO: Test deserializing the serialized bytes once a KV-pair IR deserializer is implemented.
-
     vector<int8_t> ir_buf;
+    vector<nlohmann::json> serialized_json_objects;
 
     auto result{Serializer<TestType>::create()};
     REQUIRE((false == result.has_error()));
@@ -1024,6 +1058,7 @@ TEMPLATE_TEST_CASE(
 
     auto const empty_obj = nlohmann::json::parse("{}");
     REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(empty_obj), serializer));
+    serialized_json_objects.emplace_back(empty_obj);
 
     // Test encoding basic object
     constexpr string_view cShortString{"short_string"};
@@ -1050,6 +1085,7 @@ TEMPLATE_TEST_CASE(
                {"empty_array", empty_array}};
 
     REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(basic_obj), serializer));
+    serialized_json_objects.emplace_back(basic_obj);
 
     auto basic_array = empty_array;
     basic_array.emplace_back(1);
@@ -1083,5 +1119,26 @@ TEMPLATE_TEST_CASE(
                 nlohmann::json::to_msgpack(recursive_obj),
                 serializer
         ));
+        serialized_json_objects.emplace_back(recursive_obj);
     }
+
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+
+    // Deserialize the results
+    BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
+    auto deserializer_result = Deserializer::create(reader);
+    REQUIRE_FALSE(deserializer_result.has_error());
+    auto& deserializer = deserializer_result.value();
+
+    for (auto const& json_obj : serialized_json_objects) {
+        auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
+        REQUIRE_FALSE(kv_log_event_result.has_error());
+        auto const& kv_log_event = kv_log_event_result.value();
+        auto const num_leaves_in_json_obj = count_num_leaves(json_obj);
+        auto const num_kv_pairs = kv_log_event.get_node_id_value_pairs().size();
+        REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
+    }
+
+    // TODO: Test validating the deserialized bytes once we've implemented a KeyValuePairLogEvent to
+    // JSON deserializer.
 }

@@ -8,8 +8,8 @@
 #include "Transformation.hpp"
 
 namespace clp_s::search {
-typedef std::vector<std::shared_ptr<Expression>> ExpressionVector;
-typedef std::list<std::shared_ptr<Expression>> ExpressionList;
+using ExpressionVector = std::vector<std::shared_ptr<Expression>>;
+using ExpressionList = std::list<std::shared_ptr<Expression>>;
 
 // TODO: handle degenerate forms like empty or/and expressions
 class OrOfAndForm : public Transformation {

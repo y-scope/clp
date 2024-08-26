@@ -90,6 +90,27 @@ auto deserialize_log_event(
 ) -> IRErrorCode;
 
 /**
+ * Deserializes an encoded text AST from the given stream
+ * @tparam encoded_variable_t
+ * @param reader
+ * @param encoded_tag Tag of the next packet to read
+ * @param logtype Returns the logtype
+ * @param encoded_vars Returns the encoded variables
+ * @param dict_vars Returns the dictionary variables
+ * @return IRErrorCode_Success on success
+ * @return IRErrorCode_Corrupted_IR if `reader` contains invalid IR
+ * @return IRErrorCode_Incomplete_IR if `reader` doesn't contain enough data
+ */
+template <typename encoded_variable_t>
+auto deserialize_encoded_text_ast(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        std::string& logtype,
+        std::vector<encoded_variable_t>& encoded_vars,
+        std::vector<std::string>& dict_vars
+) -> IRErrorCode;
+
+/**
  * Decodes the IR message calls the given methods to handle each component of the message
  * @tparam unescape_logtype Whether to remove the escape characters from the logtype before calling
  * \p ConstantHandler
