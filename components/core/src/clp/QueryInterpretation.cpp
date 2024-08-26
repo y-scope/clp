@@ -18,7 +18,7 @@ SearchString::SearchString(std::string processed_search_string)
     // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
     // message uses the original wildcards, so correctness will be maintained.
     std::replace(m_processed_search_string.begin(), m_processed_search_string.end(), '?', '*');
-    
+
     // Clean-up in case any instances of "?*" or "*?" were changed into "**"
     m_processed_search_string = clean_up_wildcard_search_string(m_processed_search_string);
     m_is_greedy_wildcard.reserve(m_processed_search_string.size());
