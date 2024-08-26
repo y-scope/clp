@@ -100,8 +100,6 @@ void QueryInterpretation::append_logtype(QueryInterpretation& suffix) {
         std::get<StaticQueryToken>(prev_token).append(std::get<StaticQueryToken>(first_new_token));
         m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin() + 1, suffix.m_logtype.end());
     } else {
-        // TODO: This is doing a lot of string concatenations for QueryInterpretations that are just
-        // going to immediately be thrown out.
         m_logtype.insert(m_logtype.end(), suffix.m_logtype.begin(), suffix.m_logtype.end());
     }
 }

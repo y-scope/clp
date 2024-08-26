@@ -202,7 +202,14 @@ public:
         );
     }
 
-    bool operator==(QueryInterpretation const& rhs) const = default;
+    /**
+     * Ignores m_logtype_string.
+     * @param rhs
+     * @return if m_logtype is equal
+     */
+    bool QueryInterpretation::operator==(QueryInterpretation const& rhs) const {
+        return m_logtype == rhs.m_logtype;
+    }
 
     /**
      * @param rhs
@@ -211,7 +218,7 @@ public:
      * rhs, false if bigger. If the logtypes are identical, true if the current search query is
      * lexicographically smaller than rhs, false if bigger. If the search queries are identical,
      * true if the first mismatch in special character locations is a non-special character for the
-     * current logtype, false otherwise.
+     * current logtype, false otherwise. Ignores m_logtype_string.
      */
     bool operator<(QueryInterpretation const& rhs) const;
 
