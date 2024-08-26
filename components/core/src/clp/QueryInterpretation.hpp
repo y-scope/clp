@@ -124,7 +124,13 @@ public:
 
     bool operator!=(StaticQueryToken const& rhs) const = default;
 
-    auto operator<=>(StaticQueryToken const& rhs) const = default;
+    bool operator<(StaticQueryToken const& rhs) const {
+        return m_query_substring < rhs.m_query_substring;
+    }
+
+    bool operator>(StaticQueryToken const& rhs) const {
+        return m_query_substring > rhs.m_query_substring;
+    }
 
     void append(StaticQueryToken const& rhs);
 
@@ -152,7 +158,51 @@ public:
 
     bool operator==(VariableQueryToken const& rhs) const = default;
 
-    auto operator<=>(VariableQueryToken const& rhs) const = default;
+    bool operator!=(VariableQueryToken const& rhs) const = default;
+
+    bool operator<(VariableQueryToken const& rhs) const {
+        if (m_variable_type < rhs.m_variable_type) {
+            return true;
+        }
+        if (m_variable_type > rhs.m_variable_type) {
+            return false;
+        }
+        if (m_query_substring < rhs.m_query_substring) {
+            return true;
+        }
+        if (m_query_substring > rhs.m_query_substring) {
+            return false;
+        }
+        if (m_has_wildcard < rhs.m_has_wildcard) {
+            return true;
+        }
+        if (m_has_wildcard > rhs.m_has_wildcard) {
+            return false;
+        }
+        return m_is_encoded < rhs.m_is_encoded;
+    }
+
+    bool operator>(VariableQueryToken const& rhs) const {
+        if (m_variable_type > rhs.m_variable_type) {
+            return true;
+        }
+        if (m_variable_type < rhs.m_variable_type) {
+            return false;
+        }
+        if (m_query_substring > rhs.m_query_substring) {
+            return true;
+        }
+        if (m_query_substring < rhs.m_query_substring) {
+            return false;
+        }
+        if (m_has_wildcard > rhs.m_has_wildcard) {
+            return true;
+        }
+        if (m_has_wildcard < rhs.m_has_wildcard) {
+            return false;
+        }
+        return m_is_encoded > rhs.m_is_encoded;
+    }
 
     [[nodiscard]] uint32_t get_variable_type() const { return m_variable_type; }
 
