@@ -59,6 +59,8 @@ set(
         ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
+        ../QueryInterpretation.cpp
+        ../QueryInterpretation.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
