@@ -106,7 +106,6 @@ public:
     [[nodiscard]] bool get_value_is_escape(uint32_t const idx) const { return m_is_escape[idx]; }
 
 private:
-    // std::vector<bool> is specialized so use std::vector<char> instead
     std::vector<bool> m_is_greedy_wildcard;
     std::vector<bool> m_is_non_greedy_wildcard;
     std::vector<bool> m_is_escape;
