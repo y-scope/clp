@@ -273,7 +273,6 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
                             false,
                             false
                     );
-                    expected_result[0].generate_logtype_string(lexer);
                 } else if ((0 != begin_idx && search_string.length() != end_idx)
                            || (end_idx - begin_idx == 1))
                 {
@@ -281,7 +280,6 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
                     for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
                         expected_result[0].append_static_token(search_string.substr(idx, 1));
                     }
-                    expected_result[0].generate_logtype_string(lexer);
                 }
                 CAPTURE(begin_idx);
                 CAPTURE(end_idx);
