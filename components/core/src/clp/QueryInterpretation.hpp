@@ -207,9 +207,7 @@ public:
      * @param rhs
      * @return if m_logtype is equal
      */
-    bool operator==(QueryInterpretation const& rhs) const {
-        return m_logtype == rhs.m_logtype;
-    }
+    bool operator==(QueryInterpretation const& rhs) const { return m_logtype == rhs.m_logtype; }
 
     /**
      * @param rhs
