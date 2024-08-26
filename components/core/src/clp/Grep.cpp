@@ -977,13 +977,20 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
                         QueryInterpretation query_interpretation = prefix;
                         query_interpretation.append_logtype(suffix);
 
-                        // For the interpretations of the query itself we need the logtype strings
-                        // TODO: this is doing 2^n the work for cases with encoded variables
-                        if (end_idx == processed_search_string.length()) {
-                            query_interpretation.generate_logtype_string(lexer);
-                        }
+                        if (false
+                            == query_substr_interpretations[end_idx - 1].contains(
+                                    query_interpretation
+                            ))
+                        {
+                            // For the interpretations of the query itself we need the logtype
+                            // strings
+                            // TODO: this is doing 2^n the work for cases with encoded variables
+                            if (end_idx == processed_search_string.length()) {
+                                query_interpretation.generate_logtype_string(lexer);
+                            }
 
-                        query_substr_interpretations[end_idx - 1].insert(query_interpretation);
+                            query_substr_interpretations[end_idx - 1].insert(query_interpretation);
+                        }
                     }
                 }
             } else {
@@ -992,13 +999,17 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
                     auto possible_substr_type{std::move(possible_substr_types.back())};
                     possible_substr_types.pop_back();
 
-                    // For the interpretations of the query itself we need the logtype strings
-                    // TODO: this is doing 2^n the work for cases with encoded variables
-                    if (end_idx == processed_search_string.length()) {
-                        possible_substr_type.generate_logtype_string(lexer);
-                    }
+                    if (false
+                        == query_substr_interpretations[end_idx - 1].contains(possible_substr_type))
+                    {
+                        // For the interpretations of the query itself we need the logtype strings
+                        // TODO: this is doing 2^n the work for cases with encoded variables
+                        if (end_idx == processed_search_string.length()) {
+                            possible_substr_type.generate_logtype_string(lexer);
+                        }
 
-                    query_substr_interpretations[end_idx - 1].insert(possible_substr_type);
+                        query_substr_interpretations[end_idx - 1].insert(possible_substr_type);
+                    }
                 }
             }
         }
