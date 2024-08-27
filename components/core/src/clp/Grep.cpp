@@ -1041,7 +1041,7 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
     // wildcards are redundant (e.g., for string "a*b", a decomposition of the form "a*" + "b" is a
     // subset of the more general "a*" + "*" + "*b". Note, as this needs "*", the "*" substring is
     // not redundant. This is already handled above). More detail about this is given below.
-    if (search_string_view.starts_or_ends_with_wildcard()) {
+    if (search_string_view.starts_or_ends_with_greedy_wildcard()) {
         return possible_substr_types;
     }
 

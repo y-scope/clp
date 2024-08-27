@@ -1,16 +1,22 @@
 #include "QueryInterpretation.hpp"
 
+#include <algorithm>
+#include <cstdint>
+#include <ostream>
+#include <string>
 #include <utility>
+#include <variant>
 
+#include "Defs.h"
 #include "EncodedVariableInterpreter.hpp"
+#include "log_surgeon/Lexer.hpp"
 #include "LogTypeDictionaryEntry.hpp"
-#include "Utils.hpp"
+#include "string_utils/string_utils.hpp"
 
 using clp::string_utils::clean_up_wildcard_search_string;
 using log_surgeon::lexers::ByteLexer;
 
 namespace clp {
-
 SearchString::SearchString(std::string processed_search_string)
         : m_processed_search_string(std::move(processed_search_string)) {
     // TODO: remove this when subqueries can handle '?' wildcards
@@ -55,9 +61,11 @@ SearchString::SearchString(std::string processed_search_string)
 }
 
 void SearchStringView::extend_to_adjacent_wildcards() {
-    bool const prev_char_is_star = m_begin_idx > 0 && m_is_greedy_wildcard[m_begin_idx - 1];
+    bool const prev_char_is_star
+            = m_begin_idx > 0 && m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx - 1);
     bool const next_char_is_greedy_wildcard
-            = m_end_idx < m_processed_search_string.length() && m_is_greedy_wildcard[m_end_idx];
+            = m_end_idx < m_search_string_ptr->length()
+              && m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx);
     if (prev_char_is_star) {
         m_begin_idx--;
     }
@@ -66,50 +74,56 @@ void SearchStringView::extend_to_adjacent_wildcards() {
     }
 }
 
-bool SearchStringView::surrounded_by_delims(log_surgeon::lexers::ByteLexer const& lexer) const {
+auto SearchStringView::surrounded_by_delims(ByteLexer const& lexer) const -> bool {
     // Preceding delimiter counts the start of log, a wildcard, or an actual delimiter.
     bool const has_preceding_delimiter
-            = m_begin_idx == 0 || m_is_greedy_wildcard[m_begin_idx - 1]
-              || m_is_non_greedy_wildcard[m_begin_idx - 1]
-              || lexer.is_delimiter(m_processed_search_string[m_begin_idx - 1]);
+            = m_begin_idx == 0 || m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx - 1)
+              || m_search_string_ptr->get_value_is_non_greedy_wildcard(m_begin_idx - 1)
+              || lexer.is_delimiter(m_search_string_ptr->get_value(m_begin_idx - 1));
 
     // Proceeding delimiter counts the end of log, a wildcard, or an actual delimiter. However,
     // we have to be careful about a proceeding escape character. First, if '\' is a delimiter,
     // we avoid counting the escape character. Second, if a literal '*' or '?' is a delimiter,
     // then it will appear after the escape character.
     bool const has_proceeding_delimiter
-            = m_processed_search_string.size() == m_end_idx || m_is_greedy_wildcard[m_end_idx]
-              || m_is_non_greedy_wildcard[m_end_idx]
-              || (false == m_is_escape[m_end_idx]
-                  && lexer.is_delimiter(m_processed_search_string[m_end_idx]))
-              || (m_is_escape[m_end_idx]
-                  && lexer.is_delimiter(m_processed_search_string[m_end_idx + 1]));
+            = m_search_string_ptr->length() == m_end_idx
+              || m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx)
+              || m_search_string_ptr->get_value_is_non_greedy_wildcard(m_end_idx)
+              || (false == m_search_string_ptr->get_value_is_escape(m_end_idx)
+                  && lexer.is_delimiter(m_search_string_ptr->get_value(m_end_idx)))
+              || (m_search_string_ptr->get_value_is_escape(m_end_idx)
+                  && lexer.is_delimiter(m_search_string_ptr->get_value(m_end_idx + 1)));
     return has_preceding_delimiter && has_proceeding_delimiter;
 }
 
-bool VariableQueryToken::operator<(VariableQueryToken const& rhs) const {
-    if (m_variable_type < rhs.m_variable_type) {
-        return true;
-    }
-    if (m_variable_type > rhs.m_variable_type) {
-        return false;
-    }
-    if (m_query_substring < rhs.m_query_substring) {
-        return true;
-    }
-    if (m_query_substring > rhs.m_query_substring) {
-        return false;
-    }
-    if (m_has_wildcard < rhs.m_has_wildcard) {
-        return true;
-    }
-    if (m_has_wildcard > rhs.m_has_wildcard) {
-        return false;
-    }
-    return m_is_encoded < rhs.m_is_encoded;
+[[nodiscard]] auto SearchString::create_view(uint32_t const start_idx, uint32_t const end_idx) const
+        -> SearchStringView {
+    return SearchStringView{this, start_idx, end_idx};
 }
 
-bool VariableQueryToken::operator>(VariableQueryToken const& rhs) const {
+auto VariableQueryToken::operator<(VariableQueryToken const& rhs) const -> bool {
+    if (m_variable_type < rhs.m_variable_type) {
+        return true;
+    }
+    if (m_variable_type > rhs.m_variable_type) {
+        return false;
+    }
+    if (m_query_substring < rhs.m_query_substring) {
+        return true;
+    }
+    if (m_query_substring > rhs.m_query_substring) {
+        return false;
+    }
+    if (m_has_wildcard != rhs.m_has_wildcard) {
+        return rhs.m_has_wildcard;
+    }
+    if (m_is_encoded != rhs.m_is_encoded) {
+        return rhs.m_is_encoded;
+    }
+    return false;
+}
+
+auto VariableQueryToken::operator>(VariableQueryToken const& rhs) const -> bool {
     if (m_variable_type > rhs.m_variable_type) {
         return true;
     }
@@ -122,13 +136,13 @@ bool VariableQueryToken::operator>(VariableQueryToken const& rhs) const {
     if (m_query_substring < rhs.m_query_substring) {
         return false;
     }
-    if (m_has_wildcard > rhs.m_has_wildcard) {
-        return true;
+    if (m_has_wildcard != rhs.m_has_wildcard) {
+        return m_has_wildcard;
     }
-    if (m_has_wildcard < rhs.m_has_wildcard) {
-        return false;
+    if (m_is_encoded != rhs.m_is_encoded) {
+        return m_is_encoded;
     }
-    return m_is_encoded > rhs.m_is_encoded;
+    return false;
 }
 
 void QueryInterpretation::append_logtype(QueryInterpretation& suffix) {
@@ -178,7 +192,7 @@ void QueryInterpretation::generate_logtype_string(ByteLexer& lexer) {
             auto const is_encoded_with_wildcard = variable_token.get_is_encoded_with_wildcard();
             auto const var_has_wildcard = variable_token.get_has_wildcard();
             auto& schema_type = lexer.m_id_symbol[variable_type];
-            encoded_variable_t encoded_var;
+            encoded_variable_t encoded_var = 0;
             if (is_encoded_with_wildcard) {
                 if (cIntVarName == schema_type) {
                     LogTypeDictionaryEntry::add_int_var(m_logtype_string);
@@ -206,7 +220,7 @@ void QueryInterpretation::generate_logtype_string(ByteLexer& lexer) {
     }
 }
 
-bool QueryInterpretation::operator<(QueryInterpretation const& rhs) const {
+auto QueryInterpretation::operator<(QueryInterpretation const& rhs) const -> bool {
     if (m_logtype.size() < rhs.m_logtype.size()) {
         return true;
     }
@@ -224,7 +238,7 @@ bool QueryInterpretation::operator<(QueryInterpretation const& rhs) const {
     return false;
 }
 
-std::ostream& operator<<(std::ostream& os, QueryInterpretation const& query_logtype) {
+auto operator<<(std::ostream& os, QueryInterpretation const& query_logtype) -> std::ostream& {
     os << "\"";
     for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
         if (auto const& query_token = query_logtype.get_logtype_token(idx);
