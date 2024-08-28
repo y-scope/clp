@@ -31,7 +31,7 @@ def main(argv):
         "--no-submodule",
         action="store_false",
         dest="use_submodule",
-        help="Do not use git submodule update",
+        help="Don't use git submodule update",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -48,7 +48,7 @@ def main(argv):
             try:
                 subprocess.run(cmd, check=True)
             except subprocess.CalledProcessError:
-                logger.exception(f"Failed to update the submodule {dest_dir}")
+                logger.exception(f"Failed to update submodule '{dest_dir}'.")
                 return -1
             return 0
 
@@ -58,28 +58,28 @@ def main(argv):
         parsed_url = urllib.parse.urlparse(source_url)
         filename = Path(parsed_url.path).name
         file_path = work_dir / filename
+
         # Download file
         urllib.request.urlretrieve(source_url, file_path)
         if extract_source:
-            # NOTE: We need to convert file_path to a str since unpack_archive only
-            # accepts a path-like object on Python versions >= 3.7
+            # NOTE: We need to convert `file_path` to a str since `unpack_archive` only accepts a
+            # path-like object on Python versions >= 3.7
             shutil.unpack_archive(str(file_path), work_dir)
 
         if dest_dir.exists():
             shutil.rmtree(dest_dir, ignore_errors=True)
         else:
-            target_dest_parent = dest_dir.parent
-            target_dest_parent.mkdir(parents=True, exist_ok=True)
+            dest_dir.parent.mkdir(parents=True, exist_ok=True)
 
-        target_source_path = work_dir / source_name
-        if not target_source_path.exists():
-            logger.error(f"Source file {target_source_path} doesn't exist.")
+        source_path = work_dir / source_name
+        if not source_path.exists():
+            logger.error(f"Source '{source_path}' doesn't exist.")
             return -1
 
         if extract_source:
-            shutil.copytree(target_source_path, dest_dir)
+            shutil.copytree(source_path, dest_dir)
         else:
-            shutil.copy(target_source_path, dest_dir)
+            shutil.copy(source_path, dest_dir)
 
     return 0
 
