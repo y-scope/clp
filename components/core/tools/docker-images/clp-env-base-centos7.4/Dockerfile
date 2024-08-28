@@ -19,9 +19,9 @@ RUN ln -s /opt/rh/devtoolset-10/enable /etc/profile.d/devtoolset.sh
 RUN cp ./tools/docker-images/clp-env-base-centos7.4/setup-scripts/git /usr/bin/git
 
 # NOTE:
-# 1. `task` doesn't have a apt/yum package so we use its install script.
-# 2. We don't want to install it using `install-prebuilt-packages.sh` since that would change the
-#    user's environment in a way that they couldn't easily undo.
+# 1. `task` doesn't have an apt/yum package so we use its install script.
+# 2. We don't want to install it using `install-prebuilt-packages.sh` since users may use that on
+#    their own machines and it would change their environment in a way that can't easily be undone.
 RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
 # Remove cached files
