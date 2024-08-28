@@ -14,7 +14,7 @@ from source.
 
 ### Set up
 
-Before running the commands below, run the following to initialize the project:
+To initialize the project, run:
 
 ```shell
 tools/scripts/deps-download/init.sh
@@ -22,7 +22,7 @@ tools/scripts/deps-download/init.sh
 
 ### Source Dependencies
 
-We use both git submodules and third-party source packages. To download all, you can run this `task`
+We use both git submodules and third-party source packages. To download all, run this `task`
 command:
 
 ```shell
