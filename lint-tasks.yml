@@ -111,6 +111,7 @@ tasks:
           components/core/config \
           components/package-template/src/etc \
           docs \
+          deps-tasks.yml \
           lint-tasks.yml \
           Taskfile.yml
 

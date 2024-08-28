@@ -1,24 +1,24 @@
 version: "3"
 vars:
-    # Utility script path
-    G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/deps-download/download-dep.py"
+  # Utility script path
+  G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/deps-download/download-dep.py"
 
-    # Target checksum files
-    G_DEPS_CORE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#core.md5"
-    G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#log-viewer.md5"
+  # Target checksum files
+  G_DEPS_CORE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#core.md5"
+  G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#log-viewer.md5"
 
-    # Submodule checksum files
-    G_ABSEIL_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#abseil-cpp.md5"
-    G_ANTLR4_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#antlr4.md5"
-    G_CATCH2_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#Catch2.md5"
-    G_DATE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#date.md5"
-    G_JSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#json.md5"
-    G_LOG_SURGEON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#log-surgeon.md5"
-    G_OUTCOME_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#outcome.md5"
-    G_SIMDJSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#simdjson.md5"
-    G_SQLITE3_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#sqlite3.md5"
-    G_YAML_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yaml-cpp.md5"
-    G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yscope-log-viewer.md5"
+  # Submodule checksum files
+  G_ABSEIL_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#abseil-cpp.md5"
+  G_ANTLR4_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#antlr4.md5"
+  G_CATCH2_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#Catch2.md5"
+  G_DATE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#date.md5"
+  G_JSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#json.md5"
+  G_LOG_SURGEON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#log-surgeon.md5"
+  G_OUTCOME_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#outcome.md5"
+  G_SIMDJSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#simdjson.md5"
+  G_SQLITE3_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#sqlite3.md5"
+  G_YAML_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yaml-cpp.md5"
+  G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yscope-log-viewer.md5"
 
 tasks:
   default:
@@ -65,7 +65,7 @@ tasks:
       - >-
         cat
         "{{.G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE}}"
-        >> "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"  
+        >> "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
 
   # NOTE: `git submodule update` doesn't support parallel invocations, so we can't use it to
   # download submodules in parallel. This means:
@@ -82,7 +82,7 @@ tasks:
   # submodule tasks in this file.
   all-internal-deps:
     internal: true
-    run: once
+    run: "once"
     cmds:
       - task: "abseil-cpp"
       - task: "antlr4"
@@ -105,7 +105,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -135,7 +135,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -164,7 +164,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -193,7 +193,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -222,7 +222,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -251,7 +251,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -280,7 +280,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -309,7 +309,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -340,7 +340,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
@@ -398,7 +398,7 @@ tasks:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-    generates: [ "{{.CHECKSUM_FILE}}" ]
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
