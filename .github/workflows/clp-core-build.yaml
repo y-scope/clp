@@ -8,6 +8,9 @@ on:
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
+      - "deps-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   push:
     paths:
@@ -16,6 +19,9 @@ on:
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
+      - "deps-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   workflow_dispatch:
 
