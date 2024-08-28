@@ -1,9 +1,9 @@
 version: "3"
 
 includes:
+  deps: "deps-tasks.yml"
   docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
-  deps: "deps-tasks.yml"
   utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
 
 vars:
@@ -189,7 +189,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-    deps: ["init", "deps:core"]
+    deps: ["deps:core", "init"]
     cmds:
       - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
