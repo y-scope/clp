@@ -26,8 +26,8 @@ vars:
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
-  # task file paths
-  G_UTIL_TASK_FILE: "{{.ROOT_DIR}}/tool/yscope-dev-utils/taskfiles/utils.yml"
+  # Taskfile paths
+  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/taskfiles/utils.yml"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
