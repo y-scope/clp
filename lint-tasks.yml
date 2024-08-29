@@ -67,7 +67,6 @@ tasks:
       - "{{.G_WEBUI_SRC_DIR}}/server/**/*.jsx"
       - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.js"
       - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.jsx"
-      - "{{.ROOT_DIR}}/deps-tasks.yml"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     cmds:
