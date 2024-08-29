@@ -16,7 +16,7 @@ struct fmt::formatter<clp::ErrorCode> {
     }
 
     template <typename FormatContext>
-    auto format(clp::ErrorCode const& error_code, FormatContext& ctx) {
+    auto format(clp::ErrorCode const& error_code, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}", static_cast<size_t>(error_code));
     }
 };
@@ -30,7 +30,8 @@ struct fmt::formatter<clp::ffi::search::ExactVariableToken<encoded_variable_t>> 
 
     template <typename FormatContext>
     auto
-    format(clp::ffi::search::ExactVariableToken<encoded_variable_t> const& v, FormatContext& ctx) {
+    format(clp::ffi::search::ExactVariableToken<encoded_variable_t> const& v,
+           FormatContext& ctx) const {
         return fmt::format_to(
                 ctx.out(),
                 "ExactVariableToken(\"{}\") as {}",
@@ -48,7 +49,8 @@ struct fmt::formatter<clp::ffi::search::WildcardToken<encoded_variable_t>> {
     }
 
     template <typename FormatContext>
-    auto format(clp::ffi::search::WildcardToken<encoded_variable_t> const& v, FormatContext& ctx) {
+    auto
+    format(clp::ffi::search::WildcardToken<encoded_variable_t> const& v, FormatContext& ctx) const {
         return fmt::format_to(
                 ctx.out(),
                 "WildcardToken(\"{}\") as {}TokenType({}){}",

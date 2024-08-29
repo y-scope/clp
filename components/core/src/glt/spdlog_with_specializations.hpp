@@ -16,7 +16,7 @@ struct fmt::formatter<glt::ErrorCode> {
     }
 
     template <typename FormatContext>
-    auto format(glt::ErrorCode const& error_code, FormatContext& ctx) {
+    auto format(glt::ErrorCode const& error_code, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}", static_cast<size_t>(error_code));
     }
 };
@@ -30,7 +30,8 @@ struct fmt::formatter<glt::ffi::search::ExactVariableToken<encoded_variable_t>> 
 
     template <typename FormatContext>
     auto
-    format(glt::ffi::search::ExactVariableToken<encoded_variable_t> const& v, FormatContext& ctx) {
+    format(glt::ffi::search::ExactVariableToken<encoded_variable_t> const& v,
+           FormatContext& ctx) const {
         return fmt::format_to(
                 ctx.out(),
                 "ExactVariableToken(\"{}\") as {}",
@@ -48,7 +49,8 @@ struct fmt::formatter<glt::ffi::search::WildcardToken<encoded_variable_t>> {
     }
 
     template <typename FormatContext>
-    auto format(glt::ffi::search::WildcardToken<encoded_variable_t> const& v, FormatContext& ctx) {
+    auto
+    format(glt::ffi::search::WildcardToken<encoded_variable_t> const& v, FormatContext& ctx) const {
         return fmt::format_to(
                 ctx.out(),
                 "WildcardToken(\"{}\") as {}TokenType({}){}",
