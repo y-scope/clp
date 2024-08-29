@@ -16,10 +16,10 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 
 ## Setup
 
-Download CLP core's source dependencies:
+Initialize the project
 
 ```shell
-components/core/tools/scripts/deps-download/download-all.sh
+tools/scripts/deps-download/init.sh
 ```
 
 Install CLP core's dependencies

@@ -11,19 +11,19 @@ def main(argv):
 
     # Check for docs.yscope.com links with ".md" suffixes
     if _check_tracked_files(
-            r"docs\.yscope\.com/.+\.md",
-            repo_root,
-            repo_root,
-            "docs.yscope.com links cannot have \".md\" suffixes."
+        r"docs\.yscope\.com/.+\.md",
+        repo_root,
+        repo_root,
+        'docs.yscope.com links cannot have ".md" suffixes.',
     ):
         found_violation = True
 
     # Check for sphinx :link: attributes that have ".md" suffixes
     if _check_tracked_files(
-            r":link:[[:space:]]*.+\.md",
-            repo_root,
-            repo_root / "docs",
-            "sphinx :link: attributes cannot have \".md\" suffixes"
+        r":link:[[:space:]]*.+\.md",
+        repo_root,
+        repo_root / "docs",
+        'sphinx :link: attributes cannot have ".md" suffixes',
     ):
         found_violation = True
 
@@ -35,18 +35,13 @@ def main(argv):
 
 def _get_repo_root() -> Path:
     path_str = subprocess.check_output(
-        ["git", "rev-parse", "--show-toplevel"],
-        cwd=Path(__file__).parent,
-        text=True
+        ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent, text=True
     )
     return Path(path_str.strip())
 
 
 def _check_tracked_files(
-        pattern: str,
-        repo_root: Path,
-        dir_to_search: Path,
-        error_msg: str
+    pattern: str, repo_root: Path, dir_to_search: Path, error_msg: str
 ) -> bool:
     """
     Check for a pattern in all tracked files in the repo (except this script).
@@ -60,16 +55,16 @@ def _check_tracked_files(
 
     # NOTE: "-z" ensures the paths won't be quoted (while delimiting them using '\0')
     for path_str in subprocess.check_output(
-            [
-                "git",
-                "ls-files",
-                "--cached",
-                "--exclude-standard",
-                "-z",
-                str(dir_to_search.relative_to(repo_root))
-            ],
-            cwd=repo_root,
-            text=True,
+        [
+            "git",
+            "ls-files",
+            "--cached",
+            "--exclude-standard",
+            "-z",
+            str(dir_to_search.relative_to(repo_root)),
+        ],
+        cwd=repo_root,
+        text=True,
     ).split("\0"):
         path = Path(path_str)
 
@@ -79,16 +74,9 @@ def _check_tracked_files(
 
         try:
             for match in subprocess.check_output(
-                    [
-                        "grep",
-                        "--extended-regexp",
-                        "--line-number",
-                        "--with-filename",
-                        pattern,
-                        path
-                    ],
-                    cwd=repo_root,
-                    text=True,
+                ["grep", "--extended-regexp", "--line-number", "--with-filename", pattern, path],
+                cwd=repo_root,
+                text=True,
             ).splitlines():
                 _parse_and_print_match(match, error_msg)
                 found_matches = True

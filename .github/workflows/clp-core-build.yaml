@@ -8,6 +8,9 @@ on:
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
+      - "deps-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   push:
     paths:
@@ -16,6 +19,9 @@ on:
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
+      - "deps-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos-12/**"
   workflow_dispatch:
 
@@ -83,8 +89,10 @@ jobs:
               - "components/core/CMakeLists.txt"
               - "components/core/src/**"
               - "components/core/tests/**"
-              - "components/core/tools/scripts/deps-download/**"
               - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+              - "deps-tasks.yml"
+              - "Taskfile.yml"
+              - "tools/scripts/deps-download/**"
 
   centos74-deps-image:
     if: "needs.filter-relevant-changes.outputs.centos74_image_changed == 'true'"

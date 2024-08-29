@@ -10,8 +10,10 @@ brew update
 brew install \
   boost \
   cmake \
+  coreutils \
   fmt \
   gcc \
+  go-task \
   java11 \
   libarchive \
   lz4 \
