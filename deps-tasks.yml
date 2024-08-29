@@ -103,6 +103,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/abseil-cpp"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -133,6 +134,7 @@ tasks:
       DEST: "{{.DEST_DIR}}/antlr-4.13.1-complete.jar"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -162,6 +164,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/Catch2"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -191,6 +194,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/date"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -220,6 +224,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/json"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -249,6 +254,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/log-surgeon"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -278,6 +284,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/outcome"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -307,6 +314,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/simdjson"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -338,6 +346,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/sqlite3"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -367,6 +376,7 @@ tasks:
       DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/yaml-cpp"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -396,6 +406,7 @@ tasks:
       DEST: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTIL_TASK_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
