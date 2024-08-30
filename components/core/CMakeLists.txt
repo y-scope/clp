@@ -88,7 +88,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.74 REQUIRED filesystem iostreams program_options regex system thread)
+find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system regex)
 if(Boost_FOUND)
     message(STATUS "Found Boost ${Boost_VERSION}")
 else()
@@ -197,6 +197,8 @@ add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
 
 # Add simdjson
 add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
+
+find_package(Threads REQUIRED)
 
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)

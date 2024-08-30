@@ -45,12 +45,14 @@ target_link_libraries(reducer-server
         PRIVATE
         Boost::program_options
         Boost::system
-        Boost::thread
         clp::string_utils
         fmt::fmt
         ${MONGOCXX_TARGET}
         msgpack-cxx
         spdlog::spdlog
+        # Threads::Threads is necessary because on Ubuntu Focal (20.04), libssl (a dependency of
+        # mongocxx) depends on pthread but doesn't seem to link to it.
+        Threads::Threads
 )
 # Put the built executable at the root of the build directory
 set_target_properties(
