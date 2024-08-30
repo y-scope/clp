@@ -44,6 +44,8 @@ target_include_directories(reducer-server PRIVATE "${PROJECT_SOURCE_DIR}/submodu
 target_link_libraries(reducer-server
         PRIVATE
         Boost::program_options
+        Boost::system
+        Boost::thread
         clp::string_utils
         fmt::fmt
         ${MONGOCXX_TARGET}
