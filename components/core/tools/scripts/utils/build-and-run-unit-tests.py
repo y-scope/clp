@@ -21,36 +21,6 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 
-def main(argv):
-    args_parser = argparse.ArgumentParser(description="Program to TODO.")
-    args_parser.add_argument(
-        "--source-dir", required=True, help="Directory containing the main CMakeLists.txt."
-    )
-    args_parser.add_argument("--build-dir", required=True, help="Build output directory.")
-    args_parser.add_argument(
-        "--use-shared-libs", action="store_true", help="Use shared libraries when building."
-    )
-    args_parser.add_argument(
-        "--num-jobs", type=int, help="Max number of jobs to run when building."
-    )
-    args_parser.add_argument("--test-spec", help="Catch2 test specification.")
-
-    parsed_args = args_parser.parse_args(argv[1:])
-    src_dir: Path = Path(parsed_args.source_dir)
-    build_dir: Path = Path(parsed_args.build_dir)
-    use_shared_libs: bool = parsed_args.use_shared_libs
-
-    _config_project(src_dir, build_dir, use_shared_libs)
-    _build_project(build_dir, parsed_args.num_jobs)
-    _run_unit_tests(build_dir, parsed_args.test_spec)
-
-    return 0
-
-
-if "__main__" == __name__:
-    sys.exit(main(sys.argv))
-
-
 def _config_project(src_dir: Path, build_dir: Path, use_shared_libs: bool) -> None:
     cmd = [
         "cmake",
@@ -83,3 +53,33 @@ def _run_unit_tests(build_dir: Path, test_spec: Optional[str]) -> None:
     if test_spec is not None:
         cmd.append(test_spec)
     subprocess.run(cmd, cwd=build_dir, check=True)
+
+
+def main(argv):
+    args_parser = argparse.ArgumentParser(description="Program to TODO.")
+    args_parser.add_argument(
+        "--source-dir", required=True, help="Directory containing the main CMakeLists.txt."
+    )
+    args_parser.add_argument("--build-dir", required=True, help="Build output directory.")
+    args_parser.add_argument(
+        "--use-shared-libs", action="store_true", help="Use shared libraries when building."
+    )
+    args_parser.add_argument(
+        "--num-jobs", type=int, help="Max number of jobs to run when building."
+    )
+    args_parser.add_argument("--test-spec", help="Catch2 test specification.")
+
+    parsed_args = args_parser.parse_args(argv[1:])
+    src_dir: Path = Path(parsed_args.source_dir)
+    build_dir: Path = Path(parsed_args.build_dir)
+    use_shared_libs: bool = parsed_args.use_shared_libs
+
+    _config_project(src_dir, build_dir, use_shared_libs)
+    _build_project(build_dir, parsed_args.num_jobs)
+    _run_unit_tests(build_dir, parsed_args.test_spec)
+
+    return 0
+
+
+if "__main__" == __name__:
+    sys.exit(main(sys.argv))
