@@ -51,7 +51,8 @@ target_link_libraries(reducer-server
         msgpack-cxx
         spdlog::spdlog
         # Threads::Threads is necessary because on Ubuntu Focal (20.04), libssl (a dependency of
-        # mongocxx) depends on pthread but doesn't seem to link to it.
+        # libmongocxx) depends on libpthread but its cmake script doesn't seem to provide the flags
+        # to link against libpthread.
         Threads::Threads
 )
 # Put the built executable at the root of the build directory
