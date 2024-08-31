@@ -48,7 +48,7 @@ def _build_project(build_dir: Path, num_jobs: Optional[int]) -> None:
 
 def _run_unit_tests(build_dir: Path, test_spec: Optional[str]) -> None:
     cmd = [
-        "unitTest",
+        "./unitTest",
     ]
     if test_spec is not None:
         cmd.append(test_spec)
