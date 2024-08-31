@@ -24,7 +24,6 @@ build () {
         cmake_flags+=(-DCLP_USE_STATIC_LIBS=OFF)
     fi
 
-    rm -rf "$build_dir"
     cmake "${cmake_flags[@]}" -S "$src_dir" -B "$build_dir"
     cmake --build "$build_dir" --parallel "$num_jobs"
 }
