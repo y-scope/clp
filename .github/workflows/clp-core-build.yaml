@@ -89,7 +89,7 @@ jobs:
               - "components/core/CMakeLists.txt"
               - "components/core/src/**"
               - "components/core/tests/**"
-              - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+              - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
               - "deps-tasks.yml"
               - "Taskfile.yml"
               - "tools/scripts/deps-download/**"
@@ -177,6 +177,9 @@ jobs:
     needs:
       - "centos74-deps-image"
       - "filter-relevant-changes"
+    strategy:
+      matrix:
+        build_using_shared_libs: ["true", "false"]
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -192,6 +195,7 @@ jobs:
           OS_NAME: "centos7.4"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          build_using_shared_libs: "${{matrix.build_using_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos74_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -205,6 +209,9 @@ jobs:
     needs:
       - "filter-relevant-changes"
       - "ubuntu-focal-deps-image"
+    strategy:
+      matrix:
+        build_using_shared_libs: ["true", "false"]
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -220,6 +227,7 @@ jobs:
           OS_NAME: "ubuntu-focal"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          build_using_shared_libs: "${{matrix.build_using_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -234,6 +242,9 @@ jobs:
     needs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-deps-image"
+    strategy:
+      matrix:
+        build_using_shared_libs: ["true", "false"]
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -249,6 +260,7 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          build_using_shared_libs: "${{matrix.build_using_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}

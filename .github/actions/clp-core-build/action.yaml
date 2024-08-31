@@ -8,6 +8,9 @@ inputs:
   use_published_image:
     description: "Whether to use the published container image"
     required: true
+  build_using_shared_libs:
+    description: "Whether to build the core binaries using shared libraries"
+    required: true
   upload_binaries:
     description: "Whether to upload the core binaries"
     required: true
@@ -52,9 +55,11 @@ runs:
         --workdir /mnt/clp
         ${{steps.get_image_props.outputs.qualified_image_name}}
         bash -c "task deps:core &&
-        /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.sh
-        /mnt/clp/components/core
-        /mnt/clp/components/core/build"
+        python3 /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+        --source-dir /mnt/clp/components/core
+        --build-dir /mnt/clp/components/core/build
+        ${{inputs.build_using_shared_libs == 'true' && '--shared-libs' || ''}}
+        --num-jobs $(getconf _NPROCESSORS_ONLN)"
       shell: "bash"
 
     - if: "inputs.upload_binaries == 'true'"
