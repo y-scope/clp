@@ -38,7 +38,7 @@ jobs:
   build-macos:
     strategy:
       matrix:
-        build_using_shared_libs: ["true", "false"]
+        build_flags: ["--use-shared-libs", ""]
     runs-on: "macos-12"
     steps:
       - uses: "actions/checkout@v4"
@@ -70,5 +70,5 @@ jobs:
           python3 ./tools/scripts/utils/build-and-run-unit-tests.py
           --source-dir .
           --build-dir build
-          ${{matrix.build_using_shared_libs == 'true' && '--shared-libs' || ''}}
+          ${{matrix.build_flags}}
           --test-spec ~[Stopwatch]
