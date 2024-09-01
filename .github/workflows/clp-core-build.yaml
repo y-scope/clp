@@ -180,7 +180,7 @@ jobs:
     strategy:
       matrix:
         use_shared_libs: [true, false]
-    name: "centos74-${{matrix.use_shared_libs == 'true' && 'dynamic' || 'static'}}-linked-bins"
+    name: "centos74-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -217,7 +217,7 @@ jobs:
             upload_binaries: false
           - use_shared_libs: false
             upload_binaries: true
-    name: "ubuntu-focal-${{matrix.use_shared_libs == 'true' && 'dynamic' || 'static'}}-linked-bins"
+    name: "ubuntu-focal-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -251,7 +251,7 @@ jobs:
     strategy:
       matrix:
         use_shared_libs: [true, false]
-    name: "ubuntu-jammy-${{matrix.use_shared_libs == 'true' && 'dynamic' || 'static'}}-linked-bins"
+    name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
