@@ -179,7 +179,8 @@ jobs:
       - "filter-relevant-changes"
     strategy:
       matrix:
-        config_flags: ["--use-shared-libs", ""]
+        use_shared_libs: [true, false]
+    name: "centos74-${{matrix.use_shared_libs == 'true' && 'dynamic' || 'static'}}-linked-bins"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -195,7 +196,7 @@ jobs:
           OS_NAME: "centos7.4"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          config_flags: "${{matrix.config_flags}}"
+          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos74_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -212,10 +213,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - config_flags: "--use-shared-libs"
-            upload_binaries: "false"
-          - config_flags: ""
-            upload_binaries: "true"
+          - use_shared_libs: true
+            upload_binaries: false
+          - use_shared_libs: false
+            upload_binaries: true
+    name: "ubuntu-focal-${{matrix.use_shared_libs == 'true' && 'dynamic' || 'static'}}-linked-bins"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -231,7 +233,7 @@ jobs:
           OS_NAME: "ubuntu-focal"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          config_flags: "${{matrix.config_flags}}"
+          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
@@ -248,7 +250,8 @@ jobs:
       - "ubuntu-jammy-deps-image"
     strategy:
       matrix:
-        config_flags: ["--use-shared-libs", ""]
+        use_shared_libs: [true, false]
+    name: "ubuntu-jammy-${{matrix.use_shared_libs == 'true' && 'dynamic' || 'static'}}-linked-bins"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -264,7 +267,7 @@ jobs:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          config_flags: "${{matrix.config_flags}}"
+          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}

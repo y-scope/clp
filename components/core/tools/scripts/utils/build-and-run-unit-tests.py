@@ -21,7 +21,7 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 
-def _config_project(src_dir: Path, build_dir: Path, use_shared_libs: bool) -> None:
+def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool):
     cmd = [
         "cmake",
         "-S",
@@ -34,7 +34,12 @@ def _config_project(src_dir: Path, build_dir: Path, use_shared_libs: bool) -> No
     subprocess.run(cmd, check=True)
 
 
-def _build_project(build_dir: Path, num_jobs: Optional[int]) -> None:
+def _build_project(build_dir: Path, num_jobs: Optional[int]):
+    """
+    :param build_dir:
+    :param num_jobs: Max number of jobs to run when building.
+    """
+
     cmd = [
         "cmake",
         "--build",
@@ -46,7 +51,12 @@ def _build_project(build_dir: Path, num_jobs: Optional[int]) -> None:
     subprocess.run(cmd, check=True)
 
 
-def _run_unit_tests(build_dir: Path, test_spec: Optional[str]) -> None:
+def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
+    """
+    :param build_dir:
+    :param test_spec: Catch2 test specification.
+    """
+
     cmd = [
         "./unitTest",
     ]
@@ -74,7 +84,7 @@ def main(argv):
     build_dir: Path = Path(parsed_args.build_dir)
     use_shared_libs: bool = parsed_args.use_shared_libs
 
-    _config_project(src_dir, build_dir, use_shared_libs)
+    _config_cmake_project(src_dir, build_dir, use_shared_libs)
     _build_project(build_dir, parsed_args.num_jobs)
     _run_unit_tests(build_dir, parsed_args.test_spec)
 
