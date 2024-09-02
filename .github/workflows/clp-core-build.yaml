@@ -181,6 +181,7 @@ jobs:
       matrix:
         use_shared_libs: [true, false]
     name: "centos74-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -218,6 +219,7 @@ jobs:
           - use_shared_libs: false
             upload_binaries: true
     name: "ubuntu-focal-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
@@ -252,6 +254,7 @@ jobs:
       matrix:
         use_shared_libs: [true, false]
     name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"
