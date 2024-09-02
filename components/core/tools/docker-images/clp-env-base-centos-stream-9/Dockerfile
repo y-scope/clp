@@ -1,4 +1,4 @@
-FROM dokken/centos-stream-9 AS BASE
+FROM dokken/centos-stream-9 AS base
 
 WORKDIR /root
 
@@ -13,4 +13,4 @@ RUN dnf clean all \
 
 # Flatten the image
 FROM scratch
-COPY --from=BASE / /
+COPY --from=base / /
