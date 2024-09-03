@@ -134,7 +134,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
         }
     }
 
-    SECTION("surrounded_by_delims and starts_or_ends_with_greedy_wildcard") {
+    SECTION("surrounded_by_delims_or_wildcards and starts_or_ends_with_greedy_wildcard") {
         auto search_string_view1 = search_string.create_view(0, search_string.length());
         REQUIRE(search_string_view1.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(search_string_view1.starts_or_ends_with_greedy_wildcard());
