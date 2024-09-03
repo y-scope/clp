@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 
 #include "../time_types.hpp"
@@ -59,6 +60,17 @@ public:
     }
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
+
+    /**
+     * Serializes the log event into a `nlohmann::json` object.
+     * @return The serialized object on success,
+     * @return A result containing the serialized JSON object or an error code indicating the
+     * failure:
+     * - std::errc::protocol_error if a JSON exception is caught, or it fails to serialize a `Value`
+     *   instance as a JSON value.
+     */
+    [[nodiscard]] auto serialize_to_json(
+    ) const -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
 
 private:
     // Constructor

@@ -81,8 +81,6 @@ constexpr int8_t SchemaTreeNodeBool = 0x73;
 constexpr int8_t SchemaTreeNodeStr = 0x74;
 constexpr int8_t SchemaTreeNodeUnstructuredArray = 0x75;
 constexpr int8_t SchemaTreeNodeObj = 0x76;
-
-constexpr int8_t SchemaTreeNodeMask = 0x70;
 }  // namespace Payload
 
 constexpr int8_t FourByteEncodingMagicNumber[]
