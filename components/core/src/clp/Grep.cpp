@@ -1114,19 +1114,23 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
     return possible_substr_types;
 }
 
+/**
+ * To determine what variable types the search string could match, we convert the string into a DFA
+ * (string -> regex -> NFA -> DFA) and compute its intersection with the schema's DFA.
+ */
 tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
         SearchStringView const& search_string_view,
         ByteLexer const& lexer
 ) {
-    // To determine if a substring could be a variable we convert it to regex, generate the NFA and
-    // DFA for the regex, and intersect the substring DFA with the compression DFA.
-    std::string regex_search_string;
+    // Convert the search string into an equivalent regex
+    string regex_search_string;
     bool contains_wildcard = false;
     for (uint32_t idx = 0; idx < search_string_view.length(); idx++) {
         if (search_string_view.get_value_is_escape(idx)) {
             continue;
         }
-        auto const& c = search_string_view.get_value(idx);
+
+        auto const c = search_string_view.get_value(idx);
         if (search_string_view.get_value_is_greedy_wildcard(idx)) {
             contains_wildcard = true;
             regex_search_string += ".*";
@@ -1141,29 +1145,29 @@ tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
         }
     }
 
-    // Generate substring NFA from regex.
+    // Convert regex to NFA
     log_surgeon::Schema substring_schema;
-    // TODO: LogSurgeon should handle resetting this value.
+    // TODO: log-surgeon should handle resetting this value.
     log_surgeon::NonTerminal::m_next_children_start = 0;
-    // TODO: could use a forward/reverse lexer in place of intersect a lot of cases.
-    // TODO: NFA creation not optimized at all.
+    // TODO: Optimize NFA creation.
     substring_schema.add_variable("search", regex_search_string, -1);
     RegexNFA<RegexNFAByteState> nfa;
-    std::unique_ptr<SchemaAST> schema_ast = substring_schema.release_schema_ast_ptr();
-    for (std::unique_ptr<ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
+    auto schema_ast = substring_schema.release_schema_ast_ptr();
+    for (auto const& parser_ast : schema_ast->m_schema_vars) {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-        ByteLexer::Rule rule(0, std::move(schema_var_ast->m_regex_ptr));
+        ByteLexer::Rule rule{0, std::move(schema_var_ast->m_regex_ptr)};
         rule.add_ast(&nfa);
     }
 
-    // Generate substring DFA from NFA.
-    // TODO: log-surgeon needs to be refactored to allow direct usage of DFA/NFA.
-    // TODO: DFA creation isn't optimized at all.
+    // Convert NFA to DFA
+    // TODO: Refactor log-surgeon to allow direct usage of DFA/NFA.
+    // TODO: Optimize DFA creation.
     auto const search_string_dfa = ByteLexer::nfa_to_dfa(nfa);
     auto const& schema_dfa = lexer.get_dfa();
 
-    // Get variable types in the intersection of substring and compression DFAs.
-    return {schema_dfa->get_intersect(search_string_dfa), contains_wildcard};
+    // TODO: Could use a forward/reverse lexer instead of an intersection a lot of cases.
+    auto var_types = schema_dfa->get_intersect(search_string_dfa);
+    return {var_types, contains_wildcard};
 }
 
 void Grep::generate_sub_queries(

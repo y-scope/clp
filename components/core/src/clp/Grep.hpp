@@ -152,12 +152,12 @@ public:
     );
 
     /**
-     * Perform DFA intersect to determine the type of variables the string can match. Also stores
-     * if the string contains wildcards.
+     * Gets the variable types that the given search string could match.
      * @param search_string_view
      * @param lexer
-     * @return a tuple containing the set of variable types and a if the substring contains
-     * wildcards.
+     * @return A tuple:
+     * - The set of variable types that the search string could match.
+     * - Whether the search string contains a wildcard.
      */
     static std::tuple<std::set<uint32_t>, bool> get_substring_variable_types(
             SearchStringView const& search_string_view,
