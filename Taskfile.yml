@@ -30,7 +30,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/taskfiles/utils.yml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.2.0-dev"
+  G_PACKAGE_VERSION: "0.1.3"
 
 tasks:
   default:
