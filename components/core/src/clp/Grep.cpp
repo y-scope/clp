@@ -1052,7 +1052,7 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
     set<uint32_t> variable_types;
     // If the substring isn't surrounded by delimiters there is no reason to consider the case where
     // it is a variable as CLP would not compress it as such.
-    if (search_string_view.surrounded_by_delims(lexer)) {
+    if (search_string_view.surrounded_by_delims_or_wildcards(lexer)) {
         // If the substring is preceded or proceeded by a greedy wildcard then it's possible the
         // substring could be extended to match a var, so the wildcards are added to the substring.
         // If we don't consider this case we could miss combinations. Take for example "a*b", "a*"

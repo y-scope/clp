@@ -88,7 +88,13 @@ public:
                || m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx - 1);
     }
 
-    [[nodiscard]] auto surrounded_by_delims(log_surgeon::lexers::ByteLexer const& lexer
+    /**
+     * @param lexer
+     * @return Whether the substring in view is surrounded by delimiters or unescaped wildcards.
+     * NOTE: This method assumes that the beginning of the viewed string is preceeded by a delimiter
+     * and the end is succeeded by a delimiter.
+     */
+    [[nodiscard]] auto surrounded_by_delims_or_wildcards(log_surgeon::lexers::ByteLexer const& lexer
     ) const -> bool;
 
     [[nodiscard]] auto length() const -> uint32_t { return m_end_idx - m_begin_idx; }

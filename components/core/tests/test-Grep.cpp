@@ -136,22 +136,22 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
 
     SECTION("surrounded_by_delims and starts_or_ends_with_greedy_wildcard") {
         auto search_string_view1 = search_string.create_view(0, search_string.length());
-        REQUIRE(search_string_view1.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view1.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(search_string_view1.starts_or_ends_with_greedy_wildcard());
         auto search_string_view2 = search_string.create_view(1, search_string.length());
-        REQUIRE(search_string_view2.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view2.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(search_string_view2.starts_or_ends_with_greedy_wildcard());
         auto search_string_view3 = search_string.create_view(0, search_string.length() - 1);
-        REQUIRE(search_string_view3.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view3.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(search_string_view3.starts_or_ends_with_greedy_wildcard());
         auto search_string_view4 = search_string.create_view(2, search_string.length() - 2);
-        REQUIRE(search_string_view4.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view4.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(false == search_string_view4.starts_or_ends_with_greedy_wildcard());
         auto search_string_view5 = search_string.create_view(3, search_string.length() - 3);
-        REQUIRE(false == search_string_view5.surrounded_by_delims(lexer));
+        REQUIRE(false == search_string_view5.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(false == search_string_view5.starts_or_ends_with_greedy_wildcard());
         auto search_string_view6 = search_string.create_view(1, search_string.length() - 1);
-        REQUIRE(search_string_view6.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view6.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(false == search_string_view6.starts_or_ends_with_greedy_wildcard());
     }
 
@@ -159,14 +159,14 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
         auto search_string_view = search_string.create_view(1, search_string.length() - 1);
         REQUIRE(8 == search_string_view.length());
         search_string_view.extend_to_adjacent_wildcards();
-        REQUIRE(search_string_view.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(10 == search_string_view.length());
         REQUIRE(search_string_view.get_substr_copy() == "* test\\* *");
 
         auto search_string_view2 = search_string.create_view(2, search_string.length() - 2);
         REQUIRE(6 == search_string_view2.length());
         search_string_view2.extend_to_adjacent_wildcards();
-        REQUIRE(search_string_view2.surrounded_by_delims(lexer));
+        REQUIRE(search_string_view2.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(6 == search_string_view2.length());
         REQUIRE(search_string_view2.get_substr_copy() == "test\\*");
     }
