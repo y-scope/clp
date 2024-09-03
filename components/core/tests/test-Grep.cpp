@@ -11,7 +11,7 @@
 using clp::Grep;
 using clp::load_lexer_from_file;
 using clp::QueryInterpretation;
-using clp::SearchString;
+using clp::WildcardExpression;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;
@@ -123,7 +123,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    SearchString const search_string("* test\\* *");
+    WildcardExpression const search_string("* test\\* *");
     REQUIRE(search_string.substr(0, search_string.length()) == "* test\\* *");
     for (uint32_t idx = 0; idx < search_string.length(); idx++) {
         CAPTURE(idx);
@@ -208,7 +208,7 @@ TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("* 10000 reply: *") {
-        SearchString search_string("* 10000 reply: *");
+        WildcardExpression search_string("* 10000 reply: *");
         for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
                 auto [variable_types, contains_wildcard] = Grep::get_substring_variable_types(
@@ -258,7 +258,7 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("* 10000 reply: *") {
-        SearchString search_string("* 10000 reply: *");
+        WildcardExpression search_string("* 10000 reply: *");
         for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
                 auto query_logtypes = Grep::get_possible_substr_types(
@@ -298,7 +298,7 @@ TEST_CASE(
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("Static text") {
-        SearchString search_string("* z *");
+        WildcardExpression search_string("* z *");
         auto const query_logtypes
                 = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
@@ -311,7 +311,7 @@ TEST_CASE(
     }
 
     SECTION("hex") {
-        SearchString search_string("* a *");
+        WildcardExpression search_string("* a *");
         auto const query_logtypes
                 = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
@@ -342,7 +342,7 @@ TEST_CASE(
     }
 
     SECTION("int") {
-        SearchString search_string("* 1 *");
+        WildcardExpression search_string("* 1 *");
         auto const query_logtypes
                 = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
@@ -367,7 +367,7 @@ TEST_CASE(
     }
 
     SECTION("Simple query") {
-        SearchString search_string("* 10000 reply: *");
+        WildcardExpression search_string("* 10000 reply: *");
         auto const query_logtypes
                 = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;
@@ -392,7 +392,7 @@ TEST_CASE(
     }
 
     SECTION("Wildcard variable") {
-        SearchString search_string("* *10000 *");
+        WildcardExpression search_string("* *10000 *");
         auto const query_logtypes
                 = Grep::generate_query_substring_interpretations(search_string, lexer);
         set<QueryInterpretation> expected_result;

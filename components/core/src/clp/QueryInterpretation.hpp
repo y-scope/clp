@@ -12,21 +12,26 @@
 #include <log_surgeon/Lexer.hpp>
 
 namespace clp {
-class SearchStringView;
+class WildcardExpressionView;
 
 /**
- * Stores metadata about the query.
+ * A pattern that supports two types of wildcards:
+ * - `*` matches zero or more characters
+ * - '?' matches any single character
+ *
+ * To search for a literal `*` or `?`, the pattern should escape it with a backslash (`\`).
  */
-class SearchString {
+class WildcardExpression {
 public:
-    explicit SearchString(std::string processed_search_string);
+    explicit WildcardExpression(std::string processed_search_string);
 
     [[nodiscard]] auto
     substr(uint32_t const begin_idx, uint32_t const length) const -> std::string {
         return m_processed_search_string.substr(begin_idx, length);
     }
 
-    [[nodiscard]] auto create_view(uint32_t start_idx, uint32_t end_idx) const -> SearchStringView;
+    [[nodiscard]] auto
+    create_view(uint32_t start_idx, uint32_t end_idx) const -> WildcardExpressionView;
 
     [[nodiscard]] auto length() const -> uint32_t { return m_processed_search_string.size(); }
 
@@ -59,12 +64,12 @@ private:
 };
 
 /**
- * Stores a view into the SearchString class.
+ * A view of a WildcardExpression.
  */
-class SearchStringView {
+class WildcardExpressionView {
 public:
-    SearchStringView(
-            SearchString const* search_string_ptr,
+    WildcardExpressionView(
+            WildcardExpression const* search_string_ptr,
             uint32_t const begin_idx,
             uint32_t const end_idx
 
@@ -76,7 +81,7 @@ public:
     /**
      * @return A copy of this view, but extended to include adjacent greedy wildcards.
      */
-    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> SearchStringView;
+    [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView;
 
     [[nodiscard]] auto is_greedy_wildcard() const -> bool {
         return 1 == length() && m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx);
@@ -123,7 +128,7 @@ public:
     }
 
 private:
-    SearchString const* m_search_string_ptr;
+    WildcardExpression const* m_search_string_ptr;
     uint32_t m_begin_idx;
     uint32_t m_end_idx;
 };

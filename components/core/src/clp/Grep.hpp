@@ -136,7 +136,7 @@ public:
      * processed_search_string.
      */
     static std::set<QueryInterpretation> generate_query_substring_interpretations(
-            SearchString const& processed_search_string,
+            WildcardExpression const& processed_search_string,
             log_surgeon::lexers::ByteLexer& lexer
     );
 
@@ -147,7 +147,7 @@ public:
      * @return a vector containing the possible substring types
      */
     static std::vector<QueryInterpretation> get_possible_substr_types(
-            SearchStringView const& search_string_view,
+            WildcardExpressionView const& search_string_view,
             log_surgeon::lexers::ByteLexer& lexer
     );
 
@@ -160,7 +160,7 @@ public:
      * - Whether the search string contains a wildcard.
      */
     static std::tuple<std::set<uint32_t>, bool> get_substring_variable_types(
-            SearchStringView const& search_string_view,
+            WildcardExpressionView const& search_string_view,
             log_surgeon::lexers::ByteLexer const& lexer
     );
 

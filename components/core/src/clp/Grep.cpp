@@ -608,7 +608,7 @@ std::optional<Query> Grep::process_raw_query(
         // creates all possible logtypes that can match substring(0,n) of the query, which includes
         // all possible logtypes that can match the query itself. Then these logtypes, and their
         // corresponding variables are compared against the archive.
-        SearchString search_string_for_sub_queries{processed_search_string};
+        WildcardExpression search_string_for_sub_queries{processed_search_string};
 
         // Get the possible logtypes for the query (but only do it once across all archives).
         static bool query_substr_interpretations_is_set = false;
@@ -936,7 +936,7 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
 }
 
 set<QueryInterpretation> Grep::generate_query_substring_interpretations(
-        SearchString const& processed_search_string,
+        WildcardExpression const& processed_search_string,
         ByteLexer& lexer
 ) {
     // Store substring logtypes in a set to avoid duplicates
@@ -1024,7 +1024,7 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
 }
 
 vector<QueryInterpretation>
-Grep::get_possible_substr_types(SearchStringView const& search_string_view, ByteLexer& lexer) {
+Grep::get_possible_substr_types(WildcardExpressionView const& search_string_view, ByteLexer& lexer) {
     vector<QueryInterpretation> possible_substr_types;
 
     // Don't allow an isolated wildcard to be considered a variable
@@ -1119,7 +1119,7 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
  * (string -> regex -> NFA -> DFA) and compute its intersection with the schema's DFA.
  */
 tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
-        SearchStringView const& search_string_view,
+        WildcardExpressionView const& search_string_view,
         ByteLexer const& lexer
 ) {
     // Convert the search string into an equivalent regex

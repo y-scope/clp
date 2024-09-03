@@ -17,7 +17,7 @@ using clp::string_utils::clean_up_wildcard_search_string;
 using log_surgeon::lexers::ByteLexer;
 
 namespace clp {
-SearchString::SearchString(std::string processed_search_string)
+WildcardExpression::WildcardExpression(std::string processed_search_string)
         : m_processed_search_string(std::move(processed_search_string)) {
     // TODO: remove this when subqueries can handle '?' wildcards
     // Replace '?' wildcards with '*' wildcards since we currently have no support for
@@ -60,7 +60,7 @@ SearchString::SearchString(std::string processed_search_string)
     }
 }
 
-auto SearchStringView::extend_to_adjacent_greedy_wildcards() const -> SearchStringView {
+auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView {
     auto extended_view = *this;
     bool const prev_char_is_greedy_wildcard
             = m_begin_idx > 0 && m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx - 1);
@@ -76,7 +76,8 @@ auto SearchStringView::extend_to_adjacent_greedy_wildcards() const -> SearchStri
     return extended_view;
 }
 
-auto SearchStringView::surrounded_by_delims_or_wildcards(ByteLexer const& lexer) const -> bool {
+auto WildcardExpressionView::surrounded_by_delims_or_wildcards(ByteLexer const& lexer
+) const -> bool {
     bool has_preceding_delim{};
     if (0 == m_begin_idx) {
         has_preceding_delim = true;
@@ -114,9 +115,11 @@ auto SearchStringView::surrounded_by_delims_or_wildcards(ByteLexer const& lexer)
     return has_preceding_delim && has_succeeding_delim;
 }
 
-[[nodiscard]] auto SearchString::create_view(uint32_t const start_idx, uint32_t const end_idx) const
-        -> SearchStringView {
-    return SearchStringView{this, start_idx, end_idx};
+[[nodiscard]] auto WildcardExpression::create_view(
+        uint32_t const start_idx,
+        uint32_t const end_idx
+) const -> WildcardExpressionView {
+    return WildcardExpressionView{this, start_idx, end_idx};
 }
 
 auto VariableQueryToken::operator<(VariableQueryToken const& rhs) const -> bool {
