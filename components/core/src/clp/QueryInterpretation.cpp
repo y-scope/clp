@@ -60,18 +60,20 @@ SearchString::SearchString(std::string processed_search_string)
     }
 }
 
-void SearchStringView::extend_to_adjacent_wildcards() {
-    bool const prev_char_is_star
+auto SearchStringView::extend_to_adjacent_greedy_wildcards() const -> SearchStringView {
+    auto extended_view = *this;
+    bool const prev_char_is_greedy_wildcard
             = m_begin_idx > 0 && m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx - 1);
+    if (prev_char_is_greedy_wildcard) {
+        extended_view.m_begin_idx--;
+    }
     bool const next_char_is_greedy_wildcard
             = m_end_idx < m_search_string_ptr->length()
               && m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx);
-    if (prev_char_is_star) {
-        m_begin_idx--;
-    }
     if (next_char_is_greedy_wildcard) {
-        m_end_idx++;
+        ++extended_view.m_end_idx;
     }
+    return extended_view;
 }
 
 auto SearchStringView::surrounded_by_delims_or_wildcards(ByteLexer const& lexer) const -> bool {
@@ -106,8 +108,7 @@ auto SearchStringView::surrounded_by_delims_or_wildcards(ByteLexer const& lexer)
                 = m_search_string_ptr->get_value_is_escape(m_end_idx)
                   && lexer.is_delimiter(m_search_string_ptr->get_value(m_end_idx + 1));
         has_succeeding_delim = succeeded_by_greedy_wildcard || succeeded_by_non_greedy_wildcard
-                               || succeeded_by_unescaped_delim
-                               || succeeded_by_escaped_delim;
+                               || succeeded_by_unescaped_delim || succeeded_by_escaped_delim;
     }
 
     return has_preceding_delim && has_succeeding_delim;

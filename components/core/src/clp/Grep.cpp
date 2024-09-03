@@ -1062,8 +1062,7 @@ Grep::get_possible_substr_types(SearchStringView const& search_string_view, Byte
         // Instead we desire to decompose the string into "a*" + "*" + "*b". Note, non-greedy
         // wildcards do not need to be considered, for example "a?b" can never match "<has#>?<has#>"
         // or "<has#><has#>".
-        SearchStringView extended_search_string_view = search_string_view;
-        extended_search_string_view.extend_to_adjacent_wildcards();
+        auto extended_search_string_view = search_string_view.extend_to_adjacent_greedy_wildcards();
 
         std::tie(variable_types, contains_wildcard)
                 = get_substring_variable_types(extended_search_string_view, lexer);
