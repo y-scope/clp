@@ -150,17 +150,6 @@ public:
     template <FundamentalPrimitiveValueType T>
     explicit Value(T value) : m_value{value} {}
 
-    // Disable copy constructor and assignment operator
-    Value(Value const&) = delete;
-    auto operator=(Value const&) -> Value& = delete;
-
-    // Default move constructor and assignment operator
-    Value(Value&&) = default;
-    auto operator=(Value&&) -> Value& = default;
-
-    // Destructor
-    ~Value() = default;
-
     // Methods
     /**
      * @tparam T

@@ -153,8 +153,8 @@ template <typename encoded_variable_t>
 ) -> bool;
 
 /**
- * Counts the number of leaves in a JSON tree. An object is considered as a leaf if it's a primitive
- * value, an empty map, or an array.
+ * Counts the number of leaves in a JSON tree. A node is considered as a leaf if it's a primitive
+ * value, an empty map (`{}`), or an array.
  * @param root
  * @return The number of leaves under the given root.
  */
@@ -1040,14 +1040,13 @@ TEMPLATE_TEST_CASE(
     );
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEMPLATE_TEST_CASE(
         "ffi_ir_stream_Serializer_serialize_msgpack",
         "[clp][ffi][ir_stream][Serializer]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
-    // TODO: Test deserializing the serialized bytes once a KV-pair IR deserializer is implemented.
-
     vector<int8_t> ir_buf;
     vector<nlohmann::json> serialized_json_objects;
 
@@ -1123,7 +1122,6 @@ TEMPLATE_TEST_CASE(
         serialized_json_objects.emplace_back(recursive_obj);
     }
 
-    // Flush to the ir buf
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
     // Deserialize the results
@@ -1136,13 +1134,11 @@ TEMPLATE_TEST_CASE(
         auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
         REQUIRE_FALSE(kv_log_event_result.has_error());
         auto const& kv_log_event = kv_log_event_result.value();
-
         auto const num_leaves_in_json_obj = count_num_leaves(json_obj);
-        auto const num_kv_pairs = kv_log_event.get_key_value_pairs().size();
+        auto const num_kv_pairs = kv_log_event.get_node_id_value_pairs().size();
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
-
-        auto const serialized_json_result = kv_log_event.serialize_to_json();
-        REQUIRE_FALSE(serialized_json_result.has_error());
-        REQUIRE((json_obj == serialized_json_result.value()));
     }
+
+    // TODO: Test validating the deserialized bytes once we've implemented a KeyValuePairLogEvent to
+    // JSON deserializer.
 }
