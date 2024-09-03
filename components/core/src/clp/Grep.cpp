@@ -1023,8 +1023,10 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
     return query_substr_interpretations.back();
 }
 
-vector<QueryInterpretation>
-Grep::get_possible_substr_types(WildcardExpressionView const& search_string_view, ByteLexer& lexer) {
+vector<QueryInterpretation> Grep::get_possible_substr_types(
+        WildcardExpressionView const& search_string_view,
+        ByteLexer& lexer
+) {
     vector<QueryInterpretation> possible_substr_types;
 
     // Don't allow an isolated wildcard to be considered a variable
