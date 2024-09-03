@@ -75,36 +75,42 @@ void SearchStringView::extend_to_adjacent_wildcards() {
 }
 
 auto SearchStringView::surrounded_by_delims_or_wildcards(ByteLexer const& lexer) const -> bool {
-    bool const view_is_at_beginning_of_str = 0 == m_begin_idx;
-    bool const preceded_by_greedy_wildcard
-            = m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx - 1);
-    bool const preceded_by_non_greedy_wildcard
-            = m_search_string_ptr->get_value_is_non_greedy_wildcard(m_begin_idx - 1);
-    bool const preceded_by_delimiter
-            = lexer.is_delimiter(m_search_string_ptr->get_value(m_begin_idx - 1));
-    bool const has_preceding_delimiter = view_is_at_beginning_of_str || preceded_by_greedy_wildcard
-                                         || preceded_by_non_greedy_wildcard
-                                         || preceded_by_delimiter;
+    bool has_preceding_delim{};
+    if (0 == m_begin_idx) {
+        has_preceding_delim = true;
+    } else {
+        bool const preceded_by_greedy_wildcard
+                = m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx - 1);
+        bool const preceded_by_non_greedy_wildcard
+                = m_search_string_ptr->get_value_is_non_greedy_wildcard(m_begin_idx - 1);
+        bool const preceded_by_delimiter
+                = lexer.is_delimiter(m_search_string_ptr->get_value(m_begin_idx - 1));
+        has_preceding_delim = preceded_by_greedy_wildcard || preceded_by_non_greedy_wildcard
+                              || preceded_by_delimiter;
+    }
 
-    bool const view_is_at_end_of_str = m_search_string_ptr->length() == m_end_idx;
-    bool const succeeded_by_greedy_wildcard
-            = m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx);
-    bool const succeeded_by_non_greedy_wildcard
-            = m_search_string_ptr->get_value_is_non_greedy_wildcard(m_end_idx);
-    // E.g. "foo:", where ':' is a delimiter
-    bool const succeeded_by_unescaped_delimiter
-            = false == m_search_string_ptr->get_value_is_escape(m_end_idx)
-              && lexer.is_delimiter(m_search_string_ptr->get_value(m_end_idx));
-    // E.g. "foo\\", where '\' is a delimiter
-    bool const succeeded_by_escaped_delimiter
-            = m_search_string_ptr->get_value_is_escape(m_end_idx)
-              && lexer.is_delimiter(m_search_string_ptr->get_value(m_end_idx + 1));
-    bool const has_proceeding_delimiter = view_is_at_end_of_str || succeeded_by_greedy_wildcard
-                                          || succeeded_by_non_greedy_wildcard
-                                          || succeeded_by_unescaped_delimiter
-                                          || succeeded_by_escaped_delimiter;
+    bool has_succeeding_delim{};
+    if (m_search_string_ptr->length() == m_end_idx) {
+        has_succeeding_delim = true;
+    } else {
+        bool const succeeded_by_greedy_wildcard
+                = m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx);
+        bool const succeeded_by_non_greedy_wildcard
+                = m_search_string_ptr->get_value_is_non_greedy_wildcard(m_end_idx);
+        // E.g. "foo:", where ':' is a delimiter
+        bool const succeeded_by_unescaped_delim
+                = false == m_search_string_ptr->get_value_is_escape(m_end_idx)
+                  && lexer.is_delimiter(m_search_string_ptr->get_value(m_end_idx));
+        // E.g. "foo\\", where '\' is a delimiter
+        bool const succeeded_by_escaped_delim
+                = m_search_string_ptr->get_value_is_escape(m_end_idx)
+                  && lexer.is_delimiter(m_search_string_ptr->get_value(m_end_idx + 1));
+        has_succeeding_delim = succeeded_by_greedy_wildcard || succeeded_by_non_greedy_wildcard
+                               || succeeded_by_unescaped_delim
+                               || succeeded_by_escaped_delim;
+    }
 
-    return has_preceding_delimiter && has_proceeding_delimiter;
+    return has_preceding_delim && has_succeeding_delim;
 }
 
 [[nodiscard]] auto SearchString::create_view(uint32_t const start_idx, uint32_t const end_idx) const
