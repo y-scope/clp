@@ -1,4 +1,4 @@
-import msgpack from "@msgpack/msgpack";
+import {encode} from "@msgpack/msgpack";
 
 import {sleep} from "/imports/utils/misc";
 
@@ -57,7 +57,7 @@ class QueryJobsDbManager {
                  (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG}, 
                   ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
              VALUES (?, ?)`,
-            [Buffer.from(msgpack.encode(searchConfig)),
+            [Buffer.from(encode(searchConfig)),
                 QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION],
         );
 
