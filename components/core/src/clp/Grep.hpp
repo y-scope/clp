@@ -152,15 +152,15 @@ public:
     );
 
     /**
-     * Gets the variable types that the given search string could match.
-     * @param search_string_view
+     * Gets the variable types that the given wildcard expression could match.
+     * @param wildcard_expr
      * @param lexer
      * @return A tuple:
-     * - The set of variable types that the search string could match.
-     * - Whether the search string contains a wildcard.
+     * - The set of variable types that the wildcard expression could match.
+     * - Whether the wildcard expression contains a wildcard.
      */
     static std::tuple<std::set<uint32_t>, bool> get_substring_variable_types(
-            WildcardExpressionView const& search_string_view,
+            WildcardExpressionView const& wildcard_expr,
             log_surgeon::lexers::ByteLexer const& lexer
     );
 
