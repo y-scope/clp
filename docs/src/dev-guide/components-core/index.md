@@ -17,7 +17,7 @@ from source.
 To initialize the project, run:
 
 ```shell
-tools/scripts/init.sh
+tools/scripts/deps-download/init.sh
 ```
 
 ### Source Dependencies

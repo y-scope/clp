@@ -19,7 +19,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 Initialize the project
 
 ```shell
-tools/scripts/init.sh
+tools/scripts/deps-download/init.sh
 ```
 
 Install CLP core's dependencies

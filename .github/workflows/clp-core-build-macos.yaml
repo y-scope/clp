@@ -53,7 +53,7 @@ jobs:
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
 
-      - run: "./tools/scripts/init.sh"
+      - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
       - run: "task deps:core"
