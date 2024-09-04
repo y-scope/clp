@@ -42,7 +42,7 @@ runs:
         fi
       shell: "bash"
 
-    - run: "./tools/scripts/deps-download/init.sh"
+    - run: "./tools/scripts/init.sh"
       shell: "bash"
 
     - run: >-
