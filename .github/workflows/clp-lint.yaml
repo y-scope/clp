@@ -36,6 +36,9 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
+      - run: "./tools/scripts/init.sh"
+        shell: "bash"
+
       - name: "Run lint task"
         shell: "bash"
         run: "task lint:check"
