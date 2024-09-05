@@ -87,10 +87,12 @@ def main(argv: List[str]) -> int:
     src_dir: Path = Path(parsed_args.source_dir)
     build_dir: Path = Path(parsed_args.build_dir)
     use_shared_libs: bool = parsed_args.use_shared_libs
+    num_jobs: Optional[int] = parsed_args.num_jobs
+    test_spec: Optional[str] = parsed_args.test_spec
 
     _config_cmake_project(src_dir, build_dir, use_shared_libs)
-    _build_project(build_dir, parsed_args.num_jobs)
-    _run_unit_tests(build_dir, parsed_args.test_spec)
+    _build_project(build_dir, num_jobs)
+    _run_unit_tests(build_dir, test_spec)
 
     return 0
 
