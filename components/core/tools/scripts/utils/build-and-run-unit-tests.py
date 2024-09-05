@@ -65,14 +65,16 @@ def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
     subprocess.run(cmd, cwd=build_dir, check=True)
 
 
-def main(argv):
+def main(argv: List[str]) -> int:
     args_parser = argparse.ArgumentParser(description="Program to TODO.")
     args_parser.add_argument(
         "--source-dir", required=True, help="Directory containing the main CMakeLists.txt."
     )
     args_parser.add_argument("--build-dir", required=True, help="Build output directory.")
     args_parser.add_argument(
-        "--use-shared-libs", action="store_true", help="Use shared libraries when building."
+        "--use-shared-libs",
+        action="store_true",
+        help="Build targets by linking against shared libraries.",
     )
     args_parser.add_argument(
         "--num-jobs", type=int, help="Max number of jobs to run when building."
