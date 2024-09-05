@@ -3,7 +3,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
@@ -65,14 +65,18 @@ def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
     subprocess.run(cmd, cwd=build_dir, check=True)
 
 
-def main(argv):
-    args_parser = argparse.ArgumentParser(description="Program to TODO.")
+def main(argv: List[str]) -> int:
+    args_parser = argparse.ArgumentParser(
+        description="Builds the CLP-core's binaries and runs its unit tests."
+    )
     args_parser.add_argument(
         "--source-dir", required=True, help="Directory containing the main CMakeLists.txt."
     )
     args_parser.add_argument("--build-dir", required=True, help="Build output directory.")
     args_parser.add_argument(
-        "--use-shared-libs", action="store_true", help="Use shared libraries when building."
+        "--use-shared-libs",
+        action="store_true",
+        help="Build targets by linking against shared libraries.",
     )
     args_parser.add_argument(
         "--num-jobs", type=int, help="Max number of jobs to run when building."
@@ -83,10 +87,12 @@ def main(argv):
     src_dir: Path = Path(parsed_args.source_dir)
     build_dir: Path = Path(parsed_args.build_dir)
     use_shared_libs: bool = parsed_args.use_shared_libs
+    num_jobs: Optional[int] = parsed_args.num_jobs
+    test_spec: Optional[str] = parsed_args.test_spec
 
     _config_cmake_project(src_dir, build_dir, use_shared_libs)
-    _build_project(build_dir, parsed_args.num_jobs)
-    _run_unit_tests(build_dir, parsed_args.test_spec)
+    _build_project(build_dir, num_jobs)
+    _run_unit_tests(build_dir, test_spec)
 
     return 0
 

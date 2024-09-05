@@ -9,7 +9,7 @@ inputs:
     description: "Whether to use the published container image"
     required: true
   use_shared_libs:
-    description: "Whether to build the core binaries using shared libraries"
+    description: "Whether to build the core binaries by linking against shared libraries"
     required: true
   upload_binaries:
     description: "Whether to upload the core binaries"
