@@ -3,7 +3,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
@@ -66,7 +66,9 @@ def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
 
 
 def main(argv: List[str]) -> int:
-    args_parser = argparse.ArgumentParser(description="Program to TODO.")
+    args_parser = argparse.ArgumentParser(
+        description="Builds the CLP-core's binaries and runs its unit tests."
+    )
     args_parser.add_argument(
         "--source-dir", required=True, help="Directory containing the main CMakeLists.txt."
     )
