@@ -198,6 +198,8 @@ add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
 # Add simdjson
 add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
 
+find_package(Threads REQUIRED)
+
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
 
