@@ -10,7 +10,7 @@ on:
       - "components/core/tests/**"
       - "components/core/tools/scripts/lib_install/macos-12/**"
       - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
@@ -23,7 +23,7 @@ on:
       - "components/core/tests/**"
       - "components/core/tools/scripts/lib_install/macos-12/**"
       - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
@@ -36,6 +36,9 @@ concurrency:
 
 jobs:
   build-macos:
+    strategy:
+      matrix:
+        use_shared_libs: [true, false]
     runs-on: "macos-12"
     steps:
       - uses: "actions/checkout@v4"
@@ -63,4 +66,10 @@ jobs:
         shell: "bash"
         working-directory: "./components/core"
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
-        run: "./tools/scripts/utils/build-and-run-unit-tests.sh . build ~[Stopwatch]"
+        run: >-
+          python3 ./tools/scripts/utils/build-and-run-unit-tests.py
+          ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+          --source-dir .
+          --build-dir build
+          --num-jobs $(getconf _NPROCESSORS_ONLN)
+          --test-spec "~[Stopwatch]"

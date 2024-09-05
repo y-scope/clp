@@ -44,11 +44,16 @@ target_include_directories(reducer-server PRIVATE "${PROJECT_SOURCE_DIR}/submodu
 target_link_libraries(reducer-server
         PRIVATE
         Boost::program_options
+        Boost::system
         clp::string_utils
         fmt::fmt
         ${MONGOCXX_TARGET}
         msgpack-cxx
         spdlog::spdlog
+        # Threads::Threads is necessary because on Ubuntu Focal (20.04), libssl (a dependency of
+        # libmongocxx) depends on libpthread, but its cmake script doesn't seem to provide the flags
+        # to link against libpthread.
+        Threads::Threads
 )
 # Put the built executable at the root of the build directory
 set_target_properties(
