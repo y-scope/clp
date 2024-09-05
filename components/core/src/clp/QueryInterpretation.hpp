@@ -51,11 +51,6 @@ public:
         return m_processed_search_string[idx];
     }
 
-    [[nodiscard]] auto
-    get_substr_copy(uint32_t const begin_idx, uint32_t const length) const -> std::string {
-        return m_processed_search_string.substr(begin_idx, length);
-    }
-
 private:
     std::vector<bool> m_is_greedy_wildcard;
     std::vector<bool> m_is_non_greedy_wildcard;
@@ -124,7 +119,7 @@ public:
     }
 
     [[nodiscard]] auto get_substr_copy() const -> std::string {
-        return m_search_string_ptr->get_substr_copy(m_begin_idx, m_end_idx - m_begin_idx);
+        return m_search_string_ptr->substr(m_begin_idx, m_end_idx - m_begin_idx);
     }
 
 private:
