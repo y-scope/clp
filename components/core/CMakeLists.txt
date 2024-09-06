@@ -61,8 +61,8 @@ if (CLP_USE_STATIC_LIBS)
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
         message(
             AUTHOR_WARNING
-            "Building with static libraries is unsupported on \
-${CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM}. Switching to shared libraries.")
+            "Building with static libraries is unsupported on"
+            " ${CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM}. Switching to shared libraries.")
         set(CLP_USE_STATIC_LIBS OFF)
     endif()
 endif ()
