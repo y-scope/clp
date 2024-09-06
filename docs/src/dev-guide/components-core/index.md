@@ -53,7 +53,7 @@ A handful of packages and libraries are required to build CLP. There are two opt
 
 See the relevant README for your OS:
 
-* [CentOS 7.4](centos7.4-deps-install)
+* [CentOS Stream 9](centos-stream-9-deps-install)
 * [macOS 12](macos12-deps-install)
 * [Ubuntu 20.04](ubuntu-focal-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
@@ -97,7 +97,7 @@ the relevant paths on your machine.
 :::{toctree}
 :hidden:
 
-centos7.4-deps-install
+centos-stream-9-deps-install
 macos12-deps-install
 ubuntu-focal-deps-install
 ubuntu-jammy-deps-install
