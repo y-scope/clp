@@ -37,10 +37,13 @@ template <typename Func>
 concept JsonExceptionCallbackConcept = std::is_invocable_v<Func, nlohmann::json::exception const&>;
 
 /**
- * Class for iterating the schema tree using DFS. It contains a JSON map object representing itself,
- * which will be constructed by traversing through its children. When all children has been visited,
- * the iterator will be popped out from the DFS stack and emplace the constructed map to its parent
- * as a subtree.
+ * Helper class for iterating over a sub-tree of the schema tree in a depth-first manner.
+ * `KeyValuePairLogEvent::serialize_to_json` uses a stack of instances of this class to perform
+ * depth-first serialization of JSON objects. Each instance of this class holds state from the
+ * perspective of a single node in the schema tree. This includes a JSON map representing itself,
+ * which gets populated while traversing over its children. Once all its children have been visited,
+ * the iterator instance gets popped off the DFS stack, and emplaces the contents of its JSON map
+ * into its parent as a subtree.
  */
 template <JsonExceptionCallbackConcept JsonExceptionCallback>
 class SchemaTreeDfsIterator {
@@ -146,8 +149,9 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
 /**
  * @param node_id_value_pairs
  * @param schema_tree
- * @return A result containing the bitmap where the node IDs appeared in the schema of
- * `node_id_value_pairs` are set, or an error code indicating the failure:
+ * @return A result containing a bitmap where all node IDs appearing on a path from the root of the
+ * schema tree to any node in `node_id_value_pairs` are set, or an error code indicating the
+ * failure:
  * - std::errc::result_out_of_range if the key ID doesn't exist in the schema tree.
  */
 [[nodiscard]] auto get_sub_schema_tree_bitmap(
