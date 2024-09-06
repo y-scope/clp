@@ -158,7 +158,7 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
 /**
  * @param node
  * @param sub_schema_tree_bitmap
- * @return A vector that contains all the children of the current node that appears in the sub tree.
+ * @return A vector containing all children of a node that appear in a given sub tree.
  */
 [[nodiscard]] auto get_children_in_the_sub_schema_tree(
         SchemaTreeNode const& node,
