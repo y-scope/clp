@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <mariadb/mysql.h>
+#include <mysql.h>
 
 #include "Defs.h"
 #include "ErrorCode.hpp"

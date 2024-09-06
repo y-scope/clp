@@ -3,11 +3,11 @@
 We publish (to [GitHub packages][gh-packages]) several Docker container images useful for building
 and running CLP:
 
-* An [image][core-deps-centos-7.4] containing the dependencies necessary to build CLP core in a
-  Centos 7.4 x86 environment.
+* An [image][core-deps-centos-stream-9] containing the dependencies necessary to build CLP core in a
+  Centos Stream 9 x86 environment.
 
   ```text
-  ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos7.4:main
+  ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos-stream-9:main
   ```
 
 * An [image][core-deps-ubuntu-focal] containing the dependencies necessary to build CLP core in an
@@ -45,7 +45,7 @@ and running CLP:
   ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-jammy:main
   ```
 
-[core-deps-centos-7.4]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos7.4
+[core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-ubuntu-focal]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-focal
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [core-ubuntu-focal]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-focal

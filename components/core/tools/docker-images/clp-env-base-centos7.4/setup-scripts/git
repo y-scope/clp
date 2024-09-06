@@ -1,4 +1,0 @@
-#!/bin/bash
-
-source /opt/rh/rh-git227/enable
-git "$@"

@@ -49,24 +49,27 @@ if (IS_BIG_ENDIAN)
     message(FATAL_ERROR "Big-endian machines are not supported")
 endif()
 
-if (NOT DEFINED CLP_USE_EXACT_PINNED_LIB_VERSION)
-    set(CLP_USE_EXACT_PINNED_LIB_VERSION ON)
-endif()
-
 # Detect linking mode (static or shared); Default to static.
 set(CLP_USE_STATIC_LIBS ON CACHE BOOL "Whether to link against static libraries")
-if (CLP_USE_STATIC_LIBS AND APPLE)
-    message(AUTHOR_WARNING "Building with static libraries is unsupported on macOS."
-            " Switching to shared libraries.")
-    set(CLP_USE_STATIC_LIBS OFF)
-    message(AUTHOR_WARNING "Use the system provided library version for building,
-    as library version pinning is not supported on macOS.")
-    set(CLP_USE_EXACT_PINNED_LIB_VERSION OFF)
+if (CLP_USE_STATIC_LIBS)
+    if (APPLE)
+        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
+    elseif (EXISTS "/etc/centos-release")
+        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+    endif()
+
+    if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
+        message(
+            AUTHOR_WARNING
+            "Building with static libraries is unsupported on"
+            " ${CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM}. Switching to shared libraries.")
+        set(CLP_USE_STATIC_LIBS OFF)
+    endif()
 endif ()
-    if(CLP_USE_STATIC_LIBS)
-        set(CLP_LIBS_STRING "static")
-    else()
-        set(CLP_LIBS_STRING "shared")
+if(CLP_USE_STATIC_LIBS)
+    set(CLP_LIBS_STRING "static")
+else()
+    set(CLP_LIBS_STRING "shared")
 endif()
 message(STATUS "Building using ${CLP_LIBS_STRING} libraries")
 
@@ -106,12 +109,7 @@ endif()
 # NOTE:
 # - We only try to link to the static library
 # - spdlog uses fmt, so their versions need to be kept in-sync
-if(CLP_USE_EXACT_PINNED_LIB_VERSION)
-    set(FIND_FMT_PACKAGE_ARGS 8.0.1 EXACT REQUIRED)
-else()
-    set(FIND_FMT_PACKAGE_ARGS 8.0.1 REQUIRED)
-endif()
-find_package(fmt ${FIND_FMT_PACKAGE_ARGS})
+find_package(fmt 8.0.1 REQUIRED)
 if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}")
 else()
@@ -126,12 +124,7 @@ if(CLP_USE_STATIC_LIBS)
     # source.
     set(spdlog_USE_STATIC_LIBS ON)
 endif()
-if(CLP_USE_EXACT_PINNED_LIB_VERSION)
-    set(FIND_SPDLOG_PACKAGE_ARGS 1.9.2 EXACT REQUIRED)
-else()
-    set(FIND_SPDLOG_PACKAGE_ARGS 1.9.2 REQUIRED)
-endif()
-find_package(spdlog ${FIND_SPDLOG_PACKAGE_ARGS})
+find_package(spdlog 1.9.2 REQUIRED)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
 else()
