@@ -51,10 +51,20 @@ endif()
 
 # Detect linking mode (static or shared); Default to static.
 set(CLP_USE_STATIC_LIBS ON CACHE BOOL "Whether to link against static libraries")
-if (CLP_USE_STATIC_LIBS AND APPLE)
-    message(AUTHOR_WARNING "Building with static libraries is unsupported on macOS."
-            " Switching to shared libraries.")
-    set(CLP_USE_STATIC_LIBS OFF)
+if (CLP_USE_STATIC_LIBS)
+    if (APPLE)
+        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
+    elseif (EXISTS "/etc/centos-release")
+        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+    endif()
+
+    if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
+        message(
+            AUTHOR_WARNING
+            "Building with static libraries is unsupported on"
+            " ${CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM}. Switching to shared libraries.")
+        set(CLP_USE_STATIC_LIBS OFF)
+    endif()
 endif ()
 if(CLP_USE_STATIC_LIBS)
     set(CLP_LIBS_STRING "static")
