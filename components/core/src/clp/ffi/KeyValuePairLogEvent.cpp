@@ -32,7 +32,7 @@ namespace {
  * @tparam Func
  */
 template <typename Func>
-concept JsonExceptionCallbackConcept = std::is_invocable_v<Func, nlohmann::json::exception const&>;
+concept JsonExceptionHandlerConcept = std::is_invocable_v<Func, nlohmann::json::exception const&>;
 
 /**
  * Helper class for `KeyValuePairLogEvent::serialize_to_json` used to:
@@ -41,33 +41,38 @@ concept JsonExceptionCallbackConcept = std::is_invocable_v<Func, nlohmann::json:
  * - group a non-leaf schema tree node with the JSON object that it's being serialized into.
  * - add the node's corresponding JSON object to its parent's corresponding JSON object (or if the
  *   node is the root, replace the parent JSON object) when this class is destructed.
- * @tparam JsonExceptionCallback Handler for any `nlohmann::json::exception` that occurs during
+ * @tparam JsonExceptionHandler Handler for any `nlohmann::json::exception` that occurs during
  * destruction.
  */
-template <JsonExceptionCallbackConcept JsonExceptionCallback>
-class SchemaTreeDfsIterator {
+template <JsonExceptionHandlerConcept JsonExceptionHandler>
+class JsonSerializationIterator {
 public:
     // Constructor
-    SchemaTreeDfsIterator(
-            SchemaTreeNode const* node,
-            vector<SchemaTreeNode::id_t> children,
-            nlohmann::json::object_t* parent,
-            JsonExceptionCallback json_exception_callback
+    JsonSerializationIterator(
+            SchemaTreeNode const* schema_tree_node,
+            vector<bool> const& schema_subtree_bitmap,
+            nlohmann::json::object_t* parent_json_obj,
+            JsonExceptionHandler json_exception_callback
     )
-            : m_schema_tree_node{node},
-              m_children{std::move(children)},
-              m_curr_child_it{m_children.cbegin()},
-              m_parent{parent},
-              m_json_exception_callback{json_exception_callback} {}
+            : m_schema_tree_node{schema_tree_node},
+              m_parent{parent_json_obj},
+              m_json_exception_callback{json_exception_callback} {
+        for (auto const child_id : schema_tree_node->get_children_ids()) {
+            if (schema_subtree_bitmap[child_id]) {
+                m_children.push_back(child_id);
+            }
+        }
+        m_curr_child_it = m_children.cbegin();
+    }
 
     // Delete copy/move constructor and assignment
-    SchemaTreeDfsIterator(SchemaTreeDfsIterator const&) = delete;
-    SchemaTreeDfsIterator(SchemaTreeDfsIterator&&) = delete;
-    auto operator=(SchemaTreeDfsIterator const&) -> SchemaTreeDfsIterator& = delete;
-    auto operator=(SchemaTreeDfsIterator&&) -> SchemaTreeDfsIterator& = delete;
+    JsonSerializationIterator(JsonSerializationIterator const&) = delete;
+    JsonSerializationIterator(JsonSerializationIterator&&) = delete;
+    auto operator=(JsonSerializationIterator const&) -> JsonSerializationIterator& = delete;
+    auto operator=(JsonSerializationIterator&&) -> JsonSerializationIterator& = delete;
 
     // Destructor
-    ~SchemaTreeDfsIterator() {
+    ~JsonSerializationIterator() {
         try {
             // If the current node is the root, then replace the `parent` with this node's JSON
             // object. Otherwise, add this node's JSON object as a child of the parent JSON object.
@@ -102,7 +107,7 @@ private:
     vector<SchemaTreeNode::id_t>::const_iterator m_curr_child_it;
     nlohmann::json::object_t* m_parent;
     nlohmann::json::object_t m_map;
-    JsonExceptionCallback m_json_exception_callback;
+    JsonExceptionHandler m_json_exception_callback;
 };
 
 /**
@@ -153,32 +158,22 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
  * - std::errc::result_out_of_range if a node ID in `node_id_value_pairs` doesn't exist in the
  *   schema tree.
  */
-[[nodiscard]] auto get_sub_schema_tree_bitmap(
+[[nodiscard]] auto get_schema_subtree_bitmap(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         SchemaTree const& schema_tree
 ) -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>>;
 
 /**
- * @param node
- * @param sub_schema_tree_bitmap
- * @return A vector containing all children of a node that appear in a given sub tree.
- */
-[[nodiscard]] auto get_children_in_the_sub_schema_tree(
-        SchemaTreeNode const& node,
-        vector<bool> const& sub_schema_tree_bitmap
-) -> vector<SchemaTreeNode::id_t>;
-
-/**
- * Inserts the given key-value pair into the JSON map.
+ * Inserts the given key-value pair into the JSON object (map).
  * @param node The schema tree node of the key to insert.
- * @param val The value to insert.
- * @param json_map Outputs the inserted JSON map.
+ * @param optional_val The value to insert.
+ * @param json_obj Outputs the inserted JSON object.
  * @return Whether the insertion was successful.
  */
-[[nodiscard]] auto insert_kv_pair_json_map(
+[[nodiscard]] auto insert_kv_pair_into_json_obj(
         SchemaTreeNode const& node,
-        std::optional<Value> const& val,
-        nlohmann::json::object_t& json_map
+        std::optional<Value> const& optional_val,
+        nlohmann::json::object_t& json_obj
 ) -> bool;
 
 /**
@@ -282,95 +277,80 @@ auto is_leaf_node(
     return true;
 }
 
-auto get_sub_schema_tree_bitmap(
+auto get_schema_subtree_bitmap(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         SchemaTree const& schema_tree
 ) -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>> {
-    auto sub_schema_tree_bitmap{vector<bool>(schema_tree.get_size(), false)};
+    auto schema_subtree_bitmap{vector<bool>(schema_tree.get_size(), false)};
     for (auto const& [node_id, val] : node_id_value_pairs) {
-        if (node_id >= sub_schema_tree_bitmap.size()) {
+        if (node_id >= schema_subtree_bitmap.size()) {
             return std::errc::result_out_of_range;
         }
-        sub_schema_tree_bitmap[node_id] = true;
+        schema_subtree_bitmap[node_id] = true;
 
         // Iteratively mark the parents as true
         auto parent_id{schema_tree.get_node(node_id).get_parent_id()};
         while (true) {
-            if (sub_schema_tree_bitmap[parent_id]) {
+            if (schema_subtree_bitmap[parent_id]) {
                 // Parent already set by other child
                 break;
             }
-            sub_schema_tree_bitmap[parent_id] = true;
+            schema_subtree_bitmap[parent_id] = true;
             if (SchemaTree::cRootId == parent_id) {
                 break;
             }
             parent_id = schema_tree.get_node(parent_id).get_parent_id();
         }
     }
-    return sub_schema_tree_bitmap;
+    return schema_subtree_bitmap;
 }
 
-auto get_children_in_the_sub_schema_tree(
+auto insert_kv_pair_into_json_obj(
         SchemaTreeNode const& node,
-        vector<bool> const& sub_schema_tree_bitmap
-) -> vector<SchemaTreeNode::id_t> {
-    vector<SchemaTreeNode::id_t> children;
-    for (auto const child_id : node.get_children_ids()) {
-        if (sub_schema_tree_bitmap[child_id]) {
-            children.push_back(child_id);
-        }
-    }
-    return children;
-}
-
-auto insert_kv_pair_json_map(
-        SchemaTreeNode const& node,
-        std::optional<Value> const& val,
-        nlohmann::json::object_t& json_map
+        std::optional<Value> const& optional_val,
+        nlohmann::json::object_t& json_obj
 ) -> bool {
     auto const key_name{node.get_key_name()};
     auto const type{node.get_type()};
-    if (false == val.has_value()) {
-        json_map.emplace(string{key_name}, nlohmann::json::object());
+    if (false == optional_val.has_value()) {
+        json_obj.emplace(string{key_name}, nlohmann::json::object());
         return true;
     }
 
+    string const key_name_str{key_name};
     try {
-        auto const& raw_val{val.value()};
+        auto const& val{optional_val.value()};
         switch (type) {
             case SchemaTreeNode::Type::Int:
-                json_map.emplace(string{key_name}, raw_val.get_immutable_view<value_int_t>());
+                json_obj.emplace(key_name_str, val.get_immutable_view<value_int_t>());
                 break;
             case SchemaTreeNode::Type::Float:
-                json_map.emplace(string{key_name}, raw_val.get_immutable_view<value_float_t>());
+                json_obj.emplace(key_name_str, val.get_immutable_view<value_float_t>());
                 break;
             case SchemaTreeNode::Type::Bool:
-                json_map.emplace(string{key_name}, raw_val.get_immutable_view<bool>());
+                json_obj.emplace(key_name_str, val.get_immutable_view<bool>());
                 break;
             case SchemaTreeNode::Type::Str:
-                if (raw_val.is<string>()) {
-                    json_map.emplace(
-                            string{key_name},
-                            string{raw_val.get_immutable_view<string>()}
-                    );
+                if (val.is<string>()) {
+                    json_obj.emplace(key_name_str, string{val.get_immutable_view<string>()});
                 } else {
-                    auto const decoded_result{decode_as_encoded_text_ast(raw_val)};
+                    auto const decoded_result{decode_as_encoded_text_ast(val)};
                     if (false == decoded_result.has_value()) {
                         return false;
                     }
-                    json_map.emplace(string{key_name}, decoded_result.value());
+                    json_obj.emplace(key_name_str, decoded_result.value());
                 }
                 break;
             case SchemaTreeNode::Type::UnstructuredArray: {
-                auto const decoded_result{decode_as_encoded_text_ast(raw_val)};
+                auto const decoded_result{decode_as_encoded_text_ast(val)};
                 if (false == decoded_result.has_value()) {
                     return false;
                 }
-                json_map.emplace(string{key_name}, nlohmann::json::parse(decoded_result.value()));
+                json_obj.emplace(key_name_str, nlohmann::json::parse(decoded_result.value()));
                 break;
             }
             case SchemaTreeNode::Type::Obj:
-                json_map.emplace(string{key_name}, nullptr);
+                json_obj.emplace(key_name_str, nullptr);
                 break;
             default:
                 return false;
@@ -410,28 +390,26 @@ auto KeyValuePairLogEvent::serialize_to_json(
         return nlohmann::json::object();
     }
 
-    auto const sub_schema_tree_bitmap_ret{
-            get_sub_schema_tree_bitmap(m_node_id_value_pairs, *m_schema_tree)
-    };
-    if (sub_schema_tree_bitmap_ret.has_error()) {
-        return sub_schema_tree_bitmap_ret.error();
-    }
-    auto const& sub_schema_tree_bitmap{sub_schema_tree_bitmap_ret.value()};
-
-    auto json_root = nlohmann::json::object_t();
-
     bool json_exception_captured{false};
     auto json_exception_handler = [&]([[maybe_unused]] nlohmann::json::exception const& ex
                                   ) -> void { json_exception_captured = true; };
-    using DfsIterator = SchemaTreeDfsIterator<decltype(json_exception_handler)>;
+    using DfsIterator = JsonSerializationIterator<decltype(json_exception_handler)>;
 
     // NOTE: We use a `std::stack` (which uses `std::deque` as the underlying container) instead of
     // a `std::vector` to avoid implementing move semantics for `DfsIterator` (required when the
     // vector grows).
     std::stack<DfsIterator> dfs_stack;
 
+    auto const schema_subtree_bitmap_ret{
+            get_schema_subtree_bitmap(m_node_id_value_pairs, *m_schema_tree)
+    };
+    if (schema_subtree_bitmap_ret.has_error()) {
+        return schema_subtree_bitmap_ret.error();
+    }
+    auto const& schema_subtree_bitmap{schema_subtree_bitmap_ret.value()};
+
     // Traverse the schema tree in DFS order, but only traverse the nodes that are set in
-    // `sub_schema_tree_bitmap`.
+    // `schema_subtree_bitmap`.
     //
     // On the way down:
     // - for each non-leaf node, create a `nlohmann::json::object_t`;
@@ -440,26 +418,23 @@ auto KeyValuePairLogEvent::serialize_to_json(
     // On the way up, add the current node's `nlohmann::json::object_t` to the parent's
     // `nlohmann::json::object_t`.
     auto const& root_node{m_schema_tree->get_node(SchemaTree::cRootId)};
-    dfs_stack.emplace(
-            &root_node,
-            get_children_in_the_sub_schema_tree(root_node, sub_schema_tree_bitmap),
-            &json_root,
-            json_exception_handler
-    );
+    auto json_root = nlohmann::json::object_t();
+
+    dfs_stack.emplace(&root_node, schema_subtree_bitmap, &json_root, json_exception_handler);
     while (false == dfs_stack.empty() && false == json_exception_captured) {
         auto& top{dfs_stack.top()};
         if (false == top.has_next_child()) {
             dfs_stack.pop();
             continue;
         }
-        auto const child_id{top.get_next_child()};
-        auto const& child_node{m_schema_tree->get_node(child_id)};
-        if (m_node_id_value_pairs.contains(child_id)) {
+        auto const child_node_id{top.get_next_child()};
+        auto const& child_node{m_schema_tree->get_node(child_node_id)};
+        if (m_node_id_value_pairs.contains(child_node_id)) {
             // Handle leaf node
             if (false
-                == insert_kv_pair_json_map(
+                == insert_kv_pair_into_json_obj(
                         child_node,
-                        m_node_id_value_pairs.at(child_id),
+                        m_node_id_value_pairs.at(child_node_id),
                         top.get_map()
                 ))
             {
@@ -468,7 +443,7 @@ auto KeyValuePairLogEvent::serialize_to_json(
         } else {
             dfs_stack.emplace(
                     &child_node,
-                    get_children_in_the_sub_schema_tree(child_node, sub_schema_tree_bitmap),
+                    schema_subtree_bitmap,
                     &top.get_map(),
                     json_exception_handler
             );
