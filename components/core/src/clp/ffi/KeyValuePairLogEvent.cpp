@@ -28,22 +28,21 @@ using std::vector;
 namespace clp::ffi {
 namespace {
 /**
- * Callback to handle JSON exceptions. When we cannot throw a captured JSON exception (i.e., in a
- * destructor), there must be a way to not crash the program but also let the caller be aware of the
- * exception. This concept plays the role to allow users to customize a callback handler when
- * catching an exception.
+ * Function to handle a JSON exception.
+ * @tparam Func
  */
 template <typename Func>
 concept JsonExceptionCallbackConcept = std::is_invocable_v<Func, nlohmann::json::exception const&>;
 
 /**
- * Helper class for iterating over a sub-tree of the schema tree in a depth-first manner.
- * `KeyValuePairLogEvent::serialize_to_json` uses a stack of instances of this class to perform
- * depth-first serialization of JSON objects. Each instance of this class holds state from the
- * perspective of a single node in the schema tree. This includes a JSON map representing itself,
- * which gets populated while traversing over its children. Once all its children have been visited,
- * the iterator instance gets popped off the DFS stack, and emplaces the contents of its JSON map
- * into its parent as a subtree.
+ * Helper class for `KeyValuePairLogEvent::serialize_to_json` used to:
+ * - iterate over the children of a non-leaf schema tree node, so long as those children are in the
+ *   subtree defined by the `KeyValuePairLogEvent`.
+ * - group a non-leaf schema tree node with the JSON object that it's being serialized into.
+ * - add the node's corresponding JSON object to its parent's corresponding JSON object (or if the
+ *   node is the root, replace the parent JSON object) when this class is destructed.
+ * @tparam JsonExceptionCallback Handler for any `nlohmann::json::exception` that occurs during
+ * destruction.
  */
 template <JsonExceptionCallbackConcept JsonExceptionCallback>
 class SchemaTreeDfsIterator {
@@ -59,7 +58,6 @@ public:
               m_children{std::move(children)},
               m_curr_child_it{m_children.cbegin()},
               m_parent{parent},
-              m_map(nlohmann::json::object()),
               m_json_exception_callback{json_exception_callback} {}
 
     // Delete copy/move constructor and assignment
@@ -71,8 +69,8 @@ public:
     // Destructor
     ~SchemaTreeDfsIterator() {
         try {
-            // On exit, if the current node is the root, then move the entire tree to the `parent`
-            // to return. Otherwise, construct a subtree in the parent.
+            // If the current node is the root, then replace the `parent` with this node's JSON
+            // object. Otherwise, add this node's JSON object as a child of the parent JSON object.
             if (m_schema_tree_node->get_id() == SchemaTree::cRootId) {
                 *m_parent = std::move(m_map);
             } else {
@@ -149,10 +147,11 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
 /**
  * @param node_id_value_pairs
  * @param schema_tree
- * @return A result containing a bitmap where all node IDs appearing on a path from the root of the
- * schema tree to any node in `node_id_value_pairs` are set, or an error code indicating the
- * failure:
- * - std::errc::result_out_of_range if the key ID doesn't exist in the schema tree.
+ * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
+ * schema tree, and the set bits correspond to the nodes in the subtree defined by all paths from
+ * the root node to the nodes in `node_id_value_pairs`; or an error code indicating a failure:
+ * - std::errc::result_out_of_range if a node ID in `node_id_value_pairs` doesn't exist in the
+ *   schema tree.
  */
 [[nodiscard]] auto get_sub_schema_tree_bitmap(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
@@ -426,10 +425,20 @@ auto KeyValuePairLogEvent::serialize_to_json(
                                   ) -> void { json_exception_captured = true; };
     using DfsIterator = SchemaTreeDfsIterator<decltype(json_exception_handler)>;
 
-    // Note: we explicitly use `std::stack` which has `std::deque` as the underlying container.
-    // Otherwise, we have to implement move semantics for `DfsIterator` to enable vector growth.
+    // NOTE: We use a `std::stack` (which uses `std::deque` as the underlying container) instead of
+    // a `std::vector` to avoid implementing move semantics for `DfsIterator` (required when the
+    // vector grows).
     std::stack<DfsIterator> dfs_stack;
 
+    // Traverse the schema tree in DFS order, but only traverse the nodes that are set in
+    // `sub_schema_tree_bitmap`.
+    //
+    // On the way down:
+    // - for each non-leaf node, create a `nlohmann::json::object_t`;
+    // - for each leaf node, insert the key-value pair into the parent `nlohmann::json::object_t`.
+    //
+    // On the way up, add the current node's `nlohmann::json::object_t` to the parent's
+    // `nlohmann::json::object_t`.
     auto const& root_node{m_schema_tree->get_node(SchemaTree::cRootId)};
     dfs_stack.emplace(
             &root_node,
@@ -437,7 +446,6 @@ auto KeyValuePairLogEvent::serialize_to_json(
             &json_root,
             json_exception_handler
     );
-
     while (false == dfs_stack.empty() && false == json_exception_captured) {
         auto& top{dfs_stack.top()};
         if (false == top.has_next_child()) {
@@ -447,7 +455,7 @@ auto KeyValuePairLogEvent::serialize_to_json(
         auto const child_id{top.get_next_child()};
         auto const& child_node{m_schema_tree->get_node(child_id)};
         if (m_node_id_value_pairs.contains(child_id)) {
-            // Dealing with leaf nodes
+            // Handle leaf node
             if (false
                 == insert_kv_pair_json_map(
                         child_node,
