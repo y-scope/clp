@@ -12,9 +12,16 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
     extra configuration.
 * Python 3.8 or newer
 * python3-venv
+* python3-dev
 * [Task](https://taskfile.dev/)
 
 ## Setup
+
+Clone the repo and sub-components
+
+```shell
+git clone --recurse-submodules https://github.com/y-scope/clp.git
+```
 
 Initialize the project
 
@@ -25,7 +32,7 @@ tools/scripts/deps-download/init.sh
 Install CLP core's dependencies
 
 ```shell
-components/core/tools/ubuntu-focal/install-all.sh
+components/core/tools/scripts/lib_install/ubuntu-focal/install-all.sh
 ```
 
 ## Build
