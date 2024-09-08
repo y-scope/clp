@@ -10,7 +10,6 @@
 
 #include <curl/curl.h>
 
-#include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
 #include "CurlOperationFailed.hpp"
 #include "ErrorCode.hpp"
