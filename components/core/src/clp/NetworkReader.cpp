@@ -129,7 +129,7 @@ NetworkReader::NetworkReader(
           m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
           m_buffer_size{std::max(cMinBufferSize, buffer_size)} {
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
-        m_buffer_pool.emplace_back(Array<char>(m_buffer_size));
+        m_buffer_pool.emplace_back(m_buffer_size);
     }
     m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
     m_downloader_thread->start();
