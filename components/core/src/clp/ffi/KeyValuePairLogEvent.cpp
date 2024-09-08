@@ -28,21 +28,21 @@ using std::vector;
 namespace clp::ffi {
 namespace {
 /**
- * Function to handle a JSON exception.
+ * Concept for a function to handle a JSON exception.
  * @tparam Func
  */
 template <typename Func>
 concept JsonExceptionHandlerConcept = std::is_invocable_v<Func, nlohmann::json::exception const&>;
 
 /**
- * Helper class for `KeyValuePairLogEvent::serialize_to_json` used to:
+ * Helper class for `KeyValuePairLogEvent::serialize_to_json`, used to:
  * - iterate over the children of a non-leaf schema tree node, so long as those children are in the
  *   subtree defined by the `KeyValuePairLogEvent`.
  * - group a non-leaf schema tree node with the JSON object that it's being serialized into.
  * - add the node's corresponding JSON object to its parent's corresponding JSON object (or if the
  *   node is the root, replace the parent JSON object) when this class is destructed.
- * @tparam JsonExceptionHandler Handler for any `nlohmann::json::exception` that occurs during
- * destruction.
+ * @tparam JsonExceptionHandler Type of handler for any `nlohmann::json::exception` that occurs
+ * during destruction.
  */
 template <JsonExceptionHandlerConcept JsonExceptionHandler>
 class JsonSerializationIterator {
@@ -87,15 +87,15 @@ public:
     }
 
     /**
-     * @return whether there are more children to traverse.
+     * @return Whether there are more child schema tree nodes to traverse.
      */
     [[nodiscard]] auto has_next_child() const -> bool {
         return m_curr_child_it != m_children.end();
     }
 
     /**
-     * Gets the next child and advances the underlying child idx.
-     * @return the next child to traverse.
+     * Gets the next child schema tree node and advances the iterator.
+     * @return The next child schema tree node.
      */
     [[nodiscard]] auto get_next_child() -> SchemaTreeNode::id_t { return *(m_curr_child_it++); }
 
@@ -167,7 +167,7 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
  * Inserts the given key-value pair into the JSON object (map).
  * @param node The schema tree node of the key to insert.
  * @param optional_val The value to insert.
- * @param json_obj Outputs the inserted JSON object.
+ * @param json_obj The JSON object to insert the kv-pair into.
  * @return Whether the insertion was successful.
  */
 [[nodiscard]] auto insert_kv_pair_into_json_obj(
@@ -178,8 +178,8 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
 
 /**
  * Decodes a value as an `EncodedTextAst` according to the encoding type.
- * NOTE: this method assumes the upper level caller already checked that `val` is either
- * `FourByteEncodedTextAst` or `EightByteEncodedTextAst`.
+ * NOTE: This function assumes that `val` is either a `FourByteEncodedTextAst` or
+ * `EightByteEncodedTextAst`.
  * @param val
  * @return Same as `EncodedTextAst::decode_and_unparse`.
  */
