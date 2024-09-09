@@ -55,14 +55,14 @@ public:
             JsonExceptionHandler json_exception_callback
     )
             : m_schema_tree_node{schema_tree_node},
-              m_parent{parent_json_obj},
+              m_parent_json_obj{parent_json_obj},
               m_json_exception_callback{json_exception_callback} {
         for (auto const child_id : schema_tree_node->get_children_ids()) {
             if (schema_subtree_bitmap[child_id]) {
-                m_children.push_back(child_id);
+                m_child_schema_tree_nodes.push_back(child_id);
             }
         }
-        m_curr_child_it = m_children.cbegin();
+        m_child_schema_tree_node_it = m_child_schema_tree_nodes.cbegin();
     }
 
     // Delete copy/move constructor and assignment
@@ -77,9 +77,12 @@ public:
             // If the current node is the root, then replace the `parent` with this node's JSON
             // object. Otherwise, add this node's JSON object as a child of the parent JSON object.
             if (m_schema_tree_node->get_id() == SchemaTree::cRootId) {
-                *m_parent = std::move(m_map);
+                *m_parent_json_obj = std::move(m_json_obj);
             } else {
-                m_parent->emplace(string{m_schema_tree_node->get_key_name()}, std::move(m_map));
+                m_parent_json_obj->emplace(
+                        string{m_schema_tree_node->get_key_name()},
+                        std::move(m_json_obj)
+                );
             }
         } catch (nlohmann::json::exception const& ex) {
             m_json_exception_callback(ex);
@@ -89,24 +92,26 @@ public:
     /**
      * @return Whether there are more child schema tree nodes to traverse.
      */
-    [[nodiscard]] auto has_next_child() const -> bool {
-        return m_curr_child_it != m_children.end();
+    [[nodiscard]] auto has_next_child_schema_tree_node() const -> bool {
+        return m_child_schema_tree_node_it != m_child_schema_tree_nodes.end();
     }
 
     /**
      * Gets the next child schema tree node and advances the iterator.
      * @return The next child schema tree node.
      */
-    [[nodiscard]] auto get_next_child() -> SchemaTreeNode::id_t { return *(m_curr_child_it++); }
+    [[nodiscard]] auto get_next_child_schema_tree_node() -> SchemaTreeNode::id_t {
+        return *(m_child_schema_tree_node_it++);
+    }
 
-    [[nodiscard]] auto get_map() -> nlohmann::json::object_t& { return m_map; }
+    [[nodiscard]] auto get_json_obj() -> nlohmann::json::object_t& { return m_json_obj; }
 
 private:
     SchemaTreeNode const* m_schema_tree_node;
-    vector<SchemaTreeNode::id_t> m_children;
-    vector<SchemaTreeNode::id_t>::const_iterator m_curr_child_it;
-    nlohmann::json::object_t* m_parent;
-    nlohmann::json::object_t m_map;
+    vector<SchemaTreeNode::id_t> m_child_schema_tree_nodes;
+    vector<SchemaTreeNode::id_t>::const_iterator m_child_schema_tree_node_it;
+    nlohmann::json::object_t* m_parent_json_obj;
+    nlohmann::json::object_t m_json_obj;
     JsonExceptionHandler m_json_exception_callback;
 };
 
@@ -310,35 +315,34 @@ auto insert_kv_pair_into_json_obj(
         std::optional<Value> const& optional_val,
         nlohmann::json::object_t& json_obj
 ) -> bool {
-    auto const key_name{node.get_key_name()};
+    string const key_name{node.get_key_name()};
     auto const type{node.get_type()};
     if (false == optional_val.has_value()) {
-        json_obj.emplace(string{key_name}, nlohmann::json::object());
+        json_obj.emplace(key_name, nlohmann::json::object());
         return true;
     }
 
-    string const key_name_str{key_name};
     try {
         auto const& val{optional_val.value()};
         switch (type) {
             case SchemaTreeNode::Type::Int:
-                json_obj.emplace(key_name_str, val.get_immutable_view<value_int_t>());
+                json_obj.emplace(key_name, val.get_immutable_view<value_int_t>());
                 break;
             case SchemaTreeNode::Type::Float:
-                json_obj.emplace(key_name_str, val.get_immutable_view<value_float_t>());
+                json_obj.emplace(key_name, val.get_immutable_view<value_float_t>());
                 break;
             case SchemaTreeNode::Type::Bool:
-                json_obj.emplace(key_name_str, val.get_immutable_view<bool>());
+                json_obj.emplace(key_name, val.get_immutable_view<bool>());
                 break;
             case SchemaTreeNode::Type::Str:
                 if (val.is<string>()) {
-                    json_obj.emplace(key_name_str, string{val.get_immutable_view<string>()});
+                    json_obj.emplace(key_name, string{val.get_immutable_view<string>()});
                 } else {
                     auto const decoded_result{decode_as_encoded_text_ast(val)};
                     if (false == decoded_result.has_value()) {
                         return false;
                     }
-                    json_obj.emplace(key_name_str, decoded_result.value());
+                    json_obj.emplace(key_name, decoded_result.value());
                 }
                 break;
             case SchemaTreeNode::Type::UnstructuredArray: {
@@ -346,11 +350,11 @@ auto insert_kv_pair_into_json_obj(
                 if (false == decoded_result.has_value()) {
                     return false;
                 }
-                json_obj.emplace(key_name_str, nlohmann::json::parse(decoded_result.value()));
+                json_obj.emplace(key_name, nlohmann::json::parse(decoded_result.value()));
                 break;
             }
             case SchemaTreeNode::Type::Obj:
-                json_obj.emplace(key_name_str, nullptr);
+                json_obj.emplace(key_name, nullptr);
                 break;
             default:
                 return false;
@@ -417,34 +421,39 @@ auto KeyValuePairLogEvent::serialize_to_json(
     //
     // On the way up, add the current node's `nlohmann::json::object_t` to the parent's
     // `nlohmann::json::object_t`.
-    auto const& root_node{m_schema_tree->get_node(SchemaTree::cRootId)};
-    auto json_root = nlohmann::json::object_t();
+    auto const& root_schema_tree_node{m_schema_tree->get_node(SchemaTree::cRootId)};
+    auto root_json_obj = nlohmann::json::object_t();
 
-    dfs_stack.emplace(&root_node, schema_subtree_bitmap, &json_root, json_exception_handler);
+    dfs_stack.emplace(
+            &root_schema_tree_node,
+            schema_subtree_bitmap,
+            &root_json_obj,
+            json_exception_handler
+    );
     while (false == dfs_stack.empty() && false == json_exception_captured) {
         auto& top{dfs_stack.top()};
-        if (false == top.has_next_child()) {
+        if (false == top.has_next_child_schema_tree_node()) {
             dfs_stack.pop();
             continue;
         }
-        auto const child_node_id{top.get_next_child()};
-        auto const& child_node{m_schema_tree->get_node(child_node_id)};
-        if (m_node_id_value_pairs.contains(child_node_id)) {
+        auto const child_schema_tree_node_id{top.get_next_child_schema_tree_node()};
+        auto const& child_schema_tree_node{m_schema_tree->get_node(child_schema_tree_node_id)};
+        if (m_node_id_value_pairs.contains(child_schema_tree_node_id)) {
             // Handle leaf node
             if (false
                 == insert_kv_pair_into_json_obj(
-                        child_node,
-                        m_node_id_value_pairs.at(child_node_id),
-                        top.get_map()
+                        child_schema_tree_node,
+                        m_node_id_value_pairs.at(child_schema_tree_node_id),
+                        top.get_json_obj()
                 ))
             {
                 return std::errc::protocol_error;
             }
         } else {
             dfs_stack.emplace(
-                    &child_node,
+                    &child_schema_tree_node,
                     schema_subtree_bitmap,
-                    &top.get_map(),
+                    &top.get_json_obj(),
                     json_exception_handler
             );
         }
@@ -454,6 +463,6 @@ auto KeyValuePairLogEvent::serialize_to_json(
         return std::errc::protocol_error;
     }
 
-    return json_root;
+    return root_json_obj;
 }
 }  // namespace clp::ffi

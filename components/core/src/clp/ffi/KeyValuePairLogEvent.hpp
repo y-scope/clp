@@ -65,8 +65,10 @@ public:
      * Serializes the log event into a `nlohmann::json` object.
      * @return A result containing the serialized JSON object or an error code indicating the
      * failure:
-     * - std::errc::protocol_error if a `nlohmann::json::exception` occurs, or typecasting a `Value`
-     *   instance fails.
+     * - std::errc::protocol_error if a value in the log event couldn't be decoded or it couldn't be
+     *   inserted into a JSON object.
+     * - std::errc::result_out_of_range if a node ID in the log event doesn't exist in the schema
+     *   tree.
      */
     [[nodiscard]] auto serialize_to_json(
     ) const -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
