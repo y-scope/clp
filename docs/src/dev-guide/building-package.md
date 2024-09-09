@@ -11,17 +11,11 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
   * It should be possible to build a package for a different environment, it just requires a some
     extra configuration.
 * Python 3.8 or newer
-* python3-venv
 * python3-dev
+* python3-venv
 * [Task](https://taskfile.dev/)
 
 ## Setup
-
-Clone the repo and sub-components
-
-```shell
-git clone --recurse-submodules https://github.com/y-scope/clp.git
-```
 
 Initialize the project
 
@@ -29,11 +23,11 @@ Initialize the project
 tools/scripts/deps-download/init.sh
 ```
 
-Install CLP core's dependencies
-
-```shell
-components/core/tools/scripts/lib_install/ubuntu-focal/install-all.sh
-```
+Install CLP core's dependencies based on your OS:
+* [CentOS Stream 9](centos-stream-9-deps-install)
+* [macOS 12](macos12-deps-install)
+* [Ubuntu 20.04](ubuntu-focal-deps-install)
+* [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
 ## Build
 
