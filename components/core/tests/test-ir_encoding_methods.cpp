@@ -1133,12 +1133,14 @@ TEMPLATE_TEST_CASE(
     for (auto const& json_obj : serialized_json_objects) {
         auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
         REQUIRE_FALSE(kv_log_event_result.has_error());
+
         auto const& kv_log_event = kv_log_event_result.value();
         auto const num_leaves_in_json_obj = count_num_leaves(json_obj);
         auto const num_kv_pairs = kv_log_event.get_node_id_value_pairs().size();
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
-    }
 
-    // TODO: Test validating the deserialized bytes once we've implemented a KeyValuePairLogEvent to
-    // JSON deserializer.
+        auto const serialized_json_result = kv_log_event.serialize_to_json();
+        REQUIRE_FALSE(serialized_json_result.has_error());
+        REQUIRE((json_obj == serialized_json_result.value()));
+    }
 }
