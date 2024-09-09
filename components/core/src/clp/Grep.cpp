@@ -965,7 +965,7 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
                 continue;
             }
             auto possible_substr_types = get_possible_substr_types(
-                    WildcardExpressionView(processed_search_string, begin_idx, end_idx),
+                    WildcardExpressionView{processed_search_string, begin_idx, end_idx},
                     lexer
             );
             if (possible_substr_types.empty()) {

@@ -1,7 +1,7 @@
 #include "WildcardExpression.hpp"
 
 #include <algorithm>
-#include <cstdint>
+#include <cstddef>
 #include <string>
 #include <utility>
 
@@ -55,8 +55,8 @@ WildcardExpression::WildcardExpression(std::string processed_search_string)
 
 WildcardExpressionView::WildcardExpressionView(
         WildcardExpression const& wildcard_expression,
-        uint32_t const begin_idx,
-        uint32_t const end_idx
+        size_t const begin_idx,
+        size_t const end_idx
 )
         : m_search_string_ptr{&wildcard_expression},
           m_begin_idx{begin_idx},
