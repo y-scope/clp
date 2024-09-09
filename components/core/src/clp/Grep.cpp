@@ -955,13 +955,13 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
     for (size_t end_idx = 1; end_idx <= processed_search_string.length(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
         // "* text\* *").
-        if (processed_search_string.get_value_is_escape(end_idx - 1)) {
+        if (processed_search_string.char_is_escape(end_idx - 1)) {
             continue;
         }
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
             // "*text" from string "* \*text *").
-            if (begin_idx > 0 && processed_search_string.get_value_is_escape(begin_idx - 1)) {
+            if (begin_idx > 0 && processed_search_string.char_is_escape(begin_idx - 1)) {
                 continue;
             }
             auto possible_substr_types = get_possible_substr_types(

@@ -129,9 +129,9 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     for (uint32_t idx = 0; idx < search_string.length(); idx++) {
         CAPTURE(idx);
         if (idx == 6) {
-            REQUIRE(search_string.get_value_is_escape(idx));
+            REQUIRE(search_string.char_is_escape(idx));
         } else {
-            REQUIRE(false == search_string.get_value_is_escape(idx));
+            REQUIRE(false == search_string.char_is_escape(idx));
         }
     }
 

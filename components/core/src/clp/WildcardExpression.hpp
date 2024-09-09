@@ -25,19 +25,17 @@ public:
 
     [[nodiscard]] auto length() const -> size_t { return m_processed_search_string.size(); }
 
-    [[nodiscard]] auto get_value_is_greedy_wildcard(size_t const idx) const -> bool {
+    [[nodiscard]] auto char_is_greedy_wildcard(size_t const idx) const -> bool {
         return m_is_greedy_wildcard[idx];
     }
 
-    [[nodiscard]] auto get_value_is_non_greedy_wildcard(size_t const idx) const -> bool {
+    [[nodiscard]] auto char_is_non_greedy_wildcard(size_t const idx) const -> bool {
         return m_is_non_greedy_wildcard[idx];
     }
 
-    [[nodiscard]] auto get_value_is_escape(size_t const idx) const -> bool {
-        return m_is_escape[idx];
-    }
+    [[nodiscard]] auto char_is_escape(size_t const idx) const -> bool { return m_is_escape[idx]; }
 
-    [[nodiscard]] auto get_value(size_t const idx) const -> char {
+    [[nodiscard]] auto get_char(size_t const idx) const -> char {
         return m_processed_search_string[idx];
     }
 
@@ -73,16 +71,16 @@ public:
     [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView;
 
     [[nodiscard]] auto is_greedy_wildcard() const -> bool {
-        return 1 == length() && m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx);
+        return 1 == length() && m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx);
     }
 
     [[nodiscard]] auto is_non_greedy_wildcard() const -> bool {
-        return 1 == length() && m_search_string_ptr->get_value_is_non_greedy_wildcard(m_begin_idx);
+        return 1 == length() && m_search_string_ptr->char_is_non_greedy_wildcard(m_begin_idx);
     }
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
-        return m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx)
-               || m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx - 1);
+        return m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx)
+               || m_search_string_ptr->char_is_greedy_wildcard(m_end_idx - 1);
     }
 
     /**
@@ -97,19 +95,19 @@ public:
     [[nodiscard]] auto length() const -> size_t { return m_end_idx - m_begin_idx; }
 
     [[nodiscard]] auto get_value_is_greedy_wildcard(size_t const idx) const -> bool {
-        return m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx + idx);
+        return m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto get_value_is_non_greedy_wildcard(size_t const idx) const -> bool {
-        return m_search_string_ptr->get_value_is_non_greedy_wildcard(m_begin_idx + idx);
+        return m_search_string_ptr->char_is_non_greedy_wildcard(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto get_value_is_escape(size_t const idx) const -> bool {
-        return m_search_string_ptr->get_value_is_escape(m_begin_idx + idx);
+        return m_search_string_ptr->char_is_escape(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto get_value(size_t const idx) const -> char {
-        return m_search_string_ptr->get_value(m_begin_idx + idx);
+        return m_search_string_ptr->get_char(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto get_substr_copy() const -> std::string {
