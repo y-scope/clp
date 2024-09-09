@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "Array.hpp"
 #include "BufferReader.hpp"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
@@ -222,7 +223,7 @@ private:
     }
 
     [[nodiscard]] auto get_buffer_end_pos() const -> size_t {
-        return m_buffer_begin_pos + m_buffer_reader->get_buffer_size();
+        return m_buffer_begin_pos + m_buffer_reader.get_buffer_size();
     }
 
     auto update_file_pos(size_t pos) -> void;
@@ -237,7 +238,7 @@ private:
     // Buffer specific data
     std::vector<char> m_buffer;
     size_t m_base_buffer_size;
-    std::unique_ptr<BufferReader> m_buffer_reader;
+    BufferReader m_buffer_reader;
     size_t m_buffer_begin_pos{0};
 
     // Variables for checkpoint support
