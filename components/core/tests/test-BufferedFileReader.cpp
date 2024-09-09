@@ -277,7 +277,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     file_writer.write(test_data.data(), test_data_size);
     file_writer.close();
 
-    BufferedFileReader reader(make_unique<FileDescriptorReader>(test_file_path));
+    BufferedFileReader reader{make_unique<FileDescriptorReader>(test_file_path)};
     string test_string;
 
     FileReader ref_file_reader{test_file_path};

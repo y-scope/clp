@@ -30,6 +30,9 @@ namespace clp {
  *
  * NOTE 2: This class restricts the buffer size to a multiple of the page size and we avoid reading
  * anything less than a page to avoid multiple page faults.
+ *
+ * NOTE 3: Although the FILE stream interface provided by glibc also performs buffered reads, it
+ * does not allow us to control the buffering.
  */
 class BufferedFileReader : public ReaderInterface {
 public:
@@ -68,6 +71,7 @@ public:
 
     // Constructors
     /**
+     * @param reader_interface
      * @param base_buffer_size The size for the fixed-size buffer used when no checkpoint is set. It
      * must be a multiple of BufferedFileReader::cMinBufferSize.
      */
@@ -76,7 +80,7 @@ public:
             size_t base_buffer_size
     );
 
-    BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
+   explicit BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
             : BufferedFileReader(std::move(reader_interface), cDefaultBufferSize) {}
 
     // Destructor
