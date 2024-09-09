@@ -1129,15 +1129,15 @@ tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
     string regex_search_string;
     bool contains_wildcard = false;
     for (uint32_t idx = 0; idx < wildcard_expr.length(); idx++) {
-        if (wildcard_expr.get_value_is_escape(idx)) {
+        if (wildcard_expr.char_is_escape(idx)) {
             continue;
         }
 
-        auto const c = wildcard_expr.get_value(idx);
-        if (wildcard_expr.get_value_is_greedy_wildcard(idx)) {
+        auto const c = wildcard_expr.get_char(idx);
+        if (wildcard_expr.char_is_greedy_wildcard(idx)) {
             contains_wildcard = true;
             regex_search_string += ".*";
-        } else if (wildcard_expr.get_value_is_non_greedy_wildcard(idx)) {
+        } else if (wildcard_expr.char_is_non_greedy_wildcard(idx)) {
             contains_wildcard = true;
             regex_search_string += ".";
         } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {

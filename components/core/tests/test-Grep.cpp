@@ -183,22 +183,22 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
         auto search_string_view = WildcardExpressionView{search_string, 2, search_string.length()};
         REQUIRE(false == search_string_view.is_greedy_wildcard());
         REQUIRE(false == search_string_view.is_non_greedy_wildcard());
-        REQUIRE('t' == search_string_view.get_value(0));
-        REQUIRE(false == search_string_view.get_value_is_escape(0));
-        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(0));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(0));
-        REQUIRE('\\' == search_string_view.get_value(4));
-        REQUIRE(search_string_view.get_value_is_escape(4));
-        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(4));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(4));
-        REQUIRE('*' == search_string_view.get_value(5));
-        REQUIRE(false == search_string_view.get_value_is_escape(5));
-        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(5));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(5));
-        REQUIRE('*' == search_string_view.get_value(7));
-        REQUIRE(false == search_string_view.get_value_is_escape(7));
-        REQUIRE(search_string_view.get_value_is_greedy_wildcard(7));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(7));
+        REQUIRE('t' == search_string_view.get_char(0));
+        REQUIRE(false == search_string_view.char_is_escape(0));
+        REQUIRE(false == search_string_view.char_is_greedy_wildcard(0));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(0));
+        REQUIRE('\\' == search_string_view.get_char(4));
+        REQUIRE(search_string_view.char_is_escape(4));
+        REQUIRE(false == search_string_view.char_is_greedy_wildcard(4));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(4));
+        REQUIRE('*' == search_string_view.get_char(5));
+        REQUIRE(false == search_string_view.char_is_escape(5));
+        REQUIRE(false == search_string_view.char_is_greedy_wildcard(5));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(5));
+        REQUIRE('*' == search_string_view.get_char(7));
+        REQUIRE(false == search_string_view.char_is_escape(7));
+        REQUIRE(search_string_view.char_is_greedy_wildcard(7));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(7));
     }
 
     SECTION("Greedy Wildcard") {

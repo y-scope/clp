@@ -95,19 +95,19 @@ public:
 
     [[nodiscard]] auto length() const -> size_t { return m_end_idx - m_begin_idx; }
 
-    [[nodiscard]] auto get_value_is_greedy_wildcard(size_t const idx) const -> bool {
+    [[nodiscard]] auto char_is_greedy_wildcard(size_t const idx) const -> bool {
         return m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_value_is_non_greedy_wildcard(size_t const idx) const -> bool {
+    [[nodiscard]] auto char_is_non_greedy_wildcard(size_t const idx) const -> bool {
         return m_search_string_ptr->char_is_non_greedy_wildcard(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_value_is_escape(size_t const idx) const -> bool {
+    [[nodiscard]] auto char_is_escape(size_t const idx) const -> bool {
         return m_search_string_ptr->char_is_escape(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_value(size_t const idx) const -> char {
+    [[nodiscard]] auto get_char(size_t const idx) const -> char {
         return m_search_string_ptr->get_char(m_begin_idx + idx);
     }
 
