@@ -128,8 +128,7 @@ NetworkReader::NetworkReader(
           m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
           m_buffer_size{std::max(cMinBufferSize, buffer_size)} {
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-        m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
+        m_buffer_pool.emplace_back(m_buffer_size);
     }
     m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
     m_downloader_thread->start();
@@ -248,7 +247,10 @@ auto NetworkReader::acquire_empty_buffer() -> void {
             return;
         }
     }
-    m_curr_downloader_buf.emplace(m_buffer_pool.at(m_curr_downloader_buf_idx).get(), m_buffer_size);
+    m_curr_downloader_buf.emplace(
+            m_buffer_pool.at(m_curr_downloader_buf_idx).data(),
+            m_buffer_size
+    );
 }
 
 auto NetworkReader::release_empty_buffer() -> void {
@@ -264,7 +266,7 @@ auto NetworkReader::enqueue_filled_buffer() -> void {
     }
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     m_filled_buffer_queue.emplace(
-            m_buffer_pool.at(m_curr_downloader_buf_idx).get(),
+            m_buffer_pool.at(m_curr_downloader_buf_idx).data(),
             m_buffer_size - m_curr_downloader_buf.value().size()
     );
 

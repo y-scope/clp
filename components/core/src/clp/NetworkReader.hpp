@@ -17,6 +17,7 @@
 
 #include <curl/curl.h>
 
+#include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
 #include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
@@ -106,7 +107,7 @@ public:
     );
 
     // Destructor
-    virtual ~NetworkReader();
+    ~NetworkReader() override;
 
     // Copy/Move Constructors
     // These are disabled since this class' synchronization primitives are non-copyable and
@@ -330,8 +331,7 @@ private:
     size_t m_buffer_size{cDefaultBufferSize};
     size_t m_curr_downloader_buf_idx{0};
 
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-    std::vector<std::unique_ptr<char[]>> m_buffer_pool;
+    std::vector<Array<char>> m_buffer_pool;
     std::queue<BufferView> m_filled_buffer_queue;
     std::optional<BufferView> m_curr_downloader_buf;
     std::optional<BufferView> m_curr_reader_buf;
