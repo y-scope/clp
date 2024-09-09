@@ -82,7 +82,7 @@ public:
     );
 
     explicit BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
-            : BufferedFileReader(std::move(reader_interface), cDefaultBufferSize) {}
+            : BufferedFileReader{std::move(reader_interface), cDefaultBufferSize} {}
 
     // Destructor
     ~BufferedFileReader() override = default;
