@@ -11,6 +11,7 @@
 #include "QueryInterpretation.hpp"
 #include "streaming_archive/reader/Archive.hpp"
 #include "streaming_archive/reader/File.hpp"
+#include "WildcardExpression.hpp"
 
 namespace clp {
 

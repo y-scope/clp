@@ -478,6 +478,8 @@ set(SOURCE_FILES_unitTest
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
         src/clp/version.hpp
+        src/clp/WildcardExpression.cpp
+        src/clp/WildcardExpression.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
         submodules/sqlite3/sqlite3.c

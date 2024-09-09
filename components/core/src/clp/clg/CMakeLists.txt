@@ -117,6 +117,8 @@ set(
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
         ../version.hpp
+        ../WildcardExpression.cpp
+        ../WildcardExpression.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
