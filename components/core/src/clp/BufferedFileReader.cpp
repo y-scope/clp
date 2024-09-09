@@ -288,11 +288,8 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
         return error_code;
     }
     // NOTE: We still want to set the buffer reader if no bytes were read on EOF
-    m_buffer_reader = BufferReader{
-            m_buffer.data(),
-            next_buffer_pos + num_bytes_read,
-            next_buffer_pos
-    };
+    m_buffer_reader
+            = BufferReader{m_buffer.data(), next_buffer_pos + num_bytes_read, next_buffer_pos};
     m_buffer_begin_pos = next_buffer_begin_pos;
     return error_code;
 }

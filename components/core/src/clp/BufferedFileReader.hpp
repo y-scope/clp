@@ -81,7 +81,7 @@ public:
             size_t base_buffer_size
     );
 
-   explicit BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
+    explicit BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
             : BufferedFileReader(std::move(reader_interface), cDefaultBufferSize) {}
 
     // Destructor
