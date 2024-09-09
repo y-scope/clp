@@ -53,6 +53,18 @@ WildcardExpression::WildcardExpression(std::string processed_search_string)
     }
 }
 
+WildcardExpressionView::WildcardExpressionView(
+        WildcardExpression const& wildcard_expression,
+        uint32_t const begin_idx,
+        uint32_t const end_idx
+)
+        : m_search_string_ptr{&wildcard_expression},
+          m_begin_idx{begin_idx},
+          m_end_idx{end_idx} {
+    m_end_idx = std::min(m_end_idx, wildcard_expression.length());
+    m_begin_idx = std::min(m_begin_idx, m_end_idx);
+}
+
 auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView {
     auto extended_view = *this;
     bool const prev_char_is_greedy_wildcard
@@ -107,12 +119,5 @@ auto WildcardExpressionView::surrounded_by_delims_or_wildcards(
     }
 
     return has_preceding_delim && has_succeeding_delim;
-}
-
-[[nodiscard]] auto WildcardExpression::create_view(
-        uint32_t const start_idx,
-        uint32_t const end_idx
-) const -> WildcardExpressionView {
-    return WildcardExpressionView{this, start_idx, end_idx};
 }
 }  // namespace clp

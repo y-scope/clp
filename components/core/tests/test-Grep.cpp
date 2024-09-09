@@ -12,6 +12,7 @@ using clp::Grep;
 using clp::load_lexer_from_file;
 using clp::QueryInterpretation;
 using clp::WildcardExpression;
+using clp::WildcardExpressionView;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;
@@ -135,35 +136,35 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     }
 
     SECTION("surrounded_by_delims_or_wildcards and starts_or_ends_with_greedy_wildcard") {
-        auto search_string_view1 = search_string.create_view(0, search_string.length());
+        auto search_string_view1 = WildcardExpressionView(search_string, 0, search_string.length());
         REQUIRE(search_string_view1.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(search_string_view1.starts_or_ends_with_greedy_wildcard());
-        auto search_string_view2 = search_string.create_view(1, search_string.length());
+        auto search_string_view2 = WildcardExpressionView(search_string, 1, search_string.length());
         REQUIRE(search_string_view2.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(search_string_view2.starts_or_ends_with_greedy_wildcard());
-        auto search_string_view3 = search_string.create_view(0, search_string.length() - 1);
+        auto search_string_view3 = WildcardExpressionView(search_string, 0, search_string.length() - 1);
         REQUIRE(search_string_view3.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(search_string_view3.starts_or_ends_with_greedy_wildcard());
-        auto search_string_view4 = search_string.create_view(2, search_string.length() - 2);
+        auto search_string_view4 = WildcardExpressionView(search_string, 2, search_string.length() - 2);
         REQUIRE(search_string_view4.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(false == search_string_view4.starts_or_ends_with_greedy_wildcard());
-        auto search_string_view5 = search_string.create_view(3, search_string.length() - 3);
+        auto search_string_view5 = WildcardExpressionView(search_string, 3, search_string.length() - 3);
         REQUIRE(false == search_string_view5.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(false == search_string_view5.starts_or_ends_with_greedy_wildcard());
-        auto search_string_view6 = search_string.create_view(1, search_string.length() - 1);
+        auto search_string_view6 = WildcardExpressionView(search_string, 1, search_string.length() - 1);
         REQUIRE(search_string_view6.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(false == search_string_view6.starts_or_ends_with_greedy_wildcard());
     }
 
     SECTION("extend_to_adjacent_greedy_wildcards") {
-        auto search_string_view = search_string.create_view(1, search_string.length() - 1);
+        auto search_string_view = WildcardExpressionView(search_string, 1, search_string.length() - 1);
         REQUIRE(8 == search_string_view.length());
         auto extended_search_string_view = search_string_view.extend_to_adjacent_greedy_wildcards();
         REQUIRE(extended_search_string_view.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(10 == extended_search_string_view.length());
         REQUIRE(extended_search_string_view.get_substr_copy() == "* test\\* *");
 
-        auto search_string_view2 = search_string.create_view(2, search_string.length() - 2);
+        auto search_string_view2 = WildcardExpressionView(search_string, 2, search_string.length() - 2);
         REQUIRE(6 == search_string_view2.length());
         auto extended_search_string_view2
                 = search_string_view2.extend_to_adjacent_greedy_wildcards();
@@ -173,7 +174,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     }
 
     SECTION("getters") {
-        auto search_string_view = search_string.create_view(2, search_string.length());
+        auto search_string_view = WildcardExpressionView(search_string, 2, search_string.length());
         REQUIRE(false == search_string_view.is_greedy_wildcard());
         REQUIRE(false == search_string_view.is_non_greedy_wildcard());
         REQUIRE('t' == search_string_view.get_value(0));
@@ -195,7 +196,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     }
 
     SECTION("Greedy Wildcard") {
-        auto search_string_view = search_string.create_view(0, 1);
+        auto search_string_view = WildcardExpressionView(search_string, 0, 1);
         REQUIRE(search_string_view.is_greedy_wildcard());
         REQUIRE(false == search_string_view.is_non_greedy_wildcard());
     }
@@ -212,7 +213,7 @@ TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema
         for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
                 auto [variable_types, contains_wildcard] = Grep::get_substring_variable_types(
-                        search_string.create_view(begin_idx, end_idx),
+                        WildcardExpressionView(search_string, begin_idx, end_idx),
                         lexer
                 );
                 std::set<uint32_t> expected_variable_types;
@@ -262,7 +263,7 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
         for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
                 auto query_logtypes = Grep::get_possible_substr_types(
-                        search_string.create_view(begin_idx, end_idx),
+                        WildcardExpressionView(search_string, begin_idx, end_idx),
                         lexer
                 );
                 vector<QueryInterpretation> expected_result(0);

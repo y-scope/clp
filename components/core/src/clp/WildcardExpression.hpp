@@ -8,8 +8,6 @@
 #include <log_surgeon/Lexer.hpp>
 
 namespace clp {
-class WildcardExpressionView;
-
 /**
  * A pattern that supports two types of wildcards:
  * - `*` matches zero or more characters
@@ -25,9 +23,6 @@ public:
     substr(uint32_t const begin_idx, uint32_t const length) const -> std::string {
         return m_processed_search_string.substr(begin_idx, length);
     }
-
-    [[nodiscard]] auto
-    create_view(uint32_t start_idx, uint32_t end_idx) const -> WildcardExpressionView;
 
     [[nodiscard]] auto length() const -> uint32_t { return m_processed_search_string.size(); }
 
@@ -59,15 +54,19 @@ private:
  */
 class WildcardExpressionView {
 public:
+    /**
+     * Creates a view of the range [begin_idx, end_idx) in the given wildcard expression.
+     *
+     * NOTE: If either index is out of bounds, the view will be empty.
+     * @param wildcard_expression
+     * @param begin_idx
+     * @param end_idx
+     */
     WildcardExpressionView(
-            WildcardExpression const* search_string_ptr,
-            uint32_t const begin_idx,
-            uint32_t const end_idx
-
-    )
-            : m_search_string_ptr(search_string_ptr),
-              m_begin_idx(begin_idx),
-              m_end_idx(end_idx) {}
+            WildcardExpression const& wildcard_expression,
+            uint32_t begin_idx,
+            uint32_t end_idx
+    );
 
     /**
      * @return A copy of this view, but extended to include adjacent greedy wildcards.
