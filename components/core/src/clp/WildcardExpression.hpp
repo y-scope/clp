@@ -79,8 +79,9 @@ public:
     }
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
-        return m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx)
-               || m_search_string_ptr->char_is_greedy_wildcard(m_end_idx - 1);
+        return length() > 0
+               && (m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx)
+                   || m_search_string_ptr->char_is_greedy_wildcard(m_end_idx - 1));
     }
 
     /**
