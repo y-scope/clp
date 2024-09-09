@@ -33,7 +33,7 @@ public:
      * @param node_id_value_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
-     * failure. See `valdiate_node_id_value_pairs` for the possible error codes.
+     * failure. See `validate_node_id_value_pairs` for the possible error codes.
      */
     [[nodiscard]] static auto create(
             std::shared_ptr<SchemaTree const> schema_tree,
