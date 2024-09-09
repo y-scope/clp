@@ -40,7 +40,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
     auto read_buf_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& read_buf = *read_buf_uniq_ptr;
     size_t const base_buffer_size = BufferedFileReader::cMinBufferSize << 4;
-    BufferedFileReader reader(make_unique<FileDescriptorReader>(test_file_path), base_buffer_size);
+    BufferedFileReader reader{make_unique<FileDescriptorReader>(test_file_path), base_buffer_size};
 
     size_t num_bytes_read{0};
     size_t buf_pos{0};
