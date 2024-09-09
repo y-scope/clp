@@ -167,7 +167,7 @@ public:
      * Inserts a new node corresponding to the given locator.
      * @param locator
      * @return The ID of the inserted node.
-     * @throw OperationFailed if either:
+     * @throw OperationFailed if:
      * - a node that corresponds to the given locator already exists.
      * - the parent node identified by the locator is not an object.
      */
