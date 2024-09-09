@@ -9,7 +9,7 @@
 
 namespace clp {
 /**
- * A pattern for matching strings. The pattern two types of wildcards:
+ * A pattern for matching strings. The pattern supports two types of wildcards:
  * - '*' matches zero or more characters
  * - '?' matches any single character
  *
