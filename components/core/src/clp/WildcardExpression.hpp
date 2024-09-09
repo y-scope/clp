@@ -9,11 +9,11 @@
 
 namespace clp {
 /**
- * A pattern that supports two types of wildcards:
- * - `*` matches zero or more characters
+ * A pattern for matching strings. The pattern two types of wildcards:
+ * - '*' matches zero or more characters
  * - '?' matches any single character
  *
- * To search for a literal `*` or `?`, the pattern should escape it with a backslash (`\`).
+ * To match a literal '*' or '?', the pattern should escape it with a backslash (`\`).
  */
 class WildcardExpression {
 public:
@@ -88,7 +88,7 @@ public:
     /**
      * @param lexer
      * @return Whether the substring in view is surrounded by delimiters or unescaped wildcards.
-     * NOTE: This method assumes that the beginning of the viewed string is preceeded by a delimiter
+     * NOTE: This method assumes that the beginning of the viewed string is preceded by a delimiter
      * and the end is succeeded by a delimiter.
      */
     [[nodiscard]] auto surrounded_by_delims_or_wildcards(log_surgeon::lexers::ByteLexer const& lexer
