@@ -24,10 +24,10 @@ tools/scripts/deps-download/init.sh
 ```
 
 Install CLP core's dependencies based on your OS:
-* [CentOS Stream 9](centos-stream-9-deps-install)
-* [macOS 12](macos12-deps-install)
-* [Ubuntu 20.04](ubuntu-focal-deps-install)
-* [Ubuntu 22.04](ubuntu-jammy-deps-install)
+* [CentOS Stream 9](https://docs.yscope.com/clp/main/dev-guide/components-core/centos7.4-deps-install.html)
+* [macOS 12](https://docs.yscope.com/clp/main/dev-guide/components-core/macos12-deps-install.html)
+* [Ubuntu 20.04](https://docs.yscope.com/clp/main/dev-guide/components-core/ubuntu-focal-deps-install.html)
+* [Ubuntu 22.04](https://docs.yscope.com/clp/main/dev-guide/components-core/ubuntu-jammy-deps-install.html)
 
 ## Build
 
