@@ -58,7 +58,7 @@ WildcardExpressionView::WildcardExpressionView(
         size_t const begin_idx,
         size_t const end_idx
 )
-        : m_search_string_ptr{&wildcard_expression},
+        : m_expression{&wildcard_expression},
           m_begin_idx{begin_idx},
           m_end_idx{end_idx} {
     m_end_idx = std::min(m_end_idx, wildcard_expression.length());
@@ -68,13 +68,12 @@ WildcardExpressionView::WildcardExpressionView(
 auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView {
     auto extended_view = *this;
     bool const prev_char_is_greedy_wildcard
-            = m_begin_idx > 0 && m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx - 1);
+            = m_begin_idx > 0 && m_expression->char_is_greedy_wildcard(m_begin_idx - 1);
     if (prev_char_is_greedy_wildcard) {
         extended_view.m_begin_idx--;
     }
-    bool const next_char_is_greedy_wildcard
-            = m_end_idx < m_search_string_ptr->length()
-              && m_search_string_ptr->char_is_greedy_wildcard(m_end_idx);
+    bool const next_char_is_greedy_wildcard = m_end_idx < m_expression->length()
+                                              && m_expression->char_is_greedy_wildcard(m_end_idx);
     if (next_char_is_greedy_wildcard) {
         ++extended_view.m_end_idx;
     }
@@ -89,31 +88,30 @@ auto WildcardExpressionView::surrounded_by_delims_or_wildcards(
         has_preceding_delim = true;
     } else {
         bool const preceded_by_greedy_wildcard
-                = m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx - 1);
+                = m_expression->char_is_greedy_wildcard(m_begin_idx - 1);
         bool const preceded_by_non_greedy_wildcard
-                = m_search_string_ptr->char_is_non_greedy_wildcard(m_begin_idx - 1);
+                = m_expression->char_is_non_greedy_wildcard(m_begin_idx - 1);
         bool const preceded_by_delimiter
-                = lexer.is_delimiter(m_search_string_ptr->get_char(m_begin_idx - 1));
+                = lexer.is_delimiter(m_expression->get_char(m_begin_idx - 1));
         has_preceding_delim = preceded_by_greedy_wildcard || preceded_by_non_greedy_wildcard
                               || preceded_by_delimiter;
     }
 
     bool has_succeeding_delim{};
-    if (m_search_string_ptr->length() == m_end_idx) {
+    if (m_expression->length() == m_end_idx) {
         has_succeeding_delim = true;
     } else {
-        bool const succeeded_by_greedy_wildcard
-                = m_search_string_ptr->char_is_greedy_wildcard(m_end_idx);
+        bool const succeeded_by_greedy_wildcard = m_expression->char_is_greedy_wildcard(m_end_idx);
         bool const succeeded_by_non_greedy_wildcard
-                = m_search_string_ptr->char_is_non_greedy_wildcard(m_end_idx);
+                = m_expression->char_is_non_greedy_wildcard(m_end_idx);
         // E.g. "foo:", where ':' is a delimiter
         bool const succeeded_by_unescaped_delim
-                = false == m_search_string_ptr->char_is_escape(m_end_idx)
-                  && lexer.is_delimiter(m_search_string_ptr->get_char(m_end_idx));
+                = false == m_expression->char_is_escape(m_end_idx)
+                  && lexer.is_delimiter(m_expression->get_char(m_end_idx));
         // E.g. "foo\\", where '\' is a delimiter
         bool const succeeded_by_escaped_delim
-                = m_search_string_ptr->char_is_escape(m_end_idx)
-                  && lexer.is_delimiter(m_search_string_ptr->get_char(m_end_idx + 1));
+                = m_expression->char_is_escape(m_end_idx)
+                  && lexer.is_delimiter(m_expression->get_char(m_end_idx + 1));
         has_succeeding_delim = succeeded_by_greedy_wildcard || succeeded_by_non_greedy_wildcard
                                || succeeded_by_unescaped_delim || succeeded_by_escaped_delim;
     }

@@ -71,17 +71,17 @@ public:
     [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView;
 
     [[nodiscard]] auto is_greedy_wildcard() const -> bool {
-        return 1 == length() && m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx);
+        return 1 == length() && m_expression->char_is_greedy_wildcard(m_begin_idx);
     }
 
     [[nodiscard]] auto is_non_greedy_wildcard() const -> bool {
-        return 1 == length() && m_search_string_ptr->char_is_non_greedy_wildcard(m_begin_idx);
+        return 1 == length() && m_expression->char_is_non_greedy_wildcard(m_begin_idx);
     }
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
         return length() > 0
-               && (m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx)
-                   || m_search_string_ptr->char_is_greedy_wildcard(m_end_idx - 1));
+               && (m_expression->char_is_greedy_wildcard(m_begin_idx)
+                   || m_expression->char_is_greedy_wildcard(m_end_idx - 1));
     }
 
     /**
@@ -96,27 +96,27 @@ public:
     [[nodiscard]] auto length() const -> size_t { return m_end_idx - m_begin_idx; }
 
     [[nodiscard]] auto char_is_greedy_wildcard(size_t const idx) const -> bool {
-        return m_search_string_ptr->char_is_greedy_wildcard(m_begin_idx + idx);
+        return m_expression->char_is_greedy_wildcard(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto char_is_non_greedy_wildcard(size_t const idx) const -> bool {
-        return m_search_string_ptr->char_is_non_greedy_wildcard(m_begin_idx + idx);
+        return m_expression->char_is_non_greedy_wildcard(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto char_is_escape(size_t const idx) const -> bool {
-        return m_search_string_ptr->char_is_escape(m_begin_idx + idx);
+        return m_expression->char_is_escape(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto get_char(size_t const idx) const -> char {
-        return m_search_string_ptr->get_char(m_begin_idx + idx);
+        return m_expression->get_char(m_begin_idx + idx);
     }
 
     [[nodiscard]] auto get_value() const -> std::string {
-        return m_search_string_ptr->substr(m_begin_idx, m_end_idx - m_begin_idx);
+        return m_expression->substr(m_begin_idx, m_end_idx - m_begin_idx);
     }
 
 private:
-    WildcardExpression const* m_search_string_ptr;
+    WildcardExpression const* m_expression;
     size_t m_begin_idx;
     size_t m_end_idx;
 };
