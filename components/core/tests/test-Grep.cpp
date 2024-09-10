@@ -167,7 +167,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
         auto extended_search_string_view = search_string_view.extend_to_adjacent_greedy_wildcards();
         REQUIRE(extended_search_string_view.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(10 == extended_search_string_view.length());
-        REQUIRE(extended_search_string_view.get_substr_copy() == "* test\\* *");
+        REQUIRE(extended_search_string_view.get_value() == "* test\\* *");
 
         auto search_string_view2
                 = WildcardExpressionView{search_string, 2, search_string.length() - 2};
@@ -176,7 +176,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
                 = search_string_view2.extend_to_adjacent_greedy_wildcards();
         REQUIRE(extended_search_string_view2.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(6 == extended_search_string_view2.length());
-        REQUIRE(extended_search_string_view2.get_substr_copy() == "test\\*");
+        REQUIRE(extended_search_string_view2.get_value() == "test\\*");
     }
 
     SECTION("getters") {

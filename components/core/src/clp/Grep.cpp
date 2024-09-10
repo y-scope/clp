@@ -1089,7 +1089,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
                 if (contains_wildcard) {
                     possible_substr_types.emplace_back(
                             variable_type,
-                            extended_search_string_view.get_substr_copy(),
+                            extended_search_string_view.get_value(),
                             contains_wildcard,
                             true
                     );
@@ -1097,7 +1097,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
             }
             possible_substr_types.emplace_back(
                     variable_type,
-                    extended_search_string_view.get_substr_copy(),
+                    extended_search_string_view.get_value(),
                     contains_wildcard,
                     false
             );
@@ -1111,7 +1111,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     }
     // If the substring matches no variables, or has a wildcard, it is potentially static-text.
     if (variable_types.empty() || contains_wildcard) {
-        possible_substr_types.emplace_back(search_string_view.get_substr_copy());
+        possible_substr_types.emplace_back(search_string_view.get_value());
     }
     return possible_substr_types;
 }

@@ -111,7 +111,7 @@ public:
         return m_search_string_ptr->get_char(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_substr_copy() const -> std::string {
+    [[nodiscard]] auto get_value() const -> std::string {
         return m_search_string_ptr->substr(m_begin_idx, m_end_idx - m_begin_idx);
     }
 
