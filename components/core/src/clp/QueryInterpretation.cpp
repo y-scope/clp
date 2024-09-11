@@ -14,6 +14,7 @@
 #include "string_utils/string_utils.hpp"
 
 using log_surgeon::lexers::ByteLexer;
+using std::string;
 
 namespace clp {
 auto VariableQueryToken::operator<(VariableQueryToken const& rhs) const -> bool {
@@ -154,7 +155,7 @@ auto QueryInterpretation::operator<(QueryInterpretation const& rhs) const -> boo
 }
 
 auto operator<<(std::ostream& os, QueryInterpretation const& query_logtype) -> std::ostream& {
-    os << "\"";
+    os << "logtype='";
     for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
         if (auto const& query_token = query_logtype.get_logtype_token(idx);
             std::holds_alternative<StaticQueryToken>(query_token))
@@ -166,7 +167,7 @@ auto operator<<(std::ostream& os, QueryInterpretation const& query_logtype) -> s
                << variable_token.get_query_substring() << ")";
         }
     }
-    os << "\"(";
+    os << "', has_wildcard='";
     for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
         if (auto const& query_token = query_logtype.get_logtype_token(idx);
             std::holds_alternative<StaticQueryToken>(query_token))
@@ -177,7 +178,7 @@ auto operator<<(std::ostream& os, QueryInterpretation const& query_logtype) -> s
             os << variable_token.get_has_wildcard();
         }
     }
-    os << ")(";
+    os << "', is_encoded_with_wildcard='";
     for (uint32_t idx = 0; idx < query_logtype.get_logtype_size(); idx++) {
         if (auto const& query_token = query_logtype.get_logtype_token(idx);
             std::holds_alternative<StaticQueryToken>(query_token))
@@ -188,7 +189,7 @@ auto operator<<(std::ostream& os, QueryInterpretation const& query_logtype) -> s
             os << variable_token.get_is_encoded_with_wildcard();
         }
     }
-    os << ")(" << query_logtype.get_logtype_string() << ")";
+    os << "', logtype_string='" << query_logtype.get_logtype_string() << "'";
     return os;
 }
 }  // namespace clp

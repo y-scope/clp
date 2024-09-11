@@ -1,11 +1,14 @@
 #include <string>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <fmt/core.h>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
 #include "../src/clp/Grep.hpp"
+#include "../src/clp/ir/types.hpp"
 #include "../src/clp/QueryInterpretation.hpp"
+#include "../src/clp/type_utils.hpp"
 #include "log_surgeon/LogParser.hpp"
 
 using clp::Grep;
@@ -297,6 +300,35 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
     }
 }
 
+void compareLogTypesWithExpected(
+        string const& search_query_string,
+        set<std::string> const& expected_strings,
+        ByteLexer& lexer
+) {
+    WildcardExpression search_query(search_query_string);
+    set<QueryInterpretation> const& query_logtypes
+            = Grep::generate_query_substring_interpretations(search_query, lexer);
+    std::set<std::string> actual_strings;
+    for (auto const& query_logtype : query_logtypes) {
+        std::ostringstream oss;
+        oss << query_logtype;
+        actual_strings.insert(oss.str());
+    }
+
+    // Iterators for both sets
+    auto it_actual = actual_strings.begin();
+    auto it_expected = expected_strings.begin();
+
+    // Compare element by element
+    while (it_actual != actual_strings.end() && it_expected != expected_strings.end()) {
+        REQUIRE(*it_actual == *it_expected);  // Compare actual serialized string to expected string
+        ++it_actual;
+        ++it_expected;
+    }
+    REQUIRE(it_actual == actual_strings.end());
+    REQUIRE(it_expected == expected_strings.end());
+}
+
 TEST_CASE(
         "generate_query_substring_interpretations",
         "[generate_query_substring_interpretations][schema_search]"
@@ -304,277 +336,155 @@ TEST_CASE(
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    SECTION("Static text") {
-        WildcardExpression search_string("* z *");
-        auto const query_logtypes
-                = Grep::generate_query_substring_interpretations(search_string, lexer);
-        set<QueryInterpretation> expected_result;
-        // "* z *"
-        QueryInterpretation query_interpretation;
-        query_interpretation.append_static_token("* z *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        REQUIRE(query_logtypes == expected_result);
-    }
-
-    SECTION("hex") {
-        WildcardExpression search_string("* a *");
-        auto const query_logtypes
-                = Grep::generate_query_substring_interpretations(search_string, lexer);
-        set<QueryInterpretation> expected_result;
-        // "* a *"
-        // TODO: Because substring "* a *" matches no variable, one possible subquery logtype is
-        // all static text. However, we know that if at least one of the other logtypes contains
-        // a non-wildcard variable, then there is no way this query matches all static text. This
-        // can also be extended to wildcard variables, for example "*10000" must match either
-        // int or has#, but this has to be handled carefully as "*a" could match a variale, but
-        // could also be static-text.
-        QueryInterpretation query_interpretation;
-        query_interpretation.append_static_token("* a *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* <hex>(a) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* ");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["hex"]),
-                "a",
-                false,
-                false
+    SECTION("Static text query") {
+        compareLogTypesWithExpected(
+                "* z *",
+                {fmt::format("logtype='* z *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                             "logtype_string='* z *'")},
+                lexer
         );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        REQUIRE(query_logtypes == expected_result);
     }
-
-    SECTION("int") {
-        WildcardExpression search_string("* 1 *");
-        auto const query_logtypes
-                = Grep::generate_query_substring_interpretations(search_string, lexer);
-        set<QueryInterpretation> expected_result;
-        // "* 1 *"
-        QueryInterpretation query_interpretation;
-        query_interpretation.append_static_token("* 1 *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* <int>(1) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* ");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["int"]),
-                "1",
-                false,
-                false
+    SECTION("Hex query") {
+        // TODO: we shouldn't add the full static-text case when we can determine it is impossible.
+        compareLogTypesWithExpected(
+                "* a *",
+                {fmt::format("logtype='* a *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                             "logtype_string='* a *'"),
+                 fmt::format(
+                         "logtype='* <{}>(a) *', has_wildcard='000', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='* {} *'",
+                         lexer.m_symbol_id["hex"],
+                         clp::ir::VariablePlaceholder::Dictionary
+                 )},
+                lexer
         );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        REQUIRE(query_logtypes == expected_result);
     }
-
-    SECTION("Simple query") {
-        WildcardExpression search_string("* 10000 reply: *");
-        auto const query_logtypes
-                = Grep::generate_query_substring_interpretations(search_string, lexer);
-        set<QueryInterpretation> expected_result;
-        // "* 10000 reply: *"
-        QueryInterpretation query_interpretation;
-        query_interpretation.append_static_token("* 10000 reply: *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* <int>(10000) reply: *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* ");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["int"]),
-                "10000",
-                false,
-                false
+    SECTION("Integer query") {
+        compareLogTypesWithExpected(
+                "* 10000 reply: *",
+                {fmt::format("logtype='* 10000 reply: *', has_wildcard='0', "
+                             "is_encoded_with_wildcard='0', "
+                             "logtype_string='* 10000 reply: *'"),
+                 fmt::format(
+                         "logtype='* <{}>(10000) reply: *', has_wildcard='000', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='* {} reply: *'",
+                         lexer.m_symbol_id["int"],
+                         clp::ir::VariablePlaceholder::Integer
+                 )},
+                lexer
         );
-        query_interpretation.append_static_token(" reply: *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        REQUIRE(query_logtypes == expected_result);
     }
-
-    SECTION("Wildcard variable") {
+    SECTION("Wildcard variable query") {
         WildcardExpression search_string("* *10000 *");
-        auto const query_logtypes
-                = Grep::generate_query_substring_interpretations(search_string, lexer);
-        set<QueryInterpretation> expected_result;
-        // "* *10000 *"
-        QueryInterpretation query_interpretation;
-        query_interpretation.append_static_token("* *10000 *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "*<timestamp>(* *)*10000 *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["timestamp"]),
-                "* *",
-                true,
-                false
+
+        compareLogTypesWithExpected(
+                "* *10000 *",
+                // "* *10000 *"
+                {fmt::format(
+                         "logtype='* *10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                         "logtype_string='* *10000 *'"
+                 ),
+                 // "*<timestamp>(* *)*10000 *"
+                 fmt::format(
+                         "logtype='*<{}>(* *)*10000 *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='*{}*10000 *'",
+                         lexer.m_symbol_id["timestamp"],
+                         clp::ir::VariablePlaceholder::Dictionary
+                 ),
+                 // "* *<int>(*10000) *"
+                 fmt::format(
+                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='* *{} *'",
+                         lexer.m_symbol_id["int"],
+                         clp::ir::VariablePlaceholder::Dictionary
+                 ),
+                 // "* *<int>(*10000) *" encoded
+                 fmt::format(
+                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='010', "
+                         "logtype_string='* *{} *'",
+                         lexer.m_symbol_id["int"],
+                         clp::ir::VariablePlaceholder::Integer
+                 ),
+                 // "* *<float>(*10000) *"
+                 fmt::format(
+                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='* *{} *'",
+                         lexer.m_symbol_id["float"],
+                         clp::ir::VariablePlaceholder::Dictionary
+                 ),
+                 // "* *<float>(*10000) *" encoded
+                 fmt::format(
+                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='010', "
+                         "logtype_string='* *{} *'",
+                         lexer.m_symbol_id["float"],
+                         clp::ir::VariablePlaceholder::Float
+                 ),
+                 // "* *<hasNumber>(*10000) *"
+                 fmt::format(
+                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='* *{} *'",
+                         lexer.m_symbol_id["hasNumber"],
+                         clp::ir::VariablePlaceholder::Dictionary
+                 ),
+                 // "*timestamp(* *)*<int>(*10000) *"
+                 fmt::format(
+                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                         "is_encoded_with_wildcard='00000', "
+                         "logtype_string='*{}*{} *'",
+                         lexer.m_symbol_id["timestamp"],
+                         lexer.m_symbol_id["int"],
+                         clp::ir::VariablePlaceholder::Dictionary,
+                         clp::ir::VariablePlaceholder::Dictionary
+                 ),
+                 // "*timestamp(* *)*<int>(*10000) *" encoded
+                 fmt::format(
+                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                         "is_encoded_with_wildcard='00010', "
+                         "logtype_string='*{}*{} *'",
+                         lexer.m_symbol_id["timestamp"],
+                         lexer.m_symbol_id["int"],
+                         clp::ir::VariablePlaceholder::Dictionary,
+                         clp::ir::VariablePlaceholder::Integer
+                 ),
+                 // "*timestamp(* *)*<float>(*10000) *"
+                 fmt::format(
+                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                         "is_encoded_with_wildcard='00000', "
+                         "logtype_string='*{}*{} *'",
+                         lexer.m_symbol_id["timestamp"],
+                         lexer.m_symbol_id["float"],
+                         clp::ir::VariablePlaceholder::Dictionary,
+                         clp::ir::VariablePlaceholder::Dictionary
+                 ),
+                 // "*timestamp(* *)*<float>(*10000) *" encoded
+                 fmt::format(
+                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                         "is_encoded_with_wildcard='00010', "
+                         "logtype_string='*{}*{} *'",
+                         lexer.m_symbol_id["timestamp"],
+                         lexer.m_symbol_id["float"],
+                         clp::ir::VariablePlaceholder::Dictionary,
+                         clp::ir::VariablePlaceholder::Float
+                 ),
+                 // "*timestamp(* *)*<hasNumber>(*10000) *"
+                 fmt::format(
+                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                         "is_encoded_with_wildcard='00000', "
+                         "logtype_string='*{}*{} *'",
+                         lexer.m_symbol_id["timestamp"],
+                         lexer.m_symbol_id["hasNumber"],
+                         clp::ir::VariablePlaceholder::Dictionary,
+                         clp::ir::VariablePlaceholder::Dictionary
+                 )},
+                lexer
         );
-        query_interpretation.append_static_token("*10000 *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* *<int>(*10000) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* *");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["int"]),
-                "*10000",
-                true,
-                false
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* *<int>(*10000) *" encoded
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* *");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["int"]),
-                "*10000",
-                true,
-                true
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* *<float>(*10000) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* *");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["float"]),
-                "*10000",
-                true,
-                false
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* *<float>(*10000) *" encoded
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* *");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["float"]),
-                "*10000",
-                true,
-                true
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "* *<hasNumber>(*10000) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("* *");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["hasNumber"]),
-                "*10000",
-                true,
-                false
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "*timestamp(* *)*<int>(*10000) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["timestamp"]),
-                "* *",
-                true,
-                false
-        );
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["int"]),
-                "*10000",
-                true,
-                false
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "*timestamp(* *)*<int>(*10000) *" encoded
-        query_interpretation.clear();
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["timestamp"]),
-                "* *",
-                true,
-                false
-        );
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["int"]),
-                "*10000",
-                true,
-                true
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "*timestamp(* *)*<float>(*10000) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["timestamp"]),
-                "* *",
-                true,
-                false
-        );
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["float"]),
-                "*10000",
-                true,
-                false
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "*timestamp(* *)*<float>(*10000) *" encoded
-        query_interpretation.clear();
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["timestamp"]),
-                "* *",
-                true,
-                false
-        );
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["float"]),
-                "*10000",
-                true,
-                true
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        // "*timestamp(* *)*<hasNumber>(*10000) *"
-        query_interpretation.clear();
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["timestamp"]),
-                "* *",
-                true,
-                false
-        );
-        query_interpretation.append_static_token("*");
-        query_interpretation.append_variable_token(
-                static_cast<int>(lexer.m_symbol_id["hasNumber"]),
-                "*10000",
-                true,
-                false
-        );
-        query_interpretation.append_static_token(" *");
-        query_interpretation.generate_logtype_string(lexer);
-        expected_result.insert(query_interpretation);
-        REQUIRE(query_logtypes == expected_result);
     }
 }
