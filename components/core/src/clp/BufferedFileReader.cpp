@@ -13,7 +13,6 @@
 #include "math_utils.hpp"
 #include "ReaderInterface.hpp"
 
-using std::make_unique;
 using std::span;
 using std::string;
 using std::unique_ptr;
