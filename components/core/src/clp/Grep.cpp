@@ -955,13 +955,13 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
     for (size_t end_idx = 1; end_idx <= processed_search_string.length(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
         // "* text\* *").
-        if (processed_search_string.get_value_is_escape(end_idx - 1)) {
+        if (processed_search_string.char_is_escape(end_idx - 1)) {
             continue;
         }
         for (size_t begin_idx = 0; begin_idx < end_idx; ++begin_idx) {
             // Skip strings that begin with an incorrectly unescaped wildcard (e.g., substring
             // "*text" from string "* \*text *").
-            if (begin_idx > 0 && processed_search_string.get_value_is_escape(begin_idx - 1)) {
+            if (begin_idx > 0 && processed_search_string.char_is_escape(begin_idx - 1)) {
                 continue;
             }
             auto possible_substr_types = get_possible_substr_types(
@@ -1089,7 +1089,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
                 if (contains_wildcard) {
                     possible_substr_types.emplace_back(
                             variable_type,
-                            extended_search_string_view.get_substr_copy(),
+                            extended_search_string_view.get_value(),
                             contains_wildcard,
                             true
                     );
@@ -1097,7 +1097,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
             }
             possible_substr_types.emplace_back(
                     variable_type,
-                    extended_search_string_view.get_substr_copy(),
+                    extended_search_string_view.get_value(),
                     contains_wildcard,
                     false
             );
@@ -1111,7 +1111,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     }
     // If the substring matches no variables, or has a wildcard, it is potentially static-text.
     if (variable_types.empty() || contains_wildcard) {
-        possible_substr_types.emplace_back(search_string_view.get_substr_copy());
+        possible_substr_types.emplace_back(search_string_view.get_value());
     }
     return possible_substr_types;
 }
@@ -1129,15 +1129,15 @@ tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
     string regex_search_string;
     bool contains_wildcard = false;
     for (uint32_t idx = 0; idx < wildcard_expr.length(); idx++) {
-        if (wildcard_expr.get_value_is_escape(idx)) {
+        if (wildcard_expr.char_is_escape(idx)) {
             continue;
         }
 
-        auto const c = wildcard_expr.get_value(idx);
-        if (wildcard_expr.get_value_is_greedy_wildcard(idx)) {
+        auto const c = wildcard_expr.get_char(idx);
+        if (wildcard_expr.char_is_greedy_wildcard(idx)) {
             contains_wildcard = true;
             regex_search_string += ".*";
-        } else if (wildcard_expr.get_value_is_non_greedy_wildcard(idx)) {
+        } else if (wildcard_expr.char_is_non_greedy_wildcard(idx)) {
             contains_wildcard = true;
             regex_search_string += ".";
         } else if (log_surgeon::SchemaParser::get_special_regex_characters().contains(c)) {

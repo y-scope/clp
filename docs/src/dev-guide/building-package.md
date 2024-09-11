@@ -11,6 +11,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
   * It should be possible to build a package for a different environment, it just requires a some
     extra configuration.
 * Python 3.8 or newer
+* python3-dev
 * python3-venv
 * [Task](https://taskfile.dev/)
 
@@ -25,7 +26,7 @@ tools/scripts/deps-download/init.sh
 Install CLP core's dependencies
 
 ```shell
-components/core/tools/ubuntu-focal/install-all.sh
+components/core/tools/scripts/lib_install/ubuntu-focal/install-all.sh
 ```
 
 ## Build

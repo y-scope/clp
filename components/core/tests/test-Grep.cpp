@@ -132,9 +132,9 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     for (uint32_t idx = 0; idx < search_string.length(); idx++) {
         CAPTURE(idx);
         if (idx == 6) {
-            REQUIRE(search_string.get_value_is_escape(idx));
+            REQUIRE(search_string.char_is_escape(idx));
         } else {
-            REQUIRE(false == search_string.get_value_is_escape(idx));
+            REQUIRE(false == search_string.char_is_escape(idx));
         }
     }
 
@@ -170,7 +170,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
         auto extended_search_string_view = search_string_view.extend_to_adjacent_greedy_wildcards();
         REQUIRE(extended_search_string_view.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(10 == extended_search_string_view.length());
-        REQUIRE(extended_search_string_view.get_substr_copy() == "* test\\* *");
+        REQUIRE(extended_search_string_view.get_value() == "* test\\* *");
 
         auto search_string_view2
                 = WildcardExpressionView{search_string, 2, search_string.length() - 2};
@@ -179,29 +179,29 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
                 = search_string_view2.extend_to_adjacent_greedy_wildcards();
         REQUIRE(extended_search_string_view2.surrounded_by_delims_or_wildcards(lexer));
         REQUIRE(6 == extended_search_string_view2.length());
-        REQUIRE(extended_search_string_view2.get_substr_copy() == "test\\*");
+        REQUIRE(extended_search_string_view2.get_value() == "test\\*");
     }
 
     SECTION("getters") {
         auto search_string_view = WildcardExpressionView{search_string, 2, search_string.length()};
         REQUIRE(false == search_string_view.is_greedy_wildcard());
         REQUIRE(false == search_string_view.is_non_greedy_wildcard());
-        REQUIRE('t' == search_string_view.get_value(0));
-        REQUIRE(false == search_string_view.get_value_is_escape(0));
-        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(0));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(0));
-        REQUIRE('\\' == search_string_view.get_value(4));
-        REQUIRE(search_string_view.get_value_is_escape(4));
-        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(4));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(4));
-        REQUIRE('*' == search_string_view.get_value(5));
-        REQUIRE(false == search_string_view.get_value_is_escape(5));
-        REQUIRE(false == search_string_view.get_value_is_greedy_wildcard(5));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(5));
-        REQUIRE('*' == search_string_view.get_value(7));
-        REQUIRE(false == search_string_view.get_value_is_escape(7));
-        REQUIRE(search_string_view.get_value_is_greedy_wildcard(7));
-        REQUIRE(false == search_string_view.get_value_is_non_greedy_wildcard(7));
+        REQUIRE('t' == search_string_view.get_char(0));
+        REQUIRE(false == search_string_view.char_is_escape(0));
+        REQUIRE(false == search_string_view.char_is_greedy_wildcard(0));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(0));
+        REQUIRE('\\' == search_string_view.get_char(4));
+        REQUIRE(search_string_view.char_is_escape(4));
+        REQUIRE(false == search_string_view.char_is_greedy_wildcard(4));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(4));
+        REQUIRE('*' == search_string_view.get_char(5));
+        REQUIRE(false == search_string_view.char_is_escape(5));
+        REQUIRE(false == search_string_view.char_is_greedy_wildcard(5));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(5));
+        REQUIRE('*' == search_string_view.get_char(7));
+        REQUIRE(false == search_string_view.char_is_escape(7));
+        REQUIRE(search_string_view.char_is_greedy_wildcard(7));
+        REQUIRE(false == search_string_view.char_is_non_greedy_wildcard(7));
     }
 
     SECTION("Greedy Wildcard") {

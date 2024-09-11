@@ -9,11 +9,11 @@
 
 namespace clp {
 /**
- * A pattern that supports two types of wildcards:
- * - `*` matches zero or more characters
+ * A pattern for matching strings. The pattern supports two types of wildcards:
+ * - '*' matches zero or more characters
  * - '?' matches any single character
  *
- * To search for a literal `*` or `?`, the pattern should escape it with a backslash (`\`).
+ * To match a literal '*' or '?', the pattern should escape it with a backslash (`\`).
  */
 class WildcardExpression {
 public:
@@ -25,19 +25,17 @@ public:
 
     [[nodiscard]] auto length() const -> size_t { return m_processed_search_string.size(); }
 
-    [[nodiscard]] auto get_value_is_greedy_wildcard(size_t const idx) const -> bool {
+    [[nodiscard]] auto char_is_greedy_wildcard(size_t const idx) const -> bool {
         return m_is_greedy_wildcard[idx];
     }
 
-    [[nodiscard]] auto get_value_is_non_greedy_wildcard(size_t const idx) const -> bool {
+    [[nodiscard]] auto char_is_non_greedy_wildcard(size_t const idx) const -> bool {
         return m_is_non_greedy_wildcard[idx];
     }
 
-    [[nodiscard]] auto get_value_is_escape(size_t const idx) const -> bool {
-        return m_is_escape[idx];
-    }
+    [[nodiscard]] auto char_is_escape(size_t const idx) const -> bool { return m_is_escape[idx]; }
 
-    [[nodiscard]] auto get_value(size_t const idx) const -> char {
+    [[nodiscard]] auto get_char(size_t const idx) const -> char {
         return m_processed_search_string[idx];
     }
 
@@ -73,22 +71,23 @@ public:
     [[nodiscard]] auto extend_to_adjacent_greedy_wildcards() const -> WildcardExpressionView;
 
     [[nodiscard]] auto is_greedy_wildcard() const -> bool {
-        return 1 == length() && m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx);
+        return 1 == length() && m_expression->char_is_greedy_wildcard(m_begin_idx);
     }
 
     [[nodiscard]] auto is_non_greedy_wildcard() const -> bool {
-        return 1 == length() && m_search_string_ptr->get_value_is_non_greedy_wildcard(m_begin_idx);
+        return 1 == length() && m_expression->char_is_non_greedy_wildcard(m_begin_idx);
     }
 
     [[nodiscard]] auto starts_or_ends_with_greedy_wildcard() const -> bool {
-        return m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx)
-               || m_search_string_ptr->get_value_is_greedy_wildcard(m_end_idx - 1);
+        return length() > 0
+               && (m_expression->char_is_greedy_wildcard(m_begin_idx)
+                   || m_expression->char_is_greedy_wildcard(m_end_idx - 1));
     }
 
     /**
      * @param lexer
      * @return Whether the substring in view is surrounded by delimiters or unescaped wildcards.
-     * NOTE: This method assumes that the beginning of the viewed string is preceeded by a delimiter
+     * NOTE: This method assumes that the beginning of the viewed string is preceded by a delimiter
      * and the end is succeeded by a delimiter.
      */
     [[nodiscard]] auto surrounded_by_delims_or_wildcards(log_surgeon::lexers::ByteLexer const& lexer
@@ -96,28 +95,28 @@ public:
 
     [[nodiscard]] auto length() const -> size_t { return m_end_idx - m_begin_idx; }
 
-    [[nodiscard]] auto get_value_is_greedy_wildcard(size_t const idx) const -> bool {
-        return m_search_string_ptr->get_value_is_greedy_wildcard(m_begin_idx + idx);
+    [[nodiscard]] auto char_is_greedy_wildcard(size_t const idx) const -> bool {
+        return m_expression->char_is_greedy_wildcard(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_value_is_non_greedy_wildcard(size_t const idx) const -> bool {
-        return m_search_string_ptr->get_value_is_non_greedy_wildcard(m_begin_idx + idx);
+    [[nodiscard]] auto char_is_non_greedy_wildcard(size_t const idx) const -> bool {
+        return m_expression->char_is_non_greedy_wildcard(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_value_is_escape(size_t const idx) const -> bool {
-        return m_search_string_ptr->get_value_is_escape(m_begin_idx + idx);
+    [[nodiscard]] auto char_is_escape(size_t const idx) const -> bool {
+        return m_expression->char_is_escape(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_value(size_t const idx) const -> char {
-        return m_search_string_ptr->get_value(m_begin_idx + idx);
+    [[nodiscard]] auto get_char(size_t const idx) const -> char {
+        return m_expression->get_char(m_begin_idx + idx);
     }
 
-    [[nodiscard]] auto get_substr_copy() const -> std::string {
-        return m_search_string_ptr->substr(m_begin_idx, m_end_idx - m_begin_idx);
+    [[nodiscard]] auto get_value() const -> std::string {
+        return m_expression->substr(m_begin_idx, m_end_idx - m_begin_idx);
     }
 
 private:
-    WildcardExpression const* m_search_string_ptr;
+    WildcardExpression const* m_expression;
     size_t m_begin_idx;
     size_t m_end_idx;
 };
