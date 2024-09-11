@@ -11,7 +11,9 @@
 #include "../src/clp/type_utils.hpp"
 #include "log_surgeon/LogParser.hpp"
 
+using clp::enum_to_underlying_type;
 using clp::Grep;
+using clp::ir::VariablePlaceholder;
 using clp::load_lexer_from_file;
 using clp::QueryInterpretation;
 using clp::WildcardExpression;
@@ -359,7 +361,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='* {} *'",
                          lexer.m_symbol_id["hex"],
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  )
                 },
                 lexer
@@ -378,7 +380,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='* {} reply: *'",
                          lexer.m_symbol_id["int"],
-                         clp::ir::VariablePlaceholder::Integer
+                         enum_to_underlying_type(VariablePlaceholder::Integer)
                  )
                 },
                 lexer
@@ -400,7 +402,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='*{}*10000 *'",
                          lexer.m_symbol_id["timestamp"],
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  ),
                  // "* *<int>(*10000) *"
                  fmt::format(
@@ -408,7 +410,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='* *{} *'",
                          lexer.m_symbol_id["int"],
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  ),
                  // "* *<int>(*10000) *" encoded
                  fmt::format(
@@ -416,7 +418,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='010', "
                          "logtype_string='* *{} *'",
                          lexer.m_symbol_id["int"],
-                         clp::ir::VariablePlaceholder::Integer
+                         enum_to_underlying_type(VariablePlaceholder::Integer)
                  ),
                  // "* *<float>(*10000) *"
                  fmt::format(
@@ -424,7 +426,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='* *{} *'",
                          lexer.m_symbol_id["float"],
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  ),
                  // "* *<float>(*10000) *" encoded
                  fmt::format(
@@ -432,7 +434,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='010', "
                          "logtype_string='* *{} *'",
                          lexer.m_symbol_id["float"],
-                         clp::ir::VariablePlaceholder::Float
+                         enum_to_underlying_type(VariablePlaceholder::Float)
                  ),
                  // "* *<hasNumber>(*10000) *"
                  fmt::format(
@@ -440,7 +442,7 @@ TEST_CASE(
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='* *{} *'",
                          lexer.m_symbol_id["hasNumber"],
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  ),
                  // "*<timestamp>(* *)*<int>(*10000) *"
                  fmt::format(
@@ -449,8 +451,8 @@ TEST_CASE(
                          "logtype_string='*{}*{} *'",
                          lexer.m_symbol_id["timestamp"],
                          lexer.m_symbol_id["int"],
-                         clp::ir::VariablePlaceholder::Dictionary,
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  ),
                  // "*<timestamp>(* *)*<int>(*10000) *" encoded
                  fmt::format(
@@ -459,8 +461,8 @@ TEST_CASE(
                          "logtype_string='*{}*{} *'",
                          lexer.m_symbol_id["timestamp"],
                          lexer.m_symbol_id["int"],
-                         clp::ir::VariablePlaceholder::Dictionary,
-                         clp::ir::VariablePlaceholder::Integer
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                         enum_to_underlying_type(VariablePlaceholder::Integer)
                  ),
                  // "*<timestamp>(* *)*<float>(*10000) *"
                  fmt::format(
@@ -469,8 +471,8 @@ TEST_CASE(
                          "logtype_string='*{}*{} *'",
                          lexer.m_symbol_id["timestamp"],
                          lexer.m_symbol_id["float"],
-                         clp::ir::VariablePlaceholder::Dictionary,
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  ),
                  // "*<timestamp>(* *)*<float>(*10000) *" encoded
                  fmt::format(
@@ -479,8 +481,8 @@ TEST_CASE(
                          "logtype_string='*{}*{} *'",
                          lexer.m_symbol_id["timestamp"],
                          lexer.m_symbol_id["float"],
-                         clp::ir::VariablePlaceholder::Dictionary,
-                         clp::ir::VariablePlaceholder::Float
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                         enum_to_underlying_type(VariablePlaceholder::Float)
                  ),
                  // "*<timestamp>(* *)*<hasNumber>(*10000) *"
                  fmt::format(
@@ -489,8 +491,8 @@ TEST_CASE(
                          "logtype_string='*{}*{} *'",
                          lexer.m_symbol_id["timestamp"],
                          lexer.m_symbol_id["hasNumber"],
-                         clp::ir::VariablePlaceholder::Dictionary,
-                         clp::ir::VariablePlaceholder::Dictionary
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
                  )
                 },
                 lexer
