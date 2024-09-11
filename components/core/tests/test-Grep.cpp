@@ -339,8 +339,10 @@ TEST_CASE(
     SECTION("Static text query") {
         compareLogTypesWithExpected(
                 "* z *",
-                {fmt::format("logtype='* z *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                             "logtype_string='* z *'")},
+                {//"* z *"
+                 fmt::format("logtype='* z *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                             "logtype_string='* z *'")
+                },
                 lexer
         );
     }
@@ -348,31 +350,37 @@ TEST_CASE(
         // TODO: we shouldn't add the full static-text case when we can determine it is impossible.
         compareLogTypesWithExpected(
                 "* a *",
-                {fmt::format("logtype='* a *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                {// "* a *"
+                 fmt::format("logtype='* a *', has_wildcard='0', is_encoded_with_wildcard='0', "
                              "logtype_string='* a *'"),
+                 // "* <hex>(a) *"
                  fmt::format(
                          "logtype='* <{}>(a) *', has_wildcard='000', "
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='* {} *'",
                          lexer.m_symbol_id["hex"],
                          clp::ir::VariablePlaceholder::Dictionary
-                 )},
+                 )
+                },
                 lexer
         );
     }
     SECTION("Integer query") {
         compareLogTypesWithExpected(
                 "* 10000 reply: *",
-                {fmt::format("logtype='* 10000 reply: *', has_wildcard='0', "
+                {// "* 10000 reply: *"
+                 fmt::format("logtype='* 10000 reply: *', has_wildcard='0', "
                              "is_encoded_with_wildcard='0', "
                              "logtype_string='* 10000 reply: *'"),
+                 // "* <int>(10000) reply: *"
                  fmt::format(
                          "logtype='* <{}>(10000) reply: *', has_wildcard='000', "
                          "is_encoded_with_wildcard='000', "
                          "logtype_string='* {} reply: *'",
                          lexer.m_symbol_id["int"],
                          clp::ir::VariablePlaceholder::Integer
-                 )},
+                 )
+                },
                 lexer
         );
     }
@@ -381,8 +389,8 @@ TEST_CASE(
 
         compareLogTypesWithExpected(
                 "* *10000 *",
-                // "* *10000 *"
-                {fmt::format(
+                {// "* *10000 *"
+                 fmt::format(
                          "logtype='* *10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
                          "logtype_string='* *10000 *'"
                  ),
@@ -434,7 +442,7 @@ TEST_CASE(
                          lexer.m_symbol_id["hasNumber"],
                          clp::ir::VariablePlaceholder::Dictionary
                  ),
-                 // "*timestamp(* *)*<int>(*10000) *"
+                 // "*<timestamp>(* *)*<int>(*10000) *"
                  fmt::format(
                          "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
                          "is_encoded_with_wildcard='00000', "
@@ -444,7 +452,7 @@ TEST_CASE(
                          clp::ir::VariablePlaceholder::Dictionary,
                          clp::ir::VariablePlaceholder::Dictionary
                  ),
-                 // "*timestamp(* *)*<int>(*10000) *" encoded
+                 // "*<timestamp>(* *)*<int>(*10000) *" encoded
                  fmt::format(
                          "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
                          "is_encoded_with_wildcard='00010', "
@@ -454,7 +462,7 @@ TEST_CASE(
                          clp::ir::VariablePlaceholder::Dictionary,
                          clp::ir::VariablePlaceholder::Integer
                  ),
-                 // "*timestamp(* *)*<float>(*10000) *"
+                 // "*<timestamp>(* *)*<float>(*10000) *"
                  fmt::format(
                          "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
                          "is_encoded_with_wildcard='00000', "
@@ -464,7 +472,7 @@ TEST_CASE(
                          clp::ir::VariablePlaceholder::Dictionary,
                          clp::ir::VariablePlaceholder::Dictionary
                  ),
-                 // "*timestamp(* *)*<float>(*10000) *" encoded
+                 // "*<timestamp>(* *)*<float>(*10000) *" encoded
                  fmt::format(
                          "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
                          "is_encoded_with_wildcard='00010', "
@@ -474,7 +482,7 @@ TEST_CASE(
                          clp::ir::VariablePlaceholder::Dictionary,
                          clp::ir::VariablePlaceholder::Float
                  ),
-                 // "*timestamp(* *)*<hasNumber>(*10000) *"
+                 // "*<timestamp>(* *)*<hasNumber>(*10000) *"
                  fmt::format(
                          "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
                          "is_encoded_with_wildcard='00000', "
@@ -483,7 +491,8 @@ TEST_CASE(
                          lexer.m_symbol_id["hasNumber"],
                          clp::ir::VariablePlaceholder::Dictionary,
                          clp::ir::VariablePlaceholder::Dictionary
-                 )},
+                 )
+                },
                 lexer
         );
     }
