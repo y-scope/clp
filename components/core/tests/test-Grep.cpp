@@ -34,11 +34,6 @@ using std::unordered_map;
 using std::vector;
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
-    ByteLexer forward_lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, forward_lexer);
-    ByteLexer reverse_lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", true, reverse_lexer);
-
     string str;
     size_t begin_pos;
     size_t end_pos;
