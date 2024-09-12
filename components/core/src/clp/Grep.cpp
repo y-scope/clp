@@ -1029,13 +1029,9 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
 ) {
     vector<QueryInterpretation> possible_substr_types;
 
-    // Don't allow an isolated wildcard to be considered a variable
+    // Don't allow an isolated greedy wildcard to be considered a variable
     if (search_string_view.is_greedy_wildcard()) {
         possible_substr_types.emplace_back("*");
-        return possible_substr_types;
-    }
-    if (search_string_view.is_non_greedy_wildcard()) {
-        possible_substr_types.emplace_back("?");
         return possible_substr_types;
     }
 
