@@ -1,4 +1,5 @@
 #include <string>
+#include <string_view>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <fmt/core.h>
@@ -213,54 +214,59 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     }
 }
 
-// 0:"$end", 1:"$UncaughtString", 2:"int", 3:"float", 4:hex, 5:firstTimestamp, 6:newLineTimestamp,
-// 7:timestamp, 8:hex, 9:hasNumber, 10:uniqueVariable, 11:test
-TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema_search]") {
+TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_search]") {
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    SECTION("* 10000 reply: *") {
-        WildcardExpression search_string("* 10000 reply: *");
-        for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
-            for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-                auto [variable_types, contains_wildcard] = Grep::get_substring_variable_types(
-                        WildcardExpressionView{search_string, begin_idx, end_idx},
-                        lexer
-                );
-                std::set<uint32_t> expected_variable_types;
+    constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
+    constexpr std::string_view cNumber = "10000";
+    constexpr size_t cFirstGreedyWildcardIdx = cWildcardExprValue.find_first_of('*');
+    constexpr size_t cLastGreedyWildcardIdx = cWildcardExprValue.find_last_of('*');
+    constexpr size_t cECharIdx = cWildcardExprValue.find('e');
+    constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
+    constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
+    WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+
+    // Test all subexpressions of `wildcard_expr`
+    for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
+        for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
+            auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
+                    WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
+                    lexer
+            );
+
+            std::set<uint32_t> expected_variable_types;
+            if ((cFirstGreedyWildcardIdx == begin_idx && cFirstGreedyWildcardIdx + 1 == end_idx)
+                || (cLastGreedyWildcardIdx == begin_idx && cLastGreedyWildcardIdx + 1 == end_idx))
+            {
                 // "*"
-                if ((0 == begin_idx && 1 == end_idx)
-                    || (search_string.length() - 1 == begin_idx && search_string.length() == end_idx
-                    ))
-                {
-                    expected_variable_types
-                            = {lexer.m_symbol_id["timestamp"],
-                               lexer.m_symbol_id["int"],
-                               lexer.m_symbol_id["float"],
-                               lexer.m_symbol_id["hex"],
-                               lexer.m_symbol_id["hasNumber"],
-                               lexer.m_symbol_id["uniqueVariable"],
-                               lexer.m_symbol_id["test"]};
-                }
-                // substrings of "10000"
-                if (2 <= begin_idx && 7 >= end_idx) {
-                    expected_variable_types
-                            = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
-                }
-                //"e"
-                if (9 == begin_idx && 10 == end_idx) {
-                    expected_variable_types = {lexer.m_symbol_id["hex"]};
-                }
-                bool expected_contains_wildcard = false;
-                if (0 == begin_idx || search_string.length() == end_idx) {
-                    expected_contains_wildcard = true;
-                }
-                CAPTURE(search_string.substr(begin_idx, end_idx - begin_idx));
-                CAPTURE(begin_idx);
-                CAPTURE(end_idx);
-                REQUIRE(variable_types == expected_variable_types);
-                REQUIRE(contains_wildcard == expected_contains_wildcard);
+                expected_variable_types
+                        = {lexer.m_symbol_id["timestamp"],
+                           lexer.m_symbol_id["int"],
+                           lexer.m_symbol_id["float"],
+                           lexer.m_symbol_id["hex"],
+                           lexer.m_symbol_id["hasNumber"],
+                           lexer.m_symbol_id["uniqueVariable"],
+                           lexer.m_symbol_id["test"]};
+            } else if (cNumberBeginIdx <= begin_idx && end_idx <= cNumberEndIdx) {
+                // Substrings of "10000"
+                expected_variable_types
+                        = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
+            } else if (cECharIdx == begin_idx && cECharIdx + 1 == end_idx) {
+                // "e"
+                expected_variable_types = {lexer.m_symbol_id["hex"]};
             }
+
+            bool expected_contains_wildcard = false;
+            if (cFirstGreedyWildcardIdx == begin_idx || cLastGreedyWildcardIdx + 1 == end_idx) {
+                expected_contains_wildcard = true;
+            }
+
+            CAPTURE(wildcard_expr.substr(begin_idx, end_idx - begin_idx));
+            CAPTURE(begin_idx);
+            CAPTURE(end_idx);
+            REQUIRE((variable_types == expected_variable_types));
+            REQUIRE((contains_wildcard == expected_contains_wildcard));
         }
     }
 }
@@ -269,35 +275,42 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    SECTION("* 10000 reply: *") {
-        WildcardExpression search_string("* 10000 reply: *");
-        for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
-            for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-                auto query_logtypes = Grep::get_possible_substr_types(
-                        WildcardExpressionView{search_string, begin_idx, end_idx},
-                        lexer
+    constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
+    constexpr std::string_view cNumber = "10000";
+    constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
+    constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
+    WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+
+    for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
+        for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
+            auto interpretations = Grep::get_possible_substr_types(
+                    WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
+                    lexer
+            );
+
+            vector<QueryInterpretation> expected_interpretations(0);
+            if (cNumberBeginIdx == begin_idx && cNumberEndIdx == end_idx) {
+                QueryInterpretation expected_interpretation;
+                expected_interpretation.append_variable_token(
+                        static_cast<int>(lexer.m_symbol_id["int"]),
+                        string{cNumber},
+                        false,
+                        false
                 );
-                vector<QueryInterpretation> expected_result(0);
-                if (2 == begin_idx && 7 == end_idx) {
-                    expected_result.emplace_back();
-                    expected_result[0].append_variable_token(
-                            static_cast<int>(lexer.m_symbol_id["int"]),
-                            "10000",
-                            false,
-                            false
-                    );
-                } else if ((0 != begin_idx && search_string.length() != end_idx)
-                           || (end_idx - begin_idx == 1))
-                {
-                    expected_result.emplace_back();
-                    for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                        expected_result[0].append_static_token(search_string.substr(idx, 1));
-                    }
+                expected_interpretations.emplace_back(expected_interpretation);
+            } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
+                       || (end_idx - begin_idx == 1))
+            {
+                QueryInterpretation expected_interpretation;
+                for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
+                    expected_interpretation.append_static_token(wildcard_expr.substr(idx, 1));
                 }
-                CAPTURE(begin_idx);
-                CAPTURE(end_idx);
-                REQUIRE(query_logtypes == expected_result);
+                expected_interpretations.emplace_back(expected_interpretation);
             }
+
+            CAPTURE(begin_idx);
+            CAPTURE(end_idx);
+            REQUIRE((interpretations == expected_interpretations));
         }
     }
 }
