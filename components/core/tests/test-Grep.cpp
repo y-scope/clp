@@ -283,6 +283,7 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
                         WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
                         lexer
                 );
+
                 vector<QueryInterpretation> expected_interpretations(0);
                 if (2 == begin_idx && 7 == end_idx) {
                     expected_interpretations.emplace_back();
@@ -301,6 +302,7 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
                         );
                     }
                 }
+
                 CAPTURE(begin_idx);
                 CAPTURE(end_idx);
                 REQUIRE(interpretations == expected_interpretations);
