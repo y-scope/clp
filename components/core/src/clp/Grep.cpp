@@ -1067,7 +1067,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
         auto extended_search_string_view = search_string_view.extend_to_adjacent_greedy_wildcards();
 
         std::tie(variable_types, contains_wildcard)
-                = get_substring_variable_types(extended_search_string_view, lexer);
+                = get_matching_variable_types(extended_search_string_view, lexer);
         bool already_added_var = false;
         // Use the variable types to determine the possible_substr_types
         for (uint32_t const variable_type : variable_types) {
@@ -1121,7 +1121,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
  * into a DFA (wildcard expression -> regex -> NFA -> DFA) and compute its intersection with the
  * schema's DFA.
  */
-tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
+tuple<set<uint32_t>, bool> Grep::get_matching_variable_types(
         WildcardExpressionView const& wildcard_expr,
         ByteLexer const& lexer
 ) {
@@ -1168,7 +1168,7 @@ tuple<set<uint32_t>, bool> Grep::get_substring_variable_types(
     auto const search_string_dfa = ByteLexer::nfa_to_dfa(nfa);
     auto const& schema_dfa = lexer.get_dfa();
 
-    // TODO: Could use a forward/reverse lexer instead of an intersection a lot of cases.
+    // TODO: Could use a forward/reverse lexer instead of an intersection in a lot of cases.
     auto var_types = schema_dfa->get_intersect(search_string_dfa);
     return {var_types, contains_wildcard};
 }

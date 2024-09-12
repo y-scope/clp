@@ -160,7 +160,7 @@ public:
      * - The set of variable types that the wildcard expression could match.
      * - Whether the wildcard expression contains a wildcard.
      */
-    static std::tuple<std::set<uint32_t>, bool> get_substring_variable_types(
+    static std::tuple<std::set<uint32_t>, bool> get_matching_variable_types(
             WildcardExpressionView const& wildcard_expr,
             log_surgeon::lexers::ByteLexer const& lexer
     );

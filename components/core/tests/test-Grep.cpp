@@ -223,7 +223,7 @@ TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema
         WildcardExpression search_string("* 10000 reply: *");
         for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-                auto [variable_types, contains_wildcard] = Grep::get_substring_variable_types(
+                auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
                         WildcardExpressionView{search_string, begin_idx, end_idx},
                         lexer
                 );
