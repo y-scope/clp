@@ -54,7 +54,8 @@ public:
     /**
      * Creates a view of the range [begin_idx, end_idx) in the given wildcard expression.
      *
-     * NOTE: If either index is out of bounds, the view will be empty.
+     * NOTE: To ensure validity, end_idx is limited to wildcard_expression.length(), and then
+     * begin_idx is limited to end_idx.
      * @param wildcard_expression
      * @param begin_idx
      * @param end_idx
