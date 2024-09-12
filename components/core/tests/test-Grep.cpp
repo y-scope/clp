@@ -275,39 +275,37 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    SECTION("* 10000 reply: *") {
-        WildcardExpression wildcard_expr("* 10000 reply: *");
-        for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
-            for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-                auto interpretations = Grep::get_possible_substr_types(
-                        WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
-                        lexer
+    WildcardExpression wildcard_expr("* 10000 reply: *");
+    for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
+        for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
+            auto interpretations = Grep::get_possible_substr_types(
+                    WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
+                    lexer
+            );
+
+            vector<QueryInterpretation> expected_interpretations(0);
+            if (2 == begin_idx && 7 == end_idx) {
+                QueryInterpretation expected_interpretation;
+                expected_interpretation.append_variable_token(
+                        static_cast<int>(lexer.m_symbol_id["int"]),
+                        "10000",
+                        false,
+                        false
                 );
-
-                vector<QueryInterpretation> expected_interpretations(0);
-                if (2 == begin_idx && 7 == end_idx) {
-                    QueryInterpretation expected_interpretation;
-                    expected_interpretation.append_variable_token(
-                            static_cast<int>(lexer.m_symbol_id["int"]),
-                            "10000",
-                            false,
-                            false
-                    );
-                    expected_interpretations.emplace_back(expected_interpretation);
-                } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
-                           || (end_idx - begin_idx == 1))
-                {
-                    QueryInterpretation expected_interpretation;
-                    for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                        expected_interpretation.append_static_token(wildcard_expr.substr(idx, 1));
-                    }
-                    expected_interpretations.emplace_back(expected_interpretation);
+                expected_interpretations.emplace_back(expected_interpretation);
+            } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
+                       || (end_idx - begin_idx == 1))
+            {
+                QueryInterpretation expected_interpretation;
+                for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
+                    expected_interpretation.append_static_token(wildcard_expr.substr(idx, 1));
                 }
-
-                CAPTURE(begin_idx);
-                CAPTURE(end_idx);
-                REQUIRE(interpretations == expected_interpretations);
+                expected_interpretations.emplace_back(expected_interpretation);
             }
+
+            CAPTURE(begin_idx);
+            CAPTURE(end_idx);
+            REQUIRE(interpretations == expected_interpretations);
         }
     }
 }
