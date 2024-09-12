@@ -227,12 +227,13 @@ TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema
                         WildcardExpressionView{search_string, begin_idx, end_idx},
                         lexer
                 );
+
                 std::set<uint32_t> expected_variable_types;
-                // "*"
                 if ((0 == begin_idx && 1 == end_idx)
                     || (search_string.length() - 1 == begin_idx && search_string.length() == end_idx
                     ))
                 {
+                    // "*"
                     expected_variable_types
                             = {lexer.m_symbol_id["timestamp"],
                                lexer.m_symbol_id["int"],
@@ -241,20 +242,20 @@ TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema
                                lexer.m_symbol_id["hasNumber"],
                                lexer.m_symbol_id["uniqueVariable"],
                                lexer.m_symbol_id["test"]};
-                }
-                // substrings of "10000"
-                if (2 <= begin_idx && 7 >= end_idx) {
+                } else if (2 <= begin_idx && 7 >= end_idx) {
+                    // substrings of "10000"
                     expected_variable_types
                             = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
-                }
-                //"e"
-                if (9 == begin_idx && 10 == end_idx) {
+                } else if (9 == begin_idx && 10 == end_idx) {
+                    //"e"
                     expected_variable_types = {lexer.m_symbol_id["hex"]};
                 }
+
                 bool expected_contains_wildcard = false;
                 if (0 == begin_idx || search_string.length() == end_idx) {
                     expected_contains_wildcard = true;
                 }
+
                 CAPTURE(search_string.substr(begin_idx, end_idx - begin_idx));
                 CAPTURE(begin_idx);
                 CAPTURE(end_idx);
