@@ -70,7 +70,7 @@ auto WildcardExpressionView::extend_to_adjacent_greedy_wildcards() const -> Wild
     bool const prev_char_is_greedy_wildcard
             = m_begin_idx > 0 && m_expression->char_is_greedy_wildcard(m_begin_idx - 1);
     if (prev_char_is_greedy_wildcard) {
-        extended_view.m_begin_idx--;
+        --extended_view.m_begin_idx;
     }
     bool const next_char_is_greedy_wildcard = m_end_idx < m_expression->length()
                                               && m_expression->char_is_greedy_wildcard(m_end_idx);
