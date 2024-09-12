@@ -215,7 +215,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
 
 // 0:"$end", 1:"$UncaughtString", 2:"int", 3:"float", 4:hex, 5:firstTimestamp, 6:newLineTimestamp,
 // 7:timestamp, 8:hex, 9:hasNumber, 10:uniqueVariable, 11:test
-TEST_CASE("get_substring_variable_types", "[get_substring_variable_types][schema_search]") {
+TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_search]") {
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
