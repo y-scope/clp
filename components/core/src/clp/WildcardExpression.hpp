@@ -87,8 +87,7 @@ public:
     /**
      * @param lexer
      * @return Whether the substring in view is surrounded by delimiters or unescaped wildcards.
-     * NOTE: This method assumes that the beginning of the viewed string is preceded by a delimiter
-     * and the end is succeeded by a delimiter.
+     * NOTE: This method assumes that the viewed string is preceded and succeeded by a delimiter.
      */
     [[nodiscard]] auto surrounded_by_delims_or_wildcards(log_surgeon::lexers::ByteLexer const& lexer
     ) const -> bool;
