@@ -219,49 +219,46 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    SECTION("* 10000 reply: *") {
-        WildcardExpression search_string("* 10000 reply: *");
-        for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
-            for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-                auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
-                        WildcardExpressionView{search_string, begin_idx, end_idx},
-                        lexer
-                );
+    WildcardExpression search_string("* 10000 reply: *");
+    for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
+        for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
+            auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
+                    WildcardExpressionView{search_string, begin_idx, end_idx},
+                    lexer
+            );
 
-                std::set<uint32_t> expected_variable_types;
-                if ((0 == begin_idx && 1 == end_idx)
-                    || (search_string.length() - 1 == begin_idx && search_string.length() == end_idx
-                    ))
-                {
-                    // "*"
-                    expected_variable_types
-                            = {lexer.m_symbol_id["timestamp"],
-                               lexer.m_symbol_id["int"],
-                               lexer.m_symbol_id["float"],
-                               lexer.m_symbol_id["hex"],
-                               lexer.m_symbol_id["hasNumber"],
-                               lexer.m_symbol_id["uniqueVariable"],
-                               lexer.m_symbol_id["test"]};
-                } else if (2 <= begin_idx && 7 >= end_idx) {
-                    // substrings of "10000"
-                    expected_variable_types
-                            = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
-                } else if (9 == begin_idx && 10 == end_idx) {
-                    //"e"
-                    expected_variable_types = {lexer.m_symbol_id["hex"]};
-                }
-
-                bool expected_contains_wildcard = false;
-                if (0 == begin_idx || search_string.length() == end_idx) {
-                    expected_contains_wildcard = true;
-                }
-
-                CAPTURE(search_string.substr(begin_idx, end_idx - begin_idx));
-                CAPTURE(begin_idx);
-                CAPTURE(end_idx);
-                REQUIRE(variable_types == expected_variable_types);
-                REQUIRE(contains_wildcard == expected_contains_wildcard);
+            std::set<uint32_t> expected_variable_types;
+            if ((0 == begin_idx && 1 == end_idx)
+                || (search_string.length() - 1 == begin_idx && search_string.length() == end_idx))
+            {
+                // "*"
+                expected_variable_types
+                        = {lexer.m_symbol_id["timestamp"],
+                           lexer.m_symbol_id["int"],
+                           lexer.m_symbol_id["float"],
+                           lexer.m_symbol_id["hex"],
+                           lexer.m_symbol_id["hasNumber"],
+                           lexer.m_symbol_id["uniqueVariable"],
+                           lexer.m_symbol_id["test"]};
+            } else if (2 <= begin_idx && 7 >= end_idx) {
+                // substrings of "10000"
+                expected_variable_types
+                        = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
+            } else if (9 == begin_idx && 10 == end_idx) {
+                //"e"
+                expected_variable_types = {lexer.m_symbol_id["hex"]};
             }
+
+            bool expected_contains_wildcard = false;
+            if (0 == begin_idx || search_string.length() == end_idx) {
+                expected_contains_wildcard = true;
+            }
+
+            CAPTURE(search_string.substr(begin_idx, end_idx - begin_idx));
+            CAPTURE(begin_idx);
+            CAPTURE(end_idx);
+            REQUIRE(variable_types == expected_variable_types);
+            REQUIRE(contains_wildcard == expected_contains_wildcard);
         }
     }
 }
