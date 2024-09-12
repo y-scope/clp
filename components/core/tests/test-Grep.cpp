@@ -218,17 +218,17 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     // Test all subexpressions of `wildcard_expr`
-    WildcardExpression search_string("* 10000 reply: *");
-    for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
+    WildcardExpression wildcard_expr("* 10000 reply: *");
+    for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
         for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
             auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
-                    WildcardExpressionView{search_string, begin_idx, end_idx},
+                    WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
                     lexer
             );
 
             std::set<uint32_t> expected_variable_types;
             if ((0 == begin_idx && 1 == end_idx)
-                || (search_string.length() - 1 == begin_idx && search_string.length() == end_idx))
+                || (wildcard_expr.length() - 1 == begin_idx && wildcard_expr.length() == end_idx))
             {
                 // "*"
                 expected_variable_types
@@ -249,11 +249,11 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
             }
 
             bool expected_contains_wildcard = false;
-            if (0 == begin_idx || search_string.length() == end_idx) {
+            if (0 == begin_idx || wildcard_expr.length() == end_idx) {
                 expected_contains_wildcard = true;
             }
 
-            CAPTURE(search_string.substr(begin_idx, end_idx - begin_idx));
+            CAPTURE(wildcard_expr.substr(begin_idx, end_idx - begin_idx));
             CAPTURE(begin_idx);
             CAPTURE(end_idx);
             REQUIRE(variable_types == expected_variable_types);
