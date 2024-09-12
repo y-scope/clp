@@ -1,4 +1,5 @@
 #include <string>
+#include <string_view>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <fmt/core.h>
@@ -217,8 +218,16 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
+    constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
+    constexpr std::string_view cNumber = "10000";
+    constexpr size_t cFirstGreedyWildcardIdx = cWildcardExprValue.find_first_of('*');
+    constexpr size_t cLastGreedyWildcardIdx = cWildcardExprValue.find_last_of('*');
+    constexpr size_t cECharIdx = cWildcardExprValue.find('e');
+    constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
+    constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
+    WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+
     // Test all subexpressions of `wildcard_expr`
-    WildcardExpression wildcard_expr("* 10000 reply: *");
     for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
         for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
             auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
@@ -227,8 +236,8 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
             );
 
             std::set<uint32_t> expected_variable_types;
-            if ((0 == begin_idx && 1 == end_idx)
-                || (wildcard_expr.length() - 1 == begin_idx && wildcard_expr.length() == end_idx))
+            if ((cFirstGreedyWildcardIdx == begin_idx && cFirstGreedyWildcardIdx + 1 == end_idx)
+                || (cLastGreedyWildcardIdx == begin_idx && cLastGreedyWildcardIdx + 1 == end_idx))
             {
                 // "*"
                 expected_variable_types
@@ -239,25 +248,25 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
                            lexer.m_symbol_id["hasNumber"],
                            lexer.m_symbol_id["uniqueVariable"],
                            lexer.m_symbol_id["test"]};
-            } else if (2 <= begin_idx && 7 >= end_idx) {
+            } else if (cNumberBeginIdx <= begin_idx && end_idx <= cNumberEndIdx) {
                 // Substrings of "10000"
                 expected_variable_types
                         = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
-            } else if (9 == begin_idx && 10 == end_idx) {
+            } else if (cECharIdx == begin_idx && cECharIdx + 1 == end_idx) {
                 // "e"
                 expected_variable_types = {lexer.m_symbol_id["hex"]};
             }
 
             bool expected_contains_wildcard = false;
-            if (0 == begin_idx || wildcard_expr.length() == end_idx) {
+            if (cFirstGreedyWildcardIdx == begin_idx || cLastGreedyWildcardIdx + 1 == end_idx) {
                 expected_contains_wildcard = true;
             }
 
             CAPTURE(wildcard_expr.substr(begin_idx, end_idx - begin_idx));
             CAPTURE(begin_idx);
             CAPTURE(end_idx);
-            REQUIRE(variable_types == expected_variable_types);
-            REQUIRE(contains_wildcard == expected_contains_wildcard);
+            REQUIRE((variable_types == expected_variable_types));
+            REQUIRE((contains_wildcard == expected_contains_wildcard));
         }
     }
 }
