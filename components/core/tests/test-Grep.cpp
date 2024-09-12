@@ -276,11 +276,11 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("* 10000 reply: *") {
-        WildcardExpression search_string("* 10000 reply: *");
-        for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
+        WildcardExpression wildcard_expr("* 10000 reply: *");
+        for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
                 auto query_logtypes = Grep::get_possible_substr_types(
-                        WildcardExpressionView{search_string, begin_idx, end_idx},
+                        WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
                         lexer
                 );
                 vector<QueryInterpretation> expected_result(0);
@@ -292,12 +292,12 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
                             false,
                             false
                     );
-                } else if ((0 != begin_idx && search_string.length() != end_idx)
+                } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
                            || (end_idx - begin_idx == 1))
                 {
                     expected_result.emplace_back();
                     for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                        expected_result[0].append_static_token(search_string.substr(idx, 1));
+                        expected_result[0].append_static_token(wildcard_expr.substr(idx, 1));
                     }
                 }
                 CAPTURE(begin_idx);
