@@ -286,21 +286,22 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
 
                 vector<QueryInterpretation> expected_interpretations(0);
                 if (2 == begin_idx && 7 == end_idx) {
-                    expected_interpretations.emplace_back();
-                    expected_interpretations[0].append_variable_token(
+                    QueryInterpretation expected_interpretation;
+                    expected_interpretation.append_variable_token(
                             static_cast<int>(lexer.m_symbol_id["int"]),
                             "10000",
                             false,
                             false
                     );
+                    expected_interpretations.emplace_back(expected_interpretation);
                 } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
                            || (end_idx - begin_idx == 1))
                 {
-                    expected_interpretations.emplace_back();
+                    QueryInterpretation expected_interpretation;
                     for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                        expected_interpretations[0].append_static_token(wildcard_expr.substr(idx, 1)
-                        );
+                        expected_interpretation.append_static_token(wildcard_expr.substr(idx, 1));
                     }
+                    expected_interpretations.emplace_back(expected_interpretation);
                 }
 
                 CAPTURE(begin_idx);
