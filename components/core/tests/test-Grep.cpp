@@ -213,12 +213,11 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
     }
 }
 
-// 0:"$end", 1:"$UncaughtString", 2:"int", 3:"float", 4:hex, 5:firstTimestamp, 6:newLineTimestamp,
-// 7:timestamp, 8:hex, 9:hasNumber, 10:uniqueVariable, 11:test
 TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_search]") {
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
+    // Test all subexpressions of `wildcard_expr`
     WildcardExpression search_string("* 10000 reply: *");
     for (uint32_t end_idx = 1; end_idx <= search_string.length(); end_idx++) {
         for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
@@ -241,11 +240,11 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
                            lexer.m_symbol_id["uniqueVariable"],
                            lexer.m_symbol_id["test"]};
             } else if (2 <= begin_idx && 7 >= end_idx) {
-                // substrings of "10000"
+                // Substrings of "10000"
                 expected_variable_types
                         = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
             } else if (9 == begin_idx && 10 == end_idx) {
-                //"e"
+                // "e"
                 expected_variable_types = {lexer.m_symbol_id["hex"]};
             }
 
