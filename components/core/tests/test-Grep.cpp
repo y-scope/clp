@@ -279,14 +279,14 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
         WildcardExpression wildcard_expr("* 10000 reply: *");
         for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
             for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-                auto query_logtypes = Grep::get_possible_substr_types(
+                auto interpretations = Grep::get_possible_substr_types(
                         WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
                         lexer
                 );
-                vector<QueryInterpretation> expected_result(0);
+                vector<QueryInterpretation> expected_interpretations(0);
                 if (2 == begin_idx && 7 == end_idx) {
-                    expected_result.emplace_back();
-                    expected_result[0].append_variable_token(
+                    expected_interpretations.emplace_back();
+                    expected_interpretations[0].append_variable_token(
                             static_cast<int>(lexer.m_symbol_id["int"]),
                             "10000",
                             false,
@@ -295,14 +295,15 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
                 } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
                            || (end_idx - begin_idx == 1))
                 {
-                    expected_result.emplace_back();
+                    expected_interpretations.emplace_back();
                     for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                        expected_result[0].append_static_token(wildcard_expr.substr(idx, 1));
+                        expected_interpretations[0].append_static_token(wildcard_expr.substr(idx, 1)
+                        );
                     }
                 }
                 CAPTURE(begin_idx);
                 CAPTURE(end_idx);
-                REQUIRE(query_logtypes == expected_result);
+                REQUIRE(interpretations == expected_interpretations);
             }
         }
     }
