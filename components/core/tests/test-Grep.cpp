@@ -1,5 +1,7 @@
+#include <iostream>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <fmt/core.h>
@@ -25,8 +27,10 @@ using log_surgeon::ParserAST;
 using log_surgeon::SchemaAST;
 using log_surgeon::SchemaParser;
 using log_surgeon::SchemaVarAST;
+using std::ostream;
 using std::set;
 using std::string;
+using std::unordered_map;
 using std::vector;
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
@@ -315,6 +319,15 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
     }
 }
 
+auto operator<<(ostream& os, unordered_map<uint32_t, string> const& map) -> ostream& {
+    os << "{ ";
+    for (auto const& [key, value] : map) {
+        os << "{" << key << ": " << value << "} ";
+    }
+    os << "}";
+    return os;
+}
+
 void compareLogTypesWithExpected(
         string const& search_query_string,
         set<std::string> const& expected_strings,
@@ -335,11 +348,16 @@ void compareLogTypesWithExpected(
     auto it_expected = expected_strings.begin();
 
     // Compare element by element
+    std::ostringstream oss;
+    oss << lexer.m_id_symbol;
+    CAPTURE(oss.str());
     while (it_actual != actual_strings.end() && it_expected != expected_strings.end()) {
-        REQUIRE(*it_actual == *it_expected);  // Compare actual serialized string to expected string
+        REQUIRE(*it_actual == *it_expected);
         ++it_actual;
         ++it_expected;
     }
+
+    // Make sure all the elements of both sets were used
     REQUIRE(it_actual == actual_strings.end());
     REQUIRE(it_expected == expected_strings.end());
 }
