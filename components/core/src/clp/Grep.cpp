@@ -1158,7 +1158,7 @@ tuple<set<uint32_t>, bool> Grep::get_matching_variable_types(
     auto schema_ast = substring_schema.release_schema_ast_ptr();
     for (auto const& parser_ast : schema_ast->m_schema_vars) {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());
-        ByteLexer::Rule rule{0, std::move(schema_var_ast->m_regex_ptr)};
+        ByteLexer::Rule const rule{0, std::move(schema_var_ast->m_regex_ptr)};
         rule.add_ast(&nfa);
     }
 
