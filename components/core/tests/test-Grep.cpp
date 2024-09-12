@@ -275,7 +275,12 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    WildcardExpression wildcard_expr("* 10000 reply: *");
+    constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
+    constexpr std::string_view cNumber = "10000";
+    constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
+    constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
+    WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+
     for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
         for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
             auto interpretations = Grep::get_possible_substr_types(
@@ -284,11 +289,11 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
             );
 
             vector<QueryInterpretation> expected_interpretations(0);
-            if (2 == begin_idx && 7 == end_idx) {
+            if (cNumberBeginIdx == begin_idx && cNumberEndIdx == end_idx) {
                 QueryInterpretation expected_interpretation;
                 expected_interpretation.append_variable_token(
                         static_cast<int>(lexer.m_symbol_id["int"]),
-                        "10000",
+                        string{cNumber},
                         false,
                         false
                 );
@@ -305,7 +310,7 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
 
             CAPTURE(begin_idx);
             CAPTURE(end_idx);
-            REQUIRE(interpretations == expected_interpretations);
+            REQUIRE((interpretations == expected_interpretations));
         }
     }
 }
