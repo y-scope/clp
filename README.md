@@ -8,7 +8,9 @@ YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to 
 compressed logs without decompression. CLP supports both JSON logs and unstructured (i.e., free
 text) logs. It also supports real-time log compression within several logging libraries. CLP also
 includes purpose-built web interfaces for searching and viewing the compressed logs. To learn more
-about it, you can read our [paper][clp-paper].
+about it, you can read our [2021 paper][clp-paper-21] and [2024 paper][clp-paper-24]. The former
+describes how we handle unstructured logs whereas the latter describes how we extend it to JSON
+logs. 
 
 # Benchmarks
 
@@ -94,7 +96,8 @@ If you would like a feature or want to report a bug, please file an issue and we
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
-[clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
+[clp-paper-21]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
+[clp-paper-24]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf 
 [core]: http://docs.yscope.com/clp/main/dev-guide/components-core
 [core-container]: http://docs.yscope.com/clp/main/user-guide/core-container
 [datasets]: https://docs.yscope.com/clp/main/user-guide/resources-datasets
