@@ -8,9 +8,8 @@ YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to 
 compressed logs without decompression. CLP supports both JSON logs and unstructured (i.e., free
 text) logs. It also supports real-time log compression within several logging libraries. CLP also
 includes purpose-built web interfaces for searching and viewing the compressed logs. To learn more
-about it, you can read our [2021 paper][clp-paper-21] and [2024 paper][clp-paper-24]. The former
-describes how we handle unstructured logs whereas the latter describes how we extend it to JSON
-logs. 
+about it, read our [2021 paper][clp-paper-21] about handling unstructured logs and our 
+[2024 paper][clp-paper-24] on extending it to JSON logs.
 
 # Benchmarks
 
@@ -29,7 +28,7 @@ index-less design, so for a fair comparison, we disabled MongoDB and PostgreSQL'
 left them enabled, MongoDB and PostgreSQL's compression ratio would be worse. We didn't disable
 indexing for Elasticsearch or Splunk since these tools are fundamentally index-based (i.e., logs
 cannot be searched without indexes). More details about our experimental methodology can be found in
-the [CLP paper][clp-paper].
+the [2021 paper][clp-paper-21] and the [2024 paper][clp-paper-24].
 
 # System Overview
 
