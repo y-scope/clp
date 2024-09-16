@@ -1043,75 +1043,78 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
         return interpretations;
     }
 
+    if (false == wildcard_expr.surrounded_by_delims_or_wildcards(lexer)) {
+        // Variables must be surrounded by delimiters or wildcards, so this wildcard expression can
+        // only match static text.
+        interpretations.emplace_back(wildcard_expr.get_value());
+        return interpretations;
+    }
+
+    // If the substring is preceded or proceeded by a greedy wildcard then it's possible the
+    // substring could be extended to match a var, so the wildcards are added to the substring.
+    // If we don't consider this case we could miss combinations. Take for example "a*b", "a*"
+    // and "*b" can both match a has# style variable ("\w*\d+\w*"). If we decompose the string
+    // into either substrings "a*" + "b" or "a" + "*b", neither would capture the possibility of
+    // a logtype with the form "<has#>*<has#>", which is a valid possibility during compression.
+    // Instead we desire to decompose the string into "a*" + "*" + "*b". Note, non-greedy
+    // wildcards do not need to be considered, for example "a?b" can never match "<has#>?<has#>"
+    // or "<has#><has#>".
+    auto extended_wildcard_expr = wildcard_expr.extend_to_adjacent_greedy_wildcards();
+
+    set<uint32_t> matching_variable_type_ids;
     // If the substring contains a wildcard, we need to consider the case that it can simultaneously
     // match multiple variables and static text, and we need a different approach to compare against
     // the archive.
     bool contains_wildcard = false;
-    bool wildcard_expr_matches_variable_type = false;
-    // If the substring isn't surrounded by delimiters there is no reason to consider the case where
-    // it is a variable as CLP would not compress it as such.
-    if (wildcard_expr.surrounded_by_delims_or_wildcards(lexer)) {
-        // If the substring is preceded or proceeded by a greedy wildcard then it's possible the
-        // substring could be extended to match a var, so the wildcards are added to the substring.
-        // If we don't consider this case we could miss combinations. Take for example "a*b", "a*"
-        // and "*b" can both match a has# style variable ("\w*\d+\w*"). If we decompose the string
-        // into either substrings "a*" + "b" or "a" + "*b", neither would capture the possibility of
-        // a logtype with the form "<has#>*<has#>", which is a valid possibility during compression.
-        // Instead we desire to decompose the string into "a*" + "*" + "*b". Note, non-greedy
-        // wildcards do not need to be considered, for example "a?b" can never match "<has#>?<has#>"
-        // or "<has#><has#>".
-        auto extended_wildcard_expr = wildcard_expr.extend_to_adjacent_greedy_wildcards();
-
-        set<uint32_t> matching_variable_type_ids;
-        std::tie(matching_variable_type_ids, contains_wildcard)
-                = get_matching_variable_types(extended_wildcard_expr, lexer);
-        wildcard_expr_matches_variable_type = false == matching_variable_type_ids.empty();
-        bool already_added_dict_var = false;
-        // Use the variable types to determine the possible_substr_types
-        for (uint32_t const variable_type_id : matching_variable_type_ids) {
-            auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
-            auto is_encoded_variable_type
-                    = QueryInterpretation::cIntVarName == variable_type_name
-                      || QueryInterpretation::cFloatVarName == variable_type_name;
-            if (false == is_encoded_variable_type) {
-                // LogSurgeon differentiates between all variable types. For example, LogSurgeon
-                // might report thet types has#, userID, and int. However, CLP only supports dict,
-                // int, and float variables. So there is no benefit in duplicating the dict variable
-                // option for both has# and userID in the example.
-                if (already_added_dict_var) {
-                    continue;
-                }
-                already_added_dict_var = true;
-            } else {
-                // If encoded variables have wildcards they require two different logtypes, one that
-                // compares against the dictionary and one that compares against segment.
-                if (contains_wildcard) {
-                    interpretations.emplace_back(
-                            variable_type_id,
-                            extended_wildcard_expr.get_value(),
-                            contains_wildcard,
-                            true
-                    );
-                }
-            }
-            interpretations.emplace_back(
-                    variable_type_id,
-                    extended_wildcard_expr.get_value(),
-                    contains_wildcard,
-                    false
-            );
-
-            // If the substring has no wildcards, we can safely exclude lower priority variable
-            // types.
-            if (false == contains_wildcard) {
-                break;
-            }
-        }
-    }
-    // If the substring matches no variables, or has a wildcard, it is potentially static-text.
-    if (false == wildcard_expr_matches_variable_type || contains_wildcard) {
+    std::tie(matching_variable_type_ids, contains_wildcard)
+            = get_matching_variable_types(extended_wildcard_expr, lexer);
+    if (matching_variable_type_ids.empty() || contains_wildcard) {
+        // The wildcard expression doesn't match any variable types, or it contains a wildcard, so
+        // we must consider that it could match static text.
         interpretations.emplace_back(wildcard_expr.get_value());
     }
+
+    bool already_added_dict_var = false;
+    // Use the variable types to determine the possible_substr_types
+    for (uint32_t const variable_type_id : matching_variable_type_ids) {
+        auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
+        auto is_encoded_variable_type = QueryInterpretation::cIntVarName == variable_type_name
+                                        || QueryInterpretation::cFloatVarName == variable_type_name;
+        if (false == is_encoded_variable_type) {
+            // LogSurgeon differentiates between all variable types. For example, LogSurgeon
+            // might report thet types has#, userID, and int. However, CLP only supports dict,
+            // int, and float variables. So there is no benefit in duplicating the dict variable
+            // option for both has# and userID in the example.
+            if (already_added_dict_var) {
+                continue;
+            }
+            already_added_dict_var = true;
+        } else {
+            // If encoded variables have wildcards they require two different logtypes, one that
+            // compares against the dictionary and one that compares against segment.
+            if (contains_wildcard) {
+                interpretations.emplace_back(
+                        variable_type_id,
+                        extended_wildcard_expr.get_value(),
+                        contains_wildcard,
+                        true
+                );
+            }
+        }
+        interpretations.emplace_back(
+                variable_type_id,
+                extended_wildcard_expr.get_value(),
+                contains_wildcard,
+                false
+        );
+
+        // If the substring has no wildcards, we can safely exclude lower priority variable
+        // types.
+        if (false == contains_wildcard) {
+            break;
+        }
+    }
+
     return interpretations;
 }
 
