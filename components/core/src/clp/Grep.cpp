@@ -1060,11 +1060,11 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
         // Instead we desire to decompose the string into "a*" + "*" + "*b". Note, non-greedy
         // wildcards do not need to be considered, for example "a?b" can never match "<has#>?<has#>"
         // or "<has#><has#>".
-        auto extended_search_string_view = wildcard_expr.extend_to_adjacent_greedy_wildcards();
+        auto extended_wildcard_expr = wildcard_expr.extend_to_adjacent_greedy_wildcards();
 
         set<uint32_t> variable_types;
         std::tie(variable_types, contains_wildcard)
-                = get_matching_variable_types(extended_search_string_view, lexer);
+                = get_matching_variable_types(extended_wildcard_expr, lexer);
         wildcard_expr_matches_variable_type = false == variable_types.empty();
         bool already_added_var = false;
         // Use the variable types to determine the possible_substr_types
@@ -1087,7 +1087,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
                 if (contains_wildcard) {
                     interpretations.emplace_back(
                             variable_type,
-                            extended_search_string_view.get_value(),
+                            extended_wildcard_expr.get_value(),
                             contains_wildcard,
                             true
                     );
@@ -1095,7 +1095,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
             }
             interpretations.emplace_back(
                     variable_type,
-                    extended_search_string_view.get_value(),
+                    extended_wildcard_expr.get_value(),
                     contains_wildcard,
                     false
             );
