@@ -17,13 +17,13 @@ public:
         m_error_message = msg;
     }
 
-    [[nodiscard]] bool error() const { return m_error; }
+    [[nodiscard]] auto error() const -> bool { return m_error; }
 
-    [[nodiscard]] std::string const& message() const { return m_error_message; }
+    [[nodiscard]] auto message() const -> std::string const& { return m_error_message; }
 
 private:
     bool m_error{false};
-    std::string m_error_message;
+    std::string m_error_message{};
 };
 }  // namespace clp_s::search::antlr_common
 
