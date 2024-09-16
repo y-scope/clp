@@ -277,10 +277,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     file_writer.write(test_data.data(), test_data_size);
     file_writer.close();
 
-    size_t const reader_begin_offset = GENERATE(
-            0,
-            127
-    );
+    size_t const reader_begin_offset = GENERATE(0, 127);
 
     // Instantiate BufferedFileReader and the reference FileReader from a non-zero pos
     auto fd_reader = make_unique<FileDescriptorReader>(test_file_path);
@@ -302,12 +299,8 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     auto delimiter = (char)('a' + (std::rand() % (cNumAlphabets)));
     while (ErrorCode_EndOfFile != error_code) {
         error_code = ref_file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
-        auto const error_code2 = buffered_file_reader.try_read_to_delimiter(
-                delimiter,
-                true,
-                false,
-                test_string
-        );
+        auto const error_code2
+                = buffered_file_reader.try_read_to_delimiter(delimiter, true, false, test_string);
         REQUIRE(error_code2 == error_code);
         REQUIRE(test_string == ref_string);
     }
