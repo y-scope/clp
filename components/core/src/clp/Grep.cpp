@@ -1062,16 +1062,17 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
         // or "<has#><has#>".
         auto extended_wildcard_expr = wildcard_expr.extend_to_adjacent_greedy_wildcards();
 
-        set<uint32_t> variable_types;
-        std::tie(variable_types, contains_wildcard)
+        set<uint32_t> matching_variable_type_ids;
+        std::tie(matching_variable_type_ids, contains_wildcard)
                 = get_matching_variable_types(extended_wildcard_expr, lexer);
-        wildcard_expr_matches_variable_type = false == variable_types.empty();
+        wildcard_expr_matches_variable_type = false == matching_variable_type_ids.empty();
         bool already_added_var = false;
         // Use the variable types to determine the possible_substr_types
-        for (uint32_t const variable_type : variable_types) {
-            auto& schema_type = lexer.m_id_symbol[variable_type];
-            auto is_encoded_variable_type = QueryInterpretation::cIntVarName == schema_type
-                                            || QueryInterpretation::cFloatVarName == schema_type;
+        for (uint32_t const variable_type_id : matching_variable_type_ids) {
+            auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
+            auto is_encoded_variable_type
+                    = QueryInterpretation::cIntVarName == variable_type_name
+                      || QueryInterpretation::cFloatVarName == variable_type_name;
             if (false == is_encoded_variable_type) {
                 // LogSurgeon differentiates between all variable types. For example, LogSurgeon
                 // might report thet types has#, userID, and int. However, CLP only supports dict,
@@ -1086,7 +1087,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
                 // compares against the dictionary and one that compares against segment.
                 if (contains_wildcard) {
                     interpretations.emplace_back(
-                            variable_type,
+                            variable_type_id,
                             extended_wildcard_expr.get_value(),
                             contains_wildcard,
                             true
@@ -1094,7 +1095,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
                 }
             }
             interpretations.emplace_back(
-                    variable_type,
+                    variable_type_id,
                     extended_wildcard_expr.get_value(),
                     contains_wildcard,
                     false

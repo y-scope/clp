@@ -14,7 +14,8 @@ vars:
   G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/log-viewer-webui"
 
   # Build paths
-  G_BUILD_DIR: "{{.ROOT_DIR}}/build"
+  # G_BUILD_DIR: "{{.ROOT_DIR}}/build"
+  G_BUILD_DIR: "/home/kirk/projects/builds/clp"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
