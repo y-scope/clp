@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "Array.hpp"
 #include "BufferReader.hpp"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
