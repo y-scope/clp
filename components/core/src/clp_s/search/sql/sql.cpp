@@ -1,12 +1,13 @@
 #include <any>
 #include <iostream>
-#include <string>
+#include <memory>
 
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
 
 #include "../antlr_common/ErrorListener.hpp"
 #include "../EmptyExpr.hpp"
+#include "../Expression.hpp"
 #include "SqlBaseVisitor.h"
 #include "SqlLexer.h"
 #include "SqlParser.h"
@@ -19,11 +20,13 @@ namespace clp_s::search::sql {
 namespace {
 class ParseTreeVisitor : public SqlBaseVisitor {
 public:
-    std::any visitStart(SqlParser::StartContext* ctx) override { return EmptyExpr::create(); }
+    auto visitStart(SqlParser::StartContext* ctx) -> std::any override {
+        return EmptyExpr::create();
+    }
 };
 }  // namespace
 
-std::shared_ptr<Expression> parse_sql_expression(std::istream& in) {
+auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
     ErrorListener lexer_error_listener;
     ErrorListener parser_error_listener;
 
@@ -46,7 +49,7 @@ std::shared_ptr<Expression> parse_sql_expression(std::istream& in) {
         return {};
     }
 
-    ParseTreeVisitor visitor;
+    ParseTreeVisitor const visitor;
     return std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
 }
 }  // namespace clp_s::search::sql

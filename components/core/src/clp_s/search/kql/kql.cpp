@@ -5,12 +5,6 @@
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
 
-#include "KqlBaseVisitor.h"
-#include "KqlLexer.h"
-#include "KqlParser.h"
-// If redlining may want to add ${workspaceFolder}/build/**
-// to include path for vscode C/C++ utils
-
 #include "../../Utils.hpp"
 #include "../AndExpr.hpp"
 #include "../antlr_common/ErrorListener.hpp"
@@ -23,6 +17,9 @@
 #include "../NullLiteral.hpp"
 #include "../OrExpr.hpp"
 #include "../StringLiteral.hpp"
+#include "KqlBaseVisitor.h"
+#include "KqlLexer.h"
+#include "KqlParser.h"
 
 using namespace antlr4;
 using namespace kql;
