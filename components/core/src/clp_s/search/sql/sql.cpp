@@ -49,7 +49,7 @@ auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
         return {};
     }
 
-    ParseTreeVisitor const visitor;
+    ParseTreeVisitor visitor;
     return std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
 }
 }  // namespace clp_s::search::sql
