@@ -107,8 +107,8 @@ protected:
 
     // Variables
     bool m_is_open;
-    FileReader m_dictionary_file_reader;
-    FileReader m_segment_index_file_reader;
+    std::unique_ptr<FileReader> m_dictionary_file_reader;
+    std::unique_ptr<FileReader> m_segment_index_file_reader;
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor m_dictionary_decompressor;
     streaming_compression::passthrough::Decompressor m_segment_index_decompressor;
@@ -133,14 +133,19 @@ void DictionaryReader<DictionaryIdType, EntryType>::open(
 
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
-    open_dictionary_for_reading(
-            dictionary_path,
-            segment_index_path,
-            cDecompressorFileReadBufferCapacity,
-            m_dictionary_file_reader,
-            m_dictionary_decompressor,
-            m_segment_index_file_reader,
-            m_segment_index_decompressor
+    m_dictionary_file_reader = make_unique<FileReader>(dictionary_path);
+
+    // Skip header and then open the decompressor
+    m_dictionary_file_reader->seek_from_begin(sizeof(uint64_t));
+    m_dictionary_decompressor.open(*m_dictionary_file_reader, cDecompressorFileReadBufferCapacity);
+
+    m_segment_index_file_reader = make_unique<FileReader>(segment_index_path);
+
+    // Skip header and then open the decompressor
+    m_segment_index_file_reader->seek_from_begin(sizeof(uint64_t));
+    m_segment_index_decompressor.open(
+            *m_segment_index_file_reader,
+            cDecompressorFileReadBufferCapacity
     );
 
     m_is_open = true;
@@ -153,9 +158,9 @@ void DictionaryReader<DictionaryIdType, EntryType>::close() {
     }
 
     m_segment_index_decompressor.close();
-    m_segment_index_file_reader.close();
+    m_segment_index_file_reader.reset();
     m_dictionary_decompressor.close();
-    m_dictionary_file_reader.close();
+    m_dictionary_file_reader.reset();
 
     m_num_segments_read_from_index = 0;
     m_entries.clear();
@@ -170,7 +175,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries() {
     }
 
     // Read dictionary header
-    auto num_dictionary_entries = read_dictionary_header(m_dictionary_file_reader);
+    auto num_dictionary_entries = read_dictionary_header(*m_dictionary_file_reader);
 
     // Validate dictionary header
     if (num_dictionary_entries < m_entries.size()) {
@@ -190,7 +195,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries() {
     }
 
     // Read segment index header
-    auto num_segments = read_segment_index_header(m_segment_index_file_reader);
+    auto num_segments = read_segment_index_header(*m_segment_index_file_reader);
 
     // Validate segment index header
     if (num_segments < m_num_segments_read_from_index) {
