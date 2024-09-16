@@ -1047,7 +1047,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
     // match multiple variables and static text, and we need a different approach to compare against
     // the archive.
     bool contains_wildcard = false;
-    set<uint32_t> variable_types;
+    bool wildcard_expr_matches_variable_type = false;
     // If the substring isn't surrounded by delimiters there is no reason to consider the case where
     // it is a variable as CLP would not compress it as such.
     if (wildcard_expr.surrounded_by_delims_or_wildcards(lexer)) {
@@ -1062,15 +1062,17 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
         // or "<has#><has#>".
         auto extended_search_string_view = wildcard_expr.extend_to_adjacent_greedy_wildcards();
 
+        set<uint32_t> variable_types;
         std::tie(variable_types, contains_wildcard)
                 = get_matching_variable_types(extended_search_string_view, lexer);
+        wildcard_expr_matches_variable_type = false == variable_types.empty();
         bool already_added_var = false;
         // Use the variable types to determine the possible_substr_types
         for (uint32_t const variable_type : variable_types) {
-            if (auto& schema_type = lexer.m_id_symbol[variable_type];
-                schema_type != QueryInterpretation::cIntVarName
-                && schema_type != QueryInterpretation::cFloatVarName)
-            {
+            auto& schema_type = lexer.m_id_symbol[variable_type];
+            auto is_encoded_variable_type = QueryInterpretation::cIntVarName == schema_type
+                                            || QueryInterpretation::cFloatVarName == schema_type;
+            if (false == is_encoded_variable_type) {
                 // LogSurgeon differentiates between all variable types. For example, LogSurgeon
                 // might report thet types has#, userID, and int. However, CLP only supports dict,
                 // int, and float variables. So there is no benefit in duplicating the dict variable
@@ -1106,7 +1108,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
         }
     }
     // If the substring matches no variables, or has a wildcard, it is potentially static-text.
-    if (variable_types.empty() || contains_wildcard) {
+    if (false == wildcard_expr_matches_variable_type || contains_wildcard) {
         interpretations.emplace_back(wildcard_expr.get_value());
     }
     return interpretations;
