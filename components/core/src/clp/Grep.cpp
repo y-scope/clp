@@ -1066,7 +1066,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
         std::tie(matching_variable_type_ids, contains_wildcard)
                 = get_matching_variable_types(extended_wildcard_expr, lexer);
         wildcard_expr_matches_variable_type = false == matching_variable_type_ids.empty();
-        bool already_added_var = false;
+        bool already_added_dict_var = false;
         // Use the variable types to determine the possible_substr_types
         for (uint32_t const variable_type_id : matching_variable_type_ids) {
             auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
@@ -1078,10 +1078,10 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
                 // might report thet types has#, userID, and int. However, CLP only supports dict,
                 // int, and float variables. So there is no benefit in duplicating the dict variable
                 // option for both has# and userID in the example.
-                if (already_added_var) {
+                if (already_added_dict_var) {
                     continue;
                 }
-                already_added_var = true;
+                already_added_dict_var = true;
             } else {
                 // If encoded variables have wildcards they require two different logtypes, one that
                 // compares against the dictionary and one that compares against segment.
