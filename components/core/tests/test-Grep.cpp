@@ -270,7 +270,10 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
     }
 }
 
-TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_search]") {
+TEST_CASE(
+        "get_interpretations_for_whole_wildcard_expr",
+        "[get_interpretations_for_whole_wildcard_expr][schema_search]"
+) {
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
@@ -282,7 +285,7 @@ TEST_CASE("get_possible_substr_types", "[get_possible_substr_types][schema_searc
 
     for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
         for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-            auto interpretations = Grep::get_possible_substr_types(
+            auto interpretations = Grep::get_interpretations_for_whole_wildcard_expr(
                     WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
                     lexer
             );

@@ -964,7 +964,7 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
             if (begin_idx > 0 && processed_search_string.char_is_escape(begin_idx - 1)) {
                 continue;
             }
-            auto possible_substr_types = get_possible_substr_types(
+            auto possible_substr_types = get_interpretations_for_whole_wildcard_expr(
                     WildcardExpressionView{processed_search_string, begin_idx, end_idx},
                     lexer
             );
@@ -1023,14 +1023,16 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
     return query_substr_interpretations.back();
 }
 
-vector<QueryInterpretation>
-Grep::get_possible_substr_types(WildcardExpressionView const& wildcard_expr, ByteLexer& lexer) {
-    vector<QueryInterpretation> possible_substr_types;
+vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
+        WildcardExpressionView const& wildcard_expr,
+        ByteLexer& lexer
+) {
+    vector<QueryInterpretation> interpretations;
 
     // Don't allow an isolated greedy wildcard to be considered a variable
     if (wildcard_expr.is_greedy_wildcard()) {
-        possible_substr_types.emplace_back("*");
-        return possible_substr_types;
+        interpretations.emplace_back("*");
+        return interpretations;
     }
 
     // As we extend substrings adjacent to wildcards, the substrings that begin or end with
@@ -1038,7 +1040,7 @@ Grep::get_possible_substr_types(WildcardExpressionView const& wildcard_expr, Byt
     // subset of the more general "a*" + "*" + "*b". Note, as this needs "*", the "*" substring is
     // not redundant. This is already handled above). More detail about this is given below.
     if (wildcard_expr.starts_or_ends_with_greedy_wildcard()) {
-        return possible_substr_types;
+        return interpretations;
     }
 
     // If the substring contains a wildcard, we need to consider the case that it can simultaneously
@@ -1081,7 +1083,7 @@ Grep::get_possible_substr_types(WildcardExpressionView const& wildcard_expr, Byt
                 // If encoded variables have wildcards they require two different logtypes, one that
                 // compares against the dictionary and one that compares against segment.
                 if (contains_wildcard) {
-                    possible_substr_types.emplace_back(
+                    interpretations.emplace_back(
                             variable_type,
                             extended_search_string_view.get_value(),
                             contains_wildcard,
@@ -1089,7 +1091,7 @@ Grep::get_possible_substr_types(WildcardExpressionView const& wildcard_expr, Byt
                     );
                 }
             }
-            possible_substr_types.emplace_back(
+            interpretations.emplace_back(
                     variable_type,
                     extended_search_string_view.get_value(),
                     contains_wildcard,
@@ -1105,9 +1107,9 @@ Grep::get_possible_substr_types(WildcardExpressionView const& wildcard_expr, Byt
     }
     // If the substring matches no variables, or has a wildcard, it is potentially static-text.
     if (variable_types.empty() || contains_wildcard) {
-        possible_substr_types.emplace_back(wildcard_expr.get_value());
+        interpretations.emplace_back(wildcard_expr.get_value());
     }
-    return possible_substr_types;
+    return interpretations;
 }
 
 /**

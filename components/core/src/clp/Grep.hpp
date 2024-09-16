@@ -143,13 +143,13 @@ public:
 
     /**
      * Computes the tokens (static text or different types of variables) that the given wildcard
-     * expression could be interpreted as, generates a `QueryInterpretation` for each one, and
-     * returns the `QueryInterpretation`s.
+     * expression (as a whole) could be interpreted as, generates a `QueryInterpretation` for each
+     * one, and returns the `QueryInterpretation`s.
      * @param wildcard_expr
      * @param lexer
      * @return The `QueryInterpretation`s.
      */
-    static std::vector<QueryInterpretation> get_possible_substr_types(
+    static std::vector<QueryInterpretation> get_interpretations_for_whole_wildcard_expr(
             WildcardExpressionView const& wildcard_expr,
             log_surgeon::lexers::ByteLexer& lexer
     );
