@@ -266,6 +266,12 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampPattern.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
+    src/clp_s/ZstdCompressor.hpp
+    src/clp_s/ZstdCompressor.cpp
+    src/clp_s/ZstdDecompressor.hpp
+    src/clp_s/ZstdDecompressor.cpp
+    src/clp_s/FileWriter.cpp
+    src/clp_s/FileReader.cpp
 )
 
 set(SOURCE_FILES_unitTest

@@ -1,6 +1,7 @@
 #include "JsonParser.hpp"
 
 #include <iostream>
+#include <fstream>
 #include <stack>
 
 #include <simdjson.h>
@@ -31,6 +32,26 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.archives_dir = option.archives_dir;
     m_archive_options.compression_level = option.compression_level;
     m_archive_options.print_archive_stats = option.print_archive_stats;
+    m_archive_options.id = m_generator();
+
+    m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
+    m_archive_writer->open(m_archive_options);
+}
+
+JsonParser::JsonParser(JsonToIRParserOption const& option)
+        : m_num_messages(0),
+          m_max_document_size(option.max_document_size) {
+    if (false == FileUtils::validate_path(option.file_paths)) {
+        exit(1);
+    }
+
+    for (auto& file_path : option.file_paths) {
+        FileUtils::find_all_files(file_path, m_file_paths);
+    }
+
+    m_archive_options.archives_dir = option.irs_dir;
+    m_archive_options.compression_level = option.compression_level;
+    //m_archive_options.print_archive_stats = option.print_archive_stats;
     m_archive_options.id = m_generator();
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
@@ -517,6 +538,317 @@ bool JsonParser::parse() {
             );
         }
     }
+    return true;
+}
+
+NodeType get_archive_node_type(clp::ffi::SchemaTreeNode const& node, std::pair<clp::ffi::SchemaTreeNode::id_t, std::optional<clp::ffi::Value>> p){
+    //std::cerr << "In get_archive_node_type\n";
+    auto const node_type = node.get_type();
+    //std::cerr << "got ir type\n";
+    //figure out what type the node is in archive node type
+    NodeType archiveNodeType;
+    switch(node_type){
+            case clp::ffi::SchemaTreeNode::Type::Int : 
+                archiveNodeType = NodeType::Integer;
+                break;
+            case clp::ffi::SchemaTreeNode::Type::Float : 
+                archiveNodeType = NodeType::Float;
+                break;
+            case clp::ffi::SchemaTreeNode::Type::Bool : 
+                archiveNodeType = NodeType::Boolean;
+                break;
+            case clp::ffi::SchemaTreeNode::Type::UnstructuredArray : 
+                archiveNodeType = NodeType::UnstructuredArray;
+                break;
+            case clp::ffi::SchemaTreeNode::Type::Str :
+                //std::cerr << "In str\n";
+                if(p.second.value().is<std::string>()){
+                    //maybe special case for date string
+                    archiveNodeType = NodeType::VarString;
+                }else{
+                    archiveNodeType = NodeType::ClpString;
+                }
+                break;
+            case clp::ffi::SchemaTreeNode::Type::Obj :
+                //std::cerr << "In obj\n"; 
+                if(p.second.has_value()){
+                    if(p.second.value().is_null()){
+                        //std::cout << "Found Null\n";
+                        archiveNodeType = NodeType::NullValue;
+                    }else{
+                        archiveNodeType = NodeType::Object;
+                    }
+                }else{
+                    archiveNodeType = NodeType::Object;
+                }
+                break;
+            default : 
+                archiveNodeType = NodeType::Unknown;
+                break;
+            //Do I need to do anything for structured arrays
+    }
+    //std::cerr << "After Switch\n";
+    return archiveNodeType;
+}
+
+//
+int JsonParser::get_archive_node_id(std::map< std::tuple<int, NodeType>, int>& cache, int irNodeID, NodeType archiveNodeType, clp::ffi::SchemaTree const& irTree){
+    //std::cerr << "In get archive node id\n";
+    std::tuple<int, NodeType> key (irNodeID, archiveNodeType);
+    if(cache.find(key) != cache.end()){
+        //std::cerr << "Found value\n";
+        return cache[key];
+    }
+    auto& currNode =  irTree.get_node(irNodeID);
+    //std::cerr << "Got node\n";
+    int parent_node_id;
+    if(currNode.get_parent_id() == 0){
+        //std::cout << "Hit the root\n";
+        parent_node_id = 0;
+    }else{
+        //std::cerr << "Look for parent id\n";
+        parent_node_id = get_archive_node_id(cache, currNode.get_parent_id(), NodeType::Object, irTree);
+        //std::cerr << "Got parent id\n";
+    }
+    std::string nodeKey = clp::ffi::validate_and_escape_utf8_string(currNode.get_key_name()).value();
+    //std::string nodeKey = static_cast<std::string>(validated_key);
+    int curr_node_archive_id = m_archive_writer->add_node(parent_node_id, archiveNodeType, nodeKey);
+    //std::cerr << "Added node to archive\n";
+    cache[key] = curr_node_archive_id;
+    //std::cerr << "Added to cache\n";
+    return curr_node_archive_id;
+}
+
+void print_kv_log_event(KeyValuePairLogEvent const& kv){
+    auto const num_kv_pairs = kv.get_node_id_value_pairs().size();
+    std::cout << "number of kv pairs: " << num_kv_pairs << std::endl;
+    auto const& tree = kv.get_schema_tree();
+    for (auto const &pair: kv.get_node_id_value_pairs()){
+        auto const& tree_node = tree.get_node(pair.first);
+        auto const node_type = tree_node.get_type();
+        switch(node_type){
+                case clp::ffi::SchemaTreeNode::Type::Int : std::cout << "Int" << std::endl; break;
+                case clp::ffi::SchemaTreeNode::Type::Float : std::cout << "Float" << std::endl; break;
+                case clp::ffi::SchemaTreeNode::Type::Bool : std::cout << "Bool" << std::endl; break;
+                case clp::ffi::SchemaTreeNode::Type::Str : std::cout << "Str" << std::endl; break;
+                case clp::ffi::SchemaTreeNode::Type::UnstructuredArray : std::cout << "UArray" << std::endl; break;
+                case clp::ffi::SchemaTreeNode::Type::Obj : std::cout << "Obj" << std::endl; break;
+                default : std::cout << "???" << std::endl; break;
+        }
+        
+        if(!pair.second.has_value()){
+                std::cout << "{??:\t" << pair.first << ": Node doesn't have Value ... EMPTY OBJ}\n";
+                continue;
+        }
+        if(pair.second.value().is<clp::ffi::value_int_t>()){
+                std::cout << "{INT:\t" << pair.first << ": " << pair.second.value().get_immutable_view<clp::ffi::value_int_t>() << "}\n";
+        }else if(pair.second.value().is<clp::ffi::value_float_t>()){
+                std::cout << "{FLOAT:\t" << pair.first << ": " << pair.second.value().get_immutable_view<clp::ffi::value_float_t>() << "}\n";
+        }else if(pair.second.value().is<clp::ffi::value_bool_t>()){
+                std::cout << "{BOOL:\t" << pair.first << ": " << pair.second.value().get_immutable_view<clp::ffi::value_bool_t>() << "}\n";
+        }else if(pair.second.value().is<std::string>()){
+                std::cout << "{STRING:\t" << pair.first << ": " << pair.second.value().get_immutable_view<std::string>() << "}\n";
+        }else if(pair.second.value().is<clp::ir::EightByteEncodedTextAst>()){
+                std::cout << "{EIGHTByte:\t" << pair.first << ": \n";
+                auto decoded = pair.second.value().get_immutable_view<clp::ir::EightByteEncodedTextAst>().decode_and_unparse();
+                if(std::nullopt != decoded){
+                        std:: cout << "\t Decoded & Unparsed: "<< decoded.value()<< std::endl;
+                }else{
+                        std::cout << "\tNULL\n";
+                }
+                std::cout << "}\n";
+        }else if(pair.second.value().is<clp::ir::FourByteEncodedTextAst>()){
+                std::cout << "{FOURByte:\t" << pair.first << ": \n";
+                auto decoded = pair.second.value().get_immutable_view<clp::ir::FourByteEncodedTextAst>().decode_and_unparse();
+                if(std::nullopt != decoded){
+                        std:: cout << "\tDecoded & Unparsed: "<< decoded.value() << std::endl;
+                }else{
+                        std::cout << "\tNULL\n";
+                }
+                std::cout << "}\n";
+        }else{
+                std::cout << "Unknown Type:\t" << pair.first << "\n";
+        }
+
+    }
+    std::cout << "after for loop\n\n\n";
+}
+
+void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv, std::map<std::tuple<int, NodeType>,  int>& cache){
+    auto const num_kv_pairs = kv.get_node_id_value_pairs().size();
+    clp::ffi::SchemaTree const& tree = kv.get_schema_tree();
+    //std::cerr << "In parse\n";
+    for (auto const& pair: kv.get_node_id_value_pairs()){
+        //std::cerr << "In for loop\n";
+        clp::ffi::SchemaTreeNode const& tree_node = tree.get_node(pair.first);
+        //std::cerr << "After get node\n";
+        NodeType archiveNodeType = get_archive_node_type(tree_node, pair);
+        //std::cerr << "After get archive node type\n";
+        int node_id = get_archive_node_id(cache, pair.first, archiveNodeType, tree);
+        //std::cerr << "After get_archive_node_id\n";
+        //std::cerr << node_id << std::endl;
+        switch(archiveNodeType){
+            case NodeType::Integer :{
+                int64_t i64_value = pair.second.value().get_immutable_view<clp::ffi::value_int_t>();
+                m_current_parsed_message.add_value(node_id, i64_value);
+            }break;
+            case NodeType::Float :{
+                double d_value = pair.second.value().get_immutable_view<clp::ffi::value_float_t>();
+                m_current_parsed_message.add_value(node_id, d_value);
+            }break;
+            case NodeType::Boolean :{
+                bool b_value = pair.second.value().get_immutable_view<clp::ffi::value_bool_t>();
+                m_current_parsed_message.add_value(node_id, b_value);
+            }break; 
+            case NodeType::VarString :{
+                std::string str = clp::ffi::validate_and_escape_utf8_string(pair.second.value().get_immutable_view<std::string>()).value();
+                m_current_parsed_message.add_value(node_id, str);
+            }break;
+            case NodeType::ClpString :{
+                //auto const node_type = tree_node.get_type();
+                std::string encoded_str;
+                ///Do I need to reparse these? Do I need to convert 4bytes to 8bytes .... how?
+                if(pair.second.value().is<clp::ir::EightByteEncodedTextAst>()){
+                    std::string decodedValue = pair.second.value().get_immutable_view<clp::ir::EightByteEncodedTextAst>().decode_and_unparse().value();
+                    encoded_str = clp::ffi::validate_and_escape_utf8_string(decodedValue.c_str()).value();
+                }else{
+                    std::string decodedValue = pair.second.value().get_immutable_view<clp::ir::FourByteEncodedTextAst>().decode_and_unparse().value();
+                    encoded_str = clp::ffi::validate_and_escape_utf8_string(decodedValue.c_str()).value();
+                }
+                m_current_parsed_message.add_value(node_id, encoded_str);
+            }break;
+            case NodeType::UnstructuredArray :{
+                //auto const encoded_type = tree_node.get_type();
+                std::string array_str;
+                if(pair.second.value().is<clp::ir::EightByteEncodedTextAst>()){
+                    array_str = pair.second.value().get_immutable_view<clp::ir::EightByteEncodedTextAst>().decode_and_unparse().value();
+                }else{
+                    array_str = pair.second.value().get_immutable_view<clp::ir::FourByteEncodedTextAst>().decode_and_unparse().value();
+                }
+                m_current_parsed_message.add_value(node_id, array_str);
+                break;
+            }
+            default : 
+                //Don't need to add value for obj or null
+                break;
+        }
+        m_current_schema.insert_ordered(node_id);
+    } 
+
+    int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
+    m_current_parsed_message.set_id(current_schema_id);
+    m_archive_writer->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
+    return;
+}
+
+bool JsonParser::parse_from_IR() {
+    std::map<std::tuple<int, NodeType>,  int> id_conversion_cache;
+    m_archive_writer->add_node(-1, NodeType::Unknown, "root");
+
+    for (auto& file_path : m_file_paths) {
+        std::vector<char> ir_buf;
+        //Make function from reading in this file
+        char temp_ir_buf[1000];
+        //char* new_ir_buf = (char *) malloc(ir_buf.size());
+        FileReader infile;
+        infile.open(file_path);
+        if(false == infile.is_open()){
+            m_archive_writer->close();
+            return false;
+        }
+        int fsize = std::filesystem::file_size(file_path);
+        if(0  == fsize){
+            m_archive_writer->close();
+            return false;
+        }
+        ZstdDecompressor zd;
+        zd.open(infile, fsize);
+        size_t num_bytes_read = 0;
+        do{
+            num_bytes_read = 0;
+            zd.try_read(temp_ir_buf, 1000, num_bytes_read);
+            if (num_bytes_read != 0){
+                ir_buf.insert(ir_buf.end(), temp_ir_buf, temp_ir_buf+num_bytes_read);
+            }
+        }while (num_bytes_read == 1000);
+        zd.close();
+        infile.close(); 
+        /* std::cout << "IR BUFFER\n";
+        for (size_t i = 0; i < ir_buf.size(); ++i) {
+            std::cout << ir_buf.data()[i];
+        }
+        std::cout << "\n\n\n"; */
+        BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
+        char const* p;
+        size_t p_size;
+        //reader.peek_buffer(p, p_size);
+        //std::cout << "Num Bytes in buffer left: " << p_size << std::endl;
+        //for(int z = 0; z < p_size; z++){
+        //    std::cout << p[z];
+        //}
+        //std::cout << std::endl;
+
+        auto deserializer_result = Deserializer::create(reader);
+        if(deserializer_result.has_error()){
+            m_archive_writer->close();
+            return false;
+        }
+        auto& deserializer = deserializer_result.value();
+
+
+        m_num_messages = 0;
+        //size_t bytes_consumed_up_to_prev_archive = 0;
+        //size_t bytes_consumed_up_to_prev_record = 0;
+        int iterations = 2;
+        do{
+            iterations--;
+            //std::cerr << "In do while loop\n";
+            auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
+            //std::cerr << "After deserialize\n";
+
+            //reader.peek_buffer(p, p_size);
+            //std::cout << "Num Bytes in buffer left: " << p_size << std::endl;
+            //for(int z = 0; z < p_size; z++){
+            //    std::cout << p[z];
+            //}
+            //std::cout << std::endl;
+
+            if(kv_log_event_result.has_error()){
+                //std::cerr << "has error\n";
+                if(kv_log_event_result.error() == std::errc::no_message_available || kv_log_event_result.error() == std::errc::result_out_of_range){
+                    //std::cerr << "Breaking out of do while loop\n";
+                    break;
+                }
+            }
+            //std::cerr << "After error check\n";
+            m_current_schema.clear();
+            auto const& kv_log_event = kv_log_event_result.value();
+
+            //print_kv_log_event(kv_log_event);
+            //std::cerr << "before parse\n";
+            parse_kv_log_event(kv_log_event, id_conversion_cache);
+            //std::cerr << "After parse\n";
+            m_num_messages++;
+            //Implement archive splitting and size tracking
+            /* bytes_consumed_up_to_prev_record = json_file_iterator.get_num_bytes_consumed();
+            if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
+                m_archive_writer->increment_uncompressed_size(
+                        bytes_consumed_up_to_prev_record - bytes_consumed_up_to_prev_archive
+                );
+                bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
+                split_archive();
+            } */
+
+            m_current_parsed_message.clear();
+
+        } while(1);//while(iterations > 0);
+        //std::cout << "Out of do while loop\n";
+
+    }
+    return true;
+}
+
+bool JsonParser::parse_to_IR(){
     return true;
 }
 

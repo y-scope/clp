@@ -28,6 +28,34 @@ set(
         ../clp/TraceableException.hpp
         ../clp/WriterInterface.cpp
         ../clp/WriterInterface.hpp
+        ../clp/ffi/ir_stream/Deserializer.hpp
+        ../clp/ffi/ir_stream/Deserializer.cpp
+        ../clp/BufferReader.hpp
+        ../clp/BufferReader.cpp
+        ../clp/type_utils.hpp
+        ../clp/ffi/Value.hpp
+        ../clp/ErrorCode.hpp
+        ../clp/ir/EncodedTextAst.hpp
+        ../clp/ir/EncodedTextAst.cpp
+        ../clp/ir/types.hpp
+        ../clp/ReaderInterface.hpp
+        ../clp/ReaderInterface.cpp
+        ../clp/time_types.hpp
+        ../clp/type_utils.hpp
+        ../clp/ffi/KeyValuePairLogEvent.hpp
+        ../clp/ffi/KeyValuePairLogEvent.cpp
+        ../clp/ffi/SchemaTree.hpp
+        ../clp/ffi/SchemaTree.cpp
+        ../clp/ffi/SchemaTreeNode.hpp
+        ../clp/ffi/Value.hpp
+        ../clp/ffi/ir_stream/decoding_methods.hpp
+        ../clp/ffi/ir_stream/protocol_constants.hpp
+        ../clp/ffi/ir_stream/utils.hpp
+        ../clp/ffi/ir_stream/decoding_methods.cpp
+        ../clp/ffi/utils.hpp
+        ../clp/ffi/utils.cpp
+        ../clp/utf8_utils.hpp
+        ../clp/utf8_utils.cpp
 )
 
 set(

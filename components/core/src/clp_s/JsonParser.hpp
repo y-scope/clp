@@ -22,6 +22,19 @@
 #include "TimestampDictionaryWriter.hpp"
 #include "Utils.hpp"
 #include "ZstdCompressor.hpp"
+#include "../clp/ffi/ir_stream/Deserializer.hpp"
+#include "../clp/BufferReader.hpp"
+#include "../clp/type_utils.hpp"
+#include "../clp/ffi/Value.hpp"
+#include "../clp/ffi/KeyValuePairLogEvent.hpp"
+#include "../clp/ffi/SchemaTree.hpp"
+#include "../clp/ffi/SchemaTreeNode.hpp"
+#include "../clp/ffi/utils.hpp"
+
+using clp::size_checked_pointer_cast;
+using clp::BufferReader;
+using clp::ffi::ir_stream::Deserializer;
+using clp::ffi::KeyValuePairLogEvent;
 
 using namespace simdjson;
 
@@ -38,6 +51,14 @@ struct JsonParserOption {
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
+struct JsonToIRParserOption {
+    std::vector<std::string> file_paths;
+    std::string irs_dir;
+    size_t max_document_size;
+    int compression_level;
+    std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
+};
+
 class JsonParser {
 public:
     class OperationFailed : public TraceableException {
@@ -50,6 +71,8 @@ public:
     // Constructor
     explicit JsonParser(JsonParserOption const& option);
 
+    JsonParser(JsonToIRParserOption const& option);
+
     // Destructor
     ~JsonParser() = default;
 
@@ -58,6 +81,18 @@ public:
      * @return whether the JSON was parsed succesfully
      */
     [[nodiscard]] bool parse();
+
+    /**
+     * Parses the Key Value IR Stream and stores the data in the archive.
+     * @return whether the IR Stream was parsed succesfully
+     */
+    [[nodiscard]] bool parse_from_IR();
+
+    /**
+     * Parses the JSON log messages to the Key Value IR Stream format.
+     * @return whether the JSON was parsed succesfully
+     */
+    [[nodiscard]] bool parse_to_IR();
 
     /**
      * Writes the metadata and archive data to disk.
@@ -73,6 +108,22 @@ private:
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
     void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
+
+    /**
+     * Parses a Key Value Log Event
+     * @param kv the key value log event
+     * @param cache cache of node id conversions between deserializer schema tree nodes and archive schema tree nodes
+     */
+    void parse_kv_log_event(KeyValuePairLogEvent const& kv, std::map<std::tuple<int, NodeType>, int>& cache);
+
+    /**
+     * Get archive node id for ir node
+     * @param cache cache of node id conversions between deserializer schema tree nodes and archive schema tree nodes
+     * @param irNodeID
+     * @param irType
+     * @param irTree
+     */
+    int get_archive_node_id(std::map < std::tuple<int, NodeType>,  int>& cache, int irNodeID, NodeType archiveNodeType, clp::ffi::SchemaTree const& irTree);
 
     /**
      * Parses an array within a JSON line

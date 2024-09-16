@@ -26,7 +26,9 @@ public:
     enum class Command : char {
         Compress = 'c',
         Extract = 'x',
-        Search = 's'
+        Search = 's',
+        Json_To_IR = 'r',
+        IR_Compress = 'i'
     };
 
     enum class OutputHandlerType : uint8_t {
@@ -156,6 +158,10 @@ private:
     void print_decompression_usage() const;
 
     void print_search_usage() const;
+
+    void print_json_to_IR_usage() const;
+
+    void print_IR_compression_usage() const;
 
     // Variables
     std::string m_program_name;
