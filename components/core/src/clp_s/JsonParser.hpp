@@ -71,6 +71,7 @@ private:
      * @param line the JSON line
      * @param parent_node_id the parent node id
      * @param key the key of the node
+     * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
     void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
 

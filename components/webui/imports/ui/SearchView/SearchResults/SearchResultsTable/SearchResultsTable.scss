@@ -27,6 +27,8 @@
 }
 
 .search-results-content {
+  overflow: auto;
+
   font-size: 0.875rem;
   line-height: var(--search-results-message-line-height);
 }
@@ -48,3 +50,12 @@
   word-break: break-word;
 }
 
+.search-results-file-link {
+  margin-top: 0.25rem;
+
+  color: grey;
+  font-family: 'Roboto', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+}

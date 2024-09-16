@@ -1,14 +1,20 @@
+#include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
+#include <msgpack.hpp>
 
 #include "../src/clp/BufferReader.hpp"
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/Deserializer.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../src/clp/ffi/ir_stream/Serializer.hpp"
@@ -29,6 +35,7 @@ using clp::ffi::ir_stream::cProtocol::MagicNumberLength;
 using clp::ffi::ir_stream::deserialize_preamble;
 using clp::ffi::ir_stream::deserialize_tag;
 using clp::ffi::ir_stream::deserialize_utc_offset_change;
+using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -131,6 +138,27 @@ auto flush_and_clear_serializer_buffer(
         Serializer<encoded_variable_t>& serializer,
         std::vector<int8_t>& byte_buf
 ) -> void;
+
+/**
+ * Unpacks and serializes the given msgpack bytes using kv serializer.
+ * @tparam encoded_variable_t
+ * @param msgpack_bytes
+ * @param serializer
+ * @return Whether serialization succeeded.
+ */
+template <typename encoded_variable_t>
+[[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
+        vector<uint8_t> const& msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
+) -> bool;
+
+/**
+ * Counts the number of leaves in a JSON tree. A node is considered as a leaf if it's a primitive
+ * value, an empty map (`{}`), or an array.
+ * @param root
+ * @return The number of leaves under the given root.
+ */
+[[nodiscard]] auto count_num_leaves(nlohmann::json const& root) -> size_t;
 
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
@@ -240,6 +268,46 @@ auto flush_and_clear_serializer_buffer(
     auto const view{serializer.get_ir_buf_view()};
     byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
     serializer.clear_ir_buf();
+}
+
+template <typename encoded_variable_t>
+auto unpack_and_serialize_msgpack_bytes(
+        vector<uint8_t> const& msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
+) -> bool {
+    auto const msgpack_obj_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
+            msgpack_bytes.size()
+    )};
+    auto const msgpack_obj{msgpack_obj_handle.get()};
+    if (msgpack::type::MAP != msgpack_obj.type) {
+        return false;
+    }
+    return serializer.serialize_msgpack_map(msgpack_obj.via.map);
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+auto count_num_leaves(nlohmann::json const& root) -> size_t {
+    if (false == root.is_object()) {
+        return 0;
+    }
+
+    size_t num_leaves{0};
+    for (auto const& [key, val] : root.items()) {
+        if (val.is_primitive() || val.is_array()) {
+            ++num_leaves;
+        } else if (val.is_object()) {
+            if (val.empty()) {
+                ++num_leaves;
+            } else {
+                num_leaves += count_num_leaves(val);
+            }
+        } else {
+            FAIL("Unknown JSON object types.");
+        }
+    }
+
+    return num_leaves;
 }
 }  // namespace
 
@@ -878,7 +946,7 @@ TEMPLATE_TEST_CASE(
         REQUIRE(log_event.get_utc_offset() == ref_log_event.get_utc_offset());
         // We only compare the logtype since decoding messages from logtype + variables is not yet
         // supported by our public interfaces
-        REQUIRE(log_event.get_logtype() == encoded_logtypes.at(log_event_idx));
+        REQUIRE(log_event.get_message().get_logtype() == encoded_logtypes.at(log_event_idx));
         ++log_event_idx;
     }
     auto result = log_event_deserializer.deserialize_log_event();
@@ -970,4 +1038,109 @@ TEMPLATE_TEST_CASE(
             (clp::ErrorCode_EndOfFile == buffer_reader.try_read(&eof, 1, num_bytes_read)
              && 0 == num_bytes_read)
     );
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_Serializer_serialize_msgpack",
+        "[clp][ffi][ir_stream][Serializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    vector<int8_t> ir_buf;
+    vector<nlohmann::json> serialized_json_objects;
+
+    auto result{Serializer<TestType>::create()};
+    REQUIRE((false == result.has_error()));
+
+    auto& serializer{result.value()};
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+
+    auto const empty_obj = nlohmann::json::parse("{}");
+    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(empty_obj), serializer));
+    serialized_json_objects.emplace_back(empty_obj);
+
+    // Test encoding basic object
+    constexpr string_view cShortString{"short_string"};
+    constexpr string_view cClpString{"uid=0, CPU usage: 99.99%, \"user_name\"=YScope"};
+    auto const empty_array = nlohmann::json::parse("[]");
+    nlohmann::json const basic_obj
+            = {{"int8_max", INT8_MAX},
+               {"int8_min", INT8_MIN},
+               {"int16_max", INT16_MAX},
+               {"int16_min", INT16_MIN},
+               {"int32_max", INT32_MAX},
+               {"int32_min", INT32_MIN},
+               {"int64_max", INT64_MAX},
+               {"int64_min", INT64_MIN},
+               {"float_zero", 0.0},
+               {"float_pos", 1.01},
+               {"float_neg", -1.01},
+               {"true", true},
+               {"false", false},
+               {"string", cShortString},
+               {"clp_string", cClpString},
+               {"null", nullptr},
+               {"empty_object", empty_obj},
+               {"empty_array", empty_array}};
+
+    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(basic_obj), serializer));
+    serialized_json_objects.emplace_back(basic_obj);
+
+    auto basic_array = empty_array;
+    basic_array.emplace_back(1);
+    basic_array.emplace_back(1.0);
+    basic_array.emplace_back(true);
+    basic_array.emplace_back(cShortString);
+    basic_array.emplace_back(cClpString);
+    basic_array.emplace_back(nullptr);
+    basic_array.emplace_back(empty_array);
+    for (auto const& element : basic_array) {
+        // Non-map objects should not be serializable
+        REQUIRE(
+                (false
+                 == unpack_and_serialize_msgpack_bytes(
+                         nlohmann::json::to_msgpack(element),
+                         serializer
+                 ))
+        );
+    }
+    basic_array.emplace_back(empty_obj);
+
+    // Recursively construct an object containing inner maps and inner arrays.
+    auto recursive_obj = basic_obj;
+    auto recursive_array = basic_array;
+    constexpr size_t cRecursiveDepth{6};
+    for (size_t i{0}; i < cRecursiveDepth; ++i) {
+        recursive_array.emplace_back(recursive_obj);
+        recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
+        recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
+        REQUIRE(unpack_and_serialize_msgpack_bytes(
+                nlohmann::json::to_msgpack(recursive_obj),
+                serializer
+        ));
+        serialized_json_objects.emplace_back(recursive_obj);
+    }
+
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+
+    // Deserialize the results
+    BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
+    auto deserializer_result = Deserializer::create(reader);
+    REQUIRE_FALSE(deserializer_result.has_error());
+    auto& deserializer = deserializer_result.value();
+
+    for (auto const& json_obj : serialized_json_objects) {
+        auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
+        REQUIRE_FALSE(kv_log_event_result.has_error());
+
+        auto const& kv_log_event = kv_log_event_result.value();
+        auto const num_leaves_in_json_obj = count_num_leaves(json_obj);
+        auto const num_kv_pairs = kv_log_event.get_node_id_value_pairs().size();
+        REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
+
+        auto const serialized_json_result = kv_log_event.serialize_to_json();
+        REQUIRE_FALSE(serialized_json_result.has_error());
+        REQUIRE((json_obj == serialized_json_result.value()));
+    }
 }

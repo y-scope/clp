@@ -64,6 +64,9 @@ logger = get_logger("search-job-handler")
 # Dictionary of active jobs indexed by job id
 active_jobs: Dict[str, QueryJob] = {}
 
+# Dictionary that maps IDs of file splits being extracted to IDs of jobs waiting for them
+active_file_split_ir_extractions: Dict[str, List[str]] = {}
+
 reducer_connection_queue: Optional[asyncio.Queue] = None
 
 
@@ -463,12 +466,13 @@ def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
+    ir_collection_name: str,
     num_archives_to_search_per_sub_job: int,
 ) -> List[asyncio.Task]:
     global active_jobs
+    global active_file_split_ir_extractions
 
     reducer_acquisition_tasks = []
-
     pending_search_jobs = [
         job
         for job in active_jobs.values()
@@ -542,10 +546,58 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
+                # NOTE: The following two if blocks should not be reordered since if we first check
+                # whether *an* IR file has been extracted for the requested file split, it doesn't
+                # mean that *all* IR files have has been extracted for the file split (since the
+                # extraction job may still be in progress). Thus, we must first check whether the
+                # file split is in the process of being extracted, and then check whether it's
+                # already been extracted.
+
+                # Check if the file split is currently being extracted; if so, add the job ID to the
+                # list of jobs waiting for it.
+                if file_split_id in active_file_split_ir_extractions:
+                    active_file_split_ir_extractions[file_split_id].append(job_id)
+                    logger.info(
+                        f"Split {file_split_id} is being extracted, so mark job {job_id} as running"
+                    )
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.RUNNING,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as running")
+                    continue
+
+                # Check if the file split has already been extracted
+                if ir_file_exists_for_file_split(
+                    results_cache_uri, ir_collection_name, file_split_id
+                ):
+                    logger.info(
+                        f"Split {file_split_id} already extracted, so mark job {job_id} as done"
+                    )
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.SUCCEEDED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as succeeded")
+                    continue
+
+                active_file_split_ir_extractions[file_split_id] = [job_id]
                 extract_ir_config.file_split_id = file_split_id
                 new_extract_ir_job = ExtractIrJob(
                     id=job_id,
                     archive_id=archive_id,
+                    file_split_id=file_split_id,
                     extract_ir_config=extract_ir_config,
                     state=InternalJobState.WAITING_FOR_DISPATCH,
                 )
@@ -631,6 +683,15 @@ def found_max_num_latest_results(
         )
         min_timestamp_in_top_results = 0 if len(results) == 0 else results[0]["timestamp"]
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
+
+
+def ir_file_exists_for_file_split(
+    results_cache_uri: str, ir_collection_name: str, file_split_id: str
+):
+    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+        ir_collection = results_cache_client.get_default_database()[ir_collection_name]
+        results_count = ir_collection.count_documents({"file_split_id": file_split_id})
+        return 0 != results_count
 
 
 async def handle_finished_search_job(
@@ -723,8 +784,10 @@ async def handle_finished_extract_ir_job(
     db_conn, job: ExtractIrJob, task_results: Optional[Any]
 ) -> None:
     global active_jobs
+    global active_file_split_ir_extractions
 
     job_id = job.id
+    file_split_id = job.file_split_id
     new_job_status = QueryJobStatus.SUCCEEDED
     num_tasks = len(task_results)
     if 1 != num_tasks:
@@ -761,6 +824,22 @@ async def handle_finished_extract_ir_job(
             logger.info(f"Completed IR extraction job {job_id}.")
         else:
             logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
+
+    waiting_jobs = active_file_split_ir_extractions[file_split_id]
+    waiting_jobs.remove(job_id)
+    for waiting_job in waiting_jobs:
+        logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
+        set_job_or_task_status(
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            waiting_job,
+            new_job_status,
+            QueryJobStatus.RUNNING,
+            num_tasks_completed=0,
+            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        )
+
+    del active_file_split_ir_extractions[file_split_id]
     del active_jobs[job_id]
 
 
@@ -819,6 +898,7 @@ async def handle_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
+    ir_collection_name: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
 ) -> None:
@@ -832,6 +912,7 @@ async def handle_jobs(
             db_conn_pool,
             clp_metadata_db_conn_params,
             results_cache_uri,
+            ir_collection_name,
             num_archives_to_search_per_sub_job,
         )
         if 0 == len(reducer_acquisition_tasks):
@@ -915,6 +996,7 @@ async def main(argv: List[str]) -> int:
                     True
                 ),
                 results_cache_uri=clp_config.results_cache.get_uri(),
+                ir_collection_name=clp_config.results_cache.ir_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
             )

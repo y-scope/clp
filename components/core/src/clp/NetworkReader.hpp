@@ -17,7 +17,9 @@
 
 #include <curl/curl.h>
 
+#include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
+#include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 #include "Thread.hpp"
@@ -70,23 +72,19 @@ public:
     static constexpr size_t cMinBufferSize{512};
 
     /**
-     * Initializes static resources for this class. This must be called before using the class.
-     * @return ErrorCode_Success on success.
-     * @return ErrorCode_Failure if libcurl initialization failed.
-     */
-    [[nodiscard]] static auto init() -> ErrorCode;
-
-    /**
-     * De-initializes any static resources.
-     */
-    static auto deinit() -> void;
-
-    /**
      * Constructs a reader to stream data from the given URL, starting at the given offset.
-     * TODO: the current implementation doesn't handle the case when the given offset is out of
-     * range. The file_pos will be set to an invalid state if this happens, which can be
-     * problematic if the other part of the program depends on this position. It can be fixed by
-     * capturing the error code 416 in the response header.
+     * NOTE: This class depends on `libcurl`, so an instance of `clp::CurlGlobalInstance` must
+     * remain alive for the entire lifespan of any instance of this class.
+     *
+     * This class maintains an instance of `CurlGlobalInstance` in case the user forgets to
+     * instantiate one, but it is better for performance if the user instantiates one. For instance,
+     * if the user doesn't instantiate a `CurlGlobalInstance` and only ever creates one
+     * `NetworkReader` at a time, then every construction and destruction of `NetworkReader` would
+     * cause `libcurl` to init and deinit. In contrast, if the user instantiates a
+     * `CurlGlobalInstance` before instantiating any `NetworkReader`s, then the `CurlGlobalInstance`
+     * maintained by this class will simply be a reference to the existing one rather than
+     * initializing and deinitializing `libcurl`.
+     *
      * @param src_url
      * @param offset Index of the byte at which to start the download
      * @param disable_caching Whether to disable the caching.
@@ -109,7 +107,7 @@ public:
     );
 
     // Destructor
-    virtual ~NetworkReader();
+    ~NetworkReader() override;
 
     // Copy/Move Constructors
     // These are disabled since this class' synchronization primitives are non-copyable and
@@ -219,6 +217,19 @@ public:
         return m_curl_ret_code.load();
     }
 
+    /**
+     * @return The error message set by the underlying CURL handler.
+     * @return std::nullopt if the download is still in-progress or no error has occured.
+     */
+    [[nodiscard]] auto get_curl_error_msg() const -> std::optional<std::string_view> {
+        if (auto const ret_code{get_curl_ret_code()};
+            false == ret_code.has_value() || CURLE_OK == ret_code.value())
+        {
+            return std::nullopt;
+        }
+        return std::string_view{m_curl_error_msg_buf->data()};
+    }
+
 private:
     /**
      * This class implements clp::Thread to download data using CURL.
@@ -245,8 +256,6 @@ private:
         size_t m_offset{0};
         bool m_disable_caching{false};
     };
-
-    static bool m_static_init_complete;
 
     /**
      * Submits a request to abort the ongoing curl download session.
@@ -308,6 +317,8 @@ private:
         return m_at_least_one_byte_downloaded.load();
     }
 
+    CurlGlobalInstance m_curl_global_instance;
+
     std::string m_src_url;
 
     size_t m_offset{0};
@@ -320,8 +331,7 @@ private:
     size_t m_buffer_size{cDefaultBufferSize};
     size_t m_curr_downloader_buf_idx{0};
 
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-    std::vector<std::unique_ptr<char[]>> m_buffer_pool;
+    std::vector<Array<char>> m_buffer_pool;
     std::queue<BufferView> m_filled_buffer_queue;
     std::optional<BufferView> m_curr_downloader_buf;
     std::optional<BufferView> m_curr_reader_buf;
@@ -337,6 +347,10 @@ private:
     // These two members should only be set from `set_download_completion_status`
     std::atomic<State> m_state{State::InProgress};
     std::atomic<std::optional<CURLcode>> m_curl_ret_code;
+
+    std::shared_ptr<CurlDownloadHandler::ErrorMsgBuf> m_curl_error_msg_buf{
+            std::make_shared<CurlDownloadHandler::ErrorMsgBuf>()
+    };
 };
 }  // namespace clp
 
