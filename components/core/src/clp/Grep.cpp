@@ -1023,14 +1023,12 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
     return query_substr_interpretations.back();
 }
 
-vector<QueryInterpretation> Grep::get_possible_substr_types(
-        WildcardExpressionView const& search_string_view,
-        ByteLexer& lexer
-) {
+vector<QueryInterpretation>
+Grep::get_possible_substr_types(WildcardExpressionView const& wildcard_expr, ByteLexer& lexer) {
     vector<QueryInterpretation> possible_substr_types;
 
     // Don't allow an isolated greedy wildcard to be considered a variable
-    if (search_string_view.is_greedy_wildcard()) {
+    if (wildcard_expr.is_greedy_wildcard()) {
         possible_substr_types.emplace_back("*");
         return possible_substr_types;
     }
@@ -1039,7 +1037,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     // wildcards are redundant (e.g., for string "a*b", a decomposition of the form "a*" + "b" is a
     // subset of the more general "a*" + "*" + "*b". Note, as this needs "*", the "*" substring is
     // not redundant. This is already handled above). More detail about this is given below.
-    if (search_string_view.starts_or_ends_with_greedy_wildcard()) {
+    if (wildcard_expr.starts_or_ends_with_greedy_wildcard()) {
         return possible_substr_types;
     }
 
@@ -1050,7 +1048,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     set<uint32_t> variable_types;
     // If the substring isn't surrounded by delimiters there is no reason to consider the case where
     // it is a variable as CLP would not compress it as such.
-    if (search_string_view.surrounded_by_delims_or_wildcards(lexer)) {
+    if (wildcard_expr.surrounded_by_delims_or_wildcards(lexer)) {
         // If the substring is preceded or proceeded by a greedy wildcard then it's possible the
         // substring could be extended to match a var, so the wildcards are added to the substring.
         // If we don't consider this case we could miss combinations. Take for example "a*b", "a*"
@@ -1060,7 +1058,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
         // Instead we desire to decompose the string into "a*" + "*" + "*b". Note, non-greedy
         // wildcards do not need to be considered, for example "a?b" can never match "<has#>?<has#>"
         // or "<has#><has#>".
-        auto extended_search_string_view = search_string_view.extend_to_adjacent_greedy_wildcards();
+        auto extended_search_string_view = wildcard_expr.extend_to_adjacent_greedy_wildcards();
 
         std::tie(variable_types, contains_wildcard)
                 = get_matching_variable_types(extended_search_string_view, lexer);
@@ -1107,7 +1105,7 @@ vector<QueryInterpretation> Grep::get_possible_substr_types(
     }
     // If the substring matches no variables, or has a wildcard, it is potentially static-text.
     if (variable_types.empty() || contains_wildcard) {
-        possible_substr_types.emplace_back(search_string_view.get_value());
+        possible_substr_types.emplace_back(wildcard_expr.get_value());
     }
     return possible_substr_types;
 }

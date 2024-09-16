@@ -142,13 +142,15 @@ public:
     );
 
     /**
-     * Generates the possible static-text and variable types for the given substring.
-     * @param search_string_view
+     * Computes the tokens (static text or different types of variables) that the given wildcard
+     * expression could be interpreted as, generates a `QueryInterpretation` for each one, and
+     * returns the `QueryInterpretation`s.
+     * @param wildcard_expr
      * @param lexer
-     * @return a vector containing the possible substring types
+     * @return The `QueryInterpretation`s.
      */
     static std::vector<QueryInterpretation> get_possible_substr_types(
-            WildcardExpressionView const& search_string_view,
+            WildcardExpressionView const& wildcard_expr,
             log_surgeon::lexers::ByteLexer& lexer
     );
 
