@@ -499,7 +499,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-ffi_IrUnitHandler.cpp
+        tests/test-ffi_IrUnitHandlerInterface.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
