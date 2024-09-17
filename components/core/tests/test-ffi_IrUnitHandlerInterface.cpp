@@ -84,10 +84,11 @@ class TriviallyInheritedIrUnitHandler : public TrivialIrUnitHandler {};
  * `clp::ffi::ir_stream::IrUnitHandlerInterface` and ensure they don't return errors.
  * @param handler
  */
-auto simulate_ir_unit_handler_calling(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
+auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
 ) -> void;
 
-auto simulate_ir_unit_handler(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler) -> void {
+auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
+) -> void {
     auto test_log_event_result{
             KeyValuePairLogEvent::create(std::make_shared<SchemaTree>(), {}, cTestUtcOffset)
     };
@@ -114,14 +115,14 @@ auto simulate_ir_unit_handler(clp::ffi::ir_stream::IrUnitHandlerInterface auto& 
 }  // namespace
 
 TEMPLATE_TEST_CASE(
-        "test_ir_unit_handler_basic",
+        "test_ir_unit_handler_interface_basic",
         "[ffi][ir_stream]",
         TrivialIrUnitHandler,
         TriviallyInheritedIrUnitHandler
 ) {
     TestType handler;
     REQUIRE_FALSE(handler.is_complete());
-    simulate_ir_unit_handler(handler);
+    test_ir_unit_handler_interface(handler);
 
     REQUIRE((handler.get_utc_offset_delta() == cTestUtcOffsetDelta));
     auto const& optional_log_event{handler.get_log_event()};
