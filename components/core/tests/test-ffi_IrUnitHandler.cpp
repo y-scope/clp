@@ -26,7 +26,7 @@ constexpr std::string_view cTestSchemaTreeNodeKeyName{"test_key"};
 class TestUnitHandler {
 public:
     // Implements `clp::ffi::ir_stream::IrUnitHandler` interface
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent log_event) -> IRErrorCode {
+    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
         m_log_event.emplace(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
     }
@@ -95,9 +95,22 @@ auto test_ir_unit_handler(Handler& handler) -> void {
     );
     REQUIRE((IRErrorCode::IRErrorCode_Success == handler.handle_end_of_stream()));
 }
+}  // namespace
 
 TEST_CASE("test_ir_unit_handler_basic", "[ffi][ir_stream]") {
     TestUnitHandler handler;
+    REQUIRE_FALSE(handler.is_complete());
     test_ir_unit_handler(handler);
+    REQUIRE(handler.get_utc_offset_delta() == cTestUtcOffsetDelta);
+    REQUIRE(
+            (handler.get_log_event().has_value()
+             && handler.get_log_event().value().get_utc_offset() == cTestUtcOffset
+             && handler.get_log_event().value().get_node_id_value_pairs().empty())
+    );
+    REQUIRE(
+            (handler.get_schema_tree_node_locator().has_value()
+             && handler.get_schema_tree_node_locator().value().get_key_name()
+                        == cTestSchemaTreeNodeKeyName)
+    );
+    REQUIRE(handler.is_complete());
 }
-}  // namespace

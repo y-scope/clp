@@ -16,7 +16,7 @@ namespace clp::ffi::ir_stream {
 template <typename Handler>
 concept IrUnitHandler = requires(
         Handler handler,
-        KeyValuePairLogEvent log_event,
+        KeyValuePairLogEvent&& log_event,
         UtcOffset utc_offset_old,
         UtcOffset utc_offset_new,
         SchemaTree::NodeLocator schema_tree_node_locator
@@ -27,7 +27,7 @@ concept IrUnitHandler = requires(
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
-        handler.handle_log_event(std::move(log_event))
+        handler.handle_log_event(std::forward<KeyValuePairLogEvent&&>(log_event))
     } -> std::same_as<IRErrorCode>;
 
     /**
