@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_IRUNITHANLER_HPP
-#define CLP_FFI_IR_STREAM_IRUNITHANLER_HPP
+#ifndef CLP_FFI_IR_STREAM_IRUNITHANLERINTERFACE_HPP
+#define CLP_FFI_IR_STREAM_IRUNITHANLERINTERFACE_HPP
 
 #include <concepts>
 #include <utility>
@@ -14,7 +14,7 @@ namespace clp::ffi::ir_stream {
  * Concept that defines IR unit handler interface.
  */
 template <typename Handler>
-concept IrUnitHandler = requires(
+concept IrUnitHandlerInterface = requires(
         Handler handler,
         KeyValuePairLogEvent&& log_event,
         UtcOffset utc_offset_old,
@@ -59,4 +59,4 @@ concept IrUnitHandler = requires(
 };
 }  // namespace clp::ffi::ir_stream
 
-#endif  // CLP_FFI_IR_STREAM_IRUNITHANLER_HPP
+#endif  // CLP_FFI_IR_STREAM_IRUNITHANLERINTERFACE_HPP

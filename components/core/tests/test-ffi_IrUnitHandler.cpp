@@ -6,7 +6,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
-#include "../src/clp/ffi/ir_stream/IrUnitHandler.hpp"
+#include "../src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../src/clp/ffi/SchemaTree.hpp"
 #include "../src/clp/ffi/SchemaTreeNode.hpp"
@@ -23,9 +23,12 @@ constexpr UtcOffset cTestUtcOffset{100};
 constexpr UtcOffset cTestUtcOffsetDelta{1000};
 constexpr std::string_view cTestSchemaTreeNodeKeyName{"test_key"};
 
-class TestUnitHandler {
+/**
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ */
+class TrivialIrUnitHandler {
 public:
-    // Implements `clp::ffi::ir_stream::IrUnitHandler` interface
+    // Implements `clp::ffi::ir_stream::IrUnitHandlerInterface` interface
     [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
         m_log_event.emplace(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
@@ -70,8 +73,21 @@ private:
     std::optional<KeyValuePairLogEvent> m_log_event;
 };
 
-template <clp::ffi::ir_stream::IrUnitHandler Handler>
-auto test_ir_unit_handler(Handler& handler) -> void {
+/**
+ * Class that inherits `TrivialIrUnitHandler` which also implements
+ * `clp::ffi::ir_stream::IrUnitHandlerInterface`.
+ */
+class TriviallyInheritedIrUnitHandler : public TrivialIrUnitHandler {};
+
+/**
+ * Simulates the use of an IR unit handler. It calls every method required by
+ * `clp::ffi::ir_stream::IrUnitHandlerInterface` and ensure they don't return errors.
+ * @param handler
+ */
+auto simulate_ir_unit_handler_calling(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
+) -> void;
+
+auto simulate_ir_unit_handler(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler) -> void {
     auto test_log_event_result{
             KeyValuePairLogEvent::create(std::make_shared<SchemaTree>(), {}, cTestUtcOffset)
     };
@@ -97,20 +113,27 @@ auto test_ir_unit_handler(Handler& handler) -> void {
 }
 }  // namespace
 
-TEST_CASE("test_ir_unit_handler_basic", "[ffi][ir_stream]") {
-    TestUnitHandler handler;
+TEMPLATE_TEST_CASE(
+        "test_ir_unit_handler_basic",
+        "[ffi][ir_stream]",
+        TrivialIrUnitHandler,
+        TriviallyInheritedIrUnitHandler
+) {
+    TestType handler;
     REQUIRE_FALSE(handler.is_complete());
-    test_ir_unit_handler(handler);
-    REQUIRE(handler.get_utc_offset_delta() == cTestUtcOffsetDelta);
+    simulate_ir_unit_handler(handler);
+
+    REQUIRE((handler.get_utc_offset_delta() == cTestUtcOffsetDelta));
+    auto const& optional_log_event{handler.get_log_event()};
     REQUIRE(
-            (handler.get_log_event().has_value()
-             && handler.get_log_event().value().get_utc_offset() == cTestUtcOffset
-             && handler.get_log_event().value().get_node_id_value_pairs().empty())
+            (optional_log_event.has_value()
+             && optional_log_event.value().get_utc_offset() == cTestUtcOffset
+             && optional_log_event.value().get_node_id_value_pairs().empty())
     );
+    auto const& optional_schema_tree_locator{handler.get_schema_tree_node_locator()};
     REQUIRE(
-            (handler.get_schema_tree_node_locator().has_value()
-             && handler.get_schema_tree_node_locator().value().get_key_name()
-                        == cTestSchemaTreeNodeKeyName)
+            (optional_schema_tree_locator.has_value()
+             && optional_schema_tree_locator.value().get_key_name() == cTestSchemaTreeNodeKeyName)
     );
     REQUIRE(handler.is_complete());
 }
