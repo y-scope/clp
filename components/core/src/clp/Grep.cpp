@@ -1078,6 +1078,9 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
     // Use the variable types to determine the possible_substr_types
     for (uint32_t const variable_type_id : matching_variable_type_ids) {
         auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
+
+        // TODO We shouldn't hardcode the type names for encoded variables, but to support that, we
+        // need to improve our schema file syntax.
         auto is_encoded_variable_type = QueryInterpretation::cIntVarName == variable_type_name
                                         || QueryInterpretation::cFloatVarName == variable_type_name;
         if (false == is_encoded_variable_type) {
