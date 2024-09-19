@@ -147,6 +147,8 @@ size_t ArchiveWriter::store_tables() {
      * Packed stream metadata schema
      * # num packed streams <64 bit>
      * # [offset into file <64 bit> uncompressed size <64 bit>]+
+     * # num_separate_column_schemas (always 0 in current implementation)
+     * # [undefined]+ (will be defined once supported)
      * # num schemas <64 bit>
      * # [stream id <64 bit> offset into stream <64 bit> schema id <32 bit> num messages <64 bit>]+
      *
@@ -210,6 +212,11 @@ size_t ArchiveWriter::store_tables() {
         m_table_metadata_compressor.write_numeric_value(file_offset);
         m_table_metadata_compressor.write_numeric_value(uncompressed_size);
     }
+
+    // The current implementation doesn't store large tables as separate columns, so this is always
+    // zero.
+    size_t const num_separate_column_schemas{0};
+    m_table_metadata_compressor.write_numeric_value(num_separate_column_schemas);
 
     m_table_metadata_compressor.write_numeric_value(schema_metadata.size());
     for (auto& [stream_id, stream_offset, schema_id, num_messages] : schema_metadata) {
