@@ -13,6 +13,7 @@ dnf install -y \
     java-11-openjdk \
     libarchive-devel \
     libcurl-devel \
+    librdkafka-devel \
     libzstd-devel \
     make \
     mariadb-connector-c-devel \
