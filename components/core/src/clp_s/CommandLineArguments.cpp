@@ -352,8 +352,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 std::cerr << "Examples:" << std::endl;
                 std::cerr << "  # Compress file1.ir and dir1 into archives-dir" << std::endl;
-                std::cerr << "  " << m_program_name << " i archives-dir file1.ir dir1"
-                          << std::endl;
+                std::cerr << "  " << m_program_name << " i archives-dir file1.ir dir1" << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -471,8 +470,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 std::cerr << "Examples:" << std::endl;
                 std::cerr << "  # Parse file1.json and dir1 into irs-dir" << std::endl;
-                std::cerr << "  " << m_program_name << " r irs-dir file1.json dir1"
-                          << std::endl;
+                std::cerr << "  " << m_program_name << " r irs-dir file1.json dir1" << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -1042,8 +1040,7 @@ void CommandLineArguments::print_search_usage() const {
 }
 
 void CommandLineArguments::print_json_to_IR_usage() const {
-    std::cerr << "Usage: " << m_program_name << " r [OPTIONS] IRS_DIR [FILE/DIR ...]"
-              << std::endl;
+    std::cerr << "Usage: " << m_program_name << " r [OPTIONS] IRS_DIR [FILE/DIR ...]" << std::endl;
 }
 
 void CommandLineArguments::print_IR_compression_usage() const {
