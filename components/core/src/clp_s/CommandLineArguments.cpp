@@ -324,11 +324,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "print-archive-stats",
                     po::bool_switch(&m_print_archive_stats),
                     "Print statistics (json) about the archive after it's compressed."
-            )/*(
-                    "structurize-arrays",
-                    po::bool_switch(&m_structurize_arrays),
-                    "Structurize arrays instead of compressing them as clp strings."
-            ) */;
+            );
             // clang-format on
 
             po::positional_options_description positional_options;
@@ -354,10 +350,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             if (parsed_command_line_options.count("help")) {
                 print_IR_compression_usage();
 
-                /* std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Compress file1.json and dir1 into archives-dir" << std::endl;
-                std::cerr << "  " << m_program_name << " c archives-dir file1.json dir1"
-                          << std::endl; */
+                std::cerr << "Examples:" << std::endl;
+                std::cerr << "  # Compress file1.ir and dir1 into archives-dir" << std::endl;
+                std::cerr << "  " << m_program_name << " i archives-dir file1.ir dir1"
+                          << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -403,7 +399,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 m_metadata_db_config = std::move(metadata_db_config);
             }
-        }else if ((char)Command::Json_To_IR == command_input) {
+        } else if ((char)Command::Json_To_IR == command_input) {
             po::options_description compression_positional_options;
             // clang-format off
              compression_positional_options.add_options()(
@@ -473,10 +469,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             if (parsed_command_line_options.count("help")) {
                 print_json_to_IR_usage();
 
-                /* std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Compress file1.json and dir1 into archives-dir" << std::endl;
-                std::cerr << "  " << m_program_name << " c archives-dir file1.json dir1"
-                          << std::endl; */
+                std::cerr << "Examples:" << std::endl;
+                std::cerr << "  # Parse file1.json and dir1 into irs-dir" << std::endl;
+                std::cerr << "  " << m_program_name << " r irs-dir file1.json dir1"
+                          << std::endl;
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -522,7 +518,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 m_metadata_db_config = std::move(metadata_db_config);
             }
-        }else if ((char)Command::Extract == command_input) {
+        } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             // clang-format off
             extraction_options.add_options()(
@@ -1046,7 +1042,7 @@ void CommandLineArguments::print_search_usage() const {
 }
 
 void CommandLineArguments::print_json_to_IR_usage() const {
-    std::cerr << "Usage: " << m_program_name << " r [OPTIONS] ARCHIVES_DIR [FILE/DIR ...]"
+    std::cerr << "Usage: " << m_program_name << " r [OPTIONS] IRS_DIR [FILE/DIR ...]"
               << std::endl;
 }
 

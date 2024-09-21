@@ -9,7 +9,16 @@
 #include <boost/uuid/random_generator.hpp>
 #include <simdjson.h>
 
+#include "../clp/BufferReader.hpp"
+#include "../clp/ffi/ir_stream/Deserializer.hpp"
+#include "../clp/ffi/KeyValuePairLogEvent.hpp"
+#include "../clp/ffi/SchemaTree.hpp"
+#include "../clp/ffi/SchemaTreeNode.hpp"
+#include "../clp/ffi/utils.hpp"
+#include "../clp/ffi/Value.hpp"
 #include "../clp/GlobalMySQLMetadataDB.hpp"
+#include "../clp/ir/types.hpp"
+#include "../clp/type_utils.hpp"
 #include "ArchiveWriter.hpp"
 #include "DictionaryWriter.hpp"
 #include "FileReader.hpp"
@@ -22,20 +31,11 @@
 #include "TimestampDictionaryWriter.hpp"
 #include "Utils.hpp"
 #include "ZstdCompressor.hpp"
-#include "../clp/ffi/ir_stream/Deserializer.hpp"
-#include "../clp/BufferReader.hpp"
-#include "../clp/type_utils.hpp"
-#include "../clp/ffi/Value.hpp"
-#include "../clp/ffi/KeyValuePairLogEvent.hpp"
-#include "../clp/ffi/SchemaTree.hpp"
-#include "../clp/ffi/SchemaTreeNode.hpp"
-#include "../clp/ffi/utils.hpp"
-#include "../clp/ir/types.hpp"
 
-using clp::size_checked_pointer_cast;
 using clp::BufferReader;
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::KeyValuePairLogEvent;
+using clp::size_checked_pointer_cast;
 
 using namespace simdjson;
 
@@ -107,18 +107,28 @@ private:
     /**
      * Parses a Key Value Log Event
      * @param kv the key value log event
-     * @param cache cache of node id conversions between deserializer schema tree nodes and archive schema tree nodes
+     * @param cache cache of node id conversions between deserializer schema tree nodes and archive
+     * schema tree nodes
      */
-    void parse_kv_log_event(KeyValuePairLogEvent const& kv, std::map<std::tuple<int, NodeType>, int>& cache);
+    void parse_kv_log_event(
+            KeyValuePairLogEvent const& kv,
+            std::map<std::tuple<int, NodeType>, int>& cache
+    );
 
     /**
      * Get archive node id for ir node
-     * @param cache cache of node id conversions between deserializer schema tree nodes and archive schema tree nodes
+     * @param cache cache of node id conversions between deserializer schema tree nodes and archive
+     * schema tree nodes
      * @param irNodeID
      * @param irType
      * @param irTree
      */
-    int get_archive_node_id(std::map < std::tuple<int, NodeType>,  int>& cache, int irNodeID, NodeType archiveNodeType, clp::ffi::SchemaTree const& irTree);
+    int get_archive_node_id(
+            std::map<std::tuple<int, NodeType>, int>& cache,
+            int irNodeID,
+            NodeType archiveNodeType,
+            clp::ffi::SchemaTree const& irTree
+    );
 
     /**
      * Parses an array within a JSON line
