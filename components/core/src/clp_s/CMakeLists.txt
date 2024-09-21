@@ -30,6 +30,10 @@ set(
         ../clp/WriterInterface.hpp
         ../clp/ffi/ir_stream/Deserializer.hpp
         ../clp/ffi/ir_stream/Deserializer.cpp
+        ../clp/ffi/ir_stream/Serializer.hpp
+        ../clp/ffi/ir_stream/Serializer.cpp
+        ../clp/ffi/ir_stream/utils.hpp
+        ../clp/ffi/ir_stream/utils.cpp
         ../clp/BufferReader.hpp
         ../clp/BufferReader.cpp
         ../clp/type_utils.hpp
@@ -49,9 +53,12 @@ set(
         ../clp/ffi/SchemaTreeNode.hpp
         ../clp/ffi/Value.hpp
         ../clp/ffi/ir_stream/decoding_methods.hpp
-        ../clp/ffi/ir_stream/protocol_constants.hpp
-        ../clp/ffi/ir_stream/utils.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
+        ../clp/ffi/ir_stream/encoding_methods.hpp
+        ../clp/ffi/ir_stream/encoding_methods.cpp
+        ../clp/ir/parsing.hpp
+        ../clp/ir/parsing.cpp
+        ../clp/ffi/ir_stream/protocol_constants.hpp
         ../clp/ffi/utils.hpp
         ../clp/ffi/utils.cpp
         ../clp/utf8_utils.hpp

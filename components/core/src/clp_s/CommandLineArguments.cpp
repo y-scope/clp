@@ -432,10 +432,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         default_value(m_max_document_size),
                     "Maximum allowed size (B) for a single document before ir generation fails."
             )(
-                    "timestamp-key",
-                    po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
-                        default_value(m_timestamp_key),
-                    "Path (e.g. x.y) for the field containing the log event's timestamp."
+                    "encoding-type",
+                    po::value<int>(&m_encoding_type)->value_name("ENCODING_TYPE")->
+                        default_value(m_encoding_type),
+                    "4 (four byte encoding) or 8 (eight byte encoding)"
             )(
                     "db-config-file",
                     po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")->

@@ -38,26 +38,6 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_writer->open(m_archive_options);
 }
 
-JsonParser::JsonParser(JsonToIRParserOption const& option)
-        : m_num_messages(0),
-          m_max_document_size(option.max_document_size) {
-    if (false == FileUtils::validate_path(option.file_paths)) {
-        exit(1);
-    }
-
-    for (auto& file_path : option.file_paths) {
-        FileUtils::find_all_files(file_path, m_file_paths);
-    }
-
-    m_archive_options.archives_dir = option.irs_dir;
-    m_archive_options.compression_level = option.compression_level;
-    //m_archive_options.print_archive_stats = option.print_archive_stats;
-    m_archive_options.id = m_generator();
-
-    m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
-    m_archive_writer->open(m_archive_options);
-}
-
 void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_id) {
     ondemand::object_iterator it = line.begin();
     if (it == line.end()) {
@@ -744,11 +724,12 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv, std::map<std
 bool JsonParser::parse_from_IR() {
     std::map<std::tuple<int, NodeType>,  int> id_conversion_cache;
     m_archive_writer->add_node(-1, NodeType::Unknown, "root");
-
+    //int fileNum = 0;
     for (auto& file_path : m_file_paths) {
+        std::cout << file_path << std::endl;
         std::vector<char> ir_buf;
         //Make function from reading in this file
-        char temp_ir_buf[1000];
+        char temp_ir_buf[10000];
         //char* new_ir_buf = (char *) malloc(ir_buf.size());
         FileReader infile;
         infile.open(file_path);
@@ -766,11 +747,11 @@ bool JsonParser::parse_from_IR() {
         size_t num_bytes_read = 0;
         do{
             num_bytes_read = 0;
-            zd.try_read(temp_ir_buf, 1000, num_bytes_read);
+            zd.try_read(temp_ir_buf, 10000, num_bytes_read);
             if (num_bytes_read != 0){
                 ir_buf.insert(ir_buf.end(), temp_ir_buf, temp_ir_buf+num_bytes_read);
             }
-        }while (num_bytes_read == 1000);
+        }while (num_bytes_read == 10000);
         zd.close();
         infile.close(); 
         /* std::cout << "IR BUFFER\n";
@@ -799,9 +780,9 @@ bool JsonParser::parse_from_IR() {
         m_num_messages = 0;
         //size_t bytes_consumed_up_to_prev_archive = 0;
         //size_t bytes_consumed_up_to_prev_record = 0;
-        int iterations = 2;
+        //int iterations = 2;
         do{
-            iterations--;
+            //iterations--;
             //std::cerr << "In do while loop\n";
             auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
             //std::cerr << "After deserialize\n";
@@ -825,30 +806,28 @@ bool JsonParser::parse_from_IR() {
             auto const& kv_log_event = kv_log_event_result.value();
 
             //print_kv_log_event(kv_log_event);
-            //std::cerr << "before parse\n";
+            /*if (fileNum > 0){
+                std::cout << "before parse\n";
+                print_kv_log_event(kv_log_event);
+            }*/
             parse_kv_log_event(kv_log_event, id_conversion_cache);
             //std::cerr << "After parse\n";
             m_num_messages++;
             //Implement archive splitting and size tracking
-            /* bytes_consumed_up_to_prev_record = json_file_iterator.get_num_bytes_consumed();
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                m_archive_writer->increment_uncompressed_size(
-                        bytes_consumed_up_to_prev_record - bytes_consumed_up_to_prev_archive
-                );
-                bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
+                std::cerr << "Splitting Archive\n\n";
+                id_conversion_cache.clear();
+                m_archive_writer->add_node(-1, NodeType::Unknown, "root");
                 split_archive();
-            } */
+            }
 
             m_current_parsed_message.clear();
 
         } while(1);//while(iterations > 0);
         //std::cout << "Out of do while loop\n";
-
+        id_conversion_cache.clear();
+        //fileNum++;
     }
-    return true;
-}
-
-bool JsonParser::parse_to_IR(){
     return true;
 }
 

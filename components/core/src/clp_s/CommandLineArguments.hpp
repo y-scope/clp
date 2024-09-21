@@ -62,6 +62,8 @@ public:
 
     size_t get_max_document_size() const { return m_max_document_size; }
 
+    int get_encoding_type() const { return m_encoding_type; }
+
     [[nodiscard]] bool print_archive_stats() const { return m_print_archive_stats; }
 
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
@@ -179,7 +181,7 @@ private:
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
     size_t m_ordered_chunk_size{0};
-
+    int m_encoding_type{8};
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
 

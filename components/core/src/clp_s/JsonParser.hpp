@@ -30,6 +30,7 @@
 #include "../clp/ffi/SchemaTree.hpp"
 #include "../clp/ffi/SchemaTreeNode.hpp"
 #include "../clp/ffi/utils.hpp"
+#include "../clp/ir/types.hpp"
 
 using clp::size_checked_pointer_cast;
 using clp::BufferReader;
@@ -56,7 +57,7 @@ struct JsonToIRParserOption {
     std::string irs_dir;
     size_t max_document_size;
     int compression_level;
-    std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
+    int encoding;
 };
 
 class JsonParser {
@@ -87,12 +88,6 @@ public:
      * @return whether the IR Stream was parsed succesfully
      */
     [[nodiscard]] bool parse_from_IR();
-
-    /**
-     * Parses the JSON log messages to the Key Value IR Stream format.
-     * @return whether the JSON was parsed succesfully
-     */
-    [[nodiscard]] bool parse_to_IR();
 
     /**
      * Writes the metadata and archive data to disk.
