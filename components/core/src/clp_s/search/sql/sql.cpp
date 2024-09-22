@@ -20,7 +20,7 @@ namespace clp_s::search::sql {
 namespace {
 class ParseTreeVisitor : public SqlBaseVisitor {
 public:
-    auto visitStart(SqlParser::StartContext* ctx) override -> std::any {
+    auto visitStart(SqlParser::StartContext* ctx) -> std::any override {
         return EmptyExpr::create();
     }
 };
