@@ -1079,16 +1079,24 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
     for (uint32_t const variable_type_id : matching_variable_type_ids) {
         auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
 
+        // clp supports three types of variables---int encoded variables, float encoded variables,
+        // and dictionary variables---whereas log-surgeon (in combination with the schema file) can
+        // support more, meaning we need to somehow project the variable types found by log-surgeon
+        // (schema variables) to the variable types that clp supports (clp variables). At present,
+        // clp's encoded variables have a one-to-one mapping since a variable will only be encoded
+        // if it's named `QueryInterpretation::cIntVarName` or `QueryInterpretation::cFloatVarName`.
+        // Thus, any other schema variables need to be treated as clp dictionary variables.
+        //
         // TODO We shouldn't hardcode the type names for encoded variables, but to support that, we
         // need to improve our schema file syntax.
         auto is_encoded_variable_type = QueryInterpretation::cIntVarName == variable_type_name
                                         || QueryInterpretation::cFloatVarName == variable_type_name;
         if (false == is_encoded_variable_type) {
-            // LogSurgeon differentiates between all variable types. For example, LogSurgeon
-            // might report thet types has#, userID, and int. However, CLP only supports dict,
-            // int, and float variables. So there is no benefit in duplicating the dict variable
-            // option for both has# and userID in the example.
             if (already_added_dict_var) {
+                // The current variable type is not an encoded variable, so it should be treated as
+                // a dictionary variable; but we've already added a dictionary variable to the
+                // current `QueryInterpretation`, so adding another would result in a duplicate
+                // interpretation.
                 continue;
             }
             already_added_dict_var = true;
