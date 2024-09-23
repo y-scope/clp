@@ -17,6 +17,7 @@
 
 #include <curl/curl.h>
 
+#include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
 #include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
@@ -106,7 +107,7 @@ public:
     );
 
     // Destructor
-    virtual ~NetworkReader();
+    ~NetworkReader() override;
 
     // Copy/Move Constructors
     // These are disabled since this class' synchronization primitives are non-copyable and
@@ -216,6 +217,19 @@ public:
         return m_curl_ret_code.load();
     }
 
+    /**
+     * @return The error message set by the underlying CURL handler.
+     * @return std::nullopt if the download is still in-progress or no error has occured.
+     */
+    [[nodiscard]] auto get_curl_error_msg() const -> std::optional<std::string_view> {
+        if (auto const ret_code{get_curl_ret_code()};
+            false == ret_code.has_value() || CURLE_OK == ret_code.value())
+        {
+            return std::nullopt;
+        }
+        return std::string_view{m_curl_error_msg_buf->data()};
+    }
+
 private:
     /**
      * This class implements clp::Thread to download data using CURL.
@@ -317,8 +331,7 @@ private:
     size_t m_buffer_size{cDefaultBufferSize};
     size_t m_curr_downloader_buf_idx{0};
 
-    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-    std::vector<std::unique_ptr<char[]>> m_buffer_pool;
+    std::vector<Array<char>> m_buffer_pool;
     std::queue<BufferView> m_filled_buffer_queue;
     std::optional<BufferView> m_curr_downloader_buf;
     std::optional<BufferView> m_curr_reader_buf;
@@ -334,6 +347,10 @@ private:
     // These two members should only be set from `set_download_completion_status`
     std::atomic<State> m_state{State::InProgress};
     std::atomic<std::optional<CURLcode>> m_curl_ret_code;
+
+    std::shared_ptr<CurlDownloadHandler::ErrorMsgBuf> m_curl_error_msg_buf{
+            std::make_shared<CurlDownloadHandler::ErrorMsgBuf>()
+    };
 };
 }  // namespace clp
 
