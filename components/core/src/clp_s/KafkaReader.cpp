@@ -3,17 +3,69 @@
 #include <librdkafka/rdkafka.h>
 
 #include <array>
+#include <stdexcept>
 
 #include <spdlog/spdlog.h>
+#include <yaml-cpp/include/yaml-cpp/yaml.h>
 
 namespace clp_s {
-KafkaReader::KafkaReader(std::string const& topic, int32_t partition, int64_t offset)
+auto KafkaReader::populate_config_from_yaml_file(
+        std::string const& config_file,
+        rd_kafka_conf_t* conf
+) -> bool {
+    constexpr char cKafkaConfig[] = "kafka";
+    constexpr size_t cErrorBufferSize = 512;
+    std::array<char, cErrorBufferSize> error_msg{};
+    try {
+        YAML::Node config = YAML::LoadFile(config_file);
+        if (false == config[cKafkaConfig].IsDefined()) {
+            return false;
+        }
+        auto kafka_config = config[cKafkaConfig];
+        for (auto it = kafka_config.begin(); it != kafka_config.end(); ++it) {
+            YAML::Node config_property_node = it->second;
+            std::string const& key = config_property_node.Tag();
+            std::string value = config_property_node.as<std::string>();
+
+            auto rc = rd_kafka_conf_set(
+                    conf,
+                    key.c_str(),
+                    value.c_str(),
+                    error_msg.data(),
+                    error_msg.size()
+            );
+            if (RD_KAFKA_CONF_OK != rc) {
+                SPDLOG_ERROR(
+                        "Failed to set Kafka config {}={}, error: {}",
+                        key,
+                        value,
+                        error_msg.data()
+                );
+                return false;
+            }
+        }
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("Failed to read YAML config for Kafka consumer: {}", e.what());
+        return false;
+    }
+    return true;
+}
+
+KafkaReader::KafkaReader(
+        std::string const& config_file,
+        std::string const& topic,
+        int32_t partition,
+        int64_t offset
+)
         : m_partition(partition) {
     constexpr size_t cErrorBufferSize = 512;
     std::array<char, cErrorBufferSize> error_msg{};
     auto conf = rd_kafka_conf_new();
 
-    // set_config(k, v, conf) multiple times
+    if (false == populate_config_from_yaml_file(config_file, conf)) {
+        rd_kafka_conf_destroy(conf);
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
 
     m_consumer = rd_kafka_new(RD_KAFKA_CONSUMER, conf, error_msg.data(), error_msg.size());
     if (nullptr == m_consumer) {
@@ -54,7 +106,7 @@ KafkaReader::~KafkaReader() {
     rd_kafka_destroy(m_consumer);
 }
 
-auto KafkaReader::consume_messages(std::function<char*, size_t> consume, size_t num_messages)
+auto KafkaReader::consume_messages(std::function<void(char*, size_t)> consume, size_t num_messages)
         -> ssize_t {
     constexpr size_t cBatchSize = 128;
     constexpr int cTimeoutMs = 1000;
@@ -66,7 +118,7 @@ auto KafkaReader::consume_messages(std::function<char*, size_t> consume, size_t 
     do {
         size_t batch_size = num_messages < cBatchSize ? num_messages : cBatchSize;
         auto rc = rd_kafka_consume_batch(
-                m_consumer,
+                m_topic,
                 m_partition,
                 cTimeoutMs,
                 messages.data(),
@@ -103,7 +155,7 @@ auto KafkaReader::consume_messages(std::function<char*, size_t> consume, size_t 
             }
 
             num_messages_consumed += 1;
-            consume(cur_message->payload, cur_message->len);
+            consume(static_cast<char*>(cur_message->payload), cur_message->len);
             rd_kafka_message_destroy(cur_message);
         }
 
