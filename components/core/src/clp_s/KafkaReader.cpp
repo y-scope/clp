@@ -62,7 +62,8 @@ auto KafkaReader::consume_messages(std::function<char*, size_t> consume, size_t 
     std::array<rd_kafka_message_t*, cBatchSize> messages;
 
     bool end_of_partition{false};
-    size_t num_messages_remaining = do {
+    size_t num_messages_remaining{num_messages};
+    do {
         size_t batch_size = num_messages < cBatchSize ? num_messages : cBatchSize;
         auto rc = rd_kafka_consume_batch(
                 m_consumer,
@@ -123,9 +124,7 @@ auto KafkaReader::consume_messages(std::function<char*, size_t> consume, size_t 
             return -1;
         }
         num_messages_remaining = num_messages - num_messages_consumed;
-    }
-    while (0 < num_messages_remaining && false == end_of_partition)
-        ;
+    } while (0 < num_messages_remaining && false == end_of_partition);
     return num_messages_consumed;
 }
 }  // namespace clp_s
