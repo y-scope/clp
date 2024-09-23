@@ -7,7 +7,8 @@
 
 namespace clp_s {
 /**
- * This class
+ * This class provides a high-level interface to consume messages from a Kafka topic starting at
+ * a given partition and offset.
  */
 class KafkaReader {
 public:
