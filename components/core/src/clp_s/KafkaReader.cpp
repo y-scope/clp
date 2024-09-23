@@ -23,9 +23,8 @@ auto KafkaReader::populate_config_from_yaml_file(
         }
         auto kafka_config = config[cKafkaConfig];
         for (auto it = kafka_config.begin(); it != kafka_config.end(); ++it) {
-            YAML::Node config_property_node = it->second;
-            std::string const& key = config_property_node.Tag();
-            std::string value = config_property_node.as<std::string>();
+            std::string key = it->first.as<std::string>();
+            std::string value = it->second.as<std::string>();
 
             auto rc = rd_kafka_conf_set(
                     conf,
