@@ -28,6 +28,14 @@ public:
     auto operator=(KafkaReader&) -> KafkaReader& = delete;
     auto operator=(KafkaReader&&) -> KafkaReader& = delete;
 
+    /**
+     * Consume up to num_messages messages from this KafkaReader.
+     * @param consume a function which accepts the raw bytes and payload length for each message
+     * @param num_messages the number of messages to consume
+     * @return the number of messages consumed, or -1 on error
+     */
+    auto consume_messages(std::function<char*, size_t> consume, size_t num_messages) -> ssize_t;
+
 private:
     rd_kafka_t* m_consumer{nullptr};
     rd_kafka_topic_t* m_topic{nullptr};
