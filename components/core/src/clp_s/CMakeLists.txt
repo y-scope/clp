@@ -63,6 +63,12 @@ set(
         ../clp/ffi/utils.cpp
         ../clp/utf8_utils.hpp
         ../clp/utf8_utils.cpp
+        ../clp/streaming_compression/zstd/Decompressor.hpp
+        ../clp/streaming_compression/zstd/Decompressor.cpp
+        ../clp/ReadOnlyMemoryMappedFile.hpp
+        ../clp/ReadOnlyMemoryMappedFile.cpp
+        ../clp/FileDescriptor.hpp
+        ../clp/FileDescriptor.cpp
 )
 
 set(

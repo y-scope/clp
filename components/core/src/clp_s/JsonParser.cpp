@@ -760,38 +760,15 @@ bool JsonParser::parse_from_IR() {
     m_archive_writer->add_node(-1, NodeType::Unknown, "root");
 
     for (auto& file_path : m_file_paths) {
-        std::cout << file_path << std::endl;
-        std::vector<char> ir_buf;
-        char temp_ir_buf[10'000];
-        FileReader infile;
-        infile.open(file_path);
-        if (false == infile.is_open()) {
-            m_archive_writer->close();
-            return false;
-        }
         int fsize = std::filesystem::file_size(file_path);
         if (0 == fsize) {
             m_archive_writer->close();
             return false;
         }
-        ZstdDecompressor zd;
-        zd.open(infile, fsize);
-        size_t num_bytes_read = 0;
-        do {
-            num_bytes_read = 0;
-            zd.try_read(temp_ir_buf, 10'000, num_bytes_read);
-            if (num_bytes_read != 0) {
-                ir_buf.insert(ir_buf.end(), temp_ir_buf, temp_ir_buf + num_bytes_read);
-            }
-        } while (num_bytes_read == 10'000);
-        zd.close();
-        infile.close();
+        clp::streaming_compression::zstd::Decompressor zd;
+        zd.open(file_path);
 
-        BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
-        char const* p;
-        size_t p_size;
-
-        auto deserializer_result = Deserializer::create(reader);
+        auto deserializer_result = Deserializer::create(zd);
         if (deserializer_result.has_error()) {
             m_archive_writer->close();
             return false;
@@ -800,7 +777,7 @@ bool JsonParser::parse_from_IR() {
 
         m_num_messages = 0;
         do {
-            auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
+            auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(zd);
 
             if (kv_log_event_result.has_error()) {
                 if (kv_log_event_result.error() == std::errc::no_message_available
@@ -828,6 +805,8 @@ bool JsonParser::parse_from_IR() {
 
         } while (1);
         id_conversion_cache.clear();
+        zd.close();
+        //infile.close();
     }
     return true;
 }

@@ -31,6 +31,7 @@
 #include "TimestampDictionaryWriter.hpp"
 #include "Utils.hpp"
 #include "ZstdCompressor.hpp"
+#include "../clp/streaming_compression/zstd/Decompressor.hpp"
 
 using clp::BufferReader;
 using clp::ffi::ir_stream::Deserializer;
