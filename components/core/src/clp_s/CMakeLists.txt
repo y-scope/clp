@@ -2,12 +2,13 @@ add_subdirectory(search/kql)
 
 set(
         CLP_SOURCES
-        ../clp/cli_utils.cpp
-        ../clp/cli_utils.hpp
-        ../clp/database_utils.cpp
-        ../clp/database_utils.hpp
+        ../clp/BufferReader.cpp
+        ../clp/BufferReader.hpp
         ../clp/Defs.h
         ../clp/ErrorCode.hpp
+        ../clp/ErrorCode.hpp
+        ../clp/FileDescriptor.cpp
+        ../clp/FileDescriptor.hpp
         ../clp/GlobalMetadataDB.hpp
         ../clp/GlobalMetadataDBConfig.cpp
         ../clp/GlobalMetadataDBConfig.hpp
@@ -19,56 +20,55 @@ set(
         ../clp/MySQLParamBindings.hpp
         ../clp/MySQLPreparedStatement.cpp
         ../clp/MySQLPreparedStatement.hpp
-        ../clp/networking/socket_utils.cpp
-        ../clp/networking/socket_utils.hpp
+        ../clp/ReadOnlyMemoryMappedFile.cpp
+        ../clp/ReadOnlyMemoryMappedFile.hpp
+        ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.hpp
-        ../clp/streaming_archive/ArchiveMetadata.cpp
-        ../clp/streaming_archive/ArchiveMetadata.hpp
+        ../clp/ReaderInterface.hpp
         ../clp/TraceableException.hpp
         ../clp/WriterInterface.cpp
         ../clp/WriterInterface.hpp
-        ../clp/ffi/ir_stream/Deserializer.hpp
-        ../clp/ffi/ir_stream/Deserializer.cpp
-        ../clp/ffi/ir_stream/Serializer.hpp
-        ../clp/ffi/ir_stream/Serializer.cpp
-        ../clp/ffi/ir_stream/utils.hpp
-        ../clp/ffi/ir_stream/utils.cpp
-        ../clp/BufferReader.hpp
-        ../clp/BufferReader.cpp
-        ../clp/type_utils.hpp
-        ../clp/ffi/Value.hpp
-        ../clp/ErrorCode.hpp
-        ../clp/ir/EncodedTextAst.hpp
-        ../clp/ir/EncodedTextAst.cpp
-        ../clp/ir/types.hpp
-        ../clp/ReaderInterface.hpp
-        ../clp/ReaderInterface.cpp
-        ../clp/time_types.hpp
-        ../clp/type_utils.hpp
-        ../clp/ffi/KeyValuePairLogEvent.hpp
+        ../clp/cli_utils.cpp
+        ../clp/cli_utils.hpp
+        ../clp/database_utils.cpp
+        ../clp/database_utils.hpp
         ../clp/ffi/KeyValuePairLogEvent.cpp
-        ../clp/ffi/SchemaTree.hpp
+        ../clp/ffi/KeyValuePairLogEvent.hpp
         ../clp/ffi/SchemaTree.cpp
+        ../clp/ffi/SchemaTree.hpp
         ../clp/ffi/SchemaTreeNode.hpp
         ../clp/ffi/Value.hpp
-        ../clp/ffi/ir_stream/decoding_methods.hpp
+        ../clp/ffi/Value.hpp
+        ../clp/ffi/ir_stream/Deserializer.cpp
+        ../clp/ffi/ir_stream/Deserializer.hpp
+        ../clp/ffi/ir_stream/Serializer.cpp
+        ../clp/ffi/ir_stream/Serializer.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
-        ../clp/ffi/ir_stream/encoding_methods.hpp
+        ../clp/ffi/ir_stream/decoding_methods.hpp
         ../clp/ffi/ir_stream/encoding_methods.cpp
-        ../clp/ir/parsing.hpp
-        ../clp/ir/parsing.cpp
+        ../clp/ffi/ir_stream/encoding_methods.hpp
         ../clp/ffi/ir_stream/protocol_constants.hpp
-        ../clp/ffi/utils.hpp
+        ../clp/ffi/ir_stream/utils.cpp
+        ../clp/ffi/ir_stream/utils.hpp
         ../clp/ffi/utils.cpp
-        ../clp/utf8_utils.hpp
-        ../clp/utf8_utils.cpp
-        ../clp/streaming_compression/zstd/Decompressor.hpp
+        ../clp/ffi/utils.hpp
+        ../clp/ir/EncodedTextAst.cpp
+        ../clp/ir/EncodedTextAst.hpp
+        ../clp/ir/parsing.cpp
+        ../clp/ir/parsing.hpp
+        ../clp/ir/types.hpp
+        ../clp/networking/socket_utils.cpp
+        ../clp/networking/socket_utils.hpp
+        ../clp/streaming_archive/ArchiveMetadata.cpp
+        ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
-        ../clp/ReadOnlyMemoryMappedFile.hpp
-        ../clp/ReadOnlyMemoryMappedFile.cpp
-        ../clp/FileDescriptor.hpp
-        ../clp/FileDescriptor.cpp
+        ../clp/streaming_compression/zstd/Decompressor.hpp
+        ../clp/time_types.hpp
+        ../clp/type_utils.hpp
+        ../clp/type_utils.hpp
+        ../clp/utf8_utils.cpp
+        ../clp/utf8_utils.hpp
 )
 
 set(

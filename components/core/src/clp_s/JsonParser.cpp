@@ -1,6 +1,5 @@
 #include "JsonParser.hpp"
 
-#include <fstream>
 #include <iostream>
 #include <stack>
 
@@ -522,170 +521,109 @@ bool JsonParser::parse() {
 }
 
 NodeType get_archive_node_type(
-        clp::ffi::SchemaTreeNode const& node,
-        std::pair<clp::ffi::SchemaTreeNode::id_t, std::optional<clp::ffi::Value>> p
+        clp::ffi::SchemaTreeNode::Type ir_node_type,
+        bool node_has_value,
+        std::optional<clp::ffi::Value> const& node_value
 ) {
-    auto const node_type = node.get_type();
     // figure out what type the node is in archive node type
-    NodeType archiveNodeType;
-    switch (node_type) {
+    NodeType archive_node_type;
+    switch (ir_node_type) {
         case clp::ffi::SchemaTreeNode::Type::Int:
-            archiveNodeType = NodeType::Integer;
+            archive_node_type = NodeType::Integer;
             break;
         case clp::ffi::SchemaTreeNode::Type::Float:
-            archiveNodeType = NodeType::Float;
+            archive_node_type = NodeType::Float;
             break;
         case clp::ffi::SchemaTreeNode::Type::Bool:
-            archiveNodeType = NodeType::Boolean;
+            archive_node_type = NodeType::Boolean;
             break;
         case clp::ffi::SchemaTreeNode::Type::UnstructuredArray:
-            archiveNodeType = NodeType::UnstructuredArray;
+            archive_node_type = NodeType::UnstructuredArray;
             break;
         case clp::ffi::SchemaTreeNode::Type::Str:
-            // std::cerr << "In str\n";
-            if (p.second.value().is<std::string>()) {
-                // maybe special case for date string
-                archiveNodeType = NodeType::VarString;
+            if (node_value->is<std::string>()) {
+                archive_node_type = NodeType::VarString;
             } else {
-                archiveNodeType = NodeType::ClpString;
+                archive_node_type = NodeType::ClpString;
             }
             break;
         case clp::ffi::SchemaTreeNode::Type::Obj:
-            // std::cerr << "In obj\n";
-            if (p.second.has_value()) {
-                if (p.second.value().is_null()) {
-                    // std::cout << "Found Null\n";
-                    archiveNodeType = NodeType::NullValue;
+            if (node_has_value) {
+                if (node_value->is_null()) {
+                    archive_node_type = NodeType::NullValue;
                 } else {
-                    archiveNodeType = NodeType::Object;
+                    archive_node_type = NodeType::Object;
                 }
             } else {
-                archiveNodeType = NodeType::Object;
+                archive_node_type = NodeType::Object;
             }
             break;
         default:
-            archiveNodeType = NodeType::Unknown;
+            archive_node_type = NodeType::Unknown;
             break;
     }
-    return archiveNodeType;
+    return archive_node_type;
 }
 
 //
 int JsonParser::get_archive_node_id(
-        std::map<std::tuple<int, NodeType>, int>& cache,
-        int irNodeID,
-        NodeType archiveNodeType,
-        clp::ffi::SchemaTree const& irTree
+        std::map<std::tuple<int32_t, NodeType>, int32_t>& ir_node_to_archive_node_map,
+        int ir_node_id,
+        NodeType archive_node_type,
+        clp::ffi::SchemaTree const& ir_tree
 ) {
-    std::tuple<int, NodeType> key(irNodeID, archiveNodeType);
-    if (cache.find(key) != cache.end()) {
-        return cache[key];
+    auto key = std::make_tuple(ir_node_id, archive_node_type);
+    auto map_location = ir_node_to_archive_node_map.find(key);
+    if (ir_node_to_archive_node_map.end() != map_location) {
+        return map_location->second;
     }
-    auto& currNode = irTree.get_node(irNodeID);
-    int parent_node_id;
-    // Found the root
-    if (currNode.get_parent_id() == 0) {
-        parent_node_id = 0;
-    } else {
-        parent_node_id
-                = get_archive_node_id(cache, currNode.get_parent_id(), NodeType::Object, irTree);
+    auto& curr_node = ir_tree.get_node(ir_node_id);
+    int32_t parent_node_id{0};
+    if (0 != curr_node.get_parent_id()) {
+        parent_node_id = get_archive_node_id(
+                ir_node_to_archive_node_map,
+                curr_node.get_parent_id(),
+                NodeType::Object,
+                ir_tree
+        );
     }
-    std::string nodeKey
-            = clp::ffi::validate_and_escape_utf8_string(currNode.get_key_name()).value();
-    int curr_node_archive_id = m_archive_writer->add_node(parent_node_id, archiveNodeType, nodeKey);
-    cache[key] = curr_node_archive_id;
+    auto validated_escaped_key
+            = clp::ffi::validate_and_escape_utf8_string(curr_node.get_key_name());
+    std::string node_key = "";
+    if (validated_escaped_key.has_value()) {
+        node_key = validated_escaped_key.value();
+    }
+    int curr_node_archive_id
+            = m_archive_writer->add_node(parent_node_id, archive_node_type, node_key);
+    ir_node_to_archive_node_map.emplace(std::move(key), curr_node_archive_id);
     return curr_node_archive_id;
-}
-
-void print_kv_log_event(KeyValuePairLogEvent const& kv) {
-    auto const num_kv_pairs = kv.get_node_id_value_pairs().size();
-    std::cout << "number of kv pairs: " << num_kv_pairs << std::endl;
-    auto const& tree = kv.get_schema_tree();
-    for (auto const& pair : kv.get_node_id_value_pairs()) {
-        auto const& tree_node = tree.get_node(pair.first);
-        auto const node_type = tree_node.get_type();
-        switch (node_type) {
-            case clp::ffi::SchemaTreeNode::Type::Int:
-                std::cout << "Int" << std::endl;
-                break;
-            case clp::ffi::SchemaTreeNode::Type::Float:
-                std::cout << "Float" << std::endl;
-                break;
-            case clp::ffi::SchemaTreeNode::Type::Bool:
-                std::cout << "Bool" << std::endl;
-                break;
-            case clp::ffi::SchemaTreeNode::Type::Str:
-                std::cout << "Str" << std::endl;
-                break;
-            case clp::ffi::SchemaTreeNode::Type::UnstructuredArray:
-                std::cout << "UArray" << std::endl;
-                break;
-            case clp::ffi::SchemaTreeNode::Type::Obj:
-                std::cout << "Obj" << std::endl;
-                break;
-            default:
-                std::cout << "???" << std::endl;
-                break;
-        }
-
-        if (!pair.second.has_value()) {
-            std::cout << "{??:\t" << pair.first << ": Node doesn't have Value ... EMPTY OBJ}\n";
-            continue;
-        }
-        if (pair.second.value().is<clp::ffi::value_int_t>()) {
-            std::cout << "{INT:\t" << pair.first << ": "
-                      << pair.second.value().get_immutable_view<clp::ffi::value_int_t>() << "}\n";
-        } else if (pair.second.value().is<clp::ffi::value_float_t>()) {
-            std::cout << "{FLOAT:\t" << pair.first << ": "
-                      << pair.second.value().get_immutable_view<clp::ffi::value_float_t>() << "}\n";
-        } else if (pair.second.value().is<clp::ffi::value_bool_t>()) {
-            std::cout << "{BOOL:\t" << pair.first << ": "
-                      << pair.second.value().get_immutable_view<clp::ffi::value_bool_t>() << "}\n";
-        } else if (pair.second.value().is<std::string>()) {
-            std::cout << "{STRING:\t" << pair.first << ": "
-                      << pair.second.value().get_immutable_view<std::string>() << "}\n";
-        } else if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
-            std::cout << "{EIGHTByte:\t" << pair.first << ": \n";
-            auto decoded = pair.second.value()
-                                   .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                                   .decode_and_unparse();
-            if (std::nullopt != decoded) {
-                std::cout << "\t Decoded & Unparsed: " << decoded.value() << std::endl;
-            } else {
-                std::cout << "\tNULL\n";
-            }
-            std::cout << "}\n";
-        } else if (pair.second.value().is<clp::ir::FourByteEncodedTextAst>()) {
-            std::cout << "{FOURByte:\t" << pair.first << ": \n";
-            auto decoded = pair.second.value()
-                                   .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                                   .decode_and_unparse();
-            if (std::nullopt != decoded) {
-                std::cout << "\tDecoded & Unparsed: " << decoded.value() << std::endl;
-            } else {
-                std::cout << "\tNULL\n";
-            }
-            std::cout << "}\n";
-        } else {
-            std::cout << "Unknown Type:\t" << pair.first << "\n";
-        }
-    }
-    std::cout << "after for loop\n\n\n";
 }
 
 void JsonParser::parse_kv_log_event(
         KeyValuePairLogEvent const& kv,
-        std::map<std::tuple<int, NodeType>, int>& cache
+        std::map<std::tuple<int32_t, NodeType>, int32_t>& ir_node_to_archive_node_map
 ) {
-    auto const num_kv_pairs = kv.get_node_id_value_pairs().size();
     clp::ffi::SchemaTree const& tree = kv.get_schema_tree();
 
     for (auto const& pair : kv.get_node_id_value_pairs()) {
         clp::ffi::SchemaTreeNode const& tree_node = tree.get_node(pair.first);
-        NodeType archiveNodeType = get_archive_node_type(tree_node, pair);
-        int node_id = get_archive_node_id(cache, pair.first, archiveNodeType, tree);
+        clp::ffi::SchemaTreeNode::Type ir_node_type = tree_node.get_type();
+        bool node_has_value = pair.second.has_value();
+        NodeType archive_node_type = NodeType::Unknown;
+        if (node_has_value) {
+            archive_node_type
+                    = get_archive_node_type(ir_node_type, node_has_value, pair.second.value());
+        } else {
+            archive_node_type = get_archive_node_type(ir_node_type, node_has_value, {});
+        }
+        int node_id = get_archive_node_id(
+                ir_node_to_archive_node_map,
+                pair.first,
+                archive_node_type,
+                tree
+        );
 
-        switch (archiveNodeType) {
+        switch (archive_node_type) {
             case NodeType::Integer: {
                 int64_t i64_value = pair.second.value().get_immutable_view<clp::ffi::value_int_t>();
                 m_current_parsed_message.add_value(node_id, i64_value);
@@ -756,7 +694,7 @@ void JsonParser::parse_kv_log_event(
 }
 
 bool JsonParser::parse_from_IR() {
-    std::map<std::tuple<int, NodeType>, int> id_conversion_cache;
+    std::map<std::tuple<int32_t, NodeType>, int32_t> ir_node_to_archive_node_map;
     m_archive_writer->add_node(-1, NodeType::Unknown, "root");
 
     for (auto& file_path : m_file_paths) {
@@ -790,23 +728,20 @@ bool JsonParser::parse_from_IR() {
             m_current_schema.clear();
             auto const& kv_log_event = kv_log_event_result.value();
 
-            // print_kv_log_event(kv_log_event);
-            parse_kv_log_event(kv_log_event, id_conversion_cache);
+            parse_kv_log_event(kv_log_event, ir_node_to_archive_node_map);
 
             m_num_messages++;
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                std::cerr << "Splitting Archive\n\n";
-                id_conversion_cache.clear();
+                ir_node_to_archive_node_map.clear();
                 m_archive_writer->add_node(-1, NodeType::Unknown, "root");
                 split_archive();
             }
 
             m_current_parsed_message.clear();
 
-        } while (1);
-        id_conversion_cache.clear();
+        } while (true);
+        ir_node_to_archive_node_map.clear();
         zd.close();
-        //infile.close();
     }
     return true;
 }

@@ -156,7 +156,6 @@ auto unpack_and_serialize_msgpack_bytes(
 
 template <typename T>
 auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
-    // std::cout << "Running Serializer\n";
     auto result{Serializer<T>::create()};
     if (result.has_error()) {
         SPDLOG_ERROR("Failed to create Serializer");
@@ -166,45 +165,43 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
     std::vector<int8_t> ir_buf;
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
-    std::ifstream inFile;
-    inFile.open(path, std::ifstream::in);
-    // std::cout << "Opened Input file\n";
+    std::ifstream in_file;
+    in_file.open(path, std::ifstream::in);
 
-    std::string outPath = "";
+    std::string out_path = "";
     int index = path.find_last_of('/');
     if (std::string::npos == index) {
-        outPath = option.irs_dir + "/" + path + ".ir";
+        out_path = option.irs_dir + "/" + path + ".ir";
     } else {
-        outPath = option.irs_dir + "/" + path.substr(index, path.length() - index) + ".ir";
+        out_path = option.irs_dir + "/" + path.substr(index, path.length() - index) + ".ir";
     }
-    clp_s::FileWriter outFile;
-    // std::cout << outPath << "\n";
-    outFile.open(outPath, clp_s::FileWriter::OpenMode::CreateForWriting);
+    clp_s::FileWriter out_file;
+    out_file.open(out_path, clp_s::FileWriter::OpenMode::CreateForWriting);
     clp_s::ZstdCompressor zc;
-    zc.open(outFile, option.compression_level);
+    zc.open(out_file, option.compression_level);
 
     std::string line;
-    size_t totalSize = 0;
+    size_t total_size = 0;
 
-    if (inFile.is_open()) {
-        while (getline(inFile, line)) {
+    if (in_file.is_open()) {
+        while (getline(in_file, line)) {
             auto j_obj = nlohmann::json::parse(line);
             unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(j_obj), serializer);
             flush_and_clear_serializer_buffer(serializer, ir_buf);
             if (ir_buf.size() >= 1'000'000'000) {
-                totalSize = totalSize + ir_buf.size();
+                total_size = total_size + ir_buf.size();
                 zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
                 zc.flush();
                 ir_buf.clear();
             }
         }
-        totalSize = totalSize + ir_buf.size();
+        total_size = total_size + ir_buf.size();
         zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
         zc.flush();
         ir_buf.clear();
-        inFile.close();
+        in_file.close();
         zc.close();
-        outFile.close();
+        out_file.close();
     }
 
     return true;
@@ -223,11 +220,9 @@ bool generate_IR(CommandLineArguments const& command_line_arguments) {
     clp_s::JsonToIRParserOption option{};
     option.file_paths = command_line_arguments.get_file_paths();
     option.irs_dir = irs_dir.string();
-    // std::cout << "IRs dir: " << option.irs_dir << std::endl;
     option.max_document_size = command_line_arguments.get_max_document_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.encoding = command_line_arguments.get_encoding_type();
-    // std::cout << "encoding type: " << static_cast<int>(option.encoding) << std::endl;
 
     if (false == clp_s::FileUtils::validate_path(option.file_paths)) {
         exit(1);
@@ -241,10 +236,8 @@ bool generate_IR(CommandLineArguments const& command_line_arguments) {
     for (auto& path : all_file_paths) {
         bool success;
         if (option.encoding == 4) {
-            // std::cout << "four byte\n";
             success = run_serializer<int32_t>(option, path);
         } else {
-            // std::cout << "eight byte\n";
             success = run_serializer<int64_t>(option, path);
         }
         if (false == success) {
@@ -273,14 +266,10 @@ bool IR_compress(CommandLineArguments const& command_line_arguments) {
     option.file_paths = command_line_arguments.get_file_paths();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
-    // Do I need max_document_size()
     option.max_document_size = command_line_arguments.get_max_document_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
     option.print_archive_stats = command_line_arguments.print_archive_stats();
-    // Is this an option they can make after IR or is that made before and has to be what is in the
-    // IR stream already option.structurize_arrays =
-    // command_line_arguments.get_structurize_arrays();
 
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();
     if (db_config_container.has_value()) {

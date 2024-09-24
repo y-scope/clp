@@ -18,6 +18,7 @@
 #include "../clp/ffi/Value.hpp"
 #include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "../clp/ir/types.hpp"
+#include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "../clp/type_utils.hpp"
 #include "ArchiveWriter.hpp"
 #include "DictionaryWriter.hpp"
@@ -31,7 +32,6 @@
 #include "TimestampDictionaryWriter.hpp"
 #include "Utils.hpp"
 #include "ZstdCompressor.hpp"
-#include "../clp/streaming_compression/zstd/Decompressor.hpp"
 
 using clp::BufferReader;
 using clp::ffi::ir_stream::Deserializer;
