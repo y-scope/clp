@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_DESERIALIZERIMPL_HPP
-#define CLP_FFI_IR_STREAM_DESERIALIZERIMPL_HPP
+#ifndef CLP_FFI_IR_STREAM_IR_UNIT_DESERIALIZATION_METHODS_HPP
+#define CLP_FFI_IR_STREAM_IR_UNIT_DESERIALIZATION_METHODS_HPP
 
 #include <memory>
 #include <string>
@@ -64,4 +64,4 @@ namespace clp::ffi::ir_stream {
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
 }  // namespace clp::ffi::ir_stream
 
-#endif  // CLP_FFI_IR_STREAM_DESERIALIZERIMPL_HPP
+#endif  // CLP_FFI_IR_STREAM_IR_UNIT_DESERIALIZATION_METHODS_HPP
