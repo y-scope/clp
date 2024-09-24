@@ -46,7 +46,7 @@ public:
 
     // Methods
     /**
-     * Deserializes the stream from the given reader up to and including the next log event.
+     * Deserializes the stream from the given reader up to and including the next log event IR unit.
      * @param reader
      * @return A result containing the deserialized log event or an error code indicating the
      * failure:

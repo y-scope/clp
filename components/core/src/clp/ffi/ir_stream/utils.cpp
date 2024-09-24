@@ -2,11 +2,13 @@
 
 #include <cstdint>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../../type_utils.hpp"
+#include "decoding_methods.hpp"
 #include "protocol_constants.hpp"
 
 namespace clp::ffi::ir_stream {
@@ -48,5 +50,19 @@ auto serialize_string(std::string_view str, std::vector<int8_t>& output_buf) -> 
     }
     output_buf.insert(output_buf.cend(), str.cbegin(), str.cend());
     return true;
+}
+
+auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
+    switch (ir_error_code) {
+        case IRErrorCode_Incomplete_IR:
+            return std::errc::result_out_of_range;
+        case IRErrorCode_Corrupted_IR:
+        case IRErrorCode_Decode_Error:
+            return std::errc::protocol_error;
+        case IRErrorCode_Eof:
+            return std::errc::no_message_available;
+        default:
+            return std::errc::not_supported;
+    }
 }
 }  // namespace clp::ffi::ir_stream

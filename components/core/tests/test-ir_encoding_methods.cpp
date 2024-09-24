@@ -1123,6 +1123,7 @@ TEMPLATE_TEST_CASE(
     }
 
     flush_and_clear_serializer_buffer(serializer, ir_buf);
+    ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
 
     // Deserialize the results
     BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
@@ -1143,4 +1144,8 @@ TEMPLATE_TEST_CASE(
         REQUIRE_FALSE(serialized_json_result.has_error());
         REQUIRE((json_obj == serialized_json_result.value()));
     }
+
+    auto const eof_result{deserializer.deserialize_to_next_log_event(reader)};
+    REQUIRE(eof_result.has_error());
+    REQUIRE((std::errc::no_message_available == eof_result.error()));
 }
