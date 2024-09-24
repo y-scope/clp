@@ -133,6 +133,10 @@ auto KafkaReader::consume_messages(std::function<void(char*, size_t)> consume, s
             );
             return -1;
         }
+        if (0 == rc) {
+            SPDLOG_ERROR("Expected messages from Kafka but received none.");
+            return -1;
+        }
 
         bool error{false};
         for (size_t i = 0; i < rc; ++i) {

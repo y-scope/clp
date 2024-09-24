@@ -420,7 +420,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     while (!object_stack.empty());
 }
 
-void JsonParser::parse_from_kafka() {
+bool JsonParser::parse_from_kafka() {
     KafkaReader reader{
             m_kafka_option.kafka_config_file,
             m_kafka_option.topic,
@@ -452,13 +452,13 @@ void JsonParser::parse_from_kafka() {
         m_current_parsed_message.clear();
     };
 
-    reader.consume_messages(consume_message, m_kafka_option.num_messages);
+    return -1 != reader.consume_messages(consume_message, m_kafka_option.num_messages);
 }
 
 bool JsonParser::parse() {
     if (CommandLineArguments::InputSourceType::Kafka == m_input_source) {
         try {
-            parse_from_kafka();
+            return parse_from_kafka();
         } catch (TraceableException& e) {
             SPDLOG_ERROR(
                     "Encountered error - {} - while trying to parse logs from Kafka",
@@ -466,7 +466,6 @@ bool JsonParser::parse() {
             );
             return false;
         }
-        return true;
     }
 
     for (auto& file_path : m_file_paths) {

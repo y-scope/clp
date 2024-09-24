@@ -109,8 +109,9 @@ private:
     /**
      * Parses input from kafka according to the configuration specified in `m_kafka_option`.
      * @throws KafkaReader::OperationFailed
+     * @return true on success, false otherwise
      */
-    void parse_from_kafka();
+    bool parse_from_kafka();
 
     std::vector<std::string> m_file_paths;
 
