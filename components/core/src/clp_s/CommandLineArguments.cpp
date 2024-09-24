@@ -148,6 +148,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::options_description compression_options("Compression options");
             std::string metadata_db_config_file_path;
             std::string input_path_list_file_path;
+            std::string input_source;
+            constexpr char cFilesystemSource[] = "filesystem";
+            constexpr char cKafkaSource[] = "kafka";
+            std::map<std::string, InputSourceType> input_source_map{
+                    {cFilesystemSource, InputSourceType::Filesystem},
+                    {cKafkaSource, InputSourceType::Kafka}
+            };
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -189,6 +196,32 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "structurize-arrays",
                     po::bool_switch(&m_structurize_arrays),
                     "Structurize arrays instead of compressing them as clp strings."
+            )(
+                    "input-source",
+                    po::value<std::string>(&input_source)
+                            ->value_name("INPUT_SOURCE")
+                            ->default_value(cFilesystemSource),
+                    "Input source from which to pull data."
+            )(
+                    "kafka-topic",
+                    po::value<std::string>(&m_kafka_topic),
+                    "Kafka topic from which to pull messages."
+            )(
+                    "kafka-partition",
+                    po::value<int32_t>(&m_kafka_partition),
+                    "Partition within a Kafka topic from which to pull messages."
+            )(
+                    "kafka-starting-offset",
+                    po::value<int64_t>(&m_kafka_offset),
+                    "Starting offset within a Kafka partition from which to pull messages."
+            )(
+                    "kafka-num-messages",
+                    po::value<size_t>(&m_kafka_num_messages),
+                    "Number of messages to consume from Kafka."
+            )(
+                    "kafka-config-file",
+                    po::value<std::string>(&m_kafka_config_file),
+                    "Path to YAML config file with additional configuration for Kafka consumer."
             );
             // clang-format on
 
@@ -238,8 +271,25 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 }
             }
 
-            if (m_file_paths.empty()) {
+            auto it = input_source_map.find(input_source);
+            if (input_source_map.end() == it) {
+                throw std::invalid_argument("Unknown input source: " + input_source + ".");
+            } else {
+                m_input_source = it->second;
+            }
+
+            if (m_file_paths.empty() && InputSourceType::Kafka != m_input_source) {
                 throw std::invalid_argument("No input paths specified.");
+            }
+
+            if (InputSourceType::Kafka == m_input_source) {
+                if (0 == m_kafka_num_messages) {
+                    throw std::invalid_argument("kafka-num-messages must be greater than zero.");
+                }
+
+                if (m_kafka_topic.empty()) {
+                    throw std::invalid_argument("kafka-topic must be specified.");
+                }
             }
 
             // Parse and validate global metadata DB config

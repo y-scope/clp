@@ -36,6 +36,11 @@ public:
         Stdout,
     };
 
+    enum class InputSourceType : uint8_t {
+        Filesystem = 0,
+        Kafka
+    };
+
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 
@@ -108,6 +113,18 @@ public:
 
     size_t get_ordered_chunk_size() const { return m_ordered_chunk_size; }
 
+    InputSourceType get_input_source() const { return m_input_source; }
+
+    std::string const& get_kafka_topic() const { return m_kafka_topic; }
+
+    int32_t get_kafka_partition() const { return m_kafka_partition; }
+
+    int64_t get_kafka_offset() const { return m_kafka_offset; }
+
+    size_t get_num_kafka_messages() const { return m_kafka_num_messages; }
+
+    std::string const& get_kafka_config_file() const { return m_kafka_config_file; }
+
 private:
     // Methods
     /**
@@ -173,6 +190,14 @@ private:
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
     size_t m_ordered_chunk_size{0};
+
+    // Input source variables
+    InputSourceType m_input_source{InputSourceType::Filesystem};
+    std::string m_kafka_topic;
+    int32_t m_kafka_partition{};
+    int64_t m_kafka_offset{};
+    size_t m_kafka_num_messages{};
+    std::string m_kafka_config_file;
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;

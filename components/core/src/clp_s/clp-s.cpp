@@ -85,6 +85,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     }
 
     clp_s::JsonParserOption option{};
+    option.input_source = command_line_arguments.get_input_source();
     option.file_paths = command_line_arguments.get_file_paths();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
@@ -93,6 +94,15 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.timestamp_key = command_line_arguments.get_timestamp_key();
     option.print_archive_stats = command_line_arguments.print_archive_stats();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
+
+    if (CommandLineArguments::InputSourceType::Kafka == option.input_source) {
+        clp_s::KafkaOption& kafka_option = option.kafka_option;
+        kafka_option.topic = command_line_arguments.get_kafka_topic();
+        kafka_option.partition = command_line_arguments.get_kafka_partition();
+        kafka_option.offset = command_line_arguments.get_kafka_offset();
+        kafka_option.num_messages = command_line_arguments.get_num_kafka_messages();
+        kafka_option.kafka_config_file = command_line_arguments.get_kafka_config_file();
+    }
 
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();
     if (db_config_container.has_value()) {

@@ -8,14 +8,16 @@
 
 #include "archive_constants.hpp"
 #include "JsonFileIterator.hpp"
+#include "KafkaReader.hpp"
 
 namespace clp_s {
 JsonParser::JsonParser(JsonParserOption const& option)
-        : m_num_messages(0),
-          m_target_encoded_size(option.target_encoded_size),
+        : m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
-          m_structurize_arrays(option.structurize_arrays) {
+          m_structurize_arrays(option.structurize_arrays),
+          m_input_source(option.input_source),
+          m_kafka_option(std::move(option.kafka_option)) {
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
     }
@@ -418,7 +420,55 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     while (!object_stack.empty());
 }
 
+void JsonParser::parse_from_kafka() {
+    KafkaReader reader{
+            m_kafka_option.kafka_config_file,
+            m_kafka_option.topic,
+            m_kafka_option.partition,
+            m_kafka_option.offset
+    };
+    std::string buffer;
+    simdjson::ondemand::parser parser;
+    auto consume_message = [&](char* data, size_t len) -> void {
+        buffer.clear();
+        if (buffer.capacity() < len + simdjson::SIMDJSON_PADDING) {
+            buffer.reserve(len + simdjson::SIMDJSON_PADDING);
+        }
+        buffer.insert(0, data, len);
+        auto record = parser.iterate(buffer);
+        parse_line(record, -1, "");
+
+        auto current_schema_id = m_archive_writer->add_schema(m_current_schema);
+        m_current_parsed_message.set_id(current_schema_id);
+        m_archive_writer
+                ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
+        m_archive_writer->increment_uncompressed_size(len);
+
+        if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
+            split_archive();
+        }
+
+        m_current_schema.clear();
+        m_current_parsed_message.clear();
+    };
+
+    reader.consume_messages(consume_message, m_kafka_option.num_messages);
+}
+
 bool JsonParser::parse() {
+    if (CommandLineArguments::InputSourceType::Kafka == m_input_source) {
+        try {
+            parse_from_kafka();
+        } catch (TraceableException& e) {
+            SPDLOG_ERROR(
+                    "Encountered error - {} - while trying to parse logs from Kafka",
+                    e.what()
+            );
+            return false;
+        }
+        return true;
+    }
+
     for (auto& file_path : m_file_paths) {
         JsonFileIterator json_file_iterator(file_path, m_max_document_size);
         if (false == json_file_iterator.is_open()) {
@@ -438,7 +488,6 @@ bool JsonParser::parse() {
 
         simdjson::ondemand::document_stream::iterator json_it;
 
-        m_num_messages = 0;
         size_t bytes_consumed_up_to_prev_archive = 0;
         size_t bytes_consumed_up_to_prev_record = 0;
         while (json_file_iterator.get_json(json_it)) {
@@ -476,7 +525,6 @@ bool JsonParser::parse() {
                 m_archive_writer->close();
                 return false;
             }
-            m_num_messages++;
 
             int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
             m_current_parsed_message.set_id(current_schema_id);

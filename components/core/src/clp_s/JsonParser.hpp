@@ -11,6 +11,7 @@
 
 #include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "ArchiveWriter.hpp"
+#include "CommandLineArguments.hpp"
 #include "DictionaryWriter.hpp"
 #include "FileReader.hpp"
 #include "FileWriter.hpp"
@@ -26,7 +27,18 @@
 using namespace simdjson;
 
 namespace clp_s {
+struct KafkaOption {
+    std::string topic;
+    int32_t partition{};
+    int64_t offset{};
+    size_t num_messages{};
+    std::string kafka_config_file;
+};
+
 struct JsonParserOption {
+    CommandLineArguments::InputSourceType input_source{
+            CommandLineArguments::InputSourceType::Filesystem
+    };
     std::vector<std::string> file_paths;
     std::string timestamp_key;
     std::string archives_dir;
@@ -36,6 +48,7 @@ struct JsonParserOption {
     bool print_archive_stats;
     bool structurize_arrays;
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
+    KafkaOption kafka_option;
 };
 
 class JsonParser {
@@ -93,7 +106,12 @@ private:
      */
     void split_archive();
 
-    int m_num_messages;
+    /**
+     * Parses input from kafka according to the configuration specified in `m_kafka_option`.
+     * @throws KafkaReader::OperationFailed
+     */
+    void parse_from_kafka();
+
     std::vector<std::string> m_file_paths;
 
     Schema m_current_schema;
@@ -108,6 +126,11 @@ private:
     size_t m_target_encoded_size;
     size_t m_max_document_size;
     bool m_structurize_arrays{false};
+
+    CommandLineArguments::InputSourceType m_input_source{
+            CommandLineArguments::InputSourceType::Filesystem
+    };
+    KafkaOption m_kafka_option;
 };
 }  // namespace clp_s
 
