@@ -12,7 +12,7 @@ namespace clp_s::search::sql {
  * @param in Input stream containing an SQL expression followed by EOF
  * @return a search AST on success, nullptr otherwise
  */
-auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression>;
+[[nodiscard]] auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression>;
 }  // namespace clp_s::search::sql
 
 #endif  // CLP_S_SEARCH_SQL_SQL_HPP

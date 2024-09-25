@@ -12,15 +12,18 @@
 #include "SqlLexer.h"
 #include "SqlParser.h"
 
-using namespace antlr4;
-using namespace sql;
+using antlr4::ANTLRInputStream;
+using antlr4::CommonTokenStream;
 using clp_s::search::antlr_common::ErrorListener;
+using sql::SqlBaseVisitor;
+using sql::SqlLexer;
+using sql::SqlParser;
 
 namespace clp_s::search::sql {
 namespace {
 class ParseTreeVisitor : public SqlBaseVisitor {
 public:
-    auto visitStart(SqlParser::StartContext* ctx) -> std::any override {
+    [[nodiscard]] auto visitStart([[maybe_unused]] SqlParser::StartContext* ctx) -> std::any override {
         return EmptyExpr::create();
     }
 };
@@ -30,7 +33,7 @@ auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
     ErrorListener lexer_error_listener;
     ErrorListener parser_error_listener;
 
-    ANTLRInputStream input(in);
+    ANTLRInputStream input{in};
     SqlLexer lexer(&input);
     lexer.removeErrorListeners();
     lexer.addErrorListener(&lexer_error_listener);
@@ -42,7 +45,7 @@ auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
 
     if (lexer_error_listener.error()) {
         SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
-        return {};
+        return nullptr;
     }
     if (parser_error_listener.error()) {
         SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
