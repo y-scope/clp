@@ -578,8 +578,8 @@ int JsonParser::get_archive_node_id(
         return map_location->second;
     }
     auto& curr_node = ir_tree.get_node(ir_node_id);
-    int32_t parent_node_id{0};
-    if (0 != curr_node.get_parent_id()) {
+    int32_t parent_node_id{-1};
+    if (ir_node_id != curr_node.get_parent_id()) {
         parent_node_id = get_archive_node_id(
                 ir_node_to_archive_node_map,
                 curr_node.get_parent_id(),
@@ -695,7 +695,7 @@ void JsonParser::parse_kv_log_event(
 
 bool JsonParser::parse_from_IR() {
     std::map<std::tuple<int32_t, NodeType>, int32_t> ir_node_to_archive_node_map;
-    m_archive_writer->add_node(-1, NodeType::Unknown, "root");
+    //m_archive_writer->add_node(-1, NodeType::Unknown, "root");
 
     for (auto& file_path : m_file_paths) {
         int fsize = std::filesystem::file_size(file_path);
@@ -733,7 +733,7 @@ bool JsonParser::parse_from_IR() {
             m_num_messages++;
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
                 ir_node_to_archive_node_map.clear();
-                m_archive_writer->add_node(-1, NodeType::Unknown, "root");
+                //m_archive_writer->add_node(-1, NodeType::Unknown, "root");
                 split_archive();
             }
 

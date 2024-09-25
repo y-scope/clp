@@ -86,7 +86,7 @@ public:
 
     /**
      * Parses the Key Value IR Stream and stores the data in the archive.
-     * @return whether the IR Stream was parsed succesfully
+     * @return whether the IR Stream was parsed successfully
      */
     [[nodiscard]] bool parse_from_IR();
 
