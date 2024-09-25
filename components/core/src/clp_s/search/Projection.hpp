@@ -36,13 +36,22 @@ public:
      * Add a column to the set of columns that should be included in the projected results
      * @param column
      * @throws OperationFailed if column contains a wildcard
+     * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns
+     * @throws OperationFailed if `column` is identical to a previously added column
      */
     void add_column(std::shared_ptr<ColumnDescriptor> column);
 
     /**
-     * note to self: could try to generalize projection code/move it to schema tree, or just
-     * rewrite a simpler version. Probably best to write the simpler version for now since types are
+     * Resolve all columns for the purpose of projection. This key resolution implementation is more
+     * limited than the one in schema matching. In particular, this version of key resolution only
+     * allows resolving keys that do not contain wildcards and does not allow resolving to objects
+     * within arrays.
+     *
+     * Note: we could try to generalize column resolution code/move it to the schema tree. It is
+     * probably best to write a simpler version dedicated to projection for now since types are
      * leaf-only. The type-per-token idea solves this problem (in the absence of wildcards).
+     *
+     * @param tree
      */
     void resolve_columns(std::shared_ptr<SchemaTree> tree);
 
@@ -57,6 +66,11 @@ public:
     }
 
 private:
+    /**
+     * Resolve an individual column as described by the `resolve_columns` method.
+     * @param tree
+     * @param column
+     */
     void resolve_column(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ColumnDescriptor> column);
 
     std::vector<std::shared_ptr<ColumnDescriptor>> m_selected_columns;
