@@ -176,10 +176,10 @@ private:
     );
 
     /**
-     * Reads a table with given ID from the table reader. If read_stream is called multiple times in
-     * a row for the same stream_id a cached buffer is returned. This function allows the caller to
-     * ask for the same buffer to be reused to read multiple different tables: this can save memory
-     * allocations, but can only be used when tables are read one at a time.
+     * Reads a table with given ID from the packed stream reader. If read_stream is called multiple
+     * times in a row for the same stream_id a cached buffer is returned. This function allows the
+     * caller to ask for the same buffer to be reused to read multiple different tables: this can
+     * save memory allocations, but can only be used when tables are read one at a time.
      * @param stream_id
      * @param reuse_buffer when true the same buffer is reused across invocations, overwriting data
      * returned previous calls to read_stream
