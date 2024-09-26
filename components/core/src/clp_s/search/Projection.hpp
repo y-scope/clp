@@ -42,10 +42,10 @@ public:
     void add_column(std::shared_ptr<ColumnDescriptor> column);
 
     /**
-     * Resolves all columns for the purpose of projection. This key resolution implementation is more
-     * limited than the one in schema matching. In particular, this version of key resolution only
-     * allows resolving keys that do not contain wildcards and does not allow resolving to objects
-     * within arrays.
+     * Resolves all columns for the purpose of projection. This key resolution implementation is
+     * more limited than the one in schema matching. In particular, this version of key resolution
+     * only allows resolving keys that do not contain wildcards and does not allow resolving to
+     * objects within arrays.
      *
      * Note: we could try to generalize column resolution code/move it to the schema tree. It is
      * probably best to write a simpler version dedicated to projection for now since types are
