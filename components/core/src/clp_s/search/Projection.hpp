@@ -33,16 +33,16 @@ public:
     explicit Projection(ProjectionMode mode) : m_projection_mode{mode} {}
 
     /**
-     * Add a column to the set of columns that should be included in the projected results
+     * Adds a column to the set of columns that should be included in the projected results
      * @param column
-     * @throws OperationFailed if column contains a wildcard
+     * @throws OperationFailed if `column` contains a wildcard
      * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns
      * @throws OperationFailed if `column` is identical to a previously added column
      */
     void add_column(std::shared_ptr<ColumnDescriptor> column);
 
     /**
-     * Resolve all columns for the purpose of projection. This key resolution implementation is more
+     * Resolves all columns for the purpose of projection. This key resolution implementation is more
      * limited than the one in schema matching. In particular, this version of key resolution only
      * allows resolving keys that do not contain wildcards and does not allow resolving to objects
      * within arrays.
@@ -56,7 +56,7 @@ public:
     void resolve_columns(std::shared_ptr<SchemaTree> tree);
 
     /**
-     * Check whether a column corresponding to given leaf node should be included in the output
+     * Checks whether a column corresponding to given leaf node should be included in the output
      * @param node_id
      * @return true if the column should be included in the output, false otherwise
      */
@@ -67,7 +67,7 @@ public:
 
 private:
     /**
-     * Resolve an individual column as described by the `resolve_columns` method.
+     * Resolves an individual column as described by the `resolve_columns` method.
      * @param tree
      * @param column
      */
