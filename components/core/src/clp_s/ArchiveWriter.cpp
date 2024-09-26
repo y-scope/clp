@@ -145,18 +145,18 @@ size_t ArchiveWriter::store_tables() {
 
     /**
      * Packed stream metadata schema
-     * This metadata schema organizes information about packed compression streams and associated 
+     * This metadata schema organizes information about packed compression streams and associated
      * schema tables within a file. The schema is divided into two primary sections:
      * Section 1: Compression Streams Metadata
      * - Contains metadata about each compression stream.
      * - Structure:
      *   - Number of packed streams: <64-bit integer>
-     *   - For each stream: 
+     *   - For each stream:
      *     - Offset into the file: <64-bit integer>
      *     - Uncompressed size: <64-bit integer>
      * - `num_separate_column_schemas` is always 0 in the current implementation.
      * - Undefined section for separate column schemas, reserved for future support.
-     * 
+     *
      * Section 2: Schema Tables Metadata
      * - Contains metadata about schema tables associated with each compression stream.
      * - Structure:
