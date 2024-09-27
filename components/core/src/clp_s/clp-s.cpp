@@ -143,15 +143,20 @@ auto unpack_and_serialize_msgpack_bytes(
         std::vector<uint8_t> const& msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
 ) -> bool {
-    auto const msgpack_obj_handle{msgpack::unpack(
-            clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
-            msgpack_bytes.size()
-    )};
-    auto const msgpack_obj{msgpack_obj_handle.get()};
-    if (msgpack::type::MAP != msgpack_obj.type) {
+    try {
+        auto const msgpack_obj_handle{msgpack::unpack(
+                clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
+                msgpack_bytes.size()
+        )};
+        auto const msgpack_obj{msgpack_obj_handle.get()};
+        if (msgpack::type::MAP != msgpack_obj.type) {
+            return false;
+        }
+        return serializer.serialize_msgpack_map(msgpack_obj.via.map);
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to unpack msgpack bytes: {}", e.what());
         return false;
     }
-    return serializer.serialize_msgpack_map(msgpack_obj.via.map);
 }
 
 template <typename T>
@@ -168,13 +173,17 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
     std::ifstream in_file;
     in_file.open(path, std::ifstream::in);
 
-    std::string out_path = "";
+    /* std::string out_path = "";
     int index = path.find_last_of('/');
     if (std::string::npos == index) {
         out_path = option.irs_dir + "/" + path + ".ir";
     } else {
         out_path = option.irs_dir + "/" + path.substr(index, path.length() - index) + ".ir";
-    }
+    } */
+    std::filesystem::path input_path{path};
+    std::string filename = input_path.filename().string();
+    std::string out_path = option.irs_dir + "/" + filename + ".ir";
+
     clp_s::FileWriter out_file;
     out_file.open(out_path, clp_s::FileWriter::OpenMode::CreateForWriting);
     clp_s::ZstdCompressor zc;
@@ -185,14 +194,29 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
 
     if (in_file.is_open()) {
         while (getline(in_file, line)) {
-            auto j_obj = nlohmann::json::parse(line);
-            unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(j_obj), serializer);
-            flush_and_clear_serializer_buffer(serializer, ir_buf);
-            if (ir_buf.size() >= 1'000'000'000) {
-                total_size = total_size + ir_buf.size();
-                zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
-                zc.flush();
-                ir_buf.clear();
+            try {
+                auto j_obj = nlohmann::json::parse(line);
+                if (!unpack_and_serialize_msgpack_bytes(
+                            nlohmann::json::to_msgpack(j_obj),
+                            serializer
+                    ))
+                {
+                    SPDLOG_ERROR("Failed to serialize msgpack bytes for line: {}", line);
+                    return false;
+                }
+                flush_and_clear_serializer_buffer(serializer, ir_buf);
+                if (ir_buf.size() >= 1'000'000'000) {
+                    total_size = total_size + ir_buf.size();
+                    zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
+                    zc.flush();
+                    ir_buf.clear();
+                }
+            } catch (nlohmann::json::parse_error const& e) {
+                SPDLOG_ERROR("JSON parsing error: {}", e.what());
+                return false;
+            } catch (std::exception const& e) {
+                SPDLOG_ERROR("Error during serialization: {}", e.what());
+                return false;
             }
         }
         total_size = total_size + ir_buf.size();

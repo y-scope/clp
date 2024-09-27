@@ -23,8 +23,6 @@ set(
         ../clp/ReadOnlyMemoryMappedFile.cpp
         ../clp/ReadOnlyMemoryMappedFile.hpp
         ../clp/ReaderInterface.cpp
-        ../clp/ReaderInterface.cpp
-        ../clp/ReaderInterface.hpp
         ../clp/ReaderInterface.hpp
         ../clp/TraceableException.hpp
         ../clp/WriterInterface.cpp
@@ -38,7 +36,6 @@ set(
         ../clp/ffi/SchemaTree.cpp
         ../clp/ffi/SchemaTree.hpp
         ../clp/ffi/SchemaTreeNode.hpp
-        ../clp/ffi/Value.hpp
         ../clp/ffi/Value.hpp
         ../clp/ffi/ir_stream/Deserializer.cpp
         ../clp/ffi/ir_stream/Deserializer.hpp
@@ -65,7 +62,6 @@ set(
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/time_types.hpp
-        ../clp/type_utils.hpp
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp

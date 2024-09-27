@@ -541,7 +541,7 @@ NodeType get_archive_node_type(
             archive_node_type = NodeType::UnstructuredArray;
             break;
         case clp::ffi::SchemaTreeNode::Type::Str:
-            if (node_value->is<std::string>()) {
+            if (node_value && node_value->is<std::string>()) {
                 archive_node_type = NodeType::VarString;
             } else {
                 archive_node_type = NodeType::ClpString;
@@ -592,6 +592,8 @@ int JsonParser::get_archive_node_id(
     std::string node_key = "";
     if (validated_escaped_key.has_value()) {
         node_key = validated_escaped_key.value();
+    } else {
+        throw "Key is not utf8 compliant";
     }
     int curr_node_archive_id
             = m_archive_writer->add_node(parent_node_id, archive_node_type, node_key);
@@ -616,12 +618,17 @@ void JsonParser::parse_kv_log_event(
         } else {
             archive_node_type = get_archive_node_type(ir_node_type, node_has_value, {});
         }
-        int node_id = get_archive_node_id(
-                ir_node_to_archive_node_map,
-                pair.first,
-                archive_node_type,
-                tree
-        );
+        int node_id;
+        try {
+            node_id = get_archive_node_id(
+                    ir_node_to_archive_node_map,
+                    pair.first,
+                    archive_node_type,
+                    tree
+            );
+        } catch (...) {
+            throw;
+        }
 
         switch (archive_node_type) {
             case NodeType::Integer: {
@@ -637,30 +644,38 @@ void JsonParser::parse_kv_log_event(
                 m_current_parsed_message.add_value(node_id, b_value);
             } break;
             case NodeType::VarString: {
-                std::string str = clp::ffi::validate_and_escape_utf8_string(
-                                          pair.second.value().get_immutable_view<std::string>()
-                )
-                                          .value();
+                auto validated_escaped_string = clp::ffi::validate_and_escape_utf8_string(
+                        pair.second.value().get_immutable_view<std::string>()
+                );
+                std::string str = "";
+                if (validated_escaped_string.has_value()) {
+                    str = validated_escaped_string.value();
+                } else {
+                    throw "String is not utf8 compliant";
+                }
                 m_current_parsed_message.add_value(node_id, str);
             } break;
             case NodeType::ClpString: {
-                std::string encoded_str;
+                std::string encoded_str = "";
+                std::string decodedValue = "";
                 if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
-                    std::string decodedValue
-                            = pair.second.value()
-                                      .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                                      .decode_and_unparse()
-                                      .value();
-                    encoded_str = clp::ffi::validate_and_escape_utf8_string(decodedValue.c_str())
-                                          .value();
+                    decodedValue = pair.second.value()
+                                           .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                           .decode_and_unparse()
+                                           .value();
+
                 } else {
-                    std::string decodedValue
-                            = pair.second.value()
-                                      .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                                      .decode_and_unparse()
-                                      .value();
-                    encoded_str = clp::ffi::validate_and_escape_utf8_string(decodedValue.c_str())
-                                          .value();
+                    decodedValue = pair.second.value()
+                                           .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                           .decode_and_unparse()
+                                           .value();
+                }
+                auto validated_escaped_encoded_string
+                        = clp::ffi::validate_and_escape_utf8_string(decodedValue.c_str());
+                if (validated_escaped_encoded_string.has_value()) {
+                    encoded_str = validated_escaped_encoded_string.value();
+                } else {
+                    throw "Encoded string is not utf8 compliant";
                 }
                 m_current_parsed_message.add_value(node_id, encoded_str);
             } break;
@@ -695,7 +710,6 @@ void JsonParser::parse_kv_log_event(
 
 bool JsonParser::parse_from_IR() {
     std::map<std::tuple<int32_t, NodeType>, int32_t> ir_node_to_archive_node_map;
-    //m_archive_writer->add_node(-1, NodeType::Unknown, "root");
 
     for (auto& file_path : m_file_paths) {
         int fsize = std::filesystem::file_size(file_path);
@@ -727,13 +741,20 @@ bool JsonParser::parse_from_IR() {
 
             m_current_schema.clear();
             auto const& kv_log_event = kv_log_event_result.value();
-
-            parse_kv_log_event(kv_log_event, ir_node_to_archive_node_map);
-
+            try {
+                parse_kv_log_event(kv_log_event, ir_node_to_archive_node_map);
+            } catch (std::string msg) {
+                SPDLOG_ERROR("ERROR: {}" + msg);
+                zd.close();
+                return false;
+            } catch (...) {
+                SPDLOG_ERROR("ERROR: Encountered error while parsing a kv log event");
+                zd.close();
+                return false;
+            }
             m_num_messages++;
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
                 ir_node_to_archive_node_map.clear();
-                //m_archive_writer->add_node(-1, NodeType::Unknown, "root");
                 split_archive();
             }
 
