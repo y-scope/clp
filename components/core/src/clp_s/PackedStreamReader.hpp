@@ -1,5 +1,5 @@
-#ifndef CLP_S_TABLEREADER_HPP
-#define CLP_S_TABLEREADER_HPP
+#ifndef CLP_S_PACKEDSTREAMREADER_HPP
+#define CLP_S_PACKEDSTREAMREADER_HPP
 
 #include <cstddef>
 #include <memory>
@@ -94,4 +94,4 @@ private:
 
 }  // namespace clp_s
 
-#endif  // CLP_S_TABLEREADER_HPP
+#endif  // CLP_S_PACKEDSTREAMREADER_HPP

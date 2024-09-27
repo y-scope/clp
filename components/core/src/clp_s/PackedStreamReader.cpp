@@ -75,7 +75,7 @@ void PackedStreamReader::read_stream(
         size_t& buf_size
 ) {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-    if (stream_id > m_stream_metadata.size()) {
+    if (stream_id >= m_stream_metadata.size()) {
         throw OperationFailed(ErrorCodeCorrupt, __FILE__, __LINE__);
     }
 
@@ -94,7 +94,11 @@ void PackedStreamReader::read_stream(
     m_prev_stream_id = stream_id;
 
     auto& [file_offset, uncompressed_size] = m_stream_metadata[stream_id];
-    m_packed_stream_reader.try_seek_from_begin(file_offset);
+    if (auto error = m_packed_stream_reader.try_seek_from_begin(file_offset);
+        ErrorCodeSuccess != error)
+    {
+        throw OperationFailed(error, __FILE__, __LINE__);
+    }
     m_packed_stream_decompressor.open(m_packed_stream_reader, cDecompressorFileReadBufferCapacity);
     if (buf_size < uncompressed_size) {
         // make_shared is supposed to work here for c++20, but it seems like the compiler version
