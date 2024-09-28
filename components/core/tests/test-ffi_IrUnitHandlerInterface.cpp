@@ -12,13 +12,13 @@
 #include "../src/clp/ffi/SchemaTreeNode.hpp"
 #include "../src/clp/time_types.hpp"
 
+namespace {
 using clp::ffi::ir_stream::IRErrorCode;
 using clp::ffi::KeyValuePairLogEvent;
 using clp::ffi::SchemaTree;
 using clp::ffi::SchemaTreeNode;
 using clp::UtcOffset;
 
-namespace {
 constexpr UtcOffset cTestUtcOffset{100};
 constexpr UtcOffset cTestUtcOffsetDelta{1000};
 constexpr std::string_view cTestSchemaTreeNodeKeyName{"test_key"};
