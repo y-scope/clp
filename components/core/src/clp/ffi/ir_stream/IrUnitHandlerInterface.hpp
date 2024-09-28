@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_IRUNITHANLERINTERFACE_HPP
-#define CLP_FFI_IR_STREAM_IRUNITHANLERINTERFACE_HPP
+#ifndef CLP_FFI_IR_STREAM_IRUNITHANDLERINTERFACE_HPP
+#define CLP_FFI_IR_STREAM_IRUNITHANDLERINTERFACE_HPP
 
 #include <concepts>
 #include <utility>
@@ -11,7 +11,7 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * Concept that defines IR unit handler interface.
+ * Concept that defines the IR unit handler interface.
  */
 template <typename Handler>
 concept IrUnitHandlerInterface = requires(
@@ -22,7 +22,7 @@ concept IrUnitHandlerInterface = requires(
         SchemaTree::NodeLocator schema_tree_node_locator
 ) {
     /**
-     * Handles log event IR unit.
+     * Handles a log event IR unit.
      * @param log_event The deserialized result from IR deserializer.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
@@ -31,7 +31,7 @@ concept IrUnitHandlerInterface = requires(
     } -> std::same_as<IRErrorCode>;
 
     /**
-     * Handles UTC offset change IR unit.
+     * Handles a UTC offset change IR unit.
      * @param utc_offset_old The offset before the change.
      * @param utc_offset_new The deserialized new offset.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
@@ -41,7 +41,7 @@ concept IrUnitHandlerInterface = requires(
     } -> std::same_as<IRErrorCode>;
 
     /**
-     * Handles schema tree node IR unit.
+     * Handles a schema tree node insertion IR unit.
      * @param schema_tree_node_locator The locator of the node to insert.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
@@ -50,7 +50,7 @@ concept IrUnitHandlerInterface = requires(
     } -> std::same_as<IRErrorCode>;
 
     /**
-     * Handles end-of-stream indicator IR unit.
+     * Handles an end-of-stream indicator IR unit.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
