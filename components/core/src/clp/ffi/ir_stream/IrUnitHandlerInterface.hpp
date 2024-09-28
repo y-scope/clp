@@ -59,4 +59,4 @@ concept IrUnitHandlerInterface = requires(
 };
 }  // namespace clp::ffi::ir_stream
 
-#endif  // CLP_FFI_IR_STREAM_IRUNITHANLERINTERFACE_HPP
+#endif  // CLP_FFI_IR_STREAM_IRUNITHANDLERINTERFACE_HPP
