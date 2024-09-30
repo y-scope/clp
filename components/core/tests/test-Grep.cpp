@@ -326,9 +326,9 @@ auto operator<<(ostream& os, unordered_map<uint32_t, string> const& map) -> ostr
     return os;
 }
 
-void compareLogTypesWithExpected(
+void compare_log_types_with_expected(
         string const& search_query_string,
-        set<std::string> const& expected_strings,
+        set<std::string> expected_strings,
         ByteLexer& lexer
 ) {
     WildcardExpression search_query(search_query_string);
@@ -341,23 +341,22 @@ void compareLogTypesWithExpected(
         actual_strings.insert(oss.str());
     }
 
-    // Iterators for both sets
-    auto it_actual = actual_strings.begin();
-    auto it_expected = expected_strings.begin();
-
-    // Compare element by element
+    // Compare element by element. If this test fails, when you read this tests error output there
+    // are a few possibilities. 1. The actual line shown is a false-positive
     std::ostringstream oss;
     oss << lexer.m_id_symbol;
     CAPTURE(oss.str());
-    while (it_actual != actual_strings.end() && it_expected != expected_strings.end()) {
+    while (false == actual_strings.empty() && false == expected_strings.empty()) {
+        auto it_actual = actual_strings.begin();
+        auto it_expected = expected_strings.begin();
         REQUIRE(*it_actual == *it_expected);
-        ++it_actual;
-        ++it_expected;
+
+        actual_strings.erase(it_actual);
+        expected_strings.erase(it_expected);
     }
 
     // Make sure all the elements of both sets were used
-    REQUIRE(it_actual == actual_strings.end());
-    REQUIRE(it_expected == expected_strings.end());
+    REQUIRE(actual_strings == expected_strings);
 }
 
 TEST_CASE(
@@ -368,7 +367,7 @@ TEST_CASE(
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
     SECTION("Static text query") {
-        compareLogTypesWithExpected(
+        compare_log_types_with_expected(
                 "* z *",
                 {//"* z *"
                  fmt::format("logtype='* z *', has_wildcard='0', is_encoded_with_wildcard='0', "
@@ -379,7 +378,7 @@ TEST_CASE(
     }
     SECTION("Hex query") {
         // TODO: we shouldn't add the full static-text case when we can determine it is impossible.
-        compareLogTypesWithExpected(
+        compare_log_types_with_expected(
                 "* a *",
                 {// "* a *"
                  fmt::format("logtype='* a *', has_wildcard='0', is_encoded_with_wildcard='0', "
@@ -397,7 +396,7 @@ TEST_CASE(
         );
     }
     SECTION("Integer query") {
-        compareLogTypesWithExpected(
+        compare_log_types_with_expected(
                 "* 10000 reply: *",
                 {// "* 10000 reply: *"
                  fmt::format("logtype='* 10000 reply: *', has_wildcard='0', "
@@ -415,10 +414,54 @@ TEST_CASE(
                 lexer
         );
     }
-    SECTION("Wildcard variable query") {
-        WildcardExpression search_string("* *10000 *");
+    SECTION("Non-greedy wildcard variable query") {
+        compare_log_types_with_expected("* ?10000 *",
+                {// "* ?10000 *"
+                 fmt::format(
+                         "logtype='* ?10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                         "logtype_string='* ?10000 *'"
+                 ),
+                // "* ?<int>(10000) *" encoded
+                fmt::format(
+                        "logtype='* ?<{}>(10000) *', has_wildcard='000', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* ?{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer)
+                ),
+                 // TODO: Should add logic to determine that this case is impossible as a 6 digit
+                 // integer is always encoded.
+                 // "* <int>(?10000) *"
+                 fmt::format(
+                         "logtype='* <{}>(?10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='* {} *'",
+                         lexer.m_symbol_id["int"],
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
+                 ),
+                 // "* <int>(?10000) *" encoded
+                 fmt::format(
+                         "logtype='* <{}>(?10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='010', "
+                         "logtype_string='* {} *'",
+                         lexer.m_symbol_id["int"],
+                         enum_to_underlying_type(VariablePlaceholder::Integer)
+                 ),
+                 // "* <hasNumber>(?10000) *"
+                 fmt::format(
+                         "logtype='* <{}>(?10000) *', has_wildcard='010', "
+                         "is_encoded_with_wildcard='000', "
+                         "logtype_string='* {} *'",
+                         lexer.m_symbol_id["hasNumber"],
+                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
+                 )
+                },
+                lexer
+        );
+    }
 
-        compareLogTypesWithExpected(
+    SECTION("Greedy wildcard variable query") {
+        compare_log_types_with_expected(
                 "* *10000 *",
                 {// "* *10000 *"
                  fmt::format(

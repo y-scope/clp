@@ -947,11 +947,10 @@ set<QueryInterpretation> Grep::generate_query_substring_interpretations(
     // variables/static-text Then we populate each entry in query_substr_interpretations which
     // corresponds to the logtype for substr(0,n). To do this, for each combination of
     // substr(begin_idx,end_idx) that reconstructs substr(0,n) (e.g., substring "*1 34", can be
-    // reconstructed from substrings
-    // "*1", " ", "34"), store all possible logtypes (e.g. "*<int> <int>, "*<has#> <int>, etc.) that
-    // are unique from any previously checked combination. Each entry in
-    // query_substr_interpretations is used to build the following entry, with the last entry having
-    // all possible logtypes for the full query itself.
+    // reconstructed from substrings "*1", " ", "34"), store all possible logtypes (e.g. "*<int>
+    // <int>, "*<has#> <int>, etc.) that are unique from any previously checked combination. Each
+    // entry in query_substr_interpretations is used to build the following entry, with the last
+    // entry having all possible logtypes for the full query itself.
     for (size_t end_idx = 1; end_idx <= processed_search_string.length(); ++end_idx) {
         // Skip strings that end with an escape character (e.g., substring " text\" from string
         // "* text\* *").
@@ -1077,8 +1076,6 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
     bool already_added_dict_var = false;
     // Use the variable types to determine the possible_substr_types
     for (uint32_t const variable_type_id : matching_variable_type_ids) {
-        auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
-
         // clp supports three types of variables---int encoded variables, float encoded variables,
         // and dictionary variables---whereas log-surgeon (in combination with the schema file) can
         // support more, meaning we need to somehow project the variable types found by log-surgeon
@@ -1089,6 +1086,7 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
         //
         // TODO We shouldn't hardcode the type names for encoded variables, but to support that, we
         // need to improve our schema file syntax.
+        auto& variable_type_name = lexer.m_id_symbol[variable_type_id];
         auto is_encoded_variable_type = QueryInterpretation::cIntVarName == variable_type_name
                                         || QueryInterpretation::cFloatVarName == variable_type_name;
         if (false == is_encoded_variable_type) {
