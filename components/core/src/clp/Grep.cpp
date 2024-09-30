@@ -1101,9 +1101,16 @@ vector<QueryInterpretation> Grep::get_interpretations_for_whole_wildcard_expr(
             }
             already_added_dict_var = true;
         } else {
-            // If encoded variables have wildcards they require two different logtypes, one that
-            // compares against the dictionary and one that compares against segment.
             if (contains_wildcard) {
+                // Since the wildcard expression matches one of the encodable variable types and
+                // contains a wildcard, we need to consider two cases:
+                // - It could match an encoded variable.
+                // - It could match a dictionary variable that is the result of failing to encode
+                //   a variable, where that variable seems encodable (e.g., an integer that's too
+                //   large to be encoded).
+                // On the default code path, we create a query interpretation that interprets the
+                // expression as a dictionary variable, so here we add another interpretation that
+                // interprets the expression as an encoded variable.
                 interpretations.emplace_back(
                         variable_type_id,
                         extended_wildcard_expr.get_value(),
