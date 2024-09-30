@@ -334,6 +334,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+        src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
+        src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/ir_stream/Serializer.cpp
         src/clp/ffi/ir_stream/Serializer.hpp

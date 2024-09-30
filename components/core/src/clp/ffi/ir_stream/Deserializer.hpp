@@ -46,7 +46,7 @@ public:
 
     // Methods
     /**
-     * Deserializes the stream from the given reader up to and including the next log event.
+     * Deserializes the stream from the given reader up to and including the next log event IR unit.
      * @param reader
      * @return A result containing the deserialized log event or an error code indicating the
      * failure:
@@ -55,8 +55,8 @@ public:
      * - std::errc::protocol_error if the IR stream is corrupted.
      * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
      *   or uses an unsupported version.
-     * - Same as `KeyValuePairLogEvent::create` if the intermediate deserialized result cannot
-     *   construct a valid key-value pair log event.
+     * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized
+     *   result cannot construct a valid key-value pair log event.
      */
     [[nodiscard]] auto deserialize_to_next_log_event(ReaderInterface& reader
     ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;

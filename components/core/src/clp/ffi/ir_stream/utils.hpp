@@ -5,6 +5,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
@@ -13,6 +14,7 @@
 #include "../../ir/types.hpp"
 #include "../../ReaderInterface.hpp"
 #include "byteswap.hpp"
+#include "decoding_methods.hpp"
 #include "encoding_methods.hpp"
 #include "protocol_constants.hpp"
 
@@ -67,6 +69,12 @@ template <typename encoded_variable_t>
  * @return Whether serialization succeeded.
  */
 [[nodiscard]] auto serialize_string(std::string_view str, std::vector<int8_t>& output_buf) -> bool;
+
+/**
+ * @param ir_error_code
+ * @return Equivalent `std::errc` code indicating the same error type.
+ */
+[[nodiscard]] auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc;
 
 template <typename integer_t>
 auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {
