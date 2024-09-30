@@ -47,7 +47,7 @@ using Schema = std::vector<SchemaTreeNode::id_t>;
  * @return IRErrorCode::IRErrorCode_Success on success.
  * @return IRErrorCode::IRErrorCode_Incomplete_IR if the stream is truncated.
  * @return IRErrorCode::IRErrorCode_Corrupted_IR if the next packet in the stream isn't a parent ID.
- * @return Same as `deserialize_tag` on any other failure.
+ * @return Forwards `deserialize_tag`'s return values on any other failure.
  */
 [[nodiscard]] auto deserialize_schema_tree_node_parent_id(
         ReaderInterface& reader,
@@ -59,7 +59,8 @@ using Schema = std::vector<SchemaTreeNode::id_t>;
  * @param reader
  * @param key_name Returns the deserialized key name.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Same as `deserialize_tag` or `deserialize_string` on failure.
+ * @return Forwards `deserialize_tag`'s return values on failure.
+ * @return Forwards `deserialize_string`'s return values on failure.
  */
 [[nodiscard]] auto deserialize_schema_tree_node_key_name(
         ReaderInterface& reader,
@@ -102,7 +103,7 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @param schema Returns the deserialized schema.
  * @return IRErrorCode::IRErrorCode_Success on success.
  * @return IRErrorCode::IRErrorCode_Incomplete_IR if the stream is truncated.
- * @return Same as `deserialize_tag` on any other failure.
+ * @return Forwards `deserialize_tag`'s return values on any other failure.
  */
 [[nodiscard]] auto
 deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& schema) -> IRErrorCode;
@@ -117,8 +118,8 @@ deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& schema) 
  * @return IRErrorCode::IRErrorCode_Incomplete_IR if the stream is truncated.
  * @return IRErrorCode::IRErrorCode_Corrupted_IR if the tag doesn't correspond to any known value
  * type.
- * @return Same as `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs` on any other
- * failure.
+ * @return Forwards `deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs`'s return
+ * values on any other failure.
  */
 [[nodiscard]] auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
@@ -135,7 +136,8 @@ deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& schema) 
  * @param node_id_value_pairs Returns the ID-value pair constructed by the deserialized encoded text
  * AST.
  * @return IRErrorCode::IRErrorCode_Success on success.
- * @return Same as `deserialize_tag` or `deserialize_encoded_text_ast` on failure.
+ * @return Forwards `deserialize_tag`'s return values on failure.
+ * @return Forwards `deserialize_encoded_text_ast`'s return values on failure.
  */
 template <typename encoded_variable_t>
 requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
@@ -156,8 +158,9 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
  * @return IRErrorCode::IRErrorCode_Success on success.
  * @return IRErrorCode::IRErrorCode_Corrupted_IR if a key is duplicated in the deserialized log
  * event.
- * @return Same as `deserialize_tag` or `deserialize_value_and_insert_to_node_id_value_pairs` on any
- * other failure.
+ * @return Forwards `deserialize_tag`'s return values on failure.
+ * @return Forwards `deserialize_value_and_insert_to_node_id_value_pairs`'s return values on
+ * failure.
  */
 [[nodiscard]] auto deserialize_value_and_construct_node_id_value_pairs(
         ReaderInterface& reader,
@@ -234,7 +237,6 @@ auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t
         if (false == deserialize_int(reader, deserialized_val)) {
             return IRErrorCode::IRErrorCode_Incomplete_IR;
         }
-        // NOLINTNEXTLINE(bugprone-signed-char-misuse,cert-str34-c)
         val = deserialized_val;
     } else if (cProtocol::Payload::ValueInt16 == tag) {
         int16_t deserialized_val{};

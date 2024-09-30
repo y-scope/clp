@@ -14,7 +14,7 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * Deserializes schema tree node insertion IR unit.
+ * Deserializes a schema tree node insertion IR unit.
  * @param reader
  * @param tag
  * @param key_name Returns the key name of the deserialized new node. This should be the underlying
@@ -23,7 +23,8 @@ namespace clp::ffi::ir_stream {
  * indicating the failure:
  * - std::errc::result_out_of_range if the IR stream is truncated.
  * - std::errc::protocol_error if the deserialized node type isn't supported.
- * - Same as `deserialize_schema_tree_node_parent_id` or `deserialize_schema_tree_node_key_name`.
+ * - Forwards `deserialize_schema_tree_node_key_name`'s return values.
+ * - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
  */
 [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
         ReaderInterface& reader,
@@ -32,17 +33,17 @@ namespace clp::ffi::ir_stream {
 ) -> OUTCOME_V2_NAMESPACE::std_result<SchemaTree::NodeLocator>;
 
 /**
- * Deserializes UTC offset change IR unit.
+ * Deserializes a UTC offset change IR unit.
  * @param reader
  * @return A result containing the new UTC offset or an error code indicating the failure:
  * - std::errc::result_out_of_range if the IR stream is truncated.
- * - Same as `clp::ffi::ir_stream::deserialize_utc_offset_change`.
+ * - Forwards `clp::ffi::ir_stream::deserialize_utc_offset_change`'s return values.
  */
 [[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset>;
 
 /**
- * Deserializes Key-value pair log event IR unit.
+ * Deserializes a key-value pair log event IR unit.
  * @param reader
  * @param tag
  * @param schema_tree Schema tree used to construct the KV-pair log event.
@@ -53,8 +54,8 @@ namespace clp::ffi::ir_stream {
  * - std::errc::protocol_error if the IR stream is corrupted.
  * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
  *   or uses an unsupported version.
- * - Same as `KeyValuePairLogEvent::create` if the intermediate deserialized result cannot
- *   construct a valid key-value pair log event.
+ * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
+ *   cannot construct a valid key-value pair log event.
  */
 [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
         ReaderInterface& reader,
