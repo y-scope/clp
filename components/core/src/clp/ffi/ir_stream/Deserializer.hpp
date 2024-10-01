@@ -113,7 +113,7 @@ public:
 
 private:
     // Constructor
-    Deserializer(IrUnitHandler ir_unit_handler) : m_ir_unit_handler{std::move(ir_unit_handler)} {};
+    Deserializer(IrUnitHandler ir_unit_handler) : m_ir_unit_handler{std::move(ir_unit_handler)} {}
 
     // Variables
     std::shared_ptr<SchemaTree> m_schema_tree{std::make_shared<SchemaTree>()};
