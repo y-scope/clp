@@ -1174,7 +1174,7 @@ TEMPLATE_TEST_CASE(
 
     // Deserialize the results
     BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
-    auto deserializer_result = Deserializer<IrUnitHandler>::create(reader, IrUnitHandler{});
+    auto deserializer_result{Deserializer<IrUnitHandler>::create(reader, IrUnitHandler{})};
     REQUIRE_FALSE(deserializer_result.has_error());
     auto& deserializer = deserializer_result.value();
     while (true) {
@@ -1202,7 +1202,7 @@ TEMPLATE_TEST_CASE(
         auto const num_kv_pairs{deserialized_log_event.get_node_id_value_pairs().size()};
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
 
-        auto const serialized_json_result = deserialized_log_event.serialize_to_json();
+        auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
         REQUIRE((expect == serialized_json_result.value()));
     }
