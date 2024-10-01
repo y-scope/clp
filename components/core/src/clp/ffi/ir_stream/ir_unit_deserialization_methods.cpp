@@ -22,6 +22,7 @@
 #include "../SchemaTreeNode.hpp"
 #include "../Value.hpp"
 #include "decoding_methods.hpp"
+#include "IrUnitType.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
 
@@ -459,6 +460,24 @@ auto deserialize_value_and_construct_node_id_value_pairs(
     return IRErrorCode::IRErrorCode_Success;
 }
 }  // namespace
+
+auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> IrUnitType {
+    // First, we check the tags that have one-to-one IR unit mapping
+    if (cProtocol::Eof == tag) {
+        return IrUnitType::EndOfStream;
+    }
+    if (cProtocol::Payload::UtcOffsetChange == tag) {
+        return IrUnitType::UtcOffsetChange;
+    }
+
+    // Then, check tags that may match any byte within a continuous range
+    if ((tag & cProtocol::Payload::SchemaTreeNodeMask) == cProtocol::Payload::SchemaTreeNodeMask) {
+        return IrUnitType::SchemaTreeNodeInsertion;
+    }
+
+    // If not match, it is assumed to be a log event
+    return IrUnitType::LogEvent;
+}
 
 auto deserialize_ir_unit_schema_tree_node_insertion(
         ReaderInterface& reader,

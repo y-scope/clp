@@ -11,8 +11,15 @@
 #include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
 #include "decoding_methods.hpp"
+#include "IrUnitType.hpp"
 
 namespace clp::ffi::ir_stream {
+/**
+ * @param tag
+ * @return The IR unit type of indicated by the given tag.
+ */
+[[nodiscard]] auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> IrUnitType;
+
 /**
  * Deserializes a schema tree node insertion IR unit.
  * @param reader
