@@ -11,7 +11,7 @@ namespace clp {
  * @tparam FailureHandler A cleanup lambda to call on failure.
  */
 template <typename SuccessHandler, typename FailureHandler>
-requires(std::is_invocable_v<SuccessHandler> && std::is_invocable_v<FailureHandler>)
+requires(std::is_nothrow_invocable_v<SuccessHandler> && std::is_nothrow_invocable_v<FailureHandler>)
 class TransactionManager {
 public:
     // Constructor

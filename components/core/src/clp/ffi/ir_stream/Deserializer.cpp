@@ -79,8 +79,8 @@ auto Deserializer::deserialize_to_next_log_event(clp::ReaderInterface& reader
     auto const utc_offset_snapshot{m_utc_offset};
     m_schema_tree->take_snapshot();
     TransactionManager revert_manager{
-            []() -> void {},
-            [&]() -> void {
+            []() noexcept -> void {},
+            [&]() noexcept -> void {
                 m_utc_offset = utc_offset_snapshot;
                 m_schema_tree->revert();
             }
