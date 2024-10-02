@@ -5,8 +5,8 @@
 
 namespace clp {
 /**
- * Class to perform different actions depending on whether a transaction succeeds or fails. The
- * default state assumes the transaction fails.
+ * A class that on destruction, performs different actions depending on whether a transaction
+ * succeeds or fails. The default state assumes the transaction fails.
  * @tparam SuccessHandler A cleanup lambda to call on success.
  * @tparam FailureHandler A cleanup lambda to call on failure.
  */
