@@ -52,6 +52,7 @@ jobs:
           rm -f /usr/local/bin/idle3*
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
+          rm -f /urs/local/bin/go*
 
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
