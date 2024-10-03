@@ -6,7 +6,6 @@ set(
         ../clp/BufferReader.hpp
         ../clp/Defs.h
         ../clp/ErrorCode.hpp
-        ../clp/ErrorCode.hpp
         ../clp/FileDescriptor.cpp
         ../clp/FileDescriptor.hpp
         ../clp/GlobalMetadataDB.hpp

@@ -58,7 +58,7 @@ bool compress(CommandLineArguments const& command_line_arguments);
  * @param command_line_arguments
  * @return Whether compression was successful
  */
-bool IR_compress(CommandLineArguments const& command_line_arguments);
+bool ir_compress(CommandLineArguments const& command_line_arguments);
 
 /**
  * Decompresses the archive specified by the given JsonConstructorOption.
@@ -187,7 +187,12 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
     clp_s::FileWriter out_file;
     out_file.open(out_path, clp_s::FileWriter::OpenMode::CreateForWriting);
     clp_s::ZstdCompressor zc;
-    zc.open(out_file, option.compression_level);
+    try {
+        zc.open(out_file, option.compression_level);
+    } catch (clp_s::ZstdCompressor::OperationFailed& error) {
+        SPDLOG_ERROR("Failed to open ZSTDcompressor - {}", error.what());
+        return false;
+    }
 
     std::string line;
     size_t total_size = 0;
@@ -271,7 +276,7 @@ bool generate_IR(CommandLineArguments const& command_line_arguments) {
     return true;
 }
 
-bool IR_compress(CommandLineArguments const& command_line_arguments) {
+bool ir_compress(CommandLineArguments const& command_line_arguments) {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
     // Create output directory in case it doesn't exist
@@ -465,7 +470,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
     } else if (CommandLineArguments::Command::IR_Compress == command_line_arguments.get_command()) {
-        if (false == IR_compress(command_line_arguments)) {
+        if (false == ir_compress(command_line_arguments)) {
             return 1;
         }
     } else if (CommandLineArguments::Command::Json_To_IR == command_line_arguments.get_command()) {
