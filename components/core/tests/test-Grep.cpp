@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <unordered_map>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -21,17 +22,123 @@ using clp::load_lexer_from_file;
 using clp::QueryInterpretation;
 using clp::WildcardExpression;
 using clp::WildcardExpressionView;
+using fmt::format;
+using fmt::join;
+using fmt::make_format_args;
+using fmt::vformat;
 using log_surgeon::DelimiterStringAST;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;
 using log_surgeon::SchemaAST;
 using log_surgeon::SchemaParser;
 using log_surgeon::SchemaVarAST;
+using std::apply;
+using std::back_inserter;
+using std::forward;
+using std::index_sequence;
+using std::make_index_sequence;
+using std::make_tuple;
 using std::ostream;
+using std::ranges::transform;
 using std::set;
+using std::size_t;
 using std::string;
+using std::tuple;
 using std::unordered_map;
 using std::vector;
+
+class ExpectedInterpretationBuilder {
+public:
+    explicit ExpectedInterpretationBuilder(ByteLexer& lexer) : lexer(lexer) {}
+
+    static auto get_placeholder(string const& variable_type_name) {
+        if (variable_type_name == "int") {
+            return enum_to_underlying_type(VariablePlaceholder::Integer);
+        }
+        if (variable_type_name == "float") {
+            return enum_to_underlying_type(VariablePlaceholder::Float);
+        }
+        return enum_to_underlying_type(VariablePlaceholder::Dictionary);
+    }
+
+    static auto get_placeholder(
+            string const& variable_type_name,
+            bool const force_add_to_dictionary
+    ) -> uint32_t {
+        if (force_add_to_dictionary) {
+            return enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        }
+        return get_placeholder(variable_type_name);
+    }
+
+    [[nodiscard]] auto build(
+            string const& logtype,
+            string const& has_wildcard,
+            string const& is_encoded_with_wildcard,
+            string const& logtype_string
+    ) -> string {
+        return format(
+                "logtype='{}', has_wildcard='{}', is_encoded_with_wildcard='{}', "
+                "logtype_string='{}'",
+                logtype,
+                has_wildcard,
+                is_encoded_with_wildcard,
+                logtype_string
+        );
+    }
+
+    template <typename... VariableTypeNames>
+    [[nodiscard]] auto
+    build(string const& logtype,
+          string const& has_wildcard,
+          string const& is_encoded_with_wildcard,
+          string const& logtype_string,
+          VariableTypeNames const&... variable_type_names) -> string {
+        auto formatted_logtype
+                = vformat(logtype, make_format_args(lexer.m_symbol_id[variable_type_names]...));
+        auto formatted_logtype_string = vformat(
+                logtype_string,
+                make_format_args(get_placeholder(variable_type_names...))
+        );
+        return build(
+                formatted_logtype,
+                has_wildcard,
+                is_encoded_with_wildcard,
+                formatted_logtype_string
+        );
+    }
+
+    template <typename... VariableTypeNames, typename... ForceAddToDictionary>
+    [[nodiscard]] auto build_verbose(
+            string const& logtype,
+            string const& has_wildcard,
+            string const& is_encoded_with_wildcard,
+            string const& logtype_string,
+            VariableTypeNames const&... variable_type_names,
+            ForceAddToDictionary const&... force_add_to_dictionary
+    ) -> string {
+        if (0 < sizeof...(force_add_to_dictionary)) {
+            REQUIRE(sizeof...(variable_type_names) == sizeof...(force_add_to_dictionary));
+        }
+
+        auto formatted_logtype
+                = vformat(logtype, make_format_args(lexer.m_symbol_id[variable_type_names]...));
+        auto formatted_logtype_string = vformat(
+                logtype_string,
+                make_format_args(get_placeholder(variable_type_names..., force_add_to_dictionary...)
+                )
+        );
+        return build(
+                formatted_logtype,
+                has_wildcard,
+                is_encoded_with_wildcard,
+                formatted_logtype_string
+        );
+    }
+
+private:
+    ByteLexer& lexer;
+};
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     string str;
@@ -326,37 +433,38 @@ auto operator<<(ostream& os, unordered_map<uint32_t, string> const& map) -> ostr
     return os;
 }
 
-void compare_log_types_with_expected(
+auto compare_interpretation_with_expected(
         string const& search_query_string,
-        set<std::string> expected_strings,
+        set<std::string> expected_interpretation_strings,
         ByteLexer& lexer
-) {
+) -> void {
     WildcardExpression search_query(search_query_string);
-    set<QueryInterpretation> const& query_logtypes
+    set<QueryInterpretation> const& query_interpretations
             = Grep::generate_query_substring_interpretations(search_query, lexer);
     std::set<std::string> actual_strings;
-    for (auto const& query_logtype : query_logtypes) {
+    for (auto const& query_logtype : query_interpretations) {
         std::ostringstream oss;
         oss << query_logtype;
         actual_strings.insert(oss.str());
     }
 
-    // Compare element by element. If this test fails, when you read this tests error output there
-    // are a few possibilities. 1. The actual line shown is a false-positive
+    // Compare element by element. If this test fails there is an error with one of the two shown
+    // elements. One (or both) of the elements should either be excluded from their set or added to
+    // the other.
     std::ostringstream oss;
     oss << lexer.m_id_symbol;
     CAPTURE(oss.str());
-    while (false == actual_strings.empty() && false == expected_strings.empty()) {
+    while (false == actual_strings.empty() && false == expected_interpretation_strings.empty()) {
         auto it_actual = actual_strings.begin();
-        auto it_expected = expected_strings.begin();
+        auto it_expected = expected_interpretation_strings.begin();
         REQUIRE(*it_actual == *it_expected);
 
         actual_strings.erase(it_actual);
-        expected_strings.erase(it_expected);
+        expected_interpretation_strings.erase(it_expected);
     }
 
     // Make sure all the elements of both sets were used
-    REQUIRE(actual_strings == expected_strings);
+    REQUIRE(actual_strings == expected_interpretation_strings);
 }
 
 TEST_CASE(
@@ -365,209 +473,584 @@ TEST_CASE(
 ) {
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    ExpectedInterpretationBuilder interp_builder(lexer);
 
-    SECTION("Static text query") {
-        compare_log_types_with_expected(
+    SECTION("Query with static text") {
+        compare_interpretation_with_expected(
                 "* z *",
                 {//"* z *"
-                 fmt::format("logtype='* z *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                             "logtype_string='* z *'")
+                 interp_builder.build("* z *", "0", "0", "* z *")
                 },
                 lexer
         );
     }
-    SECTION("Hex query") {
+    SECTION("Query with a hex value") {
         // TODO: we shouldn't add the full static-text case when we can determine it is impossible.
-        compare_log_types_with_expected(
+        compare_interpretation_with_expected(
                 "* a *",
                 {// "* a *"
-                 fmt::format("logtype='* a *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                             "logtype_string='* a *'"),
+                 interp_builder.build("* a *", "0", "0", "* a *"),
                  // "* <hex>(a) *"
-                 fmt::format(
-                         "logtype='* <{}>(a) *', has_wildcard='000', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='* {} *'",
-                         lexer.m_symbol_id["hex"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 )
+                 interp_builder.build("* <{}>(a) *", "000", "000", "* {} *", "hex")
                 },
                 lexer
         );
     }
-    SECTION("Integer query") {
-        compare_log_types_with_expected(
+    SECTION("Query with an integer") {
+        compare_interpretation_with_expected(
                 "* 10000 reply: *",
                 {// "* 10000 reply: *"
-                 fmt::format("logtype='* 10000 reply: *', has_wildcard='0', "
-                             "is_encoded_with_wildcard='0', "
-                             "logtype_string='* 10000 reply: *'"),
+                 interp_builder.build("* 10000 reply: *", "0", "0", "* 10000 reply: *"),
                  // "* <int>(10000) reply: *"
-                 fmt::format(
-                         "logtype='* <{}>(10000) reply: *', has_wildcard='000', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='* {} reply: *'",
-                         lexer.m_symbol_id["int"],
-                         enum_to_underlying_type(VariablePlaceholder::Integer)
-                 )
+                 interp_builder
+                         .build("* <{}>(10000) reply: *", "000", "000", "* {} reply: *", "int")
                 },
                 lexer
         );
     }
-    SECTION("Non-greedy wildcard variable query") {
-        compare_log_types_with_expected("* ?10000 *",
+    SECTION("Query with a non-greedy wildcard at the start of a variable") {
+        compare_interpretation_with_expected(
+                "* ?10000 *",
                 {// "* ?10000 *"
-                 fmt::format(
-                         "logtype='* ?10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                         "logtype_string='* ?10000 *'"
-                 ),
-                // "* ?<int>(10000) *" encoded
-                fmt::format(
-                        "logtype='* ?<{}>(10000) *', has_wildcard='000', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* ?{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer)
-                ),
-                 // TODO: Should add logic to determine that this case is impossible as a 6 digit
-                 // integer is always encoded.
+                 interp_builder.build("* ?10000 *", "0", "0", "* ?10000 *"),
+                 // "* ?<int>(10000) *"
+                 interp_builder.build("* ?<{}>(10000) *", "000", "000", "* ?{} *", "int"),
                  // "* <int>(?10000) *"
-                 fmt::format(
-                         "logtype='* <{}>(?10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='* {} *'",
-                         lexer.m_symbol_id["int"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 ),
-                 // "* <int>(?10000) *" encoded
-                 fmt::format(
-                         "logtype='* <{}>(?10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='010', "
-                         "logtype_string='* {} *'",
-                         lexer.m_symbol_id["int"],
-                         enum_to_underlying_type(VariablePlaceholder::Integer)
-                 ),
+                 // TODO: Add logic to determine this case is impossible.
+                 interp_builder
+                         .build_verbose("* <{}>(?10000) *", "010", "000", "* {} *", "int", true),
+                 interp_builder
+                         .build_verbose("* <{}>(?10000) *", "010", "010", "* {} *", "int", false),
                  // "* <hasNumber>(?10000) *"
-                 fmt::format(
-                         "logtype='* <{}>(?10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='* {} *'",
-                         lexer.m_symbol_id["hasNumber"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 )
+                 interp_builder.build("* <{}>(?10000) *", "010", "000", "* {} *", "hasNumber")
                 },
                 lexer
         );
     }
-
-    SECTION("Greedy wildcard variable query") {
-        compare_log_types_with_expected(
+    /*
+    SECTION("Query with a non-greedy wildcard at the end of a variable") {
+        compare_interpretation_with_expected(
+                "* 10000? *",
+                {
+                        // "* 10000? *"
+                        interp_builder.build("* 10000? *", "0", "0", "* 10000? *"),
+                        // "* <int>(10000)? *"
+                        interp_builder.build("* <{}>(10000)? *", "000", "000", "* {}? *", "int"),
+                        // "* <int>(10000?) *"
+                        interp_builder
+                                .build("* <{}>(10000?) *", "010", "000", "* {} *", "int", true),
+                        interp_builder
+                                .build("* <{}>(10000?) *", "010", "010", "* {} *", "int", false),
+                        // "* <hasNumber>(10000?) *"
+                        // interp_builder.build("* <{}>(10000?) *", "010", "000", "* {} *", {},
+                        // "hasNumber")
+                },
+                lexer
+        );
+    }
+    SECTION("Query with a non-greedy wildcard in the middle of a variable") {
+        compare_interpretation_with_expected(
+                "* 100?00 *",
+                {
+                        // "* 10000? *"
+                        // interp_builder.build("* 100?00 *", "0", "0", "* 100?00 *", {}),
+                        // "* <int>(100?00) *"
+                        // interp_builder.build("* <{}>(100?00) *", "010", "000", "* {} *", {true},
+                        // "int"), interp_builder.build("* <{}>(100?00) *", "010", "010", "* {} *",
+                        // {false}, "int"),
+                        // "* <hasNumber>(100?00) *"
+                        // interp_builder.build("* <{}>(100?00) *", "010", "000", "* {} *", {},
+                        // "hasNumber"),
+                        // "* <hasNumber>(100?00) *"
+                        // interp_builder.build("* <{}>(100?00) *", "010", "000", "* {} *", {},
+                        // "hasNumber"),
+                        // "* <int>(100)?00 *"
+                        // TODO: Add logic to determine this case is impossible.
+                        // interp_builder.build("* <{}>(100)?00 *", "000", "000", "* {}?00 *", {},
+                        // "int"),
+                        // "* 100?<int>(00) *"
+                        // TODO: Add logic to determine this case is impossible.
+                        // interp_builder
+                        //        .build("* 100?<{}>(00) *", "000", "000", "* 100?{} *", {true},
+                        //        "int"),
+                        // "* <int>(100)?<int>(00) *"
+                        // interp_builder.build(
+                        //        "* <{}>(100)?<{}>(00) *",
+                        //        "000",
+                        //        "000",
+                        //        "* {}?{} *",
+                        //        {false, true},
+                        //        "int",
+                        //        "int"
+                        //)
+                },
+                lexer
+        );
+    }
+    SECTION("Query with a non-greedy wildcard and escaped wildcard") {
+        compare_interpretation_with_expected(
+                "* 10\\?000? *",
+                {// "* 10\\?000? *"
+                 format("logtype='* 10\\?000? *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                        "logtype_string='* 10\\?000? *'"),
+                 // "* <int>(10)\?000? *"
+                 format("logtype='* <{}>(10)\\?000? *', has_wildcard='000', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* {}\\?000? *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
+                 // "* <int>(10)\?<int>(000)? *"
+                 format("logtype='* <{}>(10)\\?<{}>(000)? *', has_wildcard='00000', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='* {}\\?{}? *'",
+                        lexer.m_symbol_id["int"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* <int>(10)\?<int>(000?) *"
+                 format("logtype='* <{}>(10)\\?<{}>(000?) *', has_wildcard='00010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='* {}\\?{} *'",
+                        lexer.m_symbol_id["int"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* <int>(10)\?<int>(000?) *" encoded
+                 format("logtype='* <{}>(10)\\?<{}>(000?) *', has_wildcard='00010', "
+                        "is_encoded_with_wildcard='00010', "
+                        "logtype_string='* {}\\?{} *'",
+                        lexer.m_symbol_id["int"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer),
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
+                 // "* <int>(10)\?<hasNumber>(000?) *"
+                 format("logtype='* <{}>(10)\\?<{}>(000?) *', has_wildcard='00010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='* {}\\?{} *'",
+                        lexer.m_symbol_id["int"],
+                        lexer.m_symbol_id["hasNumber"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* 10\?<int>(000)? *"
+                 format("logtype='* 10\\?<{}>(000)? *', has_wildcard='000', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* 10\\?{}? *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* 10\?<int>(000?) *"
+                 format("logtype='* 10\\?<{}>(000?) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* 10\\?{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* 10\?<hasNumber>(000?) *" encoded
+                 format("logtype='* 10\\?<{}>(000?) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='010', "
+                        "logtype_string='* 10\\?{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
+                 // "* 10\?<hasNumber>(000?) *" encoded
+                 format("logtype='* 10\\?<{}>(000?) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* 10\\?{} *'",
+                        lexer.m_symbol_id["hasNumber"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary))
+                },
+                lexer
+        );
+    }
+    SECTION("Query with greedy wildcard") {
+        compare_interpretation_with_expected(
                 "* *10000 *",
                 {// "* *10000 *"
-                 fmt::format(
-                         "logtype='* *10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                         "logtype_string='* *10000 *'"
-                 ),
+                 format("logtype='* *10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                        "logtype_string='* *10000 *'"),
                  // "*<timestamp>(* *)*10000 *"
-                 fmt::format(
-                         "logtype='*<{}>(* *)*10000 *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='*{}*10000 *'",
-                         lexer.m_symbol_id["timestamp"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 ),
+                 format("logtype='*<{}>(* *)*10000 *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='*{}*10000 *'",
+                        lexer.m_symbol_id["timestamp"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
                  // "* *<int>(*10000) *"
-                 fmt::format(
-                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='* *{} *'",
-                         lexer.m_symbol_id["int"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 ),
+                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
                  // "* *<int>(*10000) *" encoded
-                 fmt::format(
-                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='010', "
-                         "logtype_string='* *{} *'",
-                         lexer.m_symbol_id["int"],
-                         enum_to_underlying_type(VariablePlaceholder::Integer)
-                 ),
+                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='010', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
                  // "* *<float>(*10000) *"
-                 fmt::format(
-                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='* *{} *'",
-                         lexer.m_symbol_id["float"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 ),
+                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
                  // "* *<float>(*10000) *" encoded
-                 fmt::format(
-                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='010', "
-                         "logtype_string='* *{} *'",
-                         lexer.m_symbol_id["float"],
-                         enum_to_underlying_type(VariablePlaceholder::Float)
-                 ),
+                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='010', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Float)),
                  // "* *<hasNumber>(*10000) *"
-                 fmt::format(
-                         "logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                         "is_encoded_with_wildcard='000', "
-                         "logtype_string='* *{} *'",
-                         lexer.m_symbol_id["hasNumber"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 ),
+                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["hasNumber"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
                  // "*<timestamp>(* *)*<int>(*10000) *"
-                 fmt::format(
-                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                         "is_encoded_with_wildcard='00000', "
-                         "logtype_string='*{}*{} *'",
-                         lexer.m_symbol_id["timestamp"],
-                         lexer.m_symbol_id["int"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 ),
+                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
                  // "*<timestamp>(* *)*<int>(*10000) *" encoded
-                 fmt::format(
-                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                         "is_encoded_with_wildcard='00010', "
-                         "logtype_string='*{}*{} *'",
-                         lexer.m_symbol_id["timestamp"],
-                         lexer.m_symbol_id["int"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                         enum_to_underlying_type(VariablePlaceholder::Integer)
-                 ),
+                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00010', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
                  // "*<timestamp>(* *)*<float>(*10000) *"
-                 fmt::format(
-                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                         "is_encoded_with_wildcard='00000', "
-                         "logtype_string='*{}*{} *'",
-                         lexer.m_symbol_id["timestamp"],
-                         lexer.m_symbol_id["float"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 ),
+                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
                  // "*<timestamp>(* *)*<float>(*10000) *" encoded
-                 fmt::format(
-                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                         "is_encoded_with_wildcard='00010', "
-                         "logtype_string='*{}*{} *'",
-                         lexer.m_symbol_id["timestamp"],
-                         lexer.m_symbol_id["float"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                         enum_to_underlying_type(VariablePlaceholder::Float)
-                 ),
+                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00010', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Float)),
                  // "*<timestamp>(* *)*<hasNumber>(*10000) *"
-                 fmt::format(
-                         "logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                         "is_encoded_with_wildcard='00000', "
-                         "logtype_string='*{}*{} *'",
-                         lexer.m_symbol_id["timestamp"],
-                         lexer.m_symbol_id["hasNumber"],
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                         enum_to_underlying_type(VariablePlaceholder::Dictionary)
-                 )
+                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["hasNumber"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary))
                 },
                 lexer
         );
     }
+    SECTION("Query with greedy wildcard followed by non-greedy wildcard") {
+        compare_interpretation_with_expected(
+                "* *?10000 *",
+                {// "* *?10000 *"
+                 format("logtype='* *?10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
+                        "logtype_string='* *?10000 *'"),
+                 // "*<timestamp>(* *)*?10000 *"
+                 format("logtype='*<{}>(* *)*?10000 *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='*{}*?10000 *'",
+                        lexer.m_symbol_id["timestamp"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "*<timestamp>(* *)*?10000 *"
+                 format("logtype='*<{}>(* *)*?10000 *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='*{}*?10000 *'",
+                        lexer.m_symbol_id["timestamp"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* *<int>(*?10000) *"
+                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* *<int>(*?10000) *" encoded
+                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='010', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
+                 // "* *<float>(*?10000) *"
+                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* *<float>(*?10000) *" encoded
+                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='010', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Float)),
+                 // "* *<hasNumber>(*?10000) *"
+                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* *{} *'",
+                        lexer.m_symbol_id["hasNumber"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "*<timestamp>(* *)*<int>(*?10000) *"
+                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "*<timestamp>(* *)*<int>(*?10000) *" encoded
+                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00010', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
+                 // "*<timestamp>(* *)*<float>(*?10000) *"
+                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "*<timestamp>(* *)*<float>(*?10000) *" encoded
+                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00010', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["float"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Float)),
+                 // "*<timestamp>(* *)*<hasNumber>(*?10000) *"
+                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='*{}*{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["hasNumber"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
+                 // "* *?<int>(10000) *"
+                 format("logtype='* *?<{}>(10000) *', has_wildcard='000', "
+                        "is_encoded_with_wildcard='000', "
+                        "logtype_string='* *?{} *'",
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Integer)),
+                 // "*<timestamp>(* *)*?<int>(10000) *"
+                 format("logtype='*<{}>(* *)*?<{}>(10000) *', has_wildcard='01000', "
+                        "is_encoded_with_wildcard='00000', "
+                        "logtype_string='*{}*?{} *'",
+                        lexer.m_symbol_id["timestamp"],
+                        lexer.m_symbol_id["int"],
+                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                        enum_to_underlying_type(VariablePlaceholder::Integer))
+                },
+                lexer
+        );
+    }
+    */
+    /*
+SECTION("Query with non-greedy wildcard followed by greedy wildcard") {
+    set<string> expected_interpretation_strings;
+    // "* ?*10000 *"
+    expected_interpretation_strings.insert(
+            format("logtype='* ?*10000 *', has_wildcard='0', "
+                        "is_encoded_with_wildcard='0', "
+                        "logtype_string='* ?*10000 *'")
+    );
+    // "*<timestamp>(* *)?*10000 *"
+    expected_interpretation_strings.insert(format(
+            "logtype='*<{}>(* *)?*10000 *', has_wildcard='010', "
+            "is_encoded_with_wildcard='000', "
+            "logtype_string='*{}?*10000 *'",
+            lexer.m_symbol_id["timestamp"],
+            enum_to_underlying_type(VariablePlaceholder::Dictionary)
+    ));
+    // "* <int>(?*10000) *"
+    for () {
+        expected_interpretation_strings.insert(format(
+                "logtype='* <{}>(?*10000) *', has_wildcard='010', "
+                "is_encoded_with_wildcard='000', "
+                "logtype_string='* {} *'",
+                lexer.m_symbol_id["int"],
+                enum_to_underlying_type(VariablePlaceholder::Dictionary)
+        ));
+    }
+
+    compare_interpretation_with_expected(
+            "* ?*10000 *",
+            {,
+             // "* *<int>(?*10000) *" encoded
+             format(
+                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
+                     "is_encoded_with_wildcard='010', "
+                     "logtype_string='* {} *'",
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             ),
+             // "* <float>(?*10000) *"
+             format(
+                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
+                     "is_encoded_with_wildcard='000', "
+                     "logtype_string='* {} *'",
+                     lexer.m_symbol_id["float"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "* <float>(?*10000) *" encoded
+             format(
+                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
+                     "is_encoded_with_wildcard='010', "
+                     "logtype_string='* {} *'",
+                     lexer.m_symbol_id["float"],
+                     enum_to_underlying_type(VariablePlaceholder::Float)
+             ),
+             // "* <hasNumber>(?*10000) *"
+             format(
+                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
+                     "is_encoded_with_wildcard='000', "
+                     "logtype_string='* {} *'",
+                     lexer.m_symbol_id["hasNumber"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "*<timestamp>(* *)*<int>(?*10000) *"
+             format(
+                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='00000', "
+                     "logtype_string='*{}*{} *'",
+                     lexer.m_symbol_id["timestamp"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "*<timestamp>(* *)*<int>(?*10000) *" encoded
+             format(
+                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='00010', "
+                     "logtype_string='*{}*{} *'",
+                     lexer.m_symbol_id["timestamp"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             ),
+             // "*<timestamp>(* *)*<float>(?*10000) *"
+             format(
+                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='00000', "
+                     "logtype_string='*{}*{} *'",
+                     lexer.m_symbol_id["timestamp"],
+                     lexer.m_symbol_id["float"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "*<timestamp>(* *)*<float>(?*10000) *" encoded
+             format(
+                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='00010', "
+                     "logtype_string='*{}*{} *'",
+                     lexer.m_symbol_id["timestamp"],
+                     lexer.m_symbol_id["float"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Float)
+             ),
+             // "*<timestamp>(* *)*<hasNumber>(?*10000) *"
+             format(
+                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='00000', "
+                     "logtype_string='*{}*{} *'",
+                     lexer.m_symbol_id["timestamp"],
+                     lexer.m_symbol_id["hasNumber"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "* ?*<int>(10000) *"
+             format(
+                     "logtype='* ?*<{}>(10000) *', has_wildcard='000', "
+                     "is_encoded_with_wildcard='000', "
+                     "logtype_string='* ?*{} *'",
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             ),
+             // "*<timestamp>(* *)?*<int>(10000) *"
+             format(
+                     "logtype='*<{}>(* ?*)*<{}>(10000) *', has_wildcard='01000', "
+                     "is_encoded_with_wildcard='00000', "
+                     "logtype_string='*{}*{} *'",
+                     lexer.m_symbol_id["timestamp"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             ),
+             // "*<timestamp>(* *)?*<int>(10000) *"
+             format(
+                     "logtype='*<{}>(* ?*)*<{}>(10000) *', has_wildcard='01000', "
+                     "is_encoded_with_wildcard='00000', "
+                     "logtype_string='*{}*{} *'",
+                     lexer.m_symbol_id["timestamp"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             ),
+             // "* <int>(*?)*10000 *"
+             format(
+                     "logtype='* <{}>(?*)*10000 *', has_wildcard='010', "
+                     "is_encoded_with_wildcard='000', "
+                     "logtype_string='* {}*10000 *'",
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "* <int>(*?)*10000 * encoded"
+             format(
+                     "logtype='* <{}>(?*)*10000 *', has_wildcard='010', "
+                     "is_encoded_with_wildcard='010', "
+                     "logtype_string='* {}*10000 *'",
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             ),
+             // "* <int>(*?)*<int>(*10000) *" dict + dict
+             format(
+                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='00000', "
+                     "logtype_string='* {}*{} *'",
+                     lexer.m_symbol_id["int"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "* <int>(*?)*<int>(*10000) *"  encoded + dict
+             format(
+                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='01000', "
+                     "logtype_string='* {}*{} *'",
+                     lexer.m_symbol_id["int"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Integer),
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
+             ),
+             // "* <int>(*?)*<int>(*10000) *"  dict + encoded
+             format(
+                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='00010', "
+                     "logtype_string='* {}*{} *'",
+                     lexer.m_symbol_id["int"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             ),
+             // "* <int>(*?)*<int>(*10000) *" encoded + encoded
+             format(
+                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
+                     "is_encoded_with_wildcard='01010', "
+                     "logtype_string='* {}*{} *'",
+                     lexer.m_symbol_id["int"],
+                     lexer.m_symbol_id["int"],
+                     enum_to_underlying_type(VariablePlaceholder::Integer),
+                     enum_to_underlying_type(VariablePlaceholder::Integer)
+             )},
+            lexer
+    );
+}
+*/
 }
