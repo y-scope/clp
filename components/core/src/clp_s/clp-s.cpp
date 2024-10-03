@@ -173,13 +173,6 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
     std::ifstream in_file;
     in_file.open(path, std::ifstream::in);
 
-    /* std::string out_path = "";
-    int index = path.find_last_of('/');
-    if (std::string::npos == index) {
-        out_path = option.irs_dir + "/" + path + ".ir";
-    } else {
-        out_path = option.irs_dir + "/" + path.substr(index, path.length() - index) + ".ir";
-    } */
     std::filesystem::path input_path{path};
     std::string filename = input_path.filename().string();
     std::string out_path = option.irs_dir + "/" + filename + ".ir";
