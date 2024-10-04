@@ -145,8 +145,14 @@ size_t ArchiveWriter::store_tables() {
 
     /**
      * Packed stream metadata schema
-     * This metadata schema organizes information about packed compression streams and associated
-     * schema tables within a file. The schema is divided into two primary sections:
+     * ------------------------------
+     * Schema tables are packed into a series of compression streams. Each of those compression
+     * streams is identified by a 64 bit stream id. In the first half of the metadata we identify
+     * how many streams there are, and the offset into the file where each compression stream can
+     * be found. In the second half of the metadata we record how many schema tables there are,
+     * which compression stream they belong to, the offset into that compression stream where
+     * they can be found, and how many messages that schema table contains.
+     *
      * Section 1: Compression Streams Metadata
      * - Contains metadata about each compression stream.
      * - Structure:
@@ -154,8 +160,9 @@ size_t ArchiveWriter::store_tables() {
      *   - For each stream:
      *     - Offset into the file: <64-bit integer>
      *     - Uncompressed size: <64-bit integer>
-     * - `num_separate_column_schemas` is always 0 in the current implementation.
-     * - Undefined section for separate column schemas, reserved for future support.
+     *   - Number of separate column schemas: <64-bit integer>
+     *     It is always 0 in the current implementation.
+     *   - Undefined section for separate column schemas, reserved for future support.
      *
      * Section 2: Schema Tables Metadata
      * - Contains metadata about schema tables associated with each compression stream.
@@ -166,13 +173,6 @@ size_t ArchiveWriter::store_tables() {
      *     - Offset into the stream: <64-bit integer>
      *     - Schema ID: <32-bit integer>
      *     - Number of messages: <64-bit integer>
-     *
-     * Schema tables are packed into a series of compression streams. Each of those compression
-     * streams is identified by a 64 bit stream id. In the first half of the metadata we identify
-     * how many streams there are, and the offset into the file where each compression stream can
-     * be found. In the second half of the metadata we record how many schema tables there are,
-     * which compression stream they belong to, the offset into that compression stream where
-     * they can be found, and how many messages that schema table contains.
      *
      * We buffer the first half of the metadata in the "stream_metadata" vector, and the second half
      * of the metadata in the "schema_metadata" vector as we compress the tables. The metadata is
