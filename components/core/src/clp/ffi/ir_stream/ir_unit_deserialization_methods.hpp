@@ -2,6 +2,7 @@
 #define CLP_FFI_IR_STREAM_IR_UNIT_DESERIALIZATION_METHODS_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <outcome/single-header/outcome.hpp>
@@ -16,9 +17,10 @@
 namespace clp::ffi::ir_stream {
 /**
  * @param tag
- * @return The IR unit type of indicated by the given tag.
+ * @return The IR unit type of indicated by the given tag on success.
+ * @return std::nullopt if the tag doesn't represent a valid IR unit.
  */
-[[nodiscard]] auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> IrUnitType;
+[[nodiscard]] auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> std::optional<IrUnitType>;
 
 /**
  * Deserializes a schema tree node insertion IR unit.

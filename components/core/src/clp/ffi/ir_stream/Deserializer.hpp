@@ -178,7 +178,12 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
         return std::errc::no_message_available;
     }
 
-    auto const ir_unit_type{get_ir_unit_type_from_tag(tag)};
+    auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
+    if (false == optional_ir_unit_type.has_value()) {
+        return std::errc::protocol_not_supported;
+    }
+
+    auto const ir_unit_type{optional_ir_unit_type.value()};
     switch (ir_unit_type) {
         case IrUnitType::LogEvent: {
             auto result{

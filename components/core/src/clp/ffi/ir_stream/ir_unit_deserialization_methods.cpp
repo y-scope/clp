@@ -170,6 +170,11 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode;
 
+/**
+ * @return Whether the given tag can be a valid leading tag of a log event IR unit.
+ */
+[[nodiscard]] auto is_log_event_ir_unit_tag(encoded_tag_t tag) -> bool;
+
 auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTreeNode::Type> {
     switch (tag) {
         case cProtocol::Payload::SchemaTreeNodeInt:
@@ -459,9 +464,21 @@ auto deserialize_value_and_construct_node_id_value_pairs(
     }
     return IRErrorCode::IRErrorCode_Success;
 }
+
+auto is_log_event_ir_unit_tag(encoded_tag_t tag) -> bool {
+    if (cProtocol::Payload::ValueEmpty == tag) {
+        // The log event is an empty object
+        return true;
+    }
+    if (cProtocol::Payload::KeyIdUByte == tag || cProtocol::Payload::KeyIdUShort == tag) {
+        // If not empty, the log event must start with a tag byte indicating the key ID
+        return true;
+    }
+    return false;
+}
 }  // namespace
 
-auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> IrUnitType {
+auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> std::optional<IrUnitType> {
     // First, we check the tags that have one-to-one IR unit mapping
     if (cProtocol::Eof == tag) {
         return IrUnitType::EndOfStream;
@@ -475,8 +492,11 @@ auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> IrUnitType {
         return IrUnitType::SchemaTreeNodeInsertion;
     }
 
-    // If not match, it is assumed to be a log event
-    return IrUnitType::LogEvent;
+    if (is_log_event_ir_unit_tag(tag)) {
+        return IrUnitType::LogEvent;
+    }
+
+    return std::nullopt;
 }
 
 auto deserialize_ir_unit_schema_tree_node_insertion(
