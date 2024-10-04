@@ -68,7 +68,7 @@ public:
      * @param reader
      * @return std::errc::no_message_available if no tag bytes can be read to determine the next IR
      * unit type.
-     * @return std::errc::protocol_not_supported if the IR unit type is not support.
+     * @return std::errc::protocol_not_supported if the IR unit type is not supported.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
      * stream by deserializing an end-of-stream IR unit in the previous calls.
      * @return IRUnitType::LogEvent if a log event IR unit is deserialized, or an error code
@@ -113,7 +113,7 @@ public:
 
 private:
     // Constructor
-    Deserializer(IrUnitHandler ir_unit_handler) : m_ir_unit_handler{std::move(ir_unit_handler)} {};
+    Deserializer(IrUnitHandler ir_unit_handler) : m_ir_unit_handler{std::move(ir_unit_handler)} {}
 
     // Variables
     std::shared_ptr<SchemaTree> m_schema_tree{std::make_shared<SchemaTree>()};
