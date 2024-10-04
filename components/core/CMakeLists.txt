@@ -480,6 +480,7 @@ set(SOURCE_FILES_unitTest
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp
+        src/clp/TransactionManager.hpp
         src/clp/type_utils.hpp
         src/clp/utf8_utils.cpp
         src/clp/utf8_utils.hpp

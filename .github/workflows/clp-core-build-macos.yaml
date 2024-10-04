@@ -49,6 +49,7 @@ jobs:
       - name: "Remove preinstalled binaries which conflict with brew's installs"
         run: |
           rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/go*
           rm -f /usr/local/bin/idle3*
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
