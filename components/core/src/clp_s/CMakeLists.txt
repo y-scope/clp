@@ -65,6 +65,8 @@ set(
         JsonParser.cpp
         JsonParser.hpp
         JsonSerializer.hpp
+        PackedStreamReader.cpp
+        PackedStreamReader.hpp
         ParsedMessage.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
