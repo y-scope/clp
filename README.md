@@ -87,7 +87,7 @@ Join us on [Zulip][zulip] to chat with developers and other community members.
 # Next Steps
 
 This is our open-source release which we will be constantly updating with bug fixes, features, etc.
-If you would like a feature or want to report a bug, please file an issue and we'll be happy to engage.
+If you'd like a feature or want to report a bug, please file an issue and we'll be happy to engage.
 
 [bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
 [build-package]: http://docs.yscope.com/clp/main/dev-guide/building-package
