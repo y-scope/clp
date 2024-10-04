@@ -97,16 +97,14 @@ public:
         return IRErrorCode::IRErrorCode_Success;
     }
 
-    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    [[nodiscard]] auto handle_utc_offset_change(
+    [[nodiscard]] static auto handle_utc_offset_change(
             [[maybe_unused]] UtcOffset utc_offset_old,
             [[maybe_unused]] UtcOffset utc_offset_new
     ) -> IRErrorCode {
         return IRErrorCode::IRErrorCode_Success;
     }
 
-    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    [[nodiscard]] auto handle_schema_tree_node_insertion(
+    [[nodiscard]] static auto handle_schema_tree_node_insertion(
             [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator
     ) -> IRErrorCode {
         return IRErrorCode::IRErrorCode_Success;
