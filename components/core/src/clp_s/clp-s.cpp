@@ -48,8 +48,6 @@ using clp_s::CommandLineArguments;
 
 namespace {
 
-size_t max_ir_buffer_size = 1'000'000'000;
-
 /**
  * Compresses the input files specified by the command line arguments into an archive.
  * @param command_line_arguments
@@ -86,6 +84,17 @@ auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path)
  * @return Whether generation was successful
  */
 auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool;
+
+/**
+ * Fill in JsonParserOption instance based on command line user input
+ * @param command_line_arguments
+ * @param option
+ * @return Whether setup was succesful
+ */
+auto setup_compression_options(
+        CommandLineArguments const& command_line_arguments,
+        clp_s::JsonParserOption& option
+) -> bool;
 
 /**
  * Compresses the input IR files specified by the command line arguments into an archive.
@@ -238,7 +247,7 @@ auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path)
                     return false;
                 }
                 flush_and_clear_serializer_buffer(serializer, ir_buf);
-                if (ir_buf.size() >= max_ir_buffer_size) {
+                if (ir_buf.size() >= option.max_ir_buffer_size) {
                     total_size = total_size + ir_buf.size();
                     zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
                     zc.flush();
@@ -278,11 +287,13 @@ auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool {
     option.file_paths = command_line_arguments.get_file_paths();
     option.irs_dir = irs_dir.string();
     option.max_document_size = command_line_arguments.get_max_document_size();
+    option.max_ir_buffer_size = command_line_arguments.get_max_ir_buffer_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.encoding = command_line_arguments.get_encoding_type();
 
     if (false == clp_s::FileUtils::validate_path(option.file_paths)) {
-        exit(1);
+        SPDLOG_ERROR("Invalid file path(s) provided");
+        return false;
     }
 
     std::vector<std::string> all_file_paths;
@@ -304,9 +315,11 @@ auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool {
     return true;
 }
 
-auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool {
+auto setup_compression_options(
+        CommandLineArguments const& command_line_arguments,
+        clp_s::JsonParserOption& option
+) -> bool {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
-
     // Create output directory in case it doesn't exist
     try {
         std::filesystem::create_directory(archives_dir.string());
@@ -318,8 +331,6 @@ auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool {
         );
         return false;
     }
-
-    clp_s::JsonParserOption option{};
     option.file_paths = command_line_arguments.get_file_paths();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
@@ -339,6 +350,14 @@ auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool {
                 db_config.get_metadata_db_name(),
                 db_config.get_metadata_table_prefix()
         );
+    }
+    return true;
+}
+
+auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool {
+    clp_s::JsonParserOption option{};
+    if (false == setup_compression_options(command_line_arguments, option)) {
+        return false;
     }
 
     clp_s::JsonParser parser(option);

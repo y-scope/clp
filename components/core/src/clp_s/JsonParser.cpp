@@ -18,6 +18,7 @@
 #include "DictionaryWriter.hpp"
 #include "JsonFileIterator.hpp"
 #include "ParsedMessage.hpp"
+#include "SchemaTree.hpp"
 
 using namespace simdjson;
 

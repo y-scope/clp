@@ -21,6 +21,7 @@
 #include "ArchiveWriter.hpp"
 #include "ParsedMessage.hpp"
 #include "Schema.hpp"
+#include "SchemaTree.hpp"
 
 using clp::BufferReader;
 using clp::ffi::ir_stream::Deserializer;
@@ -44,6 +45,7 @@ struct JsonToIRParserOption {
     std::vector<std::string> file_paths;
     std::string irs_dir;
     size_t max_document_size;
+    size_t max_ir_buffer_size;
     int compression_level;
     int encoding;
 };
@@ -93,11 +95,11 @@ private:
     void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
 
     /**
-     * Compresses the input files specified by the command line arguments into an archive.
+     * Determines the archive node type based on the IR node type and value.
      * @param ir_node_type schema node type from the IR stream
-     * @param node_has_value Boolean that say whether or not the node has value.
-     * @param node_value The ir schema node value if the node has value
-     * @return The clp-s archive Node Type that shoudl be used for the archive node
+     * @param node_has_value Boolean that says whether or not the node has value.
+     * @param node_value The IR schema node value if the node has value
+     * @return The clp-s archive Node Type that should be used for the archive node
      */
     static auto get_archive_node_type(
             clp::ffi::SchemaTreeNode::Type ir_node_type,
@@ -109,9 +111,9 @@ private:
      * Get archive node id for ir node
      * @param ir_node_to_archive_node_unordered_map cache of node id conversions between
      * deserializer schema tree nodes and archive schema tree nodes
-     * @param irNodeID
-     * @param irType
-     * @param irTree
+     * @param ir_node_id ID of the IR node
+     * @param archive_node_type Type of the archive node
+     * @param ir_treeThe IR schema tree
      */
     auto get_archive_node_id(
             std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&

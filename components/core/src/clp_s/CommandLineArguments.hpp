@@ -62,7 +62,9 @@ public:
 
     size_t get_max_document_size() const { return m_max_document_size; }
 
-    int get_encoding_type() const { return m_encoding_type; }
+    [[nodiscard]] auto get_max_ir_buffer_size() const -> size_t { return m_max_ir_buffer_size; }
+
+    [[nodiscard]] auto get_encoding_type() const -> int { return m_encoding_type; }
 
     [[nodiscard]] bool print_archive_stats() const { return m_print_archive_stats; }
 
@@ -182,6 +184,7 @@ private:
     bool m_ordered_decompression{false};
     size_t m_ordered_chunk_size{0};
     int m_encoding_type{8};
+    size_t m_max_ir_buffer_size{512ULL * 1024 * 1024};
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
 

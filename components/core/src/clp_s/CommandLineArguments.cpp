@@ -427,6 +427,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         default_value(m_max_document_size),
                     "Maximum allowed size (B) for a single document before ir generation fails."
             )(
+                    "max-ir-buffer-size",
+                    po::value<size_t>(&m_max_ir_buffer_size)->value_name("BUFFER_SIZE")->
+                        default_value(m_max_ir_buffer_size),
+                    "Maximum allowed size (B) for a in memory IR buffer befroe being written to file."
+            )(
                     "encoding-type",
                     po::value<int>(&m_encoding_type)->value_name("ENCODING_TYPE")->
                         default_value(m_encoding_type),
@@ -1040,11 +1045,10 @@ void CommandLineArguments::print_search_usage() const {
 }
 
 void CommandLineArguments::print_json_to_ir_usage() const {
-    std::cerr << "Usage: " << m_program_name << " r [OPTIONS] IRS_DIR [FILE/DIR ...]" << std::endl;
+    std::cerr << "Usage: " << m_program_name << " r [OPTIONS] IRS_DIR [FILE/DIR ...]\n";
 }
 
 void CommandLineArguments::print_ir_compression_usage() const {
-    std::cerr << "Usage: " << m_program_name << " i [OPTIONS] ARCHIVES_DIR [FILE/DIR ...]"
-              << std::endl;
+    std::cerr << "Usage: " << m_program_name << " i [OPTIONS] ARCHIVES_DIR [FILE/DIR ...]\n";
 }
 }  // namespace clp_s
