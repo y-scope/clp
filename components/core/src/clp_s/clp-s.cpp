@@ -29,6 +29,7 @@
 #include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
 #include "search/OutputHandler.hpp"
+#include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
 #include "TimestampPattern.hpp"
 #include "TraceableException.hpp"
@@ -39,6 +40,7 @@ using clp_s::cArchiveFormatDevelopmentVersionFlag;
 using clp_s::cEpochTimeMax;
 using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
+using clp_s::StringUtils;
 
 namespace {
 /**
@@ -178,6 +180,25 @@ bool search_archive(
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
+
+    // Populate projection
+    auto projection = std::make_shared<Projection>(
+            command_line_arguments.get_projection_columns().empty()
+                    ? ProjectionMode::ReturnAllColumns
+                    : ProjectionMode::ReturnSelectedColumns
+    );
+    try {
+        for (auto const& column : command_line_arguments.get_projection_columns()) {
+            std::vector<std::string> descriptor_tokens;
+            StringUtils::tokenize_column_descriptor(column, descriptor_tokens);
+            projection->add_column(ColumnDescriptor::create(descriptor_tokens));
+        }
+    } catch (clp_s::TraceableException& e) {
+        SPDLOG_ERROR("{}", e.what());
+        return false;
+    }
+    projection->resolve_columns(archive_reader->get_schema_tree());
+    archive_reader->set_projection(projection);
 
     std::unique_ptr<OutputHandler> output_handler;
     try {
