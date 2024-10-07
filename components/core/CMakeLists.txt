@@ -326,7 +326,6 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
         src/clp/ffi/ir_stream/byteswap.hpp
-        src/clp/ffi/ir_stream/Deserializer.cpp
         src/clp/ffi/ir_stream/Deserializer.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
         src/clp/ffi/ir_stream/decoding_methods.hpp
@@ -334,6 +333,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+        src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
