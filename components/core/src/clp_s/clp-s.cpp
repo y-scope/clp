@@ -227,6 +227,8 @@ auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path)
         zc.open(out_file, option.compression_level);
     } catch (clp_s::ZstdCompressor::OperationFailed& error) {
         SPDLOG_ERROR("Failed to open ZSTDcompressor - {}", error.what());
+        in_file.close();
+        out_file.close();
         return false;
     }
 
@@ -244,6 +246,9 @@ auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path)
                     ))
                 {
                     SPDLOG_ERROR("Failed to serialize msgpack bytes for line: {}", line);
+                    in_file.close();
+                    out_file.close();
+                    zc.close();
                     return false;
                 }
                 flush_and_clear_serializer_buffer(serializer, ir_buf);
@@ -255,9 +260,15 @@ auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path)
                 }
             } catch (nlohmann::json::parse_error const& e) {
                 SPDLOG_ERROR("JSON parsing error: {}", e.what());
+                in_file.close();
+                out_file.close();
+                zc.close();
                 return false;
             } catch (std::exception const& e) {
                 SPDLOG_ERROR("Error during serialization: {}", e.what());
+                in_file.close();
+                out_file.close();
+                zc.close();
                 return false;
             }
         }

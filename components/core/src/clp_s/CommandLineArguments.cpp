@@ -430,7 +430,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "max-ir-buffer-size",
                     po::value<size_t>(&m_max_ir_buffer_size)->value_name("BUFFER_SIZE")->
                         default_value(m_max_ir_buffer_size),
-                    "Maximum allowed size (B) for a in memory IR buffer befroe being written to file."
+                    "Maximum allowed size (B) for an in memory IR buffer befroe being written to file."
             )(
                     "encoding-type",
                     po::value<int>(&m_encoding_type)->value_name("ENCODING_TYPE")->

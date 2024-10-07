@@ -113,7 +113,7 @@ private:
      * deserializer schema tree nodes and archive schema tree nodes
      * @param ir_node_id ID of the IR node
      * @param archive_node_type Type of the archive node
-     * @param ir_treeThe IR schema tree
+     * @param ir_tree The IR schema tree
      */
     auto get_archive_node_id(
             std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&

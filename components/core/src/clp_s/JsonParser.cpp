@@ -611,7 +611,7 @@ auto JsonParser::get_archive_node_id(
     if (validated_escaped_key.has_value()) {
         node_key = validated_escaped_key.value();
     } else {
-        throw "Key is not utf8 compliant";
+        throw "Key is not UTF-8 compliant";
     }
     int curr_node_archive_id
             = m_archive_writer->add_node(parent_node_id, archive_node_type, node_key);
@@ -747,6 +747,7 @@ auto JsonParser::parse_from_ir() -> bool {
 
         auto deserializer_result = Deserializer::create(zd);
         if (deserializer_result.has_error()) {
+            zd.close();
             m_archive_writer->close();
             return false;
         }
