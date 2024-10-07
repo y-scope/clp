@@ -41,7 +41,7 @@ struct JsonParserOption {
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
-struct JsonToIRParserOption {
+struct JsonToIrParserOption {
     std::vector<std::string> file_paths;
     std::string irs_dir;
     size_t max_document_size;
