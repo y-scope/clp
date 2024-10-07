@@ -524,7 +524,7 @@ TEST_CASE(
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "int", true);
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "int", false);
         // "* <float>(100?00) *"
-        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "float", true);
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "float", false);
         // TODO: add logic to determine this case is impossible
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "float", false);
         // "* <hasNumber>(100?00) *"
@@ -841,9 +841,7 @@ TEST_CASE(
         exp_interp.add_string<string>("* <{}>(?*10000) *", "010", "000", "* {} *", "hasNumber");
         // "* <hasNumber>(*10000) *"
         exp_interp.add_string<string>("* ?*<{}>(*10000) *", "010", "000", "* ?*{} *", "hasNumber");
-        // TODO: I believe this is a bug in `generate_query_substring_interpretations` and type1
-        // should also include hasNumber.
-        for (auto type1 : {"timestamp"}) {
+        for (auto type1 : {"hasNumber", "timestamp"}) {
             // "* <hasNumber/timestamp>(?*)*10000 *"
             exp_interp
                     .add_string<string>("* <{}>(?*)*10000 *", "010", "000", "* {}*10000 *", type1);
