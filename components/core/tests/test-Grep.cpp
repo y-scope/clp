@@ -57,7 +57,7 @@ class ExpectedInterpretation {
 public:
     explicit ExpectedInterpretation(ByteLexer& lexer) : lexer(lexer) {}
 
-    // Handles teh case where `force_add_to_dictionary_list` is empty
+    // Handles the case where `force_add_to_dictionary_list` is empty
     static auto get_placeholder(string const& variable_type_name) -> char {
         if (variable_type_name == "int") {
             return enum_to_underlying_type(VariablePlaceholder::Integer);
