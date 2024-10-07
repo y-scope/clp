@@ -910,7 +910,7 @@ TEST_CASE(
                     "* ?*{} *",
                     type1,
                     true
-                    );
+            );
             exp_interp.add_string<string>(
                     "* ?*<{}>(*10000) *",
                     "010",
