@@ -34,7 +34,7 @@ namespace clp::ffi::ir_stream {
  * @tparam IrUnitHandler
  */
 template <IrUnitHandlerInterface IrUnitHandler>
-requires(std::move_constructible<IrUnitType>)
+requires(std::move_constructible<IrUnitHandler>)
 class Deserializer {
 public:
     // Factory function
@@ -123,7 +123,7 @@ private:
 };
 
 template <IrUnitHandlerInterface IrUnitHandler>
-requires(std::move_constructible<IrUnitType>)
+requires(std::move_constructible<IrUnitHandler>)
 auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
         -> OUTCOME_V2_NAMESPACE::std_result<Deserializer> {
     bool is_four_byte_encoded{};
@@ -166,7 +166,7 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
 }
 
 template <IrUnitHandlerInterface IrUnitHandler>
-requires(std::move_constructible<IrUnitType>)
+requires(std::move_constructible<IrUnitHandler>)
 auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
     if (is_stream_completed()) {
