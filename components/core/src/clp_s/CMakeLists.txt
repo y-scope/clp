@@ -65,6 +65,8 @@ set(
         JsonParser.cpp
         JsonParser.hpp
         JsonSerializer.hpp
+        KafkaReader.cpp
+        KafkaReader.hpp
         ParsedMessage.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
@@ -194,6 +196,7 @@ target_link_libraries(
         Boost::filesystem Boost::iostreams Boost::program_options
         clp::string_utils
         kql
+        rdkafka
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
         msgpack-cxx

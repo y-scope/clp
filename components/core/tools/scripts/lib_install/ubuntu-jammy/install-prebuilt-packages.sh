@@ -20,6 +20,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   libcurl4 \
   libcurl4-openssl-dev \
   libmariadb-dev \
+  librdkafka-dev \
   libssl-dev \
   openjdk-11-jdk \
   pkg-config \
