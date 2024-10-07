@@ -75,7 +75,7 @@ auto unpack_and_serialize_msgpack_bytes(
  * @return Whether serialization was successful
  */
 template <typename T>
-auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path);
+auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path);
 
 /**
  * Iterates over the input JSON files specified by the command line arguments to generate and IR
@@ -203,7 +203,7 @@ auto unpack_and_serialize_msgpack_bytes(
 }
 
 template <typename T>
-auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path) {
+auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path) {
     auto result{Serializer<T>::create()};
     if (result.has_error()) {
         SPDLOG_ERROR("Failed to create Serializer");
@@ -294,7 +294,7 @@ auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool {
         SPDLOG_ERROR("Failed to create archives directory {} - {}", irs_dir.string(), e.what());
         return false;
     }
-    clp_s::JsonToIRParserOption option{};
+    clp_s::JsonToIrParserOption option{};
     option.file_paths = command_line_arguments.get_file_paths();
     option.irs_dir = irs_dir.string();
     option.max_document_size = command_line_arguments.get_max_document_size();

@@ -62,7 +62,7 @@ public:
     // Constructor
     explicit JsonParser(JsonParserOption const& option);
 
-    JsonParser(JsonToIRParserOption const& option);
+    JsonParser(JsonToIrParserOption const& option);
 
     // Destructor
     ~JsonParser() = default;
