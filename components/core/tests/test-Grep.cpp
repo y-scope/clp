@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <unordered_map>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -37,21 +36,29 @@ using std::back_inserter;
 using std::forward;
 using std::index_sequence;
 using std::make_index_sequence;
-using std::make_tuple;
 using std::ostream;
 using std::ranges::transform;
 using std::set;
 using std::size_t;
 using std::string;
-using std::tuple;
 using std::unordered_map;
 using std::vector;
 
-class ExpectedInterpretationBuilder {
-public:
-    explicit ExpectedInterpretationBuilder(ByteLexer& lexer) : lexer(lexer) {}
+auto operator<<(ostream& os, unordered_map<uint32_t, string> const& map) -> ostream& {
+    os << "{ ";
+    for (auto const& [key, value] : map) {
+        os << "{" << key << ": " << value << "} ";
+    }
+    os << "}";
+    return os;
+}
 
-    static auto get_placeholder(string const& variable_type_name) {
+class ExpectedInterpretation {
+public:
+    explicit ExpectedInterpretation(ByteLexer& lexer) : lexer(lexer) {}
+
+    // Handles teh case where `force_add_to_dictionary_list` is empty
+    static auto get_placeholder(string const& variable_type_name) -> char {
         if (variable_type_name == "int") {
             return enum_to_underlying_type(VariablePlaceholder::Integer);
         }
@@ -61,74 +68,60 @@ public:
         return enum_to_underlying_type(VariablePlaceholder::Dictionary);
     }
 
-    static auto get_placeholder(
-            string const& variable_type_name,
-            bool const force_add_to_dictionary
-    ) -> uint32_t {
+    static auto
+    get_placeholder(string const& variable_type_name, bool const force_add_to_dictionary) -> char {
         if (force_add_to_dictionary) {
             return enum_to_underlying_type(VariablePlaceholder::Dictionary);
         }
         return get_placeholder(variable_type_name);
     }
 
-    [[nodiscard]] auto build(
+    // Handles the case where there are no variable types because we can't call `get_placeholder`.
+    auto add_string(
             string const& logtype,
             string const& has_wildcard,
             string const& is_encoded_with_wildcard,
             string const& logtype_string
-    ) -> string {
-        return format(
-                "logtype='{}', has_wildcard='{}', is_encoded_with_wildcard='{}', "
-                "logtype_string='{}'",
-                logtype,
-                has_wildcard,
-                is_encoded_with_wildcard,
-                logtype_string
+    ) -> void {
+        expected_strings.insert(
+                format("logtype='{}', has_wildcard='{}', is_encoded_with_wildcard='{}', "
+                       "logtype_string='{}'",
+                       logtype,
+                       has_wildcard,
+                       is_encoded_with_wildcard,
+                       logtype_string)
         );
     }
 
-    template <typename... VariableTypeNames>
-    [[nodiscard]] auto
-    build(string const& logtype,
-          string const& has_wildcard,
-          string const& is_encoded_with_wildcard,
-          string const& logtype_string,
-          VariableTypeNames const&... variable_type_names) -> string {
-        auto formatted_logtype
-                = vformat(logtype, make_format_args(lexer.m_symbol_id[variable_type_names]...));
-        auto formatted_logtype_string = vformat(
-                logtype_string,
-                make_format_args(get_placeholder(variable_type_names...))
-        );
-        return build(
-                formatted_logtype,
-                has_wildcard,
-                is_encoded_with_wildcard,
-                formatted_logtype_string
-        );
-    }
-
-    template <typename... VariableTypeNames, typename... ForceAddToDictionary>
-    [[nodiscard]] auto build_verbose(
+    // TODO: Fix this so you can omit force_add_to_dictionary_list for multiple variable types.
+    template <typename... VariableTypeNames, typename... ForceAddToDictionaryList>
+    auto add_string(
             string const& logtype,
             string const& has_wildcard,
             string const& is_encoded_with_wildcard,
             string const& logtype_string,
-            VariableTypeNames const&... variable_type_names,
-            ForceAddToDictionary const&... force_add_to_dictionary
-    ) -> string {
-        if (0 < sizeof...(force_add_to_dictionary)) {
-            REQUIRE(sizeof...(variable_type_names) == sizeof...(force_add_to_dictionary));
-        }
-
+            VariableTypeNames... variable_type_names,
+            ForceAddToDictionaryList... force_add_to_dictionary_list
+    ) -> void {
         auto formatted_logtype
                 = vformat(logtype, make_format_args(lexer.m_symbol_id[variable_type_names]...));
-        auto formatted_logtype_string = vformat(
-                logtype_string,
-                make_format_args(get_placeholder(variable_type_names..., force_add_to_dictionary...)
-                )
-        );
-        return build(
+        string formatted_logtype_string;
+        if constexpr (0 == sizeof...(force_add_to_dictionary_list)) {
+            formatted_logtype_string = vformat(
+                    logtype_string,
+                    make_format_args((get_placeholder(variable_type_names), ...))
+            );
+        } else {
+            formatted_logtype_string = vformat(
+                    logtype_string,
+                    make_format_args(get_placeholder(
+                            variable_type_names,
+                            force_add_to_dictionary_list
+
+                    )...)
+            );
+        }
+        add_string(
                 formatted_logtype,
                 has_wildcard,
                 is_encoded_with_wildcard,
@@ -136,7 +129,39 @@ public:
         );
     }
 
+    auto compare(string const& search_query_string) -> void {
+        WildcardExpression search_query(search_query_string);
+        set<QueryInterpretation> const& query_interpretations
+                = Grep::generate_query_substring_interpretations(search_query, lexer);
+        std::set<std::string> actual_strings;
+        for (auto const& query_logtype : query_interpretations) {
+            std::ostringstream oss;
+            oss << query_logtype;
+            actual_strings.insert(oss.str());
+        }
+
+        // Compare element by element.
+        std::ostringstream oss;
+        oss << lexer.m_id_symbol;
+        CAPTURE(oss.str());
+        CAPTURE(actual_strings);
+        CAPTURE(expected_strings);
+
+        while (false == actual_strings.empty() && false == expected_strings.empty()) {
+            auto it_actual = actual_strings.begin();
+            auto it_expected = expected_strings.begin();
+            REQUIRE(*it_actual == *it_expected);
+
+            actual_strings.erase(it_actual);
+            expected_strings.erase(it_expected);
+        }
+
+        // Make sure all the elements of both sets were used
+        REQUIRE(actual_strings == expected_strings);
+    }
+
 private:
+    set<std::string> expected_strings;
     ByteLexer& lexer;
 };
 
@@ -424,633 +449,564 @@ TEST_CASE(
     }
 }
 
-auto operator<<(ostream& os, unordered_map<uint32_t, string> const& map) -> ostream& {
-    os << "{ ";
-    for (auto const& [key, value] : map) {
-        os << "{" << key << ": " << value << "} ";
-    }
-    os << "}";
-    return os;
-}
-
-auto compare_interpretation_with_expected(
-        string const& search_query_string,
-        set<std::string> expected_interpretation_strings,
-        ByteLexer& lexer
-) -> void {
-    WildcardExpression search_query(search_query_string);
-    set<QueryInterpretation> const& query_interpretations
-            = Grep::generate_query_substring_interpretations(search_query, lexer);
-    std::set<std::string> actual_strings;
-    for (auto const& query_logtype : query_interpretations) {
-        std::ostringstream oss;
-        oss << query_logtype;
-        actual_strings.insert(oss.str());
-    }
-
-    // Compare element by element. If this test fails there is an error with one of the two shown
-    // elements. One (or both) of the elements should either be excluded from their set or added to
-    // the other.
-    std::ostringstream oss;
-    oss << lexer.m_id_symbol;
-    CAPTURE(oss.str());
-    while (false == actual_strings.empty() && false == expected_interpretation_strings.empty()) {
-        auto it_actual = actual_strings.begin();
-        auto it_expected = expected_interpretation_strings.begin();
-        REQUIRE(*it_actual == *it_expected);
-
-        actual_strings.erase(it_actual);
-        expected_interpretation_strings.erase(it_expected);
-    }
-
-    // Make sure all the elements of both sets were used
-    REQUIRE(actual_strings == expected_interpretation_strings);
-}
-
 TEST_CASE(
         "generate_query_substring_interpretations",
         "[generate_query_substring_interpretations][schema_search]"
 ) {
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
-    ExpectedInterpretationBuilder interp_builder(lexer);
 
     SECTION("Query with static text") {
-        compare_interpretation_with_expected(
-                "* z *",
-                {//"* z *"
-                 interp_builder.build("* z *", "0", "0", "* z *")
-                },
-                lexer
-        );
+        ExpectedInterpretation exp_interp(lexer);
+
+        exp_interp.add_string("* z *", "0", "0", "* z *");
+
+        exp_interp.compare("* z *");
     }
     SECTION("Query with a hex value") {
-        // TODO: we shouldn't add the full static-text case when we can determine it is impossible.
-        compare_interpretation_with_expected(
-                "* a *",
-                {// "* a *"
-                 interp_builder.build("* a *", "0", "0", "* a *"),
-                 // "* <hex>(a) *"
-                 interp_builder.build("* <{}>(a) *", "000", "000", "* {} *", "hex")
-                },
-                lexer
-        );
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* a *"
+        exp_interp.add_string("* a *", "0", "0", "* a *");
+        // "* <hex>(a) *"
+        exp_interp.add_string<string>("* <{}>(a) *", "000", "000", "* {} *", "hex");
+
+        exp_interp.compare("* a *");
     }
     SECTION("Query with an integer") {
-        compare_interpretation_with_expected(
-                "* 10000 reply: *",
-                {// "* 10000 reply: *"
-                 interp_builder.build("* 10000 reply: *", "0", "0", "* 10000 reply: *"),
-                 // "* <int>(10000) reply: *"
-                 interp_builder
-                         .build("* <{}>(10000) reply: *", "000", "000", "* {} reply: *", "int")
-                },
-                lexer
-        );
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* 10000 reply: *"
+        exp_interp.add_string("* 10000 reply: *", "0", "0", "* 10000 reply: *");
+        // "* <int>(10000) reply: *"
+        exp_interp
+                .add_string<string>("* <{}>(10000) reply: *", "000", "000", "* {} reply: *", "int");
+
+        exp_interp.compare("* 10000 reply: *");
     }
     SECTION("Query with a non-greedy wildcard at the start of a variable") {
-        compare_interpretation_with_expected(
-                "* ?10000 *",
-                {// "* ?10000 *"
-                 interp_builder.build("* ?10000 *", "0", "0", "* ?10000 *"),
-                 // "* ?<int>(10000) *"
-                 interp_builder.build("* ?<{}>(10000) *", "000", "000", "* ?{} *", "int"),
-                 // "* <int>(?10000) *"
-                 // TODO: Add logic to determine this case is impossible.
-                 interp_builder
-                         .build_verbose("* <{}>(?10000) *", "010", "000", "* {} *", "int", true),
-                 interp_builder
-                         .build_verbose("* <{}>(?10000) *", "010", "010", "* {} *", "int", false),
-                 // "* <hasNumber>(?10000) *"
-                 interp_builder.build("* <{}>(?10000) *", "010", "000", "* {} *", "hasNumber")
-                },
-                lexer
-        );
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* ?10000 *"
+        exp_interp.add_string("* ?10000 *", "0", "0", "* ?10000 *");
+        // "* ?<int>(10000) *"
+        exp_interp.add_string<string>("* ?<{}>(10000) *", "000", "000", "* ?{} *", "int");
+        // "* <int>(?10000) *"
+        // TODO: Add logic to determine this case is impossible.
+        exp_interp.add_string<string>("* <{}>(?10000) *", "010", "000", "* {} *", "int", true);
+        exp_interp.add_string<string>("* <{}>(?10000) *", "010", "010", "* {} *", "int", false);
+        // "* <hasNumber>(?10000) *"
+        exp_interp.add_string<string>("* <{}>(?10000) *", "010", "000", "* {} *", "hasNumber");
+
+        exp_interp.compare("* ?10000 *");
     }
-    /*
     SECTION("Query with a non-greedy wildcard at the end of a variable") {
-        compare_interpretation_with_expected(
-                "* 10000? *",
-                {
-                        // "* 10000? *"
-                        interp_builder.build("* 10000? *", "0", "0", "* 10000? *"),
-                        // "* <int>(10000)? *"
-                        interp_builder.build("* <{}>(10000)? *", "000", "000", "* {}? *", "int"),
-                        // "* <int>(10000?) *"
-                        interp_builder
-                                .build("* <{}>(10000?) *", "010", "000", "* {} *", "int", true),
-                        interp_builder
-                                .build("* <{}>(10000?) *", "010", "010", "* {} *", "int", false),
-                        // "* <hasNumber>(10000?) *"
-                        // interp_builder.build("* <{}>(10000?) *", "010", "000", "* {} *", {},
-                        // "hasNumber")
-                },
-                lexer
-        );
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* 10000? *"
+        exp_interp.add_string("* 10000? *", "0", "0", "* 10000? *");
+        // "* <int>(10000)? *"
+        exp_interp.add_string<string>("* <{}>(10000)? *", "000", "000", "* {}? *", "int");
+        // "* <int>(10000?) *"
+        exp_interp.add_string<string>("* <{}>(10000?) *", "010", "000", "* {} *", "int", true);
+        exp_interp.add_string<string>("* <{}>(10000?) *", "010", "010", "* {} *", "int", false);
+        // "* <hasNumber>(10000?) *"
+        exp_interp.add_string<string>("* <{}>(10000?) *", "010", "000", "* {} *", "hasNumber");
+
+        exp_interp.compare("* 10000? *");
     }
     SECTION("Query with a non-greedy wildcard in the middle of a variable") {
-        compare_interpretation_with_expected(
-                "* 100?00 *",
-                {
-                        // "* 10000? *"
-                        // interp_builder.build("* 100?00 *", "0", "0", "* 100?00 *", {}),
-                        // "* <int>(100?00) *"
-                        // interp_builder.build("* <{}>(100?00) *", "010", "000", "* {} *", {true},
-                        // "int"), interp_builder.build("* <{}>(100?00) *", "010", "010", "* {} *",
-                        // {false}, "int"),
-                        // "* <hasNumber>(100?00) *"
-                        // interp_builder.build("* <{}>(100?00) *", "010", "000", "* {} *", {},
-                        // "hasNumber"),
-                        // "* <hasNumber>(100?00) *"
-                        // interp_builder.build("* <{}>(100?00) *", "010", "000", "* {} *", {},
-                        // "hasNumber"),
-                        // "* <int>(100)?00 *"
-                        // TODO: Add logic to determine this case is impossible.
-                        // interp_builder.build("* <{}>(100)?00 *", "000", "000", "* {}?00 *", {},
-                        // "int"),
-                        // "* 100?<int>(00) *"
-                        // TODO: Add logic to determine this case is impossible.
-                        // interp_builder
-                        //        .build("* 100?<{}>(00) *", "000", "000", "* 100?{} *", {true},
-                        //        "int"),
-                        // "* <int>(100)?<int>(00) *"
-                        // interp_builder.build(
-                        //        "* <{}>(100)?<{}>(00) *",
-                        //        "000",
-                        //        "000",
-                        //        "* {}?{} *",
-                        //        {false, true},
-                        //        "int",
-                        //        "int"
-                        //)
-                },
-                lexer
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* 10000? *"
+        exp_interp.add_string("* 100?00 *", "0", "0", "* 100?00 *");
+        // "* <int>(100?00) *"
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "int", true);
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "int", false);
+        // "* <float>(100?00) *"
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "float", true);
+        // TODO: add logic to determine this case is impossible
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "float", false);
+        // "* <hasNumber>(100?00) *"
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "hasNumber");
+        // "* <int>(100)?00 *"
+        // TODO: Add logic to determine this case is impossible.
+        exp_interp.add_string<string>("* <{}>(100)?00 *", "000", "000", "* {}?00 *", "int");
+        // "* 100?<int>(00) *"
+        // TODO: Add logic to determine this case is impossible.
+        exp_interp.add_string<string>("* 100?<{}>(00) *", "000", "000", "* 100?{} *", "int", true);
+        // "* <int>(100)?<int>(00) *"
+        exp_interp.add_string<string, string>(
+                "* <{}>(100)?<{}>(00) *",
+                "00000",
+                "00000",
+                "* {}?{} *",
+                "int",
+                "int",
+                false,
+                true
         );
+
+        exp_interp.compare("* 100?00 *");
     }
     SECTION("Query with a non-greedy wildcard and escaped wildcard") {
-        compare_interpretation_with_expected(
-                "* 10\\?000? *",
-                {// "* 10\\?000? *"
-                 format("logtype='* 10\\?000? *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                        "logtype_string='* 10\\?000? *'"),
-                 // "* <int>(10)\?000? *"
-                 format("logtype='* <{}>(10)\\?000? *', has_wildcard='000', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* {}\\?000? *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "* <int>(10)\?<int>(000)? *"
-                 format("logtype='* <{}>(10)\\?<{}>(000)? *', has_wildcard='00000', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='* {}\\?{}? *'",
-                        lexer.m_symbol_id["int"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* <int>(10)\?<int>(000?) *"
-                 format("logtype='* <{}>(10)\\?<{}>(000?) *', has_wildcard='00010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='* {}\\?{} *'",
-                        lexer.m_symbol_id["int"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* <int>(10)\?<int>(000?) *" encoded
-                 format("logtype='* <{}>(10)\\?<{}>(000?) *', has_wildcard='00010', "
-                        "is_encoded_with_wildcard='00010', "
-                        "logtype_string='* {}\\?{} *'",
-                        lexer.m_symbol_id["int"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer),
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "* <int>(10)\?<hasNumber>(000?) *"
-                 format("logtype='* <{}>(10)\\?<{}>(000?) *', has_wildcard='00010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='* {}\\?{} *'",
-                        lexer.m_symbol_id["int"],
-                        lexer.m_symbol_id["hasNumber"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* 10\?<int>(000)? *"
-                 format("logtype='* 10\\?<{}>(000)? *', has_wildcard='000', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* 10\\?{}? *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* 10\?<int>(000?) *"
-                 format("logtype='* 10\\?<{}>(000?) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* 10\\?{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* 10\?<hasNumber>(000?) *" encoded
-                 format("logtype='* 10\\?<{}>(000?) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='010', "
-                        "logtype_string='* 10\\?{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "* 10\?<hasNumber>(000?) *" encoded
-                 format("logtype='* 10\\?<{}>(000?) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* 10\\?{} *'",
-                        lexer.m_symbol_id["hasNumber"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary))
-                },
-                lexer
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* 10\\?000? *"
+        exp_interp.add_string("* 10\\?000? *", "0", "0", "* 10\\?000? *");
+        // "* <int>(10)\\?000? *"
+        exp_interp.add_string<string>(
+                "* <{}>(10)\\?000? *",
+                "000",
+                "000",
+                "* {}\\?000? *",
+                "int",
+                false
         );
+        // "* <int>(10)\\?<int>(000)? *"
+        exp_interp.add_string<string, string>(
+                "* <{}>(10)\\?<{}>(000)? *",
+                "00000",
+                "00000",
+                "* {}\\?{}? *",
+                "int",
+                "int",
+                false,
+                true
+        );
+        // "* <int>(10)\\?<int>(000?) *"
+        exp_interp.add_string<string, string>(
+                "* <{}>(10)\\?<{}>(000?) *",
+                "00010",
+                "00010",
+                "* {}\\?{} *",
+                "int",
+                "int",
+                false,
+                false
+        );
+        exp_interp.add_string<string, string>(
+                "* <{}>(10)\\?<{}>(000?) *",
+                "00010",
+                "00000",
+                "* {}\\?{} *",
+                "int",
+                "int",
+                false,
+                true
+        );
+        // "* <int>(10)\\?<hasNumber>(000?) *"
+        exp_interp.add_string<string, string>(
+                "* <{}>(10)\\?<{}>(000?) *",
+                "00010",
+                "00000",
+                "* {}\\?{} *",
+                "int",
+                "hasNumber",
+                false,
+                true
+        );
+        // "* 10\\?<int>(000)? *"
+        exp_interp.add_string<string>(
+                "* 10\\?<{}>(000)? *",
+                "000",
+                "000",
+                "* 10\\?{}? *",
+                "int",
+                true
+        );
+        // "* 10\\?<int>(000?) *"
+        exp_interp.add_string<string>(
+                "* 10\\?<{}>(000?) *",
+                "010",
+                "000",
+                "* 10\\?{} *",
+                "int",
+                true
+        );
+        exp_interp.add_string<string>(
+                "* 10\\?<{}>(000?) *",
+                "010",
+                "010",
+                "* 10\\?{} *",
+                "int",
+                false
+        );
+        // "* 10\\?<hasNumber>(000?) *"
+        exp_interp.add_string<string>(
+                "* 10\\?<{}>(000?) *",
+                "010",
+                "000",
+                "* 10\\?{} *",
+                "hasNumber",
+                false
+        );
+
+        exp_interp.compare("* 10\\?000? *");
     }
     SECTION("Query with greedy wildcard") {
-        compare_interpretation_with_expected(
-                "* *10000 *",
-                {// "* *10000 *"
-                 format("logtype='* *10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                        "logtype_string='* *10000 *'"),
-                 // "*<timestamp>(* *)*10000 *"
-                 format("logtype='*<{}>(* *)*10000 *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='*{}*10000 *'",
-                        lexer.m_symbol_id["timestamp"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* *<int>(*10000) *"
-                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* *<int>(*10000) *" encoded
-                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='010', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "* *<float>(*10000) *"
-                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* *<float>(*10000) *" encoded
-                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='010', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Float)),
-                 // "* *<hasNumber>(*10000) *"
-                 format("logtype='* *<{}>(*10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["hasNumber"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "*<timestamp>(* *)*<int>(*10000) *"
-                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "*<timestamp>(* *)*<int>(*10000) *" encoded
-                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00010', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "*<timestamp>(* *)*<float>(*10000) *"
-                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "*<timestamp>(* *)*<float>(*10000) *" encoded
-                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00010', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Float)),
-                 // "*<timestamp>(* *)*<hasNumber>(*10000) *"
-                 format("logtype='*<{}>(* *)*<{}>(*10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["hasNumber"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary))
-                },
-                lexer
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* *10000 *"
+        exp_interp.add_string("* *10000 *", "0", "0", "* *10000 *");
+        // "*<timestamp>(* *)*10000 *"
+        exp_interp.add_string<string>(
+                "*<{}>(* *)*10000 *",
+                "010",
+                "000",
+                "*{}*10000 *",
+                "timestamp",
+                false
         );
+        // "* *<int>(*10000) *"
+        exp_interp.add_string<string>("* *<{}>(*10000) *", "010", "000", "* *{} *", "int", true);
+        exp_interp.add_string<string>("* *<{}>(*10000) *", "010", "010", "* *{} *", "int", false);
+        // "* *<float>(*10000) *"
+        exp_interp.add_string<string>("* *<{}>(*10000) *", "010", "000", "* *{} *", "float", true);
+        exp_interp.add_string<string>("* *<{}>(*10000) *", "010", "010", "* *{} *", "float", false);
+        // "* *<hasNumber>(*10000) *"
+        exp_interp.add_string<string>("* *<{}>(*10000) *", "010", "000", "* *{} *", "hasNumber");
+        // "*<timestamp>(* *)*<int>(*10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*10000) *",
+                "01010",
+                "00000",
+                "*{}*{} *",
+                "timestamp",
+                "int",
+                false,
+                true
+        );
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*10000) *",
+                "01010",
+                "00010",
+                "*{}*{} *",
+                "timestamp",
+                "int",
+                false,
+                false
+        );
+        // "*<timestamp>(* *)*<float>(*10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*10000) *",
+                "01010",
+                "00000",
+                "*{}*{} *",
+                "timestamp",
+                "float",
+                false,
+                true
+        );
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*10000) *",
+                "01010",
+                "00010",
+                "*{}*{} *",
+                "timestamp",
+                "float",
+                false,
+                false
+        );
+        // "*<timestamp>(* *)*<hasNumber>(*10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*10000) *",
+                "01010",
+                "00000",
+                "*{}*{} *",
+                "timestamp",
+                "hasNumber",
+                false,
+                false
+        );
+
+        exp_interp.compare("* *10000 *");
     }
     SECTION("Query with greedy wildcard followed by non-greedy wildcard") {
-        compare_interpretation_with_expected(
-                "* *?10000 *",
-                {// "* *?10000 *"
-                 format("logtype='* *?10000 *', has_wildcard='0', is_encoded_with_wildcard='0', "
-                        "logtype_string='* *?10000 *'"),
-                 // "*<timestamp>(* *)*?10000 *"
-                 format("logtype='*<{}>(* *)*?10000 *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='*{}*?10000 *'",
-                        lexer.m_symbol_id["timestamp"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "*<timestamp>(* *)*?10000 *"
-                 format("logtype='*<{}>(* *)*?10000 *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='*{}*?10000 *'",
-                        lexer.m_symbol_id["timestamp"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* *<int>(*?10000) *"
-                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* *<int>(*?10000) *" encoded
-                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='010', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "* *<float>(*?10000) *"
-                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* *<float>(*?10000) *" encoded
-                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='010', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Float)),
-                 // "* *<hasNumber>(*?10000) *"
-                 format("logtype='* *<{}>(*?10000) *', has_wildcard='010', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* *{} *'",
-                        lexer.m_symbol_id["hasNumber"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "*<timestamp>(* *)*<int>(*?10000) *"
-                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "*<timestamp>(* *)*<int>(*?10000) *" encoded
-                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00010', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "*<timestamp>(* *)*<float>(*?10000) *"
-                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "*<timestamp>(* *)*<float>(*?10000) *" encoded
-                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00010', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["float"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Float)),
-                 // "*<timestamp>(* *)*<hasNumber>(*?10000) *"
-                 format("logtype='*<{}>(* *)*<{}>(*?10000) *', has_wildcard='01010', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='*{}*{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["hasNumber"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary)),
-                 // "* *?<int>(10000) *"
-                 format("logtype='* *?<{}>(10000) *', has_wildcard='000', "
-                        "is_encoded_with_wildcard='000', "
-                        "logtype_string='* *?{} *'",
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Integer)),
-                 // "*<timestamp>(* *)*?<int>(10000) *"
-                 format("logtype='*<{}>(* *)*?<{}>(10000) *', has_wildcard='01000', "
-                        "is_encoded_with_wildcard='00000', "
-                        "logtype_string='*{}*?{} *'",
-                        lexer.m_symbol_id["timestamp"],
-                        lexer.m_symbol_id["int"],
-                        enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                        enum_to_underlying_type(VariablePlaceholder::Integer))
-                },
-                lexer
-        );
-    }
-    */
-    /*
-SECTION("Query with non-greedy wildcard followed by greedy wildcard") {
-    set<string> expected_interpretation_strings;
-    // "* ?*10000 *"
-    expected_interpretation_strings.insert(
-            format("logtype='* ?*10000 *', has_wildcard='0', "
-                        "is_encoded_with_wildcard='0', "
-                        "logtype_string='* ?*10000 *'")
-    );
-    // "*<timestamp>(* *)?*10000 *"
-    expected_interpretation_strings.insert(format(
-            "logtype='*<{}>(* *)?*10000 *', has_wildcard='010', "
-            "is_encoded_with_wildcard='000', "
-            "logtype_string='*{}?*10000 *'",
-            lexer.m_symbol_id["timestamp"],
-            enum_to_underlying_type(VariablePlaceholder::Dictionary)
-    ));
-    // "* <int>(?*10000) *"
-    for () {
-        expected_interpretation_strings.insert(format(
-                "logtype='* <{}>(?*10000) *', has_wildcard='010', "
-                "is_encoded_with_wildcard='000', "
-                "logtype_string='* {} *'",
-                lexer.m_symbol_id["int"],
-                enum_to_underlying_type(VariablePlaceholder::Dictionary)
-        ));
-    }
+        ExpectedInterpretation exp_interp(lexer);
 
-    compare_interpretation_with_expected(
-            "* ?*10000 *",
-            {,
-             // "* *<int>(?*10000) *" encoded
-             format(
-                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
-                     "is_encoded_with_wildcard='010', "
-                     "logtype_string='* {} *'",
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             ),
-             // "* <float>(?*10000) *"
-             format(
-                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
-                     "is_encoded_with_wildcard='000', "
-                     "logtype_string='* {} *'",
-                     lexer.m_symbol_id["float"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "* <float>(?*10000) *" encoded
-             format(
-                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
-                     "is_encoded_with_wildcard='010', "
-                     "logtype_string='* {} *'",
-                     lexer.m_symbol_id["float"],
-                     enum_to_underlying_type(VariablePlaceholder::Float)
-             ),
-             // "* <hasNumber>(?*10000) *"
-             format(
-                     "logtype='* <{}>(?*10000) *', has_wildcard='010', "
-                     "is_encoded_with_wildcard='000', "
-                     "logtype_string='* {} *'",
-                     lexer.m_symbol_id["hasNumber"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "*<timestamp>(* *)*<int>(?*10000) *"
-             format(
-                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='00000', "
-                     "logtype_string='*{}*{} *'",
-                     lexer.m_symbol_id["timestamp"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "*<timestamp>(* *)*<int>(?*10000) *" encoded
-             format(
-                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='00010', "
-                     "logtype_string='*{}*{} *'",
-                     lexer.m_symbol_id["timestamp"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             ),
-             // "*<timestamp>(* *)*<float>(?*10000) *"
-             format(
-                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='00000', "
-                     "logtype_string='*{}*{} *'",
-                     lexer.m_symbol_id["timestamp"],
-                     lexer.m_symbol_id["float"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "*<timestamp>(* *)*<float>(?*10000) *" encoded
-             format(
-                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='00010', "
-                     "logtype_string='*{}*{} *'",
-                     lexer.m_symbol_id["timestamp"],
-                     lexer.m_symbol_id["float"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Float)
-             ),
-             // "*<timestamp>(* *)*<hasNumber>(?*10000) *"
-             format(
-                     "logtype='*<{}>(* *)*<{}>(?*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='00000', "
-                     "logtype_string='*{}*{} *'",
-                     lexer.m_symbol_id["timestamp"],
-                     lexer.m_symbol_id["hasNumber"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "* ?*<int>(10000) *"
-             format(
-                     "logtype='* ?*<{}>(10000) *', has_wildcard='000', "
-                     "is_encoded_with_wildcard='000', "
-                     "logtype_string='* ?*{} *'",
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             ),
-             // "*<timestamp>(* *)?*<int>(10000) *"
-             format(
-                     "logtype='*<{}>(* ?*)*<{}>(10000) *', has_wildcard='01000', "
-                     "is_encoded_with_wildcard='00000', "
-                     "logtype_string='*{}*{} *'",
-                     lexer.m_symbol_id["timestamp"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             ),
-             // "*<timestamp>(* *)?*<int>(10000) *"
-             format(
-                     "logtype='*<{}>(* ?*)*<{}>(10000) *', has_wildcard='01000', "
-                     "is_encoded_with_wildcard='00000', "
-                     "logtype_string='*{}*{} *'",
-                     lexer.m_symbol_id["timestamp"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             ),
-             // "* <int>(*?)*10000 *"
-             format(
-                     "logtype='* <{}>(?*)*10000 *', has_wildcard='010', "
-                     "is_encoded_with_wildcard='000', "
-                     "logtype_string='* {}*10000 *'",
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "* <int>(*?)*10000 * encoded"
-             format(
-                     "logtype='* <{}>(?*)*10000 *', has_wildcard='010', "
-                     "is_encoded_with_wildcard='010', "
-                     "logtype_string='* {}*10000 *'",
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             ),
-             // "* <int>(*?)*<int>(*10000) *" dict + dict
-             format(
-                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='00000', "
-                     "logtype_string='* {}*{} *'",
-                     lexer.m_symbol_id["int"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "* <int>(*?)*<int>(*10000) *"  encoded + dict
-             format(
-                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='01000', "
-                     "logtype_string='* {}*{} *'",
-                     lexer.m_symbol_id["int"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Integer),
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary)
-             ),
-             // "* <int>(*?)*<int>(*10000) *"  dict + encoded
-             format(
-                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='00010', "
-                     "logtype_string='* {}*{} *'",
-                     lexer.m_symbol_id["int"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             ),
-             // "* <int>(*?)*<int>(*10000) *" encoded + encoded
-             format(
-                     "logtype='* <{}>(?*)*<{}>(*10000) *', has_wildcard='01010', "
-                     "is_encoded_with_wildcard='01010', "
-                     "logtype_string='* {}*{} *'",
-                     lexer.m_symbol_id["int"],
-                     lexer.m_symbol_id["int"],
-                     enum_to_underlying_type(VariablePlaceholder::Integer),
-                     enum_to_underlying_type(VariablePlaceholder::Integer)
-             )},
-            lexer
-    );
-}
-*/
+        // "* *?10000 *"
+        exp_interp.add_string("* *?10000 *", "0", "0", "* *?10000 *");
+        // "*<timestamp>(* *)*?10000 *"
+        exp_interp.add_string<string>(
+                "*<{}>(* *)*?10000 *",
+                "010",
+                "000",
+                "*{}*?10000 *",
+                "timestamp"
+        );
+        // "*<timestamp>(* *)*<int>(*?10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*?10000) *",
+                "01010",
+                "00000",
+                "*{}*{} *",
+                "timestamp",
+                "int",
+                false,
+                true
+        );
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*?10000) *",
+                "01010",
+                "00010",
+                "*{}*{} *",
+                "timestamp",
+                "int",
+                false,
+                false
+        );
+        // "*<timestamp>(* *)*<float>(*?10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*?10000) *",
+                "01010",
+                "00000",
+                "*{}*{} *",
+                "timestamp",
+                "float",
+                false,
+                true
+        );
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*?10000) *",
+                "01010",
+                "00010",
+                "*{}*{} *",
+                "timestamp",
+                "float",
+                false,
+                false
+        );
+        // "*<timestamp>(* *)*<hasNumber>(*?10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*<{}>(*?10000) *",
+                "01010",
+                "00000",
+                "*{}*{} *",
+                "timestamp",
+                "hasNumber",
+                false,
+                false
+        );
+        // "*<timestamp>(* *)*?<int>(10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* *)*?<{}>(10000) *",
+                "01000",
+                "00000",
+                "*{}*?{} *",
+                "timestamp",
+                "int",
+                false,
+                false
+        );
+        // "* *<int>(*?10000) *"
+        exp_interp.add_string<string>("* *<{}>(*?10000) *", "010", "000", "* *{} *", "int", true);
+        exp_interp.add_string<string>("* *<{}>(*?10000) *", "010", "010", "* *{} *", "int", false);
+        // "* *<float>(*?10000) *"
+        exp_interp.add_string<string>("* *<{}>(*?10000) *", "010", "000", "* *{} *", "float", true);
+        exp_interp
+                .add_string<string>("* *<{}>(*?10000) *", "010", "010", "* *{} *", "float", false);
+        // "* *<hasNumber>(*?10000) *"
+        exp_interp.add_string<string>("* *<{}>(*?10000) *", "010", "000", "* *{} *", "hasNumber");
+        // "* *?<int>(10000) *"
+        exp_interp.add_string<string>("* *?<{}>(10000) *", "000", "000", "* *?{} *", "int");
+
+        exp_interp.compare("* *?10000 *");
+    }
+    SECTION("Query with non-greedy wildcard followed by greedy wildcard") {
+        ExpectedInterpretation exp_interp(lexer);
+
+        // "* ?*10000 *"
+        exp_interp.add_string("* ?*10000 *", "0", "0", "* ?*10000 *");
+        // "*<timestamp>(* ?*)*10000 *"
+        exp_interp.add_string<string>(
+                "*<{}>(* ?*)*10000 *",
+                "010",
+                "000",
+                "*{}*10000 *",
+                "timestamp"
+        );
+        // "*<timestamp>(* ?*)*<hasNumber>(*10000) *"
+        exp_interp.add_string<string, string>(
+                "*<{}>(* ?*)*<{}>(*10000) *",
+                "01010",
+                "00000",
+                "*{}*{} *",
+                "timestamp",
+                "hasNumber",
+                false,
+                false
+        );
+        // "* <hasNumber>(?*10000) *"
+        exp_interp.add_string<string>("* <{}>(?*10000) *", "010", "000", "* {} *", "hasNumber");
+        // "* <hasNumber>(*10000) *"
+        exp_interp.add_string<string>("* ?*<{}>(*10000) *", "010", "000", "* ?*{} *", "hasNumber");
+        // TODO: I believe this is a bug in `generate_query_substring_interpretations` and type1
+        // should also include hasNumber.
+        for (auto type1 : {"timestamp"}) {
+            // "* <hasNumber/timestamp>(?*)*10000 *"
+            exp_interp
+                    .add_string<string>("* <{}>(?*)*10000 *", "010", "000", "* {}*10000 *", type1);
+            for (auto type2 : {"int", "float"}) {
+                // "* <hasNumber/Timestamp>(?*)*<int/float>(*10000) *"
+                exp_interp.add_string<string, string>(
+                        "* <{}>(?*)*<{}>(*10000) *",
+                        "01010",
+                        "00000",
+                        "* {}*{} *",
+                        type1,
+                        type2,
+                        false,
+                        true
+                );
+                exp_interp.add_string<string, string>(
+                        "* <{}>(?*)*<{}>(*10000) *",
+                        "01010",
+                        "00010",
+                        "* {}*{} *",
+                        type1,
+                        type2,
+                        false,
+                        false
+                );
+            }
+            // "* <hasNumber/Timestamp>(?*)*<hasNumber>(*10000) *"
+            exp_interp.add_string<string, string>(
+                    "* <{}>(?*)*<{}>(*10000) *",
+                    "01010",
+                    "00000",
+                    "* {}*{} *",
+                    type1,
+                    "hasNumber",
+                    false,
+                    false
+            );
+        }
+        for (auto type1 : {"int", "float"}) {
+            // "*<timestamp>(* ?*)*<int/float>(*10000) *"
+            exp_interp.add_string<string, string>(
+                    "*<{}>(* ?*)*<{}>(*10000) *",
+                    "01010",
+                    "00000",
+                    "*{}*{} *",
+                    "timestamp",
+                    type1,
+                    false,
+                    true
+            );
+            exp_interp.add_string<string, string>(
+                    "*<{}>(* ?*)*<{}>(*10000) *",
+                    "01010",
+                    "00010",
+                    "*{}*{} *",
+                    "timestamp",
+                    type1,
+                    false,
+                    false
+            );
+            // "* ?*<int/float>(*10000) *"
+            exp_interp.add_string<string>(
+                    "* ?*<{}>(*10000) *",
+                    "010",
+                    "000",
+                    "* ?*{} *",
+                    type1,
+                    true
+                    );
+            exp_interp.add_string<string>(
+                    "* ?*<{}>(*10000) *",
+                    "010",
+                    "010",
+                    "* ?*{} *",
+                    type1,
+                    false
+            );
+            // "* <int/float>(?*10000) *"
+            exp_interp.add_string<string>("* <{}>(?*10000) *", "010", "000", "* {} *", type1, true);
+            exp_interp
+                    .add_string<string>("* <{}>(?*10000) *", "010", "010", "* {} *", type1, false);
+            // "* <int/float>(?*)*10000 *"
+            exp_interp.add_string<string>(
+                    "* <{}>(?*)*10000 *",
+                    "010",
+                    "000",
+                    "* {}*10000 *",
+                    type1,
+                    true
+            );
+            exp_interp.add_string<string>(
+                    "* <{}>(?*)*10000 *",
+                    "010",
+                    "010",
+                    "* {}*10000 *",
+                    type1,
+                    false
+            );
+            for (auto type2 : {"int", "float"}) {
+                // "* <int/float>(?*)*<int/float>(*10000) *"
+                exp_interp.add_string<string, string>(
+                        "* <{}>(?*)*<{}>(*10000) *",
+                        "01010",
+                        "00000",
+                        "* {}*{} *",
+                        type1,
+                        type2,
+                        true,
+                        true
+                );
+                exp_interp.add_string<string, string>(
+                        "* <{}>(?*)*<{}>(*10000) *",
+                        "01010",
+                        "00010",
+                        "* {}*{} *",
+                        type1,
+                        type2,
+                        true,
+                        false
+                );
+                exp_interp.add_string<string, string>(
+                        "* <{}>(?*)*<{}>(*10000) *",
+                        "01010",
+                        "01000",
+                        "* {}*{} *",
+                        type1,
+                        type2,
+                        false,
+                        true
+                );
+                exp_interp.add_string<string, string>(
+                        "* <{}>(?*)*<{}>(*10000) *",
+                        "01010",
+                        "01010",
+                        "* {}*{} *",
+                        type1,
+                        type2,
+                        false,
+                        false
+                );
+            }
+            // "* <int/float>(?*)*<hasNumber>(*10000) *"
+            exp_interp.add_string<string, string>(
+                    "* <{}>(?*)*<{}>(*10000) *",
+                    "01010",
+                    "00000",
+                    "* {}*{} *",
+                    type1,
+                    "hasNumber",
+                    true,
+                    false
+            );
+            exp_interp.add_string<string, string>(
+                    "* <{}>(?*)*<{}>(*10000) *",
+                    "01010",
+                    "01000",
+                    "* {}*{} *",
+                    type1,
+                    "hasNumber",
+                    false,
+                    false
+            );
+        }
+        exp_interp.compare("* ?*10000 *");
+    }
 }
