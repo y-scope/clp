@@ -524,7 +524,6 @@ TEST_CASE(
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "int", true);
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "int", false);
         // "* <float>(100?00) *"
-        // TODO: check if 100.00 should be encoded or in dictionary.
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "float", true);
         // TODO: add logic to determine this case is impossible
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "float", false);
