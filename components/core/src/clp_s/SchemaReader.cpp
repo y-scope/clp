@@ -548,19 +548,25 @@ void SchemaReader::initialize_serializer() {
     m_serializer_initialized = true;
 
     for (int32_t global_column_id : m_ordered_schema) {
-        generate_local_tree(global_column_id);
+        if (m_projection->matches_node(global_column_id)) {
+            generate_local_tree(global_column_id);
+        }
     }
 
     for (auto it = m_global_id_to_unordered_object.begin();
          it != m_global_id_to_unordered_object.end();
          ++it)
     {
-        generate_local_tree(it->first);
+        if (m_projection->matches_node(it->first)) {
+            generate_local_tree(it->first);
+        }
     }
 
     // TODO: this code will have to change once we allow mixing log lines parsed by different
     // parsers.
-    generate_json_template(0);
+    if (false == m_local_schema_tree.get_nodes().empty()) {
+        generate_json_template(m_local_schema_tree.get_root_node_id());
+    }
 }
 
 void SchemaReader::generate_json_template(int32_t id) {
