@@ -1,7 +1,7 @@
+#include <cstdlib>
 #include <exception>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -9,6 +9,7 @@
 
 #include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
+#include <msgpack.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
@@ -46,6 +47,9 @@ using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
 
 namespace {
+
+size_t max_ir_buffer_size = 1'000'000'000;
+
 /**
  * Compresses the input files specified by the command line arguments into an archive.
  * @param command_line_arguments
@@ -53,12 +57,42 @@ namespace {
  */
 bool compress(CommandLineArguments const& command_line_arguments);
 
+template <typename encoded_variable_t>
+auto flush_and_clear_serializer_buffer(
+        Serializer<encoded_variable_t>& serializer,
+        std::vector<int8_t>& byte_buf
+) -> void;
+
+template <typename encoded_variable_t>
+auto unpack_and_serialize_msgpack_bytes(
+        std::vector<uint8_t> const& msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
+) -> bool;
+
+/**
+ * Given user specified options and a file path to a JSON file calls the serailizer one each JSON
+ * entry to serialize into IR
+ * @param option
+ * @param path
+ * @return Whether serialization was successful
+ */
+template <typename T>
+auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path);
+
+/**
+ * Iterates over the input JSON files specified by the command line arguments to generate and IR
+ * file for each one.
+ * @param command_line_arguments
+ * @return Whether generation was successful
+ */
+auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool;
+
 /**
  * Compresses the input IR files specified by the command line arguments into an archive.
  * @param command_line_arguments
  * @return Whether compression was successful
  */
-bool ir_compress(CommandLineArguments const& command_line_arguments);
+auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool;
 
 /**
  * Decompresses the archive specified by the given JsonConstructorOption.
@@ -160,7 +194,7 @@ auto unpack_and_serialize_msgpack_bytes(
 }
 
 template <typename T>
-auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
+auto run_serializer(clp_s::JsonToIRParserOption const& option, std::string path) {
     auto result{Serializer<T>::create()};
     if (result.has_error()) {
         SPDLOG_ERROR("Failed to create Serializer");
@@ -187,14 +221,15 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
         return false;
     }
 
-    std::string line;
+    std::string line = "";
     size_t total_size = 0;
 
     if (in_file.is_open()) {
         while (getline(in_file, line)) {
             try {
                 auto j_obj = nlohmann::json::parse(line);
-                if (!unpack_and_serialize_msgpack_bytes(
+                if (false
+                    == unpack_and_serialize_msgpack_bytes(
                             nlohmann::json::to_msgpack(j_obj),
                             serializer
                     ))
@@ -203,7 +238,7 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
                     return false;
                 }
                 flush_and_clear_serializer_buffer(serializer, ir_buf);
-                if (ir_buf.size() >= 1'000'000'000) {
+                if (ir_buf.size() >= max_ir_buffer_size) {
                     total_size = total_size + ir_buf.size();
                     zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
                     zc.flush();
@@ -229,7 +264,7 @@ auto run_serializer(clp_s::JsonToIRParserOption option, std::string path) {
     return true;
 }
 
-bool generate_IR(CommandLineArguments const& command_line_arguments) {
+auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool {
     auto irs_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
     // Create output directory in case it doesn't exist
@@ -269,7 +304,7 @@ bool generate_IR(CommandLineArguments const& command_line_arguments) {
     return true;
 }
 
-bool ir_compress(CommandLineArguments const& command_line_arguments) {
+auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
     // Create output directory in case it doesn't exist
@@ -307,7 +342,7 @@ bool ir_compress(CommandLineArguments const& command_line_arguments) {
     }
 
     clp_s::JsonParser parser(option);
-    if (false == parser.parse_from_IR()) {
+    if (false == parser.parse_from_ir()) {
         SPDLOG_ERROR("Encountered error while parsing input");
         return false;
     }
@@ -462,12 +497,12 @@ int main(int argc, char const* argv[]) {
         if (false == compress(command_line_arguments)) {
             return 1;
         }
-    } else if (CommandLineArguments::Command::IR_Compress == command_line_arguments.get_command()) {
+    } else if (CommandLineArguments::Command::IrCompress == command_line_arguments.get_command()) {
         if (false == ir_compress(command_line_arguments)) {
             return 1;
         }
-    } else if (CommandLineArguments::Command::Json_To_IR == command_line_arguments.get_command()) {
-        if (false == generate_IR(command_line_arguments)) {
+    } else if (CommandLineArguments::Command::JsonToIr == command_line_arguments.get_command()) {
+        if (false == generate_ir(command_line_arguments)) {
             return 1;
         }
     } else if (CommandLineArguments::Command::Extract == command_line_arguments.get_command()) {

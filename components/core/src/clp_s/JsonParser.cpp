@@ -1,15 +1,28 @@
 #include "JsonParser.hpp"
 
-#include <iostream>
+#include <cstdint>
+#include <cstdlib>
+#include <optional>
 #include <stack>
+#include <unordered_map>
 
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
-#include "archive_constants.hpp"
+#include "../clp/ffi/SchemaTree.hpp"
+#include "../clp/ffi/SchemaTreeNode.hpp"
+#include "../clp/ffi/utils.hpp"
+#include "../clp/ffi/Value.hpp"
+#include "../clp/ir/types.hpp"
+#include "../clp/streaming_compression/zstd/Decompressor.hpp"
+#include "DictionaryWriter.hpp"
 #include "JsonFileIterator.hpp"
+#include "ParsedMessage.hpp"
+
+using namespace simdjson;
 
 namespace clp_s {
+
 JsonParser::JsonParser(JsonParserOption const& option)
         : m_num_messages(0),
           m_target_encoded_size(option.target_encoded_size),
@@ -520,13 +533,13 @@ bool JsonParser::parse() {
     return true;
 }
 
-NodeType get_archive_node_type(
+auto JsonParser::get_archive_node_type(
         clp::ffi::SchemaTreeNode::Type ir_node_type,
         bool node_has_value,
         std::optional<clp::ffi::Value> const& node_value
-) {
+) -> NodeType {
     // figure out what type the node is in archive node type
-    NodeType archive_node_type;
+    NodeType archive_node_type = NodeType::Unknown;
     switch (ir_node_type) {
         case clp::ffi::SchemaTreeNode::Type::Int:
             archive_node_type = NodeType::Integer;
@@ -559,29 +572,33 @@ NodeType get_archive_node_type(
             }
             break;
         default:
-            archive_node_type = NodeType::Unknown;
             break;
     }
     return archive_node_type;
 }
 
-//
-int JsonParser::get_archive_node_id(
-        std::map<std::tuple<int32_t, NodeType>, int32_t>& ir_node_to_archive_node_map,
-        int ir_node_id,
+auto JsonParser::get_archive_node_id(
+        std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&
+                ir_node_to_archive_node_unordered_map,
+        int32_t ir_node_id,
         NodeType archive_node_type,
         clp::ffi::SchemaTree const& ir_tree
-) {
-    auto key = std::make_tuple(ir_node_id, archive_node_type);
-    auto map_location = ir_node_to_archive_node_map.find(key);
-    if (ir_node_to_archive_node_map.end() != map_location) {
-        return map_location->second;
+) -> int {
+    auto unordered_map_location = ir_node_to_archive_node_unordered_map.find(ir_node_id);
+    if (ir_node_to_archive_node_unordered_map.end() != unordered_map_location) {
+        auto translation_vector = unordered_map_location->second;
+        for (int i = 0; i < translation_vector.size(); i++) {
+            if (translation_vector[i].first == archive_node_type) {
+                return translation_vector[i].second;
+            }
+        }
     }
-    auto& curr_node = ir_tree.get_node(ir_node_id);
+
+    auto const& curr_node = ir_tree.get_node(ir_node_id);
     int32_t parent_node_id{-1};
     if (ir_node_id != curr_node.get_parent_id()) {
         parent_node_id = get_archive_node_id(
-                ir_node_to_archive_node_map,
+                ir_node_to_archive_node_unordered_map,
                 curr_node.get_parent_id(),
                 NodeType::Object,
                 ir_tree
@@ -597,16 +614,23 @@ int JsonParser::get_archive_node_id(
     }
     int curr_node_archive_id
             = m_archive_writer->add_node(parent_node_id, archive_node_type, node_key);
-    ir_node_to_archive_node_map.emplace(std::move(key), curr_node_archive_id);
+    auto p = std::make_pair(archive_node_type, curr_node_archive_id);
+    if (ir_node_to_archive_node_unordered_map.end() != unordered_map_location) {
+        unordered_map_location->second.push_back(p);
+    } else {
+        std::vector<std::pair<NodeType, int32_t>> v;
+        v.push_back(p);
+        ir_node_to_archive_node_unordered_map.emplace(ir_node_id, v);
+    }
     return curr_node_archive_id;
 }
 
 void JsonParser::parse_kv_log_event(
         KeyValuePairLogEvent const& kv,
-        std::map<std::tuple<int32_t, NodeType>, int32_t>& ir_node_to_archive_node_map
+        std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&
+                ir_node_to_archive_node_unordered_map
 ) {
     clp::ffi::SchemaTree const& tree = kv.get_schema_tree();
-
     for (auto const& pair : kv.get_node_id_value_pairs()) {
         clp::ffi::SchemaTreeNode const& tree_node = tree.get_node(pair.first);
         clp::ffi::SchemaTreeNode::Type ir_node_type = tree_node.get_type();
@@ -621,7 +645,7 @@ void JsonParser::parse_kv_log_event(
         int node_id;
         try {
             node_id = get_archive_node_id(
-                    ir_node_to_archive_node_map,
+                    ir_node_to_archive_node_unordered_map,
                     pair.first,
                     archive_node_type,
                     tree
@@ -705,11 +729,11 @@ void JsonParser::parse_kv_log_event(
     int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
     m_current_parsed_message.set_id(current_schema_id);
     m_archive_writer->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
-    return;
 }
 
-bool JsonParser::parse_from_IR() {
-    std::map<std::tuple<int32_t, NodeType>, int32_t> ir_node_to_archive_node_map;
+auto JsonParser::parse_from_ir() -> bool {
+    std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>
+            ir_node_to_archive_node_unordered_map;
 
     for (auto& file_path : m_file_paths) {
         int fsize = std::filesystem::file_size(file_path);
@@ -742,7 +766,7 @@ bool JsonParser::parse_from_IR() {
             m_current_schema.clear();
             auto const& kv_log_event = kv_log_event_result.value();
             try {
-                parse_kv_log_event(kv_log_event, ir_node_to_archive_node_map);
+                parse_kv_log_event(kv_log_event, ir_node_to_archive_node_unordered_map);
             } catch (std::string msg) {
                 SPDLOG_ERROR("ERROR: {}" + msg);
                 zd.close();
@@ -754,14 +778,14 @@ bool JsonParser::parse_from_IR() {
             }
             m_num_messages++;
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                ir_node_to_archive_node_map.clear();
+                ir_node_to_archive_node_unordered_map.clear();
                 split_archive();
             }
 
             m_current_parsed_message.clear();
 
         } while (true);
-        ir_node_to_archive_node_map.clear();
+        ir_node_to_archive_node_unordered_map.clear();
         zd.close();
     }
     return true;

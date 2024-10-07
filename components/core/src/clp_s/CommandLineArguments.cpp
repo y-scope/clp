@@ -129,8 +129,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             case (char)Command::Compress:
             case (char)Command::Extract:
             case (char)Command::Search:
-            case (char)Command::Json_To_IR:
-            case (char)Command::IR_Compress:
+            case (char)Command::JsonToIr:
+            case (char)Command::IrCompress:
                 m_command = (Command)command_input;
                 break;
             default:
@@ -270,7 +270,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 m_metadata_db_config = std::move(metadata_db_config);
             }
-        } else if (Command::IR_Compress == m_command) {
+        } else if (Command::IrCompress == m_command) {
             po::options_description compression_positional_options;
             // clang-format off
              compression_positional_options.add_options()(
@@ -348,11 +348,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::notify(parsed_command_line_options);
 
             if (parsed_command_line_options.count("help")) {
-                print_IR_compression_usage();
+                print_ir_compression_usage();
 
-                std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Compress file1.ir and dir1 into archives-dir" << std::endl;
-                std::cerr << "  " << m_program_name << " i archives-dir file1.ir dir1" << std::endl;
+                std::cerr << "Examples:\n";
+                std::cerr << "  # Compress file1.ir and dir1 into archives-dir\n";
+                std::cerr << "  " << m_program_name << " i archives-dir file1.ir dir1\n";
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -398,7 +398,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 m_metadata_db_config = std::move(metadata_db_config);
             }
-        } else if ((char)Command::Json_To_IR == command_input) {
+        } else if ((char)Command::JsonToIr == command_input) {
             po::options_description compression_positional_options;
             // clang-format off
              compression_positional_options.add_options()(
@@ -466,11 +466,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::notify(parsed_command_line_options);
 
             if (parsed_command_line_options.count("help")) {
-                print_json_to_IR_usage();
+                print_json_to_ir_usage();
 
-                std::cerr << "Examples:" << std::endl;
-                std::cerr << "  # Parse file1.json and dir1 into irs-dir" << std::endl;
-                std::cerr << "  " << m_program_name << " r irs-dir file1.json dir1" << std::endl;
+                std::cerr << "Examples:\n";
+                std::cerr << "  # Parse file1.json and dir1 into irs-dir\n";
+                std::cerr << "  " << m_program_name << " r irs-dir file1.json dir1\n";
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
@@ -1039,11 +1039,11 @@ void CommandLineArguments::print_search_usage() const {
               << std::endl;
 }
 
-void CommandLineArguments::print_json_to_IR_usage() const {
+void CommandLineArguments::print_json_to_ir_usage() const {
     std::cerr << "Usage: " << m_program_name << " r [OPTIONS] IRS_DIR [FILE/DIR ...]" << std::endl;
 }
 
-void CommandLineArguments::print_IR_compression_usage() const {
+void CommandLineArguments::print_ir_compression_usage() const {
     std::cerr << "Usage: " << m_program_name << " i [OPTIONS] ARCHIVES_DIR [FILE/DIR ...]"
               << std::endl;
 }

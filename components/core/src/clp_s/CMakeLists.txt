@@ -4,32 +4,12 @@ set(
         CLP_SOURCES
         ../clp/BufferReader.cpp
         ../clp/BufferReader.hpp
-        ../clp/Defs.h
-        ../clp/ErrorCode.hpp
-        ../clp/FileDescriptor.cpp
-        ../clp/FileDescriptor.hpp
-        ../clp/GlobalMetadataDB.hpp
-        ../clp/GlobalMetadataDBConfig.cpp
-        ../clp/GlobalMetadataDBConfig.hpp
-        ../clp/GlobalMySQLMetadataDB.cpp
-        ../clp/GlobalMySQLMetadataDB.hpp
-        ../clp/MySQLDB.cpp
-        ../clp/MySQLDB.hpp
-        ../clp/MySQLParamBindings.cpp
-        ../clp/MySQLParamBindings.hpp
-        ../clp/MySQLPreparedStatement.cpp
-        ../clp/MySQLPreparedStatement.hpp
-        ../clp/ReadOnlyMemoryMappedFile.cpp
-        ../clp/ReadOnlyMemoryMappedFile.hpp
-        ../clp/ReaderInterface.cpp
-        ../clp/ReaderInterface.hpp
-        ../clp/TraceableException.hpp
-        ../clp/WriterInterface.cpp
-        ../clp/WriterInterface.hpp
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
         ../clp/database_utils.cpp
         ../clp/database_utils.hpp
+        ../clp/Defs.h
+        ../clp/ErrorCode.hpp
         ../clp/ffi/KeyValuePairLogEvent.cpp
         ../clp/ffi/KeyValuePairLogEvent.hpp
         ../clp/ffi/SchemaTree.cpp
@@ -51,21 +31,41 @@ set(
         ../clp/ffi/ir_stream/utils.hpp
         ../clp/ffi/utils.cpp
         ../clp/ffi/utils.hpp
+        ../clp/FileDescriptor.cpp
+        ../clp/FileDescriptor.hpp
+        ../clp/GlobalMetadataDB.hpp
+        ../clp/GlobalMetadataDBConfig.cpp
+        ../clp/GlobalMetadataDBConfig.hpp
+        ../clp/GlobalMySQLMetadataDB.cpp
+        ../clp/GlobalMySQLMetadataDB.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
         ../clp/ir/types.hpp
+        ../clp/MySQLDB.cpp
+        ../clp/MySQLDB.hpp
+        ../clp/MySQLParamBindings.cpp
+        ../clp/MySQLParamBindings.hpp
+        ../clp/MySQLPreparedStatement.cpp
+        ../clp/MySQLPreparedStatement.hpp
         ../clp/networking/socket_utils.cpp
         ../clp/networking/socket_utils.hpp
+        ../clp/ReadOnlyMemoryMappedFile.cpp
+        ../clp/ReadOnlyMemoryMappedFile.hpp
+        ../clp/ReaderInterface.cpp
+        ../clp/ReaderInterface.hpp
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/time_types.hpp
+        ../clp/TraceableException.hpp
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
+        ../clp/WriterInterface.cpp
+        ../clp/WriterInterface.hpp
 )
 
 set(

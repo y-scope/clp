@@ -27,8 +27,8 @@ public:
         Compress = 'c',
         Extract = 'x',
         Search = 's',
-        Json_To_IR = 'r',
-        IR_Compress = 'i'
+        JsonToIr = 'r',
+        IrCompress = 'i'
     };
 
     enum class OutputHandlerType : uint8_t {
@@ -161,9 +161,9 @@ private:
 
     void print_search_usage() const;
 
-    void print_json_to_IR_usage() const;
+    void print_json_to_ir_usage() const;
 
-    void print_IR_compression_usage() const;
+    void print_ir_compression_usage() const;
 
     // Variables
     std::string m_program_name;
