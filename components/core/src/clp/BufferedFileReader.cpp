@@ -56,6 +56,13 @@ BufferedFileReader::BufferedFileReader(
         size_t base_buffer_size
 )
         : m_file_reader(std::move(reader_interface)) {
+    if (nullptr == m_file_reader) {
+        throw OperationFailed(
+            ErrorCode_BadParam,
+            __FILENAME__,
+            __LINE__,
+            "reader_interface cannot be null");
+    }
     if (base_buffer_size % cMinBufferSize != 0) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
@@ -278,11 +285,11 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
 }
 
 auto BufferedFileReader::drop_content_before_current_pos() -> void {
-    auto buffer_reader_pos = m_buffer_reader.get_pos();
+    auto const buffer_reader_pos = m_buffer_reader.get_pos();
     auto const new_data_size = m_buffer_reader.get_buffer_size() - buffer_reader_pos;
     auto const new_buffer_size = int_round_up_to_multiple(new_data_size, m_base_buffer_size);
 
-    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + static_cast<long>(buffer_reader_pos));
+    m_buffer.erase(m_buffer.begin(), m_buffer.begin() + buffer_reader_pos);
     m_buffer.resize(new_buffer_size);
     m_buffer_begin_pos += buffer_reader_pos;
 
