@@ -103,6 +103,7 @@ private:
      * @param target_encoded_file_size
      * @param file_to_compress
      * @param archive_writer
+     * @param file_reader
      * @param use_heuristic
      * @return true if all files were compressed successfully, false otherwise
      */
