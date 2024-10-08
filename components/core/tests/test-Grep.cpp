@@ -41,6 +41,7 @@ using std::ranges::transform;
 using std::set;
 using std::size_t;
 using std::string;
+using std::string_view;
 using std::unordered_map;
 using std::vector;
 
@@ -349,56 +350,82 @@ TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_s
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
-    constexpr std::string_view cNumber = "10000";
-    constexpr size_t cFirstGreedyWildcardIdx = cWildcardExprValue.find_first_of('*');
-    constexpr size_t cLastGreedyWildcardIdx = cWildcardExprValue.find_last_of('*');
-    constexpr size_t cECharIdx = cWildcardExprValue.find('e');
-    constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
-    constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
-    WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+    SECTION("Non-wildcard search query") {
+        constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
+        constexpr std::string_view cNumber = "10000";
+        constexpr size_t cFirstGreedyWildcardIdx = cWildcardExprValue.find_first_of('*');
+        constexpr size_t cLastGreedyWildcardIdx = cWildcardExprValue.find_last_of('*');
+        constexpr size_t cECharIdx = cWildcardExprValue.find('e');
+        constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
+        constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
+        WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
 
-    // Test all subexpressions of `wildcard_expr`
-    for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
-        for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-            auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
-                    WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
-                    lexer
-            );
+        // Test all subexpressions of `wildcard_expr`
+        for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
+            for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
+                auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
+                        WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
+                        lexer
+                );
 
-            std::set<uint32_t> expected_variable_types;
-            if ((cFirstGreedyWildcardIdx == begin_idx && cFirstGreedyWildcardIdx + 1 == end_idx)
-                || (cLastGreedyWildcardIdx == begin_idx && cLastGreedyWildcardIdx + 1 == end_idx))
-            {
-                // "*"
-                expected_variable_types
-                        = {lexer.m_symbol_id["timestamp"],
-                           lexer.m_symbol_id["int"],
-                           lexer.m_symbol_id["float"],
-                           lexer.m_symbol_id["hex"],
-                           lexer.m_symbol_id["hasNumber"],
-                           lexer.m_symbol_id["uniqueVariable"],
-                           lexer.m_symbol_id["test"]};
-            } else if (cNumberBeginIdx <= begin_idx && end_idx <= cNumberEndIdx) {
-                // Substrings of "10000"
-                expected_variable_types
-                        = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
-            } else if (cECharIdx == begin_idx && cECharIdx + 1 == end_idx) {
-                // "e"
-                expected_variable_types = {lexer.m_symbol_id["hex"]};
+                std::set<uint32_t> expected_variable_types;
+                if ((cFirstGreedyWildcardIdx == begin_idx && cFirstGreedyWildcardIdx + 1 == end_idx)
+                    || (cLastGreedyWildcardIdx == begin_idx && cLastGreedyWildcardIdx + 1 == end_idx
+                    ))
+                {
+                    // "*"
+                    expected_variable_types
+                            = {lexer.m_symbol_id["timestamp"],
+                               lexer.m_symbol_id["int"],
+                               lexer.m_symbol_id["float"],
+                               lexer.m_symbol_id["hex"],
+                               lexer.m_symbol_id["hasNumber"],
+                               lexer.m_symbol_id["uniqueVariable"],
+                               lexer.m_symbol_id["test"]};
+                } else if (cNumberBeginIdx <= begin_idx && end_idx <= cNumberEndIdx) {
+                    // Substrings of "10000"
+                    expected_variable_types
+                            = {lexer.m_symbol_id["int"], lexer.m_symbol_id["hasNumber"]};
+                } else if (cECharIdx == begin_idx && cECharIdx + 1 == end_idx) {
+                    // "e"
+                    expected_variable_types = {lexer.m_symbol_id["hex"]};
+                }
+
+                bool expected_contains_wildcard = false;
+                if (cFirstGreedyWildcardIdx == begin_idx || cLastGreedyWildcardIdx + 1 == end_idx) {
+                    expected_contains_wildcard = true;
+                }
+
+                CAPTURE(wildcard_expr.substr(begin_idx, end_idx - begin_idx));
+                CAPTURE(begin_idx);
+                CAPTURE(end_idx);
+                REQUIRE(variable_types == expected_variable_types);
+                REQUIRE(contains_wildcard == expected_contains_wildcard);
             }
-
-            bool expected_contains_wildcard = false;
-            if (cFirstGreedyWildcardIdx == begin_idx || cLastGreedyWildcardIdx + 1 == end_idx) {
-                expected_contains_wildcard = true;
-            }
-
-            CAPTURE(wildcard_expr.substr(begin_idx, end_idx - begin_idx));
-            CAPTURE(begin_idx);
-            CAPTURE(end_idx);
-            REQUIRE((variable_types == expected_variable_types));
-            REQUIRE((contains_wildcard == expected_contains_wildcard));
         }
+    }
+
+    SECTION("Non-greedy wildcard followed by a greedy wildcard") {
+        constexpr std::string_view cWildcardExprValue("?*");
+
+        WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+        auto [variable_types, contains_wildcard] = Grep::get_matching_variable_types(
+                WildcardExpressionView{wildcard_expr, 0, wildcard_expr.length()},
+                lexer
+        );
+
+        set expected_variable_types
+                = {lexer.m_symbol_id["timestamp"],
+                   lexer.m_symbol_id["int"],
+                   lexer.m_symbol_id["float"],
+                   lexer.m_symbol_id["hex"],
+                   lexer.m_symbol_id["hasNumber"],
+                   lexer.m_symbol_id["uniqueVariable"],
+                   lexer.m_symbol_id["test"]};
+        bool expected_contains_wildcard = true;
+
+        REQUIRE(variable_types == expected_variable_types);
+        REQUIRE(contains_wildcard == expected_contains_wildcard);
     }
 }
 
@@ -409,43 +436,93 @@ TEST_CASE(
     ByteLexer lexer;
     load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
 
-    constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
-    constexpr std::string_view cNumber = "10000";
-    constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
-    constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
-    WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+    SECTION("Non-wildcard search query") {
+        constexpr string_view cWildcardExprValue("* 10000 reply: *");
+        constexpr string_view cNumber = "10000";
+        constexpr size_t cNumberBeginIdx = cWildcardExprValue.find(cNumber);
+        constexpr size_t cNumberEndIdx = cNumberBeginIdx + cNumber.length();
+        WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
 
-    for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
-        for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
-            auto interpretations = Grep::get_interpretations_for_whole_wildcard_expr(
-                    WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
-                    lexer
-            );
+        for (uint32_t end_idx = 1; end_idx <= wildcard_expr.length(); end_idx++) {
+            for (uint32_t begin_idx = 0; begin_idx < end_idx; begin_idx++) {
+                auto interpretations = Grep::get_interpretations_for_whole_wildcard_expr(
+                        WildcardExpressionView{wildcard_expr, begin_idx, end_idx},
+                        lexer
+                );
 
-            vector<QueryInterpretation> expected_interpretations(0);
-            if (cNumberBeginIdx == begin_idx && cNumberEndIdx == end_idx) {
+                vector<QueryInterpretation> expected_interpretations(0);
+                if (cNumberBeginIdx == begin_idx && cNumberEndIdx == end_idx) {
+                    QueryInterpretation expected_interpretation;
+                    expected_interpretation.append_variable_token(
+                            static_cast<int>(lexer.m_symbol_id["int"]),
+                            string{cNumber},
+                            false,
+                            false
+                    );
+                    expected_interpretations.emplace_back(expected_interpretation);
+                } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
+                           || (end_idx - begin_idx == 1))
+                {
+                    QueryInterpretation expected_interpretation;
+                    for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
+                        expected_interpretation.append_static_token(wildcard_expr.substr(idx, 1));
+                    }
+                    expected_interpretations.emplace_back(expected_interpretation);
+                }
+
+                CAPTURE(begin_idx);
+                CAPTURE(end_idx);
+                REQUIRE(interpretations == expected_interpretations);
+            }
+        }
+    }
+
+    SECTION("Non-greedy wildcard followed by a greedy wildcard") {
+        constexpr string_view cWildcardExprValue(" ?* ");
+        WildcardExpression const wildcard_expr{string{cWildcardExprValue}};
+
+        auto interpretations = Grep::get_interpretations_for_whole_wildcard_expr(
+                WildcardExpressionView{wildcard_expr, 1, 2},
+                lexer
+        );
+        vector<QueryInterpretation> expected_interpretations(0);
+
+        {
+            QueryInterpretation expected_interpretation;
+            expected_interpretation.append_static_token("?");
+            expected_interpretations.emplace_back(expected_interpretation);
+        }
+
+        for (auto const& var_type : {"int", "float"}) {
+            for (auto const encoded : {true, false}) {
                 QueryInterpretation expected_interpretation;
                 expected_interpretation.append_variable_token(
-                        static_cast<int>(lexer.m_symbol_id["int"]),
-                        string{cNumber},
-                        false,
-                        false
+                        static_cast<int>(lexer.m_symbol_id[var_type]),
+                        string{"?*"},
+                        true,
+                        encoded
                 );
                 expected_interpretations.emplace_back(expected_interpretation);
-            } else if ((0 != begin_idx && wildcard_expr.length() != end_idx)
-                       || (end_idx - begin_idx == 1))
-            {
-                QueryInterpretation expected_interpretation;
-                for (uint32_t idx = begin_idx; idx < end_idx; idx++) {
-                    expected_interpretation.append_static_token(wildcard_expr.substr(idx, 1));
-                }
-                expected_interpretations.emplace_back(expected_interpretation);
             }
-
-            CAPTURE(begin_idx);
-            CAPTURE(end_idx);
-            REQUIRE((interpretations == expected_interpretations));
         }
+
+        // Note: all the other non-encodable variable types are ignored because CLP considers them
+        // to be the same as timestamp (i.e., they're all stored in the dictionary).
+        for (auto const& var_type : {"timestamp"}) {
+            QueryInterpretation expected_interpretation;
+            expected_interpretation.append_variable_token(
+                    static_cast<int>(lexer.m_symbol_id[var_type]),
+                    string{"?*"},
+                    true,
+                    false
+            );
+            expected_interpretations.emplace_back(expected_interpretation);
+        }
+
+        std::ostringstream oss;
+        oss << lexer.m_id_symbol;
+        CAPTURE(oss.str());
+        REQUIRE(interpretations == expected_interpretations);
     }
 }
 
@@ -521,12 +598,13 @@ TEST_CASE(
         // "* 10000? *"
         exp_interp.add_string("* 100?00 *", "0", "0", "* 100?00 *");
         // "* <int>(100?00) *"
-        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "int", true);
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "int", false);
+        // TODO: add logic to determine this case is impossible
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "int", true);
         // "* <float>(100?00) *"
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "float", false);
         // TODO: add logic to determine this case is impossible
-        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "010", "* {} *", "float", false);
+        exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "float", true);
         // "* <hasNumber>(100?00) *"
         exp_interp.add_string<string>("* <{}>(100?00) *", "010", "000", "* {} *", "hasNumber");
         // "* <int>(100)?00 *"
@@ -841,7 +919,9 @@ TEST_CASE(
         exp_interp.add_string<string>("* <{}>(?*10000) *", "010", "000", "* {} *", "hasNumber");
         // "* <hasNumber>(*10000) *"
         exp_interp.add_string<string>("* ?*<{}>(*10000) *", "010", "000", "* ?*{} *", "hasNumber");
-        for (auto type1 : {"hasNumber", "timestamp"}) {
+        // Note: all the other non-encodable variable types are ignored because CLP considers them
+        // to be the same as timestamp (i.e., they're all stored in the dictionary).
+        for (auto type1 : {"timestamp"}) {
             // "* <hasNumber/timestamp>(?*)*10000 *"
             exp_interp
                     .add_string<string>("* <{}>(?*)*10000 *", "010", "000", "* {}*10000 *", type1);
