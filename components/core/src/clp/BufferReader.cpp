@@ -11,6 +11,11 @@ BufferReader::BufferReader(char const* data, size_t data_size, size_t pos)
     if (nullptr == data && (data_size != 0 || pos != 0)) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
+    else if (pos > data_size) {
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    }
 }
 
 auto BufferReader::peek_buffer(char const*& buf, size_t& peek_size) const -> void {

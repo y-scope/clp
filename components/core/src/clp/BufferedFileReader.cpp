@@ -65,7 +65,7 @@ BufferedFileReader::BufferedFileReader(
     m_file_pos = m_file_reader->get_pos();
     m_buffer_begin_pos = 0;
     m_buffer_reader = BufferReader{m_buffer.data(), 0};
-    m_highest_read_pos = 0;
+    m_highest_read_pos = m_file_pos;
 }
 
 auto BufferedFileReader::try_refill_buffer_if_empty() -> ErrorCode {
