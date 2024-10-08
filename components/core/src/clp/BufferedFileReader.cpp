@@ -18,39 +18,6 @@ using std::string;
 using std::unique_ptr;
 
 namespace clp {
-namespace {
-/**
- * Reads from the given file descriptor
- * @param fd
- * @param buf
- * @param num_bytes_to_read
- * @param num_bytes_read
- * @return ErrorCode_errno on error
- * @return ErrorCode_EndOfFile on EOF
- * @return ErrorCode_Success on success
- */
-auto read_into_buffer(
-        ReaderInterface* reader,
-        char* buf,
-        size_t num_bytes_to_read,
-        size_t& num_bytes_read
-) -> ErrorCode;
-
-auto read_into_buffer(
-        ReaderInterface* reader,
-        char* buf,
-        size_t num_bytes_to_read,
-        size_t& num_bytes_read
-) -> ErrorCode {
-    num_bytes_read = 0;
-    auto const error_code = reader->try_read(buf, num_bytes_to_read, num_bytes_read);
-    if (0 == num_bytes_read) {
-        return ErrorCode_EndOfFile;
-    }
-    return error_code;
-}
-}  // namespace
-
 BufferedFileReader::BufferedFileReader(
         std::unique_ptr<ReaderInterface> reader_interface,
         size_t base_buffer_size
@@ -269,8 +236,7 @@ auto BufferedFileReader::refill_reader_buffer(size_t num_bytes_to_refill) -> Err
     }
 
     size_t num_bytes_read{0};
-    auto error_code = read_into_buffer(
-            m_file_reader.get(),
+    auto const error_code = m_file_reader->try_read(
             &m_buffer[next_buffer_pos],
             num_bytes_to_read,
             num_bytes_read
