@@ -262,12 +262,19 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
 }
 
 TEST_CASE("Test delimiter", "[BufferedFileReader]") {
+    // Initialize random number generator
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> uniformly_distributed_alphabet('a', 'a' + cNumAlphabets - 1);
+
     // Initialize data for testing
     size_t const test_data_size = 1L * 1024 * 1024 + 1;  // 1MB
     auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& test_data = *test_data_uniq_ptr;
+
+
     for (size_t i = 0; i < test_data.size(); ++i) {
-        test_data[i] = static_cast<char>('a' + (std::rand() % (cNumAlphabets)));
+        test_data[i] = static_cast<char>(uniformly_distributed_alphabet(gen));
     }
 
     // Write to test file
@@ -296,7 +303,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     // Validate that a FileReader and a BufferedFileReader return the same strings (split by
     // delimiters)
     ErrorCode error_code{ErrorCode_Success};
-    auto delimiter = (char)('a' + (std::rand() % (cNumAlphabets)));
+    auto delimiter = static_cast<char>(uniformly_distributed_alphabet(gen));
     while (ErrorCode_EndOfFile != error_code) {
         error_code = ref_file_reader.try_read_to_delimiter(delimiter, true, false, ref_string);
         auto const error_code2
