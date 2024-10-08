@@ -75,24 +75,8 @@ auto BufferedFileReader::try_refill_buffer_if_empty() -> ErrorCode {
     return refill_reader_buffer(m_base_buffer_size);
 }
 
-void BufferedFileReader::refill_buffer_if_empty() {
-    auto error_code = try_refill_buffer_if_empty();
-    if (ErrorCode_Success != error_code) {
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
-    }
-}
-
-auto BufferedFileReader::try_peek_buffered_data(char const*& buf, size_t& peek_size) const
-        -> ErrorCode {
-    m_buffer_reader.peek_buffer(buf, peek_size);
-    return ErrorCode_Success;
-}
-
 void BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size) const {
-    auto error_code = try_peek_buffered_data(buf, peek_size);
-    if (ErrorCode_Success != error_code) {
-        throw OperationFailed(error_code, __FILENAME__, __LINE__);
-    }
+    m_buffer_reader.peek_buffer(buf, peek_size);
 }
 
 auto BufferedFileReader::set_checkpoint() -> size_t {

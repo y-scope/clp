@@ -95,27 +95,10 @@ public:
     // Methods
     /**
      * Tries to fill the internal buffer if it's empty
-     * @return ErrorCode_errno on error reading from the underlying file
-     * @return ErrorCode_EndOfFile on EOF
+     * @return Same as refill_reader_buffer if it fails
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto try_refill_buffer_if_empty() -> ErrorCode;
-
-    /**
-     * Fills the internal buffer if it's empty
-     */
-    void refill_buffer_if_empty();
-
-    /**
-     * Tries to peek the remaining buffered content without advancing the read head.
-     *
-     * NOTE: Any subsequent read or seek operations may invalidate the returned buffer.
-     * @param buf Returns a pointer to the remaining content in the buffer
-     * @param peek_size Returns the size of the remaining content in the buffer
-     * @return ErrorCode_Success on success
-     */
-    [[nodiscard]] auto
-    try_peek_buffered_data(char const*& buf, size_t& peek_size) const -> ErrorCode;
 
     /**
      * Peeks the remaining buffered content without advancing the read head.
@@ -173,6 +156,7 @@ public:
      * @return ErrorCode_BadParam if buf is null
      * @return ErrorCode_errno on error reading from the underlying file
      * @return ErrorCode_EndOfFile on EOF
+     * @return Same as BufferReader::try_read if it fails
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto
