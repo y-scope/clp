@@ -142,8 +142,8 @@ public:
      * head's position.
      * @return ErrorCode_Truncated if we reached the end of the file before we reached the given
      * position
-     * @return ErrorCode_errno on error reading from the underlying file
      * @return Same as BufferReader::try_seek_from_begin if it fails
+     * @return Same as ReaderInterface::try_seek_from_begin if it fails
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
@@ -154,7 +154,6 @@ public:
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
      * @return ErrorCode_BadParam if buf is null
-     * @return ErrorCode_errno on error reading from the underlying file
      * @return ErrorCode_EndOfFile on EOF
      * @return Same as BufferReader::try_read if it fails
      * @return ErrorCode_Success on success
@@ -169,8 +168,8 @@ public:
      * @param append Whether to append to the given string or replace its contents
      * @param str Returns the content read
      * @return ErrorCode_EndOfFile on EOF
-     * @return ErrorCode_errno on error reading from the underlying file
      * @return Same as BufferReader::try_read_to_delimiter if it fails
+     * @return Same as refill_reader_buffer if it fails
      * @return ErrorCode_Success on success
      */
     [[nodiscard]] auto try_read_to_delimiter(
@@ -187,8 +186,8 @@ private:
      *
      * NOTE: Callers must ensure the current buffer has been exhausted before calling this method
      * (i.e., the read head is at the end of the buffer).
-     * @param refill_size
-     * @return Same as read_into_buffer
+     * @param num_bytes_to_refill
+     * @return Same as ReaderInterface::try_read
      */
     [[nodiscard]] auto refill_reader_buffer(size_t num_bytes_to_refill) -> ErrorCode;
 
@@ -199,7 +198,7 @@ private:
 
     /**
      * @param file_pos
-     * @return \p file_pos relative to the beginning of the buffer
+     * @return file_pos relative to the beginning of the buffer
      */
     [[nodiscard]] auto get_buffer_relative_pos(size_t file_pos) const -> size_t {
         return file_pos - m_buffer_begin_pos;
