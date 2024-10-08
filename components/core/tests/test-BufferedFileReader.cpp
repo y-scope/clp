@@ -272,7 +272,6 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& test_data = *test_data_uniq_ptr;
 
-
     for (size_t i = 0; i < test_data.size(); ++i) {
         test_data[i] = static_cast<char>(uniformly_distributed_alphabet(gen));
     }

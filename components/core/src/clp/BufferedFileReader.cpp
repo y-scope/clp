@@ -58,10 +58,11 @@ BufferedFileReader::BufferedFileReader(
         : m_file_reader(std::move(reader_interface)) {
     if (nullptr == m_file_reader) {
         throw OperationFailed(
-            ErrorCode_BadParam,
-            __FILENAME__,
-            __LINE__,
-            "reader_interface cannot be null");
+                ErrorCode_BadParam,
+                __FILENAME__,
+                __LINE__,
+                "reader_interface cannot be null"
+        );
     }
     if (base_buffer_size % cMinBufferSize != 0) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
