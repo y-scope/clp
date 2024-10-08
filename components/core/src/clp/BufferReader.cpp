@@ -11,9 +11,7 @@ BufferReader::BufferReader(char const* data, size_t data_size, size_t pos)
     if (nullptr == data && (data_size != 0 || pos != 0)) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
-    else if (pos > data_size) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
+    if (pos > data_size) {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 }
