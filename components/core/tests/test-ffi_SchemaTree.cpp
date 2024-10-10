@@ -17,7 +17,7 @@ namespace {
  */
 [[nodiscard]] auto insert_node(
         SchemaTree& schema_tree,
-        SchemaTree::NodeLocator locator,
+        SchemaTree::NodeLocator const& locator,
         SchemaTree::Node::id_t expected_id
 ) -> bool;
 
@@ -30,13 +30,13 @@ namespace {
  */
 [[nodiscard]] auto check_node(
         SchemaTree const& schema_tree,
-        SchemaTree::NodeLocator locator,
+        SchemaTree::NodeLocator const& locator,
         SchemaTree::Node::id_t expected_id
 ) -> bool;
 
 auto insert_node(
         SchemaTree& schema_tree,
-        SchemaTree::NodeLocator locator,
+        SchemaTree::NodeLocator const& locator,
         SchemaTree::Node::id_t expected_id
 ) -> bool {
     return false == schema_tree.has_node(locator)
@@ -45,7 +45,7 @@ auto insert_node(
 
 auto check_node(
         SchemaTree const& schema_tree,
-        SchemaTree::NodeLocator locator,
+        SchemaTree::NodeLocator const& locator,
         SchemaTree::Node::id_t expected_id
 ) -> bool {
     auto const node_id{schema_tree.try_get_node_id(locator)};
