@@ -17,7 +17,6 @@
 #include "../ir/EncodedTextAst.hpp"
 #include "../time_types.hpp"
 #include "SchemaTree.hpp"
-#include "SchemaTreeNode.hpp"
 #include "Value.hpp"
 
 using clp::ir::EightByteEncodedTextAst;
@@ -49,7 +48,7 @@ class JsonSerializationIterator {
 public:
     // Constructor
     JsonSerializationIterator(
-            SchemaTreeNode const* schema_tree_node,
+            SchemaTree::Node const* schema_tree_node,
             vector<bool> const& schema_subtree_bitmap,
             nlohmann::json::object_t* parent_json_obj,
             JsonExceptionHandler json_exception_callback
@@ -100,16 +99,16 @@ public:
      * Gets the next child schema tree node and advances the iterator.
      * @return The next child schema tree node.
      */
-    [[nodiscard]] auto get_next_child_schema_tree_node() -> SchemaTreeNode::id_t {
+    [[nodiscard]] auto get_next_child_schema_tree_node() -> SchemaTree::Node::id_t {
         return *(m_child_schema_tree_node_it++);
     }
 
     [[nodiscard]] auto get_json_obj() -> nlohmann::json::object_t& { return m_json_obj; }
 
 private:
-    SchemaTreeNode const* m_schema_tree_node;
-    vector<SchemaTreeNode::id_t> m_child_schema_tree_nodes;
-    vector<SchemaTreeNode::id_t>::const_iterator m_child_schema_tree_node_it;
+    SchemaTree::Node const* m_schema_tree_node;
+    vector<SchemaTree::Node::id_t> m_child_schema_tree_nodes;
+    vector<SchemaTree::Node::id_t>::const_iterator m_child_schema_tree_node_it;
     nlohmann::json::object_t* m_parent_json_obj;
     nlohmann::json::object_t m_json_obj;
     JsonExceptionHandler m_json_exception_callback;
@@ -121,7 +120,7 @@ private:
  * @return Whether the given schema tree node type matches the given value's type.
  */
 [[nodiscard]] auto
-node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> bool;
+node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) -> bool;
 
 /**
  * Validates whether the given node-ID value pairs are leaf nodes in the `SchemaTree` forming a
@@ -150,7 +149,7 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
  */
 [[nodiscard]] auto is_leaf_node(
         SchemaTree const& schema_tree,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
 ) -> bool;
 
@@ -176,7 +175,7 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
  * @return Whether the insertion was successful.
  */
 [[nodiscard]] auto insert_kv_pair_into_json_obj(
-        SchemaTreeNode const& node,
+        SchemaTree::Node const& node,
         std::optional<Value> const& optional_val,
         nlohmann::json::object_t& json_obj
 ) -> bool;
@@ -190,19 +189,19 @@ node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> b
  */
 [[nodiscard]] auto decode_as_encoded_text_ast(Value const& val) -> std::optional<string>;
 
-auto node_type_matches_value_type(SchemaTreeNode::Type type, Value const& value) -> bool {
+auto node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) -> bool {
     switch (type) {
-        case SchemaTreeNode::Type::Obj:
+        case SchemaTree::Node::Type::Obj:
             return value.is_null();
-        case SchemaTreeNode::Type::Int:
+        case SchemaTree::Node::Type::Int:
             return value.is<value_int_t>();
-        case SchemaTreeNode::Type::Float:
+        case SchemaTree::Node::Type::Float:
             return value.is<value_float_t>();
-        case SchemaTreeNode::Type::Bool:
+        case SchemaTree::Node::Type::Bool:
             return value.is<value_bool_t>();
-        case SchemaTreeNode::Type::UnstructuredArray:
+        case SchemaTree::Node::Type::UnstructuredArray:
             return value.is<FourByteEncodedTextAst>() || value.is<EightByteEncodedTextAst>();
-        case SchemaTreeNode::Type::Str:
+        case SchemaTree::Node::Type::Str:
             return value.is<string>() || value.is<FourByteEncodedTextAst>()
                    || value.is<EightByteEncodedTextAst>();
         default:
@@ -215,7 +214,7 @@ auto validate_node_id_value_pairs(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
 ) -> std::errc {
     try {
-        std::unordered_map<SchemaTreeNode::id_t, std::unordered_set<std::string_view>>
+        std::unordered_map<SchemaTree::Node::id_t, std::unordered_set<std::string_view>>
                 parent_node_id_to_key_names;
         for (auto const& [node_id, value] : node_id_value_pairs) {
             auto const& node{schema_tree.get_node(node_id)};
@@ -227,14 +226,14 @@ auto validate_node_id_value_pairs(
             auto const node_type{node.get_type()};
             if (false == value.has_value()) {
                 // Value is an empty object (`{}`, which is not the same as `null`)
-                if (SchemaTreeNode::Type::Obj != node_type) {
+                if (SchemaTree::Node::Type::Obj != node_type) {
                     return std::errc::protocol_error;
                 }
             } else if (false == node_type_matches_value_type(node_type, value.value())) {
                 return std::errc::protocol_error;
             }
 
-            if (SchemaTreeNode::Type::Obj == node_type
+            if (SchemaTree::Node::Type::Obj == node_type
                 && false == is_leaf_node(schema_tree, node_id, node_id_value_pairs))
             {
                 // The node's value is `null` or `{}` but its descendants appear in
@@ -266,10 +265,10 @@ auto validate_node_id_value_pairs(
 
 auto is_leaf_node(
         SchemaTree const& schema_tree,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
 ) -> bool {
-    vector<SchemaTreeNode::id_t> dfs_stack;
+    vector<SchemaTree::Node::id_t> dfs_stack;
     dfs_stack.reserve(schema_tree.get_size());
     dfs_stack.push_back(node_id);
     while (false == dfs_stack.empty()) {
@@ -318,7 +317,7 @@ auto get_schema_subtree_bitmap(
 }
 
 auto insert_kv_pair_into_json_obj(
-        SchemaTreeNode const& node,
+        SchemaTree::Node const& node,
         std::optional<Value> const& optional_val,
         nlohmann::json::object_t& json_obj
 ) -> bool {
@@ -332,16 +331,16 @@ auto insert_kv_pair_into_json_obj(
     try {
         auto const& val{optional_val.value()};
         switch (type) {
-            case SchemaTreeNode::Type::Int:
+            case SchemaTree::Node::Type::Int:
                 json_obj.emplace(key_name, val.get_immutable_view<value_int_t>());
                 break;
-            case SchemaTreeNode::Type::Float:
+            case SchemaTree::Node::Type::Float:
                 json_obj.emplace(key_name, val.get_immutable_view<value_float_t>());
                 break;
-            case SchemaTreeNode::Type::Bool:
+            case SchemaTree::Node::Type::Bool:
                 json_obj.emplace(key_name, val.get_immutable_view<bool>());
                 break;
-            case SchemaTreeNode::Type::Str:
+            case SchemaTree::Node::Type::Str:
                 if (val.is<string>()) {
                     json_obj.emplace(key_name, string{val.get_immutable_view<string>()});
                 } else {
@@ -352,7 +351,7 @@ auto insert_kv_pair_into_json_obj(
                     json_obj.emplace(key_name, decoded_result.value());
                 }
                 break;
-            case SchemaTreeNode::Type::UnstructuredArray: {
+            case SchemaTree::Node::Type::UnstructuredArray: {
                 auto const decoded_result{decode_as_encoded_text_ast(val)};
                 if (false == decoded_result.has_value()) {
                     return false;
@@ -360,7 +359,7 @@ auto insert_kv_pair_into_json_obj(
                 json_obj.emplace(key_name, nlohmann::json::parse(decoded_result.value()));
                 break;
             }
-            case SchemaTreeNode::Type::Obj:
+            case SchemaTree::Node::Type::Obj:
                 json_obj.emplace(key_name, nullptr);
                 break;
             default:

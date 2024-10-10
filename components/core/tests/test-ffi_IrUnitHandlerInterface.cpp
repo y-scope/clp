@@ -9,14 +9,12 @@
 #include "../src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../src/clp/ffi/SchemaTree.hpp"
-#include "../src/clp/ffi/SchemaTreeNode.hpp"
 #include "../src/clp/time_types.hpp"
 
 namespace {
 using clp::ffi::ir_stream::IRErrorCode;
 using clp::ffi::KeyValuePairLogEvent;
 using clp::ffi::SchemaTree;
-using clp::ffi::SchemaTreeNode;
 using clp::UtcOffset;
 
 constexpr UtcOffset cTestUtcOffset{100};
@@ -109,7 +107,7 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
              == handler.handle_schema_tree_node_insertion(
                      {SchemaTree::get_root_node_id(),
                       cTestSchemaTreeNodeKeyName,
-                      SchemaTreeNode::Type::Obj}
+                      SchemaTree::Node::Type::Obj}
              ))
     );
     REQUIRE((IRErrorCode::IRErrorCode_Success == handler.handle_end_of_stream()));
