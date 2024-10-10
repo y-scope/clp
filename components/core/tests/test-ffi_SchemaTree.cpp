@@ -25,7 +25,7 @@ namespace {
  * @param schema_tree
  * @param locator
  * @param expected_id
- * @return Whether the node exists with its ID matches the expected ID and its information matched
+ * @return Whether the node exists with its ID matches the expected ID and its information matches
  * the ones specified in the locator.
  */
 [[nodiscard]] auto check_node(
@@ -60,7 +60,7 @@ auto check_node(
     }
     auto const optional_parent_id{node.get_parent_id()};
     if (false == optional_parent_id.has_value()) {
-        // None-root node must have parent ID.
+        // Non-root node must have a parent ID.
         return false;
     }
     if (optional_parent_id.value() != locator.get_parent_id()
