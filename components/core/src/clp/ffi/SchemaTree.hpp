@@ -188,15 +188,6 @@ public:
      */
     auto revert() -> void;
 
-    /**
-     * Resets the schema tree by removing all nodes except the root.
-     */
-    auto reset() -> void {
-        m_snapshot_size.reset();
-        m_tree_nodes.clear();
-        m_tree_nodes.emplace_back(SchemaTreeNode::create_root(cRootId));
-    }
-
 private:
     // Constants
     static constexpr SchemaTreeNode::id_t cRootId{0};
