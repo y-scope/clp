@@ -116,24 +116,6 @@ public:
             Obj
         };
 
-        // Factory functions
-        /**
-         * Creates a non-root tree node.
-         * @param id
-         * @param locator
-         */
-        [[nodiscard]] static auto create(id_t id, NodeLocator const& locator) -> Node {
-            return {id, locator.get_parent_id(), locator.get_key_name(), locator.get_type()};
-        }
-
-        /**
-         * Creates a root node.
-         * @param id The ID of the root node assigned by the schema tree.
-         */
-        [[nodiscard]] static auto create_root() -> Node {
-            return {cRootId, std::nullopt, "", Type::Obj};
-        }
-
         // Disable copy constructor/assignment operator
         Node(Node const&) = delete;
         auto operator=(Node const&) -> Node& = delete;
@@ -193,6 +175,26 @@ public:
         }
 
     private:
+        friend SchemaTree;
+
+        // Factory functions
+        /**
+         * Creates a non-root tree node.
+         * @param id
+         * @param locator
+         */
+        [[nodiscard]] static auto create(id_t id, NodeLocator const& locator) -> Node {
+            return {id, locator.get_parent_id(), locator.get_key_name(), locator.get_type()};
+        }
+
+        /**
+         * Creates a root node.
+         * @param id The ID of the root node assigned by the schema tree.
+         */
+        [[nodiscard]] static auto create_root() -> Node {
+            return {cRootId, std::nullopt, "", Type::Obj};
+        }
+
         // Constructors
         Node(id_t id, std::optional<id_t> parent_id, std::string_view key_name, Type type)
                 : m_id{id},
