@@ -22,7 +22,7 @@ auto SchemaTree::get_node(Node::id_t id) const -> Node const& {
 auto SchemaTree::try_get_node_id(NodeLocator const& locator) const -> std::optional<Node::id_t> {
     auto const parent_id{static_cast<size_t>(locator.get_parent_id())};
     if (m_tree_nodes.size() <= parent_id) {
-        return false;
+        return std::nullopt;
     }
     std::optional<Node::id_t> node_id;
     for (auto const child_id : m_tree_nodes[parent_id].get_children_ids()) {
