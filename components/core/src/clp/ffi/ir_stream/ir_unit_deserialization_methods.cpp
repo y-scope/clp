@@ -19,7 +19,6 @@
 #include "../../type_utils.hpp"
 #include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
-#include "../SchemaTreeNode.hpp"
 #include "../Value.hpp"
 #include "decoding_methods.hpp"
 #include "IrUnitType.hpp"
@@ -31,7 +30,7 @@ namespace {
 /**
  * A collection of schema tree leaf node IDs. It represents the schema of a `KeyValuePairLogEvent`.
  */
-using Schema = std::vector<SchemaTreeNode::id_t>;
+using Schema = std::vector<SchemaTree::Node::id_t>;
 
 /**
  * @param tag
@@ -39,7 +38,7 @@ using Schema = std::vector<SchemaTreeNode::id_t>;
  * @return std::nullopt if the tag doesn't match to any defined schema tree node type.
  */
 [[nodiscard]] auto schema_tree_node_tag_to_type(encoded_tag_t tag
-) -> std::optional<SchemaTreeNode::Type>;
+) -> std::optional<SchemaTree::Node::Type>;
 
 /**
  * Deserializes the parent ID of a schema tree node.
@@ -52,7 +51,7 @@ using Schema = std::vector<SchemaTreeNode::id_t>;
  */
 [[nodiscard]] auto deserialize_schema_tree_node_parent_id(
         ReaderInterface& reader,
-        SchemaTreeNode::id_t& parent_id
+        SchemaTree::Node::id_t& parent_id
 ) -> IRErrorCode;
 
 /**
@@ -125,7 +124,7 @@ deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& schema) 
 [[nodiscard]] auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode;
 
@@ -145,7 +144,7 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
          || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode;
 
@@ -175,20 +174,20 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
  */
 [[nodiscard]] auto is_log_event_ir_unit_tag(encoded_tag_t tag) -> bool;
 
-auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTreeNode::Type> {
+auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree::Node::Type> {
     switch (tag) {
         case cProtocol::Payload::SchemaTreeNodeInt:
-            return SchemaTreeNode::Type::Int;
+            return SchemaTree::Node::Type::Int;
         case cProtocol::Payload::SchemaTreeNodeFloat:
-            return SchemaTreeNode::Type::Float;
+            return SchemaTree::Node::Type::Float;
         case cProtocol::Payload::SchemaTreeNodeBool:
-            return SchemaTreeNode::Type::Bool;
+            return SchemaTree::Node::Type::Bool;
         case cProtocol::Payload::SchemaTreeNodeStr:
-            return SchemaTreeNode::Type::Str;
+            return SchemaTree::Node::Type::Str;
         case cProtocol::Payload::SchemaTreeNodeUnstructuredArray:
-            return SchemaTreeNode::Type::UnstructuredArray;
+            return SchemaTree::Node::Type::UnstructuredArray;
         case cProtocol::Payload::SchemaTreeNodeObj:
-            return SchemaTreeNode::Type::Obj;
+            return SchemaTree::Node::Type::Obj;
         default:
             return std::nullopt;
     }
@@ -196,7 +195,7 @@ auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree
 
 auto deserialize_schema_tree_node_parent_id(
         ReaderInterface& reader,
-        SchemaTreeNode::id_t& parent_id
+        SchemaTree::Node::id_t& parent_id
 ) -> IRErrorCode {
     encoded_tag_t tag{};
     if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
@@ -207,13 +206,13 @@ auto deserialize_schema_tree_node_parent_id(
         if (false == deserialize_int(reader, deserialized_id)) {
             return IRErrorCode::IRErrorCode_Incomplete_IR;
         }
-        parent_id = static_cast<SchemaTreeNode::id_t>(deserialized_id);
+        parent_id = static_cast<SchemaTree::Node::id_t>(deserialized_id);
     } else if (cProtocol::Payload::SchemaTreeNodeParentIdUShort == tag) {
         uint16_t deserialized_id{};
         if (false == deserialize_int(reader, deserialized_id)) {
             return IRErrorCode::IRErrorCode_Incomplete_IR;
         }
-        parent_id = static_cast<SchemaTreeNode::id_t>(deserialized_id);
+        parent_id = static_cast<SchemaTree::Node::id_t>(deserialized_id);
     } else {
         return IRErrorCode::IRErrorCode_Corrupted_IR;
     }
@@ -307,13 +306,13 @@ auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& sch
             if (false == deserialize_int(reader, id)) {
                 return IRErrorCode::IRErrorCode_Incomplete_IR;
             }
-            schema.push_back(static_cast<SchemaTreeNode::id_t>(id));
+            schema.push_back(static_cast<SchemaTree::Node::id_t>(id));
         } else if (cProtocol::Payload::KeyIdUShort == tag) {
             uint16_t id{};
             if (false == deserialize_int(reader, id)) {
                 return IRErrorCode::IRErrorCode_Incomplete_IR;
             }
-            schema.push_back(static_cast<SchemaTreeNode::id_t>(id));
+            schema.push_back(static_cast<SchemaTree::Node::id_t>(id));
         } else {
             break;
         }
@@ -329,7 +328,7 @@ auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& sch
 auto deserialize_value_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         encoded_tag_t tag,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode {
     switch (tag) {
@@ -405,7 +404,7 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
          || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& node_id_value_pairs
 ) -> IRErrorCode {
     encoded_tag_t tag{};
@@ -509,7 +508,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
         return ir_error_code_to_errc(IRErrorCode::IRErrorCode_Corrupted_IR);
     }
 
-    SchemaTreeNode::id_t parent_id{};
+    SchemaTree::Node::id_t parent_id{};
     if (auto const err{deserialize_schema_tree_node_parent_id(reader, parent_id)};
         IRErrorCode_Success != err)
     {

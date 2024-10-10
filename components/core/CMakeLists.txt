@@ -345,7 +345,6 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/KeyValuePairLogEvent.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
-        src/clp/ffi/SchemaTreeNode.hpp
         src/clp/ffi/search/CompositeWildcardToken.cpp
         src/clp/ffi/search/CompositeWildcardToken.hpp
         src/clp/ffi/search/ExactVariableToken.cpp
