@@ -43,12 +43,12 @@ auto SchemaTree::insert_node(NodeLocator const& locator) -> SchemaTreeNode::id_t
         throw OperationFailed(ErrorCode_Failure, __FILE__, __LINE__, "Node already exists.");
     }
     auto const node_id{static_cast<SchemaTreeNode::id_t>(m_tree_nodes.size())};
-    m_tree_nodes.emplace_back(
+    m_tree_nodes.emplace_back(SchemaTreeNode::create(
             node_id,
             locator.get_parent_id(),
             locator.get_key_name(),
             locator.get_type()
-    );
+    ));
     auto& parent_node{m_tree_nodes[locator.get_parent_id()]};
     if (SchemaTreeNode::Type::Obj != parent_node.get_type()) {
         throw OperationFailed(
@@ -68,7 +68,10 @@ auto SchemaTree::revert() -> void {
     }
     while (m_tree_nodes.size() != m_snapshot_size) {
         auto const& node{m_tree_nodes.back()};
-        m_tree_nodes[node.get_parent_id()].remove_last_appended_child();
+        auto const optional_parent_id{node.get_parent_id()};
+        if (optional_parent_id.has_value()) {
+            m_tree_nodes[optional_parent_id.value()].remove_last_appended_child();
+        }
         m_tree_nodes.pop_back();
     }
     m_snapshot_size.reset();

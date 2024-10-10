@@ -119,11 +119,13 @@ public:
         SchemaTreeNode::Type m_type;
     };
 
-    // Constants
-    static constexpr SchemaTreeNode::id_t cRootId{0};
+    // Static methods
+    [[nodiscard]] constexpr static auto get_root_node_id() -> SchemaTreeNode::id_t {
+        return cRootId;
+    }
 
     // Constructors
-    SchemaTree() { m_tree_nodes.emplace_back(cRootId, cRootId, "", SchemaTreeNode::Type::Obj); }
+    SchemaTree() { m_tree_nodes.emplace_back(SchemaTreeNode::create_root(cRootId)); }
 
     // Disable copy constructor/assignment operator
     SchemaTree(SchemaTree const&) = delete;
@@ -138,6 +140,8 @@ public:
 
     // Methods
     [[nodiscard]] auto get_size() const -> size_t { return m_tree_nodes.size(); }
+
+    [[nodiscard]] auto get_root() const -> SchemaTreeNode const& { return m_tree_nodes[cRootId]; }
 
     /**
      * @param id
@@ -190,10 +194,14 @@ public:
     auto reset() -> void {
         m_snapshot_size.reset();
         m_tree_nodes.clear();
-        m_tree_nodes.emplace_back(cRootId, cRootId, "", SchemaTreeNode::Type::Obj);
+        m_tree_nodes.emplace_back(SchemaTreeNode::create_root(cRootId));
     }
 
 private:
+    // Constants
+    static constexpr SchemaTreeNode::id_t cRootId{0};
+
+    // Variables
     std::optional<size_t> m_snapshot_size;
     std::vector<SchemaTreeNode> m_tree_nodes;
 };

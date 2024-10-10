@@ -107,7 +107,9 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
     REQUIRE(
             (IRErrorCode::IRErrorCode_Success
              == handler.handle_schema_tree_node_insertion(
-                     {SchemaTree::cRootId, cTestSchemaTreeNodeKeyName, SchemaTreeNode::Type::Obj}
+                     {SchemaTree::get_root_node_id(),
+                      cTestSchemaTreeNodeKeyName,
+                      SchemaTreeNode::Type::Obj}
              ))
     );
     REQUIRE((IRErrorCode::IRErrorCode_Success == handler.handle_end_of_stream()));

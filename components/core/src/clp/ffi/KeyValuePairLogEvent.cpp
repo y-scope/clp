@@ -76,7 +76,7 @@ public:
         try {
             // If the current node is the root, then replace the `parent` with this node's JSON
             // object. Otherwise, add this node's JSON object as a child of the parent JSON object.
-            if (m_schema_tree_node->get_id() == SchemaTree::cRootId) {
+            if (m_schema_tree_node->is_root()) {
                 *m_parent_json_obj = std::move(m_json_obj);
             } else {
                 m_parent_json_obj->emplace(
@@ -218,11 +218,12 @@ auto validate_node_id_value_pairs(
         std::unordered_map<SchemaTreeNode::id_t, std::unordered_set<std::string_view>>
                 parent_node_id_to_key_names;
         for (auto const& [node_id, value] : node_id_value_pairs) {
-            if (SchemaTree::cRootId == node_id) {
+            auto const& node{schema_tree.get_node(node_id)};
+            if (node.is_root()) {
+                // This node is the root
                 return std::errc::operation_not_permitted;
             }
 
-            auto const& node{schema_tree.get_node(node_id)};
             auto const node_type{node.get_type()};
             if (false == value.has_value()) {
                 // Value is an empty object (`{}`, which is not the same as `null`)
@@ -241,7 +242,9 @@ auto validate_node_id_value_pairs(
                 return std::errc::operation_not_permitted;
             }
 
-            auto const parent_node_id{node.get_parent_id()};
+            // Since we checked that the node must not be the root, we can query the underlying ID
+            // safely without a repeated check.
+            auto const parent_node_id{node.get_parent_id_unsafe()};
             auto const key_name{node.get_key_name()};
             if (parent_node_id_to_key_names.contains(parent_node_id)) {
                 auto const [it, new_key_inserted]{
@@ -294,17 +297,21 @@ auto get_schema_subtree_bitmap(
         schema_subtree_bitmap[node_id] = true;
 
         // Iteratively mark the parents as true
-        auto parent_id{schema_tree.get_node(node_id).get_parent_id()};
+        auto optional_parent_id{schema_tree.get_node(node_id).get_parent_id()};
         while (true) {
+            if (false == optional_parent_id.has_value()) {
+                // Root has been reached.
+                // Ideally this if statement can be used as the loop condition. However, clang-tidy
+                // will complain about unchecked optional access.
+                break;
+            }
+            auto const parent_id{optional_parent_id.value()};
             if (schema_subtree_bitmap[parent_id]) {
                 // Parent already set by other child
                 break;
             }
             schema_subtree_bitmap[parent_id] = true;
-            if (SchemaTree::cRootId == parent_id) {
-                break;
-            }
-            parent_id = schema_tree.get_node(parent_id).get_parent_id();
+            optional_parent_id = schema_tree.get_node(parent_id).get_parent_id();
         }
     }
     return schema_subtree_bitmap;
@@ -421,7 +428,7 @@ auto KeyValuePairLogEvent::serialize_to_json(
     //
     // On the way up, add the current node's `nlohmann::json::object_t` to the parent's
     // `nlohmann::json::object_t`.
-    auto const& root_schema_tree_node{m_schema_tree->get_node(SchemaTree::cRootId)};
+    auto const& root_schema_tree_node{m_schema_tree->get_root()};
     auto root_json_obj = nlohmann::json::object_t();
 
     dfs_stack.emplace(
