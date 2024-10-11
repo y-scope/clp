@@ -25,8 +25,8 @@ namespace {
  * @param schema_tree
  * @param locator
  * @param expected_id
- * @return Whether the node exists with its ID matches the expected ID and its information matches
- * the ones specified in the locator.
+ * @return Whether an ID could be found for a node matching the locator, the ID matches the expected
+ * ID, the corresponding node is not the root, and it matches the locator.
  */
 [[nodiscard]] auto check_node(
         SchemaTree const& schema_tree,
@@ -50,17 +50,17 @@ auto check_node(
 ) -> bool {
     auto const node_id{schema_tree.try_get_node_id(locator)};
     if (false == node_id.has_value() || node_id.value() != expected_id) {
-        // Check node ID
+        // The node's ID doesn't match.
         return false;
     }
     auto const& node{schema_tree.get_node(expected_id)};
     if (node.is_root()) {
-        // The node after initialization must not be the root.
+        // Any nodes added after the tree was constructed must not be the root.
         return false;
     }
     auto const optional_parent_id{node.get_parent_id()};
     if (false == optional_parent_id.has_value()) {
-        // Non-root node must have a parent ID.
+        // Non-root nodes must have a parent ID.
         return false;
     }
     if (optional_parent_id.value() != locator.get_parent_id()

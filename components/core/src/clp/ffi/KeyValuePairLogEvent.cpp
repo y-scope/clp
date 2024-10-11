@@ -219,7 +219,6 @@ auto validate_node_id_value_pairs(
         for (auto const& [node_id, value] : node_id_value_pairs) {
             auto const& node{schema_tree.get_node(node_id)};
             if (node.is_root()) {
-                // This node is the root
                 return std::errc::operation_not_permitted;
             }
 
@@ -241,7 +240,7 @@ auto validate_node_id_value_pairs(
                 return std::errc::operation_not_permitted;
             }
 
-            // Since we checked that the node must not be the root, we can query the underlying ID
+            // We checked that the node isn't the root above, so we can query the underlying ID
             // safely without a repeated check.
             auto const parent_node_id{node.get_parent_id_unsafe()};
             auto const key_name{node.get_key_name()};
@@ -298,10 +297,10 @@ auto get_schema_subtree_bitmap(
         // Iteratively mark the parents as true
         auto optional_parent_id{schema_tree.get_node(node_id).get_parent_id()};
         while (true) {
+            // Ideally, we'd use this if statement as the loop condition, but clang-tidy will
+            // complain about an unchecked `optional` access.
             if (false == optional_parent_id.has_value()) {
-                // Root has been reached.
-                // Ideally this if statement can be used as the loop condition. However, clang-tidy
-                // will complain about unchecked optional access.
+                // Reached the root
                 break;
             }
             auto const parent_id{optional_parent_id.value()};

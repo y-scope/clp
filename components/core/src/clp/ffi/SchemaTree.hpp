@@ -133,16 +133,15 @@ public:
         [[nodiscard]] auto is_root() const -> bool { return false == m_parent_id.has_value(); }
 
         /**
-         * @return the ID of the parent node in the schema tree if the node is not root.
-         * @return std::nullopt if the node is root.
+         * @return The ID of the parent node in the schema tree, if the node is not the root.
+         * @return std::nullopt if the node is the root.
          */
         [[nodiscard]] auto get_parent_id() const -> std::optional<id_t> { return m_parent_id; }
 
         /**
-         * Gets the parent ID without checking if it is std::nullopt.
+         * Gets the parent ID without checking if it's `std::nullopt`.
          * NOTE: This method should only be used if the caller has checked the node is not the root.
-         * `is_root()` must return false to call this method safely.
-         * @return the ID of the parent node in the schema tree.
+         * @return The ID of the parent node in the schema tree.
          */
         [[nodiscard]] auto get_parent_id_unsafe() const -> id_t {
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
@@ -189,10 +188,9 @@ public:
 
         /**
          * Creates a root node.
-         * @param id The ID of the root node assigned by the schema tree.
          */
         [[nodiscard]] static auto create_root() -> Node {
-            return {cRootId, std::nullopt, "", Type::Obj};
+            return {cRootId, std::nullopt, {}, Type::Obj};
         }
 
         // Constructors
