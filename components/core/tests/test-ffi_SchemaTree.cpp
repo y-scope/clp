@@ -1,4 +1,3 @@
-#include <optional>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -25,10 +24,10 @@ namespace {
  * @param schema_tree
  * @param locator
  * @param expected_id
- * @return Whether an ID could be found for a node matching the locator, the ID matches the expected
- * ID, the corresponding node is not the root, and it matches the locator.
+ * @return Whether an ID could be found for a non root node matching the locator, the ID matches the
+ * expected ID, the corresponding node is not the root, and it matches the locator.
  */
-[[nodiscard]] auto check_node(
+[[nodiscard]] auto check_non_root_node(
         SchemaTree const& schema_tree,
         SchemaTree::NodeLocator const& locator,
         SchemaTree::Node::id_t expected_id
@@ -43,7 +42,7 @@ auto insert_node(
            && expected_id == schema_tree.insert_node(locator);
 }
 
-auto check_node(
+auto check_non_root_node(
         SchemaTree const& schema_tree,
         SchemaTree::NodeLocator const& locator,
         SchemaTree::Node::id_t expected_id
@@ -117,7 +116,7 @@ TEST_CASE("ffi_schema_tree", "[ffi]") {
     }
 
     for (SchemaTree::Node::id_t id_to_check{1}; id_to_check <= locators.size(); ++id_to_check) {
-        REQUIRE(check_node(schema_tree, locators[id_to_check - 1], id_to_check));
+        REQUIRE(check_non_root_node(schema_tree, locators[id_to_check - 1], id_to_check));
     }
 
     schema_tree.revert();
@@ -129,6 +128,6 @@ TEST_CASE("ffi_schema_tree", "[ffi]") {
     }
 
     for (SchemaTree::Node::id_t id_to_check{1}; id_to_check <= locators.size(); ++id_to_check) {
-        REQUIRE(check_node(schema_tree, locators[id_to_check - 1], id_to_check));
+        REQUIRE(check_non_root_node(schema_tree, locators[id_to_check - 1], id_to_check));
     }
 }
