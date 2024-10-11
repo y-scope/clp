@@ -264,8 +264,8 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
      */
     auto const schema_tree{std::make_shared<SchemaTree>()};
     std::vector<SchemaTree::NodeLocator> const locators{
-            {SchemaTree::get_root_node_id(), "a", SchemaTree::Node::Type::Obj},
-            {SchemaTree::get_root_node_id(), "a", SchemaTree::Node::Type::Int},
+            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Obj},
+            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Int},
             {1, "b", SchemaTree::Node::Type::Obj},
             {3, "c", SchemaTree::Node::Type::Obj},
             {3, "d", SchemaTree::Node::Type::Str},

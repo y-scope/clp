@@ -291,7 +291,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
     bool failure{false};
     vector<MsgpackMapIterator> dfs_stack;
     dfs_stack.emplace_back(
-            SchemaTree::get_root_node_id(),
+            SchemaTree::cRootId,
             span<MsgpackMapIterator::Child>{msgpack_map.ptr, msgpack_map.size}
     );
     while (false == dfs_stack.empty()) {

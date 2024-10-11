@@ -91,13 +91,13 @@ TEST_CASE("ffi_schema_tree", "[ffi]") {
 
     // Check the root node
     auto const& root{schema_tree.get_root()};
-    REQUIRE((SchemaTree::get_root_node_id() == root.get_id()));
+    REQUIRE((SchemaTree::cRootId == root.get_id()));
     REQUIRE(root.is_root());
     REQUIRE_FALSE(root.get_parent_id().has_value());
 
     std::vector<SchemaTree::NodeLocator> const locators{
-            {SchemaTree::get_root_node_id(), "a", SchemaTree::Node::Type::Obj},
-            {SchemaTree::get_root_node_id(), "a", SchemaTree::Node::Type::Int},
+            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Obj},
+            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Int},
             {1, "b", SchemaTree::Node::Type::Obj},
             {3, "c", SchemaTree::Node::Type::Obj},
             {3, "d", SchemaTree::Node::Type::Int},

@@ -231,8 +231,8 @@ public:
         Node::Type m_type;
     };
 
-    // Static methods
-    [[nodiscard]] constexpr static auto get_root_node_id() -> Node::id_t { return cRootId; }
+    // Constants
+    static constexpr Node::id_t cRootId{0};
 
     // Constructors
     SchemaTree() { m_tree_nodes.emplace_back(Node::create_root()); }
@@ -299,9 +299,6 @@ public:
     auto revert() -> void;
 
 private:
-    // Constants
-    static constexpr Node::id_t cRootId{0};
-
     // Variables
     std::optional<size_t> m_snapshot_size;
     std::vector<Node> m_tree_nodes;
