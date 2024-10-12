@@ -11,7 +11,6 @@
 
 #include "../time_types.hpp"
 #include "SchemaTree.hpp"
-#include "SchemaTreeNode.hpp"
 #include "Value.hpp"
 
 namespace clp::ffi {
@@ -25,7 +24,7 @@ namespace clp::ffi {
 class KeyValuePairLogEvent {
 public:
     // Types
-    using NodeIdValuePairs = std::unordered_map<SchemaTreeNode::id_t, std::optional<Value>>;
+    using NodeIdValuePairs = std::unordered_map<SchemaTree::Node::id_t, std::optional<Value>>;
 
     // Factory functions
     /**
