@@ -293,7 +293,7 @@ auto deserialize_and_decode_schema_tree_node_id(
         return size_dependent_deserialize_and_decode_schema_tree_node_id<int16_t>(reader);
     }
     if (four_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id<int64_t>(reader);
+        return size_dependent_deserialize_and_decode_schema_tree_node_id<int32_t>(reader);
     }
     return std::errc::protocol_error;
 }
