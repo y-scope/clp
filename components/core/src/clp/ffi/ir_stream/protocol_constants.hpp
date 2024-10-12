@@ -67,11 +67,13 @@ constexpr int8_t ValueEightByteEncodingClpStr = 0x5A;
 constexpr int8_t ValueEmpty = 0x5E;
 constexpr int8_t ValueNull = 0x5F;
 
-constexpr int8_t SchemaTreeNodeParentIdUByte = 0x60;
-constexpr int8_t SchemaTreeNodeParentIdUShort = 0x61;
+constexpr int8_t EncodedSchemaTreeNodeParentIdByte = 0x60;
+constexpr int8_t EncodedSchemaTreeNodeParentIdShort = 0x61;
+constexpr int8_t EncodedSchemaTreeNodeParentIdInt = 0x62;
 
-constexpr int8_t KeyIdUByte = 0x65;
-constexpr int8_t KeyIdUShort = 0x66;
+constexpr int8_t EncodedKeyIdByte = 0x65;
+constexpr int8_t EncodedKeyIdShort = 0x66;
+constexpr int8_t EncodedKeyIdInt = 0x67;
 
 constexpr int8_t SchemaTreeNodeMask = 0x70;
 
