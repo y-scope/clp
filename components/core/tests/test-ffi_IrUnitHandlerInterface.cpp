@@ -87,9 +87,13 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
 
 auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
 ) -> void {
-    auto test_log_event_result{
-            KeyValuePairLogEvent::create(std::make_shared<SchemaTree>(), {}, cTestUtcOffset)
-    };
+    auto test_log_event_result{KeyValuePairLogEvent::create(
+            std::make_shared<SchemaTree>(),
+            std::make_shared<SchemaTree>(),
+            {},
+            {},
+            cTestUtcOffset
+    )};
     REQUIRE(
             (false == test_log_event_result.has_error()
              && IRErrorCode::IRErrorCode_Success

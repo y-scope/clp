@@ -1204,7 +1204,9 @@ TEMPLATE_TEST_CASE(
 
         auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
-        REQUIRE((expect == serialized_json_result.value()));
+        auto const& [auto_generated, user_generated]{serialized_json_result.value()};
+        REQUIRE(auto_generated.empty());
+        REQUIRE((expect == user_generated));
     }
 
     auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};

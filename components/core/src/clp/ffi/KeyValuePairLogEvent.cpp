@@ -189,6 +189,18 @@ node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) ->
  */
 [[nodiscard]] auto decode_as_encoded_text_ast(Value const& val) -> std::optional<string>;
 
+/**
+ * Serializes the given node ID value pairs into a `nlohmann::json` object.
+ * @return A result containing the serialized JSON object or an error code indicating the failure:
+ * - std::errc::protocol_error if a value in the log event couldn't be decoded or it couldn't be
+ *   inserted into a JSON object.
+ * - std::errc::result_out_of_range if a node ID in the log event doesn't exist in the schema tree.
+ */
+[[nodiscard]] auto serialize_node_id_value_pairs_to_json(
+        SchemaTree const& schema_tree,
+        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
+) -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
+
 auto node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) -> bool {
     switch (type) {
         case SchemaTree::Node::Type::Obj:
@@ -378,31 +390,12 @@ auto decode_as_encoded_text_ast(Value const& val) -> std::optional<string> {
                    ? val.get_immutable_view<FourByteEncodedTextAst>().decode_and_unparse()
                    : val.get_immutable_view<EightByteEncodedTextAst>().decode_and_unparse();
 }
-}  // namespace
 
-auto KeyValuePairLogEvent::create(
-        std::shared_ptr<SchemaTree const> user_generated_schema_tree,
-        NodeIdValuePairs user_generated_node_id_value_pairs,
-        UtcOffset utc_offset
-) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
-    if (auto const ret_val{validate_node_id_value_pairs(
-                *user_generated_schema_tree,
-                user_generated_node_id_value_pairs
-        )};
-        std::errc{} != ret_val)
-    {
-        return ret_val;
-    }
-    return KeyValuePairLogEvent{
-            std::move(user_generated_schema_tree),
-            std::move(user_generated_node_id_value_pairs),
-            utc_offset
-    };
-}
-
-auto KeyValuePairLogEvent::serialize_to_json(
-) const -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json> {
-    if (m_user_generated_node_id_value_pairs.empty()) {
+auto serialize_node_id_value_pairs_to_json(
+        SchemaTree const& schema_tree,
+        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
+) -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json> {
+    if (node_id_value_pairs.empty()) {
         return nlohmann::json::object();
     }
 
@@ -416,10 +409,8 @@ auto KeyValuePairLogEvent::serialize_to_json(
     // vector grows).
     std::stack<DfsIterator> dfs_stack;
 
-    auto const schema_subtree_bitmap_ret{get_schema_subtree_bitmap(
-            m_user_generated_node_id_value_pairs,
-            *m_user_generated_schema_tree
-    )};
+    auto const schema_subtree_bitmap_ret{get_schema_subtree_bitmap(node_id_value_pairs, schema_tree)
+    };
     if (schema_subtree_bitmap_ret.has_error()) {
         return schema_subtree_bitmap_ret.error();
     }
@@ -434,7 +425,7 @@ auto KeyValuePairLogEvent::serialize_to_json(
     //
     // On the way up, add the current node's `nlohmann::json::object_t` to the parent's
     // `nlohmann::json::object_t`.
-    auto const& root_schema_tree_node{m_user_generated_schema_tree->get_root()};
+    auto const& root_schema_tree_node{schema_tree.get_root()};
     auto root_json_obj = nlohmann::json::object_t();
 
     dfs_stack.emplace(
@@ -450,15 +441,13 @@ auto KeyValuePairLogEvent::serialize_to_json(
             continue;
         }
         auto const child_schema_tree_node_id{top.get_next_child_schema_tree_node()};
-        auto const& child_schema_tree_node{
-                m_user_generated_schema_tree->get_node(child_schema_tree_node_id)
-        };
-        if (m_user_generated_node_id_value_pairs.contains(child_schema_tree_node_id)) {
+        auto const& child_schema_tree_node{schema_tree.get_node(child_schema_tree_node_id)};
+        if (node_id_value_pairs.contains(child_schema_tree_node_id)) {
             // Handle leaf node
             if (false
                 == insert_kv_pair_into_json_obj(
                         child_schema_tree_node,
-                        m_user_generated_node_id_value_pairs.at(child_schema_tree_node_id),
+                        node_id_value_pairs.at(child_schema_tree_node_id),
                         top.get_json_obj()
                 ))
             {
@@ -479,5 +468,62 @@ auto KeyValuePairLogEvent::serialize_to_json(
     }
 
     return root_json_obj;
+}
+}  // namespace
+
+auto KeyValuePairLogEvent::create(
+        std::shared_ptr<SchemaTree const> auto_generated_schema_tree,
+        std::shared_ptr<SchemaTree const> user_generated_schema_tree,
+        NodeIdValuePairs auto_generated_node_id_value_pairs,
+        NodeIdValuePairs user_generated_node_id_value_pairs,
+        UtcOffset utc_offset
+) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
+    if (auto const ret_val{validate_node_id_value_pairs(
+                *auto_generated_schema_tree,
+                auto_generated_node_id_value_pairs
+        )};
+        std::errc{} != ret_val)
+    {
+        return ret_val;
+    }
+
+    if (auto const ret_val{validate_node_id_value_pairs(
+                *user_generated_schema_tree,
+                user_generated_node_id_value_pairs
+        )};
+        std::errc{} != ret_val)
+    {
+        return ret_val;
+    }
+
+    return KeyValuePairLogEvent{
+            std::move(auto_generated_schema_tree),
+            std::move(user_generated_schema_tree),
+            std::move(auto_generated_node_id_value_pairs),
+            std::move(user_generated_node_id_value_pairs),
+            utc_offset
+    };
+}
+
+auto KeyValuePairLogEvent::serialize_to_json(
+) const -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
+    auto serialized_auto_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
+            *m_auto_generated_schema_tree,
+            m_auto_generated_node_id_value_pairs
+    )};
+    if (serialized_auto_generated_kv_pairs_result.has_error()) {
+        return serialized_auto_generated_kv_pairs_result.error();
+    }
+
+    auto serialized_user_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
+            *m_user_generated_schema_tree,
+            m_user_generated_node_id_value_pairs
+    )};
+    if (serialized_user_generated_kv_pairs_result.has_error()) {
+        return serialized_user_generated_kv_pairs_result.error();
+    }
+
+    return {std::move(serialized_auto_generated_kv_pairs_result.value()),
+            std::move(serialized_user_generated_kv_pairs_result.value())};
 }
 }  // namespace clp::ffi
