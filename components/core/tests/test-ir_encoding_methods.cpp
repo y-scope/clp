@@ -1197,7 +1197,9 @@ TEMPLATE_TEST_CASE(
         auto const& deserialized_log_event{deserialized_log_events.at(idx)};
 
         auto const num_leaves_in_json_obj{count_num_leaves(expect)};
-        auto const num_kv_pairs{deserialized_log_event.get_node_id_value_pairs().size()};
+        auto const num_kv_pairs{
+                deserialized_log_event.get_user_generated_node_id_value_pairs().size()
+        };
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
 
         auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
