@@ -403,15 +403,16 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
             return false;
     }
 
-    auto const parent_id{locator.get_parent_id()};
-    if (parent_id <= UINT8_MAX) {
-        m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUByte);
-        m_schema_tree_node_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(parent_id)));
-    } else if (parent_id <= UINT16_MAX) {
-        m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUShort);
-        serialize_int(static_cast<uint16_t>(parent_id), m_schema_tree_node_buf);
-    } else {
-        // Out of range
+    if (false
+        == encode_and_serialize_schema_tree_node_id<
+                false,
+                cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
+                cProtocol::Payload::EncodedSchemaTreeNodeParentIdShort,
+                cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt>(
+                locator.get_parent_id(),
+                m_schema_tree_node_buf
+        ))
+    {
         return false;
     }
 
@@ -420,16 +421,11 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id) -> bool {
-    if (id <= UINT8_MAX) {
-        m_key_group_buf.push_back(cProtocol::Payload::KeyIdUByte);
-        m_key_group_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(id)));
-    } else if (id <= UINT16_MAX) {
-        m_key_group_buf.push_back(cProtocol::Payload::KeyIdUShort);
-        serialize_int(static_cast<uint16_t>(id), m_key_group_buf);
-    } else {
-        return false;
-    }
-    return true;
+    return encode_and_serialize_schema_tree_node_id<
+            false,
+            cProtocol::Payload::EncodedKeyIdByte,
+            cProtocol::Payload::EncodedKeyIdShort,
+            cProtocol::Payload::EncodedKeyIdInt>(id, m_key_group_buf);
 }
 
 template <typename encoded_variable_t>
@@ -493,17 +489,20 @@ auto Serializer<encoded_variable_t>::serialize_val(
 // file
 template auto Serializer<eight_byte_encoded_variable_t>::create(
 ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
+
 template auto Serializer<four_byte_encoded_variable_t>::create(
 ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
 ) -> void;
+
 template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
 ) -> void;
 
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& msgpack_map
 ) -> bool;
+
 template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& msgpack_map
 ) -> bool;
@@ -511,12 +510,14 @@ template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
 ) -> bool;
+
 template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
 ) -> bool;
 
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id
 ) -> bool;
+
 template auto Serializer<four_byte_encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id
 ) -> bool;
 
@@ -524,6 +525,7 @@ template auto Serializer<eight_byte_encoded_variable_t>::serialize_val(
         msgpack::object const& val,
         SchemaTree::Node::Type schema_tree_node_type
 ) -> bool;
+
 template auto Serializer<four_byte_encoded_variable_t>::serialize_val(
         msgpack::object const& val,
         SchemaTree::Node::Type schema_tree_node_type

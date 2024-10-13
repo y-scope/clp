@@ -93,6 +93,18 @@ struct is_in_type_tuple;
 template <typename Type, typename... Types>
 struct is_in_type_tuple<Type, std::tuple<Types...>>
         : std::disjunction<std::is_same<Type, Types>...> {};
+
+/**
+ * Concept for integer types.
+ */
+template <typename integer_t>
+concept IntegerType = std::is_integral_v<integer_t> && false == std::is_same_v<integer_t, bool>;
+
+/**
+ * Concept for signed integer types.
+ */
+template <typename integer_t>
+concept SignedIntegerType = IntegerType<integer_t> && std::is_signed_v<integer_t>;
 }  // namespace clp
 
 #endif  // CLP_TYPE_UTILS_HPP
