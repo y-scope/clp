@@ -201,6 +201,19 @@ node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) ->
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
 ) -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
 
+/**
+ * @param node A non-root schema tree node.
+ * @param parent_node_id_to_key_names
+ * @return true if `node`'s key is unique among its sibling nodes with `parent_node_id_to_key_names`
+ * updated to keep track of this unique key name.
+ * @return false if `node`'s key already exists in other sibling nodes.
+ */
+[[nodiscard]] auto check_key_uniqueness_among_sibling_nodes(
+        SchemaTree::Node const& node,
+        std::unordered_map<SchemaTree::Node::id_t, std::unordered_set<std::string_view>>&
+                parent_node_id_to_key_names
+) -> bool;
+
 auto node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) -> bool {
     switch (type) {
         case SchemaTree::Node::Type::Obj:
@@ -228,6 +241,7 @@ auto validate_node_id_value_pairs(
     try {
         std::unordered_map<SchemaTree::Node::id_t, std::unordered_set<std::string_view>>
                 parent_node_id_to_key_names;
+        std::vector<bool> key_duplication_checked_node_id_bitmap(schema_tree.get_size(), false);
         for (auto const& [node_id, value] : node_id_value_pairs) {
             auto const& node{schema_tree.get_node(node_id)};
             if (node.is_root()) {
@@ -252,20 +266,38 @@ auto validate_node_id_value_pairs(
                 return std::errc::operation_not_permitted;
             }
 
-            // We checked that the node isn't the root above, so we can query the underlying ID
-            // safely without a repeated check.
-            auto const parent_node_id{node.get_parent_id_unsafe()};
-            auto const key_name{node.get_key_name()};
-            if (parent_node_id_to_key_names.contains(parent_node_id)) {
-                auto const [it, new_key_inserted]{
-                        parent_node_id_to_key_names.at(parent_node_id).emplace(key_name)
-                };
-                if (false == new_key_inserted) {
-                    // The key is duplicated under the same parent
+            if (false
+                == check_key_uniqueness_among_sibling_nodes(node, parent_node_id_to_key_names))
+            {
+                return std::errc::protocol_not_supported;
+            }
+
+            // Iteratively check if there's any key duplication in ancestors until:
+            // 1. The ancestor is already checked. We only need to check an ancestor node once. If
+            //    there are key duplications among its sibling, it will be caught when the sibling
+            //    is first checked. The order of which sibling gets checked first doesn't affect the
+            //    results.
+            // 2. Reached the root nod
+            auto next_ancestor_node_id_to_check{node.get_parent_id_unsafe()};
+            while (false == key_duplication_checked_node_id_bitmap[next_ancestor_node_id_to_check])
+            {
+                auto const& node_to_check{schema_tree.get_node(next_ancestor_node_id_to_check)};
+                if (node_to_check.is_root()) {
+                    key_duplication_checked_node_id_bitmap[node_to_check.get_id()] = true;
+                    break;
+                }
+
+                if (false
+                    == check_key_uniqueness_among_sibling_nodes(
+                            node_to_check,
+                            parent_node_id_to_key_names
+                    ))
+                {
                     return std::errc::protocol_not_supported;
                 }
-            } else {
-                parent_node_id_to_key_names.emplace(parent_node_id, std::unordered_set{key_name});
+
+                key_duplication_checked_node_id_bitmap[next_ancestor_node_id_to_check] = true;
+                next_ancestor_node_id_to_check = node_to_check.get_parent_id_unsafe();
             }
         }
     } catch (SchemaTree::OperationFailed const& ex) {
@@ -468,6 +500,29 @@ auto serialize_node_id_value_pairs_to_json(
     }
 
     return root_json_obj;
+}
+
+auto check_key_uniqueness_among_sibling_nodes(
+        SchemaTree::Node const& node,
+        std::unordered_map<SchemaTree::Node::id_t, std::unordered_set<std::string_view>>&
+                parent_node_id_to_key_names
+) -> bool {
+    // The given node must not be the root (checked by the caller), so we can query the underlying
+    // ID safely without a repeated check.
+    auto const parent_node_id{node.get_parent_id_unsafe()};
+    auto const key_name{node.get_key_name()};
+    if (parent_node_id_to_key_names.contains(parent_node_id)) {
+        auto const [it, new_key_inserted]{
+                parent_node_id_to_key_names.at(parent_node_id).emplace(key_name)
+        };
+        if (false == new_key_inserted) {
+            // The key is duplicated under the same parent
+            return false;
+        }
+    } else {
+        parent_node_id_to_key_names.emplace(parent_node_id, std::unordered_set{key_name});
+    }
+    return true;
 }
 }  // namespace
 

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <json/single_include/nlohmann/json.hpp>
 
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
@@ -80,6 +81,25 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& invalid_node_id_value_pairs
 ) -> void;
+
+/**
+ * Asserts the kv pair log event creation fails with the expected error code.
+ * @param auto_generated_schema_tree
+ * @param user_generated_schema_tree
+ * @param auto_generated_node_id_value_pairs
+ * @param user_generated_node_id_value_pairs
+ * @param utc_offset
+ * @param expected_error_code
+ * @return Whether the assertion succeeded.
+ */
+[[nodiscard]] auto assert_kv_pair_log_event_creation_failure(
+        std::shared_ptr<SchemaTree> auto_generated_schema_tree,
+        std::shared_ptr<SchemaTree> user_generated_schema_tree,
+        KeyValuePairLogEvent::NodeIdValuePairs const& auto_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs const& user_generated_node_id_value_pairs,
+        UtcOffset utc_offset,
+        std::errc expected_error_code
+) -> bool;
 
 template <typename encoded_variable_t>
 requires(std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
@@ -197,6 +217,24 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         invalid_node_id_value_pairs.emplace(node_id, Value{});
     }
 }
+
+auto assert_kv_pair_log_event_creation_failure(
+        std::shared_ptr<SchemaTree> auto_generated_schema_tree,
+        std::shared_ptr<SchemaTree> user_generated_schema_tree,
+        KeyValuePairLogEvent::NodeIdValuePairs const& auto_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs const& user_generated_node_id_value_pairs,
+        UtcOffset utc_offset,
+        std::errc expected_error_code
+) -> bool {
+    auto const result{KeyValuePairLogEvent::create(
+            auto_generated_schema_tree,
+            user_generated_schema_tree,
+            auto_generated_node_id_value_pairs,
+            user_generated_node_id_value_pairs,
+            utc_offset
+    )};
+    return result.has_error() && result.error() == expected_error_code;
+}
 }  // namespace
 
 TEST_CASE("ffi_Value_basic", "[ffi][Value]") {
@@ -250,7 +288,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
      *      |
      *      |------------> <1:a:Obj>
      *      |                  |
-     *      |--> <2:a:Int>     |--> <3:b:Obj>
+     *      |--> <2:b:Int>     |--> <3:b:Obj>
      *                                  |
      *                                  |------------> <4:c:Obj>
      *                                  |                  |
@@ -262,10 +300,11 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
      *                                                     |
      *                                                     |--> <11:f:Obj>
      */
-    auto const schema_tree{std::make_shared<SchemaTree>()};
+    auto const auto_generated_schema_tree{std::make_shared<SchemaTree>()};
+    auto const user_generated_schema_tree{std::make_shared<SchemaTree>()};
     std::vector<SchemaTree::NodeLocator> const locators{
             {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Obj},
-            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Int},
+            {SchemaTree::cRootId, "b", SchemaTree::Node::Type::Int},
             {1, "b", SchemaTree::Node::Type::Obj},
             {3, "c", SchemaTree::Node::Type::Obj},
             {3, "d", SchemaTree::Node::Type::Str},
@@ -277,14 +316,20 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             {4, "f", SchemaTree::Node::Type::Obj}
     };
     for (auto const& locator : locators) {
-        REQUIRE_NOTHROW(schema_tree->insert_node(locator));
+        REQUIRE_NOTHROW(auto_generated_schema_tree->insert_node(locator));
+        REQUIRE_NOTHROW(user_generated_schema_tree->insert_node(locator));
     }
 
+    // This test case implicitly requires the auto-generated and user-generated schema trees to
+    // be identical. Adding this check to prevent this assumption is broken by future development.
+    REQUIRE((*auto_generated_schema_tree == *user_generated_schema_tree));
+
     SECTION("Test empty ID-value pairs") {
-        KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
         auto const result{KeyValuePairLogEvent::create(
-                schema_tree,
-                std::move(node_id_value_pairs),
+                auto_generated_schema_tree,
+                user_generated_schema_tree,
+                {},
+                {},
                 UtcOffset{0}
         )};
         REQUIRE_FALSE(result.has_error());
@@ -295,42 +340,42 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
         // Int:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *schema_tree,
+                *user_generated_schema_tree,
                 2,
                 invalid_node_id_value_pairs
         );
 
         // Float:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *schema_tree,
+                *user_generated_schema_tree,
                 9,
                 invalid_node_id_value_pairs
         );
 
         // Bool:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *schema_tree,
+                *user_generated_schema_tree,
                 6,
                 invalid_node_id_value_pairs
         );
 
         // Str:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *schema_tree,
+                *user_generated_schema_tree,
                 5,
                 invalid_node_id_value_pairs
         );
 
         // UnstructuredArray:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *schema_tree,
+                *user_generated_schema_tree,
                 7,
                 invalid_node_id_value_pairs
         );
 
         // Obj:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *schema_tree,
+                *user_generated_schema_tree,
                 3,
                 invalid_node_id_value_pairs
         );
@@ -343,26 +388,37 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             } else {
                 node_id_value_pair_to_test.emplace(node_id, std::nullopt);
             }
-            auto const result{KeyValuePairLogEvent::create(
-                    schema_tree,
-                    std::move(node_id_value_pair_to_test),
-                    UtcOffset{0}
-            )};
-            REQUIRE(result.has_error());
-            auto const& err{result.error()};
-            REQUIRE((std::errc::protocol_error == err));
+
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    node_id_value_pair_to_test,
+                    {},
+                    UtcOffset{0},
+                    std::errc::protocol_error
+            ));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    {},
+                    node_id_value_pair_to_test,
+                    UtcOffset{0},
+                    std::errc::protocol_error
+            ));
         }
     }
 
     SECTION("Test valid ID-value pairs") {
-        KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
+        constexpr std::string_view cJsonArrayToEncode{"[\"a\", 1, 0.1, null]"};
+        constexpr std::string_view cStaticText{"Test"};
+        KeyValuePairLogEvent::NodeIdValuePairs valid_node_id_value_pairs;
         /*
          * The sub schema tree of `node_id_value_pairs`:
          * <0:root:Obj>
          *      |
          *      |------------> <1:a:Obj>
          *      |                  |
-         *      |--> <2:a:Int>     |--> <3:b:Obj>
+         *      |--> <2:b:Int>     |--> <3:b:Obj>
          *                                  |
          *                                  |------------> <4:c:Obj>
          *                                  |                  |
@@ -375,77 +431,160 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
          *                                                     |--> <11:f:Obj>
          */
         // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        node_id_value_pairs.emplace(2, Value{static_cast<value_int_t>(0)});
-        node_id_value_pairs.emplace(5, Value{string{"Test"}});
-        node_id_value_pairs.emplace(
+        valid_node_id_value_pairs.emplace(2, Value{static_cast<value_int_t>(0)});
+        valid_node_id_value_pairs.emplace(5, Value{string{cStaticText}});
+        valid_node_id_value_pairs.emplace(
                 8,
                 Value{get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)}
         );
-        node_id_value_pairs.emplace(
+        valid_node_id_value_pairs.emplace(
                 7,
-                Value{get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)}
+                Value{get_encoded_text_ast<eight_byte_encoded_variable_t>(cJsonArrayToEncode)}
         );
-        node_id_value_pairs.emplace(10, Value{});
-        node_id_value_pairs.emplace(11, std::nullopt);
+        valid_node_id_value_pairs.emplace(10, Value{});
+        valid_node_id_value_pairs.emplace(11, std::nullopt);
         // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        auto const result{
-                KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
-        };
+        auto const result{KeyValuePairLogEvent::create(
+                auto_generated_schema_tree,
+                user_generated_schema_tree,
+                valid_node_id_value_pairs,
+                valid_node_id_value_pairs,
+                UtcOffset{0}
+        )};
         REQUIRE_FALSE(result.has_error());
 
-        SECTION("Test duplicated key conflict on node #3") {
-            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            node_id_value_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
-            auto const result{
-                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
+        SECTION("Test JSON serialization") {
+            nlohmann::json const subtree_rooted_at_node_4
+                    = {{"a", nlohmann::json::parse(cJsonArrayToEncode)},
+                       {"d", cStringToEncode},
+                       {"f", nlohmann::json::object_t()}};
+            nlohmann::json const subtree_rooted_at_node_3
+                    = {{"c", subtree_rooted_at_node_4}, {"d", cStaticText}, {"e", nullptr}};
+            nlohmann::json const expected = {
+                    {"a", {{"b", subtree_rooted_at_node_3}}},
+                    {"b", 0},
             };
-            REQUIRE(result.has_error());
-            REQUIRE((std::errc::protocol_not_supported == result.error()));
+
+            auto const& kv_pair_log_event{result.value()};
+            auto const serialized_json_result{kv_pair_log_event.serialize_to_json()};
+            REQUIRE_FALSE(serialized_json_result.has_error());
+            auto const& [serialized_auto_generated_kv_pairs, serialized_user_generated_kv_pairs]{
+                    serialized_json_result.value()
+            };
+            REQUIRE((serialized_auto_generated_kv_pairs == expected));
+            REQUIRE((serialized_user_generated_kv_pairs == expected));
+        }
+
+        SECTION("Test duplicated key conflict on node #3") {
+            auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            invalid_node_id_value_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    invalid_node_id_value_pairs,
+                    valid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    valid_node_id_value_pairs,
+                    invalid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
         }
 
         SECTION("Test duplicated key conflict on node #4") {
+            auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-            node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
-            auto const result{
-                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
-            };
-            REQUIRE(result.has_error());
-            REQUIRE((std::errc::protocol_not_supported == result.error()));
+            invalid_node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    invalid_node_id_value_pairs,
+                    valid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    valid_node_id_value_pairs,
+                    invalid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
         }
 
         SECTION("Test invalid sub-tree on node #3") {
-            node_id_value_pairs.emplace(3, std::nullopt);
-            auto const result{
-                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
-            };
+            auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
+            invalid_node_id_value_pairs.emplace(3, std::nullopt);
             // Node #3 is empty, but its descendants appear in the sub schema tree (node #5 & #10)
-            REQUIRE(result.has_error());
-            REQUIRE((std::errc::operation_not_permitted == result.error()));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    invalid_node_id_value_pairs,
+                    valid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::operation_not_permitted
+            ));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    valid_node_id_value_pairs,
+                    invalid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::operation_not_permitted
+            ));
         }
 
         SECTION("Test invalid sub-tree on node #4") {
-            node_id_value_pairs.emplace(4, Value{});
-            auto const result{
-                    KeyValuePairLogEvent::create(schema_tree, node_id_value_pairs, UtcOffset{0})
-            };
+            auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
+            invalid_node_id_value_pairs.emplace(4, Value{});
             // Node #4 is null, but its descendants appear in the sub schema tree (node #5 & #10)
-            REQUIRE(result.has_error());
-            REQUIRE((std::errc::operation_not_permitted == result.error()));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    invalid_node_id_value_pairs,
+                    valid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::operation_not_permitted
+            ));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    valid_node_id_value_pairs,
+                    invalid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::operation_not_permitted
+            ));
         }
     }
 
     SECTION("Test out-of-bound node ID") {
         KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs_out_of_bound;
         node_id_value_pairs_out_of_bound.emplace(
-                static_cast<SchemaTree::Node::id_t>(schema_tree->get_size()),
+                static_cast<SchemaTree::Node::id_t>(user_generated_schema_tree->get_size()),
                 Value{}
         );
-        auto const out_of_bound_result{KeyValuePairLogEvent::create(
-                schema_tree,
-                std::move(node_id_value_pairs_out_of_bound),
-                UtcOffset{0}
-        )};
-        REQUIRE(out_of_bound_result.has_error());
-        REQUIRE((std::errc::operation_not_permitted == out_of_bound_result.error()));
+        REQUIRE(assert_kv_pair_log_event_creation_failure(
+                auto_generated_schema_tree,
+                user_generated_schema_tree,
+                node_id_value_pairs_out_of_bound,
+                {},
+                UtcOffset{0},
+                std::errc::operation_not_permitted
+        ));
+        REQUIRE(assert_kv_pair_log_event_creation_failure(
+                auto_generated_schema_tree,
+                user_generated_schema_tree,
+                {},
+                node_id_value_pairs_out_of_bound,
+                UtcOffset{0},
+                std::errc::operation_not_permitted
+        ));
     }
 }
