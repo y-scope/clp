@@ -511,10 +511,9 @@ auto check_key_uniqueness_among_sibling_nodes(
     // ID safely without a repeated check.
     auto const parent_node_id{node.get_parent_id_unsafe()};
     auto const key_name{node.get_key_name()};
-    if (parent_node_id_to_key_names.contains(parent_node_id)) {
-        auto const [it, new_key_inserted]{
-                parent_node_id_to_key_names.at(parent_node_id).emplace(key_name)
-        };
+    auto const parent_node_id_to_key_names_it{parent_node_id_to_key_names.find(parent_node_id)};
+    if (parent_node_id_to_key_names_it != parent_node_id_to_key_names.end()) {
+        auto const [it, new_key_inserted]{parent_node_id_to_key_names_it->second.emplace(key_name)};
         if (false == new_key_inserted) {
             // The key is duplicated under the same parent
             return false;
