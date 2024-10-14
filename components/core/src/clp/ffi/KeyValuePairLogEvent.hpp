@@ -37,7 +37,9 @@ public:
      * @param user_generated_node_id_value_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
-     * failure. See `validate_node_id_value_pairs` for the possible error codes.
+     * failure, or an error code indicating the failure:
+     * - std::errc::invalid_argument if any of the given schema tree pointers are null.
+     * - Forwards `validate_node_id_value_pairs`'s return values.
      */
     [[nodiscard]] static auto create(
             std::shared_ptr<SchemaTree const> auto_generated_schema_tree,

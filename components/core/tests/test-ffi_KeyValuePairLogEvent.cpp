@@ -337,6 +337,25 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE_FALSE(result.has_error());
     }
 
+    SECTION("Test schema tree pointers being null") {
+        REQUIRE(assert_kv_pair_log_event_creation_failure(
+                nullptr,
+                user_generated_schema_tree,
+                {},
+                {},
+                UtcOffset{0},
+                std::errc::invalid_argument
+        ));
+        REQUIRE(assert_kv_pair_log_event_creation_failure(
+                auto_generated_schema_tree,
+                nullptr,
+                {},
+                {},
+                UtcOffset{0},
+                std::errc::invalid_argument
+        ));
+    }
+
     SECTION("Test mismatched types") {
         KeyValuePairLogEvent::NodeIdValuePairs invalid_node_id_value_pairs;
         // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)

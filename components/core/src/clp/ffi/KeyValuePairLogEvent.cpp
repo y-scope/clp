@@ -533,6 +533,10 @@ auto KeyValuePairLogEvent::create(
         NodeIdValuePairs user_generated_node_id_value_pairs,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
+    if (nullptr == auto_generated_schema_tree || nullptr == user_generated_schema_tree) {
+        return std::errc::invalid_argument;
+    }
+
     if (auto const ret_val{validate_node_id_value_pairs(
                 *auto_generated_schema_tree,
                 auto_generated_node_id_value_pairs
