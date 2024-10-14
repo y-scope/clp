@@ -95,8 +95,8 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 [[nodiscard]] auto assert_kv_pair_log_event_creation_failure(
         std::shared_ptr<SchemaTree> auto_generated_schema_tree,
         std::shared_ptr<SchemaTree> user_generated_schema_tree,
-        KeyValuePairLogEvent::NodeIdValuePairs const& auto_generated_node_id_value_pairs,
-        KeyValuePairLogEvent::NodeIdValuePairs const& user_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs auto_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs user_generated_node_id_value_pairs,
         UtcOffset utc_offset,
         std::errc expected_error_code
 ) -> bool;
@@ -221,16 +221,16 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 auto assert_kv_pair_log_event_creation_failure(
         std::shared_ptr<SchemaTree> auto_generated_schema_tree,
         std::shared_ptr<SchemaTree> user_generated_schema_tree,
-        KeyValuePairLogEvent::NodeIdValuePairs const& auto_generated_node_id_value_pairs,
-        KeyValuePairLogEvent::NodeIdValuePairs const& user_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs auto_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs user_generated_node_id_value_pairs,
         UtcOffset utc_offset,
         std::errc expected_error_code
 ) -> bool {
     auto const result{KeyValuePairLogEvent::create(
-            auto_generated_schema_tree,
-            user_generated_schema_tree,
-            auto_generated_node_id_value_pairs,
-            user_generated_node_id_value_pairs,
+            std::move(auto_generated_schema_tree),
+            std::move(user_generated_schema_tree),
+            std::move(auto_generated_node_id_value_pairs),
+            std::move(user_generated_node_id_value_pairs),
             utc_offset
     )};
     return result.has_error() && result.error() == expected_error_code;
@@ -289,16 +289,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
      *      |------------> <1:a:Obj>
      *      |                  |
      *      |--> <2:b:Int>     |--> <3:b:Obj>
-     *                                  |
-     *                                  |------------> <4:c:Obj>
-     *                                  |                  |
-     *                                  |--> <5:d:Str>     |--> <7:a:UnstructuredArray>
-     *                                  |                  |
-     *                                  |--> <6:d:Bool>    |--> <8:d:Str>
-     *                                  |                  |
-     *                                  |--> <10:e:Obj>    |--> <9:d:Float>
-     *                                                     |
-     *                                                     |--> <11:f:Obj>
+     *      |                  |        |
+     *      |--> <12:a:Int>    |        |------------> <4:c:Obj>
+     *                         |        |                  |
+     *                         |        |--> <5:d:Str>     |--> <7:a:UnstructuredArray>
+     *                         |        |                  |
+     *                         |        |--> <6:d:Bool>    |--> <8:d:Str>
+     *                         |        |                  |
+     *                         |        |--> <10:e:Obj>    |--> <9:d:Float>
+     *                         |                           |
+     *                         |--> <13:b:Bool>            |--> <11:f:Obj>
      */
     auto const auto_generated_schema_tree{std::make_shared<SchemaTree>()};
     auto const user_generated_schema_tree{std::make_shared<SchemaTree>()};
@@ -313,7 +313,9 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             {4, "d", SchemaTree::Node::Type::Str},
             {4, "d", SchemaTree::Node::Type::Float},
             {3, "e", SchemaTree::Node::Type::Obj},
-            {4, "f", SchemaTree::Node::Type::Obj}
+            {4, "f", SchemaTree::Node::Type::Obj},
+            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Int},
+            {1, "b", SchemaTree::Node::Type::Bool}
     };
     for (auto const& locator : locators) {
         REQUIRE_NOTHROW(auto_generated_schema_tree->insert_node(locator));
@@ -501,6 +503,52 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    invalid_node_id_value_pairs,
+                    valid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    valid_node_id_value_pairs,
+                    invalid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
+        }
+
+        SECTION("Test duplicated keys among siblings of node #1") {
+            auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            invalid_node_id_value_pairs.emplace(12, static_cast<value_int_t>(0));
+            // Node #12 has the same key as its sibling node #1
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    invalid_node_id_value_pairs,
+                    valid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
+            REQUIRE(assert_kv_pair_log_event_creation_failure(
+                    auto_generated_schema_tree,
+                    user_generated_schema_tree,
+                    valid_node_id_value_pairs,
+                    invalid_node_id_value_pairs,
+                    UtcOffset{0},
+                    std::errc::protocol_not_supported
+            ));
+        }
+
+        SECTION("Test duplicated keys among siblings of node #3") {
+            auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
+            // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
+            invalid_node_id_value_pairs.emplace(13, false);
+            // Node #12 has the same key as its sibling node #3
             REQUIRE(assert_kv_pair_log_event_creation_failure(
                     auto_generated_schema_tree,
                     user_generated_schema_tree,
