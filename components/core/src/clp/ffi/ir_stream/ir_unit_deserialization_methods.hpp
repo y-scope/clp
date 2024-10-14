@@ -55,7 +55,10 @@ namespace clp::ffi::ir_stream {
  * Deserializes a key-value pair log event IR unit.
  * @param reader
  * @param tag
- * @param schema_tree Schema tree used to construct the KV-pair log event.
+ * @param auto_generated_schema_tree Schema tree of auto-generated keys used to construct the
+ * KV-pair log event.
+ * @param user_generated_schema_tree Schema tree of user-generated keys used to construct the
+ * KV-pair log event.
  * @param utc_offset UTC offset used to construct the KV-pair log event.
  * @return A result containing the deserialized log event or an error code indicating the
  * failure:
@@ -69,7 +72,8 @@ namespace clp::ffi::ir_stream {
 [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
         ReaderInterface& reader,
         encoded_tag_t tag,
-        std::shared_ptr<SchemaTree> schema_tree,
+        std::shared_ptr<SchemaTree> auto_generated_schema_tree,
+        std::shared_ptr<SchemaTree> user_generated_schema_tree,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
 }  // namespace clp::ffi::ir_stream
