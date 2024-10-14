@@ -277,7 +277,7 @@ auto validate_node_id_value_pairs(
             //    there are key duplications among its sibling, it will be caught when the sibling
             //    is first checked. The order of which sibling gets checked first doesn't affect the
             //    results.
-            // 2. Reached the root nod
+            // 2. Reached the root node.
             auto next_ancestor_node_id_to_check{node.get_parent_id_unsafe()};
             while (false == key_duplication_checked_node_id_bitmap[next_ancestor_node_id_to_check])
             {
