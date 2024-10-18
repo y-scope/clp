@@ -77,15 +77,15 @@ template <typename encoded_variable_t>
 /**
  * @tparam T
  * @param int_val
- * @return One's complement of `int_val` without implicit integer promotions.
+ * @return One's complement of `int_val`.
  */
 template <IntegerType T>
 [[nodiscard]] auto get_ones_complement(T int_val) -> T;
 
 /**
  * Encodes and serializes a schema tree node ID using the given encoding type.
- * @tparam is_auto_generated Whether the schema tree node ID comes from the auto-generated or the
- * user-generated schema tree.
+ * @tparam is_auto_generated Whether the node is from the auto-generated or the user-generated
+ * schema tree.
  * @tparam length_indicator_tag
  * @tparam encoded_node_id_t
  * @param node_id
@@ -99,7 +99,7 @@ auto size_dependent_encode_and_serialize_schema_tree_node_id(
 
 /**
  * Encodes and serializes a schema tree node ID.
- * @tparam is_auto_generated Whether the schema tree node ID comes from the auto-generated or the
+ * @tparam is_auto_generated Whether the schema tree node ID is from the auto-generated or the
  * user-generated schema tree.
  * @tparam one_byte_length_indicator_tag Tag for one-byte node ID encoding.
  * @tparam two_byte_length_indicator_tag Tag for two-byte node ID encoding.
@@ -123,9 +123,12 @@ template <
  * Deserializes and decodes a schema tree node ID with the given encoding type.
  * @tparam encoded_node_id_t The integer type used to encode the node ID.
  * @param reader
- * @return a result containing a pair of an auto-generated ID indicator and a decoded node ID, or an
- * error code indicating the failure:
- * - std::errc::result_out_of_range if the IR stream is truncated.
+ * @return A result containing a pair or an error code indicating the failure:
+ * - The pair:
+ *   - Whether the node ID is for an auto-generated node.
+ *   - The decoded node ID.
+ * - The possible error codes:
+ *   - std::errc::result_out_of_range if the IR stream is truncated.
  */
 template <SignedIntegerType encoded_node_id_t>
 [[nodiscard]] auto size_dependent_deserialize_and_decode_schema_tree_node_id(ReaderInterface& reader
@@ -138,10 +141,13 @@ template <SignedIntegerType encoded_node_id_t>
  * @tparam four_byte_length_indicator_tag Tag for four-byte node ID encoding.
  * @param length_indicator_tag
  * @param reader
- * @return a result containing a pair of an auto-generated ID indicator and a decoded node ID, or an
- * error code indicating the failure:
- * - std::errc::protocol_error if the given length indicator is unknown.
- * - Forwards `size_dependent_deserialize_and_decode_schema_tree_node_id`'s return values.
+ * @return A result containing a pair or an error code indicating the failure:
+ * - The pair:
+ *   - Whether the node ID is for an auto-generated node.
+ *   - The decoded node ID.
+ * - The possible error codes:
+ *   - std::errc::protocol_error if the given length indicator is unknown.
+ * @return Forwards `size_dependent_deserialize_and_decode_schema_tree_node_id`'s return values.
  */
 template <
         int8_t one_byte_length_indicator_tag,
@@ -219,6 +225,7 @@ template <typename encoded_variable_t>
 
 template <IntegerType T>
 auto get_ones_complement(T int_val) -> T {
+    // Explicit cast to undo the implicit integer promotion
     return static_cast<T>(~int_val);
 }
 

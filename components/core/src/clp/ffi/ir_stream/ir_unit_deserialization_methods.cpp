@@ -44,10 +44,13 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
 /**
  * Deserializes the parent ID of a schema tree node.
  * @param reader
- * @return a result containing a pair of an auto-generated ID indicator and a decoded node ID, or an
- * error code indicating the failure:
- * - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
- * - Forwards `deserialize_tag`'s return values.
+ * @return A result containing a pair or an error code indicating the failure:
+ * - The pair:
+ *   - Whether the node ID is for an auto-generated node.
+ *   - The decoded node ID.
+ * - The possible error codes:
+ *   - Forwards `deserialize_tag`'s return values.
+ * @return Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
  */
 [[nodiscard]] auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
@@ -99,6 +102,8 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @param reader
  * @param tag Takes the current tag as input and returns the last tag read.
  * @return A result containing the deserialized schema or an error code indicating the failure:
+ * - std::err::protocol_not_supported if the IR stream contains auto-generated keys (TODO: Remove
+ *   this once auto-generated keys are fully supported).
  * - Forwards `deserialize_tag`'s return values.
  * - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
  */
@@ -174,7 +179,7 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
 
 /**
  * @param tag
- * @return Whether the given tag represent a valid encoded key ID.
+ * @return Whether the given tag represents a valid encoded key ID.
  */
 [[nodiscard]] auto is_encoded_key_id_tag(encoded_tag_t tag) -> bool;
 
@@ -292,6 +297,7 @@ auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
     Schema schema;
     while (true) {
         if (false == is_encoded_key_id_tag(tag)) {
+            // The log event must be an empty value.
             break;
         }
 
@@ -304,7 +310,7 @@ auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
         }
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
         if (is_auto_generated) {
-            // currently, we don't support auto-generated keys
+            // Currently, we don't support auto-generated keys.
             return std::errc::protocol_not_supported;
         }
         schema.push_back(node_id);
@@ -470,10 +476,11 @@ auto is_log_event_ir_unit_tag(encoded_tag_t tag) -> bool {
 
 auto is_encoded_key_id_tag(encoded_tag_t tag) -> bool {
     // Ideally, we could check whether the tag is within the range of
-    // [EncodedKeyIdByte, EncodedKeyIdInt]. There are two reasons why we don't do this:
-    // - We optimize for streams that has few key IDs: we can short circuit in the first branch
-    // - The range check assumes all length indicator to be defined continuously in order
-    //   We don't have static checks for this assumption.
+    // [EncodedKeyIdByte, EncodedKeyIdInt], but we don't for two reasons:
+    // - We optimize for streams that have few key IDs, meaning we can short circuit in the first
+    //   branch below.
+    // - Using a range check assumes all length indicators are defined continuously, in order, but
+    //   we don't have static checks for this assumption.
     return cProtocol::Payload::EncodedKeyIdByte == tag
            || cProtocol::Payload::EncodedKeyIdShort == tag
            || cProtocol::Payload::EncodedKeyIdInt == tag;
@@ -517,7 +524,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
     }
     auto const [is_auto_generated, parent_id]{parent_node_id_result.value()};
     if (is_auto_generated) {
-        // currently, we don't support auto-generated keys
+        // Currently, we don't support auto-generated keys.
         return std::errc::protocol_not_supported;
     }
 
