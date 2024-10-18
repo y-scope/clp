@@ -84,14 +84,14 @@ template <IntegerType T>
 
 /**
  * Encodes and serializes a schema tree node ID using the given encoding type.
- * @tparam is_auto_generated Whether the node is from the auto-generated or the user-generated
+ * @tparam is_auto_generated_node Whether the node is from the auto-generated or the user-generated
  * schema tree.
  * @tparam length_indicator_tag
  * @tparam encoded_node_id_t
  * @param node_id
  * @param output_buf
  */
-template <bool is_auto_generated, int8_t length_indicator_tag, SignedIntegerType encoded_node_id_t>
+template <bool is_auto_generated_node, int8_t length_indicator_tag, SignedIntegerType encoded_node_id_t>
 auto size_dependent_encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
@@ -99,7 +99,7 @@ auto size_dependent_encode_and_serialize_schema_tree_node_id(
 
 /**
  * Encodes and serializes a schema tree node ID.
- * @tparam is_auto_generated Whether the schema tree node ID is from the auto-generated or the
+ * @tparam is_auto_generated_node Whether the schema tree node ID is from the auto-generated or the
  * user-generated schema tree.
  * @tparam one_byte_length_indicator_tag Tag for one-byte node ID encoding.
  * @tparam two_byte_length_indicator_tag Tag for two-byte node ID encoding.
@@ -110,7 +110,7 @@ auto size_dependent_encode_and_serialize_schema_tree_node_id(
  * @return false if the ID exceeds the representable range.
  */
 template <
-        bool is_auto_generated,
+        bool is_auto_generated_node,
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
         int8_t four_byte_length_indicator_tag>
@@ -229,13 +229,13 @@ auto get_ones_complement(T int_val) -> T {
     return static_cast<T>(~int_val);
 }
 
-template <bool is_auto_generated, int8_t length_indicator_tag, SignedIntegerType encoded_node_id_t>
+template <bool is_auto_generated_node, int8_t length_indicator_tag, SignedIntegerType encoded_node_id_t>
 auto size_dependent_encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
 ) -> void {
     output_buf.push_back(length_indicator_tag);
-    if constexpr (is_auto_generated) {
+    if constexpr (is_auto_generated_node) {
         serialize_int(get_ones_complement(static_cast<encoded_node_id_t>(node_id)), output_buf);
     } else {
         serialize_int(static_cast<encoded_node_id_t>(node_id), output_buf);
@@ -243,7 +243,7 @@ auto size_dependent_encode_and_serialize_schema_tree_node_id(
 }
 
 template <
-        bool is_auto_generated,
+        bool is_auto_generated_node,
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
         int8_t four_byte_length_indicator_tag>
@@ -253,17 +253,17 @@ auto encode_and_serialize_schema_tree_node_id(
 ) -> bool {
     if (node_id <= static_cast<SchemaTree::Node::id_t>(INT8_MAX)) {
         size_dependent_encode_and_serialize_schema_tree_node_id<
-                is_auto_generated,
+                is_auto_generated_node,
                 one_byte_length_indicator_tag,
                 int8_t>(node_id, output_buf);
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT16_MAX)) {
         size_dependent_encode_and_serialize_schema_tree_node_id<
-                is_auto_generated,
+                is_auto_generated_node,
                 two_byte_length_indicator_tag,
                 int16_t>(node_id, output_buf);
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT32_MAX)) {
         size_dependent_encode_and_serialize_schema_tree_node_id<
-                is_auto_generated,
+                is_auto_generated_node,
                 four_byte_length_indicator_tag,
                 int32_t>(node_id, output_buf);
     } else {
