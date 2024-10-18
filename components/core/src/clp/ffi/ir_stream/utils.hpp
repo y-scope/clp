@@ -91,7 +91,10 @@ template <IntegerType T>
  * @param node_id
  * @param output_buf
  */
-template <bool is_auto_generated_node, int8_t length_indicator_tag, SignedIntegerType encoded_node_id_t>
+template <
+        bool is_auto_generated_node,
+        int8_t length_indicator_tag,
+        SignedIntegerType encoded_node_id_t>
 auto size_dependent_encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
@@ -229,7 +232,10 @@ auto get_ones_complement(T int_val) -> T {
     return static_cast<T>(~int_val);
 }
 
-template <bool is_auto_generated_node, int8_t length_indicator_tag, SignedIntegerType encoded_node_id_t>
+template <
+        bool is_auto_generated_node,
+        int8_t length_indicator_tag,
+        SignedIntegerType encoded_node_id_t>
 auto size_dependent_encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
