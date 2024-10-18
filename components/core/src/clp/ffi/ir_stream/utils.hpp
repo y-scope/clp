@@ -209,30 +209,25 @@ auto encode_and_serialize_schema_tree_node_id(
         std::vector<int8_t>& output_buf
 ) -> bool {
     auto size_dependent_encode_and_serialize_schema_tree_node_id
-            = [&output_buf]<SignedIntegerType encoded_node_id_t>(
-                      int8_t length_indicator_tag,
-                      SchemaTree::Node::id_t node_id
-              ) {
-                  output_buf.push_back(length_indicator_tag);
-                  if constexpr (is_auto_generated_node) {
-                      serialize_int(
-                              get_ones_complement(static_cast<encoded_node_id_t>(node_id)),
-                              output_buf
-                      );
-                  } else {
-                      serialize_int(static_cast<encoded_node_id_t>(node_id), output_buf);
-                  }
-              };
+            = [&output_buf,
+               &node_id]<SignedIntegerType encoded_node_id_t>(int8_t length_indicator_tag) -> void {
+        output_buf.push_back(length_indicator_tag);
+        if constexpr (is_auto_generated_node) {
+            serialize_int(get_ones_complement(static_cast<encoded_node_id_t>(node_id)), output_buf);
+        } else {
+            serialize_int(static_cast<encoded_node_id_t>(node_id), output_buf);
+        }
+    };
 
     if (node_id <= static_cast<SchemaTree::Node::id_t>(INT8_MAX)) {
         size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int8_t>(one_byte_length_indicator_tag, node_id);
+        )<int8_t>(one_byte_length_indicator_tag);
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT16_MAX)) {
         size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int16_t>(two_byte_length_indicator_tag, node_id);
+        )<int16_t>(two_byte_length_indicator_tag);
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT32_MAX)) {
         size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int32_t>(four_byte_length_indicator_tag, node_id);
+        )<int32_t>(four_byte_length_indicator_tag);
     } else {
         return false;
     }
