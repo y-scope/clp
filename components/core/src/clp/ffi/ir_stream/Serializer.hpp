@@ -103,8 +103,7 @@ private:
     /**
      * Serializes the given key ID into `m_key_group_buf`.
      * @param id
-     * @return true on success.
-     * @return false if the ID exceeds the representable range.
+     * @return Forwards `encode_and_serialize_schema_tree_node_id`'s return values.
      */
     [[nodiscard]] auto serialize_key(SchemaTree::Node::id_t id) -> bool;
 

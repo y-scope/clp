@@ -54,6 +54,8 @@ auto serialize_string(std::string_view str, std::vector<int8_t>& output_buf) -> 
 
 auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
     switch (ir_error_code) {
+        case IRErrorCode_Success:
+            return {};
         case IRErrorCode_Incomplete_IR:
             return std::errc::result_out_of_range;
         case IRErrorCode_Corrupted_IR:
