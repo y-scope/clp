@@ -83,24 +83,6 @@ template <IntegerType T>
 [[nodiscard]] auto get_ones_complement(T int_val) -> T;
 
 /**
- * Encodes and serializes a schema tree node ID using the given encoding type.
- * @tparam is_auto_generated_node Whether the node is from the auto-generated or the user-generated
- * schema tree.
- * @tparam length_indicator_tag
- * @tparam encoded_node_id_t
- * @param node_id
- * @param output_buf
- */
-template <
-        bool is_auto_generated_node,
-        int8_t length_indicator_tag,
-        SignedIntegerType encoded_node_id_t>
-auto size_dependent_encode_and_serialize_schema_tree_node_id(
-        SchemaTree::Node::id_t node_id,
-        std::vector<int8_t>& output_buf
-) -> void;
-
-/**
  * Encodes and serializes a schema tree node ID.
  * @tparam is_auto_generated_node Whether the schema tree node ID is from the auto-generated or the
  * user-generated schema tree.
@@ -121,21 +103,6 @@ template <
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
 ) -> bool;
-
-/**
- * Deserializes and decodes a schema tree node ID with the given encoding type.
- * @tparam encoded_node_id_t The integer type used to encode the node ID.
- * @param reader
- * @return A result containing a pair or an error code indicating the failure:
- * - The pair:
- *   - Whether the node ID is for an auto-generated node.
- *   - The decoded node ID.
- * - The possible error codes:
- *   - std::errc::result_out_of_range if the IR stream is truncated.
- */
-template <SignedIntegerType encoded_node_id_t>
-[[nodiscard]] auto size_dependent_deserialize_and_decode_schema_tree_node_id(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
 
 /**
  * Deserializes and decodes a schema tree node ID.
@@ -234,22 +201,6 @@ auto get_ones_complement(T int_val) -> T {
 
 template <
         bool is_auto_generated_node,
-        int8_t length_indicator_tag,
-        SignedIntegerType encoded_node_id_t>
-auto size_dependent_encode_and_serialize_schema_tree_node_id(
-        SchemaTree::Node::id_t node_id,
-        std::vector<int8_t>& output_buf
-) -> void {
-    output_buf.push_back(length_indicator_tag);
-    if constexpr (is_auto_generated_node) {
-        serialize_int(get_ones_complement(static_cast<encoded_node_id_t>(node_id)), output_buf);
-    } else {
-        serialize_int(static_cast<encoded_node_id_t>(node_id), output_buf);
-    }
-}
-
-template <
-        bool is_auto_generated_node,
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
         int8_t four_byte_length_indicator_tag>
@@ -257,38 +208,35 @@ auto encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
 ) -> bool {
+    auto size_dependent_encode_and_serialize_schema_tree_node_id
+            = [&output_buf]<SignedIntegerType encoded_node_id_t>(
+                      int8_t length_indicator_tag,
+                      SchemaTree::Node::id_t node_id
+              ) {
+                  output_buf.push_back(length_indicator_tag);
+                  if constexpr (is_auto_generated_node) {
+                      serialize_int(
+                              get_ones_complement(static_cast<encoded_node_id_t>(node_id)),
+                              output_buf
+                      );
+                  } else {
+                      serialize_int(static_cast<encoded_node_id_t>(node_id), output_buf);
+                  }
+              };
+
     if (node_id <= static_cast<SchemaTree::Node::id_t>(INT8_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id<
-                is_auto_generated_node,
-                one_byte_length_indicator_tag,
-                int8_t>(node_id, output_buf);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
+        )<int8_t>(one_byte_length_indicator_tag, node_id);
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT16_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id<
-                is_auto_generated_node,
-                two_byte_length_indicator_tag,
-                int16_t>(node_id, output_buf);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
+        )<int16_t>(two_byte_length_indicator_tag, node_id);
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT32_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id<
-                is_auto_generated_node,
-                four_byte_length_indicator_tag,
-                int32_t>(node_id, output_buf);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
+        )<int32_t>(four_byte_length_indicator_tag, node_id);
     } else {
         return false;
     }
     return true;
-}
-
-template <SignedIntegerType encoded_node_id_t>
-auto size_dependent_deserialize_and_decode_schema_tree_node_id(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
-    encoded_node_id_t encoded_node_id{};
-    if (false == deserialize_int(reader, encoded_node_id)) {
-        return std::errc::result_out_of_range;
-    }
-    if (0 > encoded_node_id) {
-        return {true, static_cast<SchemaTree::Node::id_t>(get_ones_complement(encoded_node_id))};
-    }
-    return {false, static_cast<SchemaTree::Node::id_t>(encoded_node_id)};
 }
 
 template <
@@ -299,14 +247,31 @@ auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
         ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+    auto size_dependent_deserialize_and_decode_schema_tree_node_id
+            = [&reader]<SignedIntegerType encoded_node_id_t>(
+              ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+        encoded_node_id_t encoded_node_id{};
+        if (false == deserialize_int(reader, encoded_node_id)) {
+            return std::errc::result_out_of_range;
+        }
+        if (0 > encoded_node_id) {
+            return {true, static_cast<SchemaTree::Node::id_t>(get_ones_complement(encoded_node_id))
+            };
+        }
+        return {false, static_cast<SchemaTree::Node::id_t>(encoded_node_id)};
+    };
+
     if (one_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id<int8_t>(reader);
+        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
+        )<int8_t>();
     }
     if (two_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id<int16_t>(reader);
+        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
+        )<int16_t>();
     }
     if (four_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id<int32_t>(reader);
+        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
+        )<int32_t>();
     }
     return std::errc::protocol_error;
 }
