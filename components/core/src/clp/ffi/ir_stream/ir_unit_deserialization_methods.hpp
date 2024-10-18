@@ -32,6 +32,8 @@ namespace clp::ffi::ir_stream {
  * indicating the failure:
  * - std::errc::result_out_of_range if the IR stream is truncated.
  * - std::errc::protocol_error if the deserialized node type isn't supported.
+ * - std::errc::protocol_not_supported if the IR stream contains auto-generated keys (TODO: Remove
+ *   this once auto-generated keys are fully supported).
  * - Forwards `deserialize_schema_tree_node_key_name`'s return values.
  * - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
  */
@@ -63,6 +65,7 @@ namespace clp::ffi::ir_stream {
  * - std::errc::protocol_error if the IR stream is corrupted.
  * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
  *   or uses an unsupported version.
+ * - Forwards `deserialize_schema`'s return values.
  * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
  *   cannot construct a valid key-value pair log event.
  */
