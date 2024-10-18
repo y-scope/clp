@@ -302,9 +302,9 @@ auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
         }
 
         auto const schema_tree_node_id_result{deserialize_and_decode_schema_tree_node_id<
-                cProtocol::Payload::EncodedKeyIdByte,
-                cProtocol::Payload::EncodedKeyIdShort,
-                cProtocol::Payload::EncodedKeyIdInt>(tag, reader)};
+                cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+                cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+                cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(tag, reader)};
         if (schema_tree_node_id_result.has_error()) {
             return schema_tree_node_id_result.error();
         }
@@ -481,9 +481,9 @@ auto is_encoded_key_id_tag(encoded_tag_t tag) -> bool {
     //   branch below.
     // - Using a range check assumes all length indicators are defined continuously, in order, but
     //   we don't have static checks for this assumption.
-    return cProtocol::Payload::EncodedKeyIdByte == tag
-           || cProtocol::Payload::EncodedKeyIdShort == tag
-           || cProtocol::Payload::EncodedKeyIdInt == tag;
+    return cProtocol::Payload::EncodedSchemaTreeNodeIdByte == tag
+           || cProtocol::Payload::EncodedSchemaTreeNodeIdShort == tag
+           || cProtocol::Payload::EncodedSchemaTreeNodeIdInt == tag;
 }
 }  // namespace
 

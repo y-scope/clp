@@ -65,8 +65,7 @@ namespace clp::ffi::ir_stream {
  * - std::errc::protocol_error if the IR stream is corrupted.
  * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
  *   or uses an unsupported version.
- * - std::errc::protocol_not_supported if the IR stream contains auto-generated keys.
- *   TODO: remove this once auto-generated keys are fully supported.
+ * - Forwards `deserialize_schema`'s return values.
  * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
  *   cannot construct a valid key-value pair log event.
  */

@@ -423,9 +423,9 @@ template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id) -> bool {
     return encode_and_serialize_schema_tree_node_id<
             false,
-            cProtocol::Payload::EncodedKeyIdByte,
-            cProtocol::Payload::EncodedKeyIdShort,
-            cProtocol::Payload::EncodedKeyIdInt>(id, m_key_group_buf);
+            cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+            cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+            cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(id, m_key_group_buf);
 }
 
 template <typename encoded_variable_t>
