@@ -113,7 +113,7 @@ class DbManager {
                 `INSERT INTO ${this.#queryJobsTableName} (job_config, type)
              VALUES (?, ?)`,
                 [
-                    Buffer.from(encode(jobConfig)),
+                    Buffer.from(msgpackEncode(jobConfig)),
                     QUERY_JOB_TYPE.EXTRACT_IR,
                 ]
             );
