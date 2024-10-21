@@ -7,3 +7,5 @@ set -e
 set -u
 
 brew update
+brew install \
+    go-task
