@@ -63,7 +63,7 @@ void ArchiveWriter::close() {
                 {constants::cArchiveTablesFile, table_compressed_size}
         };
         uint64_t offset = 0;
-        for (auto & file : files) {
+        for (auto& file : files) {
             uint64_t original_size = file.o;
             file.o = offset;
             offset += original_size;

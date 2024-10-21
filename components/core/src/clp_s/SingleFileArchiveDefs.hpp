@@ -51,6 +51,6 @@ struct ArchiveFileInfoPacket {
 
     MSGPACK_DEFINE(files);
 };
-} // namespace clp_s
+}  // namespace clp_s
 
 #endif  // CLP_S_ARCHIVEDEFS_HPP
