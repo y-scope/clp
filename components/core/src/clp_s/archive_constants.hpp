@@ -2,6 +2,9 @@
 #define CLP_S_ARCHIVE_CONSTANTS_HPP
 
 namespace clp_s::constants {
+// Single file archive
+constexpr char cArchiveFile[] = "/archive";
+
 // Schema files
 constexpr char cArchiveSchemaMapFile[] = "/schema_ids";
 constexpr char cArchiveSchemaTreeFile[] = "/schema_tree";

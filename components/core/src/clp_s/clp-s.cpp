@@ -94,6 +94,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
     option.print_archive_stats = command_line_arguments.print_archive_stats();
+    option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
 
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();

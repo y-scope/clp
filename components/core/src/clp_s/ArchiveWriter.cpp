@@ -11,6 +11,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_id = boost::uuids::to_string(option.id);
     m_compression_level = option.compression_level;
     m_print_archive_stats = option.print_archive_stats;
+    m_single_file_archive = option.single_file_archive;
     auto archive_path = boost::filesystem::path(option.archives_dir) / m_id;
 
     boost::system::error_code boost_error_code;
@@ -43,13 +44,37 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 }
 
 void ArchiveWriter::close() {
-    m_compressed_size += m_var_dict->close();
-    m_compressed_size += m_log_dict->close();
-    m_compressed_size += m_array_dict->close();
-    m_compressed_size += m_timestamp_dict->close();
-    m_compressed_size += m_schema_tree.store(m_archive_path, m_compression_level);
-    m_compressed_size += m_schema_map.store(m_archive_path, m_compression_level);
-    m_compressed_size += store_tables();
+    auto var_dict_compressed_size = m_var_dict->close();
+    auto log_dict_compressed_size = m_log_dict->close();
+    auto array_dict_compressed_size = m_array_dict->close();
+    auto timestamp_dict_compressed_size = m_timestamp_dict->close();
+    auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);
+    auto schema_map_compressed_size = m_schema_map.store(m_archive_path, m_compression_level);
+    auto [table_metadata_compressed_size, table_compressed_size] = store_tables();
+
+    if (m_single_file_archive) {
+        std::vector<ArchiveFileInfo> files{
+                {constants::cArchiveSchemaTreeFile, schema_tree_compressed_size},
+                {constants::cArchiveSchemaMapFile, schema_map_compressed_size},
+                {constants::cArchiveVarDictFile, var_dict_compressed_size},
+                {constants::cArchiveLogDictFile, log_dict_compressed_size},
+                {constants::cArchiveArrayDictFile, array_dict_compressed_size},
+                {constants::cArchiveTableMetadataFile, table_metadata_compressed_size},
+                {constants::cArchiveTablesFile, table_compressed_size}
+        };
+        uint64_t offset = 0;
+        for (auto & file : files) {
+            uint64_t original_size = file.o;
+            file.o = offset;
+            offset += original_size;
+        }
+        write_single_file_archive(files, timestamp_dict_compressed_size);
+    } else {
+        m_compressed_size = var_dict_compressed_size + log_dict_compressed_size
+                            + array_dict_compressed_size + timestamp_dict_compressed_size
+                            + schema_tree_compressed_size + schema_map_compressed_size
+                            + table_metadata_compressed_size + table_compressed_size;
+    }
 
     if (m_metadata_db) {
         update_metadata_db();
@@ -65,6 +90,113 @@ void ArchiveWriter::close() {
     m_encoded_message_size = 0UL;
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
+}
+
+void ArchiveWriter::write_single_file_archive(
+        std::vector<ArchiveFileInfo> const& files,
+        size_t timestamp_dict_compressed_size
+) {
+    std::string archive_path = m_archive_path + constants::cArchiveFile;
+    FileWriter archive_writer;
+    archive_writer.open(archive_path, FileWriter::OpenMode::CreateForWriting);
+
+    write_archive_metadata(archive_writer, files, timestamp_dict_compressed_size);
+    size_t metadata_section_size = archive_writer.get_pos() - sizeof(ArchiveHeader);
+    write_archive_files(archive_writer, files);
+    m_compressed_size = archive_writer.get_pos();
+    write_archive_header(archive_writer, metadata_section_size);
+
+    archive_writer.close();
+}
+
+void ArchiveWriter::write_archive_metadata(
+        FileWriter& archive_writer,
+        std::vector<ArchiveFileInfo> const& files,
+        size_t timestamp_dict_compressed_size
+) {
+    archive_writer.seek_from_begin(sizeof(ArchiveHeader));
+
+    ZstdCompressor compressor;
+    compressor.open(archive_writer, m_compression_level);
+    compressor.write_numeric_value(3);  // Number of packets
+
+    // Write archive info
+    ArchiveInfoPacket archive_info{.num_segments = 1};
+    std::stringstream msgpack_buffer;
+    msgpack::pack(msgpack_buffer, archive_info);
+    std::string archive_info_str = msgpack_buffer.str();
+    compressor.write_numeric_value(ArchiveMetadataPacketType::ArchiveInfo);
+    compressor.write_numeric_value(archive_info_str.size());
+    compressor.write_string(archive_info_str);
+
+    // Write archive file info
+    ArchiveFileInfoPacket archive_file_info{.files{files}};
+    msgpack_buffer.clear();
+    msgpack::pack(msgpack_buffer, archive_file_info);
+    std::string archive_file_info_str = msgpack_buffer.str();
+    compressor.write_numeric_value(ArchiveMetadataPacketType::ArchiveFileInfo);
+    compressor.write_numeric_value(archive_file_info_str.size());
+    compressor.write_string(archive_file_info_str);
+
+    // Write timestamp dictionary
+    compressor.write_numeric_value(ArchiveMetadataPacketType::TimestampDictionary);
+    compressor.write_numeric_value(timestamp_dict_compressed_size);
+    std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
+    FileReader timestamp_dict_reader;
+    timestamp_dict_reader.open(timestamp_dict_path);
+    char read_buffer[cReadBlockSize];
+    while (true) {
+        size_t num_bytes_read{0};
+        ErrorCode error_code
+                = timestamp_dict_reader.try_read(read_buffer, cReadBlockSize, num_bytes_read);
+        if (ErrorCodeSuccess != error_code) {
+            break;
+        }
+        compressor.write(read_buffer, num_bytes_read);
+    }
+    timestamp_dict_reader.close();
+    std::filesystem::remove(timestamp_dict_path);
+    compressor.close();
+}
+
+void ArchiveWriter::write_archive_files(
+        FileWriter& archive_writer,
+        std::vector<ArchiveFileInfo> const& files
+) {
+    for (auto const& file : files) {
+        std::string file_path = m_archive_path + file.n;
+        FileReader reader;
+        reader.open(file_path);
+        char read_buffer[cReadBlockSize];
+        while (true) {
+            size_t num_bytes_read{0};
+            ErrorCode const error_code
+                    = reader.try_read(read_buffer, cReadBlockSize, num_bytes_read);
+            if (ErrorCodeSuccess != error_code) {
+                break;
+            }
+            archive_writer.write(read_buffer, num_bytes_read);
+        }
+        reader.close();
+        boost::filesystem::remove(file_path);
+    }
+}
+
+void ArchiveWriter::write_archive_header(FileWriter& archive_writer, size_t metadata_section_size) {
+    ArchiveHeader header{
+            .magic_number{0},
+            .version
+            = (cArchiveMajorVersion << 24) | (cArchiveMinorVersion << 16) | cArchivePatchVersion,
+            .uncompressed_size = m_uncompressed_size,
+            .compressed_size = m_compressed_size,
+            .reserved_padding{0},
+            .metadata_section_size = static_cast<uint32_t>(metadata_section_size),
+            .compression_type = static_cast<uint16_t>(ArchiveCompressionType::Zstd),
+            .padding = 0
+    };
+    std::memcpy(&header.magic_number, "ARCHIVES", sizeof(header.magic_number));
+    archive_writer.seek_from_begin(0);
+    archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
 void ArchiveWriter::append_message(
@@ -127,8 +259,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
     }
 }
 
-size_t ArchiveWriter::store_tables() {
-    size_t compressed_size = 0;
+std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     m_tables_file_writer.open(
             m_archive_path + constants::cArchiveTablesFile,
             FileWriter::OpenMode::CreateForWriting
@@ -153,13 +284,13 @@ size_t ArchiveWriter::store_tables() {
     }
     m_table_metadata_compressor.close();
 
-    compressed_size += m_table_metadata_file_writer.get_pos();
-    compressed_size += m_tables_file_writer.get_pos();
+    auto table_metadata_compressed_size = m_table_metadata_file_writer.get_pos();
+    auto table_compressed_size = m_tables_file_writer.get_pos();
 
     m_table_metadata_file_writer.close();
     m_tables_file_writer.close();
 
-    return compressed_size;
+    return {table_metadata_compressed_size, table_compressed_size};
 }
 
 void ArchiveWriter::update_metadata_db() {

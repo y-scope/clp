@@ -13,6 +13,7 @@
 #include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
+#include "SingleFileArchiveDefs.hpp"
 #include "TimestampDictionaryWriter.hpp"
 
 namespace clp_s {
@@ -21,6 +22,7 @@ struct ArchiveWriterOption {
     std::string archives_dir;
     int compression_level;
     bool print_archive_stats;
+    bool single_file_archive;
 };
 
 class ArchiveWriter {
@@ -109,13 +111,16 @@ public:
     }
 
     /**
-     * Increments the size of the compressed data written to the archive
+     * Increments the size of the original (uncompressed) logs ingested into the archive. This size
+     * tracks the raw input size before any encoding or compression.
      * @param size
      */
     void increment_uncompressed_size(size_t size) { m_uncompressed_size += size; }
 
     /**
-     * @return Size of the uncompressed data written to the archive
+     * @return The total size of the encoded (uncompressed) data written to the archive. This
+     * reflects the size of the data after encoding but before compression.
+     * TODO: Add the size of schema tree, schema map and timestamp dictionary
      */
     size_t get_data_size();
 
@@ -128,10 +133,48 @@ private:
     void initialize_schema_writer(SchemaWriter* writer, Schema const& schema);
 
     /**
-     * Stores the tables
-     * @return Size of the compressed data in bytes
+     * Compresses and stores the tables.
+     * @return A pair containing:
+     *         - The size of the compressed table metadata in bytes.
+     *         - The size of the compressed tables in bytes.
      */
-    [[nodiscard]] size_t store_tables();
+    [[nodiscard]] std::pair<size_t, size_t> store_tables();
+
+    /**
+     * Writes the archive to a single file
+     * @param files
+     * @param timestamp_dict_compressed_size
+     */
+    void write_single_file_archive(
+            std::vector<ArchiveFileInfo> const& files,
+            size_t timestamp_dict_compressed_size
+    );
+
+    /**
+     * Writes the metadata section of the single file archive
+     * @param archive_writer
+     * @param files
+     * @param timestamp_dict_compressed_size
+     */
+    void write_archive_metadata(
+            FileWriter& archive_writer,
+            std::vector<ArchiveFileInfo> const& files,
+            size_t timestamp_dict_compressed_size
+    );
+
+    /**
+     * Writes the file section of the single file archive
+     * @param archive_writer
+     * @param files
+     */
+    void write_archive_files(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files);
+
+    /**
+     * Writes the header section of the single file archive
+     * @param archive_writer
+     * @param metadata_section_size
+     */
+    void write_archive_header(FileWriter& archive_writer, size_t metadata_section_size);
 
     /**
      * Updates the metadata db with the archive's metadata (id, size, timestamp ranges, etc.)
@@ -142,6 +185,8 @@ private:
      * Prints the archive's statistics (id, uncompressed size, compressed size, etc.)
      */
     void print_archive_stats();
+
+    static constexpr size_t cReadBlockSize = 4 * 1024;
 
     size_t m_encoded_message_size{};
     size_t m_uncompressed_size{};
@@ -159,6 +204,7 @@ private:
     std::shared_ptr<clp::GlobalMySQLMetadataDB> m_metadata_db;
     int m_compression_level{};
     bool m_print_archive_stats{};
+    bool m_single_file_archive{};
 
     SchemaMap m_schema_map;
     SchemaTree m_schema_tree;

@@ -57,6 +57,10 @@ size_t TimestampDictionaryWriter::close() {
     m_dictionary_file_writer.close();
 
     m_is_open = false;
+    m_next_id = 0;
+    m_pattern_to_id.clear();
+    m_column_id_to_range.clear();
+    m_column_key_to_range.clear();
     return compressed_size;
 }
 
