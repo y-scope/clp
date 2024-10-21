@@ -431,9 +431,8 @@ bool StringUtils::tokenize_column_descriptor(
         std::string const& descriptor,
         std::vector<std::string>& tokens
 ) {
-    // TODO: add support for unicoce sequences e.g. \u263A
+    // TODO: add support for unicode sequences e.g. \u263A
     std::string cur_tok;
-    size_t cur = 0;
     for (size_t cur = 0; cur < descriptor.size(); ++cur) {
         if ('\\' == descriptor[cur]) {
             ++cur;
