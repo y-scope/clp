@@ -8,7 +8,7 @@ on:
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos-13/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
@@ -21,7 +21,7 @@ on:
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos-13/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
@@ -39,7 +39,7 @@ jobs:
     strategy:
       matrix:
         use_shared_libs: [true, false]
-    runs-on: "macos-12"
+    runs-on: "macos-13"
     steps:
       - uses: "actions/checkout@v4"
         with:
@@ -55,7 +55,7 @@ jobs:
           rm -f /usr/local/bin/python3*
 
       - name: "Install dependencies"
-        run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
+        run: "./components/core/tools/scripts/lib_install/macos-13/install-all.sh"
 
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
