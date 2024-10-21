@@ -427,18 +427,32 @@ bool StringUtils::convert_string_to_double(std::string const& raw, double& conve
     return true;
 }
 
-void StringUtils::tokenize_column_descriptor(
+bool StringUtils::tokenize_column_descriptor(
         std::string const& descriptor,
         std::vector<std::string>& tokens
 ) {
-    // TODO: handle escaped . correctly
-    auto start = 0U;
-    auto end = descriptor.find('.');
-    while (end != std::string::npos) {
-        tokens.push_back(descriptor.substr(start, end - start));
-        start = end + 1;
-        end = descriptor.find('.', start);
+    // TODO: add support for unicoce sequences e.g. \u263A
+    std::string cur_tok;
+    size_t cur = 0;
+    for (size_t cur = 0; cur < descriptor.size(); ++cur) {
+        if ('\\' == descriptor[cur]) {
+            ++cur;
+            if (cur >= descriptor.size()) {
+                return false;
+            }
+        } else if ('.' == descriptor[cur]) {
+            tokens.push_back(cur_tok);
+            cur_tok.clear();
+            continue;
+        }
+        cur_tok.push_back(descriptor[cur]);
     }
-    tokens.push_back(descriptor.substr(start));
+
+    if (cur_tok.empty()) {
+        return false;
+    }
+
+    tokens.push_back(cur_tok);
+    return true;
 }
 }  // namespace clp_s
