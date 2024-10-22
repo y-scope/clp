@@ -9,8 +9,9 @@
  * the placement of the methods in this file.
  */
 
+#include <cstddef>
+#include <string>
 #include <string_view>
-#include <vector>
 
 namespace clp::ir {
 /**
