@@ -35,14 +35,14 @@ auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
     ErrorListener parser_error_listener;
 
     ANTLRInputStream input{in};
-    SqlLexer lexer(&input);
+    SqlLexer lexer{&input};
     lexer.removeErrorListeners();
     lexer.addErrorListener(&lexer_error_listener);
-    CommonTokenStream tokens(&lexer);
+    CommonTokenStream tokens{&lexer};
     SqlParser parser(&tokens);
     parser.removeErrorListeners();
     parser.addErrorListener(&parser_error_listener);
-    SqlParser::StartContext* tree = parser.start();
+    SqlParser::StartContext* tree{parser.start()};
 
     if (lexer_error_listener.error()) {
         SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
@@ -50,7 +50,7 @@ auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
     }
     if (parser_error_listener.error()) {
         SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
-        return {};
+        return nullptr;
     }
 
     ParseTreeVisitor visitor;
