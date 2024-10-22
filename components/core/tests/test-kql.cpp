@@ -211,4 +211,20 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         SPDLOG_INFO("{}", it->get_token());
         REQUIRE(DescriptorToken{"c"} == *it++);
     }
+
+    SECTION("Illegal escape sequences in column name") {
+        auto query = GENERATE(
+                "a\\:*",
+                "\"a\\\":*",
+                "a\\ :*",
+                "\"a\\\" :*",
+                "a.:*",
+                "\"a.\":*",
+                "a. :*",
+                "\"a.\" :*"
+        );
+        stringstream illegal_escape{query};
+        auto filter = parse_kql_expression(escaped_column_query);
+        REQUIRE(nullptr == filter);
+    }
 }
