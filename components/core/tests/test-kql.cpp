@@ -214,7 +214,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
 
     SECTION("Illegal escape sequences in column name") {
         auto query = GENERATE(
-                "a\\:*",
+                //"a\\:*", this case is technically legal since ':' gets escaped
                 "\"a\\\":*",
                 "a\\ :*",
                 "\"a\\\" :*",
