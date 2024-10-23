@@ -56,7 +56,7 @@ auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
     ParseTreeVisitor visitor;
     try {
         return std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
-    } catch (std::exception& e) {
+    } catch (std::exception const& e) {
         return nullptr;
     }
 }
