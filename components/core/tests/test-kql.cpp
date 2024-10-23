@@ -224,7 +224,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
                 "\"a.\" :*"
         );
         stringstream illegal_escape{query};
-        auto filter = parse_kql_expression(escaped_column_query);
+        auto filter = parse_kql_expression(illegal_escape);
         REQUIRE(nullptr == filter);
     }
 }
