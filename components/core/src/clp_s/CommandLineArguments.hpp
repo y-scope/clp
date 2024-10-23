@@ -110,6 +110,8 @@ public:
 
     size_t get_minimum_table_size() const { return m_minimum_table_size; }
 
+    std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
+
 private:
     // Methods
     /**
@@ -195,6 +197,7 @@ private:
     std::optional<epochtime_t> m_search_begin_ts;
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
+    std::vector<std::string> m_projection_columns;
 
     // Decompression and search variables
     std::string m_archive_id;

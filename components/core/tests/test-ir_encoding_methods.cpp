@@ -3,6 +3,8 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -16,8 +18,12 @@
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/Deserializer.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../src/clp/ffi/ir_stream/Serializer.hpp"
+#include "../src/clp/ffi/ir_stream/utils.hpp"
+#include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
+#include "../src/clp/ffi/SchemaTree.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/time_types.hpp"
@@ -42,6 +48,7 @@ using clp::ffi::ir_stream::IRErrorCode;
 using clp::ffi::ir_stream::serialize_utc_offset_change;
 using clp::ffi::ir_stream::Serializer;
 using clp::ffi::ir_stream::validate_protocol_version;
+using clp::ffi::KeyValuePairLogEvent;
 using clp::ffi::wildcard_query_matches_any_encoded_var;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
@@ -80,6 +87,47 @@ private:
     string m_message;
     epoch_time_ms_t m_timestamp{0};
     UtcOffset m_utc_offset{0};
+};
+
+/**
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ */
+class IrUnitHandler {
+public:
+    // Implements `clp::ffi::ir_stream::IrUnitHandlerInterface` interface
+    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+        m_deserialized_log_events.emplace_back(std::move(log_event));
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] static auto handle_utc_offset_change(
+            [[maybe_unused]] UtcOffset utc_offset_old,
+            [[maybe_unused]] UtcOffset utc_offset_new
+    ) -> IRErrorCode {
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] static auto handle_schema_tree_node_insertion(
+            [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator
+    ) -> IRErrorCode {
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] auto handle_end_of_stream() -> IRErrorCode {
+        m_is_complete = true;
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    // Methods
+    [[nodiscard]] auto is_complete() const -> bool { return m_is_complete; }
+
+    [[nodiscard]] auto get_deserialized_log_events() const -> vector<KeyValuePairLogEvent> const& {
+        return m_deserialized_log_events;
+    }
+
+private:
+    vector<KeyValuePairLogEvent> m_deserialized_log_events;
+    bool m_is_complete{false};
 };
 
 /**
@@ -1127,25 +1175,112 @@ TEMPLATE_TEST_CASE(
 
     // Deserialize the results
     BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
-    auto deserializer_result = Deserializer::create(reader);
+    auto deserializer_result{Deserializer<IrUnitHandler>::create(reader, IrUnitHandler{})};
     REQUIRE_FALSE(deserializer_result.has_error());
     auto& deserializer = deserializer_result.value();
+    while (true) {
+        auto const result{deserializer.deserialize_next_ir_unit(reader)};
+        REQUIRE_FALSE(result.has_error());
+        if (result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
+            break;
+        }
+    }
+    auto const& ir_unit_handler{deserializer.get_ir_unit_handler()};
 
-    for (auto const& json_obj : serialized_json_objects) {
-        auto const kv_log_event_result = deserializer.deserialize_to_next_log_event(reader);
-        REQUIRE_FALSE(kv_log_event_result.has_error());
+    // Check the stream is complete
+    REQUIRE(ir_unit_handler.is_complete());
+    REQUIRE(deserializer.is_stream_completed());
+    // Check the number of log events deserialized matches the number of log events serialized
+    auto const& deserialized_log_events{ir_unit_handler.get_deserialized_log_events()};
+    REQUIRE((serialized_json_objects.size() == deserialized_log_events.size()));
 
-        auto const& kv_log_event = kv_log_event_result.value();
-        auto const num_leaves_in_json_obj = count_num_leaves(json_obj);
-        auto const num_kv_pairs = kv_log_event.get_node_id_value_pairs().size();
+    auto const num_log_events{serialized_json_objects.size()};
+    for (size_t idx{0}; idx < num_log_events; ++idx) {
+        auto const& expect{serialized_json_objects.at(idx)};
+        auto const& deserialized_log_event{deserialized_log_events.at(idx)};
+
+        auto const num_leaves_in_json_obj{count_num_leaves(expect)};
+        auto const num_kv_pairs{deserialized_log_event.get_node_id_value_pairs().size()};
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
 
-        auto const serialized_json_result = kv_log_event.serialize_to_json();
+        auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
-        REQUIRE((json_obj == serialized_json_result.value()));
+        REQUIRE((expect == serialized_json_result.value()));
     }
 
-    auto const eof_result{deserializer.deserialize_to_next_log_event(reader)};
-    REQUIRE(eof_result.has_error());
-    REQUIRE((std::errc::no_message_available == eof_result.error()));
+    auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};
+    REQUIRE((eof_result.has_error() && std::errc::operation_not_permitted == eof_result.error()));
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_serialize_schema_tree_node_id",
+        "[clp][ffi][ir_stream]",
+        std::true_type,
+        std::false_type
+) {
+    constexpr bool cIsAutoGeneratedNode{TestType{}};
+    constexpr int8_t cOneByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdByte
+    };
+    constexpr int8_t cTwoByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdShort
+    };
+    constexpr int8_t cFourByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+    };
+    constexpr auto cMaxNodeId{static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX)};
+
+    constexpr auto cSerializationMethodToTest
+            = clp::ffi::ir_stream::encode_and_serialize_schema_tree_node_id<
+                    cIsAutoGeneratedNode,
+                    cOneByteLengthIndicatorTag,
+                    cTwoByteLengthIndicatorTag,
+                    cFourByteLengthIndicatorTag>;
+    constexpr auto cDeserializationMethodToTest
+            = clp::ffi::ir_stream::deserialize_and_decode_schema_tree_node_id<
+                    cOneByteLengthIndicatorTag,
+                    cTwoByteLengthIndicatorTag,
+                    cFourByteLengthIndicatorTag>;
+
+    std::vector<int8_t> output_buf;
+    std::unordered_set<clp::ffi::SchemaTree::Node::id_t> valid_node_ids_to_test;
+
+    // Add some boundary node IDs
+    valid_node_ids_to_test.emplace(0);
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX + 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX + 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX));
+
+    // Generate some more "random" valid node IDs
+    for (clp::ffi::SchemaTree::Node::id_t node_id{1}, step{1}; node_id <= cMaxNodeId;
+         node_id += step, step += 1)
+    {
+        valid_node_ids_to_test.emplace(node_id);
+    }
+
+    for (auto const node_id : valid_node_ids_to_test) {
+        output_buf.clear();
+        REQUIRE(cSerializationMethodToTest(node_id, output_buf));
+
+        BufferReader reader{size_checked_pointer_cast<char>(output_buf.data()), output_buf.size()};
+        encoded_tag_t tag{};
+        REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(reader, tag)));
+        auto const result{cDeserializationMethodToTest(tag, reader)};
+        REQUIRE_FALSE(result.has_error());
+        auto const [is_auto_generated, deserialized_node_id]{result.value()};
+        REQUIRE((cIsAutoGeneratedNode == is_auto_generated));
+        REQUIRE((deserialized_node_id == node_id));
+    }
+
+    // Test against the first invalid node ID
+    REQUIRE_FALSE(cSerializationMethodToTest(
+            static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX) + 1,
+            output_buf
+    ));
 }

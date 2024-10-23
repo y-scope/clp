@@ -147,6 +147,8 @@ set(
         search/Output.hpp
         search/OutputHandler.cpp
         search/OutputHandler.hpp
+        search/Projection.cpp
+        search/Projection.hpp
         search/SchemaMatch.cpp
         search/SchemaMatch.hpp
         search/SearchUtils.cpp

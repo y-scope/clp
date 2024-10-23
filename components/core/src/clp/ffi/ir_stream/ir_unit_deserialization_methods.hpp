@@ -2,6 +2,7 @@
 #define CLP_FFI_IR_STREAM_IR_UNIT_DESERIALIZATION_METHODS_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <outcome/single-header/outcome.hpp>
@@ -11,8 +12,16 @@
 #include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
 #include "decoding_methods.hpp"
+#include "IrUnitType.hpp"
 
 namespace clp::ffi::ir_stream {
+/**
+ * @param tag
+ * @return The IR unit type of indicated by the given tag on success.
+ * @return std::nullopt if the tag doesn't represent a valid IR unit.
+ */
+[[nodiscard]] auto get_ir_unit_type_from_tag(encoded_tag_t tag) -> std::optional<IrUnitType>;
+
 /**
  * Deserializes a schema tree node insertion IR unit.
  * @param reader
@@ -23,6 +32,8 @@ namespace clp::ffi::ir_stream {
  * indicating the failure:
  * - std::errc::result_out_of_range if the IR stream is truncated.
  * - std::errc::protocol_error if the deserialized node type isn't supported.
+ * - std::errc::protocol_not_supported if the IR stream contains auto-generated keys (TODO: Remove
+ *   this once auto-generated keys are fully supported).
  * - Forwards `deserialize_schema_tree_node_key_name`'s return values.
  * - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
  */
@@ -54,6 +65,7 @@ namespace clp::ffi::ir_stream {
  * - std::errc::protocol_error if the IR stream is corrupted.
  * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
  *   or uses an unsupported version.
+ * - Forwards `deserialize_schema`'s return values.
  * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
  *   cannot construct a valid key-value pair log event.
  */

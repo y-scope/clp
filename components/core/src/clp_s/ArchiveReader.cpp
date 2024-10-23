@@ -269,6 +269,7 @@ void ArchiveReader::initialize_schema_reader(
     auto& schema = (*m_schema_map)[schema_id];
     reader.reset(
             m_schema_tree,
+            m_projection,
             schema_id,
             schema.get_ordered_schema_view(),
             m_id_to_schema_metadata[schema_id].num_messages,
