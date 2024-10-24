@@ -4,6 +4,7 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <string_view>
 
@@ -63,7 +64,8 @@ public:
             size_t offset = 0,
             bool disable_caching = false,
             std::chrono::seconds connection_timeout = cDefaultConnectionTimeout,
-            std::chrono::seconds overall_timeout = cDefaultOverallTimeout
+            std::chrono::seconds overall_timeout = cDefaultOverallTimeout,
+            std::map<std::string, std::string> const& custom_headers = std::map<std::string, std::string>()
     );
 
     // Disable copy/move constructors/assignment operators
