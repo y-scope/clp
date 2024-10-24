@@ -34,6 +34,7 @@ struct JsonParserOption {
     size_t max_document_size;
     int compression_level;
     bool print_archive_stats;
+    bool single_file_archive;
     bool structurize_arrays;
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
