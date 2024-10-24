@@ -1,6 +1,6 @@
 #include "encoding_methods.hpp"
 
-#include <algorithm>
+#include <cstdint>
 #include <string_view>
 
 #include "../ir/types.hpp"
@@ -10,9 +10,8 @@ using clp::ir::four_byte_encoded_variable_t;
 using std::string_view;
 
 namespace clp::ffi {
-eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
-        four_byte_encoded_variable_t four_byte_encoded_var
-) {
+auto encode_four_byte_float_as_eight_byte(four_byte_encoded_variable_t four_byte_encoded_var
+) -> eight_byte_encoded_variable_t {
     uint8_t decimal_point_pos{};
     uint8_t num_digits{};
     uint32_t digits{};
@@ -33,9 +32,8 @@ eight_byte_encoded_variable_t encode_four_byte_float_as_eight_byte(
     );
 }
 
-eight_byte_encoded_variable_t encode_four_byte_integer_as_eight_byte(
-        four_byte_encoded_variable_t four_byte_encoded_var
-) {
+auto encode_four_byte_integer_as_eight_byte(four_byte_encoded_variable_t four_byte_encoded_var
+) -> eight_byte_encoded_variable_t {
     return static_cast<eight_byte_encoded_variable_t>(four_byte_encoded_var);
 }
 }  // namespace clp::ffi
