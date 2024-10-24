@@ -63,10 +63,10 @@ void ArchiveReader::read_metadata() {
     SchemaReader::SchemaMetadata prev_metadata{};
     int32_t prev_schema_id{};
     for (size_t i = 0; i < num_schemas; ++i) {
-        size_t stream_id;
-        size_t stream_offset;
+        uint64_t stream_id;
+        uint64_t stream_offset;
         int32_t schema_id;
-        size_t num_messages;
+        uint64_t num_messages;
 
         if (auto error = m_table_metadata_decompressor.try_read_numeric_value(stream_id);
             ErrorCodeSuccess != error)
@@ -97,7 +97,7 @@ void ArchiveReader::read_metadata() {
         }
 
         if (prev_metadata_initialized) {
-            size_t uncompressed_size{0};
+            uint64_t uncompressed_size{0};
             if (stream_id != prev_metadata.stream_id) {
                 uncompressed_size
                         = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)

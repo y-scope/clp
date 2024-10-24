@@ -180,8 +180,8 @@ size_t ArchiveWriter::store_tables() {
      */
     using schema_map_it = decltype(m_id_to_schema_writer)::iterator;
     std::vector<schema_map_it> schemas;
-    std::vector<std::tuple<size_t, size_t>> stream_metadata;
-    std::vector<std::tuple<size_t, size_t, int32_t, size_t>> schema_metadata;
+    std::vector<std::tuple<uint64_t, uint64_t>> stream_metadata;
+    std::vector<std::tuple<uint64_t, uint64_t, int32_t, uint64_t>> schema_metadata;
 
     schema_metadata.reserve(m_id_to_schema_writer.size());
     schemas.reserve(m_id_to_schema_writer.size());
@@ -194,9 +194,9 @@ size_t ArchiveWriter::store_tables() {
     };
     std::sort(schemas.begin(), schemas.end(), comp);
 
-    size_t current_stream_offset = 0;
-    size_t current_stream_id = 0;
-    size_t current_table_file_offset = 0;
+    uint64_t current_stream_offset = 0;
+    uint64_t current_stream_id = 0;
+    uint64_t current_table_file_offset = 0;
     m_tables_compressor.open(m_tables_file_writer, m_compression_level);
     for (auto it : schemas) {
         it->second->store(m_tables_compressor);

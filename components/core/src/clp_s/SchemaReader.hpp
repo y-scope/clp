@@ -50,10 +50,10 @@ public:
     };
 
     struct SchemaMetadata {
-        size_t stream_id;
-        size_t stream_offset;
-        size_t num_messages;
-        size_t uncompressed_size;
+        uint64_t stream_id;
+        uint64_t stream_offset;
+        uint64_t num_messages;
+        uint64_t uncompressed_size;
     };
 
     // Constructor
