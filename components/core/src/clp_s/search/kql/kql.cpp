@@ -112,7 +112,10 @@ public:
         std::string column = unquote_string(ctx->LITERAL()->getText());
 
         std::vector<std::string> descriptor_tokens;
-        StringUtils::tokenize_column_descriptor(column, descriptor_tokens);
+        if (false == StringUtils::tokenize_column_descriptor(column, descriptor_tokens)) {
+            SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
+            return nullptr;
+        }
 
         return ColumnDescriptor::create(descriptor_tokens);
     }
@@ -248,6 +251,10 @@ std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
     }
 
     ParseTreeVisitor visitor;
-    return std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
+    try {
+        return std::any_cast<std::shared_ptr<Expression>>(visitor.visitStart(tree));
+    } catch (std::exception& e) {
+        return {};
+    }
 }
 }  // namespace clp_s::search::kql
