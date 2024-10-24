@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -19,7 +20,8 @@ CurlDownloadHandler::CurlDownloadHandler(
         size_t offset,
         bool disable_caching,
         std::chrono::seconds connection_timeout,
-        std::chrono::seconds overall_timeout
+        std::chrono::seconds overall_timeout,
+        std::map<std::string, std::string> const& custom_headers
 )
         : m_error_msg_buf{std::move(error_msg_buf)} {
     if (nullptr != m_error_msg_buf) {
@@ -55,6 +57,11 @@ CurlDownloadHandler::CurlDownloadHandler(
     if (disable_caching) {
         m_http_headers.append("Cache-Control: no-cache");
         m_http_headers.append("Pragma: no-cache");
+    }
+    for (const auto& [key, value] : custom_headers) {
+        if ("Range" != key && "Cache-Control" != key && "Pragma" != key) {
+            m_http_headers.append(key + ": " + value);
+        }
     }
     if (false == m_http_headers.is_empty()) {
         m_easy_handle.set_option(CURLOPT_HTTPHEADER, m_http_headers.get_raw_list());
