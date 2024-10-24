@@ -67,12 +67,9 @@ fi
 
 # Set up
 cd "${extracted_dir}/build"
-# NOTE: Although the mongocxx docs indicate we should use
-# '-DMONGOCXX_OVERRIDE_DEFAULT_INSTALL_PREFIX=OFF' to install to the default location (/usr/local),
-# this doesn't seem to work, so we specify CMAKE_INSTALL_PREFIX here
 cmake \
   -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=/usr/local \
+  -DMONGOCXX_OVERRIDE_DEFAULT_INSTALL_PREFIX=OFF \
   -DBUILD_SHARED_AND_STATIC_LIBS=ON \
   -DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON \
   -DENABLE_TESTS=OFF \

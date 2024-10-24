@@ -6,11 +6,11 @@
 #include <unordered_map>
 #include <utility>
 
+#include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 
 #include "../time_types.hpp"
 #include "SchemaTree.hpp"
-#include "SchemaTreeNode.hpp"
 #include "Value.hpp"
 
 namespace clp::ffi {
@@ -24,7 +24,7 @@ namespace clp::ffi {
 class KeyValuePairLogEvent {
 public:
     // Types
-    using NodeIdValuePairs = std::unordered_map<SchemaTreeNode::id_t, std::optional<Value>>;
+    using NodeIdValuePairs = std::unordered_map<SchemaTree::Node::id_t, std::optional<Value>>;
 
     // Factory functions
     /**
@@ -32,7 +32,7 @@ public:
      * @param node_id_value_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
-     * failure. See `valdiate_node_id_value_pairs` for the possible error codes.
+     * failure. See `validate_node_id_value_pairs` for the possible error codes.
      */
     [[nodiscard]] static auto create(
             std::shared_ptr<SchemaTree const> schema_tree,
@@ -59,6 +59,18 @@ public:
     }
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
+
+    /**
+     * Serializes the log event into a `nlohmann::json` object.
+     * @return A result containing the serialized JSON object or an error code indicating the
+     * failure:
+     * - std::errc::protocol_error if a value in the log event couldn't be decoded or it couldn't be
+     *   inserted into a JSON object.
+     * - std::errc::result_out_of_range if a node ID in the log event doesn't exist in the schema
+     *   tree.
+     */
+    [[nodiscard]] auto serialize_to_json(
+    ) const -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
 
 private:
     // Constructor

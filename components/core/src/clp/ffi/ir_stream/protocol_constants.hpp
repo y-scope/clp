@@ -13,7 +13,7 @@ constexpr int8_t LengthUShort = 0x12;
 
 constexpr char VersionKey[] = "VERSION";
 constexpr char VersionValue[] = "0.0.2";
-constexpr char BetaVersionValue[] = "0.1.0-beta";
+constexpr char BetaVersionValue[] = "0.1.0-beta.1";
 
 // The following regex can be used to validate a Semantic Versioning string. The source of the
 // regex can be found here: https://semver.org/
@@ -67,11 +67,15 @@ constexpr int8_t ValueEightByteEncodingClpStr = 0x5A;
 constexpr int8_t ValueEmpty = 0x5E;
 constexpr int8_t ValueNull = 0x5F;
 
-constexpr int8_t SchemaTreeNodeParentIdUByte = 0x60;
-constexpr int8_t SchemaTreeNodeParentIdUShort = 0x61;
+constexpr int8_t EncodedSchemaTreeNodeParentIdByte = 0x60;
+constexpr int8_t EncodedSchemaTreeNodeParentIdShort = 0x61;
+constexpr int8_t EncodedSchemaTreeNodeParentIdInt = 0x62;
 
-constexpr int8_t KeyIdUByte = 0x65;
-constexpr int8_t KeyIdUShort = 0x66;
+constexpr int8_t EncodedSchemaTreeNodeIdByte = 0x65;
+constexpr int8_t EncodedSchemaTreeNodeIdShort = 0x66;
+constexpr int8_t EncodedSchemaTreeNodeIdInt = 0x67;
+
+constexpr int8_t SchemaTreeNodeMask = 0x70;
 
 constexpr int8_t SchemaTreeNodeInt = 0x71;
 constexpr int8_t SchemaTreeNodeFloat = 0x72;

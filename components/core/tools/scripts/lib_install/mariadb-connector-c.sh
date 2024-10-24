@@ -47,8 +47,9 @@ fi
 source /etc/os-release
 if [ $ID = "ubuntu" ] ; then
   os_version=ubuntu-$UBUNTU_CODENAME
-elif [ $ID = "centos" ] ; then
-  os_version=centos${VERSION_ID}
+else
+  echo "Unsupported OS ID: $ID"
+  exit 1
 fi
 
 # Download
