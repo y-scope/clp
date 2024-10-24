@@ -208,14 +208,14 @@ private:
         return m_buffer_begin_pos + m_buffer_reader.get_buffer_size();
     }
 
-    auto update_file_pos(size_t pos) -> void;
+    auto update_pos(size_t pos) -> void;
 
     // Constants
     static constexpr size_t cDefaultBufferSize = (16 * cMinBufferSize);
 
     // Variables
-    size_t m_file_pos{0};
-    std::unique_ptr<ReaderInterface> m_file_reader;
+    size_t m_pos{0};
+    std::unique_ptr<ReaderInterface> m_reader;
 
     // Buffer specific data
     std::vector<char> m_buffer;
