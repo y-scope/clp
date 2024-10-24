@@ -118,7 +118,8 @@ NetworkReader::NetworkReader(
         std::chrono::seconds overall_timeout,
         std::chrono::seconds connection_timeout,
         size_t buffer_pool_size,
-        size_t buffer_size
+        size_t buffer_size,
+        std::map<std::string, std::string> const& custom_headers
 )
         : m_src_url{src_url},
           m_offset{offset},
@@ -130,7 +131,7 @@ NetworkReader::NetworkReader(
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
         m_buffer_pool.emplace_back(m_buffer_size);
     }
-    m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
+    m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching, custom_headers);
     m_downloader_thread->start();
 }
 
@@ -215,7 +216,8 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
                 m_offset,
                 m_disable_caching,
                 m_reader.m_connection_timeout,
-                m_reader.m_overall_timeout
+                m_reader.m_overall_timeout,
+                m_custom_headers
         };
         auto const ret_code{curl_handler.perform()};
         // Enqueue the last filled buffer, if any
