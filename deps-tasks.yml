@@ -421,8 +421,8 @@ tasks:
         vars:
           DEST: "{{.DEST}}"
           FLAGS: "--extract"
-          SRC_NAME: "yscope-log-viewer-f15a846f6edfb47656a537aceeb1ebe579f083b7"
-          SRC_URL: "https://github.com/junhaoliao/yscope-log-viewer/archive/f15a846.zip"
+          SRC_NAME: "yscope-log-viewer-bc8109f9f371c3327070000dee3537bdaf535428"
+          SRC_URL: "https://github.com/junhaoliao/yscope-log-viewer/archive/bc8109f.zip"
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
