@@ -108,6 +108,8 @@ public:
 
     size_t get_ordered_chunk_size() const { return m_ordered_chunk_size; }
 
+    size_t get_minimum_table_size() const { return m_minimum_table_size; }
+
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
 
 private:
@@ -175,6 +177,7 @@ private:
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
     size_t m_ordered_chunk_size{0};
+    size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
