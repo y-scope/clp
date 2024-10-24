@@ -16,10 +16,13 @@
 namespace clp::ffi {
 /**
  * A log event containing key-value pairs. Each event contains:
- * - A collection of node-ID & value pairs, where each pair represents a leaf `SchemaTreeNode` in
- *   the `SchemaTree`.
- * - A reference to the `SchemaTree`
- * - The UTC offset of the current log event
+ * - A reference to the schema tree of auto-generated keys.
+ * - A reference to the schema tree of user-generated keys.
+ * - A collection of auto-generated node-ID & value pairs, where each pair represents a leaf
+ *   `SchemaTree::Node` in the `SchemaTree`.
+ * - A collection of user-generated node-ID & value pairs, where each pair represents a leaf
+ *   `SchemaTree::Node` in the `SchemaTree`.
+ * - The UTC offset of the current log event.
  */
 class KeyValuePairLogEvent {
 public:
@@ -28,15 +31,21 @@ public:
 
     // Factory functions
     /**
-     * @param schema_tree
-     * @param node_id_value_pairs
+     * @param auto_generated_schema_tree
+     * @param user_generated_schema_tree
+     * @param auto_generated_node_id_value_pairs
+     * @param user_generated_node_id_value_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
-     * failure. See `validate_node_id_value_pairs` for the possible error codes.
+     * failure, or an error code indicating the failure:
+     * - std::errc::invalid_argument if any of the given schema tree pointers are null.
+     * - Forwards `validate_node_id_value_pairs`'s return values.
      */
     [[nodiscard]] static auto create(
-            std::shared_ptr<SchemaTree const> schema_tree,
-            NodeIdValuePairs node_id_value_pairs,
+            std::shared_ptr<SchemaTree const> auto_generated_schema_tree,
+            std::shared_ptr<SchemaTree const> user_generated_schema_tree,
+            NodeIdValuePairs auto_generated_node_id_value_pairs,
+            NodeIdValuePairs user_generated_node_id_value_pairs,
             UtcOffset utc_offset
     ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
 
@@ -52,40 +61,54 @@ public:
     ~KeyValuePairLogEvent() = default;
 
     // Methods
-    [[nodiscard]] auto get_schema_tree() const -> SchemaTree const& { return *m_schema_tree; }
+    [[nodiscard]] auto get_auto_generated_schema_tree() const -> SchemaTree const& {
+        return *m_auto_generated_schema_tree;
+    }
 
-    [[nodiscard]] auto get_node_id_value_pairs() const -> NodeIdValuePairs const& {
-        return m_node_id_value_pairs;
+    [[nodiscard]] auto get_user_generated_schema_tree() const -> SchemaTree const& {
+        return *m_user_generated_schema_tree;
+    }
+
+    [[nodiscard]] auto get_auto_generated_node_id_value_pairs() const -> NodeIdValuePairs const& {
+        return m_auto_generated_node_id_value_pairs;
+    }
+
+    [[nodiscard]] auto get_user_generated_node_id_value_pairs() const -> NodeIdValuePairs const& {
+        return m_user_generated_node_id_value_pairs;
     }
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
 
     /**
-     * Serializes the log event into a `nlohmann::json` object.
-     * @return A result containing the serialized JSON object or an error code indicating the
-     * failure:
-     * - std::errc::protocol_error if a value in the log event couldn't be decoded or it couldn't be
-     *   inserted into a JSON object.
-     * - std::errc::result_out_of_range if a node ID in the log event doesn't exist in the schema
-     *   tree.
+     * Serializes the log event into `nlohmann::json` objects.
+     * @return A result containing a pair of serialized JSON objects (the first contains
+     * auto-generated key-value pairs, while the second contains user-generated key-value pairs), or
+     * an error code indicating the failure:
+     * - Forwards `serialize_node_id_value_pairs_to_json`'s return values.
      */
     [[nodiscard]] auto serialize_to_json(
-    ) const -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
+    ) const -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>>;
 
 private:
     // Constructor
     KeyValuePairLogEvent(
-            std::shared_ptr<SchemaTree const> schema_tree,
-            NodeIdValuePairs node_id_value_pairs,
+            std::shared_ptr<SchemaTree const> auto_generated_schema_tree,
+            std::shared_ptr<SchemaTree const> user_generated_schema_tree,
+            NodeIdValuePairs auto_generated_node_id_value_pairs,
+            NodeIdValuePairs user_generated_node_id_value_pairs,
             UtcOffset utc_offset
     )
-            : m_schema_tree{std::move(schema_tree)},
-              m_node_id_value_pairs{std::move(node_id_value_pairs)},
+            : m_auto_generated_schema_tree{std::move(auto_generated_schema_tree)},
+              m_user_generated_schema_tree{std::move(user_generated_schema_tree)},
+              m_auto_generated_node_id_value_pairs{std::move(auto_generated_node_id_value_pairs)},
+              m_user_generated_node_id_value_pairs{std::move(user_generated_node_id_value_pairs)},
               m_utc_offset{utc_offset} {}
 
     // Variables
-    std::shared_ptr<SchemaTree const> m_schema_tree;
-    NodeIdValuePairs m_node_id_value_pairs;
+    std::shared_ptr<SchemaTree const> m_auto_generated_schema_tree;
+    std::shared_ptr<SchemaTree const> m_user_generated_schema_tree;
+    NodeIdValuePairs m_auto_generated_node_id_value_pairs;
+    NodeIdValuePairs m_user_generated_node_id_value_pairs;
     UtcOffset m_utc_offset{0};
 };
 }  // namespace clp::ffi

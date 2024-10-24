@@ -116,7 +116,8 @@ private:
     Deserializer(IrUnitHandler ir_unit_handler) : m_ir_unit_handler{std::move(ir_unit_handler)} {}
 
     // Variables
-    std::shared_ptr<SchemaTree> m_schema_tree{std::make_shared<SchemaTree>()};
+    std::shared_ptr<SchemaTree> m_auto_generated_schema_tree{std::make_shared<SchemaTree>()};
+    std::shared_ptr<SchemaTree> m_user_generated_schema_tree{std::make_shared<SchemaTree>()};
     UtcOffset m_utc_offset{0};
     IrUnitHandler m_ir_unit_handler;
     bool m_is_complete{false};
@@ -186,9 +187,13 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
     auto const ir_unit_type{optional_ir_unit_type.value()};
     switch (ir_unit_type) {
         case IrUnitType::LogEvent: {
-            auto result{
-                    deserialize_ir_unit_kv_pair_log_event(reader, tag, m_schema_tree, m_utc_offset)
-            };
+            auto result{deserialize_ir_unit_kv_pair_log_event(
+                    reader,
+                    tag,
+                    m_auto_generated_schema_tree,
+                    m_user_generated_schema_tree,
+                    m_utc_offset
+            )};
             if (result.has_error()) {
                 return result.error();
             }
@@ -210,7 +215,7 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
             }
 
             auto const node_locator{result.value()};
-            if (m_schema_tree->has_node(node_locator)) {
+            if (m_user_generated_schema_tree->has_node(node_locator)) {
                 return std::errc::protocol_error;
             }
 
@@ -220,7 +225,7 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
                 return ir_error_code_to_errc(err);
             }
 
-            std::ignore = m_schema_tree->insert_node(node_locator);
+            std::ignore = m_user_generated_schema_tree->insert_node(node_locator);
             break;
         }
 

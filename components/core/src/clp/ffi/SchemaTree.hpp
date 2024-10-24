@@ -127,6 +127,9 @@ public:
         // Destructor
         ~Node() = default;
 
+        // Defines default equal-to operator
+        [[nodiscard]] auto operator==(SchemaTree::Node const& rhs) const -> bool = default;
+
         // Methods
         [[nodiscard]] auto get_id() const -> id_t { return m_id; }
 
@@ -247,6 +250,11 @@ public:
 
     // Destructor
     ~SchemaTree() = default;
+
+    // Equal-to operator
+    [[nodiscard]] auto operator==(SchemaTree const& rhs) const -> bool {
+        return m_tree_nodes == rhs.m_tree_nodes;
+    }
 
     // Methods
     [[nodiscard]] auto get_size() const -> size_t { return m_tree_nodes.size(); }
