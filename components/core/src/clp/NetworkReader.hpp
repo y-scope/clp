@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -103,7 +104,8 @@ public:
             std::chrono::seconds connection_timeout
             = CurlDownloadHandler::cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
-            size_t buffer_size = cDefaultBufferSize
+            size_t buffer_size = cDefaultBufferSize,
+            std::map<std::string, std::string> const& custom_headers = std::map<std::string, std::string>()
     );
 
     // Destructor
@@ -243,10 +245,15 @@ private:
          * @param offset Index of the byte at which to start the download.
          * @param disable_caching Whether to disable caching.
          */
-        DownloaderThread(NetworkReader& reader, size_t offset, bool disable_caching)
+        DownloaderThread(NetworkReader& reader, 
+                        size_t offset, 
+                        bool disable_caching,
+                        std::map<std::string, std::string> const& custom_headers
+        )
                 : m_reader{reader},
                   m_offset{offset},
-                  m_disable_caching{disable_caching} {}
+                  m_disable_caching{disable_caching},
+                  m_custom_headers{custom_headers} {}
 
     private:
         // Methods implementing `clp::Thread`
@@ -255,6 +262,7 @@ private:
         NetworkReader& m_reader;
         size_t m_offset{0};
         bool m_disable_caching{false};
+        std::map<std::string, std::string> m_custom_headers;
     };
 
     /**
