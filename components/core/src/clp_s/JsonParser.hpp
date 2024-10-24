@@ -1,29 +1,32 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
 
-#include <map>
+#include <cstdlib>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
 #include <boost/uuid/random_generator.hpp>
-#include <simdjson.h>
 
+#include "../clp/BufferReader.hpp"
+#include "../clp/ffi/ir_stream/Deserializer.hpp"
+#include "../clp/ffi/KeyValuePairLogEvent.hpp"
+#include "../clp/ffi/SchemaTree.hpp"
+#include "../clp/ffi/SchemaTreeNode.hpp"
+#include "../clp/ffi/Value.hpp"
 #include "../clp/GlobalMySQLMetadataDB.hpp"
+#include "../clp/type_utils.hpp"
 #include "ArchiveWriter.hpp"
-#include "DictionaryWriter.hpp"
-#include "FileReader.hpp"
-#include "FileWriter.hpp"
 #include "ParsedMessage.hpp"
 #include "Schema.hpp"
-#include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
-#include "SchemaWriter.hpp"
-#include "TimestampDictionaryWriter.hpp"
-#include "Utils.hpp"
-#include "ZstdCompressor.hpp"
 
-using namespace simdjson;
+using clp::BufferReader;
+using clp::ffi::ir_stream::Deserializer;
+using clp::ffi::KeyValuePairLogEvent;
+using clp::size_checked_pointer_cast;
 
 namespace clp_s {
 struct JsonParserOption {
@@ -38,6 +41,15 @@ struct JsonParserOption {
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
+struct JsonToIrParserOption {
+    std::vector<std::string> file_paths;
+    std::string irs_dir;
+    size_t max_document_size;
+    size_t max_ir_buffer_size;
+    int compression_level;
+    int encoding;
+};
+
 class JsonParser {
 public:
     class OperationFailed : public TraceableException {
@@ -50,6 +62,8 @@ public:
     // Constructor
     explicit JsonParser(JsonParserOption const& option);
 
+    JsonParser(JsonToIrParserOption const& option);
+
     // Destructor
     ~JsonParser() = default;
 
@@ -58,6 +72,12 @@ public:
      * @return whether the JSON was parsed succesfully
      */
     [[nodiscard]] bool parse();
+
+    /**
+     * Parses the Key Value IR Stream and stores the data in the archive.
+     * @return whether the IR Stream was parsed successfully
+     */
+    [[nodiscard]] auto parse_from_ir() -> bool;
 
     /**
      * Writes the metadata and archive data to disk.
@@ -73,6 +93,47 @@ private:
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
     void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
+
+    /**
+     * Determines the archive node type based on the IR node type and value.
+     * @param ir_node_type schema node type from the IR stream
+     * @param node_has_value Boolean that says whether or not the node has value.
+     * @param node_value The IR schema node value if the node has value
+     * @return The clp-s archive Node Type that should be used for the archive node
+     */
+    static auto get_archive_node_type(
+            clp::ffi::SchemaTreeNode::Type ir_node_type,
+            bool node_has_value,
+            std::optional<clp::ffi::Value> const& node_value
+    ) -> NodeType;
+
+    /**
+     * Get archive node id for ir node
+     * @param ir_node_to_archive_node_unordered_map cache of node id conversions between
+     * deserializer schema tree nodes and archive schema tree nodes
+     * @param ir_node_id ID of the IR node
+     * @param archive_node_type Type of the archive node
+     * @param ir_tree The IR schema tree
+     */
+    auto get_archive_node_id(
+            std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&
+                    ir_node_to_archive_node_unordered_map,
+            int32_t ir_node_id,
+            NodeType archive_node_type,
+            clp::ffi::SchemaTree const& ir_tree
+    ) -> int;
+
+    /**
+     * Parses a Key Value Log Event
+     * @param kv the key value log event
+     * @param ir_node_to_archive_node_unordered_map cache of node id conversions between
+     * deserializer schema tree nodes and archive schema tree nodes
+     */
+    void parse_kv_log_event(
+            KeyValuePairLogEvent const& kv,
+            std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&
+                    ir_node_to_archive_node_unordered_map
+    );
 
     /**
      * Parses an array within a JSON line
