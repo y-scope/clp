@@ -1,7 +1,6 @@
 #include "ArchiveWriter.hpp"
 
 #include <algorithm>
-#include <tuple>
 
 #include <json/single_include/nlohmann/json.hpp>
 
@@ -180,8 +179,8 @@ size_t ArchiveWriter::store_tables() {
      */
     using schema_map_it = decltype(m_id_to_schema_writer)::iterator;
     std::vector<schema_map_it> schemas;
-    std::vector<std::tuple<uint64_t, uint64_t>> stream_metadata;
-    std::vector<std::tuple<uint64_t, uint64_t, int32_t, uint64_t>> schema_metadata;
+    std::vector<StreamMetadata> stream_metadata;
+    std::vector<SchemaMetadata> schema_metadata;
 
     schema_metadata.reserve(m_id_to_schema_writer.size());
     schemas.reserve(m_id_to_schema_writer.size());
@@ -223,9 +222,9 @@ size_t ArchiveWriter::store_tables() {
     }
 
     m_table_metadata_compressor.write_numeric_value(stream_metadata.size());
-    for (auto& [file_offset, uncompressed_size] : stream_metadata) {
-        m_table_metadata_compressor.write_numeric_value(file_offset);
-        m_table_metadata_compressor.write_numeric_value(uncompressed_size);
+    for (auto& stream : stream_metadata) {
+        m_table_metadata_compressor.write_numeric_value(stream.file_offset);
+        m_table_metadata_compressor.write_numeric_value(stream.uncompressed_size);
     }
 
     // The current implementation doesn't store large tables as separate columns, so this is always
@@ -234,11 +233,11 @@ size_t ArchiveWriter::store_tables() {
     m_table_metadata_compressor.write_numeric_value(num_separate_column_schemas);
 
     m_table_metadata_compressor.write_numeric_value(schema_metadata.size());
-    for (auto& [stream_id, stream_offset, schema_id, num_messages] : schema_metadata) {
-        m_table_metadata_compressor.write_numeric_value(stream_id);
-        m_table_metadata_compressor.write_numeric_value(stream_offset);
-        m_table_metadata_compressor.write_numeric_value(schema_id);
-        m_table_metadata_compressor.write_numeric_value(num_messages);
+    for (auto& schema : schema_metadata) {
+        m_table_metadata_compressor.write_numeric_value(schema.stream_id);
+        m_table_metadata_compressor.write_numeric_value(schema.stream_offset);
+        m_table_metadata_compressor.write_numeric_value(schema.schema_id);
+        m_table_metadata_compressor.write_numeric_value(schema.num_messages);
     }
     m_table_metadata_compressor.close();
 

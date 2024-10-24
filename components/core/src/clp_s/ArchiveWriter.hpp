@@ -33,6 +33,33 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    struct StreamMetadata {
+        StreamMetadata(uint64_t file_offset, uint64_t uncompressed_size)
+                : file_offset(file_offset),
+                  uncompressed_size(uncompressed_size) {}
+
+        uint64_t file_offset{};
+        uint64_t uncompressed_size{};
+    };
+
+    struct SchemaMetadata {
+        SchemaMetadata(
+                uint64_t stream_id,
+                uint64_t stream_offset,
+                int32_t schema_id,
+                uint64_t num_messages
+        )
+                : stream_id(stream_id),
+                  stream_offset(stream_offset),
+                  schema_id(schema_id),
+                  num_messages(num_messages) {}
+
+        uint64_t stream_id{};
+        uint64_t stream_offset{};
+        int32_t schema_id{};
+        uint64_t num_messages{};
+    };
+
     // Constructor
     explicit ArchiveWriter(std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db)
             : m_metadata_db(std::move(metadata_db)) {}
