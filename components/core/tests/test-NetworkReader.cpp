@@ -195,7 +195,7 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
     std::map<std::string, std::string> custom_headers = std::map<std::string, std::string>();
     // We use httpbin (https://httpbin.org/) to test the custom headers. This request will return a
     // JSON object that contains the custom headers. We check if the headers are in the response.
-    static constexpr int kNumRegularTestHeaders = 10;
+    constexpr int kNumRegularTestHeaders = 10;
     for (int i = 0; i < kNumRegularTestHeaders; i++) {
         std::string key = fmt::format("Unit-Test-Key{}", i);
         std::string value = fmt::format("Unit-Test-Value{}", i);
