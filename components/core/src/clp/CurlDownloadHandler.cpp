@@ -60,7 +60,7 @@ CurlDownloadHandler::CurlDownloadHandler(
         m_http_headers.append("Cache-Control: no-cache");
         m_http_headers.append("Pragma: no-cache");
     }
-    static const std::set<std::string> reserved_headers = {
+    const std::set<std::string> kReservedHeaders = {
         "range",
         "cache-control",
         "pragma"
@@ -68,9 +68,10 @@ CurlDownloadHandler::CurlDownloadHandler(
     for (const auto& [key, value] : custom_headers) {
         // Convert to lowercase for case-insensitive comparison
         std::string lower_key = key;
-        std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(), ::tolower);
+        std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(),
+            [](unsigned char c){ return std::tolower(c); });
         
-        if (reserved_headers.end() == reserved_headers.find(lower_key)) {
+        if (kReservedHeaders.end() == kReservedHeaders.find(lower_key)) {
             // Filter out illegal header names and header values by regex
             // Can contain alphanumeric characters (A-Z, a-z, 0-9), hyphens (`-`), and underscores
             // (`_`)
