@@ -72,11 +72,13 @@ CurlDownloadHandler::CurlDownloadHandler(
         
         if (reserved_headers.end() == reserved_headers.find(lower_key)) {
             // Filter out illegal header names and header values by regex
-            // Can contain alphanumeric characters (A-Z, a-z, 0-9), hyphens (`-`), and underscores (`_`)
+            // Can contain alphanumeric characters (A-Z, a-z, 0-9), hyphens (`-`), and underscores
+            // (`_`)
             std::regex header_name_pattern("^[A-Za-z0-9_-]+$");
             // Must consist of printable ASCII characters (values between 0x20 and 0x7E)
             std::regex header_value_pattern("^[\\x20-\\x7E]*$");
-            if (std::regex_match(key, header_name_pattern) && std::regex_match(value, header_value_pattern)) {
+            if (std::regex_match(key, header_name_pattern) && 
+                std::regex_match(value, header_value_pattern)) {
                 m_http_headers.append(key + ": " + value);
             }
         }
