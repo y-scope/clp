@@ -60,25 +60,23 @@ CurlDownloadHandler::CurlDownloadHandler(
         m_http_headers.append("Cache-Control: no-cache");
         m_http_headers.append("Pragma: no-cache");
     }
-    const std::set<std::string> kReservedHeaders = {
-        "range",
-        "cache-control",
-        "pragma"
-    };
+    std::set<std::string> const kReservedHeaders = {"range", "cache-control", "pragma"};
     // RFC 7230 token pattern: one or more tchars
-    const std::regex header_name_pattern("^[!#$%&'*+.^_`|~0-9a-zA-Z-]+$");
+    std::regex const header_name_pattern("^[!#$%&'*+.^_`|~0-9a-zA-Z-]+$");
     // Must consist of printable ASCII characters (values between 0x20 and 0x7E)
-    const std::regex header_value_pattern("^[\\x20-\\x7E]*$");
-    for (const auto& [key, value] : custom_headers) {
+    std::regex const header_value_pattern("^[\\x20-\\x7E]*$");
+    for (auto const& [key, value] : custom_headers) {
         // Convert to lowercase for case-insensitive comparison
         std::string lower_key = key;
-        std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(),
-            [](unsigned char c){ return std::tolower(c); });
-        
+        std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(), [](unsigned char c) {
+            return std::tolower(c);
+        });
+
         if (kReservedHeaders.end() == kReservedHeaders.find(lower_key)) {
             // Filter out illegal header names and header values by regex
-            if (std::regex_match(key, header_name_pattern) && 
-                std::regex_match(value, header_value_pattern)) {
+            if (std::regex_match(key, header_name_pattern)
+                && std::regex_match(value, header_value_pattern))
+            {
                 m_http_headers.append(key + ": " + value);
             }
         }
