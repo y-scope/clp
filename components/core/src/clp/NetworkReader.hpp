@@ -95,6 +95,7 @@ public:
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param buffer_pool_size The required number of buffers in the buffer pool.
      * @param buffer_size The size of each buffer in the buffer pool.
+     * @param custom_headers Custom request headers passed by users.
      */
     explicit NetworkReader(
             std::string_view src_url,
@@ -244,6 +245,7 @@ private:
          * @param reader
          * @param offset Index of the byte at which to start the download.
          * @param disable_caching Whether to disable caching.
+         * @param custom_headers Custom request headers passed by users.
          */
         DownloaderThread(NetworkReader& reader, 
                         size_t offset, 

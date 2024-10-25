@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <regex>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -58,9 +60,25 @@ CurlDownloadHandler::CurlDownloadHandler(
         m_http_headers.append("Cache-Control: no-cache");
         m_http_headers.append("Pragma: no-cache");
     }
+    static const std::set<std::string> reserved_headers = {
+        "range",
+        "cache-control",
+        "pragma"
+    };
     for (const auto& [key, value] : custom_headers) {
-        if ("Range" != key && "Cache-Control" != key && "Pragma" != key) {
-            m_http_headers.append(key + ": " + value);
+        // Convert to lowercase for case-insensitive comparison
+        std::string lower_key = key;
+        std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(), ::tolower);
+        
+        if (reserved_headers.end() == reserved_headers.find(lower_key)) {
+            // Filter out illegal header names and header values by regex
+            // Can contain alphanumeric characters (A-Z, a-z, 0-9), hyphens (`-`), and underscores (`_`)
+            std::regex header_name_pattern("^[A-Za-z0-9_-]+$");
+            // Must consist of printable ASCII characters (values between 0x20 and 0x7E)
+            std::regex header_value_pattern("^[\\x20-\\x7E]*$");
+            if (std::regex_match(key, header_name_pattern) && std::regex_match(value, header_value_pattern)) {
+                m_http_headers.append(key + ": " + value);
+            }
         }
     }
     if (false == m_http_headers.is_empty()) {
