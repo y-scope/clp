@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -187,4 +188,55 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     }
     size_t pos{};
     REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
+}
+
+TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
+    std::map<std::string, std::string> custom_headers = std::map<std::string, std::string>();
+    // We use httpbin (https://httpbin.org/) to test the custom headers. This request will return a
+    // JSON object that contains the custom headers. We check if the headers are in the response.
+    const int NR_HEADERS = 10;
+    for (int i = 0; i < NR_HEADERS; i++) {
+      std::string key = "Unit-Test-Key" + std::to_string(i);
+      std::string value = "Unit-Test-Value" + std::to_string(i);
+      custom_headers[key] = value;
+    }
+    // The following three headers are determined by offset and disable_cache, which should not be
+    // overrided by custom headers.
+    custom_headers["Range"] = "bytes=100-";
+    custom_headers["Cache-Control"] = "no-cache";
+    custom_headers["Pragma"] = "no-cache";
+    // Some illegal custom header names and values, which should not be added into headers
+    custom_headers["A Space"] = "xx";
+    custom_headers["A\nNewline"] = "xx";
+    custom_headers["An@At"] = "xx";
+    custom_headers["-Start-with-Non-Alphanumeric"] = "xx";
+    custom_headers["Legal-Name1"] = "newline\n";
+    custom_headers["Legal-Name2"] = "control-char\x01"; 
+    clp::NetworkReader reader{
+        "https://httpbin.org/headers",
+        0,
+        false,
+        clp::CurlDownloadHandler::cDefaultOverallTimeout,
+        clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+        clp::NetworkReader::cDefaultBufferPoolSize,
+        clp::NetworkReader::cDefaultBufferSize,
+        custom_headers
+    };
+    auto const actual{get_content(reader)};
+    std::string actual_string(actual.begin(), actual.end());
+    REQUIRE(assert_curl_error_code(CURLE_OK, reader));
+    for (int i = 0; i < NR_HEADERS; i++) {
+        std::string field = "\"Unit-Test-Key" + std::to_string(i) + "\": \"Unit-Test-Value" 
+                          + std::to_string(i) + "\"";
+        REQUIRE(std::string::npos != actual_string.find(field));
+    }
+    REQUIRE(std::string::npos == actual_string.find("Range: bytes=100-"));
+    REQUIRE(std::string::npos == actual_string.find("Cache-Control: no-cache"));
+    REQUIRE(std::string::npos == actual_string.find("Pragma: no-cache"));
+    REQUIRE(std::string::npos == actual_string.find("A Space:"));
+    REQUIRE(std::string::npos == actual_string.find("A\nNewline:"));
+    REQUIRE(std::string::npos == actual_string.find("An@At:"));
+    REQUIRE(std::string::npos == actual_string.find("-Start-with-Non-Alphanumeric:"));
+    REQUIRE(std::string::npos == actual_string.find("Legal-Name1:"));
+    REQUIRE(std::string::npos == actual_string.find("Legal-Name2:"));
 }
