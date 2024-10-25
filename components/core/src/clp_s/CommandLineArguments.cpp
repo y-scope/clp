@@ -161,6 +161,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Target size (B) for the dictionaries and encoded messages before a new "
                     "archive is created."
             )(
+                    "min-table-size",
+                    po::value<size_t>(&m_minimum_table_size)->value_name("MIN_TABLE_SIZE")->
+                        default_value(m_minimum_table_size),
+                    "Minimum size (B) for a packed table before it gets compressed."
+            )(
                     "max-document-size",
                     po::value<size_t>(&m_max_document_size)->value_name("DOC_SIZE")->
                         default_value(m_max_document_size),

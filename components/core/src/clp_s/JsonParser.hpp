@@ -32,6 +32,7 @@ struct JsonParserOption {
     std::string archives_dir;
     size_t target_encoded_size;
     size_t max_document_size;
+    size_t min_table_size;
     int compression_level;
     bool print_archive_stats;
     bool structurize_arrays;

@@ -40,20 +40,19 @@ public:
     /**
      * Stores the columns to disk.
      * @param compressor
-     * @return the uncompressed in-memory size of the table
      */
-    [[nodiscard]] size_t store(ZstdCompressor& compressor);
-
-    /**
-     * Closes the schema writer.
-     * @return the compressed size of the schema table in bytes
-     */
-    [[nodiscard]] size_t close();
+    void store(ZstdCompressor& compressor);
 
     uint64_t get_num_messages() const { return m_num_messages; }
 
+    /**
+     * @return the uncompressed in-memory size of the data that will be written to the compressor
+     */
+    size_t get_total_uncompressed_size() const { return m_total_uncompressed_size; }
+
 private:
     uint64_t m_num_messages;
+    size_t m_total_uncompressed_size{};
 
     std::vector<BaseColumnWriter*> m_columns;
     std::vector<BaseColumnWriter*> m_unordered_columns;
