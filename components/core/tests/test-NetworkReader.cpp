@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fmt/core.h>
 #include <map>
 #include <memory>
 #include <string>
@@ -12,6 +11,7 @@
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <curl/curl.h>
+#include <fmt/core.h>
 
 #include "../src/clp/Array.hpp"
 #include "../src/clp/CurlDownloadHandler.hpp"
@@ -212,16 +212,16 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
     custom_headers["An@At"] = "xx";
     custom_headers["-Start-with-Non-Alphanumeric"] = "xx";
     custom_headers["Legal-Name1"] = R"(newline\n)";
-    custom_headers["Legal-Name2"] = R"(control-char\x01)"; 
+    custom_headers["Legal-Name2"] = R"(control-char\x01)";
     clp::NetworkReader reader{
-        "https://httpbin.org/headers",
-        0,
-        false,
-        clp::CurlDownloadHandler::cDefaultOverallTimeout,
-        clp::CurlDownloadHandler::cDefaultConnectionTimeout,
-        clp::NetworkReader::cDefaultBufferPoolSize,
-        clp::NetworkReader::cDefaultBufferSize,
-        custom_headers
+            "https://httpbin.org/headers",
+            0,
+            false,
+            clp::CurlDownloadHandler::cDefaultOverallTimeout,
+            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+            clp::NetworkReader::cDefaultBufferPoolSize,
+            clp::NetworkReader::cDefaultBufferSize,
+            custom_headers
     };
     auto const actual{get_content(reader)};
     std::string actual_string(actual.begin(), actual.end());

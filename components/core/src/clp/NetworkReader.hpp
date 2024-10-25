@@ -106,7 +106,8 @@ public:
             = CurlDownloadHandler::cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize,
-            std::map<std::string, std::string> const& custom_headers = std::map<std::string, std::string>()
+            std::map<std::string, std::string> const& custom_headers
+            = std::map<std::string, std::string>()
     );
 
     // Destructor
@@ -247,10 +248,11 @@ private:
          * @param disable_caching Whether to disable caching.
          * @param custom_headers Custom request headers passed by users.
          */
-        DownloaderThread(NetworkReader& reader, 
-                        size_t offset, 
-                        bool disable_caching,
-                        std::map<std::string, std::string> const& custom_headers
+        DownloaderThread(
+                NetworkReader& reader,
+                size_t offset,
+                bool disable_caching,
+                std::map<std::string, std::string> const& custom_headers
         )
                 : m_reader{reader},
                   m_offset{offset},
