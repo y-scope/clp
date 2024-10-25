@@ -54,6 +54,7 @@ public:
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param overall_timeout Maximum time that the transfer may take. Note that this includes
      * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param custom_headers Custom request headers passed by users.
      */
     explicit CurlDownloadHandler(
             std::shared_ptr<ErrorMsgBuf> error_msg_buf,
