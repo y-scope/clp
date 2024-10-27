@@ -6,7 +6,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -106,8 +106,8 @@ public:
             = CurlDownloadHandler::cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
             size_t buffer_size = cDefaultBufferSize,
-            std::map<std::string, std::string> const& custom_headers
-            = std::map<std::string, std::string>()
+            std::optional<std::unordered_map<std::string, std::string>> custom_headers
+            = std::nullopt
     );
 
     // Destructor
@@ -252,7 +252,7 @@ private:
                 NetworkReader& reader,
                 size_t offset,
                 bool disable_caching,
-                std::map<std::string, std::string> const& custom_headers
+                std::optional<std::unordered_map<std::string, std::string>> custom_headers
         )
                 : m_reader{reader},
                   m_offset{offset},
@@ -266,7 +266,7 @@ private:
         NetworkReader& m_reader;
         size_t m_offset{0};
         bool m_disable_caching{false};
-        std::map<std::string, std::string> m_custom_headers;
+        std::optional<std::unordered_map<std::string, std::string>> m_custom_headers;
     };
 
     /**

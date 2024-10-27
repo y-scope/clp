@@ -119,7 +119,7 @@ NetworkReader::NetworkReader(
         std::chrono::seconds connection_timeout,
         size_t buffer_pool_size,
         size_t buffer_size,
-        std::map<std::string, std::string> const& custom_headers
+        std::optional<std::unordered_map<std::string, std::string>> custom_headers
 )
         : m_src_url{src_url},
           m_offset{offset},
