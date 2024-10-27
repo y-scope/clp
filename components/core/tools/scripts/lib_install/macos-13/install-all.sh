@@ -8,4 +8,18 @@ set -u
 
 brew update
 brew install \
-    go-task
+    boost \
+    cmake \
+    coreutils \
+    fmt \
+    gcc \
+    go-task \
+    java11 \
+    libarchive \
+    lz4 \
+    mariadb-connector-c \
+    mongo-cxx-driver \
+    msgpack-cxx \
+    spdlog \
+    pkg-config \
+    zstd
