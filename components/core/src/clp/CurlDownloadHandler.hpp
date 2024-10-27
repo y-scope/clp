@@ -4,8 +4,9 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <map>
+#include <unordered_map>
 #include <memory>
+#include <optional>
 #include <string_view>
 
 #include <curl/curl.h>
@@ -66,8 +67,8 @@ public:
             bool disable_caching = false,
             std::chrono::seconds connection_timeout = cDefaultConnectionTimeout,
             std::chrono::seconds overall_timeout = cDefaultOverallTimeout,
-            std::map<std::string, std::string> const& custom_headers
-            = std::map<std::string, std::string>()
+            std::optional<std::unordered_map<std::string, std::string>> const& custom_headers
+            = std::nullopt
     );
 
     // Disable copy/move constructors/assignment operators
