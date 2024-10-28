@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -100,6 +101,23 @@ auto assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader)
     WARN(message_to_log);
     return false;
 }
+
+auto test_illegal_header(std::string const& header_name, std::string const& header_value) -> bool {
+    std::unordered_map<std::string, std::string> illegal_custom_headers;
+    illegal_custom_headers.emplace(header_name, header_value);
+    clp::NetworkReader illegal_reader{
+            "https://httpbin.org/headers",
+            0,
+            false,
+            clp::CurlDownloadHandler::cDefaultOverallTimeout,
+            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+            clp::NetworkReader::cDefaultBufferPoolSize,
+            clp::NetworkReader::cDefaultBufferSize,
+            illegal_custom_headers
+    };
+    auto const content = get_content(illegal_reader);
+    return content.empty();
+}
 }  // namespace
 
 TEST_CASE("network_reader_basic", "[NetworkReader]") {
@@ -193,28 +211,17 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
-    std::unordered_map<std::string, std::string> http_header_kv_pairs;
+    std::unordered_map<std::string, std::string> regular_custom_headers;
     // We use httpbin (https://httpbin.org/) to test the custom headers. This request will return a
     // JSON object that contains the custom headers. We check if the headers are in the response.
     constexpr int cNumRegularTestHeaders{10};
     for (size_t i{0}; i < cNumRegularTestHeaders; i++) {
-        http_header_kv_pairs.emplace(
+        regular_custom_headers.emplace(
                 fmt::format("Unit-Test-Key{}", i),
                 fmt::format("Unit-Test-Value{}", i)
         );
     }
-    // The following three headers are determined by offset and disable_cache, which should not be
-    // overrided by custom headers.
-    http_header_kv_pairs.emplace("Range", "bytes=100-");
-    http_header_kv_pairs.emplace("Cache-Control", "no-cache");
-    http_header_kv_pairs.emplace("Pragma", "no-cache");
-    http_header_kv_pairs.emplace("A Space", "xx");
-    http_header_kv_pairs.emplace("A\nNewline", "xx");
-    http_header_kv_pairs.emplace("An@At", "xx");
-    http_header_kv_pairs.emplace("-Start-with-Non-Alphanumeric", "xx");
-    http_header_kv_pairs.emplace("Legal-Name1", "newline\n");
-    http_header_kv_pairs.emplace("Legal-Name2", "control-char\x01");
-    clp::NetworkReader reader{
+    clp::NetworkReader reulgar_reader{
             "https://httpbin.org/headers",
             0,
             false,
@@ -222,23 +229,25 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
             clp::CurlDownloadHandler::cDefaultConnectionTimeout,
             clp::NetworkReader::cDefaultBufferPoolSize,
             clp::NetworkReader::cDefaultBufferSize,
-            http_header_kv_pairs
+            regular_custom_headers
     };
-    auto const content{nlohmann::json::parse(get_content(reader))};
+    auto const content{nlohmann::json::parse(get_content(reulgar_reader))};
     auto const& headers{content.at(0).at("headers")};
-    REQUIRE(assert_curl_error_code(CURLE_OK, reader));
+    REQUIRE(assert_curl_error_code(CURLE_OK, reulgar_reader));
     for (int i = 0; i < cNumRegularTestHeaders; i++) {
         REQUIRE((
                 fmt::format("Unit-Test-Value{}", i) == headers.at(fmt::format("Unit-Test-Key{}", i))
         ));
     }
-    REQUIRE((false == headers.contains("Range")));
-    REQUIRE((false == headers.contains("Cache-Control")));
-    REQUIRE((false == headers.contains("Pragma")));
-    REQUIRE((false == headers.contains("A Space")));
-    REQUIRE((false == headers.contains("A\nNewline")));
-    REQUIRE((false == headers.contains("An@At")));
-    REQUIRE((false == headers.contains("-Start-with-Non-Alphanumeric")));
-    REQUIRE((false == headers.contains("Legal-Name1")));
-    REQUIRE((false == headers.contains("Legal-Name2")));
+    // The following three headers are determined by offset and disable_cache, which should not be
+    // overrided by custom headers.
+    REQUIRE(test_illegal_header("Range", "bytes=100-"));
+    REQUIRE(test_illegal_header("Cache-Control", "no-cache"));
+    REQUIRE(test_illegal_header("Pragma", "no-cache"));
+    REQUIRE(test_illegal_header("A Space", "xx"));
+    REQUIRE(test_illegal_header("A\nNewline", "xx"));
+    REQUIRE(test_illegal_header("An@At", "xx"));
+    REQUIRE(test_illegal_header("-Start-with-Non-Alphanumeric", "xx"));
+    REQUIRE(test_illegal_header("Legal-Name1", "newline\n"));
+    REQUIRE(test_illegal_header("Legal-Name2", "control-char\x01"));
 }
