@@ -91,7 +91,12 @@ CurlDownloadHandler::CurlDownloadHandler(
                             __FILE__,
                             __LINE__,
                             CURLE_BAD_FUNCTION_ARGUMENT,
-                            "curl_download_handler_init failed."
+                            fmt::format(
+                                    "curl_download_handler_init failed due to illegal header: {}: "
+                                    "{}.",
+                                    key,
+                                    value
+                            )
                     );
                 }
             } else {
@@ -100,7 +105,12 @@ CurlDownloadHandler::CurlDownloadHandler(
                         __FILE__,
                         __LINE__,
                         CURLE_BAD_FUNCTION_ARGUMENT,
-                        "curl_download_handler_init failed."
+                        fmt::format(
+                                "curl_download_handler_init failed due to reserved header is being "
+                                "modified: {}: {}.",
+                                key,
+                                value
+                        )
                 );
             }
         }
