@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <iostream>
 #include <memory>
 #include <regex>
 #include <string>
@@ -64,7 +65,7 @@ CurlDownloadHandler::CurlDownloadHandler(
         constexpr std::array<std::string_view, 3> cReservedHeaders
                 = {"range", "cache-control", "pragma"};
         // RFC 7230 token pattern: one or more tchars
-        std::regex const header_name_pattern("^[!#$%&'*+.^_`|~0-9a-zA-Z-]+$");
+        std::regex const header_name_pattern("^(?![!#$%&'*+.^_`|~-])[!#$%&'*+.^_`|~0-9a-zA-Z-]+$");
         // Must consist of printable ASCII characters (values between 0x20 and 0x7E)
         std::regex const header_value_pattern("^[\\x20-\\x7E]*$");
         for (auto const& [key, value] : custom_headers.value()) {
@@ -85,7 +86,23 @@ CurlDownloadHandler::CurlDownloadHandler(
                     && std::regex_match(value, header_value_pattern))
                 {
                     m_http_headers.append(fmt::format("{}: {}", key, value));
+                } else {
+                    throw CurlOperationFailed(
+                            ErrorCode_Failure,
+                            __FILE__,
+                            __LINE__,
+                            CURLE_ABORTED_BY_CALLBACK,
+                            "curl_download_handler_init failed."
+                    );
                 }
+            } else {
+                throw CurlOperationFailed(
+                        ErrorCode_Failure,
+                        __FILE__,
+                        __LINE__,
+                        CURLE_ABORTED_BY_CALLBACK,
+                        "curl_download_handler_init failed."
+                );
             }
         }
     }
