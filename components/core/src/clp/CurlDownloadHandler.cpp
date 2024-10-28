@@ -3,7 +3,6 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <iostream>
 #include <memory>
 #include <regex>
 #include <string>
@@ -91,7 +90,7 @@ CurlDownloadHandler::CurlDownloadHandler(
                             ErrorCode_Failure,
                             __FILE__,
                             __LINE__,
-                            CURLE_ABORTED_BY_CALLBACK,
+                            CURLE_BAD_FUNCTION_ARGUMENT,
                             "curl_download_handler_init failed."
                     );
                 }
@@ -100,7 +99,7 @@ CurlDownloadHandler::CurlDownloadHandler(
                         ErrorCode_Failure,
                         __FILE__,
                         __LINE__,
-                        CURLE_ABORTED_BY_CALLBACK,
+                        CURLE_BAD_FUNCTION_ARGUMENT,
                         "curl_download_handler_init failed."
                 );
             }
