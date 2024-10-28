@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -116,7 +115,7 @@ auto test_illegal_header(std::string const& header_name, std::string const& head
             illegal_custom_headers
     };
     auto const content = get_content(illegal_reader);
-    return content.empty();
+    return assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, illegal_reader) && content.empty();
 }
 }  // namespace
 
@@ -221,7 +220,7 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
                 fmt::format("Unit-Test-Value{}", i)
         );
     }
-    clp::NetworkReader reulgar_reader{
+    clp::NetworkReader regular_reader{
             "https://httpbin.org/headers",
             0,
             false,
@@ -231,23 +230,25 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
             clp::NetworkReader::cDefaultBufferSize,
             regular_custom_headers
     };
-    auto const content{nlohmann::json::parse(get_content(reulgar_reader))};
+    auto const content{nlohmann::json::parse(get_content(regular_reader))};
     auto const& headers{content.at(0).at("headers")};
-    REQUIRE(assert_curl_error_code(CURLE_OK, reulgar_reader));
+    REQUIRE(assert_curl_error_code(CURLE_OK, regular_reader));
     for (int i = 0; i < cNumRegularTestHeaders; i++) {
         REQUIRE((
                 fmt::format("Unit-Test-Value{}", i) == headers.at(fmt::format("Unit-Test-Key{}", i))
         ));
     }
-    // The following three headers are determined by offset and disable_cache, which should not be
+    // The following headers are determined by offset and disable_cache, which should not be
     // overrided by custom headers.
     REQUIRE(test_illegal_header("Range", "bytes=100-"));
     REQUIRE(test_illegal_header("Cache-Control", "no-cache"));
     REQUIRE(test_illegal_header("Pragma", "no-cache"));
+    // The following headers contain illegal header names, the requests should be rejected.
     REQUIRE(test_illegal_header("A Space", "xx"));
     REQUIRE(test_illegal_header("A\nNewline", "xx"));
     REQUIRE(test_illegal_header("An@At", "xx"));
     REQUIRE(test_illegal_header("-Start-with-Non-Alphanumeric", "xx"));
+    // The following headers contain illegal header values, the requests should be rejected.
     REQUIRE(test_illegal_header("Legal-Name1", "newline\n"));
     REQUIRE(test_illegal_header("Legal-Name2", "control-char\x01"));
 }
