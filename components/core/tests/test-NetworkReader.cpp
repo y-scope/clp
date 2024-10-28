@@ -2,11 +2,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <unordered_map>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -199,8 +199,8 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
     constexpr int cNumRegularTestHeaders{10};
     for (size_t i{0}; i < cNumRegularTestHeaders; i++) {
         http_header_kv_pairs.emplace(
-            fmt::format("Unit-Test-Key{}", i),
-            fmt::format("Unit-Test-Value{}", i)
+                fmt::format("Unit-Test-Key{}", i),
+                fmt::format("Unit-Test-Value{}", i)
         );
     }
     // The following three headers are determined by offset and disable_cache, which should not be
@@ -229,7 +229,7 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
     REQUIRE(assert_curl_error_code(CURLE_OK, reader));
     for (int i = 0; i < cNumRegularTestHeaders; i++) {
         REQUIRE((
-            fmt::format("Unit-Test-Value{}", i) == headers.at(fmt::format("Unit-Test-Key{}", i))
+                fmt::format("Unit-Test-Value{}", i) == headers.at(fmt::format("Unit-Test-Key{}", i))
         ));
     }
     REQUIRE((false == headers.contains("Range")));
