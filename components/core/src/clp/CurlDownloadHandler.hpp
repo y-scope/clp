@@ -4,10 +4,10 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <unordered_map>
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 
 #include <curl/curl.h>
 
@@ -56,6 +56,7 @@ public:
      * @param overall_timeout Maximum time that the transfer may take. Note that this includes
      * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
      * @param custom_headers Custom request headers passed by users.
+     * @throw CurlOperationFailed if an error occurs.
      */
     explicit CurlDownloadHandler(
             std::shared_ptr<ErrorMsgBuf> error_msg_buf,

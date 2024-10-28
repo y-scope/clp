@@ -3,7 +3,6 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <fmt/core.h>
 #include <memory>
 #include <regex>
 #include <string>
@@ -11,6 +10,7 @@
 #include <utility>
 
 #include <curl/curl.h>
+#include <fmt/core.h>
 
 namespace clp {
 CurlDownloadHandler::CurlDownloadHandler(
@@ -61,7 +61,8 @@ CurlDownloadHandler::CurlDownloadHandler(
         m_http_headers.append("Pragma: no-cache");
     }
     if (custom_headers.has_value()) {
-        constexpr std::array<std::string_view, 3> cReservedHeaders = {"range", "cache-control", "pragma"};
+        constexpr std::array<std::string_view, 3> cReservedHeaders
+                = {"range", "cache-control", "pragma"};
         // RFC 7230 token pattern: one or more tchars
         std::regex const header_name_pattern("^[!#$%&'*+.^_`|~0-9a-zA-Z-]+$");
         // Must consist of printable ASCII characters (values between 0x20 and 0x7E)
@@ -69,11 +70,16 @@ CurlDownloadHandler::CurlDownloadHandler(
         for (auto const& [key, value] : custom_headers.value()) {
             // Convert to lowercase for case-insensitive comparison
             std::string lower_key = key;
-            std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(), [](unsigned char c) {
-                return std::tolower(c);
-            });
+            std::transform(
+                    lower_key.begin(),
+                    lower_key.end(),
+                    lower_key.begin(),
+                    [](unsigned char c) { return std::tolower(c); }
+            );
 
-            if (cReservedHeaders.end() == std::find(cReservedHeaders.begin(), cReservedHeaders.end(), lower_key)) {
+            if (cReservedHeaders.end()
+                == std::find(cReservedHeaders.begin(), cReservedHeaders.end(), lower_key))
+            {
                 // Filter out illegal header names and header values by regex
                 if (std::regex_match(key, header_name_pattern)
                     && std::regex_match(value, header_value_pattern))
