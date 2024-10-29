@@ -56,10 +56,10 @@ void ArchiveWriter::close() {
         std::vector<ArchiveFileInfo> files{
                 {constants::cArchiveSchemaTreeFile, schema_tree_compressed_size},
                 {constants::cArchiveSchemaMapFile, schema_map_compressed_size},
+                {constants::cArchiveTableMetadataFile, table_metadata_compressed_size},
                 {constants::cArchiveVarDictFile, var_dict_compressed_size},
                 {constants::cArchiveLogDictFile, log_dict_compressed_size},
                 {constants::cArchiveArrayDictFile, array_dict_compressed_size},
-                {constants::cArchiveTableMetadataFile, table_metadata_compressed_size},
                 {constants::cArchiveTablesFile, table_compressed_size}
         };
         uint64_t offset = 0;
@@ -68,7 +68,7 @@ void ArchiveWriter::close() {
             file.o = offset;
             offset += original_size;
         }
-        write_single_file_archive(files, timestamp_dict_compressed_size);
+        write_single_file_archive(files);
     } else {
         m_compressed_size = var_dict_compressed_size + log_dict_compressed_size
                             + array_dict_compressed_size + timestamp_dict_compressed_size
@@ -92,15 +92,12 @@ void ArchiveWriter::close() {
     m_compressed_size = 0UL;
 }
 
-void ArchiveWriter::write_single_file_archive(
-        std::vector<ArchiveFileInfo> const& files,
-        size_t timestamp_dict_compressed_size
-) {
+void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files) {
     std::string archive_path = m_archive_path + constants::cArchiveFile;
     FileWriter archive_writer;
     archive_writer.open(archive_path, FileWriter::OpenMode::CreateForWriting);
 
-    write_archive_metadata(archive_writer, files, timestamp_dict_compressed_size);
+    write_archive_metadata(archive_writer, files);
     size_t metadata_section_size = archive_writer.get_pos() - sizeof(ArchiveHeader);
     write_archive_files(archive_writer, files);
     m_compressed_size = archive_writer.get_pos();
@@ -111,14 +108,13 @@ void ArchiveWriter::write_single_file_archive(
 
 void ArchiveWriter::write_archive_metadata(
         FileWriter& archive_writer,
-        std::vector<ArchiveFileInfo> const& files,
-        size_t timestamp_dict_compressed_size
+        std::vector<ArchiveFileInfo> const& files
 ) {
     archive_writer.seek_from_begin(sizeof(ArchiveHeader));
 
     ZstdCompressor compressor;
     compressor.open(archive_writer, m_compression_level);
-    compressor.write_numeric_value(3);  // Number of packets
+    compressor.write_numeric_value(static_cast<uint8_t>(3U));  // Number of packets
 
     // Write archive info
     ArchiveInfoPacket archive_info{.num_segments = 1};
@@ -126,35 +122,41 @@ void ArchiveWriter::write_archive_metadata(
     msgpack::pack(msgpack_buffer, archive_info);
     std::string archive_info_str = msgpack_buffer.str();
     compressor.write_numeric_value(ArchiveMetadataPacketType::ArchiveInfo);
-    compressor.write_numeric_value(archive_info_str.size());
+    compressor.write_numeric_value(static_cast<uint32_t>(archive_info_str.size()));
     compressor.write_string(archive_info_str);
 
     // Write archive file info
     ArchiveFileInfoPacket archive_file_info{.files{files}};
-    msgpack_buffer.clear();
+    msgpack_buffer = std::stringstream{};
     msgpack::pack(msgpack_buffer, archive_file_info);
     std::string archive_file_info_str = msgpack_buffer.str();
     compressor.write_numeric_value(ArchiveMetadataPacketType::ArchiveFileInfo);
-    compressor.write_numeric_value(archive_file_info_str.size());
+    compressor.write_numeric_value(static_cast<uint32_t>(archive_file_info_str.size()));
     compressor.write_string(archive_file_info_str);
 
     // Write timestamp dictionary
     compressor.write_numeric_value(ArchiveMetadataPacketType::TimestampDictionary);
-    compressor.write_numeric_value(timestamp_dict_compressed_size);
     std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
     FileReader timestamp_dict_reader;
+    ZstdDecompressor timestamp_dict_decompressor;
     timestamp_dict_reader.open(timestamp_dict_path);
+    timestamp_dict_decompressor.open(timestamp_dict_reader, cReadBlockSize);
+
+    std::string decompressed_buffer;
     char read_buffer[cReadBlockSize];
     while (true) {
         size_t num_bytes_read{0};
         ErrorCode error_code
-                = timestamp_dict_reader.try_read(read_buffer, cReadBlockSize, num_bytes_read);
+                = timestamp_dict_decompressor.try_read(read_buffer, cReadBlockSize, num_bytes_read);
         if (ErrorCodeSuccess != error_code) {
             break;
         }
-        compressor.write(read_buffer, num_bytes_read);
+        decompressed_buffer.append(read_buffer, num_bytes_read);
     }
+    timestamp_dict_decompressor.close();
     timestamp_dict_reader.close();
+    compressor.write_numeric_value(static_cast<uint32_t>(decompressed_buffer.size()));
+    compressor.write(decompressed_buffer.data(), decompressed_buffer.size());
     std::filesystem::remove(timestamp_dict_path);
     compressor.close();
 }
@@ -194,7 +196,7 @@ void ArchiveWriter::write_archive_header(FileWriter& archive_writer, size_t meta
             .compression_type = static_cast<uint16_t>(ArchiveCompressionType::Zstd),
             .padding = 0
     };
-    std::memcpy(&header.magic_number, "ARCHIVES", sizeof(header.magic_number));
+    std::memcpy(&header.magic_number, cStructuredSFAMagicNumber, sizeof(header.magic_number));
     archive_writer.seek_from_begin(0);
     archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }

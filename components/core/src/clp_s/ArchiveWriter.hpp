@@ -143,24 +143,16 @@ private:
     /**
      * Writes the archive to a single file
      * @param files
-     * @param timestamp_dict_compressed_size
      */
-    void write_single_file_archive(
-            std::vector<ArchiveFileInfo> const& files,
-            size_t timestamp_dict_compressed_size
-    );
+    void write_single_file_archive(std::vector<ArchiveFileInfo> const& files);
 
     /**
      * Writes the metadata section of the single file archive
      * @param archive_writer
      * @param files
-     * @param timestamp_dict_compressed_size
      */
-    void write_archive_metadata(
-            FileWriter& archive_writer,
-            std::vector<ArchiveFileInfo> const& files,
-            size_t timestamp_dict_compressed_size
-    );
+    void
+    write_archive_metadata(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files);
 
     /**
      * Writes the file section of the single file archive
