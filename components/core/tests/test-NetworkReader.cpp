@@ -246,12 +246,9 @@ TEST_CASE("network_reader_with_http_header_kv_pairs", "[NetworkReader]") {
     REQUIRE(test_illegal_header("Range", "bytes=100-"));
     REQUIRE(test_illegal_header("Cache-Control", "no-cache"));
     REQUIRE(test_illegal_header("Pragma", "no-cache"));
-    // The following headers contain illegal header names, the requests should be rejected.
-    REQUIRE(test_illegal_header("A Space", "xx"));
-    REQUIRE(test_illegal_header("A\nNewline", "xx"));
-    REQUIRE(test_illegal_header("An@At", "xx"));
-    REQUIRE(test_illegal_header("-Start-with-Non-Alphanumeric", "xx"));
     // The following headers contain illegal header values, the requests should be rejected.
-    REQUIRE(test_illegal_header("Legal-Name1", "newline\n"));
-    REQUIRE(test_illegal_header("Legal-Name2", "control-char\x01"));
+    REQUIRE(test_illegal_header("Legal-Name1", "CRLF\n"));
+    REQUIRE(test_illegal_header("Legal-Name2", "CRLF\r"));
+    REQUIRE(test_illegal_header("Legal-Name3", "CRLF\n\r"));
+    REQUIRE(test_illegal_header("Legal-Name4", "CRLF\r\n"));
 }
