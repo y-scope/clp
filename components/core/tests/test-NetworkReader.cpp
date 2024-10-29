@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -231,6 +232,7 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
             regular_custom_headers
     };
     auto const content{nlohmann::json::parse(get_content(regular_reader))};
+    std::cout << content << std::endl;
     auto const& headers{content.at(0).at("headers")};
     REQUIRE(assert_curl_error_code(CURLE_OK, regular_reader));
     for (int i = 0; i < cNumRegularTestHeaders; i++) {
