@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -103,8 +102,8 @@ auto assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader)
 }
 
 auto test_illegal_header(std::string const& header_name, std::string const& header_value) -> bool {
-    std::unordered_map<std::string, std::string> illegal_custom_headers;
-    illegal_custom_headers.emplace(header_name, header_value);
+    std::unordered_map<std::string, std::string> illegal_http_header_kv_pairs;
+    illegal_http_header_kv_pairs.emplace(header_name, header_value);
     clp::NetworkReader illegal_reader{
             "https://httpbin.org/headers",
             0,
@@ -113,7 +112,7 @@ auto test_illegal_header(std::string const& header_name, std::string const& head
             clp::CurlDownloadHandler::cDefaultConnectionTimeout,
             clp::NetworkReader::cDefaultBufferPoolSize,
             clp::NetworkReader::cDefaultBufferSize,
-            illegal_custom_headers
+            illegal_http_header_kv_pairs
     };
     auto const content = get_content(illegal_reader);
     return assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, illegal_reader) && content.empty();
@@ -210,13 +209,13 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
 }
 
-TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
-    std::unordered_map<std::string, std::string> regular_custom_headers;
+TEST_CASE("network_reader_with_http_header_kv_pairs", "[NetworkReader]") {
+    std::unordered_map<std::string, std::string> regular_http_header_kv_pairs;
     // We use httpbin (https://httpbin.org/) to test the custom headers. This request will return a
     // JSON object that contains the custom headers. We check if the headers are in the response.
     constexpr int cNumRegularTestHeaders{10};
     for (size_t i{0}; i < cNumRegularTestHeaders; i++) {
-        regular_custom_headers.emplace(
+        regular_http_header_kv_pairs.emplace(
                 fmt::format("Unit-Test-Key{}", i),
                 fmt::format("Unit-Test-Value{}", i)
         );
@@ -229,13 +228,12 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
             clp::CurlDownloadHandler::cDefaultConnectionTimeout,
             clp::NetworkReader::cDefaultBufferPoolSize,
             clp::NetworkReader::cDefaultBufferSize,
-            regular_custom_headers
+            regular_http_header_kv_pairs
     };
     auto content{nlohmann::json::parse(get_content(regular_reader))};
     if (content.is_array() && 1 == content.size()) {
         content = content.at(0);
     }
-    std::cout << content << std::endl;
     auto const& headers{content.at("headers")};
     REQUIRE(assert_curl_error_code(CURLE_OK, regular_reader));
     for (int i = 0; i < cNumRegularTestHeaders; i++) {
