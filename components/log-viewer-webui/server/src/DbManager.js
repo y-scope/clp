@@ -2,7 +2,7 @@ import fastifyPlugin from "fastify-plugin";
 
 import fastifyMongo from "@fastify/mongodb";
 import fastifyMysql from "@fastify/mysql";
-import msgpack from "@msgpack/msgpack";
+import {encode as msgpackEncode} from "@msgpack/msgpack";
 
 import {sleep} from "./utils.js";
 
@@ -113,7 +113,7 @@ class DbManager {
                 `INSERT INTO ${this.#queryJobsTableName} (job_config, type)
              VALUES (?, ?)`,
                 [
-                    Buffer.from(msgpack.encode(jobConfig)),
+                    Buffer.from(msgpackEncode(jobConfig)),
                     QUERY_JOB_TYPE.EXTRACT_IR,
                 ]
             );

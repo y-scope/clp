@@ -1,16 +1,22 @@
 version: "3"
 
 includes:
+  deps: "deps-tasks.yml"
   docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
   utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
 
 vars:
-  # Paths
+  # Source paths
+  G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
+  G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
+  G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
+  G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/log-viewer-webui"
+
+  # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
   G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
-  G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/log-viewer-webui"
   G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
   G_NODEJS_14_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-14"
   G_NODEJS_14_BIN_DIR: "{{.G_NODEJS_14_BUILD_DIR}}/bin"
@@ -19,6 +25,9 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
+
+  # Taskfile paths
+  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/taskfiles/utils.yml"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
@@ -171,7 +180,7 @@ tasks:
     vars:
       SRC_DIR: "components/core"
     sources:
-      - "{{.G_BUILD_DIR}}/core-submodules.md5"
+      - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
       - "{{.SRC_DIR}}/cmake/**/*"
       - "{{.SRC_DIR}}/CMakeLists.txt"
       - "{{.SRC_DIR}}/src/**/*"
@@ -183,7 +192,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-    deps: ["core-submodules", "init"]
+    deps: ["deps:core", "init"]
     cmds:
       - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
       - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
@@ -317,31 +326,6 @@ tasks:
           NODEJS_VERSION: "v14.21.3"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
-  core-submodules:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "submodules"
-    sources:
-      - "{{.TASKFILE}}"
-      - ".gitmodules"
-      - "tools/scripts/deps-download/**/*"
-    dir: "components/core"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-    cmds:
-      - "tools/scripts/deps-download/download-all.sh"
-      # This command must be last
-      - task: "utils:compute-checksum"
-        vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
-
   download-and-extract-tar:
     internal: true
     label: "{{.TASK}}-{{.TAR_NAME}}"
@@ -399,7 +383,7 @@ tasks:
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
     sources:
-      - "{{.G_BUILD_DIR}}/log-viewer-webui-submodules.md5"
+      - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
       - "client/package.json"
@@ -418,7 +402,7 @@ tasks:
       - "{{.PACKAGE_CHECKSUM_FILE}}"
       - "{{.SERVER_CHECKSUM_FILE}}"
     deps:
-      - "log-viewer-webui-submodules"
+      - "deps:log-viewer"
       - "nodejs-22"
       - task: "utils:validate-checksum"
         vars:
@@ -468,30 +452,6 @@ tasks:
         "{{.PACKAGE_CHECKSUM_FILE}}"
         "{{.SERVER_CHECKSUM_FILE}}"
         > "{{.CHECKSUM_FILE}}"
-
-  log-viewer-webui-submodules:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "yscope-log-viewer"
-    sources:
-      - "{{.TASKFILE}}"
-      - ".gitmodules"
-    dir: "components/log-viewer-webui"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-    cmds:
-      - "git submodule update --init --recursive yscope-log-viewer"
-      # This command must be last
-      - task: "utils:compute-checksum"
-        vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
 
   meteor:
     vars:

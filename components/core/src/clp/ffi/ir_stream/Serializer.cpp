@@ -19,7 +19,6 @@
 #include "../../type_utils.hpp"
 #include "../encoding_methods.hpp"
 #include "../SchemaTree.hpp"
-#include "../SchemaTreeNode.hpp"
 #include "encoding_methods.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
@@ -44,7 +43,7 @@ public:
     using Child = msgpack::object_kv;
 
     // Constructors
-    MsgpackMapIterator(SchemaTreeNode::id_t schema_tree_node_id, span<Child> children)
+    MsgpackMapIterator(SchemaTree::Node::id_t schema_tree_node_id, span<Child> children)
             : m_schema_tree_node_id{schema_tree_node_id},
               m_children{children},
               m_curr_child_it{m_children.begin()} {}
@@ -53,7 +52,7 @@ public:
     /**
      * @return This map's ID in the schema tree.
      */
-    [[nodiscard]] auto get_schema_tree_node_id() const -> SchemaTreeNode::id_t {
+    [[nodiscard]] auto get_schema_tree_node_id() const -> SchemaTree::Node::id_t {
         return m_schema_tree_node_id;
     }
 
@@ -71,7 +70,7 @@ public:
     [[nodiscard]] auto get_next_child() -> Child const& { return *(m_curr_child_it++); }
 
 private:
-    SchemaTreeNode::id_t m_schema_tree_node_id;
+    SchemaTree::Node::id_t m_schema_tree_node_id;
     span<Child> m_children;
     span<Child>::iterator m_curr_child_it;
 };
@@ -83,7 +82,7 @@ private:
  * @return std::nullopt if the value doesn't match any of the supported schema-tree node types.
  */
 [[nodiscard]] auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
-) -> optional<SchemaTreeNode::Type>;
+) -> optional<SchemaTree::Node::Type>;
 
 /**
  * Serializes an empty object.
@@ -147,29 +146,29 @@ template <typename encoded_variable_t>
 ) -> bool;
 
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
-) -> optional<SchemaTreeNode::Type> {
-    optional<SchemaTreeNode::Type> ret_val;
+) -> optional<SchemaTree::Node::Type> {
+    optional<SchemaTree::Node::Type> ret_val;
     switch (val.type) {
         case msgpack::type::POSITIVE_INTEGER:
         case msgpack::type::NEGATIVE_INTEGER:
-            ret_val.emplace(SchemaTreeNode::Type::Int);
+            ret_val.emplace(SchemaTree::Node::Type::Int);
             break;
         case msgpack::type::FLOAT32:
         case msgpack::type::FLOAT64:
-            ret_val.emplace(SchemaTreeNode::Type::Float);
+            ret_val.emplace(SchemaTree::Node::Type::Float);
             break;
         case msgpack::type::STR:
-            ret_val.emplace(SchemaTreeNode::Type::Str);
+            ret_val.emplace(SchemaTree::Node::Type::Str);
             break;
         case msgpack::type::BOOLEAN:
-            ret_val.emplace(SchemaTreeNode::Type::Bool);
+            ret_val.emplace(SchemaTree::Node::Type::Bool);
             break;
         case msgpack::type::NIL:
         case msgpack::type::MAP:
-            ret_val.emplace(SchemaTreeNode::Type::Obj);
+            ret_val.emplace(SchemaTree::Node::Type::Obj);
             break;
         case msgpack::type::ARRAY:
-            ret_val.emplace(SchemaTreeNode::Type::UnstructuredArray);
+            ret_val.emplace(SchemaTree::Node::Type::UnstructuredArray);
             break;
         default:
             return std::nullopt;
@@ -381,22 +380,22 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
 ) -> bool {
     switch (locator.get_type()) {
-        case SchemaTreeNode::Type::Int:
+        case SchemaTree::Node::Type::Int:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeInt);
             break;
-        case SchemaTreeNode::Type::Float:
+        case SchemaTree::Node::Type::Float:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeFloat);
             break;
-        case SchemaTreeNode::Type::Bool:
+        case SchemaTree::Node::Type::Bool:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeBool);
             break;
-        case SchemaTreeNode::Type::Str:
+        case SchemaTree::Node::Type::Str:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeStr);
             break;
-        case SchemaTreeNode::Type::UnstructuredArray:
+        case SchemaTree::Node::Type::UnstructuredArray:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeUnstructuredArray);
             break;
-        case SchemaTreeNode::Type::Obj:
+        case SchemaTree::Node::Type::Obj:
             m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeObj);
             break;
         default:
@@ -404,15 +403,16 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
             return false;
     }
 
-    auto const parent_id{locator.get_parent_id()};
-    if (parent_id <= UINT8_MAX) {
-        m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUByte);
-        m_schema_tree_node_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(parent_id)));
-    } else if (parent_id <= UINT16_MAX) {
-        m_schema_tree_node_buf.push_back(cProtocol::Payload::SchemaTreeNodeParentIdUShort);
-        serialize_int(static_cast<uint16_t>(parent_id), m_schema_tree_node_buf);
-    } else {
-        // Out of range
+    if (false
+        == encode_and_serialize_schema_tree_node_id<
+                false,
+                cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
+                cProtocol::Payload::EncodedSchemaTreeNodeParentIdShort,
+                cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt>(
+                locator.get_parent_id(),
+                m_schema_tree_node_buf
+        ))
+    {
         return false;
     }
 
@@ -420,26 +420,21 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 }
 
 template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id) -> bool {
-    if (id <= UINT8_MAX) {
-        m_key_group_buf.push_back(cProtocol::Payload::KeyIdUByte);
-        m_key_group_buf.push_back(bit_cast<int8_t>(static_cast<uint8_t>(id)));
-    } else if (id <= UINT16_MAX) {
-        m_key_group_buf.push_back(cProtocol::Payload::KeyIdUShort);
-        serialize_int(static_cast<uint16_t>(id), m_key_group_buf);
-    } else {
-        return false;
-    }
-    return true;
+auto Serializer<encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id) -> bool {
+    return encode_and_serialize_schema_tree_node_id<
+            false,
+            cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+            cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+            cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(id, m_key_group_buf);
 }
 
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_val(
         msgpack::object const& val,
-        SchemaTreeNode::Type schema_tree_node_type
+        SchemaTree::Node::Type schema_tree_node_type
 ) -> bool {
     switch (schema_tree_node_type) {
-        case SchemaTreeNode::Type::Int:
+        case SchemaTree::Node::Type::Int:
             if (msgpack::type::POSITIVE_INTEGER == val.type
                 && static_cast<uint64_t>(INT64_MAX) < val.as<uint64_t>())
             {
@@ -448,15 +443,15 @@ auto Serializer<encoded_variable_t>::serialize_val(
             serialize_value_int(val.as<int64_t>(), m_value_group_buf);
             break;
 
-        case SchemaTreeNode::Type::Float:
+        case SchemaTree::Node::Type::Float:
             serialize_value_float(val.as<double>(), m_value_group_buf);
             break;
 
-        case SchemaTreeNode::Type::Bool:
+        case SchemaTree::Node::Type::Bool:
             serialize_value_bool(val.as<bool>(), m_value_group_buf);
             break;
 
-        case SchemaTreeNode::Type::Str:
+        case SchemaTree::Node::Type::Str:
             if (false
                 == serialize_value_string<encoded_variable_t>(
                         val.as<string_view>(),
@@ -468,14 +463,14 @@ auto Serializer<encoded_variable_t>::serialize_val(
             }
             break;
 
-        case SchemaTreeNode::Type::Obj:
+        case SchemaTree::Node::Type::Obj:
             if (msgpack::type::NIL != val.type) {
                 return false;
             }
             serialize_value_null(m_value_group_buf);
             break;
 
-        case SchemaTreeNode::Type::UnstructuredArray:
+        case SchemaTree::Node::Type::UnstructuredArray:
             if (false
                 == serialize_value_array<encoded_variable_t>(val, m_logtype_buf, m_value_group_buf))
             {
@@ -516,17 +511,17 @@ template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_no
         SchemaTree::NodeLocator const& locator
 ) -> bool;
 
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id
 ) -> bool;
-template auto Serializer<four_byte_encoded_variable_t>::serialize_key(SchemaTreeNode::id_t id
+template auto Serializer<four_byte_encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id
 ) -> bool;
 
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_val(
         msgpack::object const& val,
-        SchemaTreeNode::Type schema_tree_node_type
+        SchemaTree::Node::Type schema_tree_node_type
 ) -> bool;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_val(
         msgpack::object const& val,
-        SchemaTreeNode::Type schema_tree_node_type
+        SchemaTree::Node::Type schema_tree_node_type
 ) -> bool;
 }  // namespace clp::ffi::ir_stream

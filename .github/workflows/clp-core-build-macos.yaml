@@ -8,9 +8,12 @@ on:
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
+      - "deps-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
   push:
     paths:
       - ".github/workflows/clp-core-build-macos.yaml"
@@ -18,9 +21,12 @@ on:
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.sh"
+      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
+      - "deps-tasks.yml"
+      - "Taskfile.yml"
+      - "tools/scripts/deps-download/**"
   workflow_dispatch:
 
 concurrency:
@@ -30,7 +36,11 @@ concurrency:
 
 jobs:
   build-macos:
-    runs-on: "macos-12"
+    strategy:
+      matrix:
+        runner: ["macos-13", "macos-14"]
+        use_shared_libs: [true, false]
+    runs-on: "${{matrix.runner}}"
     steps:
       - uses: "actions/checkout@v4"
         with:
@@ -40,20 +50,28 @@ jobs:
       - name: "Remove preinstalled binaries which conflict with brew's installs"
         run: |
           rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/go*
           rm -f /usr/local/bin/idle3*
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
 
       - name: "Install dependencies"
-        run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
+        run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
-      - name: "Download source dependencies"
+      - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
-        working-directory: "./components/core"
-        run: "./tools/scripts/deps-download/download-all.sh"
+
+      - run: "task deps:core"
+        shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
         shell: "bash"
         working-directory: "./components/core"
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
-        run: "./tools/scripts/utils/build-and-run-unit-tests.sh . build ~[Stopwatch]"
+        run: >-
+          python3 ./tools/scripts/utils/build-and-run-unit-tests.py
+          ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+          --source-dir .
+          --build-dir build
+          --num-jobs $(getconf _NPROCESSORS_ONLN)
+          --test-spec "~[Stopwatch]"

@@ -36,6 +36,7 @@ const QueryStatus = () => {
 
             console.error(error);
             setErrorMsg(error);
+
             return;
         }
 
@@ -51,7 +52,7 @@ const QueryStatus = () => {
 
                 const innerLogEventNum = logEventIdx - data.begin_msg_ix + 1;
                 window.location = `/log-viewer/index.html?filePath=/ir/${data.path}` +
-                    `#logEventIdx=${innerLogEventNum}`;
+                    `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e) => {
                 let msg = "Unknown error.";

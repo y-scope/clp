@@ -161,6 +161,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Target size (B) for the dictionaries and encoded messages before a new "
                     "archive is created."
             )(
+                    "min-table-size",
+                    po::value<size_t>(&m_minimum_table_size)->value_name("MIN_TABLE_SIZE")->
+                        default_value(m_minimum_table_size),
+                    "Minimum size (B) for a packed table before it gets compressed."
+            )(
                     "max-document-size",
                     po::value<size_t>(&m_max_document_size)->value_name("DOC_SIZE")->
                         default_value(m_max_document_size),
@@ -425,6 +430,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "archive-id",
                 po::value<std::string>(&m_archive_id)->value_name("ID"),
                 "Limit search to the archive with the given ID"
+            )(
+                "projection",
+                po::value<std::vector<std::string>>(&m_projection_columns)
+                    ->multitoken()
+                    ->value_name("COLUMN_A COLUMN_B ..."),
+                "Project only the given set of columns for matching results. This option must be"
+                " specified after all positional options. Values that are objects or structured"
+                " arrays are currently unsupported."
             );
             // clang-format on
             search_options.add(match_options);
