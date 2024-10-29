@@ -98,7 +98,7 @@ the relevant paths on your machine.
 :hidden:
 
 centos-stream-9-deps-install
-macos12-deps-install
+macos-deps-install
 ubuntu-focal-deps-install
 ubuntu-jammy-deps-install
 regex-utils
