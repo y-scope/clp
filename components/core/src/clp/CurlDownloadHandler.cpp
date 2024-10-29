@@ -23,7 +23,7 @@ CurlDownloadHandler::CurlDownloadHandler(
         bool disable_caching,
         std::chrono::seconds connection_timeout,
         std::chrono::seconds overall_timeout,
-        std::optional<std::unordered_map<std::string, std::string>> const& custom_headers
+        std::optional<std::unordered_map<std::string, std::string>> const& http_header_kv_pairs
 )
         : m_error_msg_buf{std::move(error_msg_buf)} {
     if (nullptr != m_error_msg_buf) {
@@ -60,14 +60,14 @@ CurlDownloadHandler::CurlDownloadHandler(
         m_http_headers.append("Cache-Control: no-cache");
         m_http_headers.append("Pragma: no-cache");
     }
-    if (custom_headers.has_value()) {
+    if (http_header_kv_pairs.has_value()) {
         constexpr std::array<std::string_view, 3> cReservedHeaders
                 = {"range", "cache-control", "pragma"};
         // RFC 7230 token pattern: one or more tchars
         std::regex const header_name_pattern("^(?![!#$%&'*+.^_`|~-])[!#$%&'*+.^_`|~0-9a-zA-Z-]+$");
         // Must consist of printable ASCII characters (values between 0x20 and 0x7E)
         std::regex const header_value_pattern("^[\\x20-\\x7E]*$");
-        for (auto const& [key, value] : custom_headers.value()) {
+        for (auto const& [key, value] : http_header_kv_pairs.value()) {
             // Convert to lowercase for case-insensitive comparison
             std::string lower_key = key;
             std::transform(
