@@ -54,7 +54,7 @@ A handful of packages and libraries are required to build CLP. There are two opt
 See the relevant README for your OS:
 
 * [CentOS Stream 9](centos-stream-9-deps-install)
-* [macOS 12](macos12-deps-install)
+* [macOS](macos-deps-install)
 * [Ubuntu 20.04](ubuntu-focal-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
