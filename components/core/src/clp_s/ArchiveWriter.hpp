@@ -23,6 +23,7 @@ struct ArchiveWriterOption {
     int compression_level;
     bool print_archive_stats;
     bool single_file_archive;
+    size_t min_table_size;
 };
 
 class ArchiveWriter {
@@ -32,6 +33,33 @@ public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
+    };
+
+    struct StreamMetadata {
+        StreamMetadata(uint64_t file_offset, uint64_t uncompressed_size)
+                : file_offset(file_offset),
+                  uncompressed_size(uncompressed_size) {}
+
+        uint64_t file_offset{};
+        uint64_t uncompressed_size{};
+    };
+
+    struct SchemaMetadata {
+        SchemaMetadata(
+                uint64_t stream_id,
+                uint64_t stream_offset,
+                int32_t schema_id,
+                uint64_t num_messages
+        )
+                : stream_id(stream_id),
+                  stream_offset(stream_offset),
+                  schema_id(schema_id),
+                  num_messages(num_messages) {}
+
+        uint64_t stream_id{};
+        uint64_t stream_offset{};
+        int32_t schema_id{};
+        uint64_t num_messages{};
     };
 
     // Constructor
@@ -197,6 +225,7 @@ private:
     int m_compression_level{};
     bool m_print_archive_stats{};
     bool m_single_file_archive{};
+    size_t m_min_table_size{};
 
     SchemaMap m_schema_map;
     SchemaTree m_schema_tree;

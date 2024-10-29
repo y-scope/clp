@@ -15,7 +15,6 @@
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../src/clp/ffi/SchemaTree.hpp"
-#include "../src/clp/ffi/SchemaTreeNode.hpp"
 #include "../src/clp/ffi/Value.hpp"
 #include "../src/clp/ir/EncodedTextAst.hpp"
 #include "../src/clp/ir/types.hpp"
@@ -23,7 +22,6 @@
 
 using clp::ffi::KeyValuePairLogEvent;
 using clp::ffi::SchemaTree;
-using clp::ffi::SchemaTreeNode;
 using clp::ffi::Value;
 using clp::ffi::value_bool_t;
 using clp::ffi::value_float_t;
@@ -79,7 +77,7 @@ auto test_value_get_immutable_view(Value const& value, Type const& typed_value) 
  */
 auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         SchemaTree const& schema_tree,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& invalid_node_id_value_pairs
 ) -> void;
 
@@ -167,23 +165,23 @@ auto test_value_get_immutable_view(Value const& value, Type const& typed_value) 
 
 auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         SchemaTree const& schema_tree,
-        SchemaTreeNode::id_t node_id,
+        SchemaTree::Node::id_t node_id,
         KeyValuePairLogEvent::NodeIdValuePairs& invalid_node_id_value_pairs
 ) -> void {
     REQUIRE((node_id < schema_tree.get_size()));
     auto const node_type{schema_tree.get_node(node_id).get_type()};
-    if (SchemaTreeNode::Type::Int != node_type) {
+    if (SchemaTree::Node::Type::Int != node_type) {
         invalid_node_id_value_pairs.emplace(node_id, Value{static_cast<value_int_t>(0)});
     }
-    if (SchemaTreeNode::Type::Float != node_type) {
+    if (SchemaTree::Node::Type::Float != node_type) {
         invalid_node_id_value_pairs.emplace(node_id, Value{static_cast<value_float_t>(0.0)});
     }
-    if (SchemaTreeNode::Type::Bool != node_type) {
+    if (SchemaTree::Node::Type::Bool != node_type) {
         invalid_node_id_value_pairs.emplace(node_id, Value{static_cast<value_bool_t>(false)});
     }
-    if (SchemaTreeNode::Type::Str != node_type) {
+    if (SchemaTree::Node::Type::Str != node_type) {
         invalid_node_id_value_pairs.emplace(node_id, Value{static_cast<string>("Test")});
-        if (SchemaTreeNode::Type::UnstructuredArray != node_type) {
+        if (SchemaTree::Node::Type::UnstructuredArray != node_type) {
             invalid_node_id_value_pairs.emplace(
                     node_id,
                     Value{get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)}
@@ -194,7 +192,7 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
             );
         }
     }
-    if (SchemaTreeNode::Type::Obj != node_type) {
+    if (SchemaTree::Node::Type::Obj != node_type) {
         invalid_node_id_value_pairs.emplace(node_id, std::nullopt);
         invalid_node_id_value_pairs.emplace(node_id, Value{});
     }
@@ -266,17 +264,17 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
      */
     auto const schema_tree{std::make_shared<SchemaTree>()};
     std::vector<SchemaTree::NodeLocator> const locators{
-            {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Obj},
-            {SchemaTree::cRootId, "a", SchemaTreeNode::Type::Int},
-            {1, "b", SchemaTreeNode::Type::Obj},
-            {3, "c", SchemaTreeNode::Type::Obj},
-            {3, "d", SchemaTreeNode::Type::Str},
-            {3, "d", SchemaTreeNode::Type::Bool},
-            {4, "a", SchemaTreeNode::Type::UnstructuredArray},
-            {4, "d", SchemaTreeNode::Type::Str},
-            {4, "d", SchemaTreeNode::Type::Float},
-            {3, "e", SchemaTreeNode::Type::Obj},
-            {4, "f", SchemaTreeNode::Type::Obj}
+            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Obj},
+            {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Int},
+            {1, "b", SchemaTree::Node::Type::Obj},
+            {3, "c", SchemaTree::Node::Type::Obj},
+            {3, "d", SchemaTree::Node::Type::Str},
+            {3, "d", SchemaTree::Node::Type::Bool},
+            {4, "a", SchemaTree::Node::Type::UnstructuredArray},
+            {4, "d", SchemaTree::Node::Type::Str},
+            {4, "d", SchemaTree::Node::Type::Float},
+            {3, "e", SchemaTree::Node::Type::Obj},
+            {4, "f", SchemaTree::Node::Type::Obj}
     };
     for (auto const& locator : locators) {
         REQUIRE_NOTHROW(schema_tree->insert_node(locator));
@@ -439,7 +437,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
     SECTION("Test out-of-bound node ID") {
         KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs_out_of_bound;
         node_id_value_pairs_out_of_bound.emplace(
-                static_cast<SchemaTreeNode::id_t>(schema_tree->get_size()),
+                static_cast<SchemaTree::Node::id_t>(schema_tree->get_size()),
                 Value{}
         );
         auto const out_of_bound_result{KeyValuePairLogEvent::create(
