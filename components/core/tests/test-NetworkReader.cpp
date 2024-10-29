@@ -231,12 +231,12 @@ TEST_CASE("network_reader_with_custom_headers", "[NetworkReader]") {
             clp::NetworkReader::cDefaultBufferSize,
             regular_custom_headers
     };
-    auto const content{nlohmann::json::parse(get_content(regular_reader))};
+    auto content{nlohmann::json::parse(get_content(regular_reader))};
+    if (content.is_array() && 1 == content.size()) {
+        content = content.at(0);
+    }
     std::cout << content << std::endl;
-    auto const& headers{
-            content.is_array() && content.size() == 1 ? content.at(0).at("headers")
-                                                      : content.at("headers")
-    };
+    auto const& headers{content.at("headers")};
     REQUIRE(assert_curl_error_code(CURLE_OK, regular_reader));
     for (int i = 0; i < cNumRegularTestHeaders; i++) {
         REQUIRE((
