@@ -81,9 +81,7 @@ CurlDownloadHandler::CurlDownloadHandler(
                 == std::find(cReservedHeaders.begin(), cReservedHeaders.end(), lower_key))
             {
                 // Filter out illegal header names and header values by regex
-                if (std::regex_match(key, header_name_pattern)
-                    && std::regex_match(value, header_value_pattern))
-                {
+                if (false == value.empty() && ('\r' != value.back() && '\n' != value.back())) {
                     m_http_headers.append(fmt::format("{}: {}", key, value));
                 } else {
                     throw CurlOperationFailed(
@@ -92,7 +90,8 @@ CurlDownloadHandler::CurlDownloadHandler(
                             __LINE__,
                             CURLE_BAD_FUNCTION_ARGUMENT,
                             fmt::format(
-                                    "curl_download_handler_init failed due to illegal header: {}: "
+                                    "curl_download_handler_init failed due to CRLF-terminated "
+                                    "header: {}: "
                                     "{}.",
                                     key,
                                     value
