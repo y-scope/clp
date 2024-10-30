@@ -1,17 +1,22 @@
 #include "CurlDownloadHandler.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cctype>
 #include <chrono>
 #include <cstddef>
 #include <memory>
-#include <regex>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
 #include <curl/curl.h>
 #include <fmt/core.h>
+
+#include "ErrorCode.hpp"
 
 namespace clp {
 CurlDownloadHandler::CurlDownloadHandler(
@@ -91,9 +96,8 @@ CurlDownloadHandler::CurlDownloadHandler(
                                 value
                         )
                 );
-            } else {
-                m_http_headers.append(fmt::format("{}: {}", key, value));
             }
+            m_http_headers.append(fmt::format("{}: {}", key, value));
         }
     }
     if (false == m_http_headers.is_empty()) {

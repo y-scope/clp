@@ -218,7 +218,7 @@ TEST_CASE("network_reader_with_regular_http_header_kv_pairs", "[NetworkReader]")
     auto const& headers{content.at("headers")};
     REQUIRE(assert_curl_error_code(CURLE_OK, regular_reader));
     for (auto const& [key, value] : regular_http_header_kv_pairs) {
-        REQUIRE((value == headers.at(key)));
+        REQUIRE((value == headers.at(key).get<std::string_view>()));
     }
 }
 
