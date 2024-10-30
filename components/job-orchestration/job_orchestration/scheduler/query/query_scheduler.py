@@ -339,6 +339,22 @@ def get_archive_and_file_split_ids(
     return results
 
 
+def check_if_archive_exists(
+    db_conn,
+    archive_id: str,
+) -> bool:
+
+    query = f"""SELECT 1 
+                FROM {CLP_METADATA_TABLE_PREFIX}archives WHERE
+                id = '{archive_id}'
+                """
+    with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
+        cursor.execute(query)
+        if cursor.fetchone():
+            return True
+
+    return False
+
 def get_task_group_for_job(
     archive_ids: List[str],
     task_ids: List[int],
@@ -603,12 +619,10 @@ def handle_pending_query_jobs(
                 extract_ir_config.file_split_id = file_split_id
                 new_extract_ir_job = ExtractIrJob(
                     id=job_id,
-                    archive_id=archive_id,
-                    file_split_id=file_split_id,
                     extract_ir_config=extract_ir_config,
                     state=InternalJobState.WAITING_FOR_DISPATCH,
                 )
-                target_archive = [new_extract_ir_job.archive_id]
+                target_archive = [archive_id]
 
                 dispatch_job_and_update_db(
                     db_conn,
@@ -624,8 +638,23 @@ def handle_pending_query_jobs(
             elif QueryJobType.EXTRACT_JSON == job_type:
                 extract_json_config = ExtractJsonJobConfig.parse_obj(msgpack.unpackb(job_config))
 
-                # TODO: For now, let's assume the archive_id is always valid. Will need to verify this somehow
                 archive_id = extract_json_config.archive_id
+                if not check_if_archive_exists(db_conn, archive_id):
+                    logger.warning(
+                        f"archive {archive_id} does not exist, mark job {job_id} as failed"
+                    )
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as failed")
+                    continue
 
                 # NOTE: The following two if blocks should not be reordered since if we first check
                 # whether *an* IR file has been extracted for the requested file split, it doesn't
@@ -674,11 +703,10 @@ def handle_pending_query_jobs(
                 active_archive_json_extractions[archive_id] = [job_id]
                 new_extract_json_job = ExtractJsonJob(
                     id=job_id,
-                    archive_id=archive_id,
                     extract_json_config=extract_json_config,
                     state=InternalJobState.WAITING_FOR_DISPATCH,
                 )
-                target_archive = [new_extract_json_job.archive_id]
+                target_archive = [archive_id]
 
                 dispatch_job_and_update_db(
                     db_conn,
@@ -864,82 +892,20 @@ async def handle_finished_search_job(
     del active_jobs[job_id]
 
 
-async def handle_finished_extract_ir_job(
-    db_conn, job: ExtractIrJob, task_results: Optional[Any]
-) -> None:
-    global active_jobs
-    global active_file_split_ir_extractions
-
-    job_id = job.id
-    file_split_id = job.file_split_id
-    new_job_status = QueryJobStatus.SUCCEEDED
-    num_tasks = len(task_results)
-    if 1 != num_tasks:
-        logger.error(
-            f"Unexpected number of tasks for IR extraction job {job_id}. "
-            f"Expected 1, got {num_tasks}."
-        )
-        new_job_status = QueryJobStatus.FAILED
-    else:
-        task_result = QueryTaskResult.parse_obj(task_results[0])
-        task_id = task_result.task_id
-        if not QueryJobStatus.SUCCEEDED == task_result.status:
-            logger.error(
-                f"IR extraction task job-{job_id}-task-{task_id} failed. "
-                f"Check {task_result.error_log_path} for details."
-            )
-            new_job_status = QueryJobStatus.FAILED
-        else:
-            logger.info(
-                f"IR extraction task job-{job_id}-task-{task_id} succeeded in "
-                f"{task_result.duration} second(s)."
-            )
-
-    if set_job_or_task_status(
-        db_conn,
-        QUERY_JOBS_TABLE_NAME,
-        job_id,
-        new_job_status,
-        QueryJobStatus.RUNNING,
-        num_tasks_completed=num_tasks,
-        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
-    ):
-        if new_job_status == QueryJobStatus.SUCCEEDED:
-            logger.info(f"Completed IR extraction job {job_id}.")
-        else:
-            logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
-
-    waiting_jobs = active_file_split_ir_extractions[file_split_id]
-    waiting_jobs.remove(job_id)
-    for waiting_job in waiting_jobs:
-        logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
-        set_job_or_task_status(
-            db_conn,
-            QUERY_JOBS_TABLE_NAME,
-            waiting_job,
-            new_job_status,
-            QueryJobStatus.RUNNING,
-            num_tasks_completed=0,
-            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
-        )
-
-    del active_file_split_ir_extractions[file_split_id]
-    del active_jobs[job_id]
-
-
-async def handle_finished_extract_json_job(
-    db_conn, job: ExtractJsonJob, task_results: Optional[Any]
+async def handle_finished_extraction_job(
+    db_conn, job: QueryJob, task_results: List[Any]
 ) -> None:
     global active_jobs
     global active_archive_json_extractions
+    global active_file_split_ir_extractions
 
     job_id = job.id
-    archive_id = job.archive_id
     new_job_status = QueryJobStatus.SUCCEEDED
+
     num_tasks = len(task_results)
     if 1 != num_tasks:
         logger.error(
-            f"Unexpected number of tasks for Json extraction job {job_id}. "
+            f"Unexpected number of tasks for extraction job {job_id}. "
             f"Expected 1, got {num_tasks}."
         )
         new_job_status = QueryJobStatus.FAILED
@@ -948,31 +914,43 @@ async def handle_finished_extract_json_job(
         task_id = task_result.task_id
         if not QueryJobStatus.SUCCEEDED == task_result.status:
             logger.error(
-                f"Json extraction task job-{job_id}-task-{task_id} failed. "
+                f"extraction task job-{job_id}-task-{task_id} failed. "
                 f"Check {task_result.error_log_path} for details."
             )
             new_job_status = QueryJobStatus.FAILED
         else:
             logger.info(
-                f"Json extraction task job-{job_id}-task-{task_id} succeeded in "
+                f"extraction task job-{job_id}-task-{task_id} succeeded in "
                 f"{task_result.duration} second(s)."
             )
 
     if set_job_or_task_status(
-        db_conn,
-        QUERY_JOBS_TABLE_NAME,
-        job_id,
-        new_job_status,
-        QueryJobStatus.RUNNING,
-        num_tasks_completed=num_tasks,
-        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            job_id,
+            new_job_status,
+            QueryJobStatus.RUNNING,
+            num_tasks_completed=num_tasks,
+            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
     ):
         if new_job_status == QueryJobStatus.SUCCEEDED:
-            logger.info(f"Completed IR extraction job {job_id}.")
+            logger.info(f"Completed extraction job {job_id}.")
         else:
-            logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
+            logger.info(f"Completed extraction job {job_id} with failing tasks.")
 
-    waiting_jobs = active_archive_json_extractions[archive_id]
+    # TODO: find better name for these two variables
+    waiting_jobs_map: Dict[str, List[str]]
+    job_key: str
+    if QueryJobType.EXTRACT_IR == job.get_type():
+        waiting_jobs_map = active_file_split_ir_extractions
+        extract_ir_config: ExtractIrJobConfig = job.get_config()
+        job_key = extract_ir_config.file_split_id
+    else:
+        waiting_jobs_map = active_archive_json_extractions
+        extract_json_config: ExtractJsonJobConfig = job.get_config()
+        job_key = extract_json_config.archive_id
+
+    waiting_jobs = waiting_jobs_map[job_key]
     waiting_jobs.remove(job_id)
     for waiting_job in waiting_jobs:
         logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
@@ -986,7 +964,7 @@ async def handle_finished_extract_json_job(
             duration=(datetime.datetime.now() - job.start_time).total_seconds(),
         )
 
-    del active_archive_json_extractions[archive_id]
+    del waiting_jobs_map[job_key]
     del active_jobs[job_id]
 
 
@@ -1027,12 +1005,8 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                 await handle_finished_search_job(
                     db_conn, search_job, returned_results, results_cache_uri
                 )
-            elif QueryJobType.EXTRACT_IR == job_type:
-                extract_ir_job: ExtractIrJob = job
-                await handle_finished_extract_ir_job(db_conn, extract_ir_job, returned_results)
-            elif QueryJobType.EXTRACT_JSON == job_type:
-                extract_json_job: ExtractJsonJob = job
-                await handle_finished_extract_json_job(db_conn, extract_json_job, returned_results)
+            elif job_type in [QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR]:
+                await handle_finished_extraction_job(db_conn, job, returned_results)
             else:
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
 
