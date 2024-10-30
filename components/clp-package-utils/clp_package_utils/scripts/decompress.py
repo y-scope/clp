@@ -147,11 +147,11 @@ def handle_extract_file_cmd(
     return 0
 
 
-def handle_extract_ir_cmd(
+def handle_extract_cmd(
     parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
-    Handles the IR extraction command.
+    Handles the extraction command.
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
@@ -175,83 +175,40 @@ def handle_extract_ir_cmd(
     )
 
     # fmt: off
+    job_command = parsed_args.command
     extract_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
         "--config", str(generated_config_path_on_container),
-        EXTRACT_IR_CMD,
-        str(parsed_args.msg_ix),
+        job_command
     ]
     # fmt: on
-    if parsed_args.orig_file_id:
-        extract_cmd.append("--orig-file-id")
-        extract_cmd.append(str(parsed_args.orig_file_id))
+
+    if EXTRACT_IR_CMD == job_command:
+        extract_cmd.append(str(parsed_args.msg_ix))
+        if parsed_args.orig_file_id:
+            extract_cmd.append("--orig-file-id")
+            extract_cmd.append(str(parsed_args.orig_file_id))
+        else:
+            extract_cmd.append("--orig-file-path")
+            extract_cmd.append(str(parsed_args.orig_file_path))
+        if parsed_args.target_uncompressed_size:
+            extract_cmd.append("--target-uncompressed-size")
+            extract_cmd.append(str(parsed_args.target_uncompressed_size))
+    elif EXTRACT_JSON_CMD == job_command:
+        extract_cmd.append(str(parsed_args.archive_id))
+        if parsed_args.target_chunk_size:
+            extract_cmd.append("--target-chunk-size")
+            extract_cmd.append(str(parsed_args.target_chunk_size))
     else:
-        extract_cmd.append("--orig-file-path")
-        extract_cmd.append(str(parsed_args.orig_file_path))
-    if parsed_args.target_uncompressed_size:
-        extract_cmd.append("--target-uncompressed-size")
-        extract_cmd.append(str(parsed_args.target_uncompressed_size))
+        logger.exception(f"Unexpected command: {job_command}")
+
     cmd = container_start_cmd + extract_cmd
 
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError:
         logger.exception("Docker or IR extraction command failed.")
-        return -1
-
-    # Remove generated files
-    generated_config_path_on_host.unlink()
-
-    return 0
-
-
-def handle_extract_json_cmd(
-    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
-) -> int:
-    """
-    Handles the Json extraction command.
-    :param parsed_args:
-    :param clp_home:
-    :param default_config_file_path:
-    :return: 0 on success, -1 otherwise.
-    """
-    # Validate and load config file
-    clp_config = validate_and_load_config(
-        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
-    )
-    if clp_config is None:
-        return -1
-
-    container_name = generate_container_name(JobType.IR_EXTRACTION)
-    container_clp_config, mounts = generate_container_config(clp_config, clp_home)
-    generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
-    )
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
-    container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
-    )
-
-    # fmt: off
-    extract_cmd = [
-        "python3",
-        "-m", "clp_package_utils.scripts.native.decompress",
-        "--config", str(generated_config_path_on_container),
-        EXTRACT_JSON_CMD,
-        parsed_args.archive_id
-    ]
-    # fmt: on
-
-    if parsed_args.target_chunk_size:
-        extract_cmd.append("--target-chunk-size")
-        extract_cmd.append(str(parsed_args.target_chunk_size))
-    cmd = container_start_cmd + extract_cmd
-
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        logger.exception("Docker or Json extraction command failed.")
         return -1
 
     # Remove generated files
@@ -308,10 +265,8 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif EXTRACT_IR_CMD == command:
-        return handle_extract_ir_cmd(parsed_args, clp_home, default_config_file_path)
-    elif EXTRACT_JSON_CMD == command:
-        return handle_extract_json_cmd(parsed_args, clp_home, default_config_file_path)
+    elif command in [EXTRACT_IR_CMD, EXTRACT_JSON_CMD]:
+        return handle_extract_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1

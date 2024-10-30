@@ -12,7 +12,7 @@ import yaml
 from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, Database
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
-from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig, QueryJobConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -71,73 +71,37 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
         return results[0]["orig_file_id"]
 
 
-def submit_and_monitor_ir_extraction_job_in_db(
+def submit_and_monitor_extraction_job_in_db(
     db_config: Database,
-    orig_file_id: str,
-    msg_ix: int,
-    target_uncompressed_size: Optional[int],
+    job_type: QueryJobType,
+    job_config: QueryJobConfig,
 ) -> int:
     """
-    Submits an IR extraction job to the scheduler and waits until the job finishes.
+    Submits an extraction job to the scheduler and waits until the job finishes.
     :param db_config:
-    :param orig_file_id:
-    :param msg_ix:
-    :param target_uncompressed_size:
+    :param job_type:
+    :param job_config:
     :return: 0 on success, -1 otherwise.
     """
-    extract_ir_config = ExtractIrJobConfig(
-        orig_file_id=orig_file_id,
-        msg_ix=msg_ix,
-        target_uncompressed_size=target_uncompressed_size,
-    )
-
     sql_adapter = SQL_Adapter(db_config)
-    job_id = submit_query_job(sql_adapter, extract_ir_config, QueryJobType.EXTRACT_IR)
+    job_id = submit_query_job(sql_adapter, job_config, job_type)
     job_status = wait_for_query_job(sql_adapter, job_id)
 
     if QueryJobStatus.SUCCEEDED == job_status:
-        logger.info(f"Finished IR extraction job {job_id}.")
+        logger.info(f"Finished extraction job {job_id}.")
         return 0
 
     logger.error(
-        f"IR extraction job {job_id} finished with unexpected status: {job_status.to_str()}."
+        f"Extraction job {job_id} finished with unexpected status: {job_status.to_str()}."
     )
     return -1
 
 
-def submit_and_monitor_json_extraction_job_in_db(
-    db_config: Database,
-    archive_id: str,
-    target_chunk_size: Optional[int],
-) -> int:
-    """
-    Submits an IR extraction job to the scheduler and waits until the job finishes.
-    :param db_config:
-    :param archive_id:
-    :param target_chunk_size:
-    :return: 0 on success, -1 otherwise.
-    """
-    extract_json_config = ExtractJsonJobConfig(
-        archive_id=archive_id,
-        target_chunk_size=target_chunk_size,
-    )
-
-    sql_adapter = SQL_Adapter(db_config)
-    job_id = submit_query_job(sql_adapter, extract_json_config, QueryJobType.EXTRACT_JSON)
-    job_status = wait_for_query_job(sql_adapter, job_id)
-
-    if QueryJobStatus.SUCCEEDED == job_status:
-        logger.info(f"Finished Json extraction job {job_id}.")
-        return 0
-
-    logger.error(
-        f"Json extraction job {job_id} finished with unexpected status: {job_status.to_str()}."
-    )
-    return -1
-
-
-def handle_extract_ir_cmd(
-    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+def handle_extract_cmd(
+    parsed_args: argparse.Namespace,
+    job_type: QueryJobType,
+    clp_home: pathlib.Path,
+    default_config_file_path: pathlib.Path
 ) -> int:
     """
     Handles the IR extraction command.
@@ -153,57 +117,40 @@ def handle_extract_ir_cmd(
     if clp_config is None:
         return -1
 
-    orig_file_id: str
-    if parsed_args.orig_file_id:
-        orig_file_id = parsed_args.orig_file_id
+    extraction_config: QueryJobConfig
+    if QueryJobType.EXTRACT_IR == job_type:
+        orig_file_id: str
+        if parsed_args.orig_file_id:
+            orig_file_id = parsed_args.orig_file_id
+        else:
+            orig_file_path = parsed_args.orig_file_path
+            orig_file_id = get_orig_file_id(clp_config.database, parsed_args.orig_file_path)
+            if orig_file_id is None:
+                logger.error(f"Cannot find orig_file_id corresponding to {orig_file_path}")
+                return -1
+        extraction_config = ExtractIrJobConfig(
+            orig_file_id=orig_file_id,
+            msg_ix=parsed_args.msg_ix,
+            target_uncompressed_size=parsed_args.target_uncompressed_size
+        )
+    elif QueryJobType.EXTRACT_JSON == job_type:
+        extraction_config = ExtractJsonJobConfig(
+            archive_id=parsed_args.archive_id,
+            target_chunk_size=parsed_args.target_chunk_size
+        )
     else:
-        orig_file_id = get_orig_file_id(clp_config.database, parsed_args.orig_file_path)
-        if orig_file_id is None:
-            return -1
-
+        logger.exception(f"Unsupported extraction job type: {job_type}")
     try:
         return asyncio.run(
             run_function_in_process(
-                submit_and_monitor_ir_extraction_job_in_db,
+                submit_and_monitor_extraction_job_in_db,
                 clp_config.database,
-                orig_file_id,
-                parsed_args.msg_ix,
-                parsed_args.target_uncompressed_size,
+                job_type,
+                extraction_config,
             )
         )
     except asyncio.CancelledError:
         logger.error("IR extraction cancelled.")
-        return -1
-
-
-def handle_extract_json_cmd(
-    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
-) -> int:
-    """
-    Handles the IR extraction command.
-    :param parsed_args:
-    :param clp_home:
-    :param default_config_file_path:
-    :return: 0 on success, -1 otherwise.
-    """
-    # Validate and load config file
-    clp_config = validate_and_load_config_file(
-        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
-    )
-    if clp_config is None:
-        return -1
-
-    try:
-        return asyncio.run(
-            run_function_in_process(
-                submit_and_monitor_json_extraction_job_in_db,
-                clp_config.database,
-                parsed_args.archive_id,
-                parsed_args.target_chunk_size,
-            )
-        )
-    except asyncio.CancelledError:
-        logger.error("Json extraction cancelled.")
         return -1
 
 
@@ -354,9 +301,9 @@ def main(argv):
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
     elif EXTRACT_IR_CMD == command:
-        return handle_extract_ir_cmd(parsed_args, clp_home, default_config_file_path)
+        return handle_extract_cmd(parsed_args, QueryJobType.EXTRACT_IR, clp_home, default_config_file_path)
     elif EXTRACT_JSON_CMD == command:
-        return handle_extract_json_cmd(parsed_args, clp_home, default_config_file_path)
+        return handle_extract_cmd(parsed_args, QueryJobType.EXTRACT_JSON, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1
