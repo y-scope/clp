@@ -5,11 +5,13 @@ from job_orchestration.scheduler.constants import QueueName
 imports = (
     "job_orchestration.executor.query.fs_search_task",
     "job_orchestration.executor.query.extract_ir_task",
+    "job_orchestration.executor.query.extract_json_task",
 )
 
 task_routes = {
     "job_orchestration.executor.query.fs_search_task.search": QueueName.QUERY,
     "job_orchestration.executor.query.extract_ir_task.extract_ir": QueueName.QUERY,
+    "job_orchestration.executor.query.extract_json_task.extract_json": QueueName.QUERY,
 }
 task_create_missing_queues = True
 

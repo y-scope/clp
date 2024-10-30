@@ -12,12 +12,13 @@ import yaml
 from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, Database
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
-from job_orchestration.scheduler.job_config import ExtractIrJobConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     EXTRACT_FILE_CMD,
     EXTRACT_IR_CMD,
+    EXTRACT_JSON_CMD,
     get_clp_home,
     load_config_file,
 )
@@ -104,6 +105,37 @@ def submit_and_monitor_ir_extraction_job_in_db(
     return -1
 
 
+def submit_and_monitor_json_extraction_job_in_db(
+    db_config: Database,
+    archive_id: str,
+    target_chunk_size: Optional[int],
+) -> int:
+    """
+    Submits an IR extraction job to the scheduler and waits until the job finishes.
+    :param db_config:
+    :param archive_id:
+    :param target_chunk_size:
+    :return: 0 on success, -1 otherwise.
+    """
+    extract_json_config = ExtractJsonJobConfig(
+        archive_id=archive_id,
+        target_chunk_size=target_chunk_size,
+    )
+
+    sql_adapter = SQL_Adapter(db_config)
+    job_id = submit_query_job(sql_adapter, extract_json_config, QueryJobType.EXTRACT_JSON)
+    job_status = wait_for_query_job(sql_adapter, job_id)
+
+    if QueryJobStatus.SUCCEEDED == job_status:
+        logger.info(f"Finished Json extraction job {job_id}.")
+        return 0
+
+    logger.error(
+        f"Json extraction job {job_id} finished with unexpected status: {job_status.to_str()}."
+    )
+    return -1
+
+
 def handle_extract_ir_cmd(
     parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
@@ -141,6 +173,37 @@ def handle_extract_ir_cmd(
         )
     except asyncio.CancelledError:
         logger.error("IR extraction cancelled.")
+        return -1
+
+
+def handle_extract_json_cmd(
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+) -> int:
+    """
+    Handles the IR extraction command.
+    :param parsed_args:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: 0 on success, -1 otherwise.
+    """
+    # Validate and load config file
+    clp_config = validate_and_load_config_file(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
+    if clp_config is None:
+        return -1
+
+    try:
+        return asyncio.run(
+            run_function_in_process(
+                submit_and_monitor_json_extraction_job_in_db,
+                clp_config.database,
+                parsed_args.archive_id,
+                parsed_args.target_chunk_size,
+            )
+        )
+    except asyncio.CancelledError:
+        logger.error("Json extraction cancelled.")
         return -1
 
 
@@ -278,6 +341,13 @@ def main(argv):
     group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
     group.add_argument("--orig-file-path", type=str, help="Original file's path.")
 
+    # Json extraction command parser
+    json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
+    json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
+    json_extraction_parser.add_argument(
+        "--target-chunk-size", type=int, help="Target chunk size.", required=True
+    )
+
     parsed_args = args_parser.parse_args(argv[1:])
 
     command = parsed_args.command
@@ -285,6 +355,8 @@ def main(argv):
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
     elif EXTRACT_IR_CMD == command:
         return handle_extract_ir_cmd(parsed_args, clp_home, default_config_file_path)
+    elif EXTRACT_JSON_CMD == command:
+        return handle_extract_json_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1
