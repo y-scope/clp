@@ -6,7 +6,10 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
 
 #include <curl/curl.h>
 
@@ -14,6 +17,7 @@
 #include "CurlOperationFailed.hpp"
 #include "ErrorCode.hpp"
 #include "Platform.hpp"
+#include "TraceableException.hpp"
 
 namespace clp {
 /**
