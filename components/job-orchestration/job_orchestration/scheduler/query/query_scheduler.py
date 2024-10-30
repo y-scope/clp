@@ -40,9 +40,10 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.extract_ir_task import extract_ir
+from job_orchestration.executor.query.extract_json_task import extract_json
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
-from job_orchestration.scheduler.job_config import ExtractIrJobConfig, SearchJobConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig, SearchJobConfig
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
@@ -51,6 +52,7 @@ from job_orchestration.scheduler.query.reducer_handler import (
 )
 from job_orchestration.scheduler.scheduler_data import (
     ExtractIrJob,
+    ExtractJsonJob,
     InternalJobState,
     QueryJob,
     QueryTaskResult,
@@ -66,7 +68,8 @@ active_jobs: Dict[str, QueryJob] = {}
 
 # Dictionary that maps IDs of file splits being extracted to IDs of jobs waiting for them
 active_file_split_ir_extractions: Dict[str, List[str]] = {}
-
+# Dictionary that maps IDs of clp-s archives being extracted to IDs of jobs waiting for them
+active_archive_json_extractions: Dict[str, List[str]] = {}
 reducer_connection_queue: Optional[asyncio.Queue] = None
 
 
@@ -366,6 +369,18 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
+    elif QueryJobType.EXTRACT_JSON == job_type:
+        return celery.group(
+            extract_json.s(
+                job_id=job.id,
+                archive_id=archive_ids[i],
+                task_id=task_ids[i],
+                job_config_obj=job_config_obj,
+                clp_metadata_db_conn_params=clp_metadata_db_conn_params,
+                results_cache_uri=results_cache_uri,
+            )
+            for i in range(len(archive_ids))
+        )
     else:
         error_msg = f"Unexpected job type: {job_type}"
         logger.error(error_msg)
@@ -471,6 +486,7 @@ def handle_pending_query_jobs(
 ) -> List[asyncio.Task]:
     global active_jobs
     global active_file_split_ir_extractions
+    global active_archive_json_extractions
 
     reducer_acquisition_tasks = []
     pending_search_jobs = [
@@ -614,6 +630,78 @@ def handle_pending_query_jobs(
                 active_jobs[new_extract_ir_job.id] = new_extract_ir_job
                 logger.info(f"Dispatched IR extraction job {job_id} on archive: {archive_id}")
 
+            elif QueryJobType.EXTRACT_JSON == job_type:
+                extract_json_config = ExtractJsonJobConfig.parse_obj(msgpack.unpackb(job_config))
+
+                # TODO: For now, let's assume the archive_id is always valid. Will need to verify this somehow
+                archive_id = extract_json_config.archive_id
+
+                # NOTE: The following two if blocks should not be reordered since if we first check
+                # whether *an* IR file has been extracted for the requested file split, it doesn't
+                # mean that *all* IR files have has been extracted for the file split (since the
+                # extraction job may still be in progress). Thus, we must first check whether the
+                # file split is in the process of being extracted, and then check whether it's
+                # already been extracted.
+
+                # Check if the archive is currently being extracted; if so, add the job ID to the
+                # list of jobs waiting for it.
+                if archive_id in active_archive_json_extractions:
+                    active_archive_json_extractions[archive_id].append(job_id)
+                    logger.info(
+                        f"archive {archive_id} is being extracted, so mark job {job_id} as running"
+                    )
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.RUNNING,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as running")
+                    continue
+
+                # Check if the archive with the expected timestamp has already been extracted
+                if json_file_exists_for_archive(
+                        results_cache_uri, ir_collection_name, archive_id
+                ):
+                    logger.info(
+                        f"archive {archive_id} already extracted, so mark job {job_id} as done"
+                    )
+                    if not set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.SUCCEEDED,
+                            QueryJobStatus.PENDING,
+                            start_time=datetime.datetime.now(),
+                            num_tasks=0,
+                            duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as succeeded")
+                    continue
+
+                active_archive_json_extractions[archive_id] = [job_id]
+                new_extract_json_job = ExtractJsonJob(
+                    id=job_id,
+                    archive_id=archive_id,
+                    extract_json_config=extract_json_config,
+                    state=InternalJobState.WAITING_FOR_DISPATCH,
+                )
+                target_archive = [new_extract_json_job.archive_id]
+
+                dispatch_job_and_update_db(
+                    db_conn,
+                    new_extract_json_job,
+                    target_archive,
+                    clp_metadata_db_conn_params,
+                    results_cache_uri,
+                    1,
+                )
+                active_jobs[new_extract_json_job.id] = new_extract_json_job
+                logger.info(f"Dispatched Json extraction job {job_id} on archive: {archive_id}")
+
             else:
                 # NOTE: We're skipping the job for this iteration, but its status will remain
                 # unchanged. So this log will print again in the next iteration unless the user
@@ -691,6 +779,15 @@ def ir_file_exists_for_file_split(
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
         ir_collection = results_cache_client.get_default_database()[ir_collection_name]
         results_count = ir_collection.count_documents({"file_split_id": file_split_id})
+        return 0 != results_count
+
+
+def json_file_exists_for_archive(
+    results_cache_uri: str, ir_collection_name: str, archive_id: str
+):
+    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+        ir_collection = results_cache_client.get_default_database()[ir_collection_name]
+        results_count = ir_collection.count_documents({"orig_file_id": archive_id})
         return 0 != results_count
 
 
@@ -843,6 +940,69 @@ async def handle_finished_extract_ir_job(
     del active_jobs[job_id]
 
 
+async def handle_finished_extract_json_job(
+    db_conn, job: ExtractJsonJob, task_results: Optional[Any]
+) -> None:
+    global active_jobs
+    global active_archive_json_extractions
+
+    job_id = job.id
+    archive_id = job.archive_id
+    new_job_status = QueryJobStatus.SUCCEEDED
+    num_tasks = len(task_results)
+    if 1 != num_tasks:
+        logger.error(
+            f"Unexpected number of tasks for Json extraction job {job_id}. "
+            f"Expected 1, got {num_tasks}."
+        )
+        new_job_status = QueryJobStatus.FAILED
+    else:
+        task_result = QueryTaskResult.parse_obj(task_results[0])
+        task_id = task_result.task_id
+        if not QueryJobStatus.SUCCEEDED == task_result.status:
+            logger.error(
+                f"Json extraction task job-{job_id}-task-{task_id} failed. "
+                f"Check {task_result.error_log_path} for details."
+            )
+            new_job_status = QueryJobStatus.FAILED
+        else:
+            logger.info(
+                f"Json extraction task job-{job_id}-task-{task_id} succeeded in "
+                f"{task_result.duration} second(s)."
+            )
+
+    if set_job_or_task_status(
+        db_conn,
+        QUERY_JOBS_TABLE_NAME,
+        job_id,
+        new_job_status,
+        QueryJobStatus.RUNNING,
+        num_tasks_completed=num_tasks,
+        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+    ):
+        if new_job_status == QueryJobStatus.SUCCEEDED:
+            logger.info(f"Completed IR extraction job {job_id}.")
+        else:
+            logger.info(f"Completed IR extraction job {job_id} with failing tasks.")
+
+    waiting_jobs = active_archive_json_extractions[archive_id]
+    waiting_jobs.remove(job_id)
+    for waiting_job in waiting_jobs:
+        logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
+        set_job_or_task_status(
+            db_conn,
+            QUERY_JOBS_TABLE_NAME,
+            waiting_job,
+            new_job_status,
+            QueryJobStatus.RUNNING,
+            num_tasks_completed=0,
+            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        )
+
+    del active_archive_json_extractions[archive_id]
+    del active_jobs[job_id]
+
+
 async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
     global active_jobs
 
@@ -883,6 +1043,9 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
             elif QueryJobType.EXTRACT_IR == job_type:
                 extract_ir_job: ExtractIrJob = job
                 await handle_finished_extract_ir_job(db_conn, extract_ir_job, returned_results)
+            elif QueryJobType.EXTRACT_JSON == job_type:
+                extract_json_job: ExtractJsonJob = job
+                await handle_finished_extract_json_job(db_conn, extract_json_job, returned_results)
             else:
                 logger.error(f"Unexpected job type: {job_type}, skipping job {job_id}")
 

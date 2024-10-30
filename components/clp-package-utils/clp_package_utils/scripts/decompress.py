@@ -14,6 +14,7 @@ from clp_package_utils.general import (
     dump_container_config,
     EXTRACT_FILE_CMD,
     EXTRACT_IR_CMD,
+    EXTRACT_JSON_CMD,
     generate_container_config,
     generate_container_name,
     generate_container_start_cmd,
@@ -205,6 +206,60 @@ def handle_extract_ir_cmd(
     return 0
 
 
+def handle_extract_json_cmd(
+    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+) -> int:
+    """
+    Handles the Json extraction command.
+    :param parsed_args:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: 0 on success, -1 otherwise.
+    """
+    # Validate and load config file
+    clp_config = validate_and_load_config(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
+    if clp_config is None:
+        return -1
+
+    container_name = generate_container_name(JobType.IR_EXTRACTION)
+    container_clp_config, mounts = generate_container_config(clp_config, clp_home)
+    generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
+        container_clp_config, clp_config, container_name
+    )
+    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    container_start_cmd = generate_container_start_cmd(
+        container_name, necessary_mounts, clp_config.execution_container
+    )
+
+    # fmt: off
+    extract_cmd = [
+        "python3",
+        "-m", "clp_package_utils.scripts.native.decompress",
+        "--config", str(generated_config_path_on_container),
+        EXTRACT_JSON_CMD,
+        parsed_args.archive_id
+    ]
+    # fmt: on
+
+    if parsed_args.target_chunk_size:
+        extract_cmd.append("--target-chunk-size")
+        extract_cmd.append(str(parsed_args.target_chunk_size))
+    cmd = container_start_cmd + extract_cmd
+
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        logger.exception("Docker or Json extraction command failed.")
+        return -1
+
+    # Remove generated files
+    generated_config_path_on_host.unlink()
+
+    return 0
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -241,6 +296,13 @@ def main(argv):
     group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
     group.add_argument("--orig-file-path", type=str, help="Original file's path.")
 
+    # IR extraction command parser
+    json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
+    json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
+    json_extraction_parser.add_argument(
+        "--target-chunk-size", type=int, help="Target chunk size", default=100000
+    )
+
     parsed_args = args_parser.parse_args(argv[1:])
 
     command = parsed_args.command
@@ -248,6 +310,8 @@ def main(argv):
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
     elif EXTRACT_IR_CMD == command:
         return handle_extract_ir_cmd(parsed_args, clp_home, default_config_file_path)
+    elif EXTRACT_JSON_CMD == command:
+        return handle_extract_json_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1

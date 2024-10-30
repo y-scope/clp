@@ -33,6 +33,7 @@ from strenum import KebabCaseStrEnum
 # CONSTANTS
 EXTRACT_FILE_CMD = "x"
 EXTRACT_IR_CMD = "i"
+EXTRACT_JSON_CMD = "j"
 
 # Paths
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
