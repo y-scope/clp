@@ -135,7 +135,7 @@ NetworkReader::NetworkReader(
             *this,
             offset,
             disable_caching,
-            http_header_kv_pairs
+            std::move(http_header_kv_pairs)
     );
     m_downloader_thread->start();
 }

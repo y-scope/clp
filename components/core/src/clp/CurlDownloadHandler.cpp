@@ -7,6 +7,7 @@
 #include <regex>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 
 #include <curl/curl.h>
@@ -52,21 +53,21 @@ CurlDownloadHandler::CurlDownloadHandler(
     m_easy_handle.set_option(CURLOPT_TIMEOUT, static_cast<long>(overall_timeout.count()));
 
     // Set up http headers
+    constexpr std::string_view cRangeHeaderName{"range"};
+    constexpr std::string_view cCacheControlHeaderName{"cache-control"};
+    constexpr std::string_view cPragmaHeaderName{"pragma"};
+    std::unordered_set<std::string_view> reserved_headers;
+    reserved_headers.insert(cRangeHeaderName);
+    reserved_headers.insert(cCacheControlHeaderName);
+    reserved_headers.insert(cPragmaHeaderName);
     if (0 != offset) {
-        std::string const range{"Range: bytes=" + std::to_string(offset) + "-"};
-        m_http_headers.append(range);
+        m_http_headers.append(fmt::format("{}: bytes={}-", cRangeHeaderName, offset));
     }
     if (disable_caching) {
-        m_http_headers.append("Cache-Control: no-cache");
-        m_http_headers.append("Pragma: no-cache");
+        m_http_headers.append(fmt::format("{}: no-cache", cCacheControlHeaderName));
+        m_http_headers.append(fmt::format("{}: no-cache", cPragmaHeaderName));
     }
     if (http_header_kv_pairs.has_value()) {
-        constexpr std::array<std::string_view, 3> cReservedHeaders
-                = {"range", "cache-control", "pragma"};
-        // RFC 7230 token pattern: one or more tchars
-        std::regex const header_name_pattern("^(?![!#$%&'*+.^_`|~-])[!#$%&'*+.^_`|~0-9a-zA-Z-]+$");
-        // Must consist of printable ASCII characters (values between 0x20 and 0x7E)
-        std::regex const header_value_pattern("^[\\x20-\\x7E]*$");
         for (auto const& [key, value] : http_header_kv_pairs.value()) {
             // Convert to lowercase for case-insensitive comparison
             std::string lower_key = key;
@@ -76,41 +77,22 @@ CurlDownloadHandler::CurlDownloadHandler(
                     lower_key.begin(),
                     [](unsigned char c) { return std::tolower(c); }
             );
-
-            if (cReservedHeaders.end()
-                == std::find(cReservedHeaders.begin(), cReservedHeaders.end(), lower_key))
-            {
-                // Filter out illegal header names and header values by regex
-                if (false == value.empty() && ('\r' != value.back() && '\n' != value.back())) {
-                    m_http_headers.append(fmt::format("{}: {}", key, value));
-                } else {
-                    throw CurlOperationFailed(
-                            ErrorCode_Failure,
-                            __FILE__,
-                            __LINE__,
-                            CURLE_BAD_FUNCTION_ARGUMENT,
-                            fmt::format(
-                                    "curl_download_handler_init failed due to CRLF-terminated "
-                                    "header: {}: "
-                                    "{}.",
-                                    key,
-                                    value
-                            )
-                    );
-                }
-            } else {
+            if (reserved_headers.contains(lower_key) || value.ends_with("\r\n")) {
                 throw CurlOperationFailed(
                         ErrorCode_Failure,
                         __FILE__,
                         __LINE__,
                         CURLE_BAD_FUNCTION_ARGUMENT,
                         fmt::format(
-                                "curl_download_handler_init failed due to reserved header is being "
-                                "modified: {}: {}.",
+                                "curl_download_handler_init failed due to "
+                                "header: {}: "
+                                "{}.",
                                 key,
                                 value
                         )
                 );
+            } else {
+                m_http_headers.append(fmt::format("{}: {}", key, value));
             }
         }
     }

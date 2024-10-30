@@ -7,6 +7,7 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -100,23 +101,6 @@ auto assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader)
     WARN(message_to_log);
     return false;
 }
-
-auto test_illegal_header(std::string const& header_name, std::string const& header_value) -> bool {
-    std::unordered_map<std::string, std::string> illegal_http_header_kv_pairs;
-    illegal_http_header_kv_pairs.emplace(header_name, header_value);
-    clp::NetworkReader illegal_reader{
-            "https://httpbin.org/headers",
-            0,
-            false,
-            clp::CurlDownloadHandler::cDefaultOverallTimeout,
-            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
-            clp::NetworkReader::cDefaultBufferPoolSize,
-            clp::NetworkReader::cDefaultBufferSize,
-            illegal_http_header_kv_pairs
-    };
-    auto const content = get_content(illegal_reader);
-    return assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, illegal_reader) && content.empty();
-}
 }  // namespace
 
 TEST_CASE("network_reader_basic", "[NetworkReader]") {
@@ -209,12 +193,12 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
 }
 
-TEST_CASE("network_reader_with_http_header_kv_pairs", "[NetworkReader]") {
+TEST_CASE("network_reader_with_regular_http_header_kv_pairs", "[NetworkReader]") {
     std::unordered_map<std::string, std::string> regular_http_header_kv_pairs;
-    // We use httpbin (https://httpbin.org/) to test the custom headers. This request will return a
-    // JSON object that contains the custom headers. We check if the headers are in the response.
-    constexpr int cNumRegularTestHeaders{10};
-    for (size_t i{0}; i < cNumRegularTestHeaders; i++) {
+    // We use httpbin (https://httpbin.org/) to test the user-specified headers. On success, it is
+    // supposed to respond all the user-specified headers as key-value pairs in JSON form.
+    constexpr int cNumHttpHeaderKeyValuePairs{10};
+    for (size_t i{0}; i < cNumHttpHeaderKeyValuePairs; ++i) {
         regular_http_header_kv_pairs.emplace(
                 fmt::format("Unit-Test-Key{}", i),
                 fmt::format("Unit-Test-Value{}", i)
@@ -230,25 +214,41 @@ TEST_CASE("network_reader_with_http_header_kv_pairs", "[NetworkReader]") {
             clp::NetworkReader::cDefaultBufferSize,
             regular_http_header_kv_pairs
     };
-    auto content{nlohmann::json::parse(get_content(regular_reader))};
-    if (content.is_array() && 1 == content.size()) {
-        content = content.at(0);
-    }
+    auto const content = nlohmann::json::parse(get_content(regular_reader));
     auto const& headers{content.at("headers")};
     REQUIRE(assert_curl_error_code(CURLE_OK, regular_reader));
-    for (int i = 0; i < cNumRegularTestHeaders; i++) {
-        REQUIRE((
-                fmt::format("Unit-Test-Value{}", i) == headers.at(fmt::format("Unit-Test-Key{}", i))
-        ));
+    for (auto const& [key, value] : regular_http_header_kv_pairs) {
+        REQUIRE((value == headers.at(key)));
     }
-    // The following headers are determined by offset and disable_cache, which should not be
-    // overrided by custom headers.
-    REQUIRE(test_illegal_header("Range", "bytes=100-"));
-    REQUIRE(test_illegal_header("Cache-Control", "no-cache"));
-    REQUIRE(test_illegal_header("Pragma", "no-cache"));
-    // The following headers contain illegal header values, the requests should be rejected.
-    REQUIRE(test_illegal_header("Legal-Name1", "CRLF\n"));
-    REQUIRE(test_illegal_header("Legal-Name2", "CRLF\r"));
-    REQUIRE(test_illegal_header("Legal-Name3", "CRLF\n\r"));
-    REQUIRE(test_illegal_header("Legal-Name4", "CRLF\r\n"));
+}
+
+TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]") {
+    auto [header_name, header_value] = GENERATE(
+            // The following headers are determined by offset and disable_cache, which should not be
+            // overriden by custom headers.
+            std::make_pair("Range", "bytes=100-"),
+            std::make_pair("RAnGe", "bytes=100-"),
+            std::make_pair("Cache-Control", "no-cache"),
+            std::make_pair("Pragma", "no-cache"),
+            // The CRLF-terminated headers should be rejected.
+            std::make_pair("Legal-Name", "CRLF\r\n")
+    );
+    // REQUIRE(test_illegal_header(header_name, header_value));
+    REQUIRE([header_name, header_value]() {
+        std::unordered_map<std::string, std::string> illegal_http_header_kv_pairs;
+        illegal_http_header_kv_pairs.emplace(header_name, header_value);
+        clp::NetworkReader illegal_reader{
+                "https://httpbin.org/headers",
+                0,
+                false,
+                clp::CurlDownloadHandler::cDefaultOverallTimeout,
+                clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+                clp::NetworkReader::cDefaultBufferPoolSize,
+                clp::NetworkReader::cDefaultBufferSize,
+                illegal_http_header_kv_pairs
+        };
+        auto const content = get_content(illegal_reader);
+        return assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, illegal_reader)
+               && content.empty();
+    }());
 }

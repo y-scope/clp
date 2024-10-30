@@ -259,7 +259,7 @@ private:
                 : m_reader{reader},
                   m_offset{offset},
                   m_disable_caching{disable_caching},
-                  m_http_header_kv_pairs{http_header_kv_pairs} {}
+                  m_http_header_kv_pairs{std::move(http_header_kv_pairs)} {}
 
     private:
         // Methods implementing `clp::Thread`
