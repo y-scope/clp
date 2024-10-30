@@ -12,7 +12,11 @@ import yaml
 from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, Database
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
-from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig, QueryJobConfig
+from job_orchestration.scheduler.job_config import (
+    ExtractIrJobConfig,
+    ExtractJsonJobConfig,
+    QueryJobConfig,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -91,9 +95,7 @@ def submit_and_monitor_extraction_job_in_db(
         logger.info(f"Finished extraction job {job_id}.")
         return 0
 
-    logger.error(
-        f"Extraction job {job_id} finished with unexpected status: {job_status.to_str()}."
-    )
+    logger.error(f"Extraction job {job_id} finished with unexpected status: {job_status.to_str()}.")
     return -1
 
 
@@ -101,7 +103,7 @@ def handle_extract_cmd(
     parsed_args: argparse.Namespace,
     job_type: QueryJobType,
     clp_home: pathlib.Path,
-    default_config_file_path: pathlib.Path
+    default_config_file_path: pathlib.Path,
 ) -> int:
     """
     Handles the IR extraction command.
@@ -131,12 +133,11 @@ def handle_extract_cmd(
         extraction_config = ExtractIrJobConfig(
             orig_file_id=orig_file_id,
             msg_ix=parsed_args.msg_ix,
-            target_uncompressed_size=parsed_args.target_uncompressed_size
+            target_uncompressed_size=parsed_args.target_uncompressed_size,
         )
     elif QueryJobType.EXTRACT_JSON == job_type:
         extraction_config = ExtractJsonJobConfig(
-            archive_id=parsed_args.archive_id,
-            target_chunk_size=parsed_args.target_chunk_size
+            archive_id=parsed_args.archive_id, target_chunk_size=parsed_args.target_chunk_size
         )
     else:
         logger.exception(f"Unsupported extraction job type: {job_type}")
@@ -301,9 +302,13 @@ def main(argv):
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
     elif EXTRACT_IR_CMD == command:
-        return handle_extract_cmd(parsed_args, QueryJobType.EXTRACT_IR, clp_home, default_config_file_path)
+        return handle_extract_cmd(
+            parsed_args, QueryJobType.EXTRACT_IR, clp_home, default_config_file_path
+        )
     elif EXTRACT_JSON_CMD == command:
-        return handle_extract_cmd(parsed_args, QueryJobType.EXTRACT_JSON, clp_home, default_config_file_path)
+        return handle_extract_cmd(
+            parsed_args, QueryJobType.EXTRACT_JSON, clp_home, default_config_file_path
+        )
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1
