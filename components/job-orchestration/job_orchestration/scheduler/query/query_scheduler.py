@@ -42,7 +42,11 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.extract_ir_task import extract_ir
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
-from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig, SearchJobConfig
+from job_orchestration.scheduler.job_config import (
+    ExtractIrJobConfig,
+    ExtractJsonJobConfig,
+    SearchJobConfig,
+)
 from job_orchestration.scheduler.query.reducer_handler import (
     handle_reducer_connection,
     ReducerHandlerMessage,
@@ -650,21 +654,19 @@ def handle_pending_query_jobs(
                     continue
 
                 # Check if the archive with the expected timestamp has already been extracted
-                if json_file_exists_for_archive(
-                        results_cache_uri, ir_collection_name, archive_id
-                ):
+                if json_file_exists_for_archive(results_cache_uri, ir_collection_name, archive_id):
                     logger.info(
                         f"archive {archive_id} already extracted, so mark job {job_id} as done"
                     )
                     if not set_job_or_task_status(
-                            db_conn,
-                            QUERY_JOBS_TABLE_NAME,
-                            job_id,
-                            QueryJobStatus.SUCCEEDED,
-                            QueryJobStatus.PENDING,
-                            start_time=datetime.datetime.now(),
-                            num_tasks=0,
-                            duration=0,
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.SUCCEEDED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
                     ):
                         logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
@@ -769,9 +771,7 @@ def ir_file_exists_for_file_split(
         return 0 != results_count
 
 
-def json_file_exists_for_archive(
-    results_cache_uri: str, ir_collection_name: str, archive_id: str
-):
+def json_file_exists_for_archive(results_cache_uri: str, ir_collection_name: str, archive_id: str):
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
         ir_collection = results_cache_client.get_default_database()[ir_collection_name]
         results_count = ir_collection.count_documents({"orig_file_id": archive_id})
