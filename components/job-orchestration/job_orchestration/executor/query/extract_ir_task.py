@@ -13,7 +13,7 @@ from job_orchestration.executor.query.utils import (
     report_command_creation_failure,
     run_query_task,
 )
-from job_orchestration.scheduler.job_config import ExtractIrJobConfig
+from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
 # Setup logging
@@ -26,11 +26,13 @@ def make_command(
     archives_dir: Path,
     archive_id: str,
     ir_output_dir: Path,
-    extract_ir_config: ExtractIrJobConfig,
+    job_config_obj: dict,
     results_cache_uri: str,
     ir_collection: str,
 ) -> Optional[List[str]]:
     if StorageEngine.CLP == storage_engine:
+        logger.info("Start IR extraction")
+        extract_ir_config = ExtractIrJobConfig.parse_obj(job_config_obj)
         if not extract_ir_config.file_split_id:
             logger.error("file_split_id not supplied")
             return None
@@ -46,6 +48,25 @@ def make_command(
         if extract_ir_config.target_uncompressed_size is not None:
             command.append("--target-size")
             command.append(str(extract_ir_config.target_uncompressed_size))
+    elif StorageEngine.CLP_S == storage_engine:
+        logger.info("Start Json extraction")
+        extract_json_config = ExtractJsonJobConfig.parse_obj(job_config_obj)
+        command = [
+            str(clp_home / "bin" / "clp-s"),
+            "x",
+            str(archives_dir),
+            str(ir_output_dir),
+            "--ordered",
+            "--archive-id",
+            archive_id,
+            "--mongodb-uri",
+            results_cache_uri,
+            "--mongodb-collection",
+            ir_collection,
+        ]
+        if extract_json_config.target_chunk_size is not None:
+            command.append("--ordered-chunk-size")
+            command.append(str(extract_json_config.target_chunk_size))
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
         return None
@@ -63,7 +84,7 @@ def extract_ir(
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
 ) -> Dict[str, Any]:
-    task_name = "IR extraction"
+    task_name = "Extraction"
 
     # Setup logging to file
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
@@ -82,7 +103,6 @@ def extract_ir(
     clp_storage_engine = os.getenv("CLP_STORAGE_ENGINE")
     ir_output_dir = Path(os.getenv("CLP_IR_OUTPUT_DIR"))
     ir_collection = os.getenv("CLP_IR_COLLECTION")
-    extract_ir_config = ExtractIrJobConfig.parse_obj(job_config_obj)
 
     task_command = make_command(
         storage_engine=clp_storage_engine,
@@ -90,7 +110,7 @@ def extract_ir(
         archives_dir=archive_directory,
         archive_id=archive_id,
         ir_output_dir=ir_output_dir,
-        extract_ir_config=extract_ir_config,
+        job_config_obj=job_config_obj,
         results_cache_uri=results_cache_uri,
         ir_collection=ir_collection,
     )

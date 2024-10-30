@@ -40,7 +40,6 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.extract_ir_task import extract_ir
-from job_orchestration.executor.query.extract_json_task import extract_json
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig, SearchJobConfig
@@ -357,21 +356,9 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
-    elif QueryJobType.EXTRACT_IR == job_type:
+    elif job_type in [QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR]:
         return celery.group(
             extract_ir.s(
-                job_id=job.id,
-                archive_id=archive_ids[i],
-                task_id=task_ids[i],
-                job_config_obj=job_config_obj,
-                clp_metadata_db_conn_params=clp_metadata_db_conn_params,
-                results_cache_uri=results_cache_uri,
-            )
-            for i in range(len(archive_ids))
-        )
-    elif QueryJobType.EXTRACT_JSON == job_type:
-        return celery.group(
-            extract_json.s(
                 job_id=job.id,
                 archive_id=archive_ids[i],
                 task_id=task_ids[i],
