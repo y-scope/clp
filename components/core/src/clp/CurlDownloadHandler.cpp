@@ -80,7 +80,7 @@ CurlDownloadHandler::CurlDownloadHandler(
             // Therefore, we convert keys to lowercase for comparison with the reserved keys.
             // NOTE: We do not check for duplicate keys due to case insensitivity, leaving duplicate
             // handling to the server.
-            std::string lower_key = key;
+            auto lower_key{key};
             std::transform(
                     lower_key.begin(),
                     lower_key.end(),
