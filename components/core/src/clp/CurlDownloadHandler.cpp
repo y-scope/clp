@@ -85,7 +85,11 @@ CurlDownloadHandler::CurlDownloadHandler(
                     lower_key.begin(),
                     lower_key.end(),
                     lower_key.begin(),
-                    [](unsigned char c) { return std::tolower(c); }
+                    [](unsigned char c) -> char {
+                        // Implicitly cast the input character into `unsigned char` to avoid UB:
+                        // https://en.cppreference.com/w/cpp/string/byte/tolower
+                        return static_cast<char>(std::tolower(c));
+                    }
             );
             if (reserved_headers.contains(lower_key) || value.ends_with("\r\n")) {
                 throw CurlOperationFailed(
