@@ -75,7 +75,11 @@ CurlDownloadHandler::CurlDownloadHandler(
     }
     if (http_header_kv_pairs.has_value()) {
         for (auto const& [key, value] : http_header_kv_pairs.value()) {
-            // Convert to lowercase for case-insensitive comparison
+            // HTTP header field-name (key) is case-insensitive:
+            // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+            // Therefore, we convert keys to lowercase for comparison with the reserved keys.
+            // NOTE: We do not check for duplicate keys due to case insensitivity, leaving duplicate
+            // handling to the server.
             std::string lower_key = key;
             std::transform(
                     lower_key.begin(),
