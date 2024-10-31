@@ -355,6 +355,7 @@ def check_if_archive_exists(
 
     return False
 
+
 def get_task_group_for_job(
     archive_ids: List[str],
     task_ids: List[int],
@@ -892,9 +893,7 @@ async def handle_finished_search_job(
     del active_jobs[job_id]
 
 
-async def handle_finished_extraction_job(
-    db_conn, job: QueryJob, task_results: List[Any]
-) -> None:
+async def handle_finished_extraction_job(db_conn, job: QueryJob, task_results: List[Any]) -> None:
     global active_jobs
     global active_archive_json_extractions
     global active_file_split_ir_extractions
@@ -925,13 +924,13 @@ async def handle_finished_extraction_job(
             )
 
     if set_job_or_task_status(
-            db_conn,
-            QUERY_JOBS_TABLE_NAME,
-            job_id,
-            new_job_status,
-            QueryJobStatus.RUNNING,
-            num_tasks_completed=num_tasks,
-            duration=(datetime.datetime.now() - job.start_time).total_seconds(),
+        db_conn,
+        QUERY_JOBS_TABLE_NAME,
+        job_id,
+        new_job_status,
+        QueryJobStatus.RUNNING,
+        num_tasks_completed=num_tasks,
+        duration=(datetime.datetime.now() - job.start_time).total_seconds(),
     ):
         if new_job_status == QueryJobStatus.SUCCEEDED:
             logger.info(f"Completed extraction job {job_id}.")
