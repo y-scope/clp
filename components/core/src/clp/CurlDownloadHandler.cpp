@@ -98,8 +98,8 @@ CurlDownloadHandler::CurlDownloadHandler(
                         __LINE__,
                         CURLE_BAD_FUNCTION_ARGUMENT,
                         fmt::format(
-                                "curl_download_handler_init failed due to "
-                                "header: {}: "
+                                "`CurlDownloadHandler` failed to construct with the following "
+                                "invalid header: {}:{}",
                                 "{}.",
                                 key,
                                 value
