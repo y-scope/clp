@@ -7,7 +7,6 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
