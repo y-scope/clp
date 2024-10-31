@@ -61,10 +61,11 @@ CurlDownloadHandler::CurlDownloadHandler(
     constexpr std::string_view cRangeHeaderName{"range"};
     constexpr std::string_view cCacheControlHeaderName{"cache-control"};
     constexpr std::string_view cPragmaHeaderName{"pragma"};
-    std::unordered_set<std::string_view> reserved_headers;
-    reserved_headers.insert(cRangeHeaderName);
-    reserved_headers.insert(cCacheControlHeaderName);
-    reserved_headers.insert(cPragmaHeaderName);
+    std::unordered_set<std::string_view> const reserved_headers{
+            cRangeHeaderName,
+            cCacheControlHeaderName,
+            cPragmaHeaderName
+    };
     if (0 != offset) {
         m_http_headers.append(fmt::format("{}: bytes={}-", cRangeHeaderName, offset));
     }
