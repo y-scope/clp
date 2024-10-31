@@ -80,12 +80,16 @@ CurlDownloadHandler::CurlDownloadHandler(
             // Therefore, we convert keys to lowercase for comparison with the reserved keys.
             // NOTE: We do not check for duplicate keys due to case insensitivity, leaving duplicate
             // handling to the server.
-            std::string lower_key = key;
+            auto lower_key{key};
             std::transform(
                     lower_key.begin(),
                     lower_key.end(),
                     lower_key.begin(),
-                    [](unsigned char c) { return std::tolower(c); }
+                    [](unsigned char c) -> char {
+                        // Implicitly cast the input character into `unsigned char` to avoid UB:
+                        // https://en.cppreference.com/w/cpp/string/byte/tolower
+                        return static_cast<char>(std::tolower(c));
+                    }
             );
             if (reserved_headers.contains(lower_key) || value.ends_with("\r\n")) {
                 throw CurlOperationFailed(
@@ -94,8 +98,8 @@ CurlDownloadHandler::CurlDownloadHandler(
                         __LINE__,
                         CURLE_BAD_FUNCTION_ARGUMENT,
                         fmt::format(
-                                "curl_download_handler_init failed due to "
-                                "header: {}: "
+                                "`CurlDownloadHandler` failed to construct with the following "
+                                "invalid header: {}:{}",
                                 "{}.",
                                 key,
                                 value

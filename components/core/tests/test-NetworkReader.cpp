@@ -223,32 +223,27 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]") {
-    auto [header_name, header_value] = GENERATE(
+    auto illegal_header_kv_pairs = GENERATE(
             // The following headers are determined by offset and disable_cache, which should not be
-            // overriden by custom headers.
-            std::make_pair("Range", "bytes=100-"),
-            std::make_pair("RAnGe", "bytes=100-"),
-            std::make_pair("Cache-Control", "no-cache"),
-            std::make_pair("Pragma", "no-cache"),
+            // overridden by user-defined headers.
+            std::unordered_map<std::string, std::string>{{"Range", "bytes=100-"}},
+            std::unordered_map<std::string, std::string>{{"RAnGe", "bytes=100-"}},
+            std::unordered_map<std::string, std::string>{{"Cache-Control", "no-cache"}},
+            std::unordered_map<std::string, std::string>{{"Pragma", "no-cache"}},
             // The CRLF-terminated headers should be rejected.
-            std::make_pair("Legal-Name", "CRLF\r\n")
+            std::unordered_map<std::string, std::string>{{"Legal-Name", "CRLF\r\n"}}
     );
-    // REQUIRE(test_illegal_header(header_name, header_value));
-    REQUIRE([header_name, header_value]() {
-        std::unordered_map<std::string, std::string> illegal_http_header_kv_pairs;
-        illegal_http_header_kv_pairs.emplace(header_name, header_value);
-        clp::NetworkReader illegal_reader{
-                "https://httpbin.org/headers",
-                0,
-                false,
-                clp::CurlDownloadHandler::cDefaultOverallTimeout,
-                clp::CurlDownloadHandler::cDefaultConnectionTimeout,
-                clp::NetworkReader::cDefaultBufferPoolSize,
-                clp::NetworkReader::cDefaultBufferSize,
-                illegal_http_header_kv_pairs
-        };
-        auto const content = get_content(illegal_reader);
-        return assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, illegal_reader)
-               && content.empty();
-    }());
+    clp::NetworkReader reader{
+            "https://httpbin.org/headers",
+            0,
+            false,
+            clp::CurlDownloadHandler::cDefaultOverallTimeout,
+            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+            clp::NetworkReader::cDefaultBufferPoolSize,
+            clp::NetworkReader::cDefaultBufferSize,
+            illegal_header_kv_pairs
+    };
+    auto const content = get_content(reader);
+    REQUIRE(content.empty());
+    REQUIRE(assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader));
 }
