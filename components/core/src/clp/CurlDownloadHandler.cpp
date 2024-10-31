@@ -100,7 +100,6 @@ CurlDownloadHandler::CurlDownloadHandler(
                         fmt::format(
                                 "`CurlDownloadHandler` failed to construct with the following "
                                 "invalid header: {}:{}",
-                                "{}.",
                                 key,
                                 value
                         )
