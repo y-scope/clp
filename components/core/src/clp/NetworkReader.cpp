@@ -17,7 +17,6 @@
 #include "CurlOperationFailed.hpp"
 #include "ErrorCode.hpp"
 #include "Platform.hpp"
-#include "TraceableException.hpp"
 
 namespace clp {
 /**

@@ -193,18 +193,18 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
 }
 
-TEST_CASE("network_reader_with_regular_http_header_kv_pairs", "[NetworkReader]") {
-    std::unordered_map<std::string, std::string> regular_http_header_kv_pairs;
+TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
+    std::unordered_map<std::string, std::string> valid_http_header_kv_pairs;
     // We use httpbin (https://httpbin.org/) to test the user-specified headers. On success, it is
     // supposed to respond all the user-specified headers as key-value pairs in JSON form.
     constexpr int cNumHttpHeaderKeyValuePairs{10};
     for (size_t i{0}; i < cNumHttpHeaderKeyValuePairs; ++i) {
-        regular_http_header_kv_pairs.emplace(
+        valid_http_header_kv_pairs.emplace(
                 fmt::format("Unit-Test-Key{}", i),
                 fmt::format("Unit-Test-Value{}", i)
         );
     }
-    clp::NetworkReader regular_reader{
+    clp::NetworkReader reader{
             "https://httpbin.org/headers",
             0,
             false,
@@ -212,12 +212,12 @@ TEST_CASE("network_reader_with_regular_http_header_kv_pairs", "[NetworkReader]")
             clp::CurlDownloadHandler::cDefaultConnectionTimeout,
             clp::NetworkReader::cDefaultBufferPoolSize,
             clp::NetworkReader::cDefaultBufferSize,
-            regular_http_header_kv_pairs
+            valid_http_header_kv_pairs
     };
-    auto const content = nlohmann::json::parse(get_content(regular_reader));
+    auto const content = nlohmann::json::parse(get_content(reader));
     auto const& headers{content.at("headers")};
-    REQUIRE(assert_curl_error_code(CURLE_OK, regular_reader));
-    for (auto const& [key, value] : regular_http_header_kv_pairs) {
+    REQUIRE(assert_curl_error_code(CURLE_OK, reader));
+    for (auto const& [key, value] : valid_http_header_kv_pairs) {
         REQUIRE((value == headers.at(key).get<std::string_view>()));
     }
 }
