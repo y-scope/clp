@@ -937,20 +937,14 @@ async def handle_finished_extraction_job(db_conn, job: QueryJob, task_results: L
         else:
             logger.info(f"Completed extraction job {job_id} with failing tasks.")
 
-    # TODO: find better name for these two variables
-    waiting_jobs_map: Dict[str, List[str]]
-    job_key: str
+    waiting_jobs: List[str]
     if QueryJobType.EXTRACT_IR == job.get_type():
-        waiting_jobs_map = active_file_split_ir_extractions
         extract_ir_config: ExtractIrJobConfig = job.get_config()
-        job_key = extract_ir_config.file_split_id
+        waiting_jobs = active_file_split_ir_extractions.pop(extract_ir_config.file_split_id)
     else:
-        waiting_jobs_map = active_archive_json_extractions
         extract_json_config: ExtractJsonJobConfig = job.get_config()
-        job_key = extract_json_config.archive_id
+        waiting_jobs = active_archive_json_extractions.pop(extract_json_config.archive_id)
 
-    waiting_jobs = waiting_jobs_map[job_key]
-    waiting_jobs.remove(job_id)
     for waiting_job in waiting_jobs:
         logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
         set_job_or_task_status(
@@ -963,7 +957,6 @@ async def handle_finished_extraction_job(db_conn, job: QueryJob, task_results: L
             duration=(datetime.datetime.now() - job.start_time).total_seconds(),
         )
 
-    del waiting_jobs_map[job_key]
     del active_jobs[job_id]
 
 
