@@ -341,15 +341,9 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
         return true;
     }
 
-    m_schema_tree.take_snapshot();
     m_schema_tree_node_buf.clear();
     m_key_group_buf.clear();
     m_value_group_buf.clear();
-
-    TransactionManager revert_manager{
-            []() noexcept -> void {},
-            [&]() noexcept -> void { m_schema_tree.revert(); }
-    };
 
     if (false == serialize_msgpack_map_using_dfs(msgpack_map)) {
         return false;
@@ -362,8 +356,6 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
     );
     m_ir_buf.insert(m_ir_buf.cend(), m_key_group_buf.cbegin(), m_key_group_buf.cend());
     m_ir_buf.insert(m_ir_buf.cend(), m_value_group_buf.cbegin(), m_value_group_buf.cend());
-
-    revert_manager.mark_success();
     return true;
 }
 
@@ -481,6 +473,12 @@ template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::serialize_msgpack_map_using_dfs(
         msgpack::object_map const& msgpack_map
 ) -> bool {
+    m_schema_tree.take_snapshot();
+    TransactionManager revert_manager{
+            []() noexcept -> void {},
+            [&]() noexcept -> void { m_schema_tree.revert(); }
+    };
+
     vector<MsgpackMapIterator> dfs_stack;
     dfs_stack.emplace_back(
             SchemaTree::cRootId,
@@ -553,6 +551,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map_using_dfs(
         }
     }
 
+    revert_manager.mark_success();
     return true;
 }
 
