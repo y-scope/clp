@@ -147,13 +147,14 @@ template <typename encoded_variable_t>
 ) -> bool;
 
 /**
- * Validates whehther the msgpack array is valid to be serialized.
+ * Checks whether the given msgpack array can be serialized in the key-value pair IR format.
  * @param array
- * @return true if the array if valid, or false on errors:
- * - The array element has an unsupported type.
- * - The array contains a map with non-string keys.
+ * @return true if the array is serializable
+ * @return false if:
+ * - Any object inside the array has its type unsupported (`BIN` or `EXT`).
+ * - Any object inside the array is `MAP` and it has non-string keys.
  */
-[[nodiscard]] auto validate_msgpack_array(msgpack::object const& array) -> bool;
+[[nodiscard]] auto is_msgpack_array_serializable(msgpack::object const& array) -> bool;
 
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
 ) -> optional<SchemaTree::Node::Type> {
@@ -235,7 +236,7 @@ auto serialize_value_array(
         string& logtype_buf,
         vector<int8_t>& output_buf
 ) -> bool {
-    if (false == validate_msgpack_array(val)) {
+    if (false == is_msgpack_array_serializable(val)) {
         return false;
     }
     std::ostringstream oss;
@@ -244,7 +245,7 @@ auto serialize_value_array(
     return serialize_clp_string<encoded_variable_t>(oss.str(), logtype_buf, output_buf);
 }
 
-auto validate_msgpack_array(msgpack::object const& array) -> bool {
+auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
     vector<msgpack::object const*> validation_stack{&array};
     while (false == validation_stack.empty()) {
         auto const* curr{validation_stack.back()};
@@ -496,7 +497,7 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map_using_dfs(
         // Convert the current value's type to its corresponding schema-tree node type
         auto const& [key, val]{curr.get_next_child()};
         if (msgpack::type::STR != key.type) {
-            // All keys must be string type
+            // A map containing non-string keys is not serializable
             return false;
         }
 
