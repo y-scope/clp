@@ -254,8 +254,7 @@ auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
             // Validate maps
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             auto const& as_map{curr->via.map};
-            std::span<msgpack::object_kv> const map_view{as_map.ptr, as_map.size};
-            for (auto const& [key, value] : map_view) {
+            for (auto const& [key, value] : span{as_map.ptr, as_map.size}) {
                 if (msgpack::type::STR != key.type) {
                     return false;
                 }
@@ -269,10 +268,8 @@ auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
         // Validate arrays
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
         auto const& as_array{curr->via.array};
-        std::span<msgpack::object> const array_view{as_array.ptr, as_array.size};
-        for (auto const& obj : array_view) {
-            auto const obj_type{obj.type};
-            switch (obj_type) {
+        for (auto const& obj : span{as_array.ptr, as_array.size}) {
+            switch (obj.type) {
                 case msgpack::type::BIN:
                 case msgpack::type::EXT:
                     // Unsupported types
