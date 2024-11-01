@@ -214,7 +214,7 @@ template <typename encoded_variable_t>
 /**
  * Unpacks and asserts the serialization of the msgpack bytes fails.
  * @tparam encoded_variable_t
- * @param buffer
+ * @param buffer A buffer containing msgpack byte sequence.
  * @param serializer
  * @return Whether serialization failed with the underlying IR buffer being empty.
  */
@@ -380,7 +380,7 @@ auto unpack_and_assert_serialization_failure(
         Serializer<encoded_variable_t>& serializer
 ) -> bool {
     string msgpack_bytes{buffer.str()};
-    buffer.str("");
+    buffer.str({});
     buffer.clear();
     auto const msgpack_obj_handle{msgpack::unpack(msgpack_bytes.data(), msgpack_bytes.size())};
     auto const msgpack_obj{msgpack_obj_handle.get()};
