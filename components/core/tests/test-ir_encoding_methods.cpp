@@ -1372,7 +1372,7 @@ TEMPLATE_TEST_CASE(
             0,
             array_with_invalid_map
     };
-    REQUIRE(assert_invalid_serialization(subarray_with_invalid_type));
+    REQUIRE(assert_invalid_serialization(subarray_with_invalid_map));
 
     std::tuple<int, decltype(map_with_invalid_submap)> const array_with_invalid_submap{
             0,
