@@ -1,8 +1,11 @@
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <unordered_set>
 #include <utility>
@@ -208,6 +211,19 @@ template <typename encoded_variable_t>
  */
 [[nodiscard]] auto count_num_leaves(nlohmann::json const& root) -> size_t;
 
+/**
+ * Unpacks and asserts the serialization of the msgpack bytes fails.
+ * @tparam encoded_variable_t
+ * @param buffer
+ * @param serializer
+ * @return Whether serialization failed with the underlying IR buffer being empty.
+ */
+template <typename encoded_variable_t>
+[[nodiscard]] auto unpack_and_assert_serialization_failure(
+        std::stringstream& buffer,
+        Serializer<encoded_variable_t>& serializer
+) -> bool;
+
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
         vector<UnstructuredLogEvent> const& log_events,
@@ -356,6 +372,30 @@ auto count_num_leaves(nlohmann::json const& root) -> size_t {
     }
 
     return num_leaves;
+}
+
+template <typename encoded_variable_t>
+auto unpack_and_assert_serialization_failure(
+        std::stringstream& buffer,
+        Serializer<encoded_variable_t>& serializer
+) -> bool {
+    string msgpack_bytes{buffer.str()};
+    buffer.str("");
+    buffer.clear();
+    auto const msgpack_obj_handle{msgpack::unpack(msgpack_bytes.data(), msgpack_bytes.size())};
+    auto const msgpack_obj{msgpack_obj_handle.get()};
+    if (msgpack::type::MAP != msgpack_obj.type) {
+        return false;
+    }
+    if (serializer.serialize_msgpack_map(msgpack_obj.via.map)) {
+        // Serialization should fail
+        return false;
+    }
+    if (false == serializer.get_ir_buf_view().empty()) {
+        // Serialization buffer should be empty
+        return false;
+    }
+    return true;
 }
 }  // namespace
 
@@ -1283,4 +1323,60 @@ TEMPLATE_TEST_CASE(
             static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX) + 1,
             output_buf
     ));
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_Serializer_serialize_invalid_msgpack",
+        "[clp][ffi][ir_stream][Serializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    auto result{Serializer<TestType>::create()};
+    REQUIRE((false == result.has_error()));
+
+    std::stringstream msgpack_serialization_buffer;
+    auto& serializer{result.value()};
+    serializer.clear_ir_buf();
+
+    auto assert_invalid_serialization = [&](auto invalid_input) -> bool {
+        std::map<string, decltype(invalid_input)> const invalid_map{{"valid_key", invalid_input}};
+        msgpack::pack(msgpack_serialization_buffer, invalid_map);
+        return unpack_and_assert_serialization_failure(msgpack_serialization_buffer, serializer);
+    };
+
+    std::map<int, int> const map_with_integer_keys{{0, 0}, {1, 1}, {2, 2}};
+    REQUIRE(assert_invalid_serialization(map_with_integer_keys));
+
+    std::map<string, decltype(map_with_integer_keys)> const map_with_invalid_submap{
+            {"valid_key", map_with_integer_keys}
+    };
+    REQUIRE(assert_invalid_serialization(map_with_invalid_submap));
+
+    std::tuple<int, vector<uint8_t>> const array_with_invalid_type{0, {0x00, 0x00, 0x00}};
+    REQUIRE(assert_invalid_serialization(array_with_invalid_type));
+
+    std::tuple<int, decltype(array_with_invalid_type)> const subarray_with_invalid_type{
+            0,
+            array_with_invalid_type
+    };
+    REQUIRE(assert_invalid_serialization(subarray_with_invalid_type));
+
+    std::tuple<int, decltype(map_with_integer_keys)> const array_with_invalid_map{
+            0,
+            map_with_integer_keys
+    };
+    REQUIRE(assert_invalid_serialization(array_with_invalid_map));
+
+    std::tuple<int, decltype(array_with_invalid_map)> const subarray_with_invalid_map{
+            0,
+            array_with_invalid_map
+    };
+    REQUIRE(assert_invalid_serialization(subarray_with_invalid_type));
+
+    std::tuple<int, decltype(map_with_invalid_submap)> const array_with_invalid_submap{
+            0,
+            map_with_invalid_submap
+    };
+    REQUIRE(assert_invalid_serialization(array_with_invalid_submap));
 }
