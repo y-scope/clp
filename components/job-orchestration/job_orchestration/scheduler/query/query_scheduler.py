@@ -288,6 +288,32 @@ def get_archives_for_search(
     return archives_for_search
 
 
+def get_archive_and_target_ids_for_extraction(
+    db_conn,
+    job_config,
+    job_type: QueryJobType
+) -> Tuple[Optional[str], Optional[str]]:
+    archive_id = None
+    target_id = None
+
+    if QueryJobType.EXTRACT_IR == job_type:
+        extract_ir_config = ExtractIrJobConfig.parse_obj(msgpack.unpackb(job_config))
+        archive_id, target_id = get_archive_and_file_split_ids_for_extraction(
+            db_conn, extract_ir_config
+        )
+    else:
+        extract_json_config = ExtractJsonJobConfig.parse_obj(msgpack.unpackb(job_config))
+        if check_if_archive_exists(db_conn, extract_json_config.archive_id):
+            archive_id = extract_json_config.archive_id
+            target_id = archive_id
+        else:
+            logger.error(
+                f"archive {archive_id} does not exist for"
+            )
+    return archive_id, target_id
+
+
+
 def get_archive_and_file_split_ids_for_extraction(
     db_conn,
     extract_ir_config: ExtractIrJobConfig,
@@ -550,6 +576,88 @@ def handle_pending_query_jobs(
                 else:
                     pending_search_jobs.append(new_search_job)
                 active_jobs[job_id] = new_search_job
+
+            elif job_type in [QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON]:
+                archive_id, target_id = get_archive_and_target_ids_for_extraction(
+                    db_conn, job_config, job_type
+                )
+                if not target_id:
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as failed")
+                    continue
+
+                # TODO: update this
+                # NOTE: The following two if blocks should not be reordered since if we first check
+                # whether *an* IR file has been extracted for the requested file split, it doesn't
+                # mean that *all* IR files have has been extracted for the file split (since the
+                # extraction job may still be in progress). Thus, we must first check whether the
+                # file split is in the process of being extracted, and then check whether it's
+                # already been extracted.
+
+                # Check if the target is currently being extracted; if so, add the job ID to the
+                # list of jobs waiting for it.
+                if is_target_extraction_active(target_id, job_type):
+                    append_job_to_wait_list(target_id, job_id, job_type)
+                    logger.info(
+                        f"target {target_id} is being extracted, so mark job {job_id} as running"
+                    )
+                    if not set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.RUNNING,
+                            QueryJobStatus.PENDING,
+                            start_time=datetime.datetime.now(),
+                            num_tasks=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as running")
+                    continue
+
+                # Check if the target has already been extracted
+                if is_target_extracted(results_cache_uri, ir_collection_name, target_id):
+                    logger.info(
+                        f"target {target_id} already extracted, so mark job {job_id} as done"
+                    )
+                    if not set_job_or_task_status(
+                            db_conn,
+                            QUERY_JOBS_TABLE_NAME,
+                            job_id,
+                            QueryJobStatus.SUCCEEDED,
+                            QueryJobStatus.PENDING,
+                            start_time=datetime.datetime.now(),
+                            num_tasks=0,
+                            duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as succeeded")
+                    continue
+
+                # TODO: can put mark_target_as_active into create_extraction_job
+                mark_target_as_active(target_id, job_id, job_type)
+                nex_extraction_job = create_extraction_job(
+                    job_id,
+                    job_config,
+                    job_type
+                )
+
+                dispatch_job_and_update_db(
+                    db_conn,
+                    nex_extraction_job,
+                    target_archive,
+                    clp_metadata_db_conn_params,
+                    results_cache_uri,
+                    1,
+                )
+                active_jobs[job_id] = nex_extraction_job
+                logger.info(f"Dispatched extraction job {job_id} on archive: {archive_id}, target: {target_id}")
 
             elif QueryJobType.EXTRACT_IR == job_type:
                 extract_ir_config = ExtractIrJobConfig.parse_obj(msgpack.unpackb(job_config))
