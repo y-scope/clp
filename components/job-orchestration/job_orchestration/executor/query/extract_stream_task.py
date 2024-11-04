@@ -25,10 +25,10 @@ def make_command(
     clp_home: Path,
     archives_dir: Path,
     archive_id: str,
-    ir_output_dir: Path,
+    stream_output_dir: Path,
     job_config_obj: dict,
     results_cache_uri: str,
-    ir_collection: str,
+    stream_collection: str,
 ) -> Optional[List[str]]:
     if StorageEngine.CLP == storage_engine:
         logger.info("Start IR extraction")
@@ -41,9 +41,9 @@ def make_command(
             "i",
             str(archives_dir / archive_id),
             extract_ir_config.file_split_id,
-            str(ir_output_dir),
+            str(stream_output_dir),
             results_cache_uri,
-            ir_collection,
+            stream_collection,
         ]
         if extract_ir_config.target_uncompressed_size is not None:
             command.append("--target-size")
@@ -55,14 +55,14 @@ def make_command(
             str(clp_home / "bin" / "clp-s"),
             "x",
             str(archives_dir),
-            str(ir_output_dir),
+            str(stream_output_dir),
             "--ordered",
             "--archive-id",
             archive_id,
             "--mongodb-uri",
             results_cache_uri,
             "--mongodb-collection",
-            ir_collection,
+            stream_collection,
         ]
         if extract_json_config.target_chunk_size is not None:
             command.append("--ordered-chunk-size")
@@ -75,7 +75,7 @@ def make_command(
 
 
 @app.task(bind=True)
-def extract_ir(
+def extract_stream(
     self: Task,
     job_id: str,
     task_id: int,
@@ -84,7 +84,7 @@ def extract_ir(
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
 ) -> Dict[str, Any]:
-    task_name = "Extraction"
+    task_name = "Stream Extraction"
 
     # Setup logging to file
     clp_logs_dir = Path(os.getenv("CLP_LOGS_DIR"))
@@ -101,18 +101,18 @@ def extract_ir(
     clp_home = Path(os.getenv("CLP_HOME"))
     archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
     clp_storage_engine = os.getenv("CLP_STORAGE_ENGINE")
-    ir_output_dir = Path(os.getenv("CLP_IR_OUTPUT_DIR"))
-    ir_collection = os.getenv("CLP_IR_COLLECTION")
+    stream_output_dir = Path(os.getenv("CLP_IR_OUTPUT_DIR"))
+    stream_collection = os.getenv("CLP_IR_COLLECTION")
 
     task_command = make_command(
         storage_engine=clp_storage_engine,
         clp_home=clp_home,
         archives_dir=archive_directory,
         archive_id=archive_id,
-        ir_output_dir=ir_output_dir,
+        stream_output_dir=stream_output_dir,
         job_config_obj=job_config_obj,
         results_cache_uri=results_cache_uri,
-        ir_collection=ir_collection,
+        stream_collection=stream_collection,
     )
     if not task_command:
         return report_command_creation_failure(
