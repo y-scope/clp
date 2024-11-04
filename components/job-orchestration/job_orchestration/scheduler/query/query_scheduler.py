@@ -289,27 +289,20 @@ def get_archives_for_search(
 
 
 def get_archive_and_target_ids_for_extraction(
-    db_conn,
-    job_config: Dict[str, Any],
-    job_type: QueryJobType
+    db_conn, job_config: Dict[str, Any], job_type: QueryJobType
 ) -> Tuple[Optional[str], Optional[str]]:
     if QueryJobType.EXTRACT_IR == job_type:
         extract_ir_config = ExtractIrJobConfig.parse_obj(job_config)
-        return get_archive_and_file_split_ids_for_extraction(
-            db_conn, extract_ir_config
-        )
+        return get_archive_and_file_split_ids_for_extraction(db_conn, extract_ir_config)
 
     extract_json_config = ExtractJsonJobConfig.parse_obj(job_config)
     archive_id = extract_json_config.archive_id
     if check_if_archive_exists(db_conn, extract_json_config.archive_id):
         return archive_id, archive_id
     else:
-        logger.error(
-            f"archive {archive_id} does not exist"
-        )
+        logger.error(f"archive {archive_id} does not exist")
 
     return None, None
-
 
 
 def get_archive_and_file_split_ids_for_extraction(
@@ -369,7 +362,7 @@ def is_target_extraction_active(target_id: str, job_type: QueryJobType):
     return target_id in active_archive_json_extractions
 
 
-def mark_job_waiting_for_target(target_id: str, job_id:str, job_type: QueryJobType):
+def mark_job_waiting_for_target(target_id: str, job_id: str, job_type: QueryJobType):
     global active_file_split_ir_extractions
     global active_archive_json_extractions
 
@@ -384,17 +377,16 @@ def mark_job_waiting_for_target(target_id: str, job_id:str, job_type: QueryJobTy
     active_extraction_lists[target_id].append(job_id)
 
 
-def is_target_extracted(results_cache_uri: str, ir_collection_name: str, target_id: str, job_type: QueryJobType):
+def is_target_extracted(
+    results_cache_uri: str, ir_collection_name: str, target_id: str, job_type: QueryJobType
+):
     if QueryJobType.EXTRACT_IR == job_type:
         return ir_file_exists_for_file_split(results_cache_uri, ir_collection_name, target_id)
     return json_file_exists_for_archive(results_cache_uri, ir_collection_name, target_id)
 
 
 def create_extraction_job(
-    job_id: str,
-    job_config: Dict[str, Any],
-    target_id: str,
-    job_type: QueryJobType
+    job_id: str, job_config: Dict[str, Any], target_id: str, job_type: QueryJobType
 ):
     new_extraction_job: QueryJob
     new_job_state = InternalJobState.WAITING_FOR_DISPATCH
@@ -662,13 +654,13 @@ def handle_pending_query_jobs(
                         f"target {target_id} is being extracted, so mark job {job_id} as running"
                     )
                     if not set_job_or_task_status(
-                            db_conn,
-                            QUERY_JOBS_TABLE_NAME,
-                            job_id,
-                            QueryJobStatus.RUNNING,
-                            QueryJobStatus.PENDING,
-                            start_time=datetime.datetime.now(),
-                            num_tasks=0,
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.RUNNING,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
                     ):
                         logger.error(f"Failed to set job {job_id} as running")
                     continue
@@ -679,24 +671,19 @@ def handle_pending_query_jobs(
                         f"target {target_id} already extracted, so mark job {job_id} as done"
                     )
                     if not set_job_or_task_status(
-                            db_conn,
-                            QUERY_JOBS_TABLE_NAME,
-                            job_id,
-                            QueryJobStatus.SUCCEEDED,
-                            QueryJobStatus.PENDING,
-                            start_time=datetime.datetime.now(),
-                            num_tasks=0,
-                            duration=0,
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.SUCCEEDED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        num_tasks=0,
+                        duration=0,
                     ):
                         logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
 
-                nex_extraction_job = create_extraction_job(
-                    job_id,
-                    job_config,
-                    target_id,
-                    job_type
-                )
+                nex_extraction_job = create_extraction_job(job_id, job_config, target_id, job_type)
 
                 dispatch_job_and_update_db(
                     db_conn,
