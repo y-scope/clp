@@ -147,11 +147,11 @@ def handle_extract_file_cmd(
     return 0
 
 
-def handle_extract_cmd(
+def handle_extract_stream_cmd(
     parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
-    Handles the extraction command.
+    Handles the stream extraction command.
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
@@ -208,7 +208,7 @@ def handle_extract_cmd(
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError:
-        logger.exception("Docker or IR extraction command failed.")
+        logger.exception("Docker or stream extraction command failed.")
         return -1
 
     # Remove generated files
@@ -253,7 +253,7 @@ def main(argv):
     group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
     group.add_argument("--orig-file-path", type=str, help="Original file's path.")
 
-    # IR extraction command parser
+    # Json extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
     json_extraction_parser.add_argument(
@@ -266,7 +266,7 @@ def main(argv):
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
     elif command in [EXTRACT_IR_CMD, EXTRACT_JSON_CMD]:
-        return handle_extract_cmd(parsed_args, clp_home, default_config_file_path)
+        return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1
