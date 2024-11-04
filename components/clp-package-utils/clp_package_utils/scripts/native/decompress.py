@@ -99,14 +99,13 @@ def submit_and_monitor_extraction_job_in_db(
     return -1
 
 
-def handle_extract_cmd(
+def handle_extract_stream_cmd(
     parsed_args: argparse.Namespace,
-    job_type: QueryJobType,
     clp_home: pathlib.Path,
     default_config_file_path: pathlib.Path,
 ) -> int:
     """
-    Handles the IR extraction command.
+    Handles the stream extraction command.
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
@@ -119,8 +118,12 @@ def handle_extract_cmd(
     if clp_config is None:
         return -1
 
+    command = parsed_args.command
+
     extraction_config: QueryJobConfig
-    if QueryJobType.EXTRACT_IR == job_type:
+    job_type: QueryJobType
+    if EXTRACT_IR_CMD == command:
+        job_type = QueryJobType.EXTRACT_IR
         orig_file_id: str
         if parsed_args.orig_file_id:
             orig_file_id = parsed_args.orig_file_id
@@ -135,12 +138,15 @@ def handle_extract_cmd(
             msg_ix=parsed_args.msg_ix,
             target_uncompressed_size=parsed_args.target_uncompressed_size,
         )
-    elif QueryJobType.EXTRACT_JSON == job_type:
+    elif EXTRACT_JSON_CMD == command:
+        job_type = QueryJobType.EXTRACT_JSON
         extraction_config = ExtractJsonJobConfig(
             archive_id=parsed_args.archive_id, target_chunk_size=parsed_args.target_chunk_size
         )
     else:
-        logger.exception(f"Unsupported extraction job type: {job_type}")
+        logger.exception(f"Unsupported stream extraction command: {command}")
+        return -1
+
     try:
         return asyncio.run(
             run_function_in_process(
@@ -151,7 +157,7 @@ def handle_extract_cmd(
             )
         )
     except asyncio.CancelledError:
-        logger.error("IR extraction cancelled.")
+        logger.error("stream extraction cancelled.")
         return -1
 
 
@@ -301,14 +307,8 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif EXTRACT_IR_CMD == command:
-        return handle_extract_cmd(
-            parsed_args, QueryJobType.EXTRACT_IR, clp_home, default_config_file_path
-        )
-    elif EXTRACT_JSON_CMD == command:
-        return handle_extract_cmd(
-            parsed_args, QueryJobType.EXTRACT_JSON, clp_home, default_config_file_path
-        )
+    elif command in [EXTRACT_IR_CMD, EXTRACT_JSON_CMD]:
+        return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")
         return -1
