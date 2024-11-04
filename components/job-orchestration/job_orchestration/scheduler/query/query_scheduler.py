@@ -380,9 +380,16 @@ def mark_job_waiting_for_target(target_id: str, job_id: str, job_type: QueryJobT
 def is_target_extracted(
     results_cache_uri: str, ir_collection_name: str, target_id: str, job_type: QueryJobType
 ):
+    target_key: str
     if QueryJobType.EXTRACT_IR == job_type:
-        return ir_file_exists_for_file_split(results_cache_uri, ir_collection_name, target_id)
-    return json_file_exists_for_archive(results_cache_uri, ir_collection_name, target_id)
+        target_key = "file_split_id"
+    else:
+        target_key = "orig_file_id"
+
+    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+        ir_collection = results_cache_client.get_default_database()[ir_collection_name]
+        results_count = ir_collection.count_documents({target_key: target_id})
+        return 0 != results_count
 
 
 def create_extraction_job(
@@ -767,22 +774,6 @@ def found_max_num_latest_results(
         )
         min_timestamp_in_top_results = 0 if len(results) == 0 else results[0]["timestamp"]
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
-
-
-def ir_file_exists_for_file_split(
-    results_cache_uri: str, ir_collection_name: str, file_split_id: str
-):
-    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
-        ir_collection = results_cache_client.get_default_database()[ir_collection_name]
-        results_count = ir_collection.count_documents({"file_split_id": file_split_id})
-        return 0 != results_count
-
-
-def json_file_exists_for_archive(results_cache_uri: str, ir_collection_name: str, archive_id: str):
-    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
-        ir_collection = results_cache_client.get_default_database()[ir_collection_name]
-        results_count = ir_collection.count_documents({"orig_file_id": archive_id})
-        return 0 != results_count
 
 
 async def handle_finished_search_job(
