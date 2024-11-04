@@ -85,7 +85,7 @@ class CLPDockerMounts:
         self.data_dir: typing.Optional[DockerMount] = None
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
-        self.ir_output_dir: typing.Optional[DockerMount] = None
+        self.stream_output_dir: typing.Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -252,17 +252,17 @@ def generate_container_config(
             container_clp_config.archive_output.directory,
         )
 
-    container_clp_config.ir_output.directory = pathlib.Path("/") / "mnt" / "ir-output"
+    container_clp_config.stream_output.directory = pathlib.Path("/") / "mnt" / "ir-output"
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.ir_output.directory,
-        container_clp_config.ir_output.directory,
+        clp_config.stream_output.directory,
+        container_clp_config.stream_output.directory,
     ):
-        docker_mounts.ir_output_dir = DockerMount(
+        docker_mounts.stream_output_dir = DockerMount(
             DockerMountType.BIND,
-            clp_config.ir_output.directory,
-            container_clp_config.ir_output.directory,
+            clp_config.stream_output.directory,
+            container_clp_config.stream_output.directory,
         )
 
     return container_clp_config, docker_mounts
@@ -483,7 +483,7 @@ def validate_results_cache_config(
 def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
     clp_config.validate_archive_output_dir()
-    clp_config.validate_ir_output_dir()
+    clp_config.validate_stream_output_dir()
 
 
 def validate_webui_config(

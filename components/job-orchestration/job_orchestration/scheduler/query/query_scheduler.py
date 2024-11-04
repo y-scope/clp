@@ -378,7 +378,7 @@ def mark_job_waiting_for_target(target_id: str, job_id: str, job_type: QueryJobT
 
 
 def is_target_extracted(
-    results_cache_uri: str, ir_collection_name: str, target_id: str, job_type: QueryJobType
+    results_cache_uri: str, stream_collection_name: str, target_id: str, job_type: QueryJobType
 ) -> bool:
     target_key: str
     if QueryJobType.EXTRACT_IR == job_type:
@@ -387,7 +387,7 @@ def is_target_extracted(
         target_key = "orig_file_id"
 
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
-        ir_collection = results_cache_client.get_default_database()[ir_collection_name]
+        ir_collection = results_cache_client.get_default_database()[stream_collection_name]
         results_count = ir_collection.count_documents({target_key: target_id})
         return 0 != results_count
 
@@ -567,7 +567,7 @@ def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
-    ir_collection_name: str,
+    stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
 ) -> List[asyncio.Task]:
     global active_jobs
@@ -673,7 +673,9 @@ def handle_pending_query_jobs(
                     continue
 
                 # Check if the target has already been extracted
-                if is_target_extracted(results_cache_uri, ir_collection_name, target_id, job_type):
+                if is_target_extracted(
+                    results_cache_uri, stream_collection_name, target_id, job_type
+                ):
                     logger.info(
                         f"target {target_id} already extracted, so mark job {job_id} as done"
                     )
@@ -987,7 +989,7 @@ async def handle_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
-    ir_collection_name: str,
+    stream_collection_name: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
 ) -> None:
@@ -1001,7 +1003,7 @@ async def handle_jobs(
             db_conn_pool,
             clp_metadata_db_conn_params,
             results_cache_uri,
-            ir_collection_name,
+            stream_collection_name,
             num_archives_to_search_per_sub_job,
         )
         if 0 == len(reducer_acquisition_tasks):
@@ -1085,7 +1087,7 @@ async def main(argv: List[str]) -> int:
                     True
                 ),
                 results_cache_uri=clp_config.results_cache.get_uri(),
-                ir_collection_name=clp_config.results_cache.ir_collection_name,
+                stream_collection_name=clp_config.results_cache.stream_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
             )

@@ -101,8 +101,8 @@ def extract_stream(
     clp_home = Path(os.getenv("CLP_HOME"))
     archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
     clp_storage_engine = os.getenv("CLP_STORAGE_ENGINE")
-    stream_output_dir = Path(os.getenv("CLP_IR_OUTPUT_DIR"))
-    stream_collection = os.getenv("CLP_IR_COLLECTION")
+    stream_output_dir = Path(os.getenv("CLP_STREAM_OUTPUT_DIR"))
+    stream_collection = os.getenv("CLP_STREAM_COLLECTION")
 
     task_command = make_command(
         storage_engine=clp_storage_engine,
