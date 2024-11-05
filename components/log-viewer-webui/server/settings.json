@@ -6,9 +6,9 @@
     "MongoDbHost": "localhost",
     "MongoDbPort": 27017,
     "MongoDbName": "clp-query-results",
-    "MongoDbIrFilesCollectionName": "ir-files",
+    "MongoDbStreamFilesCollectionName": "stream-files",
 
     "ClientDir": "../client/dist",
-    "IrFilesDir": "../../../build/clp-package/var/data/ir",
+    "StreamFilesDir": "../../../build/clp-package/var/data/stream",
     "LogViewerDir": "../yscope-log-viewer/dist"
 }

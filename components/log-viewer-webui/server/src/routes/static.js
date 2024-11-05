@@ -18,13 +18,13 @@ const routes = async (fastify, options) => {
     const dirname = path.dirname(filename);
     const rootDirname = path.resolve(dirname, "../..");
 
-    let irFilesDir = settings.IrFilesDir;
-    if (false === path.isAbsolute(irFilesDir)) {
-        irFilesDir = path.resolve(rootDirname, irFilesDir);
+    let StreamFilesDir = settings.StreamFilesDir;
+    if (false === path.isAbsolute(StreamFilesDir)) {
+        StreamFilesDir = path.resolve(rootDirname, StreamFilesDir);
     }
     await fastify.register(fastifyStatic, {
         prefix: "/ir",
-        root: irFilesDir,
+        root: StreamFilesDir,
     });
 
     let logViewerDir = settings.LogViewerDir;

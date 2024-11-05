@@ -933,9 +933,9 @@ def start_log_viewer_webui(
         "MongoDbHost": clp_config.results_cache.host,
         "MongoDbPort": clp_config.results_cache.port,
         "MongoDbName": clp_config.results_cache.db_name,
-        "MongoDbIrFilesCollectionName": clp_config.results_cache.stream_collection_name,
+        "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
-        "IrFilesDir": str(container_clp_config.stream_output.directory),
+        "StreamFilesDir": str(container_clp_config.stream_output.directory),
         "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
