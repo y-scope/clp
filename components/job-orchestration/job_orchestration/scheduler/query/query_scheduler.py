@@ -645,13 +645,11 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
-                # TODO: update this comment
-                # NOTE: The following two if blocks should not be reordered since if we first check
-                # whether *an* IR file has been extracted for the requested file split, it doesn't
-                # mean that *all* IR files have has been extracted for the file split (since the
-                # extraction job may still be in progress). Thus, we must first check whether the
-                # file split is in the process of being extracted, and then check whether it's
-                # already been extracted.
+                # NOTE: The following two if blocks should not be reordered. The method that checks
+                # whether a stream file has been extracted doesn't guarantee that *all* stream
+                # files to be extracted for the target (since the extraction job may still be in
+                # progress). Thus, we must first check whether the target is in the process of
+                # being extracted, and then check whether it's already been extracted.
 
                 # Check if the target is currently being extracted; if so, add the job ID to the
                 # list of jobs waiting for it.
@@ -672,7 +670,7 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as running")
                     continue
 
-                # Check if the target has already been extracted
+                # Check if a stream file in the target has already been extracted
                 if is_target_extracted(
                     results_cache_uri, stream_collection_name, target_id, job_type
                 ):
