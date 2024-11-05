@@ -387,8 +387,8 @@ def is_target_extracted(
         target_key = "orig_file_id"
 
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
-        ir_collection = results_cache_client.get_default_database()[stream_collection_name]
-        results_count = ir_collection.count_documents({target_key: target_id})
+        stream_collection = results_cache_client.get_default_database()[stream_collection_name]
+        results_count = stream_collection.count_documents({target_key: target_id})
         return 0 != results_count
 
 
