@@ -424,10 +424,10 @@ def check_if_archive_exists(
 
     query = f"""SELECT 1 
                 FROM {CLP_METADATA_TABLE_PREFIX}archives WHERE
-                id = '{archive_id}'
+                id = %s
                 """
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
-        cursor.execute(query)
+        cursor.execute(query, (archive_id,))
         if cursor.fetchone():
             return True
 

@@ -81,7 +81,7 @@ def submit_and_monitor_extraction_job_in_db(
     job_config: QueryJobConfig,
 ) -> int:
     """
-    Submits an extraction job to the scheduler and waits until the job finishes.
+    Submits a stream extraction job to the scheduler and waits until it finishes.
     :param db_config:
     :param job_type:
     :param job_config:

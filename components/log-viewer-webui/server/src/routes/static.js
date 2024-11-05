@@ -18,7 +18,7 @@ const routes = async (fastify, options) => {
     const dirname = path.dirname(filename);
     const rootDirname = path.resolve(dirname, "../..");
 
-    let StreamFilesDir = settings.StreamFilesDir;
+    let {StreamFilesDir} = settings;
     if (false === path.isAbsolute(StreamFilesDir)) {
         StreamFilesDir = path.resolve(rootDirname, StreamFilesDir);
     }
