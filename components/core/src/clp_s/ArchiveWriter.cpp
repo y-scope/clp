@@ -170,8 +170,10 @@ void ArchiveWriter::write_archive_files(
             size_t num_bytes_read{0};
             ErrorCode const error_code
                     = reader.try_read(read_buffer, cReadBlockSize, num_bytes_read);
-            if (ErrorCodeSuccess != error_code) {
+            if (ErrorCodeEndOfFile == error_code) {
                 break;
+            } else if (ErrorCodeSuccess != error_code) {
+                throw OperationFailed(error_code, __FILENAME__, __LINE__);
             }
             archive_writer.write(read_buffer, num_bytes_read);
         }
