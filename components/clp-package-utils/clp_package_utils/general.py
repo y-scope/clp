@@ -252,7 +252,7 @@ def generate_container_config(
             container_clp_config.archive_output.directory,
         )
 
-    container_clp_config.stream_output.directory = pathlib.Path("/") / "mnt" / "ir-output"
+    container_clp_config.stream_output.directory = pathlib.Path("/") / "mnt" / "stream-output"
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
