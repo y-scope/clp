@@ -206,6 +206,15 @@ private:
      */
     void print_archive_stats();
 
+    /**
+     * Write the timestamp dictionary as a dedicated file for multi-file archives.
+     *
+     * Note: the timestamp dictionary will be moved into the metadata region of multi-file archives
+     * in a follow-up PR.
+     * @return the compressed size of the Timestamp Dictionary in bytes
+     */
+    size_t write_timestamp_dict();
+
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
     size_t m_encoded_message_size{};

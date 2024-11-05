@@ -41,16 +41,13 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 
-    std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
     m_timestamp_dict = std::make_shared<TimestampDictionaryWriter>();
-    m_timestamp_dict->open(timestamp_dict_path, m_compression_level);
 }
 
 void ArchiveWriter::close() {
     auto var_dict_compressed_size = m_var_dict->close();
     auto log_dict_compressed_size = m_log_dict->close();
     auto array_dict_compressed_size = m_array_dict->close();
-    auto timestamp_dict_compressed_size = m_timestamp_dict->close();
     auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);
     auto schema_map_compressed_size = m_schema_map.store(m_archive_path, m_compression_level);
     auto [table_metadata_compressed_size, table_compressed_size] = store_tables();
@@ -73,6 +70,9 @@ void ArchiveWriter::close() {
         }
         write_single_file_archive(files);
     } else {
+        // Timestamp dictionary written separately here until we transition to moving it inside of
+        // the metadata region of multi-file archives.
+        auto timestamp_dict_compressed_size = write_timestamp_dict();
         m_compressed_size = var_dict_compressed_size + log_dict_compressed_size
                             + array_dict_compressed_size + timestamp_dict_compressed_size
                             + schema_tree_compressed_size + schema_map_compressed_size
@@ -93,6 +93,19 @@ void ArchiveWriter::close() {
     m_encoded_message_size = 0UL;
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
+}
+
+size_t ArchiveWriter::write_timestamp_dict() {
+    std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
+    FileWriter timestamp_dict_file_writer;
+    ZstdCompressor timestamp_dict_compressor;
+    timestamp_dict_file_writer.open(timestamp_dict_path, FileWriter::OpenMode::CreateForWriting);
+    timestamp_dict_compressor.open(timestamp_dict_file_writer, m_compression_level);
+    m_timestamp_dict->write(timestamp_dict_compressor);
+    timestamp_dict_compressor.close();
+    auto compressed_size = timestamp_dict_file_writer.get_pos();
+    timestamp_dict_file_writer.close();
+    return compressed_size;
 }
 
 void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files) {
@@ -139,28 +152,8 @@ void ArchiveWriter::write_archive_metadata(
 
     // Write timestamp dictionary
     compressor.write_numeric_value(ArchiveMetadataPacketType::TimestampDictionary);
-    std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
-    FileReader timestamp_dict_reader;
-    ZstdDecompressor timestamp_dict_decompressor;
-    timestamp_dict_reader.open(timestamp_dict_path);
-    timestamp_dict_decompressor.open(timestamp_dict_reader, cReadBlockSize);
+    m_timestamp_dict->write(compressor);
 
-    std::string decompressed_buffer;
-    char read_buffer[cReadBlockSize];
-    while (true) {
-        size_t num_bytes_read{0};
-        ErrorCode error_code
-                = timestamp_dict_decompressor.try_read(read_buffer, cReadBlockSize, num_bytes_read);
-        if (ErrorCodeSuccess != error_code) {
-            break;
-        }
-        decompressed_buffer.append(read_buffer, num_bytes_read);
-    }
-    timestamp_dict_decompressor.close();
-    timestamp_dict_reader.close();
-    compressor.write_numeric_value(static_cast<uint32_t>(decompressed_buffer.size()));
-    compressor.write(decompressed_buffer.data(), decompressed_buffer.size());
-    std::filesystem::remove(timestamp_dict_path);
     compressor.close();
 }
 

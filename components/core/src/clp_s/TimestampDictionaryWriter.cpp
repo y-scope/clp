@@ -14,54 +14,19 @@ void TimestampDictionaryWriter::write_timestamp_entries(
     }
 }
 
-void TimestampDictionaryWriter::write_and_flush_to_disk() {
-    write_timestamp_entries(m_column_key_to_range, m_dictionary_compressor);
+void TimestampDictionaryWriter::write(ZstdCompressor& compressor) {
+    merge_range();
+    write_timestamp_entries(m_column_key_to_range, compressor);
 
-    m_dictionary_compressor.write_numeric_value<uint64_t>(m_pattern_to_id.size());
+    compressor.write_numeric_value<uint64_t>(m_pattern_to_id.size());
     for (auto& it : m_pattern_to_id) {
         // write pattern ID
-        m_dictionary_compressor.write_numeric_value<uint64_t>(it.second);
+        compressor.write_numeric_value<uint64_t>(it.second);
 
         std::string const& pattern = it.first->get_format();
-        m_dictionary_compressor.write_numeric_value<uint64_t>(pattern.length());
-        m_dictionary_compressor.write_string(pattern);
+        compressor.write_numeric_value<uint64_t>(pattern.length());
+        compressor.write_string(pattern);
     }
-
-    m_dictionary_compressor.flush();
-    m_dictionary_file_writer.flush();
-}
-
-void TimestampDictionaryWriter::open(std::string const& dictionary_path, int compression_level) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-
-    m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CreateForWriting);
-    m_dictionary_compressor.open(m_dictionary_file_writer, compression_level);
-
-    m_next_id = 0;
-    m_is_open = true;
-}
-
-size_t TimestampDictionaryWriter::close() {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
-    }
-
-    // merge before writing overall archive because this
-    // happens before the last sub-archive is written
-    merge_range();
-    write_and_flush_to_disk();
-    m_dictionary_compressor.close();
-    size_t compressed_size = m_dictionary_file_writer.get_pos();
-    m_dictionary_file_writer.close();
-
-    m_is_open = false;
-    m_next_id = 0;
-    m_pattern_to_id.clear();
-    m_column_id_to_range.clear();
-    m_column_key_to_range.clear();
-    return compressed_size;
 }
 
 uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* pattern) {
