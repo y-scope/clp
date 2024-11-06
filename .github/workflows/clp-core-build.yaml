@@ -11,7 +11,7 @@ on:
       - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
-      - "!components/core/tools/scripts/lib_install/macos-12/**"
+      - "!components/core/tools/scripts/lib_install/macos/**"
   push:
     paths:
       - ".github/actions/clp-core-build/action.yaml"
@@ -22,7 +22,7 @@ on:
       - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
-      - "!components/core/tools/scripts/lib_install/macos-12/**"
+      - "!components/core/tools/scripts/lib_install/macos/**"
   workflow_dispatch:
 
 env:
