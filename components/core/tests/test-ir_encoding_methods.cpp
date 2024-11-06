@@ -630,8 +630,8 @@ TEMPLATE_TEST_CASE(
     auto metadata_json = nlohmann::json::parse(json_metadata);
     std::string const version
             = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
-    );
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+            == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -844,17 +844,60 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
 }
 
 TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("v0.0.1")
-    );
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.1"));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.a.1"));
+    SECTION("Test invalid versions") {
+        auto const invalid_versions{GENERATE(
+                std::string_view{"v0.0.1"},
+                std::string_view{"0.1"},
+                std::string_view{"0.1.a"},
+                std::string_view{"0.a.1"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Invalid
+                 == validate_protocol_version(invalid_versions))
+        );
+    }
 
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Too_New
-            == validate_protocol_version("1000.0.0"));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version("v0.0.0"));
+    SECTION("Test backward compatible versions") {
+        auto const backward_compatible_versions{GENERATE(
+                std::string_view{"v0.0.0"},
+                std::string_view{"0.0.1"},
+                std::string_view{"0.0.2"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+                 == validate_protocol_version(backward_compatible_versions))
+        );
+    }
+
+    SECTION("Test supported versions") {
+        auto const supported_versions{GENERATE(
+                std::string_view{"0.1.0-beta.1"},
+                std::string_view{static_cast<char const*>(
+                        clp::ffi::ir_stream::cProtocol::Metadata::VersionValue
+                )}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Supported
+                 == validate_protocol_version(supported_versions))
+        );
+    }
+
+    SECTION("Test version too new") {
+        auto const old_versions{
+                GENERATE(std::string_view{"0.0.3"}, std::string_view{"0.0.3-beta.1"})
+        };
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Too_Old
+                 == validate_protocol_version(old_versions))
+        );
+    }
+
+    SECTION("Test version too new") {
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Too_New
+                 == validate_protocol_version("1000.0.0"))
+        );
+    }
 }
 
 TEMPLATE_TEST_CASE(
@@ -905,8 +948,8 @@ TEMPLATE_TEST_CASE(
     string_view json_metadata{json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     string const version = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
-    );
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+            == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -1055,7 +1098,7 @@ TEMPLATE_TEST_CASE(
     nlohmann::json expected_metadata;
     expected_metadata.emplace(
             clp::ffi::ir_stream::cProtocol::Metadata::VersionKey,
-            clp::ffi::ir_stream::cProtocol::Metadata::BetaVersionValue
+            clp::ffi::ir_stream::cProtocol::Metadata::VersionValue
     );
     expected_metadata.emplace(
             clp::ffi::ir_stream::cProtocol::Metadata::VariablesSchemaIdKey,

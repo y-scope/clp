@@ -1,6 +1,8 @@
 #include "decoding_methods.hpp"
 
+#include <array>
 #include <regex>
+#include <string_view>
 
 #include "../../ir/types.hpp"
 #include "byteswap.hpp"
@@ -468,13 +470,23 @@ IRErrorCode deserialize_preamble(
     return IRErrorCode_Success;
 }
 
-IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version) {
-    if ("v0.0.0" == protocol_version) {
-        // This version is hardcoded to support the oldest IR protocol version. When this version is
-        // no longer supported, this branch should be removed.
-        return IRProtocolErrorCode_Supported;
+auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolErrorCode {
+    // These versions are hardcoded to support the IR protocol version that predates the key-value
+    // pair IR format.
+    constexpr std::array<std::string_view, 3> cBackwardCompatibleVersions{
+            "v0.0.0",
+            "0.0.1",
+            "0.0.2"
+    };
+    for (auto const backward_compatible_version : cBackwardCompatibleVersions) {
+        if (backward_compatible_version == protocol_version) {
+            return IRProtocolErrorCode::Backward_Compatible;
+        }
     }
-    std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};
+
+    std::regex const protocol_version_regex{
+            static_cast<char const*>(cProtocol::Metadata::VersionRegex)
+    };
     if (false
         == std::regex_match(
                 protocol_version.begin(),
@@ -482,19 +494,45 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
                 protocol_version_regex
         ))
     {
-        return IRProtocolErrorCode_Invalid;
+        return IRProtocolErrorCode::Invalid;
     }
-    std::string_view current_build_protocol_version{cProtocol::Metadata::VersionValue};
+
+    std::string_view const current_build_protocol_version{
+            static_cast<char const*>(cProtocol::Metadata::VersionValue)
+    };
+    auto get_version_core = [](std::string_view version) -> std::string_view {
+        // Strip any pre-release version or build info from the version string based on the spec:
+        // https://semver.org/
+        auto const pos_pre_release{version.find('-')};
+        if (std::string_view::npos == pos_pre_release) {
+            return version.substr(0, version.find('+'));
+        }
+        return version.substr(0, pos_pre_release);
+    };
+    auto const curr_build_protocol_version_core{get_version_core(current_build_protocol_version)};
+    auto const protocol_version_core{get_version_core(protocol_version)};
+    if (curr_build_protocol_version_core < protocol_version_core) {
+        return IRProtocolErrorCode::Too_New;
+    }
+
+    // Check major version
     auto get_major_version{[](std::string_view version) {
         return version.substr(0, version.find('.'));
     }};
-    if (current_build_protocol_version < protocol_version) {
-        return IRProtocolErrorCode_Too_New;
+    if (get_major_version(curr_build_protocol_version_core)
+        > get_major_version(protocol_version_core))
+    {
+        return IRProtocolErrorCode::Too_Old;
     }
-    if (get_major_version(current_build_protocol_version) > get_major_version(protocol_version)) {
-        return IRProtocolErrorCode_Too_Old;
+
+    if (protocol_version_core < get_version_core(
+                static_cast<char const*>(cProtocol::Metadata::MinimumSupportedVersionValue)
+        ))
+    {
+        return IRProtocolErrorCode::Too_Old;
     }
-    return IRProtocolErrorCode_Supported;
+
+    return IRProtocolErrorCode::Supported;
 }
 
 IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset) {

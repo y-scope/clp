@@ -42,7 +42,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
         return std::errc::protocol_error;
     }
     auto metadata_version = version_iter->get_ref<nlohmann::json::string_t&>();
-    if (ffi::ir_stream::IRProtocolErrorCode_Supported
+    if (ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
         != ffi::ir_stream::validate_protocol_version(metadata_version))
     {
         return std::errc::protocol_not_supported;
