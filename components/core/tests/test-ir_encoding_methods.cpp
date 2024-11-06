@@ -893,9 +893,12 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
     }
 
     SECTION("Test version too new") {
+        auto const new_versions{
+                GENERATE(std::string_view{"10000.0.0"}, std::string_view{"0.10000.0"})
+        };
         REQUIRE(
                 (clp::ffi::ir_stream::IRProtocolErrorCode::Too_New
-                 == validate_protocol_version("1000.0.0"))
+                 == validate_protocol_version(new_versions))
         );
     }
 }
