@@ -149,4 +149,11 @@ epochtime_t TimestampDictionaryWriter::get_end_timestamp() const {
 
     return it->second.get_end_timestamp();
 }
+
+void TimestampDictionaryWriter::clear() {
+    m_next_id = 0;
+    m_pattern_to_id.clear();
+    m_column_key_to_range.clear();
+    m_column_id_to_range.clear();
+}
 }  // namespace clp_s

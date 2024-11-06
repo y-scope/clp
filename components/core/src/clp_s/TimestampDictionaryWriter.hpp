@@ -1,6 +1,7 @@
 #ifndef CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 #define CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -76,6 +77,11 @@ public:
      * @return the end of this archive's time range as milliseconds since the UNIX epoch
      */
     epochtime_t get_end_timestamp() const;
+
+    /**
+     * Clears and resets all internal state.
+     */
+    void clear();
 
 private:
     /**

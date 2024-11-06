@@ -121,7 +121,7 @@ public:
             std::string const& timestamp,
             uint64_t& pattern_id
     ) {
-        return m_timestamp_dict->ingest_entry(key, node_id, timestamp, pattern_id);
+        return m_timestamp_dict.ingest_entry(key, node_id, timestamp, pattern_id);
     }
 
     /**
@@ -131,11 +131,11 @@ public:
      * @param timestamp
      */
     void ingest_timestamp_entry(std::string const& key, int32_t node_id, double timestamp) {
-        m_timestamp_dict->ingest_entry(key, node_id, timestamp);
+        m_timestamp_dict.ingest_entry(key, node_id, timestamp);
     }
 
     void ingest_timestamp_entry(std::string const& key, int32_t node_id, int64_t timestamp) {
-        m_timestamp_dict->ingest_entry(key, node_id, timestamp);
+        m_timestamp_dict.ingest_entry(key, node_id, timestamp);
     }
 
     /**
@@ -229,7 +229,7 @@ private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
     std::shared_ptr<LogTypeDictionaryWriter> m_array_dict;  // log type dictionary for arrays
-    std::shared_ptr<TimestampDictionaryWriter> m_timestamp_dict;
+    TimestampDictionaryWriter m_timestamp_dict;
     std::shared_ptr<clp::GlobalMySQLMetadataDB> m_metadata_db;
     int m_compression_level{};
     bool m_print_archive_stats{};
