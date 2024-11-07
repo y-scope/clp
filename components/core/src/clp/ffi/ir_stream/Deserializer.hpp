@@ -154,10 +154,8 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
         return std::errc::protocol_error;
     }
     auto const version = version_iter->get_ref<nlohmann::json::string_t&>();
-    // TODO: Just before the KV-pair IR format is formally released, we should replace this
-    // hard-coded version check with `ffi::ir_stream::validate_protocol_version`.
-    if (std::string_view{static_cast<char const*>(cProtocol::Metadata::BetaVersionValue)}
-        != version)
+    if (ffi::ir_stream::IRProtocolErrorCode::Supported
+        != ffi::ir_stream::validate_protocol_version(version))
     {
         return std::errc::protocol_not_supported;
     }
