@@ -13,6 +13,8 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <curl/curl.h>
@@ -94,6 +96,8 @@ public:
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param buffer_pool_size The required number of buffers in the buffer pool.
      * @param buffer_size The size of each buffer in the buffer pool.
+     * @param http_header_kv_pairs Key-value pairs representing HTTP headers to pass to the server
+     * in the download request. Doc: https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html
      */
     explicit NetworkReader(
             std::string_view src_url,
@@ -103,7 +107,9 @@ public:
             std::chrono::seconds connection_timeout
             = CurlDownloadHandler::cDefaultConnectionTimeout,
             size_t buffer_pool_size = cDefaultBufferPoolSize,
-            size_t buffer_size = cDefaultBufferSize
+            size_t buffer_size = cDefaultBufferSize,
+            std::optional<std::unordered_map<std::string, std::string>> http_header_kv_pairs
+            = std::nullopt
     );
 
     // Destructor
@@ -242,11 +248,19 @@ private:
          * @param reader
          * @param offset Index of the byte at which to start the download.
          * @param disable_caching Whether to disable caching.
+         * @param http_header_kv_pairs Key-value pairs representing HTTP headers to pass to the
+         * server in the download request. Doc: https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html
          */
-        DownloaderThread(NetworkReader& reader, size_t offset, bool disable_caching)
+        DownloaderThread(
+                NetworkReader& reader,
+                size_t offset,
+                bool disable_caching,
+                std::optional<std::unordered_map<std::string, std::string>> http_header_kv_pairs
+        )
                 : m_reader{reader},
                   m_offset{offset},
-                  m_disable_caching{disable_caching} {}
+                  m_disable_caching{disable_caching},
+                  m_http_header_kv_pairs{std::move(http_header_kv_pairs)} {}
 
     private:
         // Methods implementing `clp::Thread`
@@ -255,6 +269,7 @@ private:
         NetworkReader& m_reader;
         size_t m_offset{0};
         bool m_disable_caching{false};
+        std::optional<std::unordered_map<std::string, std::string>> m_http_header_kv_pairs;
     };
 
     /**

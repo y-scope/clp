@@ -11,7 +11,7 @@ import QueryStatus from "./ui/QueryStatus.jsx";
  */
 const App = () => {
     return (
-        <CssVarsProvider modeStorageKey={LOCAL_STORAGE_KEY.UI_THEME}>
+        <CssVarsProvider modeStorageKey={LOCAL_STORAGE_KEY.THEME}>
             <QueryStatus/>
         </CssVarsProvider>
     );

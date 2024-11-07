@@ -66,6 +66,8 @@ set(
         JsonParser.cpp
         JsonParser.hpp
         JsonSerializer.hpp
+        PackedStreamReader.cpp
+        PackedStreamReader.hpp
         ParsedMessage.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
@@ -146,6 +148,8 @@ set(
         search/Output.hpp
         search/OutputHandler.cpp
         search/OutputHandler.hpp
+        search/Projection.cpp
+        search/Projection.hpp
         search/SchemaMatch.cpp
         search/SchemaMatch.hpp
         search/SearchUtils.cpp

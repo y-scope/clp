@@ -15,4 +15,4 @@ lib_install_scripts_dir="${script_dir}/.."
 "${lib_install_scripts_dir}/fmtlib.sh" 8.0.1
 "${lib_install_scripts_dir}/spdlog.sh" 1.9.2
 "${lib_install_scripts_dir}/mongocxx.sh" 3.10.2
-"${lib_install_scripts_dir}/msgpack.sh" 6.0.0
+"${lib_install_scripts_dir}/msgpack.sh" 7.0.0

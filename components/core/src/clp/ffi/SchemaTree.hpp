@@ -2,6 +2,7 @@
 #define CLP_FFI_SCHEMATREE_HPP
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -10,7 +11,6 @@
 
 #include "../ErrorCode.hpp"
 #include "../TraceableException.hpp"
-#include "SchemaTreeNode.hpp"
 
 namespace clp::ffi {
 /**
@@ -91,6 +91,122 @@ public:
         std::string m_message;
     };
 
+    // Forward declared types
+    class Node;
+    class NodeLocator;
+
+    /**
+     * A node in clp::ffi::SchemaTree. It stores the node's key name, type, parent's ID, and the IDs
+     * of all its children.
+     */
+    class Node {
+    public:
+        // Types
+        using id_t = uint32_t;
+
+        /**
+         * Enum defining the possible node types.
+         */
+        enum class Type : uint8_t {
+            Int = 0,
+            Float,
+            Bool,
+            Str,
+            UnstructuredArray,
+            Obj
+        };
+
+        // Disable copy constructor/assignment operator
+        Node(Node const&) = delete;
+        auto operator=(Node const&) -> Node& = delete;
+
+        // Define default move constructor/assignment operator
+        Node(Node&&) = default;
+        auto operator=(Node&&) -> Node& = default;
+
+        // Destructor
+        ~Node() = default;
+
+        // Methods
+        [[nodiscard]] auto get_id() const -> id_t { return m_id; }
+
+        [[nodiscard]] auto is_root() const -> bool { return false == m_parent_id.has_value(); }
+
+        /**
+         * @return The ID of the parent node in the schema tree, if the node is not the root.
+         * @return std::nullopt if the node is the root.
+         */
+        [[nodiscard]] auto get_parent_id() const -> std::optional<id_t> { return m_parent_id; }
+
+        /**
+         * Gets the parent ID without checking if it's `std::nullopt`.
+         * NOTE: This method should only be used if the caller has checked the node is not the root.
+         * @return The ID of the parent node in the schema tree.
+         */
+        [[nodiscard]] auto get_parent_id_unsafe() const -> id_t {
+            // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+            return m_parent_id.value();
+        }
+
+        [[nodiscard]] auto get_key_name() const -> std::string_view { return m_key_name; }
+
+        [[nodiscard]] auto get_type() const -> Type { return m_type; }
+
+        [[nodiscard]] auto get_children_ids() const -> std::vector<id_t> const& {
+            return m_children_ids;
+        }
+
+        /**
+         * Appends a child using its node ID.
+         * NOTE: This method doesn't check if a child with the given ID already exists.
+         * @param child_id The child node's ID.
+         */
+        auto append_new_child(id_t child_id) -> void { m_children_ids.push_back(child_id); }
+
+        /**
+         * Removes the last appended child ID (if any).
+         */
+        auto remove_last_appended_child() -> void {
+            if (m_children_ids.empty()) {
+                return;
+            }
+            m_children_ids.pop_back();
+        }
+
+    private:
+        friend SchemaTree;
+
+        // Factory functions
+        /**
+         * Creates a non-root tree node.
+         * @param id
+         * @param locator
+         */
+        [[nodiscard]] static auto create(id_t id, NodeLocator const& locator) -> Node {
+            return {id, locator.get_parent_id(), locator.get_key_name(), locator.get_type()};
+        }
+
+        /**
+         * Creates a root node.
+         */
+        [[nodiscard]] static auto create_root() -> Node {
+            return {cRootId, std::nullopt, {}, Type::Obj};
+        }
+
+        // Constructors
+        Node(id_t id, std::optional<id_t> parent_id, std::string_view key_name, Type type)
+                : m_id{id},
+                  m_parent_id{parent_id},
+                  m_key_name{key_name.begin(), key_name.end()},
+                  m_type{type} {}
+
+        id_t m_id;
+        std::optional<id_t> m_parent_id;
+        std::vector<id_t> m_children_ids;
+        std::string m_key_name;
+        Type m_type;
+    };
+
     /**
      * A triple---parent ID, key name, and node type---that uniquely identifies a node.
      * NOTE: We use the term "Locator" to avoid terms like "Key" or "Identifier" that are already in
@@ -98,32 +214,28 @@ public:
      */
     class NodeLocator {
     public:
-        NodeLocator(
-                SchemaTreeNode::id_t parent_id,
-                std::string_view key_name,
-                SchemaTreeNode::Type type
-        )
+        NodeLocator(Node::id_t parent_id, std::string_view key_name, Node::Type type)
                 : m_parent_id{parent_id},
                   m_key_name{key_name},
                   m_type{type} {}
 
-        [[nodiscard]] auto get_parent_id() const -> SchemaTreeNode::id_t { return m_parent_id; }
+        [[nodiscard]] auto get_parent_id() const -> Node::id_t { return m_parent_id; }
 
         [[nodiscard]] auto get_key_name() const -> std::string_view { return m_key_name; }
 
-        [[nodiscard]] auto get_type() const -> SchemaTreeNode::Type { return m_type; }
+        [[nodiscard]] auto get_type() const -> Node::Type { return m_type; }
 
     private:
-        SchemaTreeNode::id_t m_parent_id;
+        Node::id_t m_parent_id;
         std::string_view m_key_name;
-        SchemaTreeNode::Type m_type;
+        Node::Type m_type;
     };
 
     // Constants
-    static constexpr SchemaTreeNode::id_t cRootId{0};
+    static constexpr Node::id_t cRootId{0};
 
     // Constructors
-    SchemaTree() { m_tree_nodes.emplace_back(cRootId, cRootId, "", SchemaTreeNode::Type::Obj); }
+    SchemaTree() { m_tree_nodes.emplace_back(Node::create_root()); }
 
     // Disable copy constructor/assignment operator
     SchemaTree(SchemaTree const&) = delete;
@@ -139,12 +251,14 @@ public:
     // Methods
     [[nodiscard]] auto get_size() const -> size_t { return m_tree_nodes.size(); }
 
+    [[nodiscard]] auto get_root() const -> Node const& { return m_tree_nodes[cRootId]; }
+
     /**
      * @param id
      * @return The node with the given ID.
      * @throw OperationFailed if a node with the given ID doesn't exist in the tree.
      */
-    [[nodiscard]] auto get_node(SchemaTreeNode::id_t id) const -> SchemaTreeNode const&;
+    [[nodiscard]] auto get_node(Node::id_t id) const -> Node const&;
 
     /**
      * Tries to get the ID of a node corresponding to the given locator, if the node exists.
@@ -153,7 +267,7 @@ public:
      * @return std::nullopt otherwise.
      */
     [[nodiscard]] auto try_get_node_id(NodeLocator const& locator
-    ) const -> std::optional<SchemaTreeNode::id_t>;
+    ) const -> std::optional<Node::id_t>;
 
     /**
      * @param locator
@@ -171,7 +285,7 @@ public:
      * - a node that corresponds to the given locator already exists.
      * - the parent node identified by the locator is not an object.
      */
-    [[maybe_unused]] auto insert_node(NodeLocator const& locator) -> SchemaTreeNode::id_t;
+    [[maybe_unused]] auto insert_node(NodeLocator const& locator) -> Node::id_t;
 
     /**
      * Takes a snapshot of the current schema tree (to allow recovery on failure).
@@ -184,18 +298,10 @@ public:
      */
     auto revert() -> void;
 
-    /**
-     * Resets the schema tree by removing all nodes except the root.
-     */
-    auto reset() -> void {
-        m_snapshot_size.reset();
-        m_tree_nodes.clear();
-        m_tree_nodes.emplace_back(cRootId, cRootId, "", SchemaTreeNode::Type::Obj);
-    }
-
 private:
+    // Variables
     std::optional<size_t> m_snapshot_size;
-    std::vector<SchemaTreeNode> m_tree_nodes;
+    std::vector<Node> m_tree_nodes;
 };
 }  // namespace clp::ffi
 #endif

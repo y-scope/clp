@@ -8,7 +8,7 @@ on:
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
@@ -21,7 +21,7 @@ on:
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
@@ -38,8 +38,9 @@ jobs:
   build-macos:
     strategy:
       matrix:
+        runner: ["macos-13", "macos-14"]
         use_shared_libs: [true, false]
-    runs-on: "macos-12"
+    runs-on: "${{matrix.runner}}"
     steps:
       - uses: "actions/checkout@v4"
         with:
@@ -49,12 +50,13 @@ jobs:
       - name: "Remove preinstalled binaries which conflict with brew's installs"
         run: |
           rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/go*
           rm -f /usr/local/bin/idle3*
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
 
       - name: "Install dependencies"
-        run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
+        run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
