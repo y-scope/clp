@@ -194,9 +194,13 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
 /**
  * Validates whether the given protocol version can be supported by the current build.
  * @param protocol_version
- * @return IRProtocolErrorCode::Supported if the protocol version is supported.
- * @return IRProtocolErrorCode::BackwardCompatible if the protocol version indicates a stream format
- * that predates the key-value pair IR format.
+ * @return IRProtocolErrorCode::Supported if the protocol version is supported by the key-value
+ * pair IR stream serializer and deserializer. TODO: Update this once we integrate backwards
+ * compatibility into the deserializer.
+ * @return IRProtocolErrorCode::BackwardCompatible if the protocol version is supported by the
+ * serializer and deserializer for the IR stream format that predates the key-value pair IR stream
+ * format. TODO: Update this once we integrate backwards compatibility into the key-value pair IR
+ * stream format.
  * @return IRProtocolErrorCode::Unsupported if the protocol version is not supported by this build.
  * @return IRProtocolErrorCode::Invalid if the protocol version does not follow the SemVer
  * specification.

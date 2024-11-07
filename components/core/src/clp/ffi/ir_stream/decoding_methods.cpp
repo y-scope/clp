@@ -499,8 +499,8 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
         return IRProtocolErrorCode::Invalid;
     }
 
-    // TODO: currently, we hardcode all supported versions. This should be removed once we
-    // implement a proper version parser
+    // TODO: Currently, we hardcode all supported versions. This should be removed once we
+    // implement a proper version parser.
     constexpr std::array<std::string_view, 2> cSupportedVersions{
             cProtocol::Metadata::VersionValue,
             cProtocol::Metadata::MinimumSupportedVersion

@@ -886,7 +886,7 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
         );
     }
 
-    SECTION("Test version too old") {
+    SECTION("Test versions that're too old") {
         auto const old_versions{GENERATE(
                 std::string_view{"0.0.3"},
                 std::string_view{"0.0.3-beta.1"},
@@ -898,7 +898,7 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
         );
     }
 
-    SECTION("Test version too new") {
+    SECTION("Test versions that're too new") {
         auto const new_versions{
                 GENERATE(std::string_view{"10000.0.0"}, std::string_view{"0.10000.0"})
         };
