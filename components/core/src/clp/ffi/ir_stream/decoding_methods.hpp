@@ -23,7 +23,7 @@ typedef enum {
 
 enum class IRProtocolErrorCode : uint8_t {
     Supported,
-    Backward_Compatible,
+    BackwardCompatible,
     Unsupported,
     Invalid,
 };

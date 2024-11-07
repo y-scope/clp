@@ -630,7 +630,7 @@ TEMPLATE_TEST_CASE(
     auto metadata_json = nlohmann::json::parse(json_metadata);
     std::string const version
             = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
             == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
@@ -849,13 +849,7 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
              == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue))
     );
     REQUIRE(
-            (clp::ffi::ir_stream::IRProtocolErrorCode::Supported
-             == validate_protocol_version(
-                     clp::ffi::ir_stream::cProtocol::Metadata::MinimumSupportedVersion
-             ))
-    );
-    REQUIRE(
-            (clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+            (clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
              == validate_protocol_version(
                      clp::ffi::ir_stream::cProtocol::Metadata::LatestBackwardCompatibleVersion
              ))
@@ -881,7 +875,7 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
                 std::string_view{"0.0.2"}
         )};
         REQUIRE(
-                (clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+                (clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
                  == validate_protocol_version(backward_compatible_versions))
         );
     }
@@ -957,7 +951,7 @@ TEMPLATE_TEST_CASE(
     string_view json_metadata{json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     string const version = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
             == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);

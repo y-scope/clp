@@ -14,7 +14,6 @@ constexpr int8_t LengthUShort = 0x12;
 
 constexpr char VersionKey[] = "VERSION";
 constexpr std::string_view VersionValue{"0.1.0"};
-constexpr std::string_view MinimumSupportedVersion{"0.1.0-beta.1"};
 
 // This is used for the IR stream format that predates the key-value pair IR format.
 constexpr std::string_view LatestBackwardCompatibleVersion{"0.0.2"};

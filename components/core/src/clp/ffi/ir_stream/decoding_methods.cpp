@@ -1,7 +1,7 @@
 #include "decoding_methods.hpp"
 
+#include <algorithm>
 #include <array>
-#include <exception>
 #include <regex>
 #include <string>
 #include <string_view>
@@ -480,10 +480,10 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
             "0.0.1",
             cProtocol::Metadata::LatestBackwardCompatibleVersion
     };
-    for (auto const backward_compatible_version : cBackwardCompatibleVersions) {
-        if (backward_compatible_version == protocol_version) {
-            return IRProtocolErrorCode::Backward_Compatible;
-        }
+    if (cBackwardCompatibleVersions.cend()
+        != std::ranges::find(cBackwardCompatibleVersions, protocol_version))
+    {
+        return IRProtocolErrorCode::BackwardCompatible;
     }
 
     std::regex const protocol_version_regex{
@@ -499,16 +499,10 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
         return IRProtocolErrorCode::Invalid;
     }
 
-    // TODO: Currently, we hardcode all supported versions. This should be removed once we
+    // TODO: Currently, we hardcode the supported versions. This should be removed once we
     // implement a proper version parser.
-    constexpr std::array<std::string_view, 2> cSupportedVersions{
-            cProtocol::Metadata::VersionValue,
-            cProtocol::Metadata::MinimumSupportedVersion
-    };
-    for (auto const supported_version : cSupportedVersions) {
-        if (supported_version == protocol_version) {
-            return IRProtocolErrorCode::Supported;
-        }
+    if (cProtocol::Metadata::VersionValue == protocol_version) {
+        return IRProtocolErrorCode::Supported;
     }
 
     return IRProtocolErrorCode::Unsupported;
