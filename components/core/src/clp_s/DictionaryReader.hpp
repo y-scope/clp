@@ -87,9 +87,12 @@ protected:
     std::vector<EntryType> m_entries;
 };
 
-class VariableDictionaryReader : public DictionaryReader<uint64_t, VariableDictionaryEntry> {};
+using VariableDictionaryReader = DictionaryReader<uint64_t, VariableDictionaryEntry>;
+using LogTypeDictionaryReader = DictionaryReader<uint64_t, LogTypeDictionaryEntry>;
 
-class LogTypeDictionaryReader : public DictionaryReader<uint64_t, LogTypeDictionaryEntry> {};
+// class VariableDictionaryReader : public DictionaryReader<uint64_t, VariableDictionaryEntry> {};
+
+// class LogTypeDictionaryReader : public DictionaryReader<uint64_t, LogTypeDictionaryEntry> {};
 
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::open(std::string const& dictionary_path) {

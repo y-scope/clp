@@ -156,4 +156,18 @@ void TimestampDictionaryWriter::clear() {
     m_column_key_to_range.clear();
     m_column_id_to_range.clear();
 }
+
+size_t TimestampDictionaryWriter::size_in_bytes() {
+    merge_range();
+    size_t size{2 * sizeof(uint64_t)};
+    for (auto const& range : m_column_key_to_range) {
+        size += range.second.size_in_bytes();
+    }
+
+    for (auto& pattern : m_pattern_to_id) {
+        size += 2 * sizeof(uint64_t);
+        size += pattern.first->get_format().size();
+    }
+    return size;
+}
 }  // namespace clp_s

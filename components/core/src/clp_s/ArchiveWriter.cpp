@@ -151,6 +151,7 @@ void ArchiveWriter::write_archive_metadata(
 
     // Write timestamp dictionary
     compressor.write_numeric_value(ArchiveMetadataPacketType::TimestampDictionary);
+    compressor.write_numeric_value(static_cast<uint32_t>(m_timestamp_dict.size_in_bytes()));
     m_timestamp_dict.write(compressor);
 
     compressor.close();

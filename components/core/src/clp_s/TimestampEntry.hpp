@@ -119,6 +119,12 @@ public:
      */
     epochtime_t get_end_timestamp() const;
 
+    size_t size_in_bytes() const {
+        return sizeof(uint64_t) + m_key_name.size() + sizeof(uint64_t)
+               + m_column_ids.size() * sizeof(int32_t) + sizeof(TimestampEncoding)
+               + 2 * sizeof(epochtime_t);
+    }
+
 private:
     TimestampEncoding m_encoding;
     double m_epoch_start_double, m_epoch_end_double;

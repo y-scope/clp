@@ -83,6 +83,11 @@ public:
      */
     void clear();
 
+    /**
+     * Merge ranges by key name then return the size of data to be compressed in bytes
+     */
+    size_t size_in_bytes();
+
 private:
     /**
      * Merges timestamp ranges with the same key name but different node ids.
