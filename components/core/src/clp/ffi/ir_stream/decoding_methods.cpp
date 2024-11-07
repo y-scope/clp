@@ -525,11 +525,26 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
         return IRProtocolErrorCode::Too_Old;
     }
 
-    if (protocol_version_core < get_version_core(
-                static_cast<char const*>(cProtocol::Metadata::MinimumSupportedVersionValue)
-        ))
-    {
+    auto const minimum_supported_version_core{
+            get_version_core(cProtocol::Metadata::MinimumSupportedVersionValue)
+    };
+    if (protocol_version_core < minimum_supported_version_core) {
         return IRProtocolErrorCode::Too_Old;
+    }
+
+    if (protocol_version_core == minimum_supported_version_core
+        && protocol_version.size() != protocol_version_core.size())
+    {
+        // The given protocol core has pre-release version
+        if (minimum_supported_version_core.size()
+            == cProtocol::Metadata::MinimumSupportedVersionValue.size())
+        {
+            // The minimum supported version is a formal release
+            return IRProtocolErrorCode::Too_Old;
+        }
+        if (protocol_version < cProtocol::Metadata::MinimumSupportedVersionValue) {
+            return IRProtocolErrorCode::Too_Old;
+        }
     }
 
     return IRProtocolErrorCode::Supported;
