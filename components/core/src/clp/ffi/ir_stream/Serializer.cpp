@@ -253,7 +253,7 @@ auto Serializer<encoded_variable_t>::create(
     ir_buf.insert(ir_buf.cend(), cMagicNumber.begin(), cMagicNumber.end());
 
     nlohmann::json metadata;
-    metadata.emplace(cProtocol::Metadata::VersionKey, cProtocol::Metadata::BetaVersionValue);
+    metadata.emplace(cProtocol::Metadata::VersionKey, cProtocol::Metadata::VersionValue);
     metadata.emplace(cProtocol::Metadata::VariablesSchemaIdKey, cVariablesSchemaVersion);
     metadata.emplace(
             cProtocol::Metadata::VariableEncodingMethodsIdKey,
