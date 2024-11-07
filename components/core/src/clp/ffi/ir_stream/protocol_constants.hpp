@@ -13,11 +13,10 @@ constexpr int8_t LengthUByte = 0x11;
 constexpr int8_t LengthUShort = 0x12;
 
 constexpr char VersionKey[] = "VERSION";
-constexpr char VersionValue[] = "0.1.0";
+constexpr std::string_view VersionValue{"0.1.0"};
+constexpr std::string_view MinimumSupportedVersion{"0.1.0-beta.1"};
 // This is used for IR stream format that predates the key-value pair IR format.
-constexpr char LatestBackwardCompatibleVersionValue[] = "0.0.2";
-
-constexpr std::string_view MinimumSupportedVersionValue{"0.1.0-beta.1"};
+constexpr std::string_view LatestBackwardCompatibleVersion{"0.0.2"};
 
 // The following regex can be used to validate a Semantic Versioning string. The source of the
 // regex can be found here: https://semver.org/

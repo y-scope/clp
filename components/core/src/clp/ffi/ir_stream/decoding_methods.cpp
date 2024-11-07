@@ -1,7 +1,9 @@
 #include "decoding_methods.hpp"
 
 #include <array>
+#include <exception>
 #include <regex>
+#include <string>
 #include <string_view>
 
 #include "../../ir/types.hpp"
@@ -476,7 +478,7 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
     constexpr std::array<std::string_view, 3> cBackwardCompatibleVersions{
             "v0.0.0",
             "0.0.1",
-            "0.0.2"
+            cProtocol::Metadata::LatestBackwardCompatibleVersion
     };
     for (auto const backward_compatible_version : cBackwardCompatibleVersions) {
         if (backward_compatible_version == protocol_version) {
@@ -497,57 +499,19 @@ auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolE
         return IRProtocolErrorCode::Invalid;
     }
 
-    std::string_view const current_build_protocol_version{
-            static_cast<char const*>(cProtocol::Metadata::VersionValue)
+    // TODO: currently, we hardcode all supported versions. This should be removed once we
+    // implement a proper version parser
+    constexpr std::array<std::string_view, 2> cSupportedVersions{
+            cProtocol::Metadata::VersionValue,
+            cProtocol::Metadata::MinimumSupportedVersion
     };
-    auto get_version_core = [](std::string_view version) -> std::string_view {
-        // Strip any pre-release version or build info from the version string based on the spec:
-        // https://semver.org/
-        auto const pos_pre_release{version.find('-')};
-        if (std::string_view::npos == pos_pre_release) {
-            return version.substr(0, version.find('+'));
-        }
-        return version.substr(0, pos_pre_release);
-    };
-    auto const curr_build_protocol_version_core{get_version_core(current_build_protocol_version)};
-    auto const protocol_version_core{get_version_core(protocol_version)};
-    if (curr_build_protocol_version_core < protocol_version_core) {
-        return IRProtocolErrorCode::Too_New;
-    }
-
-    // Check major version
-    auto get_major_version{[](std::string_view version) {
-        return version.substr(0, version.find('.'));
-    }};
-    if (get_major_version(curr_build_protocol_version_core)
-        > get_major_version(protocol_version_core))
-    {
-        return IRProtocolErrorCode::Too_Old;
-    }
-
-    auto const minimum_supported_version_core{
-            get_version_core(cProtocol::Metadata::MinimumSupportedVersionValue)
-    };
-    if (protocol_version_core < minimum_supported_version_core) {
-        return IRProtocolErrorCode::Too_Old;
-    }
-
-    if (protocol_version_core == minimum_supported_version_core
-        && protocol_version.size() != protocol_version_core.size())
-    {
-        // The given protocol core has pre-release version
-        if (minimum_supported_version_core.size()
-            == cProtocol::Metadata::MinimumSupportedVersionValue.size())
-        {
-            // The minimum supported version is a formal release
-            return IRProtocolErrorCode::Too_Old;
-        }
-        if (protocol_version < cProtocol::Metadata::MinimumSupportedVersionValue) {
-            return IRProtocolErrorCode::Too_Old;
+    for (auto const supported_version : cSupportedVersions) {
+        if (supported_version == protocol_version) {
+            return IRProtocolErrorCode::Supported;
         }
     }
 
-    return IRProtocolErrorCode::Supported;
+    return IRProtocolErrorCode::Unsupported;
 }
 
 IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset) {

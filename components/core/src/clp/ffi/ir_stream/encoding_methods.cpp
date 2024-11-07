@@ -99,7 +99,7 @@ static void add_base_metadata_fields(
         nlohmann::json& metadata
 ) {
     metadata[cProtocol::Metadata::VersionKey]
-            = cProtocol::Metadata::LatestBackwardCompatibleVersionValue;
+            = cProtocol::Metadata::LatestBackwardCompatibleVersion;
     metadata[cProtocol::Metadata::VariablesSchemaIdKey] = cVariablesSchemaVersion;
     metadata[cProtocol::Metadata::VariableEncodingMethodsIdKey] = cVariableEncodingMethodsVersion;
     metadata[cProtocol::Metadata::TimestampPatternKey] = timestamp_pattern;

@@ -24,8 +24,7 @@ typedef enum {
 enum class IRProtocolErrorCode : uint8_t {
     Supported,
     Backward_Compatible,
-    Too_Old,
-    Too_New,
+    Unsupported,
     Invalid,
 };
 
@@ -198,10 +197,7 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
  * @return IRProtocolErrorCode::Supported if the protocol version is supported.
  * @return IRProtocolErrorCode::BackwardCompatible if the protocol version indicates a stream format
  * that predates the key-value pair IR format.
- * @return IRProtocolErrorCode::Too_Old if the protocol version is no longer supported by this
- * build's protocol version.
- * @return IRProtocolErrorCode::Too_New if the protocol version is newer than this build's protocol
- * version.
+ * @return IRProtocolErrorCode::Unsupported if the protocol version is not supported by this build.
  * @return IRProtocolErrorCode::Invalid if the protocol version does not follow the SemVer
  * specification.
  */

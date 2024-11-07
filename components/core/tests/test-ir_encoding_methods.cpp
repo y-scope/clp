@@ -844,6 +844,23 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
 }
 
 TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
+    REQUIRE(
+            (clp::ffi::ir_stream::IRProtocolErrorCode::Supported
+             == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue))
+    );
+    REQUIRE(
+            (clp::ffi::ir_stream::IRProtocolErrorCode::Supported
+             == validate_protocol_version(
+                     clp::ffi::ir_stream::cProtocol::Metadata::MinimumSupportedVersion
+             ))
+    );
+    REQUIRE(
+            (clp::ffi::ir_stream::IRProtocolErrorCode::Backward_Compatible
+             == validate_protocol_version(
+                     clp::ffi::ir_stream::cProtocol::Metadata::LatestBackwardCompatibleVersion
+             ))
+    );
+
     SECTION("Test invalid versions") {
         auto const invalid_versions{GENERATE(
                 std::string_view{"v0.0.1"},
@@ -869,19 +886,6 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
         );
     }
 
-    SECTION("Test supported versions") {
-        auto const supported_versions{GENERATE(
-                std::string_view{"0.1.0-beta.1"},
-                std::string_view{static_cast<char const*>(
-                        clp::ffi::ir_stream::cProtocol::Metadata::VersionValue
-                )}
-        )};
-        REQUIRE(
-                (clp::ffi::ir_stream::IRProtocolErrorCode::Supported
-                 == validate_protocol_version(supported_versions))
-        );
-    }
-
     SECTION("Test version too new") {
         auto const old_versions{GENERATE(
                 std::string_view{"0.0.3"},
@@ -889,7 +893,7 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
                 std::string_view{"0.1.0-beta"}
         )};
         REQUIRE(
-                (clp::ffi::ir_stream::IRProtocolErrorCode::Too_Old
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Unsupported
                  == validate_protocol_version(old_versions))
         );
     }
@@ -899,7 +903,7 @@ TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
                 GENERATE(std::string_view{"10000.0.0"}, std::string_view{"0.10000.0"})
         };
         REQUIRE(
-                (clp::ffi::ir_stream::IRProtocolErrorCode::Too_New
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Unsupported
                  == validate_protocol_version(new_versions))
         );
     }
