@@ -14,7 +14,6 @@
 
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
-#include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
 #include "decoding_methods.hpp"
 #include "ir_unit_deserialization_methods.hpp"
@@ -66,8 +65,8 @@ public:
     /**
      * Deserializes the stream from the given reader up to and including the next log event IR unit.
      * @param reader
-     * @return std::errc::result_out_of_range if no tag bytes can be read to determine the next IR
-     * unit type.
+     * @return Forwards `deserialize_tag`s return values if no tag bytes can be read to determine
+     * the next IR unit type.
      * @return std::errc::protocol_not_supported if the IR unit type is not supported.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
      * stream by deserializing an end-of-stream IR unit in the previous calls.
@@ -172,8 +171,8 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
     }
 
     encoded_tag_t tag{};
-    if (IRErrorCode::IRErrorCode_Success != deserialize_tag(reader, tag)) {
-        return std::errc::result_out_of_range;
+    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
+        return ir_error_code_to_errc(err);
     }
 
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
