@@ -66,7 +66,7 @@ public:
     /**
      * Deserializes the stream from the given reader up to and including the next log event IR unit.
      * @param reader
-     * @return std::errc::no_message_available if no tag bytes can be read to determine the next IR
+     * @return std::errc::result_out_of_range if no tag bytes can be read to determine the next IR
      * unit type.
      * @return std::errc::protocol_not_supported if the IR unit type is not supported.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
@@ -173,7 +173,7 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
 
     encoded_tag_t tag{};
     if (IRErrorCode::IRErrorCode_Success != deserialize_tag(reader, tag)) {
-        return std::errc::no_message_available;
+        return std::errc::result_out_of_range;
     }
 
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
