@@ -348,7 +348,7 @@ tasks:
       - "mkdir -p '{{.OUTPUT_TMP_DIR}}'"
       - >-
         curl --fail --location --show-error
-        "{{.URL_PREFIX}}/{{.TAR_NAME}}"
+        "{{trimSuffix "/" .URL_PREFIX}}/{{.TAR_NAME}}"
         --output "{{.TAR_PATH}}"
       - "tar xf '{{.TAR_PATH}}' --directory '{{.OUTPUT_TMP_DIR}}'"
       - "mv '{{.EXTRACTED_DIR}}' '{{.OUTPUT_DIR}}'"
