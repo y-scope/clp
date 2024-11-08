@@ -62,6 +62,7 @@ let enumQueryType;
 const QUERY_JOB_TYPE = Object.freeze({
     SEARCH_OR_AGGREGATION: (enumQueryType = 0),
     EXTRACT_IR: ++enumQueryType,
+    EXTRACT_JSON: ++enumQueryType,
 });
 /* eslint-enable sort-keys */
 
@@ -104,9 +105,10 @@ class DbManager {
      * Submits an IR extraction job to the scheduler and waits for it to finish.
      *
      * @param {object} jobConfig
+     * @param {number} jobType
      * @return {Promise<number|null>} The ID of the job or null if an error occurred.
      */
-    async submitAndWaitForExtractIrJob (jobConfig) {
+    async submitAndWaitForExtractStreamJob (jobConfig, jobType) {
         let jobId;
         try {
             const [result] = await this.#mysqlConnectionPool.query(
@@ -114,7 +116,7 @@ class DbManager {
              VALUES (?, ?)`,
                 [
                     Buffer.from(msgpackEncode(jobConfig)),
-                    QUERY_JOB_TYPE.EXTRACT_IR,
+                    jobType,
                 ]
             );
 
@@ -142,6 +144,22 @@ class DbManager {
             orig_file_id: origFileId,
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
+        });
+    }
+
+    /**
+     * Gets the metadata for a Json file extracted from part of an original archive, where the original
+     * archive has the given ID and the extracted part contains the given timestamp.
+     *
+     * @param {string} archiveId
+     * @param {number} timestamp
+     * @return {Promise<object>} A promise that resolves to the extracted Json file's metadata.
+     */
+    async getExtractedJsonFileMetadata (archiveId, timestamp) {
+        return await this.#StreamFilesCollection.findOne({
+            orig_file_id: archiveId,
+            begin_msg_ix: {$lte: timestamp},
+            end_msg_ix: {$gte: timestamp},
         });
     }
 
@@ -236,6 +254,7 @@ class DbManager {
     }
 }
 
+export {QUERY_JOB_TYPE};
 export default fastifyPlugin(async (app, options) => {
     await app.decorate("dbManager", new DbManager(app, options));
 });

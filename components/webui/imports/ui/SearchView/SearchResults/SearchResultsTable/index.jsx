@@ -94,8 +94,7 @@ const SearchResultsTable = ({
     }, [maxLinesPerResult]);
 
     // eslint-disable-next-line no-warning-comments
-    // TODO: remove this flag once "Extract IR" support is added for ClpStorageEngine "clp-s"
-    const isExtractIrSupported = ("clp" === Meteor.settings.public.ClpStorageEngine);
+    const isIrSupported = ("clp" === Meteor.settings.public.ClpStorageEngine);
 
     return (
         <div className={"search-results-container"}>
@@ -139,22 +138,27 @@ const SearchResultsTable = ({
                                 <pre className={"search-results-content search-results-message"}>
                                     {result.message}
                                 </pre>
-                                {isExtractIrSupported &&
-                                    <div className={"search-results-file-link"}>
-                                        <FontAwesomeIcon icon={faFileLines}/>
-                                        {" "}
-                                        <a
-                                            className={"search-results-file-link"}
-                                            rel={"noopener noreferrer"}
-                                            target={"_blank"}
-                                            title={"View log event in context"}
-                                            href={`${Meteor.settings.public.LogViewerWebuiUrl
+                                <div className={"search-results-file-link"}>
+                                    <FontAwesomeIcon icon={faFileLines}/>
+                                    {" "}
+                                    <a
+                                        className={"search-results-file-link"}
+                                        rel={"noopener noreferrer"}
+                                        target={"_blank"}
+                                        title={"View log event in context"}
+                                        href={isIrSupported ?
+                                            `${Meteor.settings.public.LogViewerWebuiUrl
                                             }?origFileId=${result.orig_file_id}` +
-                                            `&logEventIdx=${result.log_event_ix}`}
-                                        >
-                                            {result.orig_file_path}
-                                        </a>
-                                    </div>}
+                                                `&logEventIdx=${result.log_event_ix}` :
+                                            `${Meteor.settings.public.LogViewerWebuiUrl
+                                            }?archiveId=${result.archive_id}` +
+                                                `&timestamp=${result.timestamp}`}
+                                    >
+                                        {isIrSupported ?
+                                            result.orig_file_path :
+                                            "Original File"}
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     ))}

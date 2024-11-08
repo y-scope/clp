@@ -29,4 +29,22 @@ const submitExtractIrJob = async (origFileId, logEventIdx, onUploadProgress) => 
     );
 };
 
+/**
+ * Submits a job to extract the split of an original file that contains a given log event. The file
+ * is extracted as a CLP IR file.
+ *
+ * @param {number|string} archiveId The ID of the archive contain
+ * @param {number} timestamp The timestamp of the log event
+ * @param {Function} onUploadProgress Callback to handle upload progress events.
+ * @return {Promise<axios.AxiosResponse<ExtractIrResp>>}
+ */
+const submitExtractJsonJob = async (archiveId, timestamp, onUploadProgress) => {
+    return await axios.post(
+        "/query/extract-json",
+        {archiveId, timestamp},
+        {onUploadProgress}
+    );
+};
+
 export {submitExtractIrJob};
+export {submitExtractJsonJob};
