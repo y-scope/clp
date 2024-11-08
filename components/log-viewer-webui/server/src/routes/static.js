@@ -23,7 +23,7 @@ const routes = async (fastify, options) => {
         streamFilesDir = path.resolve(rootDirname, streamFilesDir);
     }
     await fastify.register(fastifyStatic, {
-        prefix: "/ir",
+        prefix: "/stream",
         root: streamFilesDir,
     });
 
