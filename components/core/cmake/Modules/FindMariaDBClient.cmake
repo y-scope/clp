@@ -23,12 +23,15 @@ pkg_check_modules(mariadbclient_PKGCONF QUIET "lib${mariadbclient_LIBNAME}")
 if(NOT mariadbclient_PKGCONF_FOUND AND APPLE)
     execute_process(
         COMMAND brew --prefix mariadb-connector-c
-        RESULT_VARIABLE brew_result
+        RESULT_VARIABLE mariadbclient_BREW_RESULT
         OUTPUT_VARIABLE mariadbclient_MACOS_PREFIX
-        ERROR_QUIET
     )
-    if(NOT brew_result EQUAL 0)
-        message(FATAL_ERROR "mariadb-connector-c not found in Homebrew")
+    if(NOT mariadbclient_BREW_RESULT EQUAL 0)
+        message(
+            FATAL_ERROR
+            "pkg-config cannot find ${mariadbclient_LIBNAME} and mariadb-connector-c isn't"
+            " installed via Homebrew"
+        )
     endif()
     string(STRIP "${mariadbclient_MACOS_PREFIX}" mariadbclient_MACOS_PREFIX)
     list(PREPEND CMAKE_PREFIX_PATH ${mariadbclient_MACOS_PREFIX})
