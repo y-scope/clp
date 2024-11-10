@@ -23,6 +23,9 @@ on:
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos/**"
+  schedule:
+    # Run at midnight UTC every day with 15 minutes delay added to avoid high load periods
+    - cron: "15 0 * * *"
   workflow_dispatch:
 
 env:

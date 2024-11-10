@@ -27,6 +27,9 @@ on:
       - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
+  schedule:
+    # Run at midnight UTC every day with 15 minutes delay added to avoid high load periods
+    - cron: "15 0 * * *"
   workflow_dispatch:
 
 concurrency:
