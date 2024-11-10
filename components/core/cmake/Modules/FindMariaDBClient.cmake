@@ -36,7 +36,7 @@ if(NOT mariadbclient_PKGCONF_FOUND AND APPLE)
 endif()
 
 if(NOT mariadbclient_PKGCONF_FOUND)
-    message(FATAL_ERROR "PkgConfig cannot find mariadb")
+    message(FATAL_ERROR "pkg-config cannot find ${mariadbclient_LIBNAME}")
 endif()
 
 # Set include directory
