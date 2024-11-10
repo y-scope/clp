@@ -20,6 +20,17 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 find_package(PkgConfig)
 pkg_check_modules(mariadbclient_PKGCONF QUIET "lib${mariadbclient_LIBNAME}")
 
+if (NOT mariadbclient_PKGCONF_FOUND AND APPLE)
+    execute_process(COMMAND brew --prefix mariadb-connector-c OUTPUT_VARIABLE mariadb_MACOS_PREFIX)
+    string(STRIP "${mariadb_MACOS_PREFIX}" mariadb_MACOS_PREFIX)
+    set(CMAKE_PREFIX_PATH "${mariadb_MACOS_PREFIX};${CMAKE_PREFIX_PATH}")
+    pkg_check_modules(mariadbclient_PKGCONF QUIET "lib${mariadbclient_LIBNAME}")
+endif()
+
+if (NOT mariadbclient_PKGCONF_FOUND)
+    message(FATAL_ERROR "pkg_config cannot find mariadb")
+endif ()
+
 # Set include directory
 find_path(MariaDBClient_INCLUDE_DIR mysql.h
         HINTS ${mariadbclient_PKGCONF_INCLUDEDIR}
