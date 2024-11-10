@@ -21,14 +21,22 @@ find_package(PkgConfig)
 pkg_check_modules(mariadbclient_PKGCONF QUIET "lib${mariadbclient_LIBNAME}")
 
 if(NOT mariadbclient_PKGCONF_FOUND AND APPLE)
-    execute_process(COMMAND brew --prefix mariadb-connector-c OUTPUT_VARIABLE mariadb_MACOS_PREFIX)
-    string(STRIP "${mariadb_MACOS_PREFIX}" mariadb_MACOS_PREFIX)
-    set(CMAKE_PREFIX_PATH "${mariadb_MACOS_PREFIX};${CMAKE_PREFIX_PATH}")
+    execute_process(
+        COMMAND brew --prefix mariadb-connector-c
+        RESULT_VARIABLE brew_result
+        OUTPUT_VARIABLE mariadbclient_MACOS_PREFIX
+        ERROR_QUIET
+    )
+    if(NOT brew_result EQUAL 0)
+        message(FATAL_ERROR "mariadb-connector-c not found in Homebrew")
+    endif()
+    string(STRIP "${mariadbclient_MACOS_PREFIX}" mariadbclient_MACOS_PREFIX)
+    list(PREPEND CMAKE_PREFIX_PATH ${mariadbclient_MACOS_PREFIX})
     pkg_check_modules(mariadbclient_PKGCONF QUIET "lib${mariadbclient_LIBNAME}")
 endif()
 
 if(NOT mariadbclient_PKGCONF_FOUND)
-    message(FATAL_ERROR "pkg_config cannot find mariadb")
+    message(FATAL_ERROR "PkgConfig cannot find mariadb")
 endif()
 
 # Set include directory
