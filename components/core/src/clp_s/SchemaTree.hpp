@@ -26,18 +26,33 @@ enum class NodeType : uint8_t {
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
+/**
+ * This class represents a single node in the SchemaTree.
+ *
+ * Note: the result of get_key_name is valid even if the original SchemaNode is later
+ * move-constructed.
+ */
 class SchemaNode {
 public:
     // Constructor
     SchemaNode() : m_parent_id(-1), m_id(-1), m_type(NodeType::Integer), m_count(0) {}
 
-    SchemaNode(int32_t parent_id, int32_t id, std::string key_name, NodeType type, int32_t depth)
+    SchemaNode(
+            int32_t parent_id,
+            int32_t id,
+            std::string_view const key_name,
+            NodeType type,
+            int32_t depth
+    )
             : m_parent_id(parent_id),
               m_id(id),
-              m_key_name(std::move(key_name)),
+              m_key_buf(std::make_unique<char[]>(key_name.size())),
+              m_key_name(m_key_buf.get(), key_name.size()),
               m_type(type),
               m_count(0),
-              m_depth(depth) {}
+              m_depth(depth) {
+        memcpy(m_key_buf.get(), key_name.begin(), key_name.size());
+    }
 
     /**
      * Getters
@@ -50,7 +65,7 @@ public:
 
     NodeType get_type() const { return m_type; }
 
-    std::string const& get_key_name() const { return m_key_name; }
+    std::string_view const get_key_name() const { return m_key_name; }
 
     int32_t get_count() const { return m_count; }
 
@@ -73,7 +88,10 @@ private:
     int32_t m_id;
     int32_t m_parent_id;
     std::vector<int32_t> m_children_ids;
-    std::string m_key_name;
+    // We use a buffer so that references to this key name are stable after this SchemaNode is move
+    // constructed
+    std::unique_ptr<char[]> m_key_buf;
+    std::string_view m_key_name;
     NodeType m_type;
     int32_t m_count;
     int32_t m_depth{0};

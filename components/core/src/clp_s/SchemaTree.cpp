@@ -29,7 +29,7 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
         node.set_depth(parent_node.get_depth() + 1);
         parent_node.add_child(node_id);
     }
-    m_node_map[{parent_node_id, node.get_key_name(), type}] = node_id;
+    m_node_map.emplace(std::make_tuple(parent_node_id, node.get_key_name(), type), node_id);
 
     return node_id;
 }
@@ -64,9 +64,9 @@ size_t SchemaTree::store(std::string const& archives_dir, int compression_level)
     for (auto const& node : m_nodes) {
         schema_tree_compressor.write_numeric_value(node.get_parent_id());
 
-        std::string const& key = node.get_key_name();
+        auto key = node.get_key_name();
         schema_tree_compressor.write_numeric_value(key.size());
-        schema_tree_compressor.write_string(key);
+        schema_tree_compressor.write(key.begin(), key.size());
         schema_tree_compressor.write_numeric_value(node.get_type());
     }
 

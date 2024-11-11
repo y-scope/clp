@@ -93,7 +93,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddIntField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
                         std::to_string(std::get<int64_t>(column->extract_value(m_cur_message)))
@@ -109,7 +109,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddFloatField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
                         std::to_string(std::get<double>(column->extract_value(m_cur_message)))
@@ -125,7 +125,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddBoolField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
                         std::get<uint8_t>(column->extract_value(m_cur_message)) != 0 ? "true"
@@ -143,7 +143,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddStringField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value_from_column_with_quotes(column, m_cur_message);
                 break;
@@ -581,7 +581,7 @@ void SchemaReader::generate_json_template(int32_t id) {
     for (int32_t child_id : children_ids) {
         int32_t child_global_id = m_local_id_to_global_id[child_id];
         auto const& child_node = m_local_schema_tree.get_node(child_id);
-        std::string const& key = child_node.get_key_name();
+        auto key = child_node.get_key_name();
         switch (child_node.get_type()) {
             case NodeType::Object: {
                 m_json_serializer.add_op(JsonSerializer::Op::BeginObject);

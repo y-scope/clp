@@ -4,6 +4,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "Literal.hpp"
@@ -22,7 +23,7 @@ public:
      * wildcards
      * @param token the string to initialize the token from
      */
-    explicit DescriptorToken(std::string const& token)
+    explicit DescriptorToken(std::string_view const token)
             : m_token(token),
               m_wildcard(false),
               m_regex(false) {
