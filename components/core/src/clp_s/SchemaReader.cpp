@@ -37,6 +37,13 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     }
 }
 
+int64_t SchemaReader::get_next_log_event_idx() const {
+    if (nullptr != m_log_event_idx_column) {
+        return std::get<int64_t>(m_log_event_idx_column->extract_value(m_cur_message));
+    }
+    return 0;
+}
+
 void SchemaReader::load(
         std::shared_ptr<char[]> stream_buffer,
         size_t offset,
@@ -215,9 +222,10 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
     return false;
 }
 
-bool SchemaReader::get_next_message_with_timestamp(
+bool SchemaReader::get_next_message_with_metadata(
         std::string& message,
         epochtime_t& timestamp,
+        int64_t& log_event_idx,
         FilterClass* filter
 ) {
     // TODO: If we already get max_num_results messages, we can skip messages
@@ -241,6 +249,7 @@ bool SchemaReader::get_next_message_with_timestamp(
         }
 
         timestamp = m_get_timestamp();
+        log_event_idx = get_next_log_event_idx();
 
         m_cur_message++;
         return true;
@@ -561,7 +570,7 @@ void SchemaReader::initialize_serializer() {
     // TODO: this code will have to change once we allow mixing log lines parsed by different
     // parsers.
     if (false == m_local_schema_tree.get_nodes().empty()) {
-        generate_json_template(m_local_schema_tree.get_root_node_id());
+        generate_json_template(m_local_schema_tree.get_object_subtree_node_id());
     }
 }
 

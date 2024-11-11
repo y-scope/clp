@@ -5,6 +5,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
@@ -21,6 +22,7 @@ enum class NodeType : uint8_t {
     NullValue,
     DateString,
     StructuredArray,
+    Internal,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
@@ -81,7 +83,7 @@ class SchemaTree {
 public:
     SchemaTree() = default;
 
-    int32_t add_node(int parent_node_id, NodeType type, std::string const& key);
+    int32_t add_node(int parent_node_id, NodeType type, std::string_view const key);
 
     bool has_node(int32_t id) { return id < m_nodes.size() && id >= 0; }
 
@@ -93,7 +95,26 @@ public:
         return m_nodes[id];
     }
 
-    int32_t get_root_node_id() const { return m_nodes[0].get_id(); }
+    /**
+     * @return the Id of the root of the Object sub-tree.
+     * @return -1 if the Object sub-tree does not exist.
+     */
+    int32_t get_object_subtree_node_id() const { return m_object_subtree_id; }
+
+    /**
+     * Get the field Id of some field in the Internal subtree.
+     * @param field_name
+     *
+     * @return the field Id of some field in the Internal subtree.
+     * @return -1 if the field does not exist.
+     */
+    int32_t get_internal_field_id(std::string_view const field_name);
+
+    /**
+     * @return the Id of the root of the Internal sub-tree.
+     * @return -1 if the Internal sub-tree does not exist.
+     */
+    int32_t get_internal_subtree_node_id() { return m_internal_subtree_id; }
 
     std::vector<SchemaNode> const& get_nodes() const { return m_nodes; }
 
@@ -129,7 +150,9 @@ public:
 
 private:
     std::vector<SchemaNode> m_nodes;
-    absl::flat_hash_map<std::tuple<int32_t, std::string, NodeType>, int32_t> m_node_map;
+    absl::flat_hash_map<std::tuple<int32_t, std::string_view const, NodeType>, int32_t> m_node_map;
+    int32_t m_object_subtree_id{-1};
+    int32_t m_internal_subtree_id{-1};
 };
 }  // namespace clp_s
 

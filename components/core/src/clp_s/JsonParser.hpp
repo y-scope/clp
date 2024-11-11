@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -93,6 +94,14 @@ private:
      * Splits the archive if the size of the archive exceeds the maximum size
      */
     void split_archive();
+
+    /**
+     * Gets the node ID for an internal field, and adds it to the schema tree if it does not exist.
+     *
+     * Note: this method should be called before parsing a record so that internal fields come first
+     * in each table. This isn't strictly necessary, but it is a nice convention.
+     */
+    int32_t get_internal_field_id(std::string_view const field_name, NodeType type);
 
     int m_num_messages;
     std::vector<std::string> m_file_paths;

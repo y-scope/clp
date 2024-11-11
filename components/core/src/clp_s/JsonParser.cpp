@@ -462,11 +462,20 @@ bool JsonParser::parse() {
                 return false;
             }
 
+            // Add internal log_event_idx field to record
+            auto log_event_idx
+                    = get_internal_field_id(constants::cLogEventIdxName, NodeType::Integer);
+            m_current_parsed_message.add_value(
+                    log_event_idx,
+                    m_archive_writer->get_next_log_event_id()
+            );
+            m_current_schema.insert_ordered(log_event_idx);
+
             // Some errors from simdjson are latent until trying to access invalid JSON fields.
             // Instead of checking for an error every time we access a JSON field in parse_line we
             // just catch simdjson_error here instead.
             try {
-                parse_line(ref.value(), -1, "");
+                parse_line(ref.value(), constants::cRootNodeId, constants::cRootNodeName);
             } catch (simdjson::simdjson_error& error) {
                 SPDLOG_ERROR(
                         "Encountered error - {} - while trying to parse {} after parsing {} bytes",
@@ -519,6 +528,15 @@ bool JsonParser::parse() {
         }
     }
     return true;
+}
+
+int32_t JsonParser::get_internal_field_id(std::string_view const field_name, NodeType type) {
+    auto internal_subtree_id = m_archive_writer->add_node(
+            constants::cRootNodeId,
+            NodeType::Internal,
+            constants::cInternalSubtreeName
+    );
+    return m_archive_writer->add_node(internal_subtree_id, type, field_name);
 }
 
 void JsonParser::store() {

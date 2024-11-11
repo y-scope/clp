@@ -68,15 +68,15 @@ void JsonConstructor::construct_in_order() {
     auto tables = m_archive_reader->read_all_tables();
     using ReaderPointer = std::shared_ptr<SchemaReader>;
     auto cmp = [](ReaderPointer& left, ReaderPointer& right) {
-        return left->get_next_timestamp() > right->get_next_timestamp();
+        return left->get_next_log_event_idx() > right->get_next_log_event_idx();
     };
     std::priority_queue record_queue(tables.begin(), tables.end(), cmp);
     // Clear tables vector so that memory gets deallocated after we have marshalled all records for
     // a given table
     tables.clear();
 
-    epochtime_t first_timestamp{0};
-    epochtime_t last_timestamp{0};
+    int64_t first_idx{0};
+    int64_t last_idx{0};
     size_t num_records_marshalled{0};
     auto src_path = std::filesystem::path(m_option.output_dir) / m_option.archive_id;
     FileWriter writer;
@@ -98,8 +98,8 @@ void JsonConstructor::construct_in_order() {
     std::vector<bsoncxx::document::value> results;
     auto finalize_chunk = [&](bool open_new_writer) {
         writer.close();
-        std::string new_file_name = src_path.string() + "_" + std::to_string(first_timestamp) + "_"
-                                    + std::to_string(last_timestamp) + ".jsonl";
+        std::string new_file_name = src_path.string() + "_" + std::to_string(first_idx) + "_"
+                                    + std::to_string(last_idx) + ".jsonl";
         auto new_file_path = std::filesystem::path(new_file_name);
         std::error_code ec;
         std::filesystem::rename(src_path, new_file_path, ec);
@@ -119,11 +119,11 @@ void JsonConstructor::construct_in_order() {
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cBeginMsgIx,
-                            static_cast<int64_t>(first_timestamp)
+                            first_idx
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cEndMsgIx,
-                            static_cast<int64_t>(last_timestamp)
+                            last_idx
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cIsLastIrChunk,
@@ -140,9 +140,9 @@ void JsonConstructor::construct_in_order() {
     while (false == record_queue.empty()) {
         ReaderPointer next = record_queue.top();
         record_queue.pop();
-        last_timestamp = next->get_next_timestamp();
+        last_idx = next->get_next_log_event_idx();
         if (0 == num_records_marshalled) {
-            first_timestamp = last_timestamp;
+            first_idx = last_idx;
         }
         next->get_next_message(buffer);
         if (false == next->done()) {

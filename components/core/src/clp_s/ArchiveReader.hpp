@@ -214,6 +214,7 @@ private:
     std::shared_ptr<char[]> m_stream_buffer{};
     size_t m_stream_buffer_size{0ULL};
     size_t m_cur_stream_id{0ULL};
+    int32_t m_log_event_idx_column_id{-1};
 };
 }  // namespace clp_s
 

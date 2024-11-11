@@ -68,6 +68,7 @@ void ArchiveWriter::close() {
     m_encoded_message_size = 0UL;
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
+    m_next_log_event_id = 0;
 }
 
 void ArchiveWriter::append_message(
@@ -86,6 +87,7 @@ void ArchiveWriter::append_message(
     }
 
     m_encoded_message_size += schema_writer->append_message(message);
+    ++m_next_log_event_id;
 }
 
 size_t ArchiveWriter::get_data_size() {
