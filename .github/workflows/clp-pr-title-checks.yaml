@@ -6,6 +6,7 @@ on:
     branches: ["main"]
 
 permissions:
+  # For amannn/action-semantic-pull-request
   pull-requests: "read"
 
 concurrency:
