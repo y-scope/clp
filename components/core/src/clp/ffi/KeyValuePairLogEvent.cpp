@@ -154,20 +154,6 @@ node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) ->
 ) -> bool;
 
 /**
- * @param node_id_value_pairs
- * @param schema_tree
- * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
- * schema tree, and the set bits correspond to the nodes in the subtree defined by all paths from
- * the root node to the nodes in `node_id_value_pairs`; or an error code indicating a failure:
- * - std::errc::result_out_of_range if a node ID in `node_id_value_pairs` doesn't exist in the
- *   schema tree.
- */
-[[nodiscard]] auto get_schema_subtree_bitmap(
-        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
-        SchemaTree const& schema_tree
-) -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>>;
-
-/**
  * Inserts the given key-value pair into the JSON object (map).
  * @param node The schema tree node of the key to insert.
  * @param optional_val The value to insert.
@@ -283,38 +269,6 @@ auto is_leaf_node(
     return true;
 }
 
-auto get_schema_subtree_bitmap(
-        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
-        SchemaTree const& schema_tree
-) -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>> {
-    auto schema_subtree_bitmap{vector<bool>(schema_tree.get_size(), false)};
-    for (auto const& [node_id, val] : node_id_value_pairs) {
-        if (node_id >= schema_subtree_bitmap.size()) {
-            return std::errc::result_out_of_range;
-        }
-        schema_subtree_bitmap[node_id] = true;
-
-        // Iteratively mark the parents as true
-        auto optional_parent_id{schema_tree.get_node(node_id).get_parent_id()};
-        while (true) {
-            // Ideally, we'd use this if statement as the loop condition, but clang-tidy will
-            // complain about an unchecked `optional` access.
-            if (false == optional_parent_id.has_value()) {
-                // Reached the root
-                break;
-            }
-            auto const parent_id{optional_parent_id.value()};
-            if (schema_subtree_bitmap[parent_id]) {
-                // Parent already set by other child
-                break;
-            }
-            schema_subtree_bitmap[parent_id] = true;
-            optional_parent_id = schema_tree.get_node(parent_id).get_parent_id();
-        }
-    }
-    return schema_subtree_bitmap;
-}
-
 auto insert_kv_pair_into_json_obj(
         SchemaTree::Node const& node,
         std::optional<Value> const& optional_val,
@@ -393,6 +347,36 @@ auto KeyValuePairLogEvent::create(
     return KeyValuePairLogEvent{std::move(schema_tree), std::move(node_id_value_pairs), utc_offset};
 }
 
+auto KeyValuePairLogEvent::get_schema_subtree_bitmap(
+) const -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>> {
+    auto schema_subtree_bitmap{vector<bool>(m_schema_tree->get_size(), false)};
+    for (auto const& [node_id, val] : m_node_id_value_pairs) {
+        if (node_id >= schema_subtree_bitmap.size()) {
+            return std::errc::result_out_of_range;
+        }
+        schema_subtree_bitmap[node_id] = true;
+
+        // Iteratively mark the parents as true
+        auto optional_parent_id{m_schema_tree->get_node(node_id).get_parent_id()};
+        while (true) {
+            // Ideally, we'd use this if statement as the loop condition, but clang-tidy will
+            // complain about an unchecked `optional` access.
+            if (false == optional_parent_id.has_value()) {
+                // Reached the root
+                break;
+            }
+            auto const parent_id{optional_parent_id.value()};
+            if (schema_subtree_bitmap[parent_id]) {
+                // Parent already set by other child
+                break;
+            }
+            schema_subtree_bitmap[parent_id] = true;
+            optional_parent_id = m_schema_tree->get_node(parent_id).get_parent_id();
+        }
+    }
+    return schema_subtree_bitmap;
+}
+
 auto KeyValuePairLogEvent::serialize_to_json(
 ) const -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json> {
     if (m_node_id_value_pairs.empty()) {
@@ -409,9 +393,7 @@ auto KeyValuePairLogEvent::serialize_to_json(
     // vector grows).
     std::stack<DfsIterator> dfs_stack;
 
-    auto const schema_subtree_bitmap_ret{
-            get_schema_subtree_bitmap(m_node_id_value_pairs, *m_schema_tree)
-    };
+    auto const schema_subtree_bitmap_ret{get_schema_subtree_bitmap()};
     if (schema_subtree_bitmap_ret.has_error()) {
         return schema_subtree_bitmap_ret.error();
     }
