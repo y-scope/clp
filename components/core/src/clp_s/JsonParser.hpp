@@ -96,12 +96,12 @@ private:
     void split_archive();
 
     /**
-     * Gets the node ID for an internal field, and adds it to the schema tree if it does not exist.
+     * Add an internal field to the MPT and get its Id.
      *
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
      */
-    int32_t get_internal_field_id(std::string_view const field_name, NodeType type);
+    int32_t add_internal_field(std::string_view const field_name, NodeType type);
 
     int m_num_messages;
     std::vector<std::string> m_file_paths;
