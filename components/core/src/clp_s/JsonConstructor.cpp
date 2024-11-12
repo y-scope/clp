@@ -97,6 +97,8 @@ void JsonConstructor::construct_in_order() {
 
     std::vector<bsoncxx::document::value> results;
     auto finalize_chunk = [&](bool open_new_writer) {
+        // Add one to last_idx to match clp's behaviour of having the end index be exclusive
+        ++last_idx;
         writer.close();
         std::string new_file_name = src_path.string() + "_" + std::to_string(first_idx) + "_"
                                     + std::to_string(last_idx) + ".jsonl";
