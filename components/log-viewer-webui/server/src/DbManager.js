@@ -102,7 +102,7 @@ class DbManager {
     }
 
     /**
-     * Submits an IR extraction job to the scheduler and waits for it to finish.
+     * Submits a stream extraction job to the scheduler and waits for it to finish.
      *
      * @param {object} jobConfig
      * @param {number} jobType
@@ -132,34 +132,19 @@ class DbManager {
     }
 
     /**
-     * Gets the metadata for an IR file extracted from part of an original file, where the original
-     * file has the given ID and the extracted part contains the given log event index.
+     * TODO: Update this comment.
+     * Gets the metadata for a extracted stream from part of an original file or archive, where the original
+     * file or archive has the given ID and the extracted stream contains the given logEventIdx.
      *
-     * @param {string} origFileId
+     * @param {string} targetId
      * @param {number} logEventIdx
-     * @return {Promise<object>} A promise that resolves to the extracted IR file's metadata.
+     * @return {Promise<object>} A promise that resolves to the extracted stream's metadata.
      */
-    async getExtractedIrFileMetadata (origFileId, logEventIdx) {
+    async getExtractedStreamFileMetadata (targetId, logEventIdx) {
         return await this.#StreamFilesCollection.findOne({
-            orig_file_id: origFileId,
+            orig_file_id: targetId,
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
-        });
-    }
-
-    /**
-     * Gets the metadata for a Json file extracted from part of an original archive, where the original
-     * archive has the given ID and the extracted part contains the given timestamp.
-     *
-     * @param {string} archiveId
-     * @param {number} timestamp
-     * @return {Promise<object>} A promise that resolves to the extracted Json file's metadata.
-     */
-    async getExtractedJsonFileMetadata (archiveId, timestamp) {
-        return await this.#StreamFilesCollection.findOne({
-            orig_file_id: archiveId,
-            begin_msg_ix: {$lte: timestamp},
-            end_msg_ix: {$gte: timestamp},
         });
     }
 

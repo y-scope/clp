@@ -148,11 +148,11 @@ const SearchResultsTable = ({
                                         title={"View log event in context"}
                                         href={isIrSupported ?
                                             `${Meteor.settings.public.LogViewerWebuiUrl
-                                            }?origFileId=${result.orig_file_id}` +
+                                            }?type=ir&targetId=${result.orig_file_id}` +
                                                 `&logEventIdx=${result.log_event_ix}` :
                                             `${Meteor.settings.public.LogViewerWebuiUrl
-                                            }?archiveId=${result.archive_id}` +
-                                                `&timestamp=${result.timestamp}`}
+                                            }?type=json&targetId=${result.archive_id}` +
+                                                `&logEventIdx=${result.log_event_ix}`}
                                     >
                                         {isIrSupported ?
                                             result.orig_file_path :
