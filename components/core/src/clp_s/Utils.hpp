@@ -211,7 +211,6 @@ public:
      * Converts a string column descriptor delimited by '.' into a list of tokens
      * @param descriptor
      * @param tokens
-     * @return the list of tokens pushed into the 'tokens' parameter
      * @return true if the descriptor was tokenized successfully, false otherwise
      */
     [[nodiscard]] static bool

@@ -206,9 +206,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         REQUIRE(2 == filter->get_column()->get_descriptor_list().size());
         auto it = filter->get_column()->descriptor_begin();
-        SPDLOG_INFO("{}", it->get_token());
         REQUIRE(DescriptorToken{"a.b"} == *it++);
-        SPDLOG_INFO("{}", it->get_token());
         REQUIRE(DescriptorToken{"c"} == *it++);
     }
 
@@ -225,6 +223,13 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         );
         stringstream illegal_escape{query};
         auto filter = parse_kql_expression(illegal_escape);
+        REQUIRE(nullptr == filter);
+    }
+
+    SECTION("Empty token in column name") {
+        auto query = GENERATE(".a:*", "a.:*", "a..c:*", "a.b.:*");
+        stringstream empty_token_column{query};
+        auto filter = parse_kql_expression(empty_token_column);
         REQUIRE(nullptr == filter);
     }
 }

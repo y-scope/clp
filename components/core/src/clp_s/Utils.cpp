@@ -440,6 +440,9 @@ bool StringUtils::tokenize_column_descriptor(
                 return false;
             }
         } else if ('.' == descriptor[cur]) {
+            if (cur_tok.empty()) {
+                return false;
+            }
             tokens.push_back(cur_tok);
             cur_tok.clear();
             continue;
