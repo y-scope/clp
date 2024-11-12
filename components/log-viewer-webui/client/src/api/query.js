@@ -13,20 +13,19 @@ import axios from "axios";
  */
 
 /**
- * TODO: update this comment.
- * Submits a job to extract the split of an original file that contains a given log event. The file
- * is extracted as a CLP IR file.
+ * Submits a job to extract the stream of an original file or archive that contains a given log
+ * event. The stream is extracted either as a CLP IR or Json line file.
  *
- * @param {number} queryJobType Type of the query job
+ * @param {number} extractJobType
  * @param {number|string} targetId The ID of the original item
  * @param {number} logEventIdx The index of the log event
  * @param {Function} onUploadProgress Callback to handle upload progress events.
  * @return {Promise<axios.AxiosResponse<ExtractIrResp>>}
  */
-const submitExtractStreamJob = async (queryJobType, targetId, logEventIdx, onUploadProgress) => {
+const submitExtractStreamJob = async (extractJobType, targetId, logEventIdx, onUploadProgress) => {
     return await axios.post(
         "/query/extract-stream",
-        {queryJobType, targetId, logEventIdx},
+        {extractJobType, targetId, logEventIdx},
         {onUploadProgress}
     );
 };

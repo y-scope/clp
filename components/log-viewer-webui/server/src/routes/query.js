@@ -14,7 +14,7 @@ import {QUERY_JOB_TYPE} from "../DbManager.js";
  */
 const routes = async (fastify, options) => {
     fastify.post("/query/extract-stream", async (req, resp) => {
-        const {queryJobType, targetId, logEventIdx} = req.body;
+        const {extractJobType, targetId, logEventIdx} = req.body;
         const sanitizedLogEventIdx = Number(logEventIdx);
 
         let streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
@@ -24,31 +24,31 @@ const routes = async (fastify, options) => {
 
         if (null === streamMetadata) {
             let jobConfig;
-            if (QUERY_JOB_TYPE.EXTRACT_IR === queryJobType) {
+            if (QUERY_JOB_TYPE.EXTRACT_IR === extractJobType) {
                 jobConfig = {
                     file_split_id: null,
                     msg_ix: sanitizedLogEventIdx,
                     orig_file_id: targetId,
                     target_uncompressed_size: EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE,
                 };
-            } else if (QUERY_JOB_TYPE.EXTRACT_JSON === queryJobType) {
+            } else if (QUERY_JOB_TYPE.EXTRACT_JSON === extractJobType) {
                 jobConfig = {
                     archive_id: targetId,
                     target_chunk_size: EXTRACT_JSON_TARGET_CHUNK_SIZE,
                 };
             } else {
-                const err = new Error(`Unsupported Job type: ${queryJobType});`);
+                const err = new Error(`Unsupported Job type: ${extractJobType});`);
                 err.statusCode = 400;
                 throw err;
             }
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob(
                 jobConfig,
-                queryJobType
+                extractJobType
             );
 
             if (null === extractResult) {
-                const err = new Error("Unable to extract json for file with " +
-                    `archiveId=${archiveId} at timestamp=${sanitizedTimestamp}`);
+                const err = new Error("Unable to extract stream with " +
+                    `targetId=${targetId} at timestamp=${sanitizedLogEventIdx}`);
 
                 err.statusCode = 400;
                 throw err;

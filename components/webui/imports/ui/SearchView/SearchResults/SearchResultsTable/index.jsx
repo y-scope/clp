@@ -94,7 +94,10 @@ const SearchResultsTable = ({
     }, [maxLinesPerResult]);
 
     // eslint-disable-next-line no-warning-comments
-    const isIrSupported = ("clp" === Meteor.settings.public.ClpStorageEngine);
+    const isIrExtraction = ("clp" === Meteor.settings.public.ClpStorageEngine);
+    const streamType = isIrExtraction ?
+        "ir" :
+        "json";
 
     return (
         <div className={"search-results-container"}>
@@ -146,15 +149,11 @@ const SearchResultsTable = ({
                                         rel={"noopener noreferrer"}
                                         target={"_blank"}
                                         title={"View log event in context"}
-                                        href={isIrSupported ?
-                                            `${Meteor.settings.public.LogViewerWebuiUrl
-                                            }?type=ir&targetId=${result.orig_file_id}` +
-                                                `&logEventIdx=${result.log_event_ix}` :
-                                            `${Meteor.settings.public.LogViewerWebuiUrl
-                                            }?type=json&targetId=${result.archive_id}` +
-                                                `&logEventIdx=${result.log_event_ix}`}
+                                        href={`${Meteor.settings.public.LogViewerWebuiUrl}?` +
+                                            `type=${streamType}&targetId=${result.orig_file_id}` +
+                                            `&logEventIdx=${result.log_event_ix}`}
                                     >
-                                        {isIrSupported ?
+                                        {isIrExtraction ?
                                             result.orig_file_path :
                                             "Original File"}
                                     </a>

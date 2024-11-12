@@ -10,6 +10,7 @@ import {submitExtractStreamJob} from "../api/query.js";
 import {QUERY_LOADING_STATES} from "../typings/query.js";
 import Loading from "./Loading.jsx";
 
+
 /* eslint-disable sort-keys */
 let enumQueryType;
 /**
@@ -24,6 +25,23 @@ const QUERY_JOB_TYPE = Object.freeze({
     EXTRACT_JSON: ++enumQueryType,
 });
 /* eslint-enable sort-keys */
+
+/**
+ * Returns the extract job type based on the given stream type
+ *
+ * @param streamType {string}
+ * @return {number|null}
+ */
+function getExtractJobType (streamType) {
+    if ("ir" === streamType) {
+        return QUERY_JOB_TYPE.EXTRACT_IR;
+    }
+    if ("json" === streamType) {
+        return QUERY_JOB_TYPE.EXTRACT_JSON;
+    }
+
+    return null;
+}
 
 /**
  * Submits queries and renders the query states.
@@ -47,33 +65,26 @@ const QueryStatus = () => {
         const logEventIdx = searchParams.get("logEventIdx");
 
         if (null === streamType || null === targetId || null === logEventIdx) {
-             const error = "Queries parameters are missing from the URL " +
+            const error = "Queries parameters are missing from the URL " +
              "parameters.";
-
-             console.error(error);
-             setErrorMsg(error);
-             return;
-
-        }
-
-        let QueryJobType;
-        switch(streamType) {
-          case 'ir':
-            QueryJobType = QUERY_JOB_TYPE.EXTRACT_IR;
-            break;
-          case 'json':
-            QueryJobType = QUERY_JOB_TYPE.EXTRACT_JSON;
-            break;
-          default:
-            const error = `Unsupported Target type: ${streamType}`
 
             console.error(error);
             setErrorMsg(error);
+
+            return;
+        }
+
+        const extractJobType = getExtractJobType(streamType);
+        if (null === extractJobType) {
+            const error = `Unsupported Target type: ${streamType}`;
+            console.error(error);
+            setErrorMsg(error);
+
             return;
         }
 
         submitExtractStreamJob(
-            QueryJobType,
+            extractJobType,
             targetId,
             Number(logEventIdx),
             () => {
