@@ -14,7 +14,6 @@
 
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
-#include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
 #include "decoding_methods.hpp"
 #include "ir_unit_deserialization_methods.hpp"
@@ -66,8 +65,8 @@ public:
     /**
      * Deserializes the stream from the given reader up to and including the next log event IR unit.
      * @param reader
-     * @return std::errc::no_message_available if no tag bytes can be read to determine the next IR
-     * unit type.
+     * @return Forwards `deserialize_tag`s return values if no tag bytes can be read to determine
+     * the next IR unit type.
      * @return std::errc::protocol_not_supported if the IR unit type is not supported.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
      * stream by deserializing an end-of-stream IR unit in the previous calls.
@@ -154,10 +153,8 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
         return std::errc::protocol_error;
     }
     auto const version = version_iter->get_ref<nlohmann::json::string_t&>();
-    // TODO: Just before the KV-pair IR format is formally released, we should replace this
-    // hard-coded version check with `ffi::ir_stream::validate_protocol_version`.
-    if (std::string_view{static_cast<char const*>(cProtocol::Metadata::BetaVersionValue)}
-        != version)
+    if (ffi::ir_stream::IRProtocolErrorCode::Supported
+        != ffi::ir_stream::validate_protocol_version(version))
     {
         return std::errc::protocol_not_supported;
     }
@@ -174,8 +171,8 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
     }
 
     encoded_tag_t tag{};
-    if (IRErrorCode::IRErrorCode_Success != deserialize_tag(reader, tag)) {
-        return std::errc::no_message_available;
+    if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
+        return ir_error_code_to_errc(err);
     }
 
     auto const optional_ir_unit_type{get_ir_unit_type_from_tag(tag)};
