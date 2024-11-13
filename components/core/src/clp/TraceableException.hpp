@@ -39,6 +39,7 @@ private:
 // Macros
 // Define a version of __FILE__ that's relative to the source directory
 #ifdef SOURCE_PATH_SIZE
+   // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     #define __FILENAME__ ((__FILE__) + SOURCE_PATH_SIZE)
 #else
    // We don't know the source path size, so just default to __FILE__

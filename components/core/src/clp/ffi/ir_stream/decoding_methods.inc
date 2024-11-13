@@ -2,6 +2,7 @@
 #define CLP_FFI_IR_STREAM_DECODING_METHODS_INC
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "../../ir/types.hpp"
@@ -48,7 +49,7 @@ void generic_decode_message(
                             ErrorCode_Corrupt,
                             __FILENAME__,
                             __LINE__,
-                            cTooFewEncodedVarsErrorMessage
+                            std::string{cTooFewEncodedVarsErrorMessage}
                     );
                 }
                 encoded_float_handler(encoded_vars[encoded_vars_ix]);
@@ -69,7 +70,7 @@ void generic_decode_message(
                             ErrorCode_Corrupt,
                             __FILENAME__,
                             __LINE__,
-                            cTooFewEncodedVarsErrorMessage
+                            std::string{cTooFewEncodedVarsErrorMessage}
                     );
                 }
                 encoded_int_handler(encoded_vars[encoded_vars_ix]);
@@ -90,7 +91,7 @@ void generic_decode_message(
                             ErrorCode_Corrupt,
                             __FILENAME__,
                             __LINE__,
-                            cTooFewDictionaryVarsErrorMessage
+                            std::string{cTooFewDictionaryVarsErrorMessage}
                     );
                 }
                 dict_var_handler(dict_vars[dictionary_vars_ix]);
@@ -106,7 +107,7 @@ void generic_decode_message(
                             ErrorCode_Corrupt,
                             __FILENAME__,
                             __LINE__,
-                            cUnexpectedEscapeCharacterMessage
+                            std::string{cUnexpectedEscapeCharacterMessage}
                     );
                 }
 
