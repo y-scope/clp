@@ -307,6 +307,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             ->default_value(m_ordered_chunk_size),
                     "Number of records to include in each output file when decompressing records "
                     "in log order"
+            )(
+                    "temp-output-dir",
+                    po::value<std::string>(&m_temp_output_dir)
+                        ->value_name("DIR")
+                        ->default_value(m_temp_output_dir),
+                        "Temporary output directory for output files while they're being written"
             );
             // clang-format on
             extraction_options.add(decompression_options);
@@ -367,6 +373,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_output_dir.empty()) {
                 throw std::invalid_argument("No output directory specified");
+            }
+
+            if (m_temp_output_dir.empty()) {
+                m_temp_output_dir = m_output_dir;
             }
 
             if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {

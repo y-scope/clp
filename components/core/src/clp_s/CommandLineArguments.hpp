@@ -52,6 +52,8 @@ public:
 
     std::string const& get_output_dir() const { return m_output_dir; }
 
+    std::string const& get_temp_output_dir() const { return m_temp_output_dir; }
+
     std::string const& get_timestamp_key() const { return m_timestamp_key; }
 
     int get_compression_level() const { return m_compression_level; }
@@ -171,6 +173,7 @@ private:
     std::vector<std::string> m_file_paths;
     std::string m_archives_dir;
     std::string m_output_dir;
+    std::string m_temp_output_dir;
     std::string m_timestamp_key;
     int m_compression_level{3};
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB

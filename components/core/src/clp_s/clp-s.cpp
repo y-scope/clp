@@ -298,6 +298,7 @@ int main(int argc, char const* argv[]) {
 
         clp_s::JsonConstructorOption option{};
         option.output_dir = command_line_arguments.get_output_dir();
+        option.temp_output_dir = command_line_arguments.get_temp_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.archives_dir = archives_dir;
         option.ordered_chunk_size = command_line_arguments.get_ordered_chunk_size();

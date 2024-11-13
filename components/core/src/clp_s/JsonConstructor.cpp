@@ -32,6 +32,20 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option) : m_option
         );
     }
 
+    std::ignore = std::filesystem::create_directory(option.temp_output_dir, error_code);
+    if (error_code) {
+        throw OperationFailed(
+                ErrorCodeFailure,
+                __FILENAME__,
+                __LINE__,
+                fmt::format(
+                        "Cannot create temporary output directory '{}' - {}",
+                        option.output_dir,
+                        error_code.message()
+                )
+        );
+    }
+
     std::filesystem::path archive_path{m_option.archives_dir};
     archive_path /= m_option.archive_id;
     if (false == std::filesystem::is_directory(archive_path)) {
@@ -84,7 +98,7 @@ void JsonConstructor::construct_in_order() {
     int64_t first_idx{0};
     int64_t last_idx{0};
     size_t num_records_marshalled{0};
-    auto src_path = std::filesystem::path(m_option.output_dir) / m_option.archive_id;
+    auto src_path = std::filesystem::path(m_option.temp_output_dir) / m_option.archive_id;
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
@@ -106,11 +120,11 @@ void JsonConstructor::construct_in_order() {
         // Add one to last_idx to match clp's behaviour of having the end index be exclusive
         ++last_idx;
         writer.close();
-        std::string new_file_name = src_path.string() + "_" + std::to_string(first_idx) + "_"
+        auto const dest_file_name = m_option.archive_id + "_" + std::to_string(first_idx) + "_"
                                     + std::to_string(last_idx) + ".jsonl";
-        auto new_file_path = std::filesystem::path(new_file_name);
+        auto const dest_path = std::filesystem::path(m_option.output_dir) / dest_file_name;
         std::error_code ec;
-        std::filesystem::rename(src_path, new_file_path, ec);
+        std::filesystem::rename(src_path, dest_path, ec);
         if (ec) {
             throw OperationFailed(ErrorCodeFailure, __FILE__, __LINE__, ec.message());
         }
@@ -119,7 +133,7 @@ void JsonConstructor::construct_in_order() {
             results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cPath,
-                            new_file_path.filename()
+                            dest_path.filename()
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cOrigFileId,
