@@ -133,8 +133,9 @@ class DbManager {
 
     /**
      * TODO: Update this comment.
-     * Gets the metadata for a extracted stream from part of an original file or archive, where the original
-     * file or archive has the given ID and the extracted stream contains the given logEventIdx.
+     * Gets the metadata for a extracted stream from part of an original file or archive, where the
+     * original file or archive has the given ID and the extracted stream contains the given
+     * logEventIdx.
      *
      * @param {string} targetId
      * @param {number} logEventIdx

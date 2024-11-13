@@ -29,10 +29,10 @@ const QUERY_JOB_TYPE = Object.freeze({
 /**
  * Returns the extract job type based on the given stream type
  *
- * @param streamType {string}
+ * @param {string} streamType
  * @return {number|null}
  */
-function getExtractJobType (streamType) {
+const getExtractJobType = (streamType) => {
     if ("ir" === streamType) {
         return QUERY_JOB_TYPE.EXTRACT_IR;
     }
@@ -41,7 +41,7 @@ function getExtractJobType (streamType) {
     }
 
     return null;
-}
+};
 
 /**
  * Submits queries and renders the query states.
