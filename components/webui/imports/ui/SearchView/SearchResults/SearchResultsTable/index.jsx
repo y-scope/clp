@@ -28,6 +28,11 @@ import "./SearchResultsTable.scss";
  */
 const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
 
+const isStreamIr = ("clp" === Meteor.settings.public.ClpStorageEngine);
+const streamType = isStreamIr ?
+    "ir" :
+    "json";
+
 /**
  * Represents a table component to display search results.
  *
@@ -93,12 +98,6 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
-    // eslint-disable-next-line no-warning-comments
-    const isIrExtraction = ("clp" === Meteor.settings.public.ClpStorageEngine);
-    const streamType = isIrExtraction ?
-        "ir" :
-        "json";
-
     return (
         <div className={"search-results-container"}>
             <Table
@@ -153,7 +152,7 @@ const SearchResultsTable = ({
                                             `type=${streamType}&targetId=${result.orig_file_id}` +
                                             `&logEventIdx=${result.log_event_ix}`}
                                     >
-                                        {isIrExtraction ?
+                                        {isStreamIr ?
                                             result.orig_file_path :
                                             "Original File"}
                                     </a>
