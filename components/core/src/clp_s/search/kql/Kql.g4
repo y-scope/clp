@@ -96,7 +96,7 @@ fragment ESCAPED_SPACE
     ;
 
 fragment SPECIAL_CHARACTER
-    : [\\():<>"*?{}]
+    : [\\():<>"*?{}.]
     ;
 
 
