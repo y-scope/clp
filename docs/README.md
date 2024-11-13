@@ -13,7 +13,7 @@ this project:
     the size of repo as we add and update images.
 * [Node.js] >= 16 to be able to [view the output](#viewing-the-output)
 * Python 3.10 or later
-* [Task] >= 3.35
+* [Task] >= 3.38.0
   * We constrain the version because, in lower versions, the Taskfile syntax we use has bugs.
 
 ## Build Commands
@@ -44,3 +44,4 @@ the address it binds to (usually http://localhost:8080).
 [git-lfs]: https://git-lfs.com
 [http-server]: https://www.npmjs.com/package/http-server
 [Node.js]: https://nodejs.org/en/download/current
+[Task]: https://taskfile.dev/
