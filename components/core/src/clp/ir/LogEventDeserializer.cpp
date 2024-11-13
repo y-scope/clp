@@ -3,16 +3,18 @@
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
+#include <outcome/single-header/outcome.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ffi/ir_stream/protocol_constants.hpp"
+#include "EncodedTextAst.hpp"
 #include "types.hpp"
 
 namespace clp::ir {
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
     ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata;
     auto ir_error_code = ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata);
@@ -40,7 +42,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
         return std::errc::protocol_error;
     }
     auto metadata_version = version_iter->get_ref<nlohmann::json::string_t&>();
-    if (ffi::ir_stream::IRProtocolErrorCode_Supported
+    if (ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
         != ffi::ir_stream::validate_protocol_version(metadata_version))
     {
         return std::errc::protocol_not_supported;
@@ -68,7 +70,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
 
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
     // Process any packets before the log event
     ffi::ir_stream::encoded_tag_t tag{};
     while (true) {
@@ -123,17 +125,21 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
         timestamp = m_prev_msg_timestamp;
     }
 
-    return LogEvent<encoded_variable_t>{timestamp, m_utc_offset, logtype, dict_vars, encoded_vars};
+    return LogEvent<encoded_variable_t>{
+            timestamp,
+            m_utc_offset,
+            EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars}
+    };
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
 template auto LogEventDeserializer<eight_byte_encoded_variable_t>::create(ReaderInterface& reader
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::create(ReaderInterface& reader
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event(
-) -> BOOST_OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
+) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
 }  // namespace clp::ir

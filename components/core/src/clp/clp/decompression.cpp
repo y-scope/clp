@@ -1,9 +1,7 @@
 #include "decompression.hpp"
 
+#include <filesystem>
 #include <iostream>
-
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 
 #include "../ErrorCode.hpp"
 #include "../FileWriter.hpp"
@@ -31,7 +29,7 @@ bool decompress(
     ErrorCode error_code;
 
     // Create output directory in case it doesn't exist
-    auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
+    auto output_dir = std::filesystem::path(command_line_args.get_output_dir());
     error_code = create_directory(output_dir.parent_path().string(), 0700, true);
     if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
@@ -41,13 +39,13 @@ bool decompress(
     unordered_set<string> decompressed_files;
 
     try {
-        auto archives_dir = boost::filesystem::path(command_line_args.get_archives_dir());
+        auto archives_dir = std::filesystem::path(command_line_args.get_archives_dir());
         auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
         auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
 
         streaming_archive::reader::Archive archive_reader;
 
-        boost::filesystem::path empty_directory_path;
+        std::filesystem::path empty_directory_path;
 
         FileDecompressor file_decompressor;
 
@@ -65,7 +63,7 @@ bool decompress(
                 archive_ix->get_id(archive_id);
                 auto archive_path = archives_dir / archive_id;
 
-                if (false == boost::filesystem::exists(archive_path)) {
+                if (false == std::filesystem::exists(archive_path)) {
                     SPDLOG_WARN(
                             "Archive {} does not exist in '{}'.",
                             archive_id,
@@ -181,11 +179,11 @@ bool decompress(
         global_metadata_db->close();
 
         string final_path;
-        boost::system::error_code boost_error_code;
+        std::error_code std_error_code;
         for (auto const& temp_path_and_final_path : temp_path_to_final_path) {
             final_path = temp_path_and_final_path.second;
             for (size_t i = 1; i < SIZE_MAX; ++i) {
-                if (boost::filesystem::exists(final_path, boost_error_code)) {
+                if (std::filesystem::exists(final_path, std_error_code)) {
                     final_path = temp_path_and_final_path.second;
                     final_path += '.';
                     final_path += std::to_string(i);
@@ -238,7 +236,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
     ErrorCode error_code{};
 
     // Create output directory in case it doesn't exist
-    auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
+    std::filesystem::path output_dir{command_line_args.get_output_dir()};
     error_code = create_directory(output_dir.parent_path().string(), 0700, true);
     if (ErrorCode_Success != error_code) {
         SPDLOG_ERROR("Failed to create {} - {}", output_dir.parent_path().c_str(), strerror(errno));
@@ -246,7 +244,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
     }
 
     try {
-        auto archives_dir = boost::filesystem::path(command_line_args.get_archives_dir());
+        std::filesystem::path archives_dir{command_line_args.get_archives_dir()};
         auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
         auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
 
@@ -280,10 +278,11 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
             return false;
         }
 
-        auto ir_output_handler = [&](boost::filesystem::path const& src_ir_path,
+        auto ir_output_handler = [&](std::filesystem::path const& src_ir_path,
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
-                                     size_t end_message_ix) {
+                                     size_t end_message_ix,
+                                     [[maybe_unused]] bool is_last_ir_chunk) {
             auto dest_ir_file_name = orig_file_id;
             dest_ir_file_name += "_" + std::to_string(begin_message_ix);
             dest_ir_file_name += "_" + std::to_string(end_message_ix);
@@ -291,8 +290,8 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
 
             auto const dest_ir_path = output_dir / dest_ir_file_name;
             try {
-                boost::filesystem::rename(src_ir_path, dest_ir_path);
-            } catch (boost::filesystem::filesystem_error const& e) {
+                std::filesystem::rename(src_ir_path, dest_ir_path);
+            } catch (std::filesystem::filesystem_error const& e) {
                 SPDLOG_ERROR(
                         "Failed to rename from {} to {}. Error: {}",
                         src_ir_path.c_str(),

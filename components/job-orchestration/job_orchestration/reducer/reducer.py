@@ -55,8 +55,8 @@ def main(argv: List[str]) -> int:
     # fmt: off
     reducer_cmd = [
         str(clp_home / "bin" / "reducer-server"),
-        "--scheduler-host", clp_config.search_scheduler.host,
-        "--scheduler-port", str(clp_config.search_scheduler.port),
+        "--scheduler-host", clp_config.query_scheduler.host,
+        "--scheduler-port", str(clp_config.query_scheduler.port),
         "--mongodb-uri", clp_config.results_cache.get_uri(),
         "--upsert-interval", str(parsed_args.upsert_interval),
         "--reducer-host", clp_config.reducer.host,

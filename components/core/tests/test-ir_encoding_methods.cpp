@@ -1,14 +1,29 @@
+#include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <json/single_include/nlohmann/json.hpp>
+#include <msgpack.hpp>
 
 #include "../src/clp/BufferReader.hpp"
+#include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/Deserializer.hpp"
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
+#include "../src/clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/clp/ffi/ir_stream/Serializer.hpp"
+#include "../src/clp/ffi/ir_stream/utils.hpp"
+#include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
+#include "../src/clp/ffi/SchemaTree.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/time_types.hpp"
@@ -26,11 +41,14 @@ using clp::ffi::ir_stream::cProtocol::MagicNumberLength;
 using clp::ffi::ir_stream::deserialize_preamble;
 using clp::ffi::ir_stream::deserialize_tag;
 using clp::ffi::ir_stream::deserialize_utc_offset_change;
+using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
 using clp::ffi::ir_stream::IRErrorCode;
 using clp::ffi::ir_stream::serialize_utc_offset_change;
+using clp::ffi::ir_stream::Serializer;
 using clp::ffi::ir_stream::validate_protocol_version;
+using clp::ffi::KeyValuePairLogEvent;
 using clp::ffi::wildcard_query_matches_any_encoded_var;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
@@ -69,6 +87,47 @@ private:
     string m_message;
     epoch_time_ms_t m_timestamp{0};
     UtcOffset m_utc_offset{0};
+};
+
+/**
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ */
+class IrUnitHandler {
+public:
+    // Implements `clp::ffi::ir_stream::IrUnitHandlerInterface` interface
+    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+        m_deserialized_log_events.emplace_back(std::move(log_event));
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] static auto handle_utc_offset_change(
+            [[maybe_unused]] UtcOffset utc_offset_old,
+            [[maybe_unused]] UtcOffset utc_offset_new
+    ) -> IRErrorCode {
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] static auto handle_schema_tree_node_insertion(
+            [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator
+    ) -> IRErrorCode {
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] auto handle_end_of_stream() -> IRErrorCode {
+        m_is_complete = true;
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    // Methods
+    [[nodiscard]] auto is_complete() const -> bool { return m_is_complete; }
+
+    [[nodiscard]] auto get_deserialized_log_events() const -> vector<KeyValuePairLogEvent> const& {
+        return m_deserialized_log_events;
+    }
+
+private:
+    vector<KeyValuePairLogEvent> m_deserialized_log_events;
+    bool m_is_complete{false};
 };
 
 /**
@@ -114,6 +173,40 @@ template <typename encoded_variable_t>
  * @return The current UNIX epoch timestamp in milliseconds.
  */
 [[nodiscard]] auto get_current_ts() -> epoch_time_ms_t;
+
+/**
+ * Flushes and clears serialized data from the serializer's underlying IR buffer into the given byte
+ * buffer.
+ * @tparam encoded_variable_t
+ * @param serializer
+ * @param byte_buf
+ */
+template <typename encoded_variable_t>
+auto flush_and_clear_serializer_buffer(
+        Serializer<encoded_variable_t>& serializer,
+        std::vector<int8_t>& byte_buf
+) -> void;
+
+/**
+ * Unpacks and serializes the given msgpack bytes using kv serializer.
+ * @tparam encoded_variable_t
+ * @param msgpack_bytes
+ * @param serializer
+ * @return Whether serialization succeeded.
+ */
+template <typename encoded_variable_t>
+[[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
+        vector<uint8_t> const& msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
+) -> bool;
+
+/**
+ * Counts the number of leaves in a JSON tree. A node is considered as a leaf if it's a primitive
+ * value, an empty map (`{}`), or an array.
+ * @param root
+ * @return The number of leaves under the given root.
+ */
+[[nodiscard]] auto count_num_leaves(nlohmann::json const& root) -> size_t;
 
 template <typename encoded_variable_t>
 [[nodiscard]] auto serialize_log_events(
@@ -213,6 +306,56 @@ auto create_test_log_events() -> vector<UnstructuredLogEvent> {
 
 auto get_current_ts() -> epoch_time_ms_t {
     return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+}
+
+template <typename encoded_variable_t>
+auto flush_and_clear_serializer_buffer(
+        Serializer<encoded_variable_t>& serializer,
+        vector<int8_t>& byte_buf
+) -> void {
+    auto const view{serializer.get_ir_buf_view()};
+    byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
+    serializer.clear_ir_buf();
+}
+
+template <typename encoded_variable_t>
+auto unpack_and_serialize_msgpack_bytes(
+        vector<uint8_t> const& msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
+) -> bool {
+    auto const msgpack_obj_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
+            msgpack_bytes.size()
+    )};
+    auto const msgpack_obj{msgpack_obj_handle.get()};
+    if (msgpack::type::MAP != msgpack_obj.type) {
+        return false;
+    }
+    return serializer.serialize_msgpack_map(msgpack_obj.via.map);
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+auto count_num_leaves(nlohmann::json const& root) -> size_t {
+    if (false == root.is_object()) {
+        return 0;
+    }
+
+    size_t num_leaves{0};
+    for (auto const& [key, val] : root.items()) {
+        if (val.is_primitive() || val.is_array()) {
+            ++num_leaves;
+        } else if (val.is_object()) {
+            if (val.empty()) {
+                ++num_leaves;
+            } else {
+                num_leaves += count_num_leaves(val);
+            }
+        } else {
+            FAIL("Unknown JSON object types.");
+        }
+    }
+
+    return num_leaves;
 }
 }  // namespace
 
@@ -487,8 +630,8 @@ TEMPLATE_TEST_CASE(
     auto metadata_json = nlohmann::json::parse(json_metadata);
     std::string const version
             = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
-    );
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+            == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -701,17 +844,63 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
 }
 
 TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("v0.0.1")
+    REQUIRE(
+            (clp::ffi::ir_stream::IRProtocolErrorCode::Supported
+             == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue))
     );
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.1"));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.a.1"));
+    REQUIRE(
+            (clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+             == validate_protocol_version(
+                     clp::ffi::ir_stream::cProtocol::Metadata::LatestBackwardCompatibleVersion
+             ))
+    );
 
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Too_New
-            == validate_protocol_version("1000.0.0"));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version("v0.0.0"));
+    SECTION("Test invalid versions") {
+        auto const invalid_versions{GENERATE(
+                std::string_view{"v0.0.1"},
+                std::string_view{"0.1"},
+                std::string_view{"0.1.a"},
+                std::string_view{"0.a.1"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Invalid
+                 == validate_protocol_version(invalid_versions))
+        );
+    }
+
+    SECTION("Test backward compatible versions") {
+        auto const backward_compatible_versions{GENERATE(
+                std::string_view{"v0.0.0"},
+                std::string_view{"0.0.1"},
+                std::string_view{"0.0.2"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+                 == validate_protocol_version(backward_compatible_versions))
+        );
+    }
+
+    SECTION("Test versions that're too old") {
+        auto const old_versions{GENERATE(
+                std::string_view{"0.0.3"},
+                std::string_view{"0.0.3-beta.1"},
+                std::string_view{"0.1.0-beta"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Unsupported
+                 == validate_protocol_version(old_versions))
+        );
+    }
+
+    SECTION("Test versions that're too new") {
+        auto const new_versions{
+                GENERATE(std::string_view{"10000.0.0"}, std::string_view{"0.10000.0"})
+        };
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Unsupported
+                 == validate_protocol_version(new_versions))
+        );
+    }
 }
 
 TEMPLATE_TEST_CASE(
@@ -762,8 +951,8 @@ TEMPLATE_TEST_CASE(
     string_view json_metadata{json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     string const version = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
-    );
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+            == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -851,10 +1040,293 @@ TEMPLATE_TEST_CASE(
         REQUIRE(log_event.get_utc_offset() == ref_log_event.get_utc_offset());
         // We only compare the logtype since decoding messages from logtype + variables is not yet
         // supported by our public interfaces
-        REQUIRE(log_event.get_logtype() == encoded_logtypes.at(log_event_idx));
+        REQUIRE(log_event.get_message().get_logtype() == encoded_logtypes.at(log_event_idx));
         ++log_event_idx;
     }
     auto result = log_event_deserializer.deserialize_log_event();
     REQUIRE(result.has_error());
     REQUIRE(std::errc::no_message_available == result.error());
+}
+
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_Serializer_creation",
+        "[clp][ffi][ir_stream][Serializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    // This is a unit test for the kv-pair IR serializer. Currently, we haven't yet implemented a
+    // deserializer, so we can only test whether the preamble packet is serialized correctly.
+    vector<int8_t> ir_buf;
+
+    auto result{Serializer<TestType>::create()};
+    REQUIRE((false == result.has_error()));
+
+    auto& serializer{result.value()};
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+    REQUIRE(serializer.get_ir_buf_view().empty());
+
+    constexpr UtcOffset cBeijingUtcOffset{8 * 60 * 60 * 1000};
+    serializer.change_utc_offset(cBeijingUtcOffset);
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+    REQUIRE(serializer.get_ir_buf_view().empty());
+
+    ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
+
+    BufferReader buffer_reader{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
+
+    bool is_four_byte_encoding{};
+    REQUIRE(
+            (IRErrorCode::IRErrorCode_Success
+             == get_encoding_type(buffer_reader, is_four_byte_encoding))
+    );
+    if constexpr (std::is_same_v<TestType, four_byte_encoded_variable_t>) {
+        REQUIRE(is_four_byte_encoding);
+    } else {
+        REQUIRE((false == is_four_byte_encoding));
+    }
+
+    encoded_tag_t metadata_type{};
+    vector<int8_t> metadata_bytes;
+    REQUIRE(
+            (IRErrorCode::IRErrorCode_Success
+             == deserialize_preamble(buffer_reader, metadata_type, metadata_bytes))
+    );
+    REQUIRE((clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type));
+    string_view const metadata_view{
+            size_checked_pointer_cast<char const>(metadata_bytes.data()),
+            metadata_bytes.size()
+    };
+    nlohmann::json const metadata = nlohmann::json::parse(metadata_view);
+
+    nlohmann::json expected_metadata;
+    expected_metadata.emplace(
+            clp::ffi::ir_stream::cProtocol::Metadata::VersionKey,
+            clp::ffi::ir_stream::cProtocol::Metadata::VersionValue
+    );
+    expected_metadata.emplace(
+            clp::ffi::ir_stream::cProtocol::Metadata::VariablesSchemaIdKey,
+            clp::ffi::cVariablesSchemaVersion
+    );
+    expected_metadata.emplace(
+            clp::ffi::ir_stream::cProtocol::Metadata::VariableEncodingMethodsIdKey,
+            clp::ffi::cVariableEncodingMethodsVersion
+    );
+    REQUIRE((expected_metadata == metadata));
+
+    encoded_tag_t encoded_tag{};
+    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    REQUIRE((clp::ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == encoded_tag));
+    UtcOffset utc_offset_change{0};
+    REQUIRE(
+            (IRErrorCode::IRErrorCode_Success
+             == deserialize_utc_offset_change(buffer_reader, utc_offset_change))
+    );
+    REQUIRE((cBeijingUtcOffset == utc_offset_change));
+
+    REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(buffer_reader, encoded_tag)));
+    REQUIRE((clp::ffi::ir_stream::cProtocol::Eof == encoded_tag));
+
+    char eof{};
+    size_t num_bytes_read{};
+    REQUIRE(
+            (clp::ErrorCode_EndOfFile == buffer_reader.try_read(&eof, 1, num_bytes_read)
+             && 0 == num_bytes_read)
+    );
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_Serializer_serialize_msgpack",
+        "[clp][ffi][ir_stream][Serializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    vector<int8_t> ir_buf;
+    vector<nlohmann::json> serialized_json_objects;
+
+    auto result{Serializer<TestType>::create()};
+    REQUIRE((false == result.has_error()));
+
+    auto& serializer{result.value()};
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+
+    auto const empty_obj = nlohmann::json::parse("{}");
+    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(empty_obj), serializer));
+    serialized_json_objects.emplace_back(empty_obj);
+
+    // Test encoding basic object
+    constexpr string_view cShortString{"short_string"};
+    constexpr string_view cClpString{"uid=0, CPU usage: 99.99%, \"user_name\"=YScope"};
+    auto const empty_array = nlohmann::json::parse("[]");
+    nlohmann::json const basic_obj
+            = {{"int8_max", INT8_MAX},
+               {"int8_min", INT8_MIN},
+               {"int16_max", INT16_MAX},
+               {"int16_min", INT16_MIN},
+               {"int32_max", INT32_MAX},
+               {"int32_min", INT32_MIN},
+               {"int64_max", INT64_MAX},
+               {"int64_min", INT64_MIN},
+               {"float_zero", 0.0},
+               {"float_pos", 1.01},
+               {"float_neg", -1.01},
+               {"true", true},
+               {"false", false},
+               {"string", cShortString},
+               {"clp_string", cClpString},
+               {"null", nullptr},
+               {"empty_object", empty_obj},
+               {"empty_array", empty_array}};
+
+    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(basic_obj), serializer));
+    serialized_json_objects.emplace_back(basic_obj);
+
+    auto basic_array = empty_array;
+    basic_array.emplace_back(1);
+    basic_array.emplace_back(1.0);
+    basic_array.emplace_back(true);
+    basic_array.emplace_back(cShortString);
+    basic_array.emplace_back(cClpString);
+    basic_array.emplace_back(nullptr);
+    basic_array.emplace_back(empty_array);
+    for (auto const& element : basic_array) {
+        // Non-map objects should not be serializable
+        REQUIRE(
+                (false
+                 == unpack_and_serialize_msgpack_bytes(
+                         nlohmann::json::to_msgpack(element),
+                         serializer
+                 ))
+        );
+    }
+    basic_array.emplace_back(empty_obj);
+
+    // Recursively construct an object containing inner maps and inner arrays.
+    auto recursive_obj = basic_obj;
+    auto recursive_array = basic_array;
+    constexpr size_t cRecursiveDepth{6};
+    for (size_t i{0}; i < cRecursiveDepth; ++i) {
+        recursive_array.emplace_back(recursive_obj);
+        recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
+        recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
+        REQUIRE(unpack_and_serialize_msgpack_bytes(
+                nlohmann::json::to_msgpack(recursive_obj),
+                serializer
+        ));
+        serialized_json_objects.emplace_back(recursive_obj);
+    }
+
+    flush_and_clear_serializer_buffer(serializer, ir_buf);
+    ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
+
+    // Deserialize the results
+    BufferReader reader{size_checked_pointer_cast<char>(ir_buf.data()), ir_buf.size()};
+    auto deserializer_result{Deserializer<IrUnitHandler>::create(reader, IrUnitHandler{})};
+    REQUIRE_FALSE(deserializer_result.has_error());
+    auto& deserializer = deserializer_result.value();
+    while (true) {
+        auto const result{deserializer.deserialize_next_ir_unit(reader)};
+        REQUIRE_FALSE(result.has_error());
+        if (result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
+            break;
+        }
+    }
+    auto const& ir_unit_handler{deserializer.get_ir_unit_handler()};
+
+    // Check the stream is complete
+    REQUIRE(ir_unit_handler.is_complete());
+    REQUIRE(deserializer.is_stream_completed());
+    // Check the number of log events deserialized matches the number of log events serialized
+    auto const& deserialized_log_events{ir_unit_handler.get_deserialized_log_events()};
+    REQUIRE((serialized_json_objects.size() == deserialized_log_events.size()));
+
+    auto const num_log_events{serialized_json_objects.size()};
+    for (size_t idx{0}; idx < num_log_events; ++idx) {
+        auto const& expect{serialized_json_objects.at(idx)};
+        auto const& deserialized_log_event{deserialized_log_events.at(idx)};
+
+        auto const num_leaves_in_json_obj{count_num_leaves(expect)};
+        auto const num_kv_pairs{deserialized_log_event.get_node_id_value_pairs().size()};
+        REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
+
+        auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
+        REQUIRE_FALSE(serialized_json_result.has_error());
+        REQUIRE((expect == serialized_json_result.value()));
+    }
+
+    auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};
+    REQUIRE((eof_result.has_error() && std::errc::operation_not_permitted == eof_result.error()));
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_serialize_schema_tree_node_id",
+        "[clp][ffi][ir_stream]",
+        std::true_type,
+        std::false_type
+) {
+    constexpr bool cIsAutoGeneratedNode{TestType{}};
+    constexpr int8_t cOneByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdByte
+    };
+    constexpr int8_t cTwoByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdShort
+    };
+    constexpr int8_t cFourByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+    };
+    constexpr auto cMaxNodeId{static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX)};
+
+    constexpr auto cSerializationMethodToTest
+            = clp::ffi::ir_stream::encode_and_serialize_schema_tree_node_id<
+                    cIsAutoGeneratedNode,
+                    cOneByteLengthIndicatorTag,
+                    cTwoByteLengthIndicatorTag,
+                    cFourByteLengthIndicatorTag>;
+    constexpr auto cDeserializationMethodToTest
+            = clp::ffi::ir_stream::deserialize_and_decode_schema_tree_node_id<
+                    cOneByteLengthIndicatorTag,
+                    cTwoByteLengthIndicatorTag,
+                    cFourByteLengthIndicatorTag>;
+
+    std::vector<int8_t> output_buf;
+    std::unordered_set<clp::ffi::SchemaTree::Node::id_t> valid_node_ids_to_test;
+
+    // Add some boundary node IDs
+    valid_node_ids_to_test.emplace(0);
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX + 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX + 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX));
+
+    // Generate some more "random" valid node IDs
+    for (clp::ffi::SchemaTree::Node::id_t node_id{1}, step{1}; node_id <= cMaxNodeId;
+         node_id += step, step += 1)
+    {
+        valid_node_ids_to_test.emplace(node_id);
+    }
+
+    for (auto const node_id : valid_node_ids_to_test) {
+        output_buf.clear();
+        REQUIRE(cSerializationMethodToTest(node_id, output_buf));
+
+        BufferReader reader{size_checked_pointer_cast<char>(output_buf.data()), output_buf.size()};
+        encoded_tag_t tag{};
+        REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(reader, tag)));
+        auto const result{cDeserializationMethodToTest(tag, reader)};
+        REQUIRE_FALSE(result.has_error());
+        auto const [is_auto_generated, deserialized_node_id]{result.value()};
+        REQUIRE((cIsAutoGeneratedNode == is_auto_generated));
+        REQUIRE((deserialized_node_id == node_id));
+    }
+
+    // Test against the first invalid node ID
+    REQUIRE_FALSE(cSerializationMethodToTest(
+            static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX) + 1,
+            output_buf
+    ));
 }

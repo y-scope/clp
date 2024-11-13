@@ -32,6 +32,7 @@ struct JsonParserOption {
     std::string archives_dir;
     size_t target_encoded_size;
     size_t max_document_size;
+    size_t min_table_size;
     int compression_level;
     bool print_archive_stats;
     bool structurize_arrays;
@@ -70,6 +71,7 @@ private:
      * @param line the JSON line
      * @param parent_node_id the parent node id
      * @param key the key of the node
+     * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
     void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
 
@@ -93,10 +95,7 @@ private:
     void split_archive();
 
     int m_num_messages;
-    int m_compression_level;
     std::vector<std::string> m_file_paths;
-    std::string m_archives_dir;
-    std::string m_schema_tree_path;
 
     Schema m_current_schema;
     ParsedMessage m_current_parsed_message;
@@ -106,6 +105,7 @@ private:
 
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
+    ArchiveWriterOption m_archive_options{};
     size_t m_target_encoded_size;
     size_t m_max_document_size;
     bool m_structurize_arrays{false};

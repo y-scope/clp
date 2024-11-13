@@ -37,17 +37,13 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     }
 }
 
-void SchemaReader::load(ZstdDecompressor& decompressor, size_t uncompressed_size) {
-    if (uncompressed_size > m_table_buffer_size) {
-        m_table_buffer = std::make_unique<char[]>(uncompressed_size);
-        m_table_buffer_size = uncompressed_size;
-    }
-    auto error = decompressor.try_read_exact_length(m_table_buffer.get(), uncompressed_size);
-    if (ErrorCodeSuccess != error) {
-        throw OperationFailed(error, __FILENAME__, __LINE__);
-    }
-
-    BufferViewReader buffer_reader{m_table_buffer.get(), uncompressed_size};
+void SchemaReader::load(
+        std::shared_ptr<char[]> stream_buffer,
+        size_t offset,
+        size_t uncompressed_size
+) {
+    m_stream_buffer = stream_buffer;
+    BufferViewReader buffer_reader{m_stream_buffer.get() + offset, uncompressed_size};
     for (auto& reader : m_columns) {
         reader->load(buffer_reader, m_num_messages);
     }
@@ -548,19 +544,25 @@ void SchemaReader::initialize_serializer() {
     m_serializer_initialized = true;
 
     for (int32_t global_column_id : m_ordered_schema) {
-        generate_local_tree(global_column_id);
+        if (m_projection->matches_node(global_column_id)) {
+            generate_local_tree(global_column_id);
+        }
     }
 
     for (auto it = m_global_id_to_unordered_object.begin();
          it != m_global_id_to_unordered_object.end();
          ++it)
     {
-        generate_local_tree(it->first);
+        if (m_projection->matches_node(it->first)) {
+            generate_local_tree(it->first);
+        }
     }
 
     // TODO: this code will have to change once we allow mixing log lines parsed by different
     // parsers.
-    generate_json_template(0);
+    if (false == m_local_schema_tree.get_nodes().empty()) {
+        generate_json_template(m_local_schema_tree.get_root_node_id());
+    }
 }
 
 void SchemaReader::generate_json_template(int32_t id) {

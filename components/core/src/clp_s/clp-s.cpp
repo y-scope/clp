@@ -29,6 +29,7 @@
 #include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
 #include "search/OutputHandler.hpp"
+#include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
 #include "TimestampPattern.hpp"
 #include "TraceableException.hpp"
@@ -39,6 +40,7 @@ using clp_s::cArchiveFormatDevelopmentVersionFlag;
 using clp_s::cEpochTimeMax;
 using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
+using clp_s::StringUtils;
 
 namespace {
 /**
@@ -89,6 +91,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
     option.max_document_size = command_line_arguments.get_max_document_size();
+    option.min_table_size = command_line_arguments.get_minimum_table_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
     option.print_archive_stats = command_line_arguments.print_archive_stats();
@@ -179,6 +182,28 @@ bool search_archive(
         return true;
     }
 
+    // Populate projection
+    auto projection = std::make_shared<Projection>(
+            command_line_arguments.get_projection_columns().empty()
+                    ? ProjectionMode::ReturnAllColumns
+                    : ProjectionMode::ReturnSelectedColumns
+    );
+    try {
+        for (auto const& column : command_line_arguments.get_projection_columns()) {
+            std::vector<std::string> descriptor_tokens;
+            if (false == StringUtils::tokenize_column_descriptor(column, descriptor_tokens)) {
+                SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
+                return false;
+            }
+            projection->add_column(ColumnDescriptor::create(descriptor_tokens));
+        }
+    } catch (clp_s::TraceableException& e) {
+        SPDLOG_ERROR("{}", e.what());
+        return false;
+    }
+    projection->resolve_columns(archive_reader->get_schema_tree());
+    archive_reader->set_projection(projection);
+
     std::unique_ptr<OutputHandler> output_handler;
     try {
         switch (command_line_arguments.get_output_handler_type()) {
@@ -245,6 +270,7 @@ int main(int argc, char const* argv[]) {
     }
 
     clp_s::TimestampPattern::init();
+    mongocxx::instance const mongocxx_instance{};
 
     CommandLineArguments command_line_arguments("clp-s");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
@@ -269,10 +295,16 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        clp_s::JsonConstructorOption option;
+        clp_s::JsonConstructorOption option{};
         option.output_dir = command_line_arguments.get_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.archives_dir = archives_dir;
+        option.ordered_chunk_size = command_line_arguments.get_ordered_chunk_size();
+        if (false == command_line_arguments.get_mongodb_uri().empty()) {
+            option.metadata_db
+                    = {command_line_arguments.get_mongodb_uri(),
+                       command_line_arguments.get_mongodb_collection()};
+        }
         try {
             auto const& archive_id = command_line_arguments.get_archive_id();
             if (false == archive_id.empty()) {
@@ -294,8 +326,6 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
     } else {
-        mongocxx::instance const mongocxx_instance{};
-
         auto const& query = command_line_arguments.get_query();
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);

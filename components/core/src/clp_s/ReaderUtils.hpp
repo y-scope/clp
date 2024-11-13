@@ -18,7 +18,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    typedef std::map<int32_t, Schema> SchemaMap;
+    using SchemaMap = std::map<int32_t, Schema>;
     static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     /**

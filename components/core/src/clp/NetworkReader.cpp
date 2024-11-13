@@ -6,13 +6,17 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
 
 #include <curl/curl.h>
 
 #include "CurlDownloadHandler.hpp"
 #include "CurlOperationFailed.hpp"
 #include "ErrorCode.hpp"
+#include "Platform.hpp"
 
 namespace clp {
 /**
@@ -110,33 +114,6 @@ curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> s
 }
 }  // namespace
 
-bool NetworkReader::m_static_init_complete{false};
-
-auto NetworkReader::init() -> ErrorCode {
-    if (m_static_init_complete) {
-        return ErrorCode_Success;
-    }
-    if (0 != curl_global_init(CURL_GLOBAL_ALL)) {
-        return ErrorCode_Failure;
-    }
-    m_static_init_complete = true;
-    return ErrorCode_Success;
-}
-
-auto NetworkReader::deinit() -> void {
-#if defined(__APPLE__)
-    // NOTE: On macOS, calling `curl_global_init` after `curl_global_cleanup` will fail with
-    // CURLE_SSL_CONNECT_ERROR. Thus, for now, we skip `deinit` on macOS. Related issues:
-    // - https://github.com/curl/curl/issues/12525
-    // - https://github.com/curl/curl/issues/13805
-    // TODO: Remove this conditional logic when the issues are resolved.
-    return;
-#else
-    curl_global_cleanup();
-    m_static_init_complete = false;
-#endif
-}
-
 NetworkReader::NetworkReader(
         std::string_view src_url,
         size_t offset,
@@ -144,7 +121,8 @@ NetworkReader::NetworkReader(
         std::chrono::seconds overall_timeout,
         std::chrono::seconds connection_timeout,
         size_t buffer_pool_size,
-        size_t buffer_size
+        size_t buffer_size,
+        std::optional<std::unordered_map<std::string, std::string>> http_header_kv_pairs
 )
         : m_src_url{src_url},
           m_offset{offset},
@@ -154,13 +132,14 @@ NetworkReader::NetworkReader(
           m_buffer_pool_size{std::max(cMinBufferPoolSize, buffer_pool_size)},
           m_buffer_size{std::max(cMinBufferSize, buffer_size)} {
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
-        m_buffer_pool.emplace_back(std::make_unique<char[]>(m_buffer_size));
+        m_buffer_pool.emplace_back(m_buffer_size);
     }
-    if (false == m_static_init_complete) {
-        throw OperationFailed(ErrorCode_NotReady, __FILE__, __LINE__);
-    }
-    m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
+    m_downloader_thread = std::make_unique<DownloaderThread>(
+            *this,
+            offset,
+            disable_caching,
+            std::move(http_header_kv_pairs)
+    );
     m_downloader_thread->start();
 }
 
@@ -187,6 +166,13 @@ auto NetworkReader::try_get_pos(size_t& pos) -> ErrorCode {
                 // Download has failed due to an HTTP error. This can be caused by an out-of-bound
                 // offset specified in the HTTP header.
                 return ErrorCode_Failure;
+            }
+            if constexpr (Platform::MacOs == cCurrentPlatform) {
+                // On macOS, HTTP response code 416 is not handled as `CURL_HTTP_RETURNED_ERROR` in
+                // some `libcurl` versions.
+                if (CURLE_RECV_ERROR == curl_return_code.value()) {
+                    return ErrorCode_Failure;
+                }
             }
         }
 
@@ -230,6 +216,7 @@ auto NetworkReader::buffer_downloaded_data(NetworkReader::BufferView data) -> si
 auto NetworkReader::DownloaderThread::thread_method() -> void {
     try {
         CurlDownloadHandler curl_handler{
+                m_reader.m_curl_error_msg_buf,
                 curl_progress_callback,
                 curl_write_callback,
                 static_cast<void*>(&m_reader),
@@ -237,7 +224,8 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
                 m_offset,
                 m_disable_caching,
                 m_reader.m_connection_timeout,
-                m_reader.m_overall_timeout
+                m_reader.m_overall_timeout,
+                m_http_header_kv_pairs
         };
         auto const ret_code{curl_handler.perform()};
         // Enqueue the last filled buffer, if any
@@ -269,7 +257,10 @@ auto NetworkReader::acquire_empty_buffer() -> void {
             return;
         }
     }
-    m_curr_downloader_buf.emplace(m_buffer_pool.at(m_curr_downloader_buf_idx).get(), m_buffer_size);
+    m_curr_downloader_buf.emplace(
+            m_buffer_pool.at(m_curr_downloader_buf_idx).data(),
+            m_buffer_size
+    );
 }
 
 auto NetworkReader::release_empty_buffer() -> void {
@@ -285,7 +276,7 @@ auto NetworkReader::enqueue_filled_buffer() -> void {
     }
     std::unique_lock<std::mutex> const buffer_resource_lock{m_buffer_resource_mutex};
     m_filled_buffer_queue.emplace(
-            m_buffer_pool.at(m_curr_downloader_buf_idx).get(),
+            m_buffer_pool.at(m_curr_downloader_buf_idx).data(),
             m_buffer_size - m_curr_downloader_buf.value().size()
     );
 

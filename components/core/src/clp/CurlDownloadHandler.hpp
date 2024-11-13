@@ -1,9 +1,14 @@
 #ifndef CLP_CURLDOWNLOADHANDLER_HPP
 #define CLP_CURLDOWNLOADHANDLER_HPP
 
+#include <array>
 #include <chrono>
 #include <cstddef>
+#include <memory>
+#include <optional>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include <curl/curl.h>
 
@@ -18,6 +23,7 @@ namespace clp {
 class CurlDownloadHandler {
 public:
     // Types
+    using ErrorMsgBuf = std::array<char, CURL_ERROR_SIZE>;
     /**
      * libcurl progress callback. This method must have C linkage. Doc:
      * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
@@ -37,6 +43,9 @@ public:
 
     // Constructor
     /**
+     * @param error_msg_buf The buffer to store the CURL error message or `nullptr` if it shouldn't
+     * be stored.
+     * Doc: https://curl.se/libcurl/c/CURLOPT_ERRORBUFFER.html
      * @param progress_callback
      * @param write_callback
      * @param arg Argument to pass to `progress_callback` and `write_callback`
@@ -47,8 +56,12 @@ public:
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param overall_timeout Maximum time that the transfer may take. Note that this includes
      * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param http_header_kv_pairs Key-value pairs representing HTTP headers to pass to the server
+     * in the download request. Doc: https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html
+     * @throw CurlOperationFailed if an error occurs.
      */
     explicit CurlDownloadHandler(
+            std::shared_ptr<ErrorMsgBuf> error_msg_buf,
             ProgressCallback progress_callback,
             WriteCallback write_callback,
             void* arg,
@@ -56,7 +69,9 @@ public:
             size_t offset = 0,
             bool disable_caching = false,
             std::chrono::seconds connection_timeout = cDefaultConnectionTimeout,
-            std::chrono::seconds overall_timeout = cDefaultOverallTimeout
+            std::chrono::seconds overall_timeout = cDefaultOverallTimeout,
+            std::optional<std::unordered_map<std::string, std::string>> const& http_header_kv_pairs
+            = std::nullopt
     );
 
     // Disable copy/move constructors/assignment operators
@@ -78,6 +93,7 @@ public:
 private:
     CurlEasyHandle m_easy_handle;
     CurlStringList m_http_headers;
+    std::shared_ptr<ErrorMsgBuf> m_error_msg_buf;
 };
 }  // namespace clp
 

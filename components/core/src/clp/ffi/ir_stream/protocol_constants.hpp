@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 #include <type_traits>
 
 namespace clp::ffi::ir_stream::cProtocol {
@@ -12,7 +13,10 @@ constexpr int8_t LengthUByte = 0x11;
 constexpr int8_t LengthUShort = 0x12;
 
 constexpr char VersionKey[] = "VERSION";
-constexpr char VersionValue[] = "0.0.2";
+constexpr std::string_view VersionValue{"0.1.0"};
+
+// This is used for the IR stream format that predates the key-value pair IR format.
+constexpr std::string_view LatestBackwardCompatibleVersion{"0.0.2"};
 
 // The following regex can be used to validate a Semantic Versioning string. The source of the
 // regex can be found here: https://semver.org/
@@ -49,6 +53,39 @@ constexpr int8_t TimestampDeltaInt = 0x33;
 constexpr int8_t TimestampDeltaLong = 0x34;
 
 constexpr int8_t UtcOffsetChange = 0x3F;
+
+constexpr int8_t StrLenUByte = 0x41;
+constexpr int8_t StrLenUShort = 0x42;
+constexpr int8_t StrLenUInt = 0x43;
+
+constexpr int8_t ValueInt8 = 0x51;
+constexpr int8_t ValueInt16 = 0x52;
+constexpr int8_t ValueInt32 = 0x53;
+constexpr int8_t ValueInt64 = 0x54;
+constexpr int8_t ValueFloat = 0x56;
+constexpr int8_t ValueTrue = 0x57;
+constexpr int8_t ValueFalse = 0x58;
+constexpr int8_t ValueFourByteEncodingClpStr = 0x59;
+constexpr int8_t ValueEightByteEncodingClpStr = 0x5A;
+constexpr int8_t ValueEmpty = 0x5E;
+constexpr int8_t ValueNull = 0x5F;
+
+constexpr int8_t EncodedSchemaTreeNodeParentIdByte = 0x60;
+constexpr int8_t EncodedSchemaTreeNodeParentIdShort = 0x61;
+constexpr int8_t EncodedSchemaTreeNodeParentIdInt = 0x62;
+
+constexpr int8_t EncodedSchemaTreeNodeIdByte = 0x65;
+constexpr int8_t EncodedSchemaTreeNodeIdShort = 0x66;
+constexpr int8_t EncodedSchemaTreeNodeIdInt = 0x67;
+
+constexpr int8_t SchemaTreeNodeMask = 0x70;
+
+constexpr int8_t SchemaTreeNodeInt = 0x71;
+constexpr int8_t SchemaTreeNodeFloat = 0x72;
+constexpr int8_t SchemaTreeNodeBool = 0x73;
+constexpr int8_t SchemaTreeNodeStr = 0x74;
+constexpr int8_t SchemaTreeNodeUnstructuredArray = 0x75;
+constexpr int8_t SchemaTreeNodeObj = 0x76;
 }  // namespace Payload
 
 constexpr int8_t FourByteEncodingMagicNumber[]

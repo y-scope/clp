@@ -4,24 +4,26 @@ import argparse
 import asyncio
 import ipaddress
 import logging
-import multiprocessing
 import pathlib
 import socket
 import sys
-import time
-from contextlib import closing
 
 import msgpack
 import pymongo
-from clp_py_utils.clp_config import Database, ResultsCache, SEARCH_JOBS_TABLE_NAME
+from clp_py_utils.clp_config import Database, ResultsCache
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.scheduler.constants import SearchJobStatus
-from job_orchestration.scheduler.job_config import AggregationConfig, SearchConfig
+from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
+from job_orchestration.scheduler.job_config import AggregationConfig, SearchJobConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     get_clp_home,
-    validate_and_load_config_file,
+    load_config_file,
+)
+from clp_package_utils.scripts.native.utils import (
+    run_function_in_process,
+    submit_query_job,
+    wait_for_query_job,
 )
 
 # Setup logging
@@ -33,41 +35,6 @@ logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
-
-
-async def run_function_in_process(function, *args, initializer=None, init_args=None):
-    """
-    Runs the given function in a separate process wrapped in a *cancellable*
-    asyncio task. This is necessary because asyncio's multiprocessing process
-    cannot be cancelled once it's started.
-    :param function: Method to run
-    :param args: Arguments for the method
-    :param initializer: Initializer for each process in the pool
-    :param init_args: Arguments for the initializer
-    :return: Return value of the method
-    """
-    pool = multiprocessing.Pool(1, initializer, init_args)
-
-    loop = asyncio.get_event_loop()
-    fut = loop.create_future()
-
-    def process_done_callback(obj):
-        loop.call_soon_threadsafe(fut.set_result, obj)
-
-    def process_error_callback(err):
-        loop.call_soon_threadsafe(fut.set_exception, err)
-
-    pool.apply_async(
-        function, args, callback=process_done_callback, error_callback=process_error_callback
-    )
-
-    try:
-        return await fut
-    except asyncio.CancelledError:
-        pass
-    finally:
-        pool.terminate()
-        pool.close()
 
 
 def create_and_monitor_job_in_db(
@@ -83,7 +50,7 @@ def create_and_monitor_job_in_db(
     do_count_aggregation: bool | None,
     count_by_time_bucket_size: int | None,
 ):
-    search_config = SearchConfig(
+    search_config = SearchJobConfig(
         query_string=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
@@ -106,47 +73,22 @@ def create_and_monitor_job_in_db(
             search_config.tags = tag_list
 
     sql_adapter = SQL_Adapter(db_config)
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
-        # Create job
-        db_cursor.execute(
-            f"INSERT INTO `{SEARCH_JOBS_TABLE_NAME}` (`search_config`) VALUES (%s)",
-            (msgpack.packb(search_config.dict()),),
-        )
-        db_conn.commit()
-        job_id = db_cursor.lastrowid
+    job_id = submit_query_job(sql_adapter, search_config, QueryJobType.SEARCH_OR_AGGREGATION)
+    job_status = wait_for_query_job(sql_adapter, job_id)
 
-        # Wait for the job to be marked complete
-        while True:
-            db_cursor.execute(
-                f"SELECT `status` FROM `{SEARCH_JOBS_TABLE_NAME}` WHERE `id` = {job_id}"
-            )
-            # There will only ever be one row since it's impossible to have more than one job with
-            # the same ID
-            new_status = db_cursor.fetchall()[0]["status"]
-            db_conn.commit()
-            if new_status in (
-                SearchJobStatus.SUCCEEDED,
-                SearchJobStatus.FAILED,
-                SearchJobStatus.CANCELLED,
-            ):
-                break
+    if do_count_aggregation is None and count_by_time_bucket_size is None:
+        return
+    with pymongo.MongoClient(results_cache.get_uri()) as client:
+        search_results_collection = client[results_cache.db_name][str(job_id)]
+        if do_count_aggregation is not None:
+            for document in search_results_collection.find():
+                print(f"tags: {document['group_tags']} count: {document['records'][0]['count']}")
+        elif count_by_time_bucket_size is not None:
+            for document in search_results_collection.find():
+                print(f"timestamp: {document['timestamp']} count: {document['count']}")
 
-            time.sleep(0.5)
-
-        if do_count_aggregation is None and count_by_time_bucket_size is None:
-            return
-        with pymongo.MongoClient(results_cache.get_uri()) as client:
-            search_results_collection = client[results_cache.db_name][str(job_id)]
-            if do_count_aggregation is not None:
-                for document in search_results_collection.find():
-                    print(
-                        f"tags: {document['group_tags']} count: {document['records'][0]['count']}"
-                    )
-            elif count_by_time_bucket_size is not None:
-                for document in search_results_collection.find():
-                    print(f"timestamp: {document['timestamp']} count: {document['count']}")
+    if job_status != QueryJobStatus.SUCCEEDED:
+        logger.error(f"job {job_id} finished with unexpected status: {job_status}")
 
 
 async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -328,9 +270,7 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = validate_and_load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
     except:
         logger.exception("Failed to load config.")

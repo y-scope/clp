@@ -1,6 +1,7 @@
 #ifndef CLP_CLP_UTILS_HPP
 #define CLP_CLP_UTILS_HPP
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -41,14 +42,6 @@ bool find_all_files_and_empty_directories(
 );
 
 /**
- * Checks if the given sequence is valid UTF-8
- * @param sequence_length
- * @param sequence
- * @return true if valid, false otherwise
- */
-bool is_utf8_sequence(size_t sequence_length, char const* sequence);
-
-/**
  * Reads a list of input paths
  * @param list_path
  * @param paths
@@ -87,7 +80,7 @@ bool validate_paths_exist(std::vector<std::string> const& paths);
  */
 std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
         GlobalMetadataDBConfig const& global_metadata_db_config,
-        boost::filesystem::path const& archives_dir
+        std::filesystem::path const& archives_dir
 );
 }  // namespace clp::clp
 

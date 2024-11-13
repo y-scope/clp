@@ -7,12 +7,13 @@
     "SqlDbClpArchivesTableName": "clp_archives",
     "SqlDbClpFilesTableName": "clp_files",
     "SqlDbCompressionJobsTableName": "compression_jobs",
-    "SqlDbSearchJobsTableName": "search_jobs"
+    "SqlDbQueryJobsTableName": "query_jobs"
   },
   "public": {
     "AggregationResultsCollectionName": "aggregation-results",
     "ClpStorageEngine": "clp",
     "CompressionJobsCollectionName": "compression-jobs",
+    "LogViewerWebuiUrl": "http://localhost:8080",
     "SearchResultsCollectionName": "search-results",
     "SearchResultsMetadataCollectionName": "results-metadata",
     "StatsCollectionName": "stats",

@@ -11,9 +11,7 @@
 
 namespace clp_s {
 JsonParser::JsonParser(JsonParserOption const& option)
-        : m_archives_dir(option.archives_dir),
-          m_num_messages(0),
-          m_compression_level(option.compression_level),
+        : m_num_messages(0),
           m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
@@ -23,21 +21,26 @@ JsonParser::JsonParser(JsonParserOption const& option)
     }
 
     if (false == m_timestamp_key.empty()) {
-        clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column);
+        if (false
+            == clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column))
+        {
+            SPDLOG_ERROR("Can not parse invalid timestamp key: \"{}\"", m_timestamp_key);
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
     }
 
     for (auto& file_path : option.file_paths) {
         FileUtils::find_all_files(file_path, m_file_paths);
     }
 
-    ArchiveWriterOption archive_writer_option;
-    archive_writer_option.archives_dir = m_archives_dir;
-    archive_writer_option.id = m_generator();
-    archive_writer_option.compression_level = option.compression_level;
-    archive_writer_option.print_archive_stats = option.print_archive_stats;
+    m_archive_options.archives_dir = option.archives_dir;
+    m_archive_options.compression_level = option.compression_level;
+    m_archive_options.print_archive_stats = option.print_archive_stats;
+    m_archive_options.min_table_size = option.min_table_size;
+    m_archive_options.id = m_generator();
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
-    m_archive_writer->open(archive_writer_option);
+    m_archive_writer->open(m_archive_options);
 }
 
 void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_id) {
@@ -431,7 +434,7 @@ bool JsonParser::parse() {
 
         if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
             SPDLOG_ERROR(
-                    "Encountered error - {} - while trying to parse {}",
+                    "Encountered error - {} - while trying to parse {} after parsing 0 bytes",
                     simdjson::error_message(json_file_iterator.get_error()),
                     file_path
             );
@@ -442,7 +445,8 @@ bool JsonParser::parse() {
         simdjson::ondemand::document_stream::iterator json_it;
 
         m_num_messages = 0;
-        size_t last_num_bytes_read = 0;
+        size_t bytes_consumed_up_to_prev_archive = 0;
+        size_t bytes_consumed_up_to_prev_record = 0;
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
@@ -453,11 +457,31 @@ bool JsonParser::parse() {
             // that this isn't a valid JSON document but they get set in different situations so we
             // need to check both here.
             if (is_scalar_result.error() || true == is_scalar_result.value()) {
-                SPDLOG_ERROR("Encountered non-json-object while trying to parse {}", file_path);
+                SPDLOG_ERROR(
+                        "Encountered non-json-object while trying to parse {} after parsing {} "
+                        "bytes",
+                        file_path,
+                        bytes_consumed_up_to_prev_record
+                );
                 m_archive_writer->close();
                 return false;
             }
-            parse_line(ref.value(), -1, "");
+
+            // Some errors from simdjson are latent until trying to access invalid JSON fields.
+            // Instead of checking for an error every time we access a JSON field in parse_line we
+            // just catch simdjson_error here instead.
+            try {
+                parse_line(ref.value(), -1, "");
+            } catch (simdjson::simdjson_error& error) {
+                SPDLOG_ERROR(
+                        "Encountered error - {} - while trying to parse {} after parsing {} bytes",
+                        error.what(),
+                        file_path,
+                        bytes_consumed_up_to_prev_record
+                );
+                m_archive_writer->close();
+                return false;
+            }
             m_num_messages++;
 
             int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
@@ -465,10 +489,12 @@ bool JsonParser::parse() {
             m_archive_writer
                     ->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
 
+            bytes_consumed_up_to_prev_record = json_file_iterator.get_num_bytes_consumed();
             if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
-                size_t num_bytes_read = json_file_iterator.get_num_bytes_read();
-                m_archive_writer->increment_uncompressed_size(num_bytes_read - last_num_bytes_read);
-                last_num_bytes_read = num_bytes_read;
+                m_archive_writer->increment_uncompressed_size(
+                        bytes_consumed_up_to_prev_record - bytes_consumed_up_to_prev_archive
+                );
+                bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
                 split_archive();
             }
 
@@ -476,14 +502,15 @@ bool JsonParser::parse() {
         }
 
         m_archive_writer->increment_uncompressed_size(
-                json_file_iterator.get_num_bytes_read() - last_num_bytes_read
+                json_file_iterator.get_num_bytes_read() - bytes_consumed_up_to_prev_archive
         );
 
         if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
             SPDLOG_ERROR(
-                    "Encountered error - {} - while trying to parse {}",
+                    "Encountered error - {} - while trying to parse {} after parsing {} bytes",
                     simdjson::error_message(json_file_iterator.get_error()),
-                    file_path
+                    file_path,
+                    bytes_consumed_up_to_prev_record
             );
             m_archive_writer->close();
             return false;
@@ -505,13 +532,8 @@ void JsonParser::store() {
 
 void JsonParser::split_archive() {
     m_archive_writer->close();
-
-    ArchiveWriterOption archive_writer_option;
-    archive_writer_option.archives_dir = m_archives_dir;
-    archive_writer_option.id = m_generator();
-    archive_writer_option.compression_level = m_compression_level;
-
-    m_archive_writer->open(archive_writer_option);
+    m_archive_options.id = m_generator();
+    m_archive_writer->open(m_archive_options);
 }
 
 }  // namespace clp_s

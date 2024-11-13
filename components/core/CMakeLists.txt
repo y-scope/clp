@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.16.3)
 project(CLP LANGUAGES CXX C)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -51,10 +51,20 @@ endif()
 
 # Detect linking mode (static or shared); Default to static.
 set(CLP_USE_STATIC_LIBS ON CACHE BOOL "Whether to link against static libraries")
-if (CLP_USE_STATIC_LIBS AND APPLE)
-    message(AUTHOR_WARNING "Building with static libraries is unsupported on macOS."
-            " Switching to shared libraries.")
-    set(CLP_USE_STATIC_LIBS OFF)
+if (CLP_USE_STATIC_LIBS)
+    if (APPLE)
+        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
+    elseif (EXISTS "/etc/centos-release")
+        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+    endif()
+
+    if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
+        message(
+            AUTHOR_WARNING
+            "Building with static libraries is unsupported on"
+            " ${CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM}. Switching to shared libraries.")
+        set(CLP_USE_STATIC_LIBS OFF)
+    endif()
 endif ()
 if(CLP_USE_STATIC_LIBS)
     set(CLP_LIBS_STRING "static")
@@ -88,7 +98,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system)
+find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system regex)
 if(Boost_FOUND)
     message(STATUS "Found Boost ${Boost_VERSION}")
 else()
@@ -146,6 +156,14 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
 endif()
 
+# Find OpenSSL
+find_package(OpenSSL REQUIRED)
+if (OPENSSL_FOUND)
+    message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
+else ()
+    message(FATAL_ERROR "OpenSSL not found")
+endif ()
+
 # Add log surgeon
 add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
@@ -176,7 +194,7 @@ else()
 endif()
 
 # Find and setup msgpack
-find_package(msgpack-cxx 6.0.0 REQUIRED)
+find_package(msgpack-cxx 7.0.0 REQUIRED)
 if(msgpack-cxx_FOUND)
     message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
 else()
@@ -189,6 +207,8 @@ add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
 
 # Add simdjson
 add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
+
+find_package(Threads REQUIRED)
 
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
@@ -209,6 +229,7 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
+add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
 add_subdirectory(src/clp/clg)
@@ -260,6 +281,10 @@ set(SOURCE_FILES_clp_s_unitTest
 )
 
 set(SOURCE_FILES_unitTest
+        src/clp/Array.hpp
+        src/clp/aws/AwsAuthenticationSigner.cpp
+        src/clp/aws/AwsAuthenticationSigner.hpp
+        src/clp/aws/constants.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -282,6 +307,8 @@ set(SOURCE_FILES_unitTest
         src/clp/CurlDownloadHandler.cpp
         src/clp/CurlDownloadHandler.hpp
         src/clp/CurlEasyHandle.hpp
+        src/clp/CurlGlobalInstance.cpp
+        src/clp/CurlGlobalInstance.hpp
         src/clp/CurlOperationFailed.hpp
         src/clp/CurlStringList.hpp
         src/clp/database_utils.cpp
@@ -299,17 +326,25 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
         src/clp/ffi/ir_stream/byteswap.hpp
+        src/clp/ffi/ir_stream/Deserializer.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
         src/clp/ffi/ir_stream/decoding_methods.hpp
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
+        src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+        src/clp/ffi/ir_stream/IrUnitType.hpp
+        src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
+        src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
+        src/clp/ffi/ir_stream/protocol_constants.hpp
+        src/clp/ffi/ir_stream/Serializer.cpp
+        src/clp/ffi/ir_stream/Serializer.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
-        src/clp/ffi/ir_stream/protocol_constants.hpp
+        src/clp/ffi/KeyValuePairLogEvent.cpp
+        src/clp/ffi/KeyValuePairLogEvent.hpp
         src/clp/ffi/SchemaTree.cpp
         src/clp/ffi/SchemaTree.hpp
-        src/clp/ffi/SchemaTreeNode.hpp
         src/clp/ffi/search/CompositeWildcardToken.cpp
         src/clp/ffi/search/CompositeWildcardToken.hpp
         src/clp/ffi/search/ExactVariableToken.cpp
@@ -324,8 +359,13 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/ffi/utils.cpp
+        src/clp/ffi/utils.hpp
+        src/clp/ffi/Value.hpp
         src/clp/FileDescriptor.cpp
         src/clp/FileDescriptor.hpp
+        src/clp/FileDescriptorReader.cpp
+        src/clp/FileDescriptorReader.hpp
         src/clp/FileReader.cpp
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
@@ -339,7 +379,11 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/hash_utils.cpp
+        src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
+        src/clp/ir/EncodedTextAst.cpp
+        src/clp/ir/EncodedTextAst.hpp
         src/clp/ir/LogEvent.hpp
         src/clp/ir/LogEventDeserializer.cpp
         src/clp/ir/LogEventDeserializer.hpp
@@ -431,11 +475,14 @@ set(SOURCE_FILES_unitTest
         src/clp/StringReader.hpp
         src/clp/Thread.cpp
         src/clp/Thread.hpp
+        src/clp/time_types.hpp
         src/clp/TimestampPattern.cpp
         src/clp/TimestampPattern.hpp
         src/clp/TraceableException.hpp
-        src/clp/time_types.hpp
+        src/clp/TransactionManager.hpp
         src/clp/type_utils.hpp
+        src/clp/utf8_utils.cpp
+        src/clp/utf8_utils.hpp
         src/clp/Utils.cpp
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
@@ -450,13 +497,19 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
+        tests/test-Array.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-ffi_IrUnitHandlerInterface.cpp
+        tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
+        tests/test-FileDescriptorReader.cpp
         tests/test-Grep.cpp
+        tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
+        tests/test-ir_serializer.cpp
         tests/test-kql.cpp
         tests/test-main.cpp
         tests/test-math_utils.cpp
@@ -464,12 +517,14 @@ set(SOURCE_FILES_unitTest
         tests/test-NetworkReader.cpp
         tests/test-ParserWithUserSchema.cpp
         tests/test-query_methods.cpp
+        tests/test-regex_utils.cpp
         tests/test-Segment.cpp
         tests/test-SQLiteDB.cpp
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
         tests/test-TimestampPattern.cpp
+        tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
 add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
@@ -480,7 +535,7 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options
+        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
         ${CURL_LIBRARIES}
         fmt::fmt
         kql
@@ -488,8 +543,10 @@ target_link_libraries(unitTest
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         spdlog::spdlog
+        OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
+        clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd
