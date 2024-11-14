@@ -7,8 +7,10 @@
 
 #include <boost/filesystem.hpp>
 
+#include "../../ErrorCode.hpp"
 #include "../../FileReader.hpp"
 #include "../../spdlog_with_specializations.hpp"
+#include "../../TraceableException.hpp"
 
 using std::make_unique;
 using std::string;
@@ -44,12 +46,14 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     }
 
     // Create read-only memory mapped file
-    m_memory_mapped_segment_file.emplace(segment_path);
-    if (false == m_memory_mapped_segment_file.has_value()) {
+    try {
+        m_memory_mapped_segment_file.emplace(segment_path);
+    } catch (TraceableException const& ex) {
         SPDLOG_ERROR(
                 "streaming_archive::reader:Segment: Unable to memory map the compressed "
-                "segment with path: {}",
-                segment_path.c_str()
+                "segment with path: {}. Error: {}",
+                segment_path.c_str(),
+                ex.what()
         );
         return ErrorCode_Failure;
     }
