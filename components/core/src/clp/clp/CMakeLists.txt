@@ -186,6 +186,7 @@ target_link_libraries(clp
         ${STD_FS_LIBS}
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory

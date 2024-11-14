@@ -51,6 +51,7 @@ target_link_libraries(make-dictionaries-readable
         log_surgeon::log_surgeon
         spdlog::spdlog
         clp::string_utils
+        ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory
