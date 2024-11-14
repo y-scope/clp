@@ -3,9 +3,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <climits>
 
 #include <boost/filesystem.hpp>
+#include <fmt/format.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../FileReader.hpp"
@@ -49,11 +51,17 @@ ErrorCode Segment::try_open(string const& segment_dir_path, segment_id_t segment
     try {
         m_memory_mapped_segment_file.emplace(segment_path);
     } catch (TraceableException const& ex) {
+        auto const error_code{ex.get_error_code()};
+        auto const formatted_error{
+                ErrorCode_errno == error_code
+                        ? fmt::format("errno={}", errno)
+                        : fmt::format("error_code={}, message={}", error_code, ex.what())
+        };
         SPDLOG_ERROR(
                 "streaming_archive::reader:Segment: Unable to memory map the compressed "
                 "segment with path: {}. Error: {}",
                 segment_path.c_str(),
-                ex.what()
+                formatted_error
         );
         return ErrorCode_Failure;
     }
