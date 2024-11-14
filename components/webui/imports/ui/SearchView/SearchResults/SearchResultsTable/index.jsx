@@ -28,10 +28,24 @@ import "./SearchResultsTable.scss";
  */
 const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
 
-const isStreamIr = ("clp" === Meteor.settings.public.ClpStorageEngine);
-const streamType = isStreamIr ?
+const IS_STREAM_IR = ("clp" === Meteor.settings.public.ClpStorageEngine);
+const STREAM_TYPE = IS_STREAM_IR ?
     "ir" :
     "json";
+
+
+/**
+ * Returns the target id for a stream extraction job.
+ *
+ * @param {object} result
+ * @return {string}
+ */
+const getTargetId = (result) => {
+    return IS_STREAM_IR ?
+        result.orig_file_id :
+        result.archive_id;
+};
+
 
 /**
  * Represents a table component to display search results.
@@ -149,10 +163,11 @@ const SearchResultsTable = ({
                                         target={"_blank"}
                                         title={"View log event in context"}
                                         href={`${Meteor.settings.public.LogViewerWebuiUrl}?` +
-                                            `type=${streamType}&targetId=${result.orig_file_id}` +
+                                            `type=${STREAM_TYPE}` +
+                                            `&targetId=${getTargetId(result)}` +
                                             `&logEventIdx=${result.log_event_ix}`}
                                     >
-                                        {isStreamIr ?
+                                        {IS_STREAM_IR ?
                                             result.orig_file_path :
                                             "Original File"}
                                     </a>
