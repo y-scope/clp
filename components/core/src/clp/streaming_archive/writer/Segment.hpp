@@ -6,6 +6,7 @@
 
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"
+#include "../../streaming_compression/lzma/Compressor.hpp"
 #include "../../streaming_compression/passthrough/Compressor.hpp"
 #include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../TraceableException.hpp"
@@ -90,6 +91,8 @@ private:
     streaming_compression::passthrough::Compressor m_compressor;
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Compressor m_compressor;
+#elif USE_LZMA_COMPRESSION
+    streaming_compression::lzma::Compressor m_compressor;
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif

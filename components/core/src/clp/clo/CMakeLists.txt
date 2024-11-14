@@ -91,6 +91,11 @@ set(
         ../streaming_archive/writer/Segment.hpp
         ../streaming_compression/Constants.hpp
         ../streaming_compression/Decompressor.hpp
+        ../streaming_compression/lzma/Compressor.cpp
+        ../streaming_compression/lzma/Compressor.hpp
+        ../streaming_compression/lzma/Constants.hpp
+        ../streaming_compression/lzma/Decompressor.cpp
+        ../streaming_compression/lzma/Decompressor.hpp
         ../streaming_compression/passthrough/Compressor.cpp
         ../streaming_compression/passthrough/Compressor.hpp
         ../streaming_compression/passthrough/Decompressor.cpp

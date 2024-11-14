@@ -10,6 +10,7 @@
 #include "dictionary_utils.hpp"
 #include "DictionaryEntry.hpp"
 #include "FileReader.hpp"
+#include "streaming_compression/lzma/Decompressor.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"
@@ -115,6 +116,9 @@ protected:
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Decompressor m_dictionary_decompressor;
     streaming_compression::zstd::Decompressor m_segment_index_decompressor;
+#elif USE_LZMA_COMPRESSION
+    streaming_compression::lzma::Decompressor m_dictionary_decompressor;
+    streaming_compression::lzma::Decompressor m_segment_index_decompressor;
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif

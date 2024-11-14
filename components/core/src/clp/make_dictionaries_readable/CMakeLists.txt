@@ -23,6 +23,8 @@ set(
         ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
         ../streaming_compression/Decompressor.hpp
+        ../streaming_compression/lzma/Decompressor.cpp
+        ../streaming_compression/lzma/Decompressor.hpp
         ../streaming_compression/passthrough/Decompressor.cpp
         ../streaming_compression/passthrough/Decompressor.hpp
         ../streaming_compression/zstd/Decompressor.cpp

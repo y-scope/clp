@@ -8,6 +8,8 @@
 #include "Defs.h"
 #include "FileWriter.hpp"
 #include "spdlog_with_specializations.hpp"
+#include "streaming_compression/lzma/Compressor.hpp"
+#include "streaming_compression/lzma/Decompressor.hpp"
 #include "streaming_compression/passthrough/Compressor.hpp"
 #include "streaming_compression/passthrough/Decompressor.hpp"
 #include "streaming_compression/zstd/Compressor.hpp"
@@ -97,6 +99,9 @@ protected:
 #elif USE_ZSTD_COMPRESSION
     streaming_compression::zstd::Compressor m_dictionary_compressor;
     streaming_compression::zstd::Compressor m_segment_index_compressor;
+#elif USE_LZMA_COMPRESSION
+    streaming_compression::lzma::Compressor m_dictionary_compressor;
+    streaming_compression::lzma::Compressor m_segment_index_compressor;
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif

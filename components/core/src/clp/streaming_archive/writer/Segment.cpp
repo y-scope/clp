@@ -45,6 +45,8 @@ void Segment::open(string const& segments_dir_path, segment_id_t id, int compres
     m_compressor.open(m_file_writer);
 #elif USE_ZSTD_COMPRESSION
     m_compressor.open(m_file_writer, compression_level);
+#elif USE_LZMA_COMPRESSION
+    m_compressor.open(m_file_writer, compression_level);
 #else
     static_assert(false, "Unsupported compression mode.");
 #endif

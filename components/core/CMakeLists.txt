@@ -11,13 +11,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
-set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)
+set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd lzma)
 if ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
     add_definitions(-DUSE_PASSTHROUGH_COMPRESSION=1)
     message(STATUS "Using passthrough compression")
 elseif ("${GENERAL_COMPRESSOR}" STREQUAL "zstd")
     add_definitions(-DUSE_ZSTD_COMPRESSION=1)
     message(STATUS "Using Zstandard compression")
+elseif ("${GENERAL_COMPRESSOR}" STREQUAL "lzma")
+    add_definitions(-DUSE_LZMA_COMPRESSION=1)
+    message(STATUS "Using Lempel–Ziv–Markov chain Algorithm compression")
 else()
     message(SEND_ERROR "GENERAL_COMPRESSOR=${GENERAL_COMPRESSOR} is unimplemented.")
 endif()
@@ -223,6 +226,19 @@ if(ZStd_FOUND)
 else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
 endif()
+
+# Find and setup LZMA Library
+# Notice that we don't have support to switch between static and shared libraries.
+# TODO: add a script in ./cmake/Modules to resolve .a vs. .so
+find_package(LibLZMA REQUIRED)
+if(LIBLZMA_FOUND)
+    message(STATUS "Found LIBLZMA_FOUND ${LIBLZMA_VERSION_STRING}")
+    message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LIBLZMA_FOUND")
+endif()
+include_directories(${LIBLZMA_INCLUDE_DIRS})
+message("LZMA Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
 
 # sqlite dependencies
 set(sqlite_DYNAMIC_LIBS "dl;m;pthread")

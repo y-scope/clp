@@ -5,6 +5,8 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <zstd.h>
 
+#include "../src/clp/streaming_compression/lzma/Compressor.hpp"
+#include "../src/clp/streaming_compression/lzma/Decompressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Decompressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
