@@ -15,7 +15,6 @@ TODO Address this limitation.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import argparse
 import asyncio
 import contextlib
@@ -24,6 +23,7 @@ import logging
 import os
 import pathlib
 import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -77,122 +77,117 @@ active_file_split_ir_extractions: Dict[str, List[str]] = {}
 active_archive_json_extractions: Dict[str, List[str]] = {}
 reducer_connection_queue: Optional[asyncio.Queue] = None
 
+
 class StreamExtractionHandle(ABC):
-    @abstractmethod
-    def get_archive_and_target_ids_for_stream_extraction(
-        self, db_conn, job_config: Dict[str, Any], job_type: QueryJobType
-    ) -> Tuple[Optional[str], Optional[str]]: ...
+    def __init__(self, job_id: str):
+        self.job_id = job_id
 
     @abstractmethod
-    def is_stream_extraction_target_active(
-        self, target_id: str, job_type: QueryJobType
-    ) -> bool: ...
+    def get_stream_id(self) -> Optional[str]: ...
 
     @abstractmethod
-    def mark_job_waiting_for_target(
-        self, target_id: str, job_id: str, job_type: QueryJobType
-    ) -> None: ...
+    def get_archive_for_stream_extraction(self, db_conn) -> Optional[str]: ...
 
     @abstractmethod
-    def is_target_extracted(
-        self, results_cache_uri: str, stream_collection_name: str, target_id: str, job_type: QueryJobType
-    ) -> bool: ...
+    def is_stream_extraction_active(self) -> bool: ...
 
     @abstractmethod
-    def create_stream_extraction_job(
-        self, job_id: str, job_config: Dict[str, Any], target_id: str, job_type: QueryJobType
-    ) -> QueryJob: ...
+    def mark_job_as_waiting(self) -> None: ...
+
+    @abstractmethod
+    def is_stream_extracted(self, results_cache_uri: str, stream_collection_name: str) -> bool: ...
+
+    @abstractmethod
+    def create_stream_extraction_job(self) -> QueryJob: ...
 
 
 class IrExtractionHandle(StreamExtractionHandle):
-    def get_archive_and_target_ids_for_stream_extraction(
-        self, db_conn, job_config: Dict[str, Any], job_type: QueryJobType
-    ) -> Tuple[Optional[str], Optional[str]]:
-        extract_ir_config = ExtractIrJobConfig.parse_obj(job_config)
-        return get_archive_and_file_split_ids_for_ir_extraction(db_conn, extract_ir_config)
+    def __init__(self, job_id: str, job_config: Dict[str, Any]):
+        super().__init__(job_id)
+        self.job_config = ExtractIrJobConfig.parse_obj(job_config)
+        self.file_split_id = None
 
-    def is_stream_extraction_target_active(
-        self, target_id: str, job_type: QueryJobType
-    ) -> bool:
-        return target_id in active_file_split_ir_extractions
+    def get_stream_id(self) -> Optional[str]:
+        return self.file_split_id
 
-    def mark_job_waiting_for_target(
-        self, target_id: str, job_id: str, job_type: QueryJobType
-    ) -> None:
+    def get_archive_for_stream_extraction(self, db_conn) -> Optional[str]:
+        archive_id, self.file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
+            db_conn, self.job_config
+        )
+        self.job_config.file_split_id = self.file_split_id
+        return archive_id
+
+    def is_stream_extraction_active(self) -> bool:
+        return self.file_split_id in active_file_split_ir_extractions
+
+    def mark_job_as_waiting(self) -> None:
         global active_file_split_ir_extractions
-        if target_id not in active_file_split_ir_extractions:
-            active_file_split_ir_extractions[target_id] = []
-        active_file_split_ir_extractions[target_id].append(job_id)
+        file_split_id = self.file_split_id
+        if file_split_id not in active_file_split_ir_extractions:
+            active_file_split_ir_extractions[file_split_id] = []
+        active_file_split_ir_extractions[file_split_id].append(self.job_id)
 
-    def is_target_extracted(
-        self, results_cache_uri: str, stream_collection_name: str, target_id: str, job_type: QueryJobType
-    ) -> bool:
-        target_key = "file_split_id"
-        with pymongo.MongoClient(results_cache_uri) as results_cache_client:
-            stream_collection = results_cache_client.get_default_database()[stream_collection_name]
-            results_count = stream_collection.count_documents({target_key: target_id})
-            return 0 != results_count
+    def is_stream_extracted(self, results_cache_uri: str, stream_collection_name: str) -> bool:
+        return does_document_exist(
+            results_cache_uri, stream_collection_name, "file_split_id", self.file_split_id
+        )
 
-    def create_stream_extraction_job(
-        self, job_id: str, job_config: Dict[str, Any], target_id: str, job_type: QueryJobType
-    ) -> QueryJob:
-        extract_ir_config = ExtractIrJobConfig.parse_obj(job_config)
-        extract_ir_config.file_split_id = target_id
-        new_stream_extraction_job = ExtractIrJob(
-            id=job_id,
-            extract_ir_config=extract_ir_config,
+    def create_stream_extraction_job(self) -> QueryJob:
+        job = ExtractIrJob(
+            id=self.job_id,
+            extract_ir_config=self.job_config,
             state=InternalJobState.WAITING_FOR_DISPATCH,
         )
-        logger.info(f"Created ir extraction job {job_id} on file_split: {target_id}")
-        return new_stream_extraction_job
+        logger.info(f"Created ir extraction job {self.job_id} on file_split: {self.file_split_id}")
+        return job
 
 
 class JsonExtractionHandle(StreamExtractionHandle):
-    def get_archive_and_target_ids_for_stream_extraction(
-        self, db_conn, job_config: Dict[str, Any], job_type: QueryJobType
-    ) -> Tuple[Optional[str], Optional[str]]:
-        extract_json_config = ExtractJsonJobConfig.parse_obj(job_config)
-        archive_id = extract_json_config.archive_id
-        if check_if_archive_exists(db_conn, extract_json_config.archive_id):
-            return archive_id, archive_id
-        else:
-            logger.error(f"archive {archive_id} does not exist")
+    def __init__(self, job_id: str, job_config: Dict[str, Any]):
+        super().__init__(job_id)
+        self.job_config = ExtractJsonJobConfig.parse_obj(job_config)
+        self.archive_id = None
 
-        return None, None
+    def get_stream_id(self) -> Optional[str]:
+        return self.archive_id
 
-    def is_stream_extraction_target_active(
-        self, target_id: str, job_type: QueryJobType
-    ) -> bool:
-        return target_id in active_archive_json_extractions
+    def get_archive_for_stream_extraction(self, db_conn) -> Optional[str]:
+        self.archive_id = self.job_config.archive_id
+        if not check_if_archive_exists(db_conn, self.archive_id):
+            logger.error(f"archive {self.archive_id} does not exist")
+            return None
 
-    def mark_job_waiting_for_target(
-        self, target_id: str, job_id: str, job_type: QueryJobType
-    ) -> None:
+        return self.archive_id
+
+    def is_stream_extraction_active(self) -> bool:
+        return self.archive_id in active_archive_json_extractions
+
+    def mark_job_as_waiting(self) -> None:
         global active_archive_json_extractions
-        if target_id not in active_archive_json_extractions:
-            active_archive_json_extractions[target_id] = []
-        active_archive_json_extractions[target_id].append(job_id)
+        archive_id = self.archive_id
+        if archive_id not in active_archive_json_extractions:
+            active_archive_json_extractions[archive_id] = []
+        active_archive_json_extractions[archive_id].append(self.job_id)
 
-    def is_target_extracted(
-        self, results_cache_uri: str, stream_collection_name: str, target_id: str, job_type: QueryJobType
-    ) -> bool:
-        target_key = "orig_file_id"
-        with pymongo.MongoClient(results_cache_uri) as results_cache_client:
-            stream_collection = results_cache_client.get_default_database()[stream_collection_name]
-            results_count = stream_collection.count_documents({target_key: target_id})
-            return 0 != results_count
+    def is_stream_extracted(self, results_cache_uri: str, stream_collection_name: str) -> bool:
+        return does_document_exist(
+            results_cache_uri, stream_collection_name, "orig_file_id", self.archive_id
+        )
 
-    def create_stream_extraction_job(
-        self, job_id: str, job_config: Dict[str, Any], target_id: str, job_type: QueryJobType
-    ) -> QueryJob:
-        extract_json_config = ExtractJsonJobConfig.parse_obj(job_config)
-        new_stream_extraction_job = ExtractJsonJob(
-            id=job_id,
-            extract_json_config=extract_json_config,
+    def create_stream_extraction_job(self) -> QueryJob:
+        job = ExtractJsonJob(
+            id=self.job_id,
+            extract_json_config=self.job_config,
             state=InternalJobState.WAITING_FOR_DISPATCH,
         )
-        logger.info(f"Created json extraction job {job_id} on archive: {target_id}")
-        return new_stream_extraction_job
+        logger.info(f"Created json extraction job {self.job_id} on archive: {self.archive_id}")
+        return job
+
+
+def does_document_exist(mongodb_uri, collection_name, field, value):
+    with pymongo.MongoClient(mongodb_uri) as mongo_client:
+        stream_collection = mongo_client.get_default_database()[collection_name]
+        return 0 != stream_collection.count_documents({field: value})
 
 
 def cancel_job_except_reducer(job: SearchJob):
@@ -671,14 +666,12 @@ def handle_pending_query_jobs(
             elif job_type in (QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON):
                 job_handle: StreamExtractionHandle
                 if QueryJobType.EXTRACT_IR == job_type:
-                    job_handle = IrExtractionHandle()
+                    job_handle = IrExtractionHandle(job_id, job_config)
                 else:
-                    job_handle = JsonExtractionHandle()
+                    job_handle = JsonExtractionHandle(job_id, job_config)
 
-                archive_id, target_id = job_handle.get_archive_and_target_ids_for_stream_extraction(
-                    db_conn, job_config, job_type
-                )
-                if not target_id:
+                archive_id = job_handle.get_archive_for_stream_extraction(db_conn)
+                if not archive_id:
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,
@@ -700,10 +693,11 @@ def handle_pending_query_jobs(
 
                 # Check if the target is currently being extracted; if so, add the job ID to the
                 # list of jobs waiting for it.
-                if job_handle.is_stream_extraction_target_active(target_id, job_type):
-                    job_handle.mark_job_waiting_for_target(target_id, job_id, job_type)
+                if job_handle.is_stream_extraction_active():
+                    job_handle.mark_job_as_waiting()
                     logger.info(
-                        f"target {target_id} is being extracted, so mark job {job_id} as running"
+                        f"target {job_handle.get_stream_id()} is being extracted, "
+                        f"so mark job {job_id} as running"
                     )
                     if not set_job_or_task_status(
                         db_conn,
@@ -718,11 +712,10 @@ def handle_pending_query_jobs(
                     continue
 
                 # Check if a stream file in the target has already been extracted
-                if job_handle.is_target_extracted(
-                    results_cache_uri, stream_collection_name, target_id, job_type
-                ):
+                if job_handle.is_stream_extracted(results_cache_uri, stream_collection_name):
                     logger.info(
-                        f"target {target_id} already extracted, so mark job {job_id} as done"
+                        f"target {job_handle.get_stream_id()} already extracted, "
+                        f"so mark job {job_id} as done"
                     )
                     if not set_job_or_task_status(
                         db_conn,
@@ -737,9 +730,7 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
 
-                next_stream_extraction_job = job_handle.create_stream_extraction_job(
-                    job_id, job_config, target_id, job_type
-                )
+                next_stream_extraction_job = job_handle.create_stream_extraction_job()
 
                 dispatch_job_and_update_db(
                     db_conn,
@@ -750,7 +741,7 @@ def handle_pending_query_jobs(
                     1,
                 )
 
-                job_handle.mark_job_waiting_for_target(target_id, job_id, job_type)
+                job_handle.mark_job_as_waiting()
                 active_jobs[job_id] = next_stream_extraction_job
                 logger.info(f"Dispatched stream extraction job {job_id} on archive: {archive_id}")
 
