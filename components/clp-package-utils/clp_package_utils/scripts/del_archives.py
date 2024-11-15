@@ -67,6 +67,9 @@ def main(argv):
     # Validate the input timestamp
     begin_ts = parsed_args.begin_ts
     end_ts = parsed_args.end_ts
+    if begin_ts > end_ts:
+        logger.error("begin-ts must be less than or equal to end-ts")
+        return -1
     if end_ts < 0 or begin_ts < 0:
         logger.error("begin_ts and end_ts must be positive.")
         return -1
