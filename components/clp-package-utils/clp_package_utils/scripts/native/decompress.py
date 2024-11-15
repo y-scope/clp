@@ -120,7 +120,7 @@ def handle_extract_stream_cmd(
 
     command = parsed_args.command
 
-    extraction_config: QueryJobConfig
+    job_config: QueryJobConfig
     job_type: QueryJobType
     if EXTRACT_IR_CMD == command:
         job_type = QueryJobType.EXTRACT_IR
@@ -133,14 +133,14 @@ def handle_extract_stream_cmd(
             if orig_file_id is None:
                 logger.error(f"Cannot find orig_file_id corresponding to '{orig_file_path}'.")
                 return -1
-        extraction_config = ExtractIrJobConfig(
+        job_config = ExtractIrJobConfig(
             orig_file_id=orig_file_id,
             msg_ix=parsed_args.msg_ix,
             target_uncompressed_size=parsed_args.target_uncompressed_size,
         )
     elif EXTRACT_JSON_CMD == command:
         job_type = QueryJobType.EXTRACT_JSON
-        extraction_config = ExtractJsonJobConfig(
+        job_config = ExtractJsonJobConfig(
             archive_id=parsed_args.archive_id, target_chunk_size=parsed_args.target_chunk_size
         )
     else:
@@ -153,7 +153,7 @@ def handle_extract_stream_cmd(
                 submit_and_monitor_extraction_job_in_db,
                 clp_config.database,
                 job_type,
-                extraction_config,
+                job_config,
             )
         )
     except asyncio.CancelledError:

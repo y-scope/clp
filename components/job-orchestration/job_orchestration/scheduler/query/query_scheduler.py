@@ -690,13 +690,13 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
 
-                nex_stream_extraction_job = create_stream_extraction_job(
+                next_stream_extraction_job = create_stream_extraction_job(
                     job_id, job_config, target_id, job_type
                 )
 
                 dispatch_job_and_update_db(
                     db_conn,
-                    nex_stream_extraction_job,
+                    next_stream_extraction_job,
                     [archive_id],
                     clp_metadata_db_conn_params,
                     results_cache_uri,
@@ -704,7 +704,7 @@ def handle_pending_query_jobs(
                 )
 
                 mark_job_waiting_for_target(target_id, job_id, job_type)
-                active_jobs[job_id] = nex_stream_extraction_job
+                active_jobs[job_id] = next_stream_extraction_job
                 logger.info(f"Dispatched stream extraction job {job_id} on archive: {archive_id}")
 
             else:

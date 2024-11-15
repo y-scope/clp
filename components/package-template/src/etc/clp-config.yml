@@ -84,7 +84,7 @@
 #
 ## Where CLP IR files should be output
 #stream_output:
-#  directory: "var/data/stream"
+#  directory: "var/data/streams"
 #
 #  # How large each IR file should be before being split into a new IR file
 #  target_uncompressed_size: 134217728  # 128 MB

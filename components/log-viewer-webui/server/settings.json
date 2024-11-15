@@ -9,6 +9,6 @@
     "MongoDbStreamFilesCollectionName": "stream-files",
 
     "ClientDir": "../client/dist",
-    "StreamFilesDir": "../../../build/clp-package/var/data/stream",
+    "StreamFilesDir": "../../../build/clp-package/var/data/streams",
     "LogViewerDir": "../yscope-log-viewer/dist"
 }
