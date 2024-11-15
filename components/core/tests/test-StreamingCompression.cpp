@@ -1,10 +1,11 @@
+#include <cstring>
 #include <string>
 
 #include <boost/filesystem.hpp>
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <zstd.h>
 
+#include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
 #include "../src/clp/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Decompressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
@@ -149,22 +150,10 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
 
         // Decompress
         // Memory map compressed file
-        // Create memory mapping for compressed_file_path, use boost read only memory mapped file
-        boost::system::error_code boost_error_code;
-        size_t compressed_file_size
-                = boost::filesystem::file_size(compressed_file_path, boost_error_code);
-        REQUIRE(!boost_error_code);
-
-        boost::iostreams::mapped_file_params memory_map_params;
-        memory_map_params.path = compressed_file_path;
-        memory_map_params.flags = boost::iostreams::mapped_file::readonly;
-        memory_map_params.length = compressed_file_size;
-        boost::iostreams::mapped_file_source memory_mapped_compressed_file;
-        memory_mapped_compressed_file.open(memory_map_params);
-        REQUIRE(memory_mapped_compressed_file.is_open());
-
+        clp::ReadOnlyMemoryMappedFile const memory_mapped_compressed_file{compressed_file_path};
         clp::streaming_compression::passthrough::Decompressor decompressor;
-        decompressor.open(memory_mapped_compressed_file.data(), compressed_file_size);
+        auto const compressed_file_view{memory_mapped_compressed_file.get_view()};
+        decompressor.open(compressed_file_view.data(), compressed_file_view.size());
 
         size_t uncompressed_bytes = 0;
         REQUIRE(ErrorCode_Success
