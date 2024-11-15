@@ -441,7 +441,7 @@ def get_task_group_for_job(
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
 ):
-    job_config_obj = job.get_config().dict()
+    job_config = job.get_config().dict()
     job_type = job.get_type()
     if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
         return celery.group(
@@ -449,7 +449,7 @@ def get_task_group_for_job(
                 job_id=job.id,
                 archive_id=archive_ids[i],
                 task_id=task_ids[i],
-                job_config_obj=job_config_obj,
+                job_config=job_config,
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
             )
@@ -461,7 +461,7 @@ def get_task_group_for_job(
                 job_id=job.id,
                 archive_id=archive_ids[i],
                 task_id=task_ids[i],
-                job_config_obj=job_config_obj,
+                job_config=job_config,
                 clp_metadata_db_conn_params=clp_metadata_db_conn_params,
                 results_cache_uri=results_cache_uri,
             )
