@@ -201,7 +201,8 @@ def handle_extract_stream_cmd(
             extract_cmd.append("--target-chunk-size")
             extract_cmd.append(str(parsed_args.target_chunk_size))
     else:
-        logger.exception(f"Unexpected command: {job_command}")
+        logger.error(f"Unexpected command: {job_command}")
+        return -1
 
     cmd = container_start_cmd + extract_cmd
 
@@ -253,7 +254,7 @@ def main(argv):
     group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
     group.add_argument("--orig-file-path", type=str, help="Original file's path.")
 
-    # Json extraction command parser
+    # JSON extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
     json_extraction_parser.add_argument(
@@ -265,7 +266,7 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif command in [EXTRACT_IR_CMD, EXTRACT_JSON_CMD]:
+    elif command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")

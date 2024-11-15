@@ -31,7 +31,7 @@ def make_command(
     stream_collection: str,
 ) -> Optional[List[str]]:
     if StorageEngine.CLP == storage_engine:
-        logger.info("Start IR extraction")
+        logger.info("Starting IR extraction")
         extract_ir_config = ExtractIrJobConfig.parse_obj(job_config_obj)
         if not extract_ir_config.file_split_id:
             logger.error("file_split_id not supplied")
@@ -49,7 +49,7 @@ def make_command(
             command.append("--target-size")
             command.append(str(extract_ir_config.target_uncompressed_size))
     elif StorageEngine.CLP_S == storage_engine:
-        logger.info("Start Json extraction")
+        logger.info("Starting JSON extraction")
         extract_json_config = ExtractJsonJobConfig.parse_obj(job_config_obj)
         command = [
             str(clp_home / "bin" / "clp-s"),
