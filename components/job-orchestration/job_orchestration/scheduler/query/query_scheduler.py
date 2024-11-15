@@ -81,12 +81,10 @@ reducer_connection_queue: Optional[asyncio.Queue] = None
 class StreamExtractionHandle(ABC):
     def __init__(self, job_id: str):
         self.job_id = job_id
+        self.archive_id: Optional[str] = None
 
     @abstractmethod
     def get_stream_id(self) -> Optional[str]: ...
-
-    @abstractmethod
-    def get_archive_for_stream_extraction(self, db_conn) -> Optional[str]: ...
 
     @abstractmethod
     def is_stream_extraction_active(self) -> bool: ...
@@ -102,20 +100,19 @@ class StreamExtractionHandle(ABC):
 
 
 class IrExtractionHandle(StreamExtractionHandle):
-    def __init__(self, job_id: str, job_config: Dict[str, Any]):
+    def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn):
         super().__init__(job_id)
         self.job_config = ExtractIrJobConfig.parse_obj(job_config)
-        self.file_split_id = None
+        self.archive_id, self.file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
+            db_conn, self.job_config
+        )
+        if self.archive_id is None:
+            raise ValueError("Job parameters does not resolve to an existing archive")
+
+        self.job_config.file_split_id = self.file_split_id
 
     def get_stream_id(self) -> Optional[str]:
         return self.file_split_id
-
-    def get_archive_for_stream_extraction(self, db_conn) -> Optional[str]:
-        archive_id, self.file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
-            db_conn, self.job_config
-        )
-        self.job_config.file_split_id = self.file_split_id
-        return archive_id
 
     def is_stream_extraction_active(self) -> bool:
         return self.file_split_id in active_file_split_ir_extractions
@@ -142,20 +139,14 @@ class IrExtractionHandle(StreamExtractionHandle):
 
 
 class JsonExtractionHandle(StreamExtractionHandle):
-    def __init__(self, job_id: str, job_config: Dict[str, Any]):
+    def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn):
         super().__init__(job_id)
         self.job_config = ExtractJsonJobConfig.parse_obj(job_config)
-        self.archive_id = None
-
-    def get_stream_id(self) -> Optional[str]:
-        return self.archive_id
-
-    def get_archive_for_stream_extraction(self, db_conn) -> Optional[str]:
         self.archive_id = self.job_config.archive_id
         if not check_if_archive_exists(db_conn, self.archive_id):
-            logger.error(f"archive {self.archive_id} does not exist")
-            return None
+            raise ValueError(f"archive {self.archive_id} does not exist")
 
+    def get_stream_id(self) -> Optional[str]:
         return self.archive_id
 
     def is_stream_extraction_active(self) -> bool:
@@ -663,13 +654,13 @@ def handle_pending_query_jobs(
 
             elif job_type in (QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON):
                 job_handle: StreamExtractionHandle
-                if QueryJobType.EXTRACT_IR == job_type:
-                    job_handle = IrExtractionHandle(job_id, job_config)
-                else:
-                    job_handle = JsonExtractionHandle(job_id, job_config)
-
-                archive_id = job_handle.get_archive_for_stream_extraction(db_conn)
-                if not archive_id:
+                try:
+                    if QueryJobType.EXTRACT_IR == job_type:
+                        job_handle = IrExtractionHandle(job_id, job_config, db_conn)
+                    else:
+                        job_handle = JsonExtractionHandle(job_id, job_config, db_conn)
+                except Exception:
+                    logger.exception("Failed to initialize extraction job")
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,
@@ -738,7 +729,7 @@ def handle_pending_query_jobs(
                     continue
 
                 next_stream_extraction_job = job_handle.create_stream_extraction_job()
-
+                archive_id = job_handle.archive_id
                 dispatch_job_and_update_db(
                     db_conn,
                     next_stream_extraction_job,
