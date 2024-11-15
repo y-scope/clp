@@ -133,13 +133,12 @@ class IrExtractionHandle(StreamExtractionHandle):
         )
 
     def create_stream_extraction_job(self) -> QueryJob:
-        job = ExtractIrJob(
+        logger.info(f"Creating ir extraction job {self.job_id} on file_split: {self.file_split_id}")
+        return ExtractIrJob(
             id=self.job_id,
             extract_ir_config=self.job_config,
             state=InternalJobState.WAITING_FOR_DISPATCH,
         )
-        logger.info(f"Created ir extraction job {self.job_id} on file_split: {self.file_split_id}")
-        return job
 
 
 class JsonExtractionHandle(StreamExtractionHandle):
@@ -175,13 +174,12 @@ class JsonExtractionHandle(StreamExtractionHandle):
         )
 
     def create_stream_extraction_job(self) -> QueryJob:
-        job = ExtractJsonJob(
+        logger.info(f"Creating json extraction job {self.job_id} on archive: {self.archive_id}")
+        return ExtractJsonJob(
             id=self.job_id,
             extract_json_config=self.job_config,
             state=InternalJobState.WAITING_FOR_DISPATCH,
         )
-        logger.info(f"Created json extraction job {self.job_id} on archive: {self.archive_id}")
-        return job
 
 
 def does_document_exist(mongodb_uri, collection_name, field, value):
