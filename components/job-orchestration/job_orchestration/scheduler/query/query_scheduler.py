@@ -685,11 +685,20 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as failed")
                     continue
 
-                # NOTE: The following two if blocks should not be reordered. The method that checks
-                # whether a stream file has been extracted doesn't guarantee that *all* stream
-                # files to be extracted for the target (since the extraction job may still be in
-                # progress). Thus, we must first check whether the target is in the process of
-                # being extracted, and then check whether it's already been extracted.
+                # NOTE: The following two if blocks of `is_stream_extraction_active` and
+                # `is_stream_extracted` should not be reordered.
+                # We must:
+                # 1. First, check if the stream is in the process of being extracted
+                # (`is_stream_extraction_active`).
+                # 2. Then, check if the stream has already been extracted
+                # (`is_stream_extracted`).
+                #
+                # This order ensures correctness because `is_stream_extracted` returns True if
+                # any chunk of the stream has been extracted, but it does not guarantee that *all*
+                # chunks are extracted. If `is_stream_extracted` is checked first and the job is
+                # marked as successful based on its result, it is possible that the extraction job
+                # is still in progress, meaning the specific chunk requested by the web UI might
+                # not yet be ready.
 
                 # Check if the target is currently being extracted; if so, add the job ID to the
                 # list of jobs waiting for it.
