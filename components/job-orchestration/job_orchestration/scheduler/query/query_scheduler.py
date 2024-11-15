@@ -71,6 +71,7 @@ active_jobs: Dict[str, QueryJob] = {}
 
 # Dictionary that maps IDs of file splits being extracted to IDs of jobs waiting for them
 active_file_split_ir_extractions: Dict[str, List[str]] = {}
+
 # Dictionary that maps IDs of clp-s archives being extracted to IDs of jobs waiting for them
 active_archive_json_extractions: Dict[str, List[str]] = {}
 reducer_connection_queue: Optional[asyncio.Queue] = None
@@ -455,7 +456,7 @@ def get_task_group_for_job(
             )
             for i in range(len(archive_ids))
         )
-    elif job_type in [QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR]:
+    elif job_type in (QueryJobType.EXTRACT_JSON, QueryJobType.EXTRACT_IR):
         return celery.group(
             extract_stream.s(
                 job_id=job.id,
@@ -627,7 +628,7 @@ def handle_pending_query_jobs(
                     pending_search_jobs.append(new_search_job)
                 active_jobs[job_id] = new_search_job
 
-            elif job_type in [QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON]:
+            elif job_type in (QueryJobType.EXTRACT_IR, QueryJobType.EXTRACT_JSON):
                 archive_id, target_id = get_archive_and_target_ids_for_stream_extraction(
                     db_conn, job_config, job_type
                 )
