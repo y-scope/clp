@@ -213,9 +213,10 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
             clp::NetworkReader::cDefaultBufferSize,
             valid_http_header_kv_pairs
     };
-    auto const content = nlohmann::json::parse(get_content(reader));
-    auto const& headers{content.at("headers")};
+    auto const context{get_content(reader)};
     REQUIRE(assert_curl_error_code(CURLE_OK, reader));
+    auto const parsed_content = nlohmann::json::parse(context);
+    auto const& headers{parsed_content.at("headers")};
     for (auto const& [key, value] : valid_http_header_kv_pairs) {
         REQUIRE((value == headers.at(key).get<std::string_view>()));
     }
