@@ -66,7 +66,7 @@ def handle_file_deletion(
         clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-                db_conn.cursor(dictionary=True)
+            db_conn.cursor(dictionary=True)
         ) as db_cursor:
             db_cursor.execute(
                 f"""
