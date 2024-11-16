@@ -133,7 +133,9 @@ class IrExtractionHandle(StreamExtractionHandle):
         active_file_split_ir_extractions[file_split_id].append(self._job_id)
 
     def create_stream_extraction_job(self) -> QueryJob:
-        logger.info(f"Creating ir extraction job {self._job_id} on file_split: {self._file_split_id}")
+        logger.info(
+            f"Creating ir extraction job {self._job_id} on file_split: {self._file_split_id}"
+        )
         return ExtractIrJob(
             id=self._job_id,
             extract_ir_config=self._job_config,
