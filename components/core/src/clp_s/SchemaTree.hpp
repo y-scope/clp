@@ -90,7 +90,7 @@ private:
     std::vector<int32_t> m_children_ids;
     // We use a buffer so that references to this key name are stable after this SchemaNode is move
     // constructed
-    std::unique_ptr<char[]> m_key_buf;
+    std::unique_ptr<char[]> m_key_name_buf;
     std::string_view m_key_name;
     NodeType m_type;
     int32_t m_count;
