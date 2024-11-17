@@ -120,11 +120,10 @@ public:
     int32_t get_object_subtree_node_id() const { return m_object_subtree_id; }
 
     /**
-     * Get the field Id of some field in the Internal subtree.
+     * Get the field Id for a specified field within the Internal subtree.
      * @param field_name
      *
-     * @return the field Id of some field in the Internal subtree.
-     * @return -1 if the field does not exist.
+     * @return the field Id if the field exists within the Internal sub-tree, -1 otherwise.
      */
     int32_t get_internal_field_id(std::string_view const field_name);
 
