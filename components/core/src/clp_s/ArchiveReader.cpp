@@ -27,7 +27,7 @@ void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
     m_schema_tree = ReaderUtils::read_schema_tree(archive_path_str);
     m_schema_map = ReaderUtils::read_schemas(archive_path_str);
 
-    m_log_event_idx_column_id = m_schema_tree->get_internal_field_id(constants::cLogEventIdxName);
+    m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
     m_table_metadata_file_reader.open(archive_path_str + constants::cArchiveTableMetadataFile);
     m_stream_reader.open_packed_streams(archive_path_str + constants::cArchiveTablesFile);

@@ -467,8 +467,8 @@ bool JsonParser::parse() {
                 return false;
             }
 
-            // Add internal log_event_idx field to record
-            auto log_event_idx = add_internal_field(constants::cLogEventIdxName, NodeType::Integer);
+            // Add log_event_idx field to metadata for record
+            auto log_event_idx = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
             m_current_parsed_message.add_value(
                     log_event_idx,
                     m_archive_writer->get_next_log_event_id()
@@ -534,13 +534,13 @@ bool JsonParser::parse() {
     return true;
 }
 
-int32_t JsonParser::add_internal_field(std::string_view const field_name, NodeType type) {
-    auto internal_subtree_id = m_archive_writer->add_node(
+int32_t JsonParser::add_metadata_field(std::string_view const field_name, NodeType type) {
+    auto metadata_subtree_id = m_archive_writer->add_node(
             constants::cRootNodeId,
-            NodeType::Internal,
-            constants::cInternalSubtreeName
+            NodeType::Metadata,
+            constants::cMetadataSubtreeName
     );
-    return m_archive_writer->add_node(internal_subtree_id, type, field_name);
+    return m_archive_writer->add_node(metadata_subtree_id, type, field_name);
 }
 
 void JsonParser::store() {

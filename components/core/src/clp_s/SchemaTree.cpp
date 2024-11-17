@@ -19,8 +19,8 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
     if (constants::cRootNodeId == parent_node_id) {
         if (NodeType::Object == type) {
             m_object_subtree_id = node_id;
-        } else if (NodeType::Internal == type) {
-            m_internal_subtree_id = node_id;
+        } else if (NodeType::Metadata == type) {
+            m_metadata_subtree_id = node_id;
         }
     }
 
@@ -34,13 +34,13 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
     return node_id;
 }
 
-int32_t SchemaTree::get_internal_field_id(std::string_view const field_name) {
-    if (m_internal_subtree_id < 0) {
+int32_t SchemaTree::get_metadata_field_id(std::string_view const field_name) {
+    if (m_metadata_subtree_id < 0) {
         return -1;
     }
 
-    auto& internal_subtree_node = m_nodes[m_internal_subtree_id];
-    for (auto child_id : internal_subtree_node.get_children_ids()) {
+    auto& metadata_subtree_node = m_nodes[m_metadata_subtree_id];
+    for (auto child_id : metadata_subtree_node.get_children_ids()) {
         auto& child_node = m_nodes[child_id];
         if (child_node.get_key_name() == field_name) {
             return child_id;

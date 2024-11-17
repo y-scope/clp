@@ -11,6 +11,19 @@
 #include <absl/container/flat_hash_map.h>
 
 namespace clp_s {
+/**
+ * This enum defines the valid MPT node types as well as the 8-bit number used to encode them.
+ *
+ * The number used to represent each node type can not change. That means that elements in this
+ * enum can never be reordered and that new node types always need to be added to the end of the
+ * enum (but before Unknown).
+ *
+ * Node types are used to help record the structure of a log record, with the exception of the
+ * "Metadata" node type. The "Metadata" type is a special type used by the implementation to
+ * demarcate data needed by the implementation that is not part of the log record. In particular,
+ * the implementation may create a special subtree of the MPT which contains fields used to record
+ * things like original log order.
+ */
 enum class NodeType : uint8_t {
     Integer,
     Float,
@@ -22,7 +35,7 @@ enum class NodeType : uint8_t {
     NullValue,
     DateString,
     StructuredArray,
-    Internal,
+    Metadata,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
@@ -46,12 +59,12 @@ public:
     )
             : m_parent_id(parent_id),
               m_id(id),
-              m_key_buf(std::make_unique<char[]>(key_name.size())),
-              m_key_name(m_key_buf.get(), key_name.size()),
+              m_key_name_buf(std::make_unique<char[]>(key_name.size())),
+              m_key_name(m_key_name_buf.get(), key_name.size()),
               m_type(type),
               m_count(0),
               m_depth(depth) {
-        memcpy(m_key_buf.get(), key_name.begin(), key_name.size());
+        memcpy(m_key_name_buf.get(), key_name.begin(), key_name.size());
     }
 
     /**
@@ -120,18 +133,18 @@ public:
     int32_t get_object_subtree_node_id() const { return m_object_subtree_id; }
 
     /**
-     * Get the field Id for a specified field within the Internal subtree.
+     * Get the field Id for a specified field within the Metadata subtree.
      * @param field_name
      *
-     * @return the field Id if the field exists within the Internal sub-tree, -1 otherwise.
+     * @return the field Id if the field exists within the Metadata sub-tree, -1 otherwise.
      */
-    int32_t get_internal_field_id(std::string_view const field_name);
+    int32_t get_metadata_field_id(std::string_view const field_name);
 
     /**
-     * @return the Id of the root of the Internal sub-tree.
-     * @return -1 if the Internal sub-tree does not exist.
+     * @return the Id of the root of the Metadata sub-tree.
+     * @return -1 if the Metadata sub-tree does not exist.
      */
-    int32_t get_internal_subtree_node_id() { return m_internal_subtree_id; }
+    int32_t get_metadata_subtree_node_id() { return m_metadata_subtree_id; }
 
     std::vector<SchemaNode> const& get_nodes() const { return m_nodes; }
 
@@ -169,7 +182,7 @@ private:
     std::vector<SchemaNode> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string_view const, NodeType>, int32_t> m_node_map;
     int32_t m_object_subtree_id{-1};
-    int32_t m_internal_subtree_id{-1};
+    int32_t m_metadata_subtree_id{-1};
 };
 }  // namespace clp_s
 

@@ -89,7 +89,7 @@ private:
     std::vector<ColumnDescriptor*> m_wildcard_columns;
     std::map<ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
     LiteralTypeBitmask m_wildcard_type_mask{0};
-    std::unordered_set<int32_t> m_internal_columns;
+    std::unordered_set<int32_t> m_metadata_columns;
 
     std::stack<
             std::pair<ExpressionType, OpList::iterator>,

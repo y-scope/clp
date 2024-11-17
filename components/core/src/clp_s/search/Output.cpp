@@ -138,12 +138,14 @@ void Output::init(
 
     for (auto column_reader : column_readers) {
         auto column_id = column_reader->get_id();
-        if (((0
-              != (m_wildcard_type_mask
-                  & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
-             || m_match.schema_searches_against_column(schema_id, column_id))
-            && 0 == m_internal_columns.count(column_id))
+        if ((0
+             != (m_wildcard_type_mask
+                 & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
+            || m_match.schema_searches_against_column(schema_id, column_id))
         {
+            if (0 != m_metadata_columns.count(column_id)) {
+                continue;
+            }
             ClpStringColumnReader* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
             VariableStringColumnReader* var_reader
                     = dynamic_cast<VariableStringColumnReader*>(column_reader);
@@ -963,15 +965,15 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
 }
 
 void Output::populate_internal_columns() {
-    int32_t internal_subtree_root_node_id = m_schema_tree->get_internal_subtree_node_id();
-    if (-1 == internal_subtree_root_node_id) {
+    int32_t metadata_subtree_root_node_id = m_schema_tree->get_metadata_subtree_node_id();
+    if (-1 == metadata_subtree_root_node_id) {
         return;
     }
 
-    // This code assumes that the internal subtree contains no nested structures
-    auto& internal_node = m_schema_tree->get_node(internal_subtree_root_node_id);
-    for (auto child_id : internal_node.get_children_ids()) {
-        m_internal_columns.insert(child_id);
+    // This code assumes that the metadata subtree contains no nested structures
+    auto& metadata_node = m_schema_tree->get_node(metadata_subtree_root_node_id);
+    for (auto child_id : metadata_node.get_children_ids()) {
+        m_metadata_columns.insert(child_id);
     }
 }
 
@@ -991,7 +993,7 @@ void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> cons
             if (Schema::schema_entry_is_unordered_object(node)) {
                 continue;
             }
-            if (0 != m_internal_columns.count(node)) {
+            if (0 != m_metadata_columns.count(node)) {
                 continue;
             }
             auto tree_node_type = m_schema_tree->get_node(node).get_type();

@@ -21,7 +21,7 @@ constexpr char cArchiveVarDictFile[] = "/var.dict";
 // Schema tree constants
 constexpr char cRootNodeName[] = "";
 constexpr int32_t cRootNodeId = -1;
-constexpr char cInternalSubtreeName[] = "";
+constexpr char cMetadataSubtreeName[] = "";
 constexpr char cLogEventIdxName[] = "log_event_idx";
 
 namespace results_cache::decompression {
