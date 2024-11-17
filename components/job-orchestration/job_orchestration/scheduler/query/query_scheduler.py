@@ -88,7 +88,7 @@ class StreamExtractionHandle(ABC):
         return self._archive_id
 
     @abstractmethod
-    def get_stream_id(self) -> Optional[str]: ...
+    def get_stream_id(self) -> str: ...
 
     @abstractmethod
     def is_stream_extraction_active(self) -> bool: ...
@@ -106,40 +106,40 @@ class StreamExtractionHandle(ABC):
 class IrExtractionHandle(StreamExtractionHandle):
     def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn):
         super().__init__(job_id)
-        self._job_config = ExtractIrJobConfig.parse_obj(job_config)
-        self._archive_id, self._file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
-            db_conn, self._job_config
+        self.__job_config = ExtractIrJobConfig.parse_obj(job_config)
+        self._archive_id, self.__file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
+            db_conn, self.__job_config
         )
         if self._archive_id is None:
             raise ValueError("Job parameters don't resolve to an existing archive")
 
-        self._job_config.file_split_id = self._file_split_id
+        self.__job_config.file_split_id = self.__file_split_id
 
-    def get_stream_id(self) -> Optional[str]:
-        return self._file_split_id
+    def get_stream_id(self) -> str:
+        return self.__file_split_id
 
     def is_stream_extraction_active(self) -> bool:
-        return self._file_split_id in active_file_split_ir_extractions
+        return self.__file_split_id in active_file_split_ir_extractions
 
     def is_stream_extracted(self, results_cache_uri: str, stream_collection_name: str) -> bool:
-        return does_document_exist(
-            results_cache_uri, stream_collection_name, "file_split_id", self._file_split_id
+        return document_exist(
+            results_cache_uri, stream_collection_name, "file_split_id", self.__file_split_id
         )
 
     def mark_job_as_waiting(self) -> None:
         global active_file_split_ir_extractions
-        file_split_id = self._file_split_id
+        file_split_id = self.__file_split_id
         if file_split_id not in active_file_split_ir_extractions:
             active_file_split_ir_extractions[file_split_id] = []
         active_file_split_ir_extractions[file_split_id].append(self._job_id)
 
     def create_stream_extraction_job(self) -> QueryJob:
         logger.info(
-            f"Creating IR extraction job {self._job_id} for file_split: {self._file_split_id}"
+            f"Creating IR extraction job {self._job_id} for file_split: {self.__file_split_id}"
         )
         return ExtractIrJob(
             id=self._job_id,
-            extract_ir_config=self._job_config,
+            extract_ir_config=self.__job_config,
             state=InternalJobState.WAITING_FOR_DISPATCH,
         )
 
@@ -147,19 +147,19 @@ class IrExtractionHandle(StreamExtractionHandle):
 class JsonExtractionHandle(StreamExtractionHandle):
     def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn):
         super().__init__(job_id)
-        self._job_config = ExtractJsonJobConfig.parse_obj(job_config)
-        self._archive_id = self._job_config.archive_id
-        if not check_if_archive_exists(db_conn, self._archive_id):
+        self.__job_config = ExtractJsonJobConfig.parse_obj(job_config)
+        self._archive_id = self.__job_config.archive_id
+        if not archive_exists(db_conn, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
 
-    def get_stream_id(self) -> Optional[str]:
+    def get_stream_id(self) -> str:
         return self._archive_id
 
     def is_stream_extraction_active(self) -> bool:
         return self._archive_id in active_archive_json_extractions
 
     def is_stream_extracted(self, results_cache_uri: str, stream_collection_name: str) -> bool:
-        return does_document_exist(
+        return document_exist(
             results_cache_uri, stream_collection_name, "orig_file_id", self._archive_id
         )
 
@@ -174,15 +174,15 @@ class JsonExtractionHandle(StreamExtractionHandle):
         logger.info(f"Creating json extraction job {self._job_id} on archive: {self._archive_id}")
         return ExtractJsonJob(
             id=self._job_id,
-            extract_json_config=self._job_config,
+            extract_json_config=self.__job_config,
             state=InternalJobState.WAITING_FOR_DISPATCH,
         )
 
 
-def does_document_exist(mongodb_uri, collection_name, field, value):
+def document_exist(mongodb_uri, collection_name, field, value):
     with pymongo.MongoClient(mongodb_uri) as mongo_client:
-        stream_collection = mongo_client.get_default_database()[collection_name]
-        return 0 != stream_collection.count_documents({field: value})
+        collection = mongo_client.get_default_database()[collection_name]
+        return 0 != collection.count_documents({field: value})
 
 
 def cancel_job_except_reducer(job: SearchJob):
@@ -448,7 +448,8 @@ def get_archive_and_file_split_ids(
     return results
 
 
-def check_if_archive_exists(
+@exception_default_value(default=[])
+def archive_exists(
     db_conn,
     archive_id: str,
 ) -> bool:
@@ -664,7 +665,7 @@ def handle_pending_query_jobs(
                         job_handle = IrExtractionHandle(job_id, job_config, db_conn)
                     else:
                         job_handle = JsonExtractionHandle(job_id, job_config, db_conn)
-                except Exception:
+                except ValueError:
                     logger.exception("Failed to initialize extraction job handle")
                     if not set_job_or_task_status(
                         db_conn,
@@ -734,11 +735,11 @@ def handle_pending_query_jobs(
                         logger.error(f"Failed to set job {job_id} as succeeded")
                     continue
 
-                next_stream_extraction_job = job_handle.create_stream_extraction_job()
+                new_stream_extraction_job = job_handle.create_stream_extraction_job()
                 archive_id = job_handle.get_archive_id()
                 dispatch_job_and_update_db(
                     db_conn,
-                    next_stream_extraction_job,
+                    new_stream_extraction_job,
                     [archive_id],
                     clp_metadata_db_conn_params,
                     results_cache_uri,
@@ -746,7 +747,7 @@ def handle_pending_query_jobs(
                 )
 
                 job_handle.mark_job_as_waiting()
-                active_jobs[job_id] = next_stream_extraction_job
+                active_jobs[job_id] = new_stream_extraction_job
                 logger.info(f"Dispatched stream extraction job {job_id} for archive: {archive_id}")
 
             else:
@@ -960,6 +961,7 @@ async def handle_finished_stream_extraction_job(
         extract_json_config: ExtractJsonJobConfig = job.get_config()
         waiting_jobs = active_archive_json_extractions.pop(extract_json_config.archive_id)
 
+    waiting_jobs.remove(job_id)
     for waiting_job in waiting_jobs:
         logger.info(f"Setting status to {new_job_status.to_str()} for waiting jobs: {waiting_job}.")
         set_job_or_task_status(
