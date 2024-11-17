@@ -99,7 +99,7 @@ public:
     }
 
     /**
-     * @return the Id the next log event should receive when appended to the archive.
+     * @return The Id that will be assigned to the next log event when appended to the archive.
      */
     int64_t get_next_log_event_id() const { return m_next_log_event_id; }
 
