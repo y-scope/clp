@@ -96,7 +96,7 @@ private:
     void split_archive();
 
     /**
-     * Add an internal field to the MPT and get its Id.
+     * Adds an internal field to the MPT and get its Id.
      *
      * Note: this method should be called before parsing a record so that internal fields come first
      * in each table. This isn't strictly necessary, but it is a nice convention.
