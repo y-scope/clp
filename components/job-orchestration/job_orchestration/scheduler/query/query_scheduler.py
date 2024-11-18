@@ -122,7 +122,7 @@ class IrExtractionHandle(StreamExtractionHandle):
         return self.__file_split_id in active_file_split_ir_extractions
 
     def is_stream_extracted(self, results_cache_uri: str, stream_collection_name: str) -> bool:
-        return document_exist(
+        return document_exists(
             results_cache_uri, stream_collection_name, "file_split_id", self.__file_split_id
         )
 
@@ -159,7 +159,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
         return self._archive_id in active_archive_json_extractions
 
     def is_stream_extracted(self, results_cache_uri: str, stream_collection_name: str) -> bool:
-        return document_exist(
+        return document_exists(
             results_cache_uri, stream_collection_name, "orig_file_id", self._archive_id
         )
 
@@ -179,7 +179,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
         )
 
 
-def document_exist(mongodb_uri, collection_name, field, value):
+def document_exists(mongodb_uri, collection_name, field, value):
     with pymongo.MongoClient(mongodb_uri) as mongo_client:
         collection = mongo_client.get_default_database()[collection_name]
         return 0 != collection.count_documents({field: value})
@@ -448,7 +448,7 @@ def get_archive_and_file_split_ids(
     return results
 
 
-@exception_default_value(default=[])
+@exception_default_value(default=False)
 def archive_exists(
     db_conn,
     archive_id: str,
