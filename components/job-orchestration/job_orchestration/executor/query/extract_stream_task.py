@@ -26,13 +26,13 @@ def make_command(
     archives_dir: Path,
     archive_id: str,
     stream_output_dir: Path,
-    job_config_obj: dict,
+    job_config: dict,
     results_cache_uri: str,
-    stream_collection: str,
+    stream_collection_name: str,
 ) -> Optional[List[str]]:
     if StorageEngine.CLP == storage_engine:
-        logger.info("Start IR extraction")
-        extract_ir_config = ExtractIrJobConfig.parse_obj(job_config_obj)
+        logger.info("Starting IR extraction")
+        extract_ir_config = ExtractIrJobConfig.parse_obj(job_config)
         if not extract_ir_config.file_split_id:
             logger.error("file_split_id not supplied")
             return None
@@ -43,14 +43,14 @@ def make_command(
             extract_ir_config.file_split_id,
             str(stream_output_dir),
             results_cache_uri,
-            stream_collection,
+            stream_collection_name,
         ]
         if extract_ir_config.target_uncompressed_size is not None:
             command.append("--target-size")
             command.append(str(extract_ir_config.target_uncompressed_size))
     elif StorageEngine.CLP_S == storage_engine:
-        logger.info("Start Json extraction")
-        extract_json_config = ExtractJsonJobConfig.parse_obj(job_config_obj)
+        logger.info("Starting JSON extraction")
+        extract_json_config = ExtractJsonJobConfig.parse_obj(job_config)
         command = [
             str(clp_home / "bin" / "clp-s"),
             "x",
@@ -62,7 +62,7 @@ def make_command(
             "--mongodb-uri",
             results_cache_uri,
             "--mongodb-collection",
-            stream_collection,
+            stream_collection_name,
         ]
         if extract_json_config.target_chunk_size is not None:
             command.append("--ordered-chunk-size")
@@ -79,7 +79,7 @@ def extract_stream(
     self: Task,
     job_id: str,
     task_id: int,
-    job_config_obj: dict,
+    job_config: dict,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
@@ -102,7 +102,7 @@ def extract_stream(
     archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
     clp_storage_engine = os.getenv("CLP_STORAGE_ENGINE")
     stream_output_dir = Path(os.getenv("CLP_STREAM_OUTPUT_DIR"))
-    stream_collection = os.getenv("CLP_STREAM_COLLECTION")
+    stream_collection_name = os.getenv("CLP_STREAM_COLLECTION_NAME")
 
     task_command = make_command(
         storage_engine=clp_storage_engine,
@@ -110,9 +110,9 @@ def extract_stream(
         archives_dir=archive_directory,
         archive_id=archive_id,
         stream_output_dir=stream_output_dir,
-        job_config_obj=job_config_obj,
+        job_config=job_config,
         results_cache_uri=results_cache_uri,
-        stream_collection=stream_collection,
+        stream_collection_name=stream_collection_name,
     )
     if not task_command:
         return report_command_creation_failure(

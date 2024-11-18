@@ -85,7 +85,7 @@ class DbManager {
     /**
      * @type {import("mongodb").Collection}
      */
-    #StreamFilesCollection;
+    #streamFilesCollection;
 
     #queryJobsTableName;
 
@@ -142,7 +142,7 @@ class DbManager {
      * @return {Promise<object>} A promise that resolves to the extracted stream's metadata.
      */
     async getExtractedStreamFileMetadata (targetId, logEventIdx) {
-        return await this.#StreamFilesCollection.findOne({
+        return await this.#streamFilesCollection.findOne({
             orig_file_id: targetId,
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
@@ -191,8 +191,8 @@ class DbManager {
             if (err) {
                 throw err;
             }
-            this.#StreamFilesCollection =
-                this.#fastify.mongo.db.collection(config.StreamFilesCollectionName);
+            this.#streamFilesCollection =
+                this.#fastify.mongo.db.collection(config.streamFilesCollectionName);
         });
     }
 

@@ -120,7 +120,7 @@ def handle_extract_stream_cmd(
 
     command = parsed_args.command
 
-    extraction_config: QueryJobConfig
+    job_config: QueryJobConfig
     job_type: QueryJobType
     if EXTRACT_IR_CMD == command:
         job_type = QueryJobType.EXTRACT_IR
@@ -129,22 +129,22 @@ def handle_extract_stream_cmd(
             orig_file_id = parsed_args.orig_file_id
         else:
             orig_file_path = parsed_args.orig_file_path
-            orig_file_id = get_orig_file_id(clp_config.database, parsed_args.orig_file_path)
+            orig_file_id = get_orig_file_id(clp_config.database, orig_file_path)
             if orig_file_id is None:
-                logger.error(f"Cannot find orig_file_id corresponding to {orig_file_path}")
+                logger.error(f"Cannot find orig_file_id corresponding to '{orig_file_path}'.")
                 return -1
-        extraction_config = ExtractIrJobConfig(
+        job_config = ExtractIrJobConfig(
             orig_file_id=orig_file_id,
             msg_ix=parsed_args.msg_ix,
             target_uncompressed_size=parsed_args.target_uncompressed_size,
         )
     elif EXTRACT_JSON_CMD == command:
         job_type = QueryJobType.EXTRACT_JSON
-        extraction_config = ExtractJsonJobConfig(
+        job_config = ExtractJsonJobConfig(
             archive_id=parsed_args.archive_id, target_chunk_size=parsed_args.target_chunk_size
         )
     else:
-        logger.exception(f"Unsupported stream extraction command: {command}")
+        logger.error(f"Unsupported stream extraction command: {command}")
         return -1
 
     try:
@@ -153,11 +153,11 @@ def handle_extract_stream_cmd(
                 submit_and_monitor_extraction_job_in_db,
                 clp_config.database,
                 job_type,
-                extraction_config,
+                job_config,
             )
         )
     except asyncio.CancelledError:
-        logger.error("stream extraction cancelled.")
+        logger.error("Stream extraction cancelled.")
         return -1
 
 
@@ -295,7 +295,7 @@ def main(argv):
     group.add_argument("--orig-file-id", type=str, help="Original file's ID.")
     group.add_argument("--orig-file-path", type=str, help="Original file's path.")
 
-    # Json extraction command parser
+    # JSON extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
     json_extraction_parser.add_argument(
@@ -307,7 +307,7 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif command in [EXTRACT_IR_CMD, EXTRACT_JSON_CMD]:
+    elif command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
     else:
         logger.exception(f"Unexpected command: {command}")

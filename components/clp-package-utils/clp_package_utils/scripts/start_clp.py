@@ -663,7 +663,7 @@ def start_query_worker(
     query_worker_mount = [mounts.stream_output_dir]
     query_worker_env = {
         "CLP_STREAM_OUTPUT_DIR": container_clp_config.stream_output.directory,
-        "CLP_STREAM_COLLECTION": clp_config.results_cache.stream_collection_name,
+        "CLP_STREAM_COLLECTION_NAME": clp_config.results_cache.stream_collection_name,
     }
 
     generic_start_worker(
