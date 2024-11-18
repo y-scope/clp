@@ -7,9 +7,9 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"
 #
-package:
-  storage_engine: "clp"
-
+#package:
+#  storage_engine: "clp"
+#
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
@@ -55,11 +55,11 @@ package:
 #query_worker:
 #  logging_level: "INFO"
 #
-webui:
-  host: "localhost"
-  port: 5000
-  logging_level: "INFO"
-
+#webui:
+#  host: "localhost"
+#  port: 4000
+#  logging_level: "INFO"
+#
 #log_viewer_webui:
 #  host: "localhost"
 #  port: 3000
