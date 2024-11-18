@@ -11,6 +11,7 @@ dnf install -y \
     gcc-c++ \
     git \
     java-11-openjdk \
+    jq \
     libarchive-devel \
     libcurl-devel \
     libzstd-devel \
