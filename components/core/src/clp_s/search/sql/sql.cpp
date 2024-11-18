@@ -3,7 +3,6 @@
 #include <memory>
 
 #include <antlr4-runtime.h>
-#include <spdlog/spdlog.h>
 
 #include "../antlr_common/ErrorListener.hpp"
 #include "../EmptyExpr.hpp"
@@ -45,11 +44,9 @@ auto parse_sql_expression(std::istream& in) -> std::shared_ptr<Expression> {
     SqlParser::StartContext* tree{parser.start()};
 
     if (lexer_error_listener.error()) {
-        SPDLOG_ERROR("Lexer error: {}", lexer_error_listener.message());
         return nullptr;
     }
     if (parser_error_listener.error()) {
-        SPDLOG_ERROR("Parser error: {}", parser_error_listener.message());
         return nullptr;
     }
 
