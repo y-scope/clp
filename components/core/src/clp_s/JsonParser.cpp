@@ -21,7 +21,12 @@ JsonParser::JsonParser(JsonParserOption const& option)
     }
 
     if (false == m_timestamp_key.empty()) {
-        clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column);
+        if (false
+            == clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column))
+        {
+            SPDLOG_ERROR("Can not parse invalid timestamp key: \"{}\"", m_timestamp_key);
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
     }
 
     for (auto& file_path : option.file_paths) {

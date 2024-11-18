@@ -194,7 +194,7 @@ else()
 endif()
 
 # Find and setup msgpack
-find_package(msgpack-cxx 6.0.0 REQUIRED)
+find_package(msgpack-cxx 7.0.0 REQUIRED)
 if(msgpack-cxx_FOUND)
     message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
 else()
