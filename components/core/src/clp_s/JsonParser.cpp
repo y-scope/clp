@@ -15,7 +15,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
-          m_structurize_arrays(option.structurize_arrays) {
+          m_structurize_arrays(option.structurize_arrays),
+          m_record_log_order(option.record_log_order) {
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
     }
@@ -447,6 +448,16 @@ bool JsonParser::parse() {
         m_num_messages = 0;
         size_t bytes_consumed_up_to_prev_archive = 0;
         size_t bytes_consumed_up_to_prev_record = 0;
+
+        int32_t log_event_idx_node_id{};
+        auto add_log_event_idx_node = [&]() {
+            if (m_record_log_order) {
+                log_event_idx_node_id
+                        = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
+            }
+        };
+        add_log_event_idx_node();
+
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
@@ -468,12 +479,13 @@ bool JsonParser::parse() {
             }
 
             // Add log_event_idx field to metadata for record
-            auto log_event_idx = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
-            m_current_parsed_message.add_value(
-                    log_event_idx,
-                    m_archive_writer->get_next_log_event_id()
-            );
-            m_current_schema.insert_ordered(log_event_idx);
+            if (m_record_log_order) {
+                m_current_parsed_message.add_value(
+                        log_event_idx_node_id,
+                        m_archive_writer->get_next_log_event_id()
+                );
+                m_current_schema.insert_ordered(log_event_idx_node_id);
+            }
 
             // Some errors from simdjson are latent until trying to access invalid JSON fields.
             // Instead of checking for an error every time we access a JSON field in parse_line we
@@ -504,6 +516,7 @@ bool JsonParser::parse() {
                 );
                 bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
                 split_archive();
+                add_log_event_idx_node();
             }
 
             m_current_parsed_message.clear();

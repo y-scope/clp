@@ -31,12 +31,13 @@ struct JsonParserOption {
     std::vector<std::string> file_paths;
     std::string timestamp_key;
     std::string archives_dir;
-    size_t target_encoded_size;
-    size_t max_document_size;
-    size_t min_table_size;
-    int compression_level;
-    bool print_archive_stats;
-    bool structurize_arrays;
+    size_t target_encoded_size{};
+    size_t max_document_size{};
+    size_t min_table_size{};
+    int compression_level{};
+    bool print_archive_stats{};
+    bool structurize_arrays{};
+    bool record_log_order{true};
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
@@ -118,6 +119,7 @@ private:
     size_t m_target_encoded_size;
     size_t m_max_document_size;
     bool m_structurize_arrays{false};
+    bool m_record_log_order{true};
 };
 }  // namespace clp_s
 

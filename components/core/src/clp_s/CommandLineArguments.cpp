@@ -189,11 +189,15 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "print-archive-stats",
                     po::bool_switch(&m_print_archive_stats),
-                    "Print statistics (json) about the archive after it's compressed."
+                    "Print statistics (json) about the archixve after it's compressed."
             )(
                     "structurize-arrays",
                     po::bool_switch(&m_structurize_arrays),
                     "Structurize arrays instead of compressing them as clp strings."
+            )(
+                    "disable-log-order",
+                    po::bool_switch(&m_no_record_log_order),
+                    "Do not record log order at ingestion time."
             );
             // clang-format on
 

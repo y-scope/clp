@@ -127,7 +127,7 @@ public:
     }
 
     /**
-     * @return the Id of the root of the Object sub-tree.
+     * @return the Id of the root of the Object sub-tree that records the structure of JSON data.
      * @return -1 if the Object sub-tree does not exist.
      */
     int32_t get_object_subtree_node_id() const { return m_object_subtree_id; }
