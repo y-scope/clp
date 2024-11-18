@@ -26,4 +26,4 @@ add_library(
 )
 target_compile_features(kql PRIVATE cxx_std_20)
 target_include_directories(kql PRIVATE ${ANTLR_KqlParser_OUTPUT_DIR})
-target_link_libraries(kql PRIVATE antlr4_static spdlog::spdlog)
+target_link_libraries(kql PRIVATE antlr4_static)
