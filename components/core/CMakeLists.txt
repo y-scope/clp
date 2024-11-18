@@ -241,6 +241,42 @@ add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
 set(SOURCE_FILES_clp_s_unitTest
+    src/clp_s/ArchiveReader.cpp
+    src/clp_s/ArchiveReader.hpp
+    src/clp_s/ArchiveWriter.cpp
+    src/clp_s/ArchiveWriter.hpp
+    src/clp_s/ColumnReader.cpp
+    src/clp_s/ColumnReader.hpp
+    src/clp_s/ColumnWriter.cpp
+    src/clp_s/ColumnWriter.hpp
+    src/clp_s/DictionaryEntry.cpp
+    src/clp_s/DictionaryEntry.hpp
+    src/clp_s/DictionaryWriter.cpp
+    src/clp_s/DictionaryWriter.hpp
+    src/clp_s/FileReader.cpp
+    src/clp_s/FileReader.hpp
+    src/clp_s/FileWriter.cpp
+    src/clp_s/FileWriter.hpp
+    src/clp_s/JsonConstructor.cpp
+    src/clp_s/JsonConstructor.hpp
+    src/clp_s/JsonFileIterator.cpp
+    src/clp_s/JsonFileIterator.hpp
+    src/clp_s/JsonParser.cpp
+    src/clp_s/JsonParser.hpp
+    src/clp_s/PackedStreamReader.cpp
+    src/clp_s/PackedStreamReader.hpp
+    src/clp_s/ReaderUtils.cpp
+    src/clp_s/ReaderUtils.hpp
+    src/clp_s/Schema.cpp
+    src/clp_s/Schema.hpp
+    src/clp_s/SchemaMap.cpp
+    src/clp_s/SchemaMap.hpp
+    src/clp_s/SchemaReader.cpp
+    src/clp_s/SchemaReader.hpp
+    src/clp_s/SchemaTree.cpp
+    src/clp_s/SchemaTree.hpp
+    src/clp_s/SchemaWriter.cpp
+    src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AndExpr.cpp
     src/clp_s/search/AndExpr.hpp
     src/clp_s/search/BooleanLiteral.cpp
@@ -273,11 +309,24 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/StringLiteral.hpp
     src/clp_s/search/Transformation.hpp
     src/clp_s/search/Value.hpp
-    src/clp_s/SchemaTree.hpp
+    src/clp_s/TimestampDictionaryReader.cpp
+    src/clp_s/TimestampDictionaryReader.hpp
+    src/clp_s/TimestampDictionaryWriter.cpp
+    src/clp_s/TimestampDictionaryWriter.hpp
+    src/clp_s/TimestampEntry.cpp
+    src/clp_s/TimestampEntry.hpp
     src/clp_s/TimestampPattern.cpp
     src/clp_s/TimestampPattern.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
+    src/clp_s/VariableDecoder.cpp
+    src/clp_s/VariableDecoder.hpp
+    src/clp_s/VariableEncoder.cpp
+    src/clp_s/VariableEncoder.hpp
+    src/clp_s/ZstdCompressor.cpp
+    src/clp_s/ZstdCompressor.hpp
+    src/clp_s/ZstdDecompressor.cpp
+    src/clp_s/ZstdDecompressor.hpp
 )
 
 set(SOURCE_FILES_unitTest
@@ -501,6 +550,7 @@ set(SOURCE_FILES_unitTest
         tests/test-BufferedFileReader.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-end_to_end.cpp
         tests/test-ffi_IrUnitHandlerInterface.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
@@ -542,6 +592,8 @@ target_link_libraries(unitTest
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
+        ${MONGOCXX_TARGET}
+        simdjson
         spdlog::spdlog
         OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
