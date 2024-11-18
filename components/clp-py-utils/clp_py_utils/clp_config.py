@@ -270,7 +270,7 @@ class ResultsCache(BaseModel):
     host: str = "localhost"
     port: int = 27017
     db_name: str = "clp-query-results"
-    ir_collection_name: str = "ir-files"
+    stream_collection_name: str = "stream-files"
 
     @validator("host")
     def validate_host(cls, field):
@@ -284,10 +284,12 @@ class ResultsCache(BaseModel):
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
         return field
 
-    @validator("ir_collection_name")
-    def validate_ir_collection_name(cls, field):
+    @validator("stream_collection_name")
+    def validate_stream_collection_name(cls, field):
         if "" == field:
-            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.ir_collection_name cannot be empty.")
+            raise ValueError(
+                f"{RESULTS_CACHE_COMPONENT_NAME}.stream_collection_name cannot be empty."
+            )
         return field
 
     def get_uri(self):
@@ -343,8 +345,8 @@ class ArchiveOutput(BaseModel):
         return d
 
 
-class IrOutput(BaseModel):
-    directory: pathlib.Path = pathlib.Path("var") / "data" / "ir"
+class StreamOutput(BaseModel):
+    directory: pathlib.Path = pathlib.Path("var") / "data" / "stream"
     target_uncompressed_size: int = 128 * 1024 * 1024
 
     @validator("directory")
@@ -425,7 +427,7 @@ class CLPConfig(BaseModel):
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
-    ir_output: IrOutput = IrOutput()
+    stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
 
@@ -435,7 +437,7 @@ class CLPConfig(BaseModel):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.make_config_paths_absolute(clp_home)
-        self.ir_output.make_config_paths_absolute(clp_home)
+        self.stream_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
@@ -455,11 +457,11 @@ class CLPConfig(BaseModel):
         except ValueError as ex:
             raise ValueError(f"archive_output.directory is invalid: {ex}")
 
-    def validate_ir_output_dir(self):
+    def validate_stream_output_dir(self):
         try:
-            validate_path_could_be_dir(self.ir_output.directory)
+            validate_path_could_be_dir(self.stream_output.directory)
         except ValueError as ex:
-            raise ValueError(f"ir_output.directory is invalid: {ex}")
+            raise ValueError(f"stream_output.directory is invalid: {ex}")
 
     def validate_data_dir(self):
         try:
@@ -528,7 +530,7 @@ class CLPConfig(BaseModel):
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
-        d["ir_output"] = self.ir_output.dump_to_primitive_dict()
+        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
         d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)

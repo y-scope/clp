@@ -37,7 +37,7 @@ const app = async ({
             mongoConfig: {
                 database: settings.MongoDbName,
                 host: settings.MongoDbHost,
-                irFilesCollectionName: settings.MongoDbIrFilesCollectionName,
+                streamFilesCollectionName: settings.MongoDbStreamFilesCollectionName,
                 port: settings.MongoDbPort,
             },
         });

@@ -84,7 +84,7 @@ class DbManager {
     /**
      * @type {import("mongodb").Collection}
      */
-    #irFilesCollection;
+    #streamFilesCollection;
 
     #queryJobsTableName;
 
@@ -138,7 +138,7 @@ class DbManager {
      * @return {Promise<object>} A promise that resolves to the extracted IR file's metadata.
      */
     async getExtractedIrFileMetadata (origFileId, logEventIdx) {
-        return await this.#irFilesCollection.findOne({
+        return await this.#streamFilesCollection.findOne({
             orig_file_id: origFileId,
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
@@ -177,7 +177,7 @@ class DbManager {
      * @param {string} config.host
      * @param {number} config.port
      * @param {string} config.database
-     * @param {string} config.irFilesCollectionName
+     * @param {string} config.StreamFilesCollectionName
      */
     #initMongo (config) {
         this.#fastify.register(fastifyMongo, {
@@ -187,8 +187,8 @@ class DbManager {
             if (err) {
                 throw err;
             }
-            this.#irFilesCollection =
-                this.#fastify.mongo.db.collection(config.irFilesCollectionName);
+            this.#streamFilesCollection =
+                this.#fastify.mongo.db.collection(config.streamFilesCollectionName);
         });
     }
 

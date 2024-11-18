@@ -51,7 +51,7 @@ const QueryStatus = () => {
                 setQueryState(QUERY_LOADING_STATES.LOADING);
 
                 const innerLogEventNum = logEventIdx - data.begin_msg_ix + 1;
-                window.location = `/log-viewer/index.html?filePath=/ir/${data.path}` +
+                window.location = `/log-viewer/index.html?filePath=/streams/${data.path}` +
                     `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e) => {

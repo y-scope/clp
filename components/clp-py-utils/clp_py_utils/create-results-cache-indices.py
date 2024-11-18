@@ -18,19 +18,21 @@ logger.addHandler(logging_console_handler)
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Creates results cache indices for CLP.")
     args_parser.add_argument("--uri", required=True, help="URI of the results cache.")
-    args_parser.add_argument("--ir-collection", required=True, help="Collection for IR metadata.")
+    args_parser.add_argument(
+        "--stream-collection", required=True, help="Collection for stream metadata."
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     results_cache_uri = parsed_args.uri
-    ir_collection_name = parsed_args.ir_collection
+    stream_collection_name = parsed_args.stream_collection
 
     try:
         with MongoClient(results_cache_uri) as results_cache_client:
-            ir_collection = results_cache_client.get_default_database()[ir_collection_name]
+            stream_collection = results_cache_client.get_default_database()[stream_collection_name]
 
             file_split_id_index = IndexModel(["file_split_id"])
             orig_file_id_index = IndexModel(["orig_file_id", "begin_msg_ix", "end_msg_ix"])
-            ir_collection.create_indexes([file_split_id_index, orig_file_id_index])
+            stream_collection.create_indexes([file_split_id_index, orig_file_id_index])
     except Exception:
         logger.exception("Failed to create clp results cache indices.")
         return -1
