@@ -14,6 +14,9 @@ import Loading from "./Loading.jsx";
 /* eslint-disable sort-keys */
 let enumQueryType;
 /**
+ * Note: This QUERY_JOB_TYPE is duplicated from server because it is tricky to include server enums
+ * from the client.
+ *
  * Enum of job types, matching the `QueryJobType` class in
  * `job_orchestration.query_scheduler.constants`.
  *
@@ -27,20 +30,19 @@ const QUERY_JOB_TYPE = Object.freeze({
 /* eslint-enable sort-keys */
 
 /**
- * Returns the extract job type based on the given stream type
+ * Returns the extract job type based on the provided stream type.
  *
- * @param {string} streamType
- * @return {number|null}
+ * @param {string} streamType The type of the stream.
+ * @return {number|null} - The corresponding extract job type, or null if the stream type is not
+ * recognized.
  */
 const getExtractJobType = (streamType) => {
-    if ("ir" === streamType) {
-        return QUERY_JOB_TYPE.EXTRACT_IR;
-    }
-    if ("json" === streamType) {
-        return QUERY_JOB_TYPE.EXTRACT_JSON;
-    }
+    const jobTypeMap = {
+        ir: QUERY_JOB_TYPE.EXTRACT_IR,
+        json: QUERY_JOB_TYPE.EXTRACT_JSON,
+    };
 
-    return null;
+    return jobTypeMap[streamType] || null;
 };
 
 /**
@@ -61,10 +63,10 @@ const QueryStatus = () => {
 
         const searchParams = new URLSearchParams(window.location.search);
         const streamType = searchParams.get("type");
-        const targetId = searchParams.get("targetId");
+        const streamId = searchParams.get("streamId");
         const logEventIdx = searchParams.get("logEventIdx");
 
-        if (null === streamType || null === targetId || null === logEventIdx) {
+        if (null === streamType || null === streamId || null === logEventIdx) {
             const error = "Queries parameters are missing from the URL " +
              "parameters.";
 
@@ -76,7 +78,7 @@ const QueryStatus = () => {
 
         const extractJobType = getExtractJobType(streamType);
         if (null === extractJobType) {
-            const error = `Unsupported Target type: ${streamType}`;
+            const error = `Unsupported Stream type: ${streamType}`;
             console.error(error);
             setErrorMsg(error);
 
@@ -85,7 +87,7 @@ const QueryStatus = () => {
 
         submitExtractStreamJob(
             extractJobType,
-            targetId,
+            streamId,
             Number(logEventIdx),
             () => {
                 setQueryState(QUERY_LOADING_STATES.WAITING);

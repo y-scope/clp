@@ -14,11 +14,10 @@ import {QUERY_JOB_TYPE} from "../DbManager.js";
  */
 const routes = async (fastify, options) => {
     fastify.post("/query/extract-stream", async (req, resp) => {
-        const {extractJobType, targetId, logEventIdx} = req.body;
+        const {extractJobType, streamId, logEventIdx} = req.body;
         const sanitizedLogEventIdx = Number(logEventIdx);
-
         let streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
-            targetId,
+            streamId,
             sanitizedLogEventIdx
         );
 
@@ -28,12 +27,12 @@ const routes = async (fastify, options) => {
                 jobConfig = {
                     file_split_id: null,
                     msg_ix: sanitizedLogEventIdx,
-                    orig_file_id: targetId,
+                    orig_file_id: streamId,
                     target_uncompressed_size: EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE,
                 };
             } else if (QUERY_JOB_TYPE.EXTRACT_JSON === extractJobType) {
                 jobConfig = {
-                    archive_id: targetId,
+                    archive_id: streamId,
                     target_chunk_size: EXTRACT_JSON_TARGET_CHUNK_SIZE,
                 };
             } else {
@@ -48,13 +47,13 @@ const routes = async (fastify, options) => {
 
             if (null === extractResult) {
                 const err = new Error("Unable to extract stream with " +
-                    `targetId=${targetId} at timestamp=${sanitizedLogEventIdx}`);
+                    `ID=${streamId} and log_event_index=${sanitizedLogEventIdx}`);
 
                 err.statusCode = 400;
                 throw err;
             }
             streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
-                targetId,
+                streamId,
                 logEventIdx
             );
         }

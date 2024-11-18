@@ -132,18 +132,16 @@ class DbManager {
     }
 
     /**
-     * TODO: Update this comment.
-     * Gets the metadata for a extracted stream from part of an original file or archive, where the
-     * original file or archive has the given ID and the extracted stream contains the given
-     * logEventIdx.
+     * Gets the metadata for the extracted stream that has the given streamId and contains the
+     * given logEventIdx.
      *
-     * @param {string} targetId
+     * @param {string} streamId
      * @param {number} logEventIdx
      * @return {Promise<object>} A promise that resolves to the extracted stream's metadata.
      */
-    async getExtractedStreamFileMetadata (targetId, logEventIdx) {
+    async getExtractedStreamFileMetadata (streamId, logEventIdx) {
         return await this.#streamFilesCollection.findOne({
-            orig_file_id: targetId,
+            orig_file_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
         });
