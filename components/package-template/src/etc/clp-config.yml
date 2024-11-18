@@ -82,7 +82,7 @@
 #  # How much data CLP should try to fit into each segment within an archive
 #  target_segment_size: 268435456  # 256 MB
 #
-## Where CLP IR files should be output
+## Where CLP stream files (e.g., IR streams) should be output
 #stream_output:
 #  directory: "var/data/streams"
 #
