@@ -98,7 +98,7 @@ def search(
     self: Task,
     job_id: str,
     task_id: int,
-    job_config_obj: dict,
+    job_config: dict,
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
@@ -120,7 +120,7 @@ def search(
     clp_home = Path(os.getenv("CLP_HOME"))
     archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
     clp_storage_engine = os.getenv("CLP_STORAGE_ENGINE")
-    search_config = SearchJobConfig.parse_obj(job_config_obj)
+    search_config = SearchJobConfig.parse_obj(job_config)
 
     task_command = make_command(
         storage_engine=clp_storage_engine,

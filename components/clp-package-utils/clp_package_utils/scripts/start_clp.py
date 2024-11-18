@@ -286,7 +286,7 @@ def create_results_cache_indices(
         "python3",
         str(clp_py_utils_dir / "create-results-cache-indices.py"),
         "--uri", container_clp_config.results_cache.get_uri(),
-        "--ir-collection", container_clp_config.results_cache.ir_collection_name,
+        "--stream-collection", container_clp_config.results_cache.stream_collection_name,
     ]
     # fmt: on
 
@@ -660,10 +660,10 @@ def start_query_worker(
     celery_method = "job_orchestration.executor.query"
     celery_route = f"{QueueName.QUERY}"
 
-    query_worker_mount = [mounts.ir_output_dir]
+    query_worker_mount = [mounts.stream_output_dir]
     query_worker_env = {
-        "CLP_IR_OUTPUT_DIR": container_clp_config.ir_output.directory,
-        "CLP_IR_COLLECTION": clp_config.results_cache.ir_collection_name,
+        "CLP_STREAM_OUTPUT_DIR": container_clp_config.stream_output.directory,
+        "CLP_STREAM_COLLECTION_NAME": clp_config.results_cache.stream_collection_name,
     }
 
     generic_start_worker(
@@ -710,7 +710,7 @@ def generic_start_worker(
 
     # Create necessary directories
     clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
-    clp_config.ir_output.directory.mkdir(parents=True, exist_ok=True)
+    clp_config.stream_output.directory.mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
@@ -933,9 +933,9 @@ def start_log_viewer_webui(
         "MongoDbHost": clp_config.results_cache.host,
         "MongoDbPort": clp_config.results_cache.port,
         "MongoDbName": clp_config.results_cache.db_name,
-        "MongoDbIrFilesCollectionName": clp_config.results_cache.ir_collection_name,
+        "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
-        "IrFilesDir": str(container_clp_config.ir_output.directory),
+        "StreamFilesDir": str(container_clp_config.stream_output.directory),
         "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
@@ -961,7 +961,7 @@ def start_log_viewer_webui(
     # fmt: on
     necessary_mounts = [
         mounts.clp_home,
-        mounts.ir_output_dir,
+        mounts.stream_output_dir,
     ]
     for mount in necessary_mounts:
         if mount:
