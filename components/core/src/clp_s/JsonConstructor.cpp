@@ -48,6 +48,12 @@ void JsonConstructor::store() {
     m_archive_reader = std::make_unique<ArchiveReader>();
     m_archive_reader->open(m_option.archives_dir, m_option.archive_id);
     m_archive_reader->read_dictionaries_and_metadata();
+
+    if (m_option.ordered && false == m_archive_reader->has_log_order()) {
+        SPDLOG_WARN("This archive is missing ordering information and can not be decompressed in "
+                    "log order. Falling back to out of order decompression.");
+    }
+
     if (false == m_option.ordered) {
         FileWriter writer;
         writer.open(

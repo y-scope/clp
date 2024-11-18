@@ -138,14 +138,15 @@ void Output::init(
 
     for (auto column_reader : column_readers) {
         auto column_id = column_reader->get_id();
+        if (0 != m_metadata_columns.count(column_id)) {
+            continue;
+        }
+
         if ((0
              != (m_wildcard_type_mask
                  & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
             || m_match.schema_searches_against_column(schema_id, column_id))
         {
-            if (0 != m_metadata_columns.count(column_id)) {
-                continue;
-            }
             ClpStringColumnReader* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
             VariableStringColumnReader* var_reader
                     = dynamic_cast<VariableStringColumnReader*>(column_reader);
