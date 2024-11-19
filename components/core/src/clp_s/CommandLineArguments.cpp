@@ -305,7 +305,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "ordered-chunk-size",
                     po::value<size_t>(&m_ordered_chunk_size)
                             ->default_value(m_ordered_chunk_size),
-                    "Chunk size in bytes to include in each output file when decompressing records "
+                    "Chunk size (B) for each output file when decompressing records "
                     "in log order"
             );
             // clang-format on
