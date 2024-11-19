@@ -101,12 +101,19 @@ TEMPLATE_TEST_CASE(
 
     REQUIRE(std::filesystem::exists("test-end-to-end-out/original"));
 
-    std::system("jq -S -c '.' test-end-to-end-out/original | sort > test-end-to-end_sorted.json");
+    int result = std::system("command -v jq >/dev/null 2>&1");
+    REQUIRE(0 == result);
+    result = std::system(
+            "jq -S -c '.' test-end-to-end-out/original | sort > test-end-to-end_sorted.json"
+    );
+    REQUIRE(0 == result);
 
     REQUIRE(false == std::filesystem::is_empty("test-end-to-end_sorted.json"));
 
     std::string const command = "diff -u test-end-to-end_sorted.json " + get_test_input_local_path()
                                 + " > diff_out.txt";
-    std::system(command.c_str());
+    result = std::system(command.c_str());
+    REQUIRE((0 == result || 1 == result));
+
     REQUIRE(std::filesystem::is_empty("diff_out.txt"));
 }
