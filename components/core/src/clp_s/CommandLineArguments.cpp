@@ -371,7 +371,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (0 != m_target_ordered_chunk_size && false == m_ordered_decompression) {
-                throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
+                throw std::invalid_argument(
+                        "target-ordered-chunk-size must be used with ordered argument"
                 );
             }
 
