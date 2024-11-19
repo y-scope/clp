@@ -3,7 +3,8 @@ import {QUERY_JOB_TYPE} from "../DbManager.js";
 
 // eslint-disable-next-line no-magic-numbers
 const EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE = 128 * 1024 * 1024;
-const EXTRACT_JSON_TARGET_CHUNK_SIZE = 100000;
+// eslint-disable-next-line no-magic-numbers
+const EXTRACT_JSON_TARGET_CHUNK_SIZE = 100 * 1000;
 
 /**
  * Creates query routes.
