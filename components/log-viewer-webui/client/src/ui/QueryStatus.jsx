@@ -30,20 +30,12 @@ const QUERY_JOB_TYPE = Object.freeze({
 /* eslint-enable sort-keys */
 
 /**
- * Returns the extract job type based on the provided stream type.
- *
- * @param {string} streamType
- * @return {number|null} - The corresponding extract job type, or null if the stream type is not
- * recognized.
+ * Mapping between job type enums and stream type
  */
-const getExtractJobType = (streamType) => {
-    const jobTypeMap = {
-        ir: QUERY_JOB_TYPE.EXTRACT_IR,
-        json: QUERY_JOB_TYPE.EXTRACT_JSON,
-    };
-
-    return jobTypeMap[streamType] || null;
-};
+const EXTRACT_JOB_TYPE = Object.freeze({
+    ir: QUERY_JOB_TYPE.EXTRACT_IR,
+    json: QUERY_JOB_TYPE.EXTRACT_JSON,
+});
 
 /**
  * Submits queries and renders the query states.
@@ -74,8 +66,8 @@ const QueryStatus = () => {
             return;
         }
 
-        const extractJobType = getExtractJobType(streamType);
-        if (null === extractJobType) {
+        const extractJobType = EXTRACT_JOB_TYPE[streamType];
+        if ("undefined" === typeof extractJobType) {
             const error = `Unsupported Stream type: ${streamType}`;
             console.error(error);
             setErrorMsg(error);
