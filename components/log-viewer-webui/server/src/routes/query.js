@@ -47,7 +47,7 @@ const routes = async (fastify, options) => {
 
             if (null === extractResult) {
                 const err = new Error("Unable to extract stream with " +
-                    `ID=${streamId} and log_event_index=${sanitizedLogEventIdx}`);
+                    `streamId=${streamId} at logEventIdx=${sanitizedLogEventIdx}`);
 
                 err.statusCode = 400;
                 throw err;

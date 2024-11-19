@@ -11,11 +11,11 @@ import {QUERY_LOADING_STATES} from "../typings/query.js";
 import Loading from "./Loading.jsx";
 
 
-/* eslint-disable sort-keys */
 let enumQueryType;
+/* eslint-disable sort-keys */
 /**
- * Note: This QUERY_JOB_TYPE is duplicated from server because it is tricky to include server enums
- * from the client.
+ * Note: This enum is duplicated from server, as it is non-trivial to include server enums from the
+ * client.
  *
  * Enum of job types, matching the `QueryJobType` class in
  * `job_orchestration.query_scheduler.constants`.
@@ -32,7 +32,7 @@ const QUERY_JOB_TYPE = Object.freeze({
 /**
  * Returns the extract job type based on the provided stream type.
  *
- * @param {string} streamType The type of the stream.
+ * @param {string} streamType
  * @return {number|null} - The corresponding extract job type, or null if the stream type is not
  * recognized.
  */
