@@ -53,8 +53,8 @@ def handle_file_deletion(
 
     database_config = clp_config.database
     archives_dir = clp_config.archive_output.directory
-    # Note, the error message doesn't print value of archives_dir because it is mounted path.
-    # It could be confusing for user since the path anyway will not exist in their file system.
+    # Note, the error message doesn't output the value of archives_dir because it is a mounted
+    # path. It could be confusing for user because the path will not exist in their file system.
     if not archives_dir.exists():
         logger.error(f"archive directory doesn't exist. abort deletion")
         return -1
@@ -78,7 +78,7 @@ def handle_file_deletion(
             results = db_cursor.fetchall()
 
             if 0 == len(results):
-                logger.warning("No archive meets the deletion condition.")
+                logger.warning("No archive falls into the specified time range, abort deletion")
                 return 0
 
             archive_ids = [result["id"] for result in results]
@@ -100,7 +100,7 @@ def handle_file_deletion(
         logger.info(f"Deleting archive {archive_id} from the storage")
         archive_path = archives_dir / archive_id
         if not archive_path.is_dir():
-            logger.warning(f"Archive {archive_id} is not a directory, skipping deletion")
+            logger.warning(f"Archive {archive_id} does not resolve to a directory, skip deletion")
             continue
         shutil.rmtree(archive_path)
 
@@ -112,7 +112,9 @@ def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-    args_parser = argparse.ArgumentParser(description="Delete out-of-dated archive.")
+    args_parser = argparse.ArgumentParser(
+        description="Delete archives that fall into the specified time range."
+    )
     args_parser.add_argument(
         "--config",
         "-c",
