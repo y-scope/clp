@@ -6,6 +6,57 @@ const EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE = 128 * 1024 * 1024;
 // eslint-disable-next-line no-magic-numbers
 const EXTRACT_JSON_TARGET_CHUNK_SIZE = 100 * 1000;
 
+
+/**
+ * Submits a stream extraction job with the given parameters and waits for it.
+ *
+ * @param {import("fastify").FastifyInstance | {dbManager: DbManager}} fastify
+ * @param {QUERY_JOB_TYPE} extractJobType
+ * @param {string} streamId
+ * @param {int} sanitizedLogEventIdx
+ */
+const submitAndWaitForExtractStreamJob = async (
+    fastify,
+    extractJobType,
+    streamId,
+    sanitizedLogEventIdx
+) => {
+    let jobConfig;
+    if (QUERY_JOB_TYPE.EXTRACT_IR === extractJobType) {
+        jobConfig = {
+            file_split_id: null,
+            msg_ix: sanitizedLogEventIdx,
+            orig_file_id: streamId,
+            target_uncompressed_size: EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE,
+        };
+    }
+    if (QUERY_JOB_TYPE.EXTRACT_JSON === extractJobType) {
+        jobConfig = {
+            archive_id: streamId,
+            target_chunk_size: EXTRACT_JSON_TARGET_CHUNK_SIZE,
+        };
+    }
+
+    if (null === jobConfig) {
+        const err = new Error(`Unsupported Job type: ${extractJobType}`);
+        err.statusCode = 400;
+        throw err;
+    }
+
+    const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob(
+        jobConfig,
+        extractJobType
+    );
+
+    if (null === extractResult) {
+        const err = new Error("Unable to extract stream with " +
+            `streamId=${streamId} at logEventIdx=${sanitizedLogEventIdx}`);
+
+        err.statusCode = 400;
+        throw err;
+    }
+};
+
 /**
  * Creates query routes.
  *
@@ -23,40 +74,19 @@ const routes = async (fastify, options) => {
         );
 
         if (null === streamMetadata) {
-            let jobConfig;
-            if (QUERY_JOB_TYPE.EXTRACT_IR === extractJobType) {
-                jobConfig = {
-                    file_split_id: null,
-                    msg_ix: sanitizedLogEventIdx,
-                    orig_file_id: streamId,
-                    target_uncompressed_size: EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE,
-                };
-            } else if (QUERY_JOB_TYPE.EXTRACT_JSON === extractJobType) {
-                jobConfig = {
-                    archive_id: streamId,
-                    target_chunk_size: EXTRACT_JSON_TARGET_CHUNK_SIZE,
-                };
-            } else {
-                const err = new Error(`Unsupported Job type: ${extractJobType}`);
-                err.statusCode = 400;
-                throw err;
-            }
-            const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob(
-                jobConfig,
-                extractJobType
+            await submitAndWaitForExtractStreamJob(fastify, extractJobType, streamId, logEventIdx);
+            streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
+                streamId,
+                logEventIdx
             );
 
-            if (null === extractResult) {
-                const err = new Error("Unable to extract stream with " +
+            if (null === streamMetadata) {
+                const err = new Error("Unable to find the metadata of extracted stream with " +
                     `streamId=${streamId} at logEventIdx=${sanitizedLogEventIdx}`);
 
                 err.statusCode = 400;
                 throw err;
             }
-            streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
-                streamId,
-                logEventIdx
-            );
         }
 
         return streamMetadata;
