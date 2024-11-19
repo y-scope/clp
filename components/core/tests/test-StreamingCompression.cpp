@@ -1,11 +1,18 @@
+#include <array>
 #include <cstring>
+#include <memory>
 #include <string>
+#include <vector>
 
-#include <boost/filesystem.hpp>
+#include <boost/filesystem/operations.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <zstd.h>
 
+#include "../src/clp/ErrorCode.hpp"
+#include "../src/clp/FileWriter.hpp"
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
+#include "../src/clp/streaming_compression/Compressor.hpp"
+#include "../src/clp/streaming_compression/Decompressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Decompressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
@@ -13,218 +20,83 @@
 
 using clp::ErrorCode_Success;
 using clp::FileWriter;
+using clp::streaming_compression::Compressor;
+using clp::streaming_compression::Decompressor;
+
+namespace {
+constexpr size_t cUncompressedDataSize{128L * 1024 * 1024};  // 128MB
+constexpr auto cCompressionChunkSizes = std::to_array<size_t>(
+        {cUncompressedDataSize / 100,
+         cUncompressedDataSize / 50,
+         cUncompressedDataSize / 25,
+         cUncompressedDataSize / 10,
+         cUncompressedDataSize / 5,
+         cUncompressedDataSize / 2,
+         cUncompressedDataSize}
+);
+constexpr size_t cUncompressedDataPatternPeriod = 26;  // lower-case alphabet
+}  // namespace
 
 TEST_CASE("StreamingCompression", "[StreamingCompression]") {
-    // Initialize data to test compression and decompression
-    size_t uncompressed_data_size = 128L * 1024 * 1024;  // 128MB
-    char* uncompressed_data = new char[uncompressed_data_size];
-    for (size_t i = 0; i < uncompressed_data_size; ++i) {
-        uncompressed_data[i] = (char)('a' + (i % 26));
+    std::string const compressed_file_path{"test_streaming_compressed_file.bin"};
+    std::vector<size_t> compression_chunk_sizes{
+            cCompressionChunkSizes.begin(),
+            cCompressionChunkSizes.end()
+    };
+    std::unique_ptr<Compressor> compressor{};
+    std::unique_ptr<Decompressor> decompressor{};
+
+    SECTION("Initiate zstd single phase compression") {
+        compression_chunk_sizes.insert(compression_chunk_sizes.begin(), ZSTD_CStreamInSize());
+        compressor = std::make_unique<clp::streaming_compression::zstd::Compressor>();
+        decompressor = std::make_unique<clp::streaming_compression::zstd::Decompressor>();
     }
 
-    // Create output buffer
-    char* decompressed_data = new char[uncompressed_data_size];
-
-    SECTION("zstd single phase compression") {
-        // Clear output buffer
-        memset(decompressed_data, 0, uncompressed_data_size);
-        std::string compressed_file_path = "compressed_file.zstd.bin.1";
-
-        // Compress
-        FileWriter file_writer;
-        file_writer.open(compressed_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
-        clp::streaming_compression::zstd::Compressor compressor;
-        compressor.open(file_writer);
-        compressor.write(uncompressed_data, ZSTD_CStreamInSize());
-        compressor.write(uncompressed_data, uncompressed_data_size / 100);
-        compressor.write(uncompressed_data, uncompressed_data_size / 50);
-        compressor.write(uncompressed_data, uncompressed_data_size / 25);
-        compressor.write(uncompressed_data, uncompressed_data_size / 10);
-        compressor.write(uncompressed_data, uncompressed_data_size / 5);
-        compressor.write(uncompressed_data, uncompressed_data_size / 2);
-        compressor.write(uncompressed_data, uncompressed_data_size);
-        compressor.close();
-        file_writer.close();
-
-        // Decompress
-        clp::streaming_compression::zstd::Decompressor decompressor;
-        REQUIRE(ErrorCode_Success == decompressor.open(compressed_file_path));
-        size_t uncompressed_bytes = 0;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        ZSTD_CStreamInSize()
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, ZSTD_CStreamInSize()) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += ZSTD_CStreamInSize();
-
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 100
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 100) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 100;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 50
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 50) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 50;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 25
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 25) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 25;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 10
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 10) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 10;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 5
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 5) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 5;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 2
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 2) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 2;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size;
-
-        // Cleanup
-        boost::filesystem::remove(compressed_file_path);
+    SECTION("Initiate passthrough compression") {
+        compressor = std::make_unique<clp::streaming_compression::passthrough::Compressor>();
+        decompressor = std::make_unique<clp::streaming_compression::passthrough::Decompressor>();
     }
 
-    SECTION("passthrough compression") {
-        // Clear output buffer
-        memset(decompressed_data, 0, uncompressed_data_size);
-        std::string compressed_file_path = "compressed_file.passthrough.bin";
+    // Initialize buffers
+    std::vector<char> uncompressed_buffer{};
+    uncompressed_buffer.reserve(cUncompressedDataSize);
+    for (size_t i{0}; i < cUncompressedDataSize; ++i) {
+        uncompressed_buffer.push_back((char)('a' + (i % cUncompressedDataPatternPeriod)));
+    }
 
-        // Compress
-        FileWriter file_writer;
-        file_writer.open(compressed_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
-        clp::streaming_compression::passthrough::Compressor compressor;
-        compressor.open(file_writer);
-        compressor.write(uncompressed_data, uncompressed_data_size / 100);
-        compressor.write(uncompressed_data, uncompressed_data_size / 50);
-        compressor.write(uncompressed_data, uncompressed_data_size / 25);
-        compressor.write(uncompressed_data, uncompressed_data_size / 10);
-        compressor.write(uncompressed_data, uncompressed_data_size / 5);
-        compressor.write(uncompressed_data, uncompressed_data_size / 2);
-        compressor.write(uncompressed_data, uncompressed_data_size);
-        compressor.close();
-        file_writer.close();
+    std::vector<char> decompressed_buffer{};
+    decompressed_buffer.reserve(cUncompressedDataSize);
 
-        // Decompress
-        // Memory map compressed file
-        clp::ReadOnlyMemoryMappedFile const memory_mapped_compressed_file{compressed_file_path};
-        clp::streaming_compression::passthrough::Decompressor decompressor;
-        auto const compressed_file_view{memory_mapped_compressed_file.get_view()};
-        decompressor.open(compressed_file_view.data(), compressed_file_view.size());
+    // Compress
+    FileWriter file_writer;
+    file_writer.open(compressed_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
+    compressor->open(file_writer);
+    for (auto const chunk_size : compression_chunk_sizes) {
+        compressor->write(uncompressed_buffer.data(), chunk_size);
+    }
+    compressor->close();
+    file_writer.close();
 
-        size_t uncompressed_bytes = 0;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 100
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 100) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 100;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 50
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 50) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 50;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 25
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 25) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 25;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 10
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 10) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 10;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 5
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 5) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 5;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size / 2
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size / 2) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size / 2;
-        REQUIRE(ErrorCode_Success
-                == decompressor.get_decompressed_stream_region(
-                        uncompressed_bytes,
-                        decompressed_data,
-                        uncompressed_data_size
-                ));
-        REQUIRE(memcmp(uncompressed_data, decompressed_data, uncompressed_data_size) == 0);
-        memset(decompressed_data, 0, uncompressed_data_size);
-        uncompressed_bytes += uncompressed_data_size;
+    // Decompress and compare
+    clp::ReadOnlyMemoryMappedFile const memory_mapped_compressed_file{compressed_file_path};
+    auto const compressed_file_view{memory_mapped_compressed_file.get_view()};
+    decompressor->open(compressed_file_view.data(), compressed_file_view.size());
 
-        // Cleanup
-        boost::filesystem::remove(compressed_file_path);
+    size_t uncompressed_bytes{0};
+    for (auto chunk_size : compression_chunk_sizes) {
+        memset(decompressed_buffer.data(), 0, cUncompressedDataSize);
+        REQUIRE(
+                (ErrorCode_Success
+                 == decompressor->get_decompressed_stream_region(
+                         uncompressed_bytes,
+                         decompressed_buffer.data(),
+                         chunk_size
+                 ))
+        );
+        REQUIRE((memcmp(uncompressed_buffer.data(), decompressed_buffer.data(), chunk_size) == 0));
+        uncompressed_bytes += chunk_size;
     }
 
     // Cleanup
-    delete[] uncompressed_data;
-    delete[] decompressed_data;
+    boost::filesystem::remove(compressed_file_path);
 }

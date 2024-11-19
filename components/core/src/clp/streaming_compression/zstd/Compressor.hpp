@@ -1,12 +1,12 @@
 #ifndef CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
 
-#include <memory>
-#include <string>
+#include <cstddef>
+#include <vector>
 
 #include <zstd.h>
-#include <zstd_errors.h>
 
+#include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../Compressor.hpp"
@@ -23,7 +23,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "streaming_compression::zstd::Compressor operation failed";
         }
     };
@@ -32,11 +32,14 @@ public:
     Compressor();
 
     // Destructor
-    ~Compressor();
+    ~Compressor() override;
 
-    // Explicitly disable copy and move constructor/assignment
+    // Explicitly disable copy constructor/assignment and enable the move version
     Compressor(Compressor const&) = delete;
-    Compressor& operator=(Compressor const&) = delete;
+    auto operator=(Compressor const&) -> Compressor& = delete;
+
+    Compressor(Compressor&&) noexcept = default;
+    auto operator=(Compressor&&) -> Compressor& = default;
 
     // Methods implementing the WriterInterface
     /**
@@ -44,11 +47,11 @@ public:
      * @param data
      * @param data_length
      */
-    void write(char const* data, size_t data_length) override;
+    auto write(char const* data, size_t data_length) -> void override;
     /**
      * Writes any internally buffered data to file and ends the current frame
      */
-    void flush() override;
+    auto flush() -> void override;
 
     /**
      * Tries to get the current position of the write head
@@ -56,26 +59,26 @@ public:
      * @return ErrorCode_NotInit if the compressor is not open
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_get_pos(size_t& pos) const override;
+    [[nodiscard]] auto try_get_pos(size_t& pos) const -> ErrorCode override;
 
     // Methods implementing the Compressor interface
     /**
      * Closes the compressor
      */
-    void close() override;
+    auto close() -> void override;
 
-    // Methods
     /**
-     * Initialize streaming compressor
+     * Initializes the compression stream with the given compression level
      * @param file_writer
      * @param compression_level
      */
-    void open(FileWriter& file_writer, int compression_level = cDefaultCompressionLevel);
+    auto open(FileWriter& file_writer, int compression_level = cDefaultCompressionLevel)
+            -> void override;
 
     /**
      * Flushes the stream without ending the current frame
      */
-    void flush_without_ending_frame();
+    auto flush_without_ending_frame() -> void;
 
 private:
     // Variables
@@ -86,9 +89,14 @@ private:
     bool m_compression_stream_contains_data;
 
     ZSTD_outBuffer m_compressed_stream_block;
-    std::unique_ptr<char[]> m_compressed_stream_block_buffer;
+    std::vector<char> m_compressed_stream_block_buffer;
 
     size_t m_uncompressed_stream_pos;
+
+    /**
+     * Tells if a `size_t` ZStd function result is an error code and is not `ZSTD_error_no_error`
+     */
+    [[nodiscard]] static auto zstd_is_error(size_t size_t_function_result) -> bool;
 };
 }  // namespace clp::streaming_compression::zstd
 
