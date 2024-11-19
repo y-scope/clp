@@ -36,7 +36,7 @@ const routes = async (fastify, options) => {
                     target_chunk_size: EXTRACT_JSON_TARGET_CHUNK_SIZE,
                 };
             } else {
-                const err = new Error(`Unsupported Job type: ${extractJobType});`);
+                const err = new Error(`Unsupported Job type: ${extractJobType}`);
                 err.statusCode = 400;
                 throw err;
             }
