@@ -117,6 +117,8 @@ TEMPLATE_TEST_CASE(
     std::cout << command << "\n";
     result = std::system(command.c_str());
     std::cout << result << "\n";
+    std::cout << WEXITSTATUS(result) << "\n";
+    std::system("cat diff_out.txt");
     REQUIRE((0 == result || 1 == result));
 
     REQUIRE(std::filesystem::is_empty("diff_out.txt"));
