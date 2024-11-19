@@ -78,7 +78,7 @@ const routes = async (fastify, options) => {
             );
             streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
                 streamId,
-                logEventIdx
+                sanitizedLogEventIdx
             );
 
             if (null === streamMetadata) {
