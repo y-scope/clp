@@ -114,12 +114,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE(0 == result);
     std::string const command = "diff -u test-end-to-end_sorted.json " + get_test_input_local_path()
                                 + " > diff_out.txt";
-    //std::cout << command << "\n";
     result = std::system(command.c_str());
-    //std::cout << result << "\n";
-    std::cout << WEXITSTATUS(result) << "\n";
-    std::system("cat test-end-to-end-out/original");
-    std::system("cat diff_out.txt");
     REQUIRE((0 == WEXITSTATUS(result) || 1 == WEXITSTATUS(result)));
 
     REQUIRE(std::filesystem::is_empty("diff_out.txt"));
