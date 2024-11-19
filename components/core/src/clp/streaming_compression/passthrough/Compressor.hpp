@@ -20,7 +20,7 @@ public:
     public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : TraceableException{error_code, filename, line_number} {}
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
@@ -39,7 +39,7 @@ public:
     auto operator=(Compressor const&) -> Compressor& = delete;
 
     Compressor(Compressor&&) noexcept = default;
-    auto operator=(Compressor&&) -> Compressor& = default;
+    auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
     // Methods implementing the WriterInterface
     /**
@@ -73,7 +73,8 @@ public:
      * @param file_writer
      * @param compression_level
      */
-    auto open(FileWriter& file_writer, [[maybe_unused]] int compression_level = 0) -> void override;
+    auto
+    open(FileWriter& file_writer, [[maybe_unused]] int const compression_level) -> void override;
 
 private:
     // Variables

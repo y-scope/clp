@@ -59,13 +59,13 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
 
     // Initialize buffers
     std::vector<char> uncompressed_buffer{};
-    uncompressed_buffer.reserve(cUncompressedDataSize);
+    uncompressed_buffer.resize(cUncompressedDataSize);
     for (size_t i{0}; i < cUncompressedDataSize; ++i) {
-        uncompressed_buffer.push_back((char)('a' + (i % cUncompressedDataPatternPeriod)));
+        uncompressed_buffer.at(i) = ((char)('a' + (i % cUncompressedDataPatternPeriod)));
     }
 
     std::vector<char> decompressed_buffer{};
-    decompressed_buffer.reserve(cUncompressedDataSize);
+    decompressed_buffer.resize(cUncompressedDataSize);
 
     // Compress
     FileWriter file_writer;
@@ -83,7 +83,7 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     decompressor->open(compressed_file_view.data(), compressed_file_view.size());
 
     size_t uncompressed_bytes{0};
-    for (auto chunk_size : compression_chunk_sizes) {
+    for (auto const chunk_size : compression_chunk_sizes) {
         memset(decompressed_buffer.data(), 0, cUncompressedDataSize);
         REQUIRE(
                 (ErrorCode_Success

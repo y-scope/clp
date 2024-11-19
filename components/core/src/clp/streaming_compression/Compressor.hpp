@@ -22,7 +22,7 @@ public:
     public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : TraceableException{error_code, filename, line_number} {}
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
@@ -31,7 +31,7 @@ public:
     };
 
     // Constructor
-    explicit Compressor(CompressorType type) : m_type(type) {}
+    explicit Compressor(CompressorType type) : m_type{type} {}
 
     // Destructor
     virtual ~Compressor() = default;
@@ -41,7 +41,7 @@ public:
     auto operator=(Compressor const&) -> Compressor& = delete;
 
     Compressor(Compressor&&) noexcept = default;
-    auto operator=(Compressor&&) -> Compressor& = default;
+    auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
     // Methods implementing the WriterInterface
     /**
@@ -69,16 +69,22 @@ public:
     virtual auto close() -> void = 0;
 
     /**
+     * Initializes the compression stream
+     * @param file_writer
+     */
+    virtual auto open(FileWriter& file_writer) -> void { open(file_writer, 0); }
+
+    /**
      * Initializes the compression stream with the given compression level
      * @param file_writer
      * @param compression_level
      */
-    virtual auto open(FileWriter& file_writer, [[maybe_unused]] int compression_level = 0) -> void
-                                                                                              = 0;
+    virtual auto open(FileWriter& file_writer, [[maybe_unused]] int const compression_level) -> void
+                                                                                                = 0;
 
 private:
     // Variables
-    CompressorType m_type{};
+    CompressorType m_type;
 };
 }  // namespace clp::streaming_compression
 

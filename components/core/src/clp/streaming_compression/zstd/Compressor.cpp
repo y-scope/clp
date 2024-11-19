@@ -15,11 +15,7 @@
 namespace clp::streaming_compression::zstd {
 Compressor::Compressor()
         : ::clp::streaming_compression::Compressor{CompressorType::ZSTD},
-          m_compressed_stream_block{},
-          m_compressed_stream_file_writer{nullptr},
-          m_compression_stream_contains_data{false},
-          m_compression_stream{ZSTD_createCStream()},
-          m_uncompressed_stream_pos{0} {
+          m_compression_stream{ZSTD_createCStream()} {
     if (nullptr == m_compression_stream) {
         SPDLOG_ERROR("streaming_compression::zstd::Compressor: ZSTD_createCStream() error");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -37,7 +33,7 @@ auto Compressor::open(FileWriter& file_writer, int const compression_level) -> v
 
     // Setup compressed stream parameters
     auto const compressed_stream_block_size{ZSTD_CStreamOutSize()};
-    m_compressed_stream_block_buffer.reserve(compressed_stream_block_size);
+    m_compressed_stream_block_buffer.resize(compressed_stream_block_size);
     m_compressed_stream_block.dst = m_compressed_stream_block_buffer.data();
     m_compressed_stream_block.size = compressed_stream_block_size;
 
@@ -147,7 +143,7 @@ auto Compressor::flush_without_ending_frame() -> void {
 
     while (true) {
         m_compressed_stream_block.pos = 0;
-        auto flush_result{ZSTD_flushStream(m_compression_stream, &m_compressed_stream_block)};
+        auto const flush_result{ZSTD_flushStream(m_compression_stream, &m_compressed_stream_block)};
         if (zstd_is_error(flush_result)) {
             SPDLOG_ERROR(
                     "streaming_compression::zstd::Compressor: ZSTD_compressStream2() error: {}",

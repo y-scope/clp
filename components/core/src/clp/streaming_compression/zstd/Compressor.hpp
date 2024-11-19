@@ -20,11 +20,12 @@ public:
     public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : TraceableException{error_code, filename, line_number} {}
 
         // Methods
         [[nodiscard]] auto what() const noexcept -> char const* override {
-            return "streaming_compression::zstd::Compressor operation failed";
+            return "streaming_compression::zstd::Compressor "
+                   "operation failed";
         }
     };
 
@@ -39,7 +40,7 @@ public:
     auto operator=(Compressor const&) -> Compressor& = delete;
 
     Compressor(Compressor&&) noexcept = default;
-    auto operator=(Compressor&&) -> Compressor& = default;
+    auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
     // Methods implementing the WriterInterface
     /**
@@ -48,6 +49,7 @@ public:
      * @param data_length
      */
     auto write(char const* data, size_t data_length) -> void override;
+
     /**
      * Writes any internally buffered data to file and ends the current frame
      */
@@ -68,12 +70,19 @@ public:
     auto close() -> void override;
 
     /**
+     * Initializes the compression stream with the default compression level
+     * @param file_writer
+     */
+    auto open(FileWriter& file_writer) -> void override {
+        this->open(file_writer, cDefaultCompressionLevel);
+    }
+
+    /**
      * Initializes the compression stream with the given compression level
      * @param file_writer
      * @param compression_level
      */
-    auto open(FileWriter& file_writer, int compression_level = cDefaultCompressionLevel)
-            -> void override;
+    auto open(FileWriter& file_writer, int const compression_level) -> void override;
 
     /**
      * Flushes the stream without ending the current frame
@@ -82,16 +91,16 @@ public:
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer;
+    FileWriter* m_compressed_stream_file_writer{nullptr};
 
     // Compressed stream variables
     ZSTD_CStream* m_compression_stream;
-    bool m_compression_stream_contains_data;
+    bool m_compression_stream_contains_data{false};
 
-    ZSTD_outBuffer m_compressed_stream_block;
+    ZSTD_outBuffer m_compressed_stream_block{};
     std::vector<char> m_compressed_stream_block_buffer;
 
-    size_t m_uncompressed_stream_pos;
+    size_t m_uncompressed_stream_pos{0};
 
     /**
      * Tells if a `size_t` ZStd function result is an error code and is not `ZSTD_error_no_error`
