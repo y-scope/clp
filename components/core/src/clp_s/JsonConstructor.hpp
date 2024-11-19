@@ -66,7 +66,7 @@ public:
 private:
     /**
      * Reads all of the tables from m_archive_reader and writes all of the records
-     * they contain to writer in timestamp order.
+     * they contain to writer in log order.
      */
     void construct_in_order();
 

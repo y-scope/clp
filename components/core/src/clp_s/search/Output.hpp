@@ -5,6 +5,7 @@
 #include <set>
 #include <stack>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -88,6 +89,7 @@ private:
     std::vector<ColumnDescriptor*> m_wildcard_columns;
     std::map<ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
     LiteralTypeBitmask m_wildcard_type_mask{0};
+    std::unordered_set<int32_t> m_metadata_columns;
 
     std::stack<
             std::pair<ExpressionType, OpList::iterator>,
@@ -341,6 +343,11 @@ private:
      * @param expr
      */
     void populate_string_queries(std::shared_ptr<Expression> const& expr);
+
+    /**
+     * Populates the set of internal columns that get ignored during dynamic wildcard expansion.
+     */
+    void populate_internal_columns();
 
     /**
      * Constant propagates an expression
