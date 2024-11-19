@@ -302,9 +302,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::bool_switch(&m_ordered_decompression),
                     "Enable decompression in log order for this archive"
             )(
-                    "ordered-chunk-size",
-                    po::value<size_t>(&m_ordered_chunk_size)
-                            ->default_value(m_ordered_chunk_size),
+                    "target-ordered-chunk-size",
+                    po::value<size_t>(&m_target_ordered_chunk_size)
+                            ->default_value(m_target_ordered_chunk_size),
                     "Chunk size (B) for each output file when decompressing records in log order."
                     " When set to 0, no chunking is performed."
             );
@@ -369,7 +369,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
+            if (0 != m_target_ordered_chunk_size && false == m_ordered_decompression) {
                 throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
                 );
             }

@@ -159,7 +159,9 @@ void JsonConstructor::construct_in_order() {
         writer.write(buffer.c_str(), buffer.length());
         chunk_size += buffer.length();
 
-        if (0 != m_option.ordered_chunk_size && chunk_size >= m_option.ordered_chunk_size) {
+        if (0 != m_option.target_ordered_chunk_size
+            && chunk_size >= m_option.target_ordered_chunk_size)
+        {
             finalize_chunk(true);
             chunk_size = 0;
         }

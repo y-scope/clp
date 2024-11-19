@@ -300,7 +300,7 @@ int main(int argc, char const* argv[]) {
         option.output_dir = command_line_arguments.get_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.archives_dir = archives_dir;
-        option.ordered_chunk_size = command_line_arguments.get_ordered_chunk_size();
+        option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
                     = {command_line_arguments.get_mongodb_uri(),
