@@ -194,6 +194,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "structurize-arrays",
                     po::bool_switch(&m_structurize_arrays),
                     "Structurize arrays instead of compressing them as clp strings."
+            )(
+                    "disable-log-order",
+                    po::bool_switch(&m_disable_log_order),
+                    "Do not record log order at ingestion time."
             );
             // clang-format on
 
@@ -296,13 +300,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             decompression_options.add_options()(
                     "ordered",
                     po::bool_switch(&m_ordered_decompression),
-                    "Enable decompression in ascending timestamp order for this archive"
+                    "Enable decompression in log order for this archive"
             )(
                     "ordered-chunk-size",
                     po::value<size_t>(&m_ordered_chunk_size)
                             ->default_value(m_ordered_chunk_size),
                     "Number of records to include in each output file when decompressing records "
-                    "in ascending timestamp order"
+                    "in log order"
             );
             // clang-format on
             extraction_options.add(decompression_options);

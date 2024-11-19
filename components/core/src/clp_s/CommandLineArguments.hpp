@@ -112,6 +112,8 @@ public:
 
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
 
+    bool get_record_log_order() const { return false == m_disable_log_order; }
+
 private:
     // Methods
     /**
@@ -178,6 +180,7 @@ private:
     bool m_ordered_decompression{false};
     size_t m_ordered_chunk_size{0};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
+    bool m_disable_log_order{false};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;

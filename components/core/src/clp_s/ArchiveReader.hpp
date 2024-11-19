@@ -142,6 +142,11 @@ public:
         m_projection = projection;
     }
 
+    /**
+     * @return true if this archive has log ordering information, and false otherwise.
+     */
+    bool has_log_order() { return m_log_event_idx_column_id >= 0; }
+
 private:
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.
@@ -214,6 +219,7 @@ private:
     std::shared_ptr<char[]> m_stream_buffer{};
     size_t m_stream_buffer_size{0ULL};
     size_t m_cur_stream_id{0ULL};
+    int32_t m_log_event_idx_column_id{-1};
 };
 }  // namespace clp_s
 

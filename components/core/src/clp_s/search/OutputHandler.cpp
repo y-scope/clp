@@ -10,6 +10,7 @@
 #include "../../reducer/CountOperator.hpp"
 #include "../../reducer/network_utils.hpp"
 #include "../../reducer/Record.hpp"
+#include "../archive_constants.hpp"
 
 using std::string;
 using std::string_view;
@@ -31,11 +32,12 @@ NetworkOutputHandler::NetworkOutputHandler(
 void NetworkOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
-        string_view archive_id
+        string_view archive_id,
+        int64_t log_event_idx
 ) {
     static constexpr string_view cOrigFilePathPlaceholder{""};
-    msgpack::type::tuple<epochtime_t, string, string, string> const
-            src(timestamp, message, cOrigFilePathPlaceholder, archive_id);
+    msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
+            src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
     msgpack::sbuffer m;
     msgpack::pack(m, src);
 
@@ -72,10 +74,26 @@ ErrorCode ResultsCacheOutputHandler::flush() {
 
         try {
             m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp("original_path", std::move(result.original_path)),
-                    bsoncxx::builder::basic::kvp("message", std::move(result.message)),
-                    bsoncxx::builder::basic::kvp("timestamp", result.timestamp),
-                    bsoncxx::builder::basic::kvp("archive_id", std::move(result.archive_id))
+                    bsoncxx::builder::basic::kvp(
+                            constants::results_cache::search::cOrigFilePath,
+                            std::move(result.original_path)
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            constants::results_cache::search::cMessage,
+                            std::move(result.message)
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            constants::results_cache::search::cTimestamp,
+                            result.timestamp
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            constants::results_cache::search::cArchiveId,
+                            std::move(result.archive_id)
+                    ),
+                    bsoncxx::builder::basic::kvp(
+                            constants::results_cache::search::cLogEventIx,
+                            result.log_event_idx
+                    )
             )));
             count++;
 
@@ -103,17 +121,26 @@ ErrorCode ResultsCacheOutputHandler::flush() {
 void ResultsCacheOutputHandler::write(
         string_view message,
         epochtime_t timestamp,
-        string_view archive_id
+        string_view archive_id,
+        int64_t log_event_idx
 ) {
     if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(
-                std::make_unique<QueryResult>(string_view{}, message, timestamp, archive_id)
-        );
+        m_latest_results.emplace(std::make_unique<QueryResult>(
+                string_view{},
+                message,
+                timestamp,
+                archive_id,
+                log_event_idx
+        ));
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
-        m_latest_results.emplace(
-                std::make_unique<QueryResult>(string_view{}, message, timestamp, archive_id)
-        );
+        m_latest_results.emplace(std::make_unique<QueryResult>(
+                string_view{},
+                message,
+                timestamp,
+                archive_id,
+                log_event_idx
+        ));
     }
 }
 
