@@ -312,7 +312,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_temp_output_dir)
                         ->value_name("DIR")
                         ->default_value(m_temp_output_dir),
-                        "Temporary output directory for output files while they're being written"
+                        "Temporary output directory for ordered output files while they're being "
+                        "written"
             );
             // clang-format on
             extraction_options.add(decompression_options);
@@ -375,13 +376,17 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (m_temp_output_dir.empty()) {
-                m_temp_output_dir = m_output_dir;
-            }
-
             if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
                 throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
                 );
+            }
+
+            if (false == m_temp_output_dir.empty() && false == m_ordered_decompression) {
+                throw std::invalid_argument("temp-output-dir must be used with ordered argument");
+            }
+
+            if (m_temp_output_dir.empty()) {
+                m_temp_output_dir = m_output_dir;
             }
 
             // We use xor to check that these arguments are either both specified or both
