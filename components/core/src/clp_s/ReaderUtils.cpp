@@ -18,10 +18,10 @@ std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(std::string const& arc
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
     }
 
+    std::string key;
     for (size_t i = 0; i < num_nodes; i++) {
         int32_t parent_id;
         size_t key_length;
-        std::string key;
         uint8_t node_type;
 
         error_code = schema_tree_decompressor.try_read_numeric_value(parent_id);

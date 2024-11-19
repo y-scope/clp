@@ -2,6 +2,7 @@
 #define CLP_S_JSONSERIALIZER_HPP
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "ColumnReader.hpp"
@@ -66,7 +67,7 @@ public:
         return false;
     }
 
-    void add_special_key(std::string const& key) { m_special_keys.push_back(key); }
+    void add_special_key(std::string_view const key) { m_special_keys.emplace_back(key); }
 
     void begin_object() {
         append_key();
@@ -110,13 +111,13 @@ public:
 
     void append_key() { append_key(m_special_keys[m_special_keys_index++]); }
 
-    void append_key(std::string const& key) {
+    void append_key(std::string_view const key) {
         m_json_string += "\"";
         m_json_string += key;
         m_json_string += "\":";
     }
 
-    void append_value(std::string const& value) {
+    void append_value(std::string_view const value) {
         m_json_string += value;
         m_json_string += ",";
     }
