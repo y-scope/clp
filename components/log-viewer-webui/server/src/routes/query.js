@@ -14,6 +14,7 @@ const EXTRACT_JSON_TARGET_CHUNK_SIZE = 100 * 1000;
  * @param {QUERY_JOB_TYPE} extractJobType
  * @param {string} streamId
  * @param {int} sanitizedLogEventIdx
+ * @throws {Error} if the extract stream job submission fails.
  */
 const submitAndWaitForExtractStreamJob = async (
     fastify,
@@ -29,8 +30,7 @@ const submitAndWaitForExtractStreamJob = async (
             orig_file_id: streamId,
             target_uncompressed_size: EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE,
         };
-    }
-    if (QUERY_JOB_TYPE.EXTRACT_JSON === extractJobType) {
+    } else if (QUERY_JOB_TYPE.EXTRACT_JSON === extractJobType) {
         jobConfig = {
             archive_id: streamId,
             target_chunk_size: EXTRACT_JSON_TARGET_CHUNK_SIZE,
@@ -74,7 +74,12 @@ const routes = async (fastify, options) => {
         );
 
         if (null === streamMetadata) {
-            await submitAndWaitForExtractStreamJob(fastify, extractJobType, streamId, logEventIdx);
+            await submitAndWaitForExtractStreamJob(
+                fastify,
+                extractJobType,
+                streamId,
+                sanitizedLogEventIdx
+            );
             streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
                 streamId,
                 logEventIdx
