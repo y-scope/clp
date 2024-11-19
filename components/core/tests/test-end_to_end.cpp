@@ -118,6 +118,7 @@ TEMPLATE_TEST_CASE(
     result = std::system(command.c_str());
     std::cout << result << "\n";
     std::cout << WEXITSTATUS(result) << "\n";
+    std::system("cat test-end-to-end-out/original");
     std::system("cat diff_out.txt");
     REQUIRE((0 == result || 1 == result));
 
