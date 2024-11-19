@@ -260,7 +260,7 @@ def main(argv):
     json_extraction_parser.add_argument(
         "--target-chunk-size",
         type=int,
-        help="Target chunk size (B)",
+        help="Target chunk size (B).",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
