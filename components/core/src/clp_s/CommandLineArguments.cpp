@@ -305,8 +305,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "ordered-chunk-size",
                     po::value<size_t>(&m_ordered_chunk_size)
                             ->default_value(m_ordered_chunk_size),
-                    "Chunk size (B) for each output file when decompressing records "
-                    "in log order"
+                    "Chunk size (B) for each output file when decompressing records in log order. "
+                    "No chunking is performed when this argument is set to zero."
             );
             // clang-format on
             extraction_options.add(decompression_options);
