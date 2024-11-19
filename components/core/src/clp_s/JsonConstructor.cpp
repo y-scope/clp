@@ -81,9 +81,9 @@ void JsonConstructor::construct_in_order() {
     // a given table
     tables.clear();
 
-    int64_t first_idx{0};
-    int64_t last_idx{0};
-    size_t chunk_size{0};
+    int64_t first_idx{};
+    int64_t last_idx{};
+    size_t chunk_size{};
     auto src_path = std::filesystem::path(m_option.output_dir) / m_option.archive_id;
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
