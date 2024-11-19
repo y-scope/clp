@@ -1,10 +1,5 @@
+import settings from "../../settings.json" with {type: "json"};
 import {QUERY_JOB_TYPE} from "../DbManager.js";
-
-
-// eslint-disable-next-line no-magic-numbers
-const EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE = 128 * 1024 * 1024;
-// eslint-disable-next-line no-magic-numbers
-const EXTRACT_JSON_TARGET_CHUNK_SIZE = 100 * 1000;
 
 
 /**
@@ -23,17 +18,18 @@ const submitAndWaitForExtractStreamJob = async (
     sanitizedLogEventIdx
 ) => {
     let jobConfig;
+    const streamTargetUncompressedSize = settings.StreamTargetUncompressedSize;
     if (QUERY_JOB_TYPE.EXTRACT_IR === extractJobType) {
         jobConfig = {
             file_split_id: null,
             msg_ix: sanitizedLogEventIdx,
             orig_file_id: streamId,
-            target_uncompressed_size: EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE,
+            target_uncompressed_size: streamTargetUncompressedSize,
         };
     } else if (QUERY_JOB_TYPE.EXTRACT_JSON === extractJobType) {
         jobConfig = {
             archive_id: streamId,
-            target_chunk_size: EXTRACT_JSON_TARGET_CHUNK_SIZE,
+            target_chunk_size: streamTargetUncompressedSize,
         };
     }
 
