@@ -12,6 +12,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   checkinstall \
   cmake \
   curl \
+  diffutils \
   g++ \
   g++-10 \
   gcc \

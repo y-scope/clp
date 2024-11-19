@@ -110,9 +110,13 @@ TEMPLATE_TEST_CASE(
 
     REQUIRE(false == std::filesystem::is_empty("test-end-to-end_sorted.json"));
 
+    result = std::system("command -v diff >/dev/null 2>&1");
+    REQUIRE(0 == result);
     std::string const command = "diff -u test-end-to-end_sorted.json " + get_test_input_local_path()
                                 + " > diff_out.txt";
+    std::cout << command << "\n";
     result = std::system(command.c_str());
+    std::cout << result << "\n";
     REQUIRE((0 == result || 1 == result));
 
     REQUIRE(std::filesystem::is_empty("diff_out.txt"));

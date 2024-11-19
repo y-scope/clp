@@ -8,6 +8,7 @@ set -u
 
 dnf install -y \
     cmake \
+    diffutils \
     gcc-c++ \
     git \
     java-11-openjdk \
