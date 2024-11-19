@@ -27,11 +27,10 @@ import axios from "axios";
  * either as a CLP IR or a JSON Lines file.
  *
  * @param {QUERY_JOB_TYPE} extractJobType
- * @param {number|string} streamId
+ * @param {string} streamId
  * @param {number} logEventIdx
  * @param {Function} onUploadProgress Callback to handle upload progress events.
- * @return
- * {Promise<axios.AxiosResponse<ExtractIrResp>>|Promise<axios.AxiosResponse<ExtractJsonResp>>}
+ * @return {Promise<axios.AxiosResponse<ExtractIrResp|ExtractJsonResp>>}
  */
 const submitExtractStreamJob = async (extractJobType, streamId, logEventIdx, onUploadProgress) => {
     return await axios.post(

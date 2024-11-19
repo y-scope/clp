@@ -67,9 +67,7 @@ const QueryStatus = () => {
         const logEventIdx = searchParams.get("logEventIdx");
 
         if (null === streamType || null === streamId || null === logEventIdx) {
-            const error = "Queries parameters are missing from the URL " +
-             "parameters.";
-
+            const error = "Queries parameters are missing from the URL parameters.";
             console.error(error);
             setErrorMsg(error);
 
