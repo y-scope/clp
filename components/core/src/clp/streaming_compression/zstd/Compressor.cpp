@@ -110,7 +110,7 @@ auto Compressor::flush() -> void {
 
     m_compressed_stream_block.pos = 0;
     auto const end_stream_result{ZSTD_endStream(m_compression_stream, &m_compressed_stream_block)};
-    if (end_stream_result > 0) {
+    if (zstd_is_error(end_stream_result)) {
         // Note: Output buffer is large enough that it is guaranteed to have enough room to be
         // able to flush the entire buffer, so this can only be an error
         SPDLOG_ERROR(
