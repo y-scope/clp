@@ -162,8 +162,8 @@ const SearchResultsTable = ({
                                         rel={"noopener noreferrer"}
                                         target={"_blank"}
                                         title={"View log event in context"}
-                                        href={`${Meteor.settings.public.LogViewerWebuiUrl}?` +
-                                            `type=${STREAM_TYPE}` +
+                                        href={Meteor.settings.public.LogViewerWebuiUrl +
+                                            `?type=${STREAM_TYPE}` +
                                             `&streamId=${getStreamId(result)}` +
                                             `&logEventIdx=${result.log_event_ix}`}
                                     >

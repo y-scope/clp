@@ -1,9 +1,9 @@
+import {QUERY_JOB_TYPE} from "../DbManager.js";
+
+
 // eslint-disable-next-line no-magic-numbers
 const EXTRACT_IR_TARGET_UNCOMPRESSED_SIZE = 128 * 1024 * 1024;
 const EXTRACT_JSON_TARGET_CHUNK_SIZE = 100000;
-
-import {QUERY_JOB_TYPE} from "../DbManager.js";
-
 
 /**
  * Creates query routes.
@@ -14,7 +14,7 @@ import {QUERY_JOB_TYPE} from "../DbManager.js";
  */
 const routes = async (fastify, options) => {
     fastify.post("/query/extract-stream", async (req, resp) => {
-        const {extractJobType, streamId, logEventIdx} = req.body;
+        const {extractJobType, logEventIdx, streamId} = req.body;
         const sanitizedLogEventIdx = Number(logEventIdx);
         let streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
             streamId,
