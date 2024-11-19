@@ -178,7 +178,7 @@ private:
     size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
-    size_t m_ordered_chunk_size{0};
+    size_t m_ordered_chunk_size{};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
 
