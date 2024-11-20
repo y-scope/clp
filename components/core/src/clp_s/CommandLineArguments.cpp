@@ -302,18 +302,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::bool_switch(&m_ordered_decompression),
                     "Enable decompression in log order for this archive"
             )(
-                    "ordered-chunk-size",
-                    po::value<size_t>(&m_ordered_chunk_size)
-                            ->default_value(m_ordered_chunk_size),
-                    "Number of records to include in each output file when decompressing records "
-                    "in log order"
+                    "target-ordered-chunk-size",
+                    po::value<size_t>(&m_target_ordered_chunk_size)
+                            ->default_value(m_target_ordered_chunk_size)
+                            ->value_name("SIZE"),
+                    "Chunk size (B) for each output file when decompressing records in log order."
+                    " When set to 0, no chunking is performed."
             )(
                     "temp-output-dir",
                     po::value<std::string>(&m_temp_output_dir)
                         ->value_name("DIR")
                         ->default_value(m_temp_output_dir),
-                        "Temporary output directory for ordered output files while they're being "
-                        "written"
+                        "Temporary output directory for ordered output files while they're being"
+                        " written"
             );
             // clang-format on
             extraction_options.add(decompression_options);
@@ -376,8 +377,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
-                throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
+            if (0 != m_target_ordered_chunk_size && false == m_ordered_decompression) {
+                throw std::invalid_argument(
+                        "target-ordered-chunk-size must be used with ordered argument"
                 );
             }
 

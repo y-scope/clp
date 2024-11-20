@@ -31,7 +31,7 @@ struct JsonConstructorOption {
     std::string output_dir;
     std::string temp_output_dir;
     bool ordered{false};
-    size_t ordered_chunk_size{0};
+    size_t target_ordered_chunk_size{};
     std::optional<MetadataDbOption> metadata_db;
 };
 

@@ -95,10 +95,10 @@ void JsonConstructor::construct_in_order() {
     // a given table
     tables.clear();
 
-    int64_t first_idx{0};
-    int64_t last_idx{0};
-    size_t num_records_marshalled{0};
-    auto src_path = std::filesystem::path(m_option.temp_output_dir) / m_option.archive_id;
+    int64_t first_idx{};
+    int64_t last_idx{};
+    size_t chunk_size{};
+    auto const src_path = std::filesystem::path(m_option.temp_output_dir) / m_option.archive_id;
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
@@ -163,7 +163,7 @@ void JsonConstructor::construct_in_order() {
         ReaderPointer next = record_queue.top();
         record_queue.pop();
         last_idx = next->get_next_log_event_idx();
-        if (0 == num_records_marshalled) {
+        if (0 == chunk_size) {
             first_idx = last_idx;
         }
         next->get_next_message(buffer);
@@ -171,17 +171,17 @@ void JsonConstructor::construct_in_order() {
             record_queue.emplace(std::move(next));
         }
         writer.write(buffer.c_str(), buffer.length());
-        num_records_marshalled += 1;
+        chunk_size += buffer.length();
 
-        if (0 != m_option.ordered_chunk_size
-            && num_records_marshalled >= m_option.ordered_chunk_size)
+        if (0 != m_option.target_ordered_chunk_size
+            && chunk_size >= m_option.target_ordered_chunk_size)
         {
             finalize_chunk(true);
-            num_records_marshalled = 0;
+            chunk_size = 0;
         }
     }
 
-    if (num_records_marshalled > 0) {
+    if (chunk_size > 0) {
         finalize_chunk(false);
     } else {
         writer.close();

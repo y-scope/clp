@@ -65,7 +65,7 @@ def make_command(
             stream_collection_name,
         ]
         if extract_json_config.target_chunk_size is not None:
-            command.append("--ordered-chunk-size")
+            command.append("--target-ordered-chunk-size")
             command.append(str(extract_json_config.target_chunk_size))
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
