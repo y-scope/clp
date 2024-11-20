@@ -30,7 +30,7 @@ struct JsonConstructorOption {
     std::string archive_id;
     std::string output_dir;
     bool ordered{false};
-    size_t ordered_chunk_size{0};
+    size_t target_ordered_chunk_size{};
     std::optional<MetadataDbOption> metadata_db;
 };
 
@@ -66,7 +66,7 @@ public:
 private:
     /**
      * Reads all of the tables from m_archive_reader and writes all of the records
-     * they contain to writer in timestamp order.
+     * they contain to writer in log order.
      */
     void construct_in_order();
 
