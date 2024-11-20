@@ -32,16 +32,14 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option) : m_option
         );
     }
 
-    std::ignore = std::filesystem::create_directory(option.temp_output_dir, error_code);
-    if (error_code) {
+    if (false == std::filesystem::exists(option.temp_output_dir)) {
         throw OperationFailed(
                 ErrorCodeFailure,
                 __FILENAME__,
                 __LINE__,
                 fmt::format(
-                        "Cannot create temporary output directory '{}' - {}",
-                        option.temp_output_dir,
-                        error_code.message()
+                        "Temporary output directory '{}' doesn't exist",
+                        option.temp_output_dir
                 )
         );
     }
