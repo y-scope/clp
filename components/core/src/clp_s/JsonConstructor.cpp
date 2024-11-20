@@ -40,7 +40,7 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option) : m_option
                 __LINE__,
                 fmt::format(
                         "Cannot create temporary output directory '{}' - {}",
-                        option.output_dir,
+                        option.temp_output_dir,
                         error_code.message()
                 )
         );
