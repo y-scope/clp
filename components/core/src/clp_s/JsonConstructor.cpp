@@ -37,10 +37,7 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option) : m_option
                 ErrorCodeFailure,
                 __FILENAME__,
                 __LINE__,
-                fmt::format(
-                        "Temporary output directory '{}' doesn't exist",
-                        option.temp_output_dir
-                )
+                fmt::format("Temporary output directory '{}' doesn't exist", option.temp_output_dir)
         );
     }
 
