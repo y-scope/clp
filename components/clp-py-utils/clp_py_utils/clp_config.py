@@ -346,7 +346,7 @@ class ArchiveOutput(BaseModel):
 
 
 class StreamOutput(BaseModel):
-    directory: pathlib.Path = pathlib.Path("var") / "data" / "stream"
+    directory: pathlib.Path = pathlib.Path("var") / "data" / "streams"
     target_uncompressed_size: int = 128 * 1024 * 1024
 
     @validator("directory")
