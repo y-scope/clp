@@ -12,6 +12,26 @@
 #include "../Compressor.hpp"
 #include "../Constants.hpp"
 
+namespace {
+/**
+ * Checks if a value returned by ZStd function indicates an error code.
+ *
+ * For most ZStd functions that return `size_t` results, instead of returning a union type that can
+ * either be a valid result or an error code, an unanimous `size_t` type is returned.
+ * Usually, if the return value exceeds the maximum possible value of valid results, it is treated
+ * as an error code. However, the exact behavior is function-dependent, so ZStd provides:
+ * 1. A value checking function `ZSTD_isError`
+ * 2. A size_t <-> error_code_enum mapping function `ZSTD_getErrorCode`.
+ * See also: https://facebook.github.io/zstd/zstd_manual.html
+ *
+ * @param result A `size_t` type result returned by ZStd functions
+ * @return Whether the result is an error code and indicates an error has occurred
+ */
+auto is_error(size_t result) -> bool {
+    return 0 != ZSTD_isError(result) && ZSTD_error_no_error != ZSTD_getErrorCode(result);
+}
+}  // namespace
+
 namespace clp::streaming_compression::zstd {
 Compressor::Compressor()
         : ::clp::streaming_compression::Compressor{CompressorType::ZSTD},
@@ -26,7 +46,7 @@ Compressor::~Compressor() {
     ZSTD_freeCStream(m_compression_stream);
 }
 
-auto Compressor::open(FileWriter& file_writer, int const compression_level) -> void {
+auto Compressor::open(FileWriter& file_writer, int compression_level) -> void {
     if (nullptr != m_compressed_stream_file_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
@@ -39,7 +59,7 @@ auto Compressor::open(FileWriter& file_writer, int const compression_level) -> v
 
     // Setup compression stream
     auto const init_result{ZSTD_initCStream(m_compression_stream, compression_level)};
-    if (zstd_is_error(init_result)) {
+    if (is_error(init_result)) {
         SPDLOG_ERROR(
                 "streaming_compression::zstd::Compressor: ZSTD_initCStream() error: {}",
                 ZSTD_getErrorName(init_result)
@@ -82,7 +102,7 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
                 &m_compressed_stream_block,
                 &uncompressed_stream_block
         )};
-        if (zstd_is_error(compress_result)) {
+        if (is_error(compress_result)) {
             SPDLOG_ERROR(
                     "streaming_compression::zstd::Compressor: ZSTD_compressStream() error: {}",
                     ZSTD_getErrorName(compress_result)
@@ -110,7 +130,7 @@ auto Compressor::flush() -> void {
 
     m_compressed_stream_block.pos = 0;
     auto const end_stream_result{ZSTD_endStream(m_compression_stream, &m_compressed_stream_block)};
-    if (zstd_is_error(end_stream_result)) {
+    if (is_error(end_stream_result)) {
         // Note: Output buffer is large enough that it is guaranteed to have enough room to be
         // able to flush the entire buffer, so this can only be an error
         SPDLOG_ERROR(
@@ -144,7 +164,7 @@ auto Compressor::flush_without_ending_frame() -> void {
     while (true) {
         m_compressed_stream_block.pos = 0;
         auto const flush_result{ZSTD_flushStream(m_compression_stream, &m_compressed_stream_block)};
-        if (zstd_is_error(flush_result)) {
+        if (is_error(flush_result)) {
             SPDLOG_ERROR(
                     "streaming_compression::zstd::Compressor: ZSTD_compressStream2() error: {}",
                     ZSTD_getErrorName(flush_result)
@@ -161,10 +181,5 @@ auto Compressor::flush_without_ending_frame() -> void {
             break;
         }
     }
-}
-
-auto Compressor::zstd_is_error(size_t size_t_function_result) -> bool {
-    return ZSTD_isError(size_t_function_result) != 0
-           && ZSTD_error_no_error != ZSTD_getErrorCode(size_t_function_result);
 }
 }  // namespace clp::streaming_compression::zstd

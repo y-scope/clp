@@ -35,10 +35,11 @@ public:
     // Destructor
     ~Compressor() override;
 
-    // Explicitly disable copy constructor/assignment and enable the move version
+    // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
     auto operator=(Compressor const&) -> Compressor& = delete;
 
+    // Default move constructor and assignment operator
     Compressor(Compressor&&) noexcept = default;
     auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
@@ -82,7 +83,7 @@ public:
      * @param file_writer
      * @param compression_level
      */
-    auto open(FileWriter& file_writer, int const compression_level) -> void override;
+    auto open(FileWriter& file_writer, int compression_level) -> void;
 
     /**
      * Flushes the stream without ending the current frame
@@ -101,11 +102,6 @@ private:
     std::vector<char> m_compressed_stream_block_buffer;
 
     size_t m_uncompressed_stream_pos{0};
-
-    /**
-     * Tells if a `size_t` ZStd function result is an error code and is not `ZSTD_error_no_error`
-     */
-    [[nodiscard]] static auto zstd_is_error(size_t size_t_function_result) -> bool;
 };
 }  // namespace clp::streaming_compression::zstd
 

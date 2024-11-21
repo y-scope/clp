@@ -34,10 +34,11 @@ public:
     // Destructor
     ~Compressor() override = default;
 
-    // Explicitly disable copy constructor/assignment and enable the move version
+    // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
     auto operator=(Compressor const&) -> Compressor& = delete;
 
+    // Default move constructor and assignment operator
     Compressor(Compressor&&) noexcept = default;
     auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
@@ -71,10 +72,8 @@ public:
     /**
      * Initializes the compression stream
      * @param file_writer
-     * @param compression_level
      */
-    auto
-    open(FileWriter& file_writer, [[maybe_unused]] int const compression_level) -> void override;
+    auto open(FileWriter& file_writer) -> void override;
 
 private:
     // Variables

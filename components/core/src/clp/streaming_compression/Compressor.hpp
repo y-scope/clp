@@ -36,10 +36,11 @@ public:
     // Destructor
     virtual ~Compressor() = default;
 
-    // Explicitly disable copy constructor/assignment and enable the move version
+    // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
     auto operator=(Compressor const&) -> Compressor& = delete;
 
+    // Default move constructor and assignment operator
     Compressor(Compressor&&) noexcept = default;
     auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
@@ -64,7 +65,7 @@ public:
 
     // Methods
     /**
-     * Closes the compression stream
+     * Closes the compressor
      */
     virtual auto close() -> void = 0;
 
@@ -72,15 +73,7 @@ public:
      * Initializes the compression stream
      * @param file_writer
      */
-    virtual auto open(FileWriter& file_writer) -> void { open(file_writer, 0); }
-
-    /**
-     * Initializes the compression stream with the given compression level
-     * @param file_writer
-     * @param compression_level
-     */
-    virtual auto open(FileWriter& file_writer, [[maybe_unused]] int const compression_level) -> void
-                                                                                                = 0;
+    virtual auto open(FileWriter& file_writer) -> void = 0;
 
 private:
     // Variables

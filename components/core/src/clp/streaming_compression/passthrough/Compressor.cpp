@@ -42,8 +42,7 @@ auto Compressor::close() -> void {
     m_compressed_stream_file_writer = nullptr;
 }
 
-auto Compressor::open(FileWriter& file_writer, [[maybe_unused]] int const compression_level)
-        -> void {
+auto Compressor::open(FileWriter& file_writer) -> void {
     m_compressed_stream_file_writer = &file_writer;
 }
 }  // namespace clp::streaming_compression::passthrough
