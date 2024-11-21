@@ -9,7 +9,7 @@
 
 namespace clp::streaming_compression::passthrough {
 Compressor::Compressor()
-        : ::clp::streaming_compression::Compressor{CompressorType::ZSTD},
+        : ::clp::streaming_compression::Compressor{CompressorType::Passthrough},
           m_compressed_stream_file_writer{nullptr} {}
 
 auto Compressor::write(char const* data, size_t const data_length) -> void {
