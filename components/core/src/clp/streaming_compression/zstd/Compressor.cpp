@@ -1,11 +1,11 @@
 #include "Compressor.hpp"
 
 #include <cstddef>
-#include <vector>
 
 #include <spdlog/spdlog.h>
 #include <zstd_errors.h>
 
+#include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
@@ -35,7 +35,17 @@ auto is_error(size_t result) -> bool {
 namespace clp::streaming_compression::zstd {
 Compressor::Compressor()
         : ::clp::streaming_compression::Compressor{CompressorType::ZSTD},
-          m_compression_stream{ZSTD_createCStream()} {
+          m_compressed_stream_file_writer{nullptr},
+          m_compression_stream{ZSTD_createCStream()},
+          m_compression_stream_contains_data{false},
+          m_compressed_stream_block_size{ZSTD_CStreamOutSize()},
+          m_compressed_stream_block_buffer{Array<char>{m_compressed_stream_block_size}},
+          m_compressed_stream_block{
+                  .dst = m_compressed_stream_block_buffer.data(),
+                  .size = m_compressed_stream_block_size,
+                  .pos = 0
+          },
+          m_uncompressed_stream_pos{0} {
     if (nullptr == m_compression_stream) {
         SPDLOG_ERROR("streaming_compression::zstd::Compressor: ZSTD_createCStream() error");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -50,12 +60,6 @@ auto Compressor::open(FileWriter& file_writer, int compression_level) -> void {
     if (nullptr != m_compressed_stream_file_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
-
-    // Setup compressed stream parameters
-    auto const compressed_stream_block_size{ZSTD_CStreamOutSize()};
-    m_compressed_stream_block_buffer.resize(compressed_stream_block_size);
-    m_compressed_stream_block.dst = m_compressed_stream_block_buffer.data();
-    m_compressed_stream_block.size = compressed_stream_block_size;
 
     // Setup compression stream
     auto const init_result{ZSTD_initCStream(m_compression_stream, compression_level)};

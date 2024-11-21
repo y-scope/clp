@@ -2,10 +2,10 @@
 #define CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
 
 #include <cstddef>
-#include <vector>
 
 #include <zstd.h>
 
+#include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
@@ -92,16 +92,17 @@ public:
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer{nullptr};
+    FileWriter* m_compressed_stream_file_writer;
 
     // Compressed stream variables
     ZSTD_CStream* m_compression_stream;
-    bool m_compression_stream_contains_data{false};
+    bool m_compression_stream_contains_data;
 
-    ZSTD_outBuffer m_compressed_stream_block{};
-    std::vector<char> m_compressed_stream_block_buffer;
+    size_t m_compressed_stream_block_size;
+    Array<char> m_compressed_stream_block_buffer;
+    ZSTD_outBuffer m_compressed_stream_block;
 
-    size_t m_uncompressed_stream_pos{0};
+    size_t m_uncompressed_stream_pos;
 };
 }  // namespace clp::streaming_compression::zstd
 

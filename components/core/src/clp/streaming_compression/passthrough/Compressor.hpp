@@ -7,7 +7,6 @@
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../Compressor.hpp"
-#include "../Constants.hpp"
 
 namespace clp::streaming_compression::passthrough {
 /**
@@ -29,7 +28,7 @@ public:
     };
 
     // Constructors
-    Compressor() : ::clp::streaming_compression::Compressor{CompressorType::Passthrough} {}
+    Compressor();
 
     // Destructor
     ~Compressor() override = default;
@@ -77,7 +76,7 @@ public:
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer{nullptr};
+    FileWriter* m_compressed_stream_file_writer;
 };
 }  // namespace clp::streaming_compression::passthrough
 

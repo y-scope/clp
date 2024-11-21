@@ -1,13 +1,14 @@
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include <boost/filesystem/operations.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <zstd.h>
 
+#include "../src/clp/Array.hpp"
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/FileWriter.hpp"
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
@@ -18,12 +19,14 @@
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Decompressor.hpp"
 
+using clp::Array;
 using clp::ErrorCode_Success;
 using clp::FileWriter;
 using clp::streaming_compression::Compressor;
 using clp::streaming_compression::Decompressor;
 
 TEST_CASE("StreamingCompression", "[StreamingCompression]") {
+    // Initialize constants
     constexpr size_t cBufferSize{128L * 1024 * 1024};  // 128MB
     constexpr auto cCompressionChunkSizes = std::to_array<size_t>(
             {cBufferSize / 100,
@@ -35,41 +38,35 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
              cBufferSize}
     );
     constexpr size_t cAlphabetLength = 26;
-
     std::string const compressed_file_path{"test_streaming_compressed_file.bin"};
-    std::vector<size_t> compression_chunk_sizes{
-            cCompressionChunkSizes.begin(),
-            cCompressionChunkSizes.end()
-    };
+
+    // Initialize compression devices
     std::unique_ptr<Compressor> compressor;
     std::unique_ptr<Decompressor> decompressor;
 
-    SECTION("Initiate zstd single phase compression") {
-        compression_chunk_sizes.insert(compression_chunk_sizes.begin(), ZSTD_CStreamInSize());
+    SECTION("ZStd single phase compression") {
         compressor = std::make_unique<clp::streaming_compression::zstd::Compressor>();
         decompressor = std::make_unique<clp::streaming_compression::zstd::Decompressor>();
     }
 
-    SECTION("Initiate passthrough compression") {
+    SECTION("Passthrough compression") {
         compressor = std::make_unique<clp::streaming_compression::passthrough::Compressor>();
         decompressor = std::make_unique<clp::streaming_compression::passthrough::Decompressor>();
     }
 
     // Initialize buffers
-    std::vector<char> uncompressed_buffer{};
-    uncompressed_buffer.resize(cBufferSize);
+    Array<char> uncompressed_buffer{cBufferSize};
     for (size_t i{0}; i < cBufferSize; ++i) {
         uncompressed_buffer.at(i) = static_cast<char>(('a' + (i % cAlphabetLength)));
     }
 
-    std::vector<char> decompressed_buffer{};
-    decompressed_buffer.resize(cBufferSize);
+    Array<char> decompressed_buffer{cBufferSize};
 
     // Compress
     FileWriter file_writer;
     file_writer.open(compressed_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
     compressor->open(file_writer);
-    for (auto const chunk_size : compression_chunk_sizes) {
+    for (auto const chunk_size : cCompressionChunkSizes) {
         compressor->write(uncompressed_buffer.data(), chunk_size);
     }
     compressor->close();
@@ -81,9 +78,9 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     decompressor->open(compressed_file_view.data(), compressed_file_view.size());
 
     size_t num_uncompressed_bytes{0};
-    for (auto const chunk_size : compression_chunk_sizes) {
+    for (auto const chunk_size : cCompressionChunkSizes) {
         // Clear the buffer to ensure that we are not comparing values from a previous test
-        std::fill(decompressed_buffer.begin(), decompressed_buffer.end(), 0);
+        std::ranges::fill(decompressed_buffer.begin(), decompressed_buffer.end(), 0);
         REQUIRE(
                 (ErrorCode_Success
                  == decompressor->get_decompressed_stream_region(
