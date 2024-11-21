@@ -86,7 +86,7 @@
 #stream_output:
 #  directory: "var/data/streams"
 #
-#  # How large each IR file should be before being split into a new IR file
+#  # How large each stream file should be before being split into a new stream file
 #  target_uncompressed_size: 134217728  # 128 MB
 #
 ## Location where other data (besides archives) are stored. It will be created if

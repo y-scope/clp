@@ -28,6 +28,25 @@ import "./SearchResultsTable.scss";
  */
 const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
 
+const IS_IR_STREAM = ("clp" === Meteor.settings.public.ClpStorageEngine);
+const STREAM_TYPE = IS_IR_STREAM ?
+    "ir" :
+    "json";
+
+
+/**
+ * Gets the stream id for an extraction job from the search result.
+ *
+ * @param {object} searchResult
+ * @return {string} stream_id
+ */
+const getStreamId = (searchResult) => {
+    return IS_IR_STREAM ?
+        searchResult.orig_file_id :
+        searchResult.archive_id;
+};
+
+
 /**
  * Represents a table component to display search results.
  *
@@ -93,10 +112,6 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
-    // eslint-disable-next-line no-warning-comments
-    // TODO: remove this flag once "Extract IR" support is added for ClpStorageEngine "clp-s"
-    const isExtractIrSupported = ("clp" === Meteor.settings.public.ClpStorageEngine);
-
     return (
         <div className={"search-results-container"}>
             <Table
@@ -139,22 +154,24 @@ const SearchResultsTable = ({
                                 <pre className={"search-results-content search-results-message"}>
                                     {result.message}
                                 </pre>
-                                {isExtractIrSupported &&
-                                    <div className={"search-results-file-link"}>
-                                        <FontAwesomeIcon icon={faFileLines}/>
-                                        {" "}
-                                        <a
-                                            className={"search-results-file-link"}
-                                            rel={"noopener noreferrer"}
-                                            target={"_blank"}
-                                            title={"View log event in context"}
-                                            href={`${Meteor.settings.public.LogViewerWebuiUrl
-                                            }?origFileId=${result.orig_file_id}` +
+                                <div className={"search-results-file-link"}>
+                                    <FontAwesomeIcon icon={faFileLines}/>
+                                    {" "}
+                                    <a
+                                        className={"search-results-file-link"}
+                                        rel={"noopener noreferrer"}
+                                        target={"_blank"}
+                                        title={"View log event in context"}
+                                        href={`${Meteor.settings.public.LogViewerWebuiUrl}` +
+                                            `?type=${STREAM_TYPE}` +
+                                            `&streamId=${getStreamId(result)}` +
                                             `&logEventIdx=${result.log_event_ix}`}
-                                        >
-                                            {result.orig_file_path}
-                                        </a>
-                                    </div>}
+                                    >
+                                        {IS_IR_STREAM ?
+                                            result.orig_file_path :
+                                            "Original File"}
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     ))}
