@@ -21,9 +21,9 @@ const routes = async (fastify, options) => {
             throw new Error("Invalid extractJobType");
         }
 
-        if (null === streamId) {
+        if ("string" !== typeof streamId || "" === streamId.trim()) {
             resp.code(StatusCodes.BAD_REQUEST);
-            throw new Error("streamId must not be null");
+            throw new Error("streamId must be a non-empty string");
         }
 
         let streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
@@ -32,12 +32,12 @@ const routes = async (fastify, options) => {
         );
 
         if (null === streamMetadata) {
-            const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob(
-                extractJobType,
-                sanitizedLogEventIdx,
-                streamId,
-                settings.StreamTargetUncompressedSize,
-            );
+            const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
+                jobType: extractJobType,
+                logEventIdx: sanitizedLogEventIdx,
+                streamId: streamId,
+                targetUncompressedSize: settings.StreamTargetUncompressedSize,
+            });
 
             if (null === extractResult) {
                 resp.code(StatusCodes.BAD_REQUEST);

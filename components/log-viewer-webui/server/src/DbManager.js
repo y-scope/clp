@@ -118,12 +118,12 @@ class DbManager {
      * @param {number} targetUncompressedSize
      * @return {Promise<number|null>} The ID of the job or null if an error occurred.
      */
-    async submitAndWaitForExtractStreamJob (
+    async submitAndWaitForExtractStreamJob ({
         jobType,
         logEventIdx,
         streamId,
-        targetUncompressedSize
-    ) {
+        targetUncompressedSize,
+    }) {
         let jobConfig;
         if (QUERY_JOB_TYPE.EXTRACT_IR === jobType) {
             jobConfig = {
@@ -268,8 +268,10 @@ class DbManager {
     }
 }
 
-export {EXTRACT_JOB_TYPES};
-export {QUERY_JOB_TYPE};
+export {
+    EXTRACT_JOB_TYPES,
+    QUERY_JOB_TYPE,
+};
 export default fastifyPlugin(async (app, options) => {
     await app.decorate("dbManager", new DbManager(app, options));
 });
