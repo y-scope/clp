@@ -67,6 +67,14 @@ const QUERY_JOB_TYPE = Object.freeze({
 /* eslint-enable sort-keys */
 
 /**
+ * List of valid extract job types.
+ */
+const EXTRACT_JOB_TYPES = Object.freeze([
+    QUERY_JOB_TYPE.EXTRACT_IR,
+    QUERY_JOB_TYPE.EXTRACT_JSON,
+]);
+
+/**
  * Class to manage connections to the jobs database (MySQL) and results cache (MongoDB).
  */
 class DbManager {
@@ -104,11 +112,33 @@ class DbManager {
     /**
      * Submits a stream extraction job to the scheduler and waits for it to finish.
      *
-     * @param {object} jobConfig
      * @param {number} jobType
+     * @param {number} logEventIdx
+     * @param {string} streamId
+     * @param {number} targetUncompressedSize
      * @return {Promise<number|null>} The ID of the job or null if an error occurred.
      */
-    async submitAndWaitForExtractStreamJob (jobConfig, jobType) {
+    async submitAndWaitForExtractStreamJob (
+        jobType,
+        logEventIdx,
+        streamId,
+        targetUncompressedSize
+    ) {
+        let jobConfig;
+        if (QUERY_JOB_TYPE.EXTRACT_IR === jobType) {
+            jobConfig = {
+                file_split_id: null,
+                msg_ix: logEventIdx,
+                orig_file_id: streamId,
+                target_uncompressed_size: targetUncompressedSize,
+            };
+        } else if (QUERY_JOB_TYPE.EXTRACT_JSON === jobType) {
+            jobConfig = {
+                archive_id: streamId,
+                target_chunk_size: targetUncompressedSize,
+            };
+        }
+
         let jobId;
         try {
             const [result] = await this.#mysqlConnectionPool.query(
@@ -238,6 +268,7 @@ class DbManager {
     }
 }
 
+export {EXTRACT_JOB_TYPES};
 export {QUERY_JOB_TYPE};
 export default fastifyPlugin(async (app, options) => {
     await app.decorate("dbManager", new DbManager(app, options));
