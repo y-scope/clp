@@ -1,8 +1,8 @@
+import {StatusCodes} from "http-status-codes";
+
 import settings from "../../settings.json" with {type: "json"};
 import {EXTRACT_JOB_TYPES} from "../DbManager.js";
-import {
-	StatusCodes,
-} from 'http-status-codes';
+
 
 /**
  * Creates query routes.
