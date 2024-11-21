@@ -14,18 +14,17 @@ import {EXTRACT_JOB_TYPES} from "../DbManager.js";
 const routes = async (fastify, options) => {
     fastify.post("/query/extract-stream", async (req, resp) => {
         const {extractJobType, logEventIdx, streamId} = req.body;
-        const sanitizedLogEventIdx = Number(logEventIdx);
-
         if (false === EXTRACT_JOB_TYPES.includes(extractJobType)) {
             resp.code(StatusCodes.BAD_REQUEST);
-            throw new Error("Invalid extractJobType");
+            throw new Error(`Invalid extractJobType="${extractJobType}".`);
         }
 
-        if ("string" !== typeof streamId || "" === streamId.trim()) {
+        if ("string" !== typeof streamId || 0 === streamId.trim().length) {
             resp.code(StatusCodes.BAD_REQUEST);
-            throw new Error("streamId must be a non-empty string");
+            throw new Error("\"streamId\" must be a non-empty string.");
         }
 
+        const sanitizedLogEventIdx = Number(logEventIdx);
         let streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
             streamId,
             sanitizedLogEventIdx
