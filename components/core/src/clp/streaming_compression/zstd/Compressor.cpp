@@ -135,7 +135,7 @@ auto Compressor::flush_without_ending_frame() -> void {
         auto const flush_result{ZSTD_flushStream(m_compression_stream, &m_compressed_stream_block)};
         if (ZSTD_error_no_error != ZSTD_getErrorCode(flush_result)) {
             SPDLOG_ERROR(
-                    "streaming_compression::zstd::Compressor: ZSTD_compressStream2() error: {}",
+                    "streaming_compression::zstd::Compressor: ZSTD_flushStream() error: {}",
                     ZSTD_getErrorName(flush_result)
             );
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
