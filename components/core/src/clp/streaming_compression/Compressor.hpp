@@ -13,7 +13,7 @@
 
 namespace clp::streaming_compression {
 /**
- * Generic compressor interface.
+ * Abstract compressor interface.
  */
 class Compressor : public WriterInterface {
 public:

@@ -24,7 +24,7 @@ namespace {
  * 2. A size_t <-> error_code_enum mapping function `ZSTD_getErrorCode`.
  * See also: https://facebook.github.io/zstd/zstd_manual.html
  *
- * @param result A `size_t` type result returned by ZStd functions
+ * @param result A `size_t` type result returned from ZStd APIs
  * @return Whether the result is an error code and indicates an error has occurred
  */
 auto is_error(size_t result) -> bool {

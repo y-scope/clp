@@ -37,7 +37,7 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
              cBufferSize / 2,
              cBufferSize}
     );
-    constexpr size_t cAlphabetLength = 26;
+    constexpr size_t cAlphabetLength{26};
     std::string const compressed_file_path{"test_streaming_compressed_file.bin"};
 
     // Initialize compression devices
