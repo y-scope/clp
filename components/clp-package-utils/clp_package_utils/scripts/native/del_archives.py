@@ -6,6 +6,7 @@ import sys
 from contextlib import closing
 from typing import List
 
+from clp_py_utils.clp_config import Database
 from clp_py_utils.sql_adapter import SQL_Adapter
 
 from clp_package_utils.general import (
@@ -25,27 +26,35 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def handle_file_deletion(
-    clp_home: pathlib.Path,
-    config_file_path: pathlib.Path,
-    default_config_file_path: pathlib.Path,
-    begin_ts: int,
-    end_ts: int,
-) -> int:
-    """
-    Deletes all archives where `begin_ts <= archive.begin_timestamp` and
-    `archive.end_timestamp <= end_ts` from both the metadata database and disk.
-    :param clp_home:
-    :param config_file_path:
-    :param default_config_file_path:
-    :param begin_ts:
-    :param end_ts:
-    :return: 0 on success, -1 otherwise.
-    """
+def main(argv):
+    clp_home = get_clp_home()
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+    args_parser = argparse.ArgumentParser(
+        description="Deletes archives that fall within the specified time range."
+    )
+    args_parser.add_argument(
+        "--config",
+        "-c",
+        required=True,
+        default=str(default_config_file_path),
+        help="CLP configuration file.",
+    )
+    args_parser.add_argument(
+        "begin_ts",
+        type=int,
+        help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
+    )
+    args_parser.add_argument(
+        "end_ts",
+        type=int,
+        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
+    )
+    parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(parsed_args.config, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
     except:
         logger.exception("Failed to load config.")
@@ -56,6 +65,30 @@ def handle_file_deletion(
     if not archives_dir.exists():
         logger.error("`archive_output.directory` doesn't exist.")
         return -1
+
+    return _delete_archives(
+        archives_dir,
+        database_config,
+        parsed_args.begin_ts,
+        parsed_args.end_ts,
+    )
+
+
+def _delete_archives(
+    archives_dir: pathlib.Path,
+    database_config: Database,
+    begin_ts: int,
+    end_ts: int,
+) -> int:
+    """
+    Deletes all archives where `begin_ts <= archive.begin_timestamp` and
+    `archive.end_timestamp <= end_ts` from both the metadata database and disk.
+    :param archives_dir:
+    :param database_config:
+    :param begin_ts:
+    :param end_ts:
+    :return: 0 on success, -1 otherwise.
+    """
 
     archive_ids: List[str]
     logger.info("Starting to delete archives from the database.")
@@ -106,41 +139,6 @@ def handle_file_deletion(
     logger.info(f"Finished deleting archives from disk.")
 
     return 0
-
-
-def main(argv):
-    clp_home = get_clp_home()
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
-
-    args_parser = argparse.ArgumentParser(
-        description="Deletes archives that fall within the specified time range."
-    )
-    args_parser.add_argument(
-        "--config",
-        "-c",
-        required=True,
-        default=str(default_config_file_path),
-        help="CLP configuration file.",
-    )
-    args_parser.add_argument(
-        "begin_ts",
-        type=int,
-        help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
-    )
-    args_parser.add_argument(
-        "end_ts",
-        type=int,
-        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
-    )
-    parsed_args = args_parser.parse_args(argv[1:])
-
-    return handle_file_deletion(
-        clp_home,
-        pathlib.Path(parsed_args.config),
-        default_config_file_path,
-        parsed_args.begin_ts,
-        parsed_args.end_ts,
-    )
 
 
 if "__main__" == __name__:

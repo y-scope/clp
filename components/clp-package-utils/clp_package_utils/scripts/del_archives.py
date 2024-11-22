@@ -31,7 +31,7 @@ def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-    args_parser = argparse.ArgumentParser(description="Prune the out-dated archives.")
+    args_parser = argparse.ArgumentParser(description="Deletes archives that fall within the specified time range.")
     args_parser.add_argument(
         "--config",
         "-c",
@@ -42,13 +42,13 @@ def main(argv):
         "--begin-ts",
         type=int,
         default=0,
-        help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "--end-ts",
         type=int,
         required=True,
-        help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
