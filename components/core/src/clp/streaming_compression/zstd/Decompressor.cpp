@@ -8,7 +8,8 @@
 
 namespace clp::streaming_compression::zstd {
 Decompressor::Decompressor()
-        : m_input_type(InputType::NotInitialized),
+        : ::clp::streaming_compression::Decompressor(CompressorType::ZSTD),
+          m_input_type(InputType::NotInitialized),
           m_decompression_stream(nullptr),
           m_file_reader(nullptr),
           m_file_reader_initial_pos(0),
