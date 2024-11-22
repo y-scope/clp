@@ -53,8 +53,9 @@ def main(argv):
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
+    config_file_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = load_config_file(parsed_args.config, default_config_file_path, clp_home)
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
     except:
         logger.exception("Failed to load config.")
@@ -109,7 +110,7 @@ def _delete_archives(
             results = db_cursor.fetchall()
 
             if 0 == len(results):
-                logger.warning("No archives (exclusively) within the specified time range.")
+                logger.info("No archives (exclusively) within the specified time range.")
                 return 0
 
             archive_ids = [result["id"] for result in results]
@@ -128,12 +129,12 @@ def _delete_archives(
     logger.info(f"Finished deleting archives from the database.")
 
     for archive_id in archive_ids:
-        logger.info(f"Deleting archive {archive_id} from disk.")
         archive_path = archives_dir / archive_id
         if not archive_path.is_dir():
             logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
             continue
 
+        logger.info(f"Deleting archive {archive_id} from disk.")
         shutil.rmtree(archive_path)
 
     logger.info(f"Finished deleting archives from disk.")
