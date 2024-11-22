@@ -91,20 +91,22 @@ def handle_file_deletion(
             )
             db_conn.commit()
     except Exception:
-        logger.exception("Failed to delete archives from database, abort deletion")
+        logger.exception("Failed to delete archives from the database. Aborting deletion.")
         return -1
 
-    logger.info(f"Finished deleting archives from the database")
+    logger.info(f"Finished deleting archives from the database.")
 
     for archive_id in archive_ids:
-        logger.info(f"Deleting archive {archive_id} from the storage")
+        logger.info(f"Deleting archive {archive_id} from disk.")
         archive_path = archives_dir / archive_id
         if not archive_path.is_dir():
-            logger.warning(f"Archive {archive_id} does not resolve to a directory, skip deletion")
+            logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
             continue
+
         shutil.rmtree(archive_path)
 
-    logger.info(f"Finished deleting archives")
+    logger.info(f"Finished deleting archives from disk.")
+
     return 0
 
 
@@ -113,7 +115,7 @@ def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(
-        description="Delete archives that fall into the specified time range."
+        description="Deletes archives that fall within the specified time range."
     )
     args_parser.add_argument(
         "--config",
@@ -125,12 +127,12 @@ def main(argv):
     args_parser.add_argument(
         "begin_ts",
         type=int,
-        help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "end_ts",
         type=int,
-        help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
