@@ -9,7 +9,6 @@
 #include "../FileWriter.hpp"
 #include "../TraceableException.hpp"
 #include "../WriterInterface.hpp"
-#include "Constants.hpp"
 
 namespace clp::streaming_compression {
 /**
@@ -31,7 +30,7 @@ public:
     };
 
     // Constructor
-    explicit Compressor(CompressorType type) : m_type{type} {}
+    Compressor() = default;
 
     // Destructor
     virtual ~Compressor() = default;
@@ -74,10 +73,6 @@ public:
      * @param file_writer
      */
     virtual auto open(FileWriter& file_writer) -> void = 0;
-
-private:
-    // Variables
-    CompressorType m_type;
 };
 }  // namespace clp::streaming_compression
 

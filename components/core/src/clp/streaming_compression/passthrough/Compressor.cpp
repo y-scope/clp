@@ -4,14 +4,8 @@
 
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
-#include "../Compressor.hpp"
-#include "../Constants.hpp"
 
 namespace clp::streaming_compression::passthrough {
-Compressor::Compressor()
-        : ::clp::streaming_compression::Compressor{CompressorType::Passthrough},
-          m_compressed_stream_file_writer{nullptr} {}
-
 auto Compressor::write(char const* data, size_t const data_length) -> void {
     if (nullptr == m_compressed_stream_file_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);

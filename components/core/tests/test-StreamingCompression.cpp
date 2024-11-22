@@ -2,6 +2,7 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <numeric>
 #include <string>
 
 #include <boost/filesystem/operations.hpp>
@@ -96,6 +97,16 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
         ));
         num_uncompressed_bytes += chunk_size;
     }
+
+    // Sanity check
+    REQUIRE(
+            (std::accumulate(
+                     cCompressionChunkSizes.cbegin(),
+                     cCompressionChunkSizes.cend(),
+                     size_t{0}
+             )
+             == num_uncompressed_bytes)
+    );
 
     // Cleanup
     boost::filesystem::remove(compressed_file_path);

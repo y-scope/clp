@@ -92,17 +92,20 @@ public:
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer;
+    FileWriter* m_compressed_stream_file_writer{nullptr};
 
     // Compressed stream variables
-    ZSTD_CStream* m_compression_stream;
-    bool m_compression_stream_contains_data;
+    ZSTD_CStream* m_compression_stream{ZSTD_createCStream()};
+    bool m_compression_stream_contains_data{false};
 
-    size_t m_compressed_stream_block_size;
-    Array<char> m_compressed_stream_block_buffer;
-    ZSTD_outBuffer m_compressed_stream_block;
+    Array<char> m_compressed_stream_block_buffer{ZSTD_CStreamOutSize()};
+    ZSTD_outBuffer m_compressed_stream_block{
+            .dst = m_compressed_stream_block_buffer.data(),
+            .size = m_compressed_stream_block_buffer.size(),
+            .pos = 0
+    };
 
-    size_t m_uncompressed_stream_pos;
+    size_t m_uncompressed_stream_pos{0};
 };
 }  // namespace clp::streaming_compression::zstd
 

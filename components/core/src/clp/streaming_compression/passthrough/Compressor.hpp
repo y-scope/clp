@@ -27,8 +27,8 @@ public:
         }
     };
 
-    // Constructors
-    Compressor();
+    // Constructor
+    Compressor() = default;
 
     // Destructor
     ~Compressor() override = default;
@@ -76,7 +76,7 @@ public:
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer;
+    FileWriter* m_compressed_stream_file_writer{nullptr};
 };
 }  // namespace clp::streaming_compression::passthrough
 

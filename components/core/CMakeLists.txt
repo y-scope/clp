@@ -460,7 +460,6 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_archive/writer/utils.cpp
         src/clp/streaming_archive/writer/utils.hpp
         src/clp/streaming_compression/Compressor.hpp
-        src/clp/streaming_compression/Constants.hpp
         src/clp/streaming_compression/Decompressor.hpp
         src/clp/streaming_compression/passthrough/Compressor.cpp
         src/clp/streaming_compression/passthrough/Compressor.hpp
