@@ -53,8 +53,6 @@ def handle_file_deletion(
 
     database_config = clp_config.database
     archives_dir = clp_config.archive_output.directory
-    # Note, the error message doesn't output the value of archives_dir because it is a mounted
-    # path. It could be confusing for user because the path will not exist in their file system.
     if not archives_dir.exists():
         logger.error("`archive_output.directory` doesn't exist.")
         return -1
