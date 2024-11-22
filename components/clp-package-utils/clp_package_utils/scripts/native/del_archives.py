@@ -33,8 +33,8 @@ def handle_file_deletion(
     end_ts: int,
 ) -> int:
     """
-    Deletes all archives with `begin_timestamp` and `end_timestamp` within the specified range from
-    the database, and removes any files associated with these archives.
+    Deletes all archives where `begin_ts <= archive.begin_timestamp` and
+    `archive.end_timestamp <= end_ts` from both the metadata database and disk.
     :param clp_home:
     :param config_file_path:
     :param default_config_file_path:
@@ -56,11 +56,11 @@ def handle_file_deletion(
     # Note, the error message doesn't output the value of archives_dir because it is a mounted
     # path. It could be confusing for user because the path will not exist in their file system.
     if not archives_dir.exists():
-        logger.error(f"archive directory doesn't exist. abort deletion")
+        logger.error("`archive_output.directory` doesn't exist.")
         return -1
 
     archive_ids: List[str]
-    logger.info(f"Start deleting archives from database")
+    logger.info("Starting to delete archives from the database.")
     try:
         sql_adapter = SQL_Adapter(database_config)
         clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
@@ -78,7 +78,7 @@ def handle_file_deletion(
             results = db_cursor.fetchall()
 
             if 0 == len(results):
-                logger.warning("No archive falls into the specified time range, abort deletion")
+                logger.warning("No archives (exclusively) within the specified time range.")
                 return 0
 
             archive_ids = [result["id"] for result in results]

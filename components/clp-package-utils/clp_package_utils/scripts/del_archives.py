@@ -68,10 +68,10 @@ def main(argv):
     begin_ts = parsed_args.begin_ts
     end_ts = parsed_args.end_ts
     if begin_ts > end_ts:
-        logger.error("begin-ts must be less than or equal to end-ts")
+        logger.error("begin-ts must be <= end-ts")
         return -1
     if end_ts < 0 or begin_ts < 0:
-        logger.error("begin_ts and end_ts must be positive.")
+        logger.error("begin_ts and end_ts must be non-negative.")
         return -1
 
     container_name = generate_container_name(JobType.DEL_ARCHIVE)
