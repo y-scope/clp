@@ -2,7 +2,6 @@
 
 #include <cstdlib>
 #include <filesystem>
-#include <format>
 #include <string>
 #include <string_view>
 #include <vector>
