@@ -10,7 +10,12 @@
 #include "../../TraceableException.hpp"
 
 namespace clp::streaming_compression::zstd {
-Compressor::Compressor() {
+Compressor::Compressor()
+        : m_compressed_stream_block{
+                  .dst = m_compressed_stream_block_buffer.data(),
+                  .size = m_compressed_stream_block_buffer.size(),
+                  .pos = 0
+          } {
     if (nullptr == m_compression_stream) {
         SPDLOG_ERROR("streaming_compression::zstd::Compressor: ZSTD_createCStream() error");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
@@ -28,7 +33,7 @@ auto Compressor::open(FileWriter& file_writer, int compression_level) -> void {
 
     // Setup compression stream
     auto const init_result{ZSTD_initCStream(m_compression_stream, compression_level)};
-    if (ZSTD_error_no_error != ZSTD_getErrorCode(init_result)) {
+    if (0 != ZSTD_isError(init_result)) {
         SPDLOG_ERROR(
                 "streaming_compression::zstd::Compressor: ZSTD_initCStream() error: {}",
                 ZSTD_getErrorName(init_result)
@@ -71,7 +76,7 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
                 &m_compressed_stream_block,
                 &uncompressed_stream_block
         )};
-        if (ZSTD_error_no_error != ZSTD_getErrorCode(compress_result)) {
+        if (0 != ZSTD_isError(compress_result)) {
             SPDLOG_ERROR(
                     "streaming_compression::zstd::Compressor: ZSTD_compressStream() error: {}",
                     ZSTD_getErrorName(compress_result)
@@ -99,7 +104,7 @@ auto Compressor::flush() -> void {
 
     m_compressed_stream_block.pos = 0;
     auto const end_stream_result{ZSTD_endStream(m_compression_stream, &m_compressed_stream_block)};
-    if (ZSTD_error_no_error != ZSTD_getErrorCode(end_stream_result)) {
+    if (0 != ZSTD_isError(end_stream_result)) {
         // Note: Output buffer is large enough that it is guaranteed to have enough room to be
         // able to flush the entire buffer, so this can only be an error
         SPDLOG_ERROR(
@@ -133,7 +138,7 @@ auto Compressor::flush_without_ending_frame() -> void {
     while (true) {
         m_compressed_stream_block.pos = 0;
         auto const flush_result{ZSTD_flushStream(m_compression_stream, &m_compressed_stream_block)};
-        if (ZSTD_error_no_error != ZSTD_getErrorCode(flush_result)) {
+        if (0 != ZSTD_isError(flush_result)) {
             SPDLOG_ERROR(
                     "streaming_compression::zstd::Compressor: ZSTD_flushStream() error: {}",
                     ZSTD_getErrorName(flush_result)

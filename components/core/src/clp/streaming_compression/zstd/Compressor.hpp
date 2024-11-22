@@ -99,11 +99,7 @@ private:
     bool m_compression_stream_contains_data{false};
 
     Array<char> m_compressed_stream_block_buffer{ZSTD_CStreamOutSize()};
-    ZSTD_outBuffer m_compressed_stream_block{
-            .dst = m_compressed_stream_block_buffer.data(),
-            .size = m_compressed_stream_block_buffer.size(),
-            .pos = 0
-    };
+    ZSTD_outBuffer m_compressed_stream_block;
 
     size_t m_uncompressed_stream_pos{0};
 };
