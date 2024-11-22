@@ -2,7 +2,9 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -10,31 +12,25 @@
 #include "../src/clp_s/JsonConstructor.hpp"
 #include "../src/clp_s/JsonParser.hpp"
 
-auto const cDefaultTargetEncodedSize = 8ULL * 1024 * 1024 * 1024;  // 8 GB
-auto const cDefaultMaxDocumentSize = 512ULL * 1024 * 1024;  // 512 MB
-auto const cDefaultMinTableSize = 1ULL * 1024 * 1024;  // 1 MB
-auto const cDefaultCompressionLevel = 3;
-auto const cDefaultPrintArchiveStats = false;
-auto const cDefaultOrdered = false;
-auto const cDefaultTargetOrderedChunkSize = 0;
-
-std::string const cTestEndToEndArchiveDirectory{"test-end-to-end-archive"};
-std::string const cTestEndToEndOutputDirectory = "test-end-to-end-out";
-std::string const cTestEndToEndOutputSortedJson = "test-end-to-end_sorted.json";
-std::string const cTestEndToEndInputFileDirectory = "test_log_files";
-std::string const cTestEndToEndInputFile = "test_no_floats_sorted.json";
+constexpr std::string_view cTestEndToEndArchiveDirectory{"test-end-to-end-archive"};
+constexpr std::string_view cTestEndToEndOutputDirectory{"test-end-to-end-out"};
+constexpr std::string_view cTestEndToEndOutputSortedJson{"test-end-to-end_sorted.json"};
+constexpr std::string_view cTestEndToEndInputFileDirectory{"test_log_files"};
+constexpr std::string_view cTestEndToEndInputFile{"test_no_floats_sorted.json"};
 
 namespace {
-
+/**
+ * Class with no data members who's contruction and destruction is soley
+ *      for cleanup up files and directorys created by the test case.
+ */
 class Cleanup {
 public:
-    Cleanup() {
-        std::filesystem::remove_all(cTestEndToEndArchiveDirectory);
-        std::filesystem::remove_all(cTestEndToEndOutputDirectory);
-        std::filesystem::remove(cTestEndToEndOutputSortedJson);
-    }
+    Cleanup() { delete_files(); }
 
-    ~Cleanup() {
+    ~Cleanup() { delete_files(); }
+
+private:
+    static void delete_files() {
         std::filesystem::remove_all(cTestEndToEndArchiveDirectory);
         std::filesystem::remove_all(cTestEndToEndOutputDirectory);
         std::filesystem::remove(cTestEndToEndOutputSortedJson);
@@ -54,6 +50,13 @@ auto get_test_input_local_path() -> std::string {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("clp-s_compression_and_extraction_no_floats", "[clp-s][end-to-end]") {
+    auto const default_target_encoded_size = 8ULL * 1024 * 1024 * 1024;  // 8 GiB
+    auto const default_max_document_size = 512ULL * 1024 * 1024;  // 512 MiB
+    auto const default_min_table_size = 1ULL * 1024 * 1024;  // 1 MiB
+    auto const default_compression_level = 3;
+    auto const default_print_archive_stats = false;
+    auto const default_ordered = false;
+    auto const default_target_ordered_chunk_size = 0;
     auto structurize_arrays = GENERATE(true, false);
 
     Cleanup const test_cleanup;
@@ -64,14 +67,14 @@ TEST_CASE("clp-s_compression_and_extraction_no_floats", "[clp-s][end-to-end]") {
     clp_s::JsonParserOption parser_option{};
     parser_option.file_paths.push_back(get_test_input_local_path());
     parser_option.archives_dir = cTestEndToEndArchiveDirectory;
-    parser_option.target_encoded_size = cDefaultTargetEncodedSize;
-    parser_option.max_document_size = cDefaultMaxDocumentSize;
-    parser_option.min_table_size = cDefaultMinTableSize;
-    parser_option.compression_level = cDefaultCompressionLevel;
-    parser_option.print_archive_stats = cDefaultPrintArchiveStats;
+    parser_option.target_encoded_size = default_target_encoded_size;
+    parser_option.max_document_size = default_max_document_size;
+    parser_option.min_table_size = default_min_table_size;
+    parser_option.compression_level = default_compression_level;
+    parser_option.print_archive_stats = default_print_archive_stats;
     parser_option.structurize_arrays = structurize_arrays;
 
-    clp_s::JsonParser parser(parser_option);
+    clp_s::JsonParser parser{parser_option};
     REQUIRE(parser.parse());
     parser.store();
 
@@ -92,17 +95,21 @@ TEST_CASE("clp-s_compression_and_extraction_no_floats", "[clp-s][end-to-end]") {
         }
 
         constructor_option.archive_id = entry.path().filename();
-        clp_s::JsonConstructor constructor(constructor_option);
+        clp_s::JsonConstructor constructor{constructor_option};
         constructor.store();
     }
 
-    std::string command = cTestEndToEndOutputDirectory + "/original";
-    REQUIRE(std::filesystem::exists(command.c_str()));
+    std::filesystem::path extracted_json_path{cTestEndToEndOutputDirectory};
+    extracted_json_path /= "original";
+    REQUIRE(std::filesystem::exists(extracted_json_path));
 
     int result = std::system("command -v jq >/dev/null 2>&1");
     REQUIRE(0 == result);
-    command = "jq -S -c '.' " + cTestEndToEndOutputDirectory + "/original | sort > "
-              + cTestEndToEndOutputSortedJson;
+    std::string command = std::format(
+            "jq --sort-keys --compact-output '.' {}/original | sort > {}",
+            cTestEndToEndOutputDirectory,
+            cTestEndToEndOutputSortedJson
+    );
     result = std::system(command.c_str());
     REQUIRE(0 == result);
 
@@ -110,8 +117,11 @@ TEST_CASE("clp-s_compression_and_extraction_no_floats", "[clp-s][end-to-end]") {
 
     result = std::system("command -v diff >/dev/null 2>&1");
     REQUIRE(0 == result);
-    command = "diff -u " + cTestEndToEndOutputSortedJson + " " + get_test_input_local_path()
-              + " > /dev/null";
+    command = std::format(
+            "diff -u {} {} > /dev/null",
+            cTestEndToEndOutputSortedJson,
+            get_test_input_local_path()
+    );
     result = std::system(command.c_str());
     REQUIRE(0 == WEXITSTATUS(result));
 }

@@ -13,7 +13,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   cmake \
   curl \
   build-essential \
-  diffutils \
   git \
   jq \
   libboost-filesystem-dev \
