@@ -3,7 +3,7 @@
 #include <cstddef>
 
 #include <spdlog/spdlog.h>
-#include <zstd_errors.h>
+#include <zstd.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
