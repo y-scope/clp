@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <fmt/format.h>
 
 #include "../src/clp_s/JsonConstructor.hpp"
 #include "../src/clp_s/JsonParser.hpp"
@@ -104,8 +105,11 @@ TEST_CASE("clp-s_compression_and_extraction_no_floats", "[clp-s][end-to-end]") {
 
     int result = std::system("command -v jq >/dev/null 2>&1");
     REQUIRE(0 == result);
-    std::string command = "jq -S -c '.' " + std::string(cTestEndToEndOutputDirectory)
-                          + "/original | sort > " + std::string(cTestEndToEndOutputSortedJson);
+    std::string command = fmt::format(
+            "jq --sort-keys --compact-output '.' {}/original | sort > {}",
+            cTestEndToEndOutputDirectory,
+            cTestEndToEndOutputSortedJson
+    );
     result = std::system(command.c_str());
     REQUIRE(0 == result);
 
@@ -113,8 +117,11 @@ TEST_CASE("clp-s_compression_and_extraction_no_floats", "[clp-s][end-to-end]") {
 
     result = std::system("command -v diff >/dev/null 2>&1");
     REQUIRE(0 == result);
-    command = "diff -u " + std::string(cTestEndToEndOutputSortedJson) + " "
-              + get_test_input_local_path() + " > /dev/null";
+    command = fmt::format(
+            "diff -u {} {}  > /dev/null",
+            cTestEndToEndOutputSortedJson,
+            get_test_input_local_path()
+    );
     result = std::system(command.c_str());
     REQUIRE(0 == WEXITSTATUS(result));
 }
