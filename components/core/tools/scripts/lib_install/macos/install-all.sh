@@ -21,5 +21,12 @@ brew install \
   mongo-cxx-driver \
   msgpack-cxx \
   spdlog \
-  pkg-config \
   zstd
+
+# Install pkg-config if it isn't already installed
+# NOTE: We might expect that pkg-config is installed through brew, so trying to install it again
+# would be harmless; however, in certain environments, like the macOS GitHub hosted runner,
+# pkg-config is installed by other means, meaning a brew install would cause conflicts.
+if ! command -v pkg-config ; then
+    brew install pkg-config
+fi
