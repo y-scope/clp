@@ -1,14 +1,19 @@
 #ifndef CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_COMPRESSOR_HPP
 
-#include <cstdint>
-#include <string>
+#include <sys/types.h>
 
+#include <cstddef>
+
+#include "../ErrorCode.hpp"
+#include "../FileWriter.hpp"
 #include "../TraceableException.hpp"
 #include "../WriterInterface.hpp"
-#include "Constants.hpp"
 
 namespace clp::streaming_compression {
+/**
+ * Abstract compressor interface.
+ */
 class Compressor : public WriterInterface {
 public:
     // Types
@@ -16,23 +21,27 @@ public:
     public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : TraceableException{error_code, filename, line_number} {}
 
         // Methods
-        char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "streaming_compression::Compressor operation failed";
         }
     };
 
     // Constructor
-    explicit Compressor(CompressorType type) : m_type(type) {}
+    Compressor() = default;
 
     // Destructor
     virtual ~Compressor() = default;
 
-    // Explicitly disable copy and move constructor/assignment
+    // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
-    Compressor& operator=(Compressor const&) = delete;
+    auto operator=(Compressor const&) -> Compressor& = delete;
+
+    // Default move constructor and assignment operator
+    Compressor(Compressor&&) noexcept = default;
+    auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
     // Methods implementing the WriterInterface
     /**
@@ -40,24 +49,30 @@ public:
      * @param pos
      * @return ErrorCode_Unsupported
      */
-    ErrorCode try_seek_from_begin(size_t pos) override { return ErrorCode_Unsupported; }
+    [[nodiscard]] auto try_seek_from_begin([[maybe_unused]] size_t pos) -> ErrorCode override {
+        return ErrorCode_Unsupported;
+    }
 
     /**
      * Unsupported operation
      * @param pos
      * @return ErrorCode_Unsupported
      */
-    ErrorCode try_seek_from_current(off_t offset) override { return ErrorCode_Unsupported; }
+    [[nodiscard]] auto try_seek_from_current([[maybe_unused]] off_t offset) -> ErrorCode override {
+        return ErrorCode_Unsupported;
+    }
 
     // Methods
     /**
-     * Closes the compression stream
+     * Closes the compressor
      */
-    virtual void close() = 0;
+    virtual auto close() -> void = 0;
 
-protected:
-    // Variables
-    CompressorType m_type;
+    /**
+     * Initializes the compression stream
+     * @param file_writer
+     */
+    virtual auto open(FileWriter& file_writer) -> void = 0;
 };
 }  // namespace clp::streaming_compression
 
