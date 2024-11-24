@@ -104,10 +104,12 @@ public:
 
     /**
      * Serializes the log event into `nlohmann::json` objects.
-     * @return A result containing a pair of serialized JSON objects (the first contains
-     * auto-generated key-value pairs, while the second contains user-generated key-value pairs), or
-     * an error code indicating the failure:
-     * - Forwards `serialize_node_id_value_pairs_to_json`'s return values.
+     * @return A result containing a pair or an error code indicating the failure:
+     * - The pair:
+     *   - Serialized auto-generated key-value pairs as a JSON object
+     *   - Serialized user-generated key-value pairs as a JSON object
+     * - The possible error codes:
+     *   - Forwards `serialize_node_id_value_pairs_to_json`'s return values on failure.
      */
     [[nodiscard]] auto serialize_to_json(
     ) const -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>>;
