@@ -15,13 +15,19 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
-          m_structurize_arrays(option.structurize_arrays) {
+          m_structurize_arrays(option.structurize_arrays),
+          m_record_log_order(option.record_log_order) {
     if (false == FileUtils::validate_path(option.file_paths)) {
         exit(1);
     }
 
     if (false == m_timestamp_key.empty()) {
-        clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column);
+        if (false
+            == clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column))
+        {
+            SPDLOG_ERROR("Can not parse invalid timestamp key: \"{}\"", m_timestamp_key);
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
     }
 
     for (auto& file_path : option.file_paths) {
@@ -31,6 +37,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.archives_dir = option.archives_dir;
     m_archive_options.compression_level = option.compression_level;
     m_archive_options.print_archive_stats = option.print_archive_stats;
+    m_archive_options.min_table_size = option.min_table_size;
     m_archive_options.id = m_generator();
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
@@ -441,6 +448,16 @@ bool JsonParser::parse() {
         m_num_messages = 0;
         size_t bytes_consumed_up_to_prev_archive = 0;
         size_t bytes_consumed_up_to_prev_record = 0;
+
+        int32_t log_event_idx_node_id{};
+        auto add_log_event_idx_node = [&]() {
+            if (m_record_log_order) {
+                log_event_idx_node_id
+                        = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
+            }
+        };
+        add_log_event_idx_node();
+
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
 
@@ -461,11 +478,20 @@ bool JsonParser::parse() {
                 return false;
             }
 
+            // Add log_event_idx field to metadata for record
+            if (m_record_log_order) {
+                m_current_parsed_message.add_value(
+                        log_event_idx_node_id,
+                        m_archive_writer->get_next_log_event_id()
+                );
+                m_current_schema.insert_ordered(log_event_idx_node_id);
+            }
+
             // Some errors from simdjson are latent until trying to access invalid JSON fields.
             // Instead of checking for an error every time we access a JSON field in parse_line we
             // just catch simdjson_error here instead.
             try {
-                parse_line(ref.value(), -1, "");
+                parse_line(ref.value(), constants::cRootNodeId, constants::cRootNodeName);
             } catch (simdjson::simdjson_error& error) {
                 SPDLOG_ERROR(
                         "Encountered error - {} - while trying to parse {} after parsing {} bytes",
@@ -490,6 +516,7 @@ bool JsonParser::parse() {
                 );
                 bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
                 split_archive();
+                add_log_event_idx_node();
             }
 
             m_current_parsed_message.clear();
@@ -518,6 +545,15 @@ bool JsonParser::parse() {
         }
     }
     return true;
+}
+
+int32_t JsonParser::add_metadata_field(std::string_view const field_name, NodeType type) {
+    auto metadata_subtree_id = m_archive_writer->add_node(
+            constants::cRootNodeId,
+            NodeType::Metadata,
+            constants::cMetadataSubtreeName
+    );
+    return m_archive_writer->add_node(metadata_subtree_id, type, field_name);
 }
 
 void JsonParser::store() {

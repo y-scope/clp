@@ -91,10 +91,12 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
     option.max_document_size = command_line_arguments.get_max_document_size();
+    option.min_table_size = command_line_arguments.get_minimum_table_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
     option.print_archive_stats = command_line_arguments.print_archive_stats();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
+    option.record_log_order = command_line_arguments.get_record_log_order();
 
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();
     if (db_config_container.has_value()) {
@@ -190,7 +192,10 @@ bool search_archive(
     try {
         for (auto const& column : command_line_arguments.get_projection_columns()) {
             std::vector<std::string> descriptor_tokens;
-            StringUtils::tokenize_column_descriptor(column, descriptor_tokens);
+            if (false == StringUtils::tokenize_column_descriptor(column, descriptor_tokens)) {
+                SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
+                return false;
+            }
             projection->add_column(ColumnDescriptor::create(descriptor_tokens));
         }
     } catch (clp_s::TraceableException& e) {
@@ -295,7 +300,7 @@ int main(int argc, char const* argv[]) {
         option.output_dir = command_line_arguments.get_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.archives_dir = archives_dir;
-        option.ordered_chunk_size = command_line_arguments.get_ordered_chunk_size();
+        option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
                     = {command_line_arguments.get_mongodb_uri(),

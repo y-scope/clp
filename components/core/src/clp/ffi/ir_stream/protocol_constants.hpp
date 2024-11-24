@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 #include <type_traits>
 
 namespace clp::ffi::ir_stream::cProtocol {
@@ -12,8 +13,10 @@ constexpr int8_t LengthUByte = 0x11;
 constexpr int8_t LengthUShort = 0x12;
 
 constexpr char VersionKey[] = "VERSION";
-constexpr char VersionValue[] = "0.0.2";
-constexpr char BetaVersionValue[] = "0.1.0-beta";
+constexpr std::string_view VersionValue{"0.1.0"};
+
+// This is used for the IR stream format that predates the key-value pair IR format.
+constexpr std::string_view LatestBackwardCompatibleVersion{"0.0.2"};
 
 // The following regex can be used to validate a Semantic Versioning string. The source of the
 // regex can be found here: https://semver.org/
@@ -67,11 +70,13 @@ constexpr int8_t ValueEightByteEncodingClpStr = 0x5A;
 constexpr int8_t ValueEmpty = 0x5E;
 constexpr int8_t ValueNull = 0x5F;
 
-constexpr int8_t SchemaTreeNodeParentIdUByte = 0x60;
-constexpr int8_t SchemaTreeNodeParentIdUShort = 0x61;
+constexpr int8_t EncodedSchemaTreeNodeParentIdByte = 0x60;
+constexpr int8_t EncodedSchemaTreeNodeParentIdShort = 0x61;
+constexpr int8_t EncodedSchemaTreeNodeParentIdInt = 0x62;
 
-constexpr int8_t KeyIdUByte = 0x65;
-constexpr int8_t KeyIdUShort = 0x66;
+constexpr int8_t EncodedSchemaTreeNodeIdByte = 0x65;
+constexpr int8_t EncodedSchemaTreeNodeIdShort = 0x66;
+constexpr int8_t EncodedSchemaTreeNodeIdInt = 0x67;
 
 constexpr int8_t SchemaTreeNodeMask = 0x70;
 

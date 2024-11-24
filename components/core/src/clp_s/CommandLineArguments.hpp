@@ -106,9 +106,13 @@ public:
 
     bool get_ordered_decompression() const { return m_ordered_decompression; }
 
-    size_t get_ordered_chunk_size() const { return m_ordered_chunk_size; }
+    size_t get_target_ordered_chunk_size() const { return m_target_ordered_chunk_size; }
+
+    size_t get_minimum_table_size() const { return m_minimum_table_size; }
 
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
+
+    bool get_record_log_order() const { return false == m_disable_log_order; }
 
 private:
     // Methods
@@ -174,7 +178,9 @@ private:
     size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
-    size_t m_ordered_chunk_size{0};
+    size_t m_target_ordered_chunk_size{};
+    size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
+    bool m_disable_log_order{false};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;

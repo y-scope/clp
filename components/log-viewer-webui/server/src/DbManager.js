@@ -2,7 +2,7 @@ import fastifyPlugin from "fastify-plugin";
 
 import fastifyMongo from "@fastify/mongodb";
 import fastifyMysql from "@fastify/mysql";
-import msgpack from "@msgpack/msgpack";
+import {encode as msgpackEncode} from "@msgpack/msgpack";
 
 import {sleep} from "./utils.js";
 
@@ -62,8 +62,17 @@ let enumQueryType;
 const QUERY_JOB_TYPE = Object.freeze({
     SEARCH_OR_AGGREGATION: (enumQueryType = 0),
     EXTRACT_IR: ++enumQueryType,
+    EXTRACT_JSON: ++enumQueryType,
 });
 /* eslint-enable sort-keys */
+
+/**
+ * List of valid extract job types.
+ */
+const EXTRACT_JOB_TYPES = Object.freeze([
+    QUERY_JOB_TYPE.EXTRACT_IR,
+    QUERY_JOB_TYPE.EXTRACT_JSON,
+]);
 
 /**
  * Class to manage connections to the jobs database (MySQL) and results cache (MongoDB).
@@ -84,7 +93,7 @@ class DbManager {
     /**
      * @type {import("mongodb").Collection}
      */
-    #irFilesCollection;
+    #streamFilesCollection;
 
     #queryJobsTableName;
 
@@ -101,20 +110,43 @@ class DbManager {
     }
 
     /**
-     * Submits an IR extraction job to the scheduler and waits for it to finish.
+     * Submits a stream extraction job to the scheduler and waits for it to finish.
      *
-     * @param {object} jobConfig
+     * @param {number} jobType
+     * @param {number} logEventIdx
+     * @param {string} streamId
+     * @param {number} targetUncompressedSize
      * @return {Promise<number|null>} The ID of the job or null if an error occurred.
      */
-    async submitAndWaitForExtractIrJob (jobConfig) {
+    async submitAndWaitForExtractStreamJob ({
+        jobType,
+        logEventIdx,
+        streamId,
+        targetUncompressedSize,
+    }) {
+        let jobConfig;
+        if (QUERY_JOB_TYPE.EXTRACT_IR === jobType) {
+            jobConfig = {
+                file_split_id: null,
+                msg_ix: logEventIdx,
+                orig_file_id: streamId,
+                target_uncompressed_size: targetUncompressedSize,
+            };
+        } else if (QUERY_JOB_TYPE.EXTRACT_JSON === jobType) {
+            jobConfig = {
+                archive_id: streamId,
+                target_chunk_size: targetUncompressedSize,
+            };
+        }
+
         let jobId;
         try {
             const [result] = await this.#mysqlConnectionPool.query(
                 `INSERT INTO ${this.#queryJobsTableName} (job_config, type)
              VALUES (?, ?)`,
                 [
-                    Buffer.from(msgpack.encode(jobConfig)),
-                    QUERY_JOB_TYPE.EXTRACT_IR,
+                    Buffer.from(msgpackEncode(jobConfig)),
+                    jobType,
                 ]
             );
 
@@ -130,16 +162,16 @@ class DbManager {
     }
 
     /**
-     * Gets the metadata for an IR file extracted from part of an original file, where the original
-     * file has the given ID and the extracted part contains the given log event index.
+     * Gets the metadata for the extracted stream that has the given streamId and contains the
+     * given logEventIdx.
      *
-     * @param {string} origFileId
+     * @param {string} streamId
      * @param {number} logEventIdx
-     * @return {Promise<object>} A promise that resolves to the extracted IR file's metadata.
+     * @return {Promise<object>} A promise that resolves to the extracted stream's metadata.
      */
-    async getExtractedIrFileMetadata (origFileId, logEventIdx) {
-        return await this.#irFilesCollection.findOne({
-            orig_file_id: origFileId,
+    async getExtractedStreamFileMetadata (streamId, logEventIdx) {
+        return await this.#streamFilesCollection.findOne({
+            orig_file_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
         });
@@ -177,7 +209,7 @@ class DbManager {
      * @param {string} config.host
      * @param {number} config.port
      * @param {string} config.database
-     * @param {string} config.irFilesCollectionName
+     * @param {string} config.StreamFilesCollectionName
      */
     #initMongo (config) {
         this.#fastify.register(fastifyMongo, {
@@ -187,8 +219,8 @@ class DbManager {
             if (err) {
                 throw err;
             }
-            this.#irFilesCollection =
-                this.#fastify.mongo.db.collection(config.irFilesCollectionName);
+            this.#streamFilesCollection =
+                this.#fastify.mongo.db.collection(config.streamFilesCollectionName);
         });
     }
 
@@ -236,6 +268,10 @@ class DbManager {
     }
 }
 
+export {
+    EXTRACT_JOB_TYPES,
+    QUERY_JOB_TYPE,
+};
 export default fastifyPlugin(async (app, options) => {
     await app.decorate("dbManager", new DbManager(app, options));
 });

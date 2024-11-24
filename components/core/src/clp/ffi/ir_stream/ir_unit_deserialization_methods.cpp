@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -43,16 +44,16 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
 /**
  * Deserializes the parent ID of a schema tree node.
  * @param reader
- * @param parent_id Returns the deserialized result.
- * @return IRErrorCode::IRErrorCode_Success on success.
- * @return IRErrorCode::IRErrorCode_Incomplete_IR if the stream is truncated.
- * @return IRErrorCode::IRErrorCode_Corrupted_IR if the next packet in the stream isn't a parent ID.
- * @return Forwards `deserialize_tag`'s return values on any other failure.
+ * @return A result containing a pair or an error code indicating the failure:
+ * - The pair:
+ *   - Whether the node ID is for an auto-generated node.
+ *   - The decoded node ID.
+ * - The possible error codes:
+ *   - Forwards `deserialize_tag`'s return values.
+ * @return Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
  */
-[[nodiscard]] auto deserialize_schema_tree_node_parent_id(
-        ReaderInterface& reader,
-        SchemaTree::Node::id_t& parent_id
-) -> IRErrorCode;
+[[nodiscard]] auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader
+) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
 
 /**
  * Deserializes the key name of a schema tree node.
@@ -100,13 +101,14 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * Deserializes the IDs of all keys in a log event.
  * @param reader
  * @param tag Takes the current tag as input and returns the last tag read.
- * @param schema Returns the deserialized schema.
- * @return IRErrorCode::IRErrorCode_Success on success.
- * @return IRErrorCode::IRErrorCode_Incomplete_IR if the stream is truncated.
- * @return Forwards `deserialize_tag`'s return values on any other failure.
+ * @return A result containing the deserialized schema or an error code indicating the failure:
+ * - std::err::protocol_not_supported if the IR stream contains auto-generated keys (TODO: Remove
+ *   this once auto-generated keys are fully supported).
+ * - Forwards `deserialize_tag`'s return values.
+ * - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
  */
-[[nodiscard]] auto
-deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& schema) -> IRErrorCode;
+[[nodiscard]] auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
+        -> OUTCOME_V2_NAMESPACE::std_result<Schema>;
 
 /**
  * Deserializes the next value and pushes the result into `node_id_value_pairs`.
@@ -170,9 +172,16 @@ requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
 ) -> IRErrorCode;
 
 /**
+ * @param tag
  * @return Whether the given tag can be a valid leading tag of a log event IR unit.
  */
 [[nodiscard]] auto is_log_event_ir_unit_tag(encoded_tag_t tag) -> bool;
+
+/**
+ * @param tag
+ * @return Whether the given tag represents a valid encoded key ID.
+ */
+[[nodiscard]] auto is_encoded_key_id_tag(encoded_tag_t tag) -> bool;
 
 auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree::Node::Type> {
     switch (tag) {
@@ -193,30 +202,16 @@ auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree
     }
 }
 
-auto deserialize_schema_tree_node_parent_id(
-        ReaderInterface& reader,
-        SchemaTree::Node::id_t& parent_id
-) -> IRErrorCode {
+auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader
+) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
     encoded_tag_t tag{};
     if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
-        return err;
+        return ir_error_code_to_errc(err);
     }
-    if (cProtocol::Payload::SchemaTreeNodeParentIdUByte == tag) {
-        uint8_t deserialized_id{};
-        if (false == deserialize_int(reader, deserialized_id)) {
-            return IRErrorCode::IRErrorCode_Incomplete_IR;
-        }
-        parent_id = static_cast<SchemaTree::Node::id_t>(deserialized_id);
-    } else if (cProtocol::Payload::SchemaTreeNodeParentIdUShort == tag) {
-        uint16_t deserialized_id{};
-        if (false == deserialize_int(reader, deserialized_id)) {
-            return IRErrorCode::IRErrorCode_Incomplete_IR;
-        }
-        parent_id = static_cast<SchemaTree::Node::id_t>(deserialized_id);
-    } else {
-        return IRErrorCode::IRErrorCode_Corrupted_IR;
-    }
-    return IRErrorCode_Success;
+    return deserialize_and_decode_schema_tree_node_id<
+            cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
+            cProtocol::Payload::EncodedSchemaTreeNodeParentIdShort,
+            cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt>(tag, reader);
 }
 
 auto deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
@@ -297,32 +292,35 @@ auto deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string&
     return IRErrorCode::IRErrorCode_Success;
 }
 
-auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag, Schema& schema)
-        -> IRErrorCode {
-    schema.clear();
+auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
+        -> OUTCOME_V2_NAMESPACE::std_result<Schema> {
+    Schema schema;
     while (true) {
-        if (cProtocol::Payload::KeyIdUByte == tag) {
-            uint8_t id{};
-            if (false == deserialize_int(reader, id)) {
-                return IRErrorCode::IRErrorCode_Incomplete_IR;
-            }
-            schema.push_back(static_cast<SchemaTree::Node::id_t>(id));
-        } else if (cProtocol::Payload::KeyIdUShort == tag) {
-            uint16_t id{};
-            if (false == deserialize_int(reader, id)) {
-                return IRErrorCode::IRErrorCode_Incomplete_IR;
-            }
-            schema.push_back(static_cast<SchemaTree::Node::id_t>(id));
-        } else {
+        if (false == is_encoded_key_id_tag(tag)) {
+            // The log event must be an empty value.
             break;
         }
 
+        auto const schema_tree_node_id_result{deserialize_and_decode_schema_tree_node_id<
+                cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+                cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+                cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(tag, reader)};
+        if (schema_tree_node_id_result.has_error()) {
+            return schema_tree_node_id_result.error();
+        }
+        auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
+        if (is_auto_generated) {
+            // Currently, we don't support auto-generated keys.
+            return std::errc::protocol_not_supported;
+        }
+        schema.push_back(node_id);
+
         if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
-            return err;
+            return ir_error_code_to_errc(err);
         }
     }
 
-    return IRErrorCode::IRErrorCode_Success;
+    return schema;
 }
 
 auto deserialize_value_and_insert_to_node_id_value_pairs(
@@ -469,11 +467,23 @@ auto is_log_event_ir_unit_tag(encoded_tag_t tag) -> bool {
         // The log event is an empty object
         return true;
     }
-    if (cProtocol::Payload::KeyIdUByte == tag || cProtocol::Payload::KeyIdUShort == tag) {
+    if (is_encoded_key_id_tag(tag)) {
         // If not empty, the log event must start with a tag byte indicating the key ID
         return true;
     }
     return false;
+}
+
+auto is_encoded_key_id_tag(encoded_tag_t tag) -> bool {
+    // Ideally, we could check whether the tag is within the range of
+    // [EncodedKeyIdByte, EncodedKeyIdInt], but we don't for two reasons:
+    // - We optimize for streams that have few key IDs, meaning we can short circuit in the first
+    //   branch below.
+    // - Using a range check assumes all length indicators are defined continuously, in order, but
+    //   we don't have static checks for this assumption.
+    return cProtocol::Payload::EncodedSchemaTreeNodeIdByte == tag
+           || cProtocol::Payload::EncodedSchemaTreeNodeIdShort == tag
+           || cProtocol::Payload::EncodedSchemaTreeNodeIdInt == tag;
 }
 }  // namespace
 
@@ -508,11 +518,14 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
         return ir_error_code_to_errc(IRErrorCode::IRErrorCode_Corrupted_IR);
     }
 
-    SchemaTree::Node::id_t parent_id{};
-    if (auto const err{deserialize_schema_tree_node_parent_id(reader, parent_id)};
-        IRErrorCode_Success != err)
-    {
-        return ir_error_code_to_errc(err);
+    auto const parent_node_id_result{deserialize_schema_tree_node_parent_id(reader)};
+    if (parent_node_id_result.has_error()) {
+        return parent_node_id_result.error();
+    }
+    auto const [is_auto_generated, parent_id]{parent_node_id_result.value()};
+    if (is_auto_generated) {
+        // Currently, we don't support auto-generated keys.
+        return std::errc::protocol_not_supported;
     }
 
     if (auto const err{deserialize_schema_tree_node_key_name(reader, key_name)};
@@ -542,12 +555,11 @@ auto deserialize_ir_unit_kv_pair_log_event(
         std::shared_ptr<SchemaTree> user_generated_schema_tree,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
-    Schema schema;
-    if (auto const err{deserialize_schema(reader, tag, schema)};
-        IRErrorCode::IRErrorCode_Success != err)
-    {
-        return ir_error_code_to_errc(err);
+    auto const schema_result{deserialize_schema(reader, tag)};
+    if (schema_result.has_error()) {
+        return schema_result.error();
     }
+    auto const& schema{schema_result.value()};
 
     KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
     if (false == schema.empty()) {

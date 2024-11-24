@@ -44,7 +44,9 @@ void TimestampDictionaryReader::read_new_entries() {
         TimestampEntry entry;
         std::vector<std::string> tokens;
         entry.try_read_from_file(m_dictionary_decompressor);
-        StringUtils::tokenize_column_descriptor(entry.get_key_name(), tokens);
+        if (false == StringUtils::tokenize_column_descriptor(entry.get_key_name(), tokens)) {
+            throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
+        }
         m_entries.emplace_back(std::move(entry));
 
         // TODO: Currently, we only allow a single authoritative timestamp column at ingestion time,

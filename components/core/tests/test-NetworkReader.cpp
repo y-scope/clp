@@ -6,10 +6,13 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <curl/curl.h>
+#include <fmt/core.h>
+#include <json/single_include/nlohmann/json.hpp>
 
 #include "../src/clp/Array.hpp"
 #include "../src/clp/CurlDownloadHandler.hpp"
@@ -187,4 +190,60 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     }
     size_t pos{};
     REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
+}
+
+TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
+    std::unordered_map<std::string, std::string> valid_http_header_kv_pairs;
+    // We use httpbin (https://httpbin.org/) to test the user-specified headers. On success, it is
+    // supposed to respond all the user-specified headers as key-value pairs in JSON form.
+    constexpr int cNumHttpHeaderKeyValuePairs{10};
+    for (size_t i{0}; i < cNumHttpHeaderKeyValuePairs; ++i) {
+        valid_http_header_kv_pairs.emplace(
+                fmt::format("Unit-Test-Key{}", i),
+                fmt::format("Unit-Test-Value{}", i)
+        );
+    }
+    clp::NetworkReader reader{
+            "https://httpbin.org/headers",
+            0,
+            false,
+            clp::CurlDownloadHandler::cDefaultOverallTimeout,
+            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+            clp::NetworkReader::cDefaultBufferPoolSize,
+            clp::NetworkReader::cDefaultBufferSize,
+            valid_http_header_kv_pairs
+    };
+    auto const content{get_content(reader)};
+    REQUIRE(assert_curl_error_code(CURLE_OK, reader));
+    auto const parsed_content = nlohmann::json::parse(content);
+    auto const& headers{parsed_content.at("headers")};
+    for (auto const& [key, value] : valid_http_header_kv_pairs) {
+        REQUIRE((value == headers.at(key).get<std::string_view>()));
+    }
+}
+
+TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]") {
+    auto illegal_header_kv_pairs = GENERATE(
+            // The following headers are determined by offset and disable_cache, which should not be
+            // overridden by user-defined headers.
+            std::unordered_map<std::string, std::string>{{"Range", "bytes=100-"}},
+            std::unordered_map<std::string, std::string>{{"RAnGe", "bytes=100-"}},
+            std::unordered_map<std::string, std::string>{{"Cache-Control", "no-cache"}},
+            std::unordered_map<std::string, std::string>{{"Pragma", "no-cache"}},
+            // The CRLF-terminated headers should be rejected.
+            std::unordered_map<std::string, std::string>{{"Legal-Name", "CRLF\r\n"}}
+    );
+    clp::NetworkReader reader{
+            "https://httpbin.org/headers",
+            0,
+            false,
+            clp::CurlDownloadHandler::cDefaultOverallTimeout,
+            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+            clp::NetworkReader::cDefaultBufferPoolSize,
+            clp::NetworkReader::cDefaultBufferSize,
+            illegal_header_kv_pairs
+    };
+    auto const content = get_content(reader);
+    REQUIRE(content.empty());
+    REQUIRE(assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader));
 }

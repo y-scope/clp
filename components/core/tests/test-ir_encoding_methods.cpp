@@ -3,6 +3,8 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -19,6 +21,7 @@
 #include "../src/clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../src/clp/ffi/ir_stream/Serializer.hpp"
+#include "../src/clp/ffi/ir_stream/utils.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../src/clp/ffi/SchemaTree.hpp"
 #include "../src/clp/ir/LogEventDeserializer.hpp"
@@ -627,8 +630,8 @@ TEMPLATE_TEST_CASE(
     auto metadata_json = nlohmann::json::parse(json_metadata);
     std::string const version
             = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
-    );
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+            == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -841,17 +844,63 @@ TEST_CASE("decode_next_message_four_byte_timestamp_delta", "[ffi][deserialize_lo
 }
 
 TEST_CASE("validate_protocol_version", "[ffi][validate_version_protocol]") {
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("v0.0.1")
+    REQUIRE(
+            (clp::ffi::ir_stream::IRProtocolErrorCode::Supported
+             == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue))
     );
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.1"));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Invalid == validate_protocol_version("0.a.1"));
+    REQUIRE(
+            (clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+             == validate_protocol_version(
+                     clp::ffi::ir_stream::cProtocol::Metadata::LatestBackwardCompatibleVersion
+             ))
+    );
 
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Too_New
-            == validate_protocol_version("1000.0.0"));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version(clp::ffi::ir_stream::cProtocol::Metadata::VersionValue));
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported
-            == validate_protocol_version("v0.0.0"));
+    SECTION("Test invalid versions") {
+        auto const invalid_versions{GENERATE(
+                std::string_view{"v0.0.1"},
+                std::string_view{"0.1"},
+                std::string_view{"0.1.a"},
+                std::string_view{"0.a.1"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Invalid
+                 == validate_protocol_version(invalid_versions))
+        );
+    }
+
+    SECTION("Test backward compatible versions") {
+        auto const backward_compatible_versions{GENERATE(
+                std::string_view{"v0.0.0"},
+                std::string_view{"0.0.1"},
+                std::string_view{"0.0.2"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+                 == validate_protocol_version(backward_compatible_versions))
+        );
+    }
+
+    SECTION("Test versions that're too old") {
+        auto const old_versions{GENERATE(
+                std::string_view{"0.0.3"},
+                std::string_view{"0.0.3-beta.1"},
+                std::string_view{"0.1.0-beta"}
+        )};
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Unsupported
+                 == validate_protocol_version(old_versions))
+        );
+    }
+
+    SECTION("Test versions that're too new") {
+        auto const new_versions{
+                GENERATE(std::string_view{"10000.0.0"}, std::string_view{"0.10000.0"})
+        };
+        REQUIRE(
+                (clp::ffi::ir_stream::IRProtocolErrorCode::Unsupported
+                 == validate_protocol_version(new_versions))
+        );
+    }
 }
 
 TEMPLATE_TEST_CASE(
@@ -902,8 +951,8 @@ TEMPLATE_TEST_CASE(
     string_view json_metadata{json_metadata_ptr, metadata_size};
     auto metadata_json = nlohmann::json::parse(json_metadata);
     string const version = metadata_json.at(clp::ffi::ir_stream::cProtocol::Metadata::VersionKey);
-    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode_Supported == validate_protocol_version(version)
-    );
+    REQUIRE(clp::ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
+            == validate_protocol_version(version));
     REQUIRE(clp::ffi::ir_stream::cProtocol::Metadata::EncodingJson == metadata_type);
     set_timestamp_info(metadata_json, ts_info);
     REQUIRE(timestamp_pattern_syntax == ts_info.timestamp_pattern_syntax);
@@ -1052,7 +1101,7 @@ TEMPLATE_TEST_CASE(
     nlohmann::json expected_metadata;
     expected_metadata.emplace(
             clp::ffi::ir_stream::cProtocol::Metadata::VersionKey,
-            clp::ffi::ir_stream::cProtocol::Metadata::BetaVersionValue
+            clp::ffi::ir_stream::cProtocol::Metadata::VersionValue
     );
     expected_metadata.emplace(
             clp::ffi::ir_stream::cProtocol::Metadata::VariablesSchemaIdKey,
@@ -1211,4 +1260,77 @@ TEMPLATE_TEST_CASE(
 
     auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};
     REQUIRE((eof_result.has_error() && std::errc::operation_not_permitted == eof_result.error()));
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_serialize_schema_tree_node_id",
+        "[clp][ffi][ir_stream]",
+        std::true_type,
+        std::false_type
+) {
+    constexpr bool cIsAutoGeneratedNode{TestType{}};
+    constexpr int8_t cOneByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdByte
+    };
+    constexpr int8_t cTwoByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdShort
+    };
+    constexpr int8_t cFourByteLengthIndicatorTag{
+            clp::ffi::ir_stream::cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+    };
+    constexpr auto cMaxNodeId{static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX)};
+
+    constexpr auto cSerializationMethodToTest
+            = clp::ffi::ir_stream::encode_and_serialize_schema_tree_node_id<
+                    cIsAutoGeneratedNode,
+                    cOneByteLengthIndicatorTag,
+                    cTwoByteLengthIndicatorTag,
+                    cFourByteLengthIndicatorTag>;
+    constexpr auto cDeserializationMethodToTest
+            = clp::ffi::ir_stream::deserialize_and_decode_schema_tree_node_id<
+                    cOneByteLengthIndicatorTag,
+                    cTwoByteLengthIndicatorTag,
+                    cFourByteLengthIndicatorTag>;
+
+    std::vector<int8_t> output_buf;
+    std::unordered_set<clp::ffi::SchemaTree::Node::id_t> valid_node_ids_to_test;
+
+    // Add some boundary node IDs
+    valid_node_ids_to_test.emplace(0);
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT8_MAX + 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT16_MAX + 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX - 1));
+    valid_node_ids_to_test.emplace(static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX));
+
+    // Generate some more "random" valid node IDs
+    for (clp::ffi::SchemaTree::Node::id_t node_id{1}, step{1}; node_id <= cMaxNodeId;
+         node_id += step, step += 1)
+    {
+        valid_node_ids_to_test.emplace(node_id);
+    }
+
+    for (auto const node_id : valid_node_ids_to_test) {
+        output_buf.clear();
+        REQUIRE(cSerializationMethodToTest(node_id, output_buf));
+
+        BufferReader reader{size_checked_pointer_cast<char>(output_buf.data()), output_buf.size()};
+        encoded_tag_t tag{};
+        REQUIRE((IRErrorCode::IRErrorCode_Success == deserialize_tag(reader, tag)));
+        auto const result{cDeserializationMethodToTest(tag, reader)};
+        REQUIRE_FALSE(result.has_error());
+        auto const [is_auto_generated, deserialized_node_id]{result.value()};
+        REQUIRE((cIsAutoGeneratedNode == is_auto_generated));
+        REQUIRE((deserialized_node_id == node_id));
+    }
+
+    // Test against the first invalid node ID
+    REQUIRE_FALSE(cSerializationMethodToTest(
+            static_cast<clp::ffi::SchemaTree::Node::id_t>(INT32_MAX) + 1,
+            output_buf
+    ));
 }
