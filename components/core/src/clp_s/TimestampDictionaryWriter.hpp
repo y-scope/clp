@@ -95,7 +95,7 @@ private:
     void merge_range();
 
     /**
-     * Writes timestamp entries to the a compression stream.
+     * Writes timestamp entries to a compression stream.
      * @param ranges
      * @param compressor
      */
