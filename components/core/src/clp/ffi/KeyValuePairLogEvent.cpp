@@ -191,6 +191,9 @@ node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) ->
 
 /**
  * Serializes the given node ID value pairs into a `nlohmann::json` object.
+ * @param schema_tree
+ * @param node_id_value_pairs
+ * @param schema_subtree_bitmap
  * @return A result containing the serialized JSON object or an error code indicating the failure:
  * - std::errc::protocol_error if a value in the log event couldn't be decoded or it couldn't be
  *   inserted into a JSON object.
@@ -198,7 +201,8 @@ node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) ->
  */
 [[nodiscard]] auto serialize_node_id_value_pairs_to_json(
         SchemaTree const& schema_tree,
-        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
+        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
+        vector<bool> const& schema_subtree_bitmap
 ) -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
 
 /**
@@ -425,7 +429,8 @@ auto decode_as_encoded_text_ast(Value const& val) -> std::optional<string> {
 
 auto serialize_node_id_value_pairs_to_json(
         SchemaTree const& schema_tree,
-        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs
+        KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
+        vector<bool> const& schema_subtree_bitmap
 ) -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json> {
     if (node_id_value_pairs.empty()) {
         return nlohmann::json::object();
@@ -440,13 +445,6 @@ auto serialize_node_id_value_pairs_to_json(
     // a `std::vector` to avoid implementing move semantics for `DfsIterator` (required when the
     // vector grows).
     std::stack<DfsIterator> dfs_stack;
-
-    auto const schema_subtree_bitmap_ret{get_schema_subtree_bitmap(node_id_value_pairs, schema_tree)
-    };
-    if (schema_subtree_bitmap_ret.has_error()) {
-        return schema_subtree_bitmap_ret.error();
-    }
-    auto const& schema_subtree_bitmap{schema_subtree_bitmap_ret.value()};
 
     // Traverse the schema tree in DFS order, but only traverse the nodes that are set in
     // `schema_subtree_bitmap`.
@@ -563,19 +561,47 @@ auto KeyValuePairLogEvent::create(
     };
 }
 
+auto KeyValuePairLogEvent::get_auto_generated_schema_subtree_bitmap(
+) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>> {
+    return get_schema_subtree_bitmap(
+            m_auto_generated_node_id_value_pairs,
+            *m_auto_generated_schema_tree
+    );
+}
+
+auto KeyValuePairLogEvent::get_user_generated_schema_subtree_bitmap(
+) const -> outcome_v2::std_result<std::vector<bool>> {
+    return get_schema_subtree_bitmap(
+            m_user_generated_node_id_value_pairs,
+            *m_user_generated_schema_tree
+    );
+}
+
 auto KeyValuePairLogEvent::serialize_to_json(
 ) const -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
+    auto const auto_generated_schema_subtree_bitmap_result{get_auto_generated_schema_subtree_bitmap(
+    )};
+    if (auto_generated_schema_subtree_bitmap_result.has_error()) {
+        return auto_generated_schema_subtree_bitmap_result.error();
+    }
     auto serialized_auto_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
             *m_auto_generated_schema_tree,
-            m_auto_generated_node_id_value_pairs
+            m_auto_generated_node_id_value_pairs,
+            auto_generated_schema_subtree_bitmap_result.value()
     )};
     if (serialized_auto_generated_kv_pairs_result.has_error()) {
         return serialized_auto_generated_kv_pairs_result.error();
     }
 
+    auto const user_generated_schema_subtree_bitmap_result{get_user_generated_schema_subtree_bitmap(
+    )};
+    if (user_generated_schema_subtree_bitmap_result.has_error()) {
+        return user_generated_schema_subtree_bitmap_result.error();
+    }
     auto serialized_user_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
             *m_user_generated_schema_tree,
-            m_user_generated_node_id_value_pairs
+            m_user_generated_node_id_value_pairs,
+            user_generated_schema_subtree_bitmap_result.value()
     )};
     if (serialized_user_generated_kv_pairs_result.has_error()) {
         return serialized_user_generated_kv_pairs_result.error();
