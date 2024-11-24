@@ -27,6 +27,7 @@ public:
 
     /**
      * Writes the timestamp dictionary to a compression stream.
+     * @param compressor
      */
     void write(ZstdCompressor& compressor);
 

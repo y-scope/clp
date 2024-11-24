@@ -161,9 +161,9 @@ void ArchiveWriter::write_archive_files(
         FileWriter& archive_writer,
         std::vector<ArchiveFileInfo> const& files
 ) {
+    FileReader reader;
     for (auto const& file : files) {
         std::string file_path = m_archive_path + file.n;
-        FileReader reader;
         reader.open(file_path);
         char read_buffer[cReadBlockSize];
         while (true) {
