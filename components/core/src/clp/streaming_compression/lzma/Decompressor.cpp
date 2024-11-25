@@ -12,9 +12,9 @@
 // Project headers
 #include "../../Defs.h"
 
-namespace streaming_compression::lzma {
+namespace clp::streaming_compression::lzma {
 Decompressor::Decompressor()
-        : ::streaming_compression::Decompressor(CompressorType::LZMA),
+        : ::clp::streaming_compression::Decompressor(CompressorType::LZMA),
           m_input_type(InputType::NotInitialized),
           m_decompression_stream(nullptr),
           m_file_reader(nullptr),
@@ -359,4 +359,4 @@ void Decompressor::reset_stream() {
     m_decompressed_stream_pos = 0;
     init_decoder(m_decompression_stream);
 }
-}  // namespace streaming_compression::lzma
+}  // namespace clp::streaming_compression::lzma

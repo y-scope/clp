@@ -1,13 +1,14 @@
-#ifndef STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
-#define STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
+#ifndef CLP_STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
+#define CLP_STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
 
 // C++ standard libraries
 #include <memory>
 #include <string>
 
 // ZLIB library
-#include <lzma.h>
 #include <zlib.h>
+
+#include <lzma.h>
 // Boost libraries
 #include <boost/iostreams/device/mapped_file.hpp>
 
@@ -16,8 +17,8 @@
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 
-namespace streaming_compression::lzma {
-class Decompressor : public ::streaming_compression::Decompressor {
+namespace clp::streaming_compression::lzma {
+class Decompressor : public ::clp::streaming_compression::Decompressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -158,5 +159,5 @@ private:
     char const* m_compressed_stream_block;
     size_t m_compressed_stream_block_size;
 };
-}  // namespace streaming_compression::lzma
-#endif  // STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
+}  // namespace clp::streaming_compression::lzma
+#endif  // CLP_STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP

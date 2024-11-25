@@ -1,22 +1,22 @@
-#ifndef STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
-#define STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
+#ifndef CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
+#define CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
 
-// C++ standard libraries
+#include <cstdint>
+#include <cstddef>
 #include <memory>
-#include <string>
 
-// ZLIB library
 #include <lzma.h>
-#include <zlib.h>
+#include <zconf.h>
 
-// Project headers
+#include "../../Array.hpp"
+#include "../../ErrorCode.hpp"
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 
-namespace streaming_compression::lzma {
-class Compressor : public ::streaming_compression::Compressor {
+namespace clp::streaming_compression::lzma {
+class Compressor : public ::clp::streaming_compression::Compressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -26,8 +26,8 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override {
-            return "streaming_compression::gzip::Compressor operation failed";
+        [[nodiscard]] auto what() const noexcept -> char const* override {
+            return "streaming_compression::lzma::Compressor operation failed";
         }
     };
 
@@ -38,10 +38,10 @@ public:
                   m_dict_size{cDefaultDictionarySize} {}
 
         auto set_compression_level(int compression_level) -> void {
-            if (0 > compression_level) {
-                m_compression_level = 0;
-            } else if (9 < compression_level) {
-                m_compression_level = 9;
+            if (compression_level < cMinCompressionLevel) {
+                m_compression_level = cMinCompressionLevel;
+            } else if (compression_level > cMaxCompressionLevel) {
+                m_compression_level = cMaxCompressionLevel;
             } else {
                 m_compression_level = compression_level;
             }
@@ -62,11 +62,15 @@ public:
     Compressor();
 
     // Destructor
-    ~Compressor();
+    ~Compressor() override = default;
 
-    // Explicitly disable copy and move constructor/assignment
+    // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
-    Compressor& operator=(Compressor const&) = delete;
+    auto operator=(Compressor const&) -> Compressor& = delete;
+
+    // Default move constructor and assignment operator
+    Compressor(Compressor&&) noexcept = default;
+    auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
     // Methods implementing the WriterInterface
     /**
@@ -74,11 +78,12 @@ public:
      * @param data
      * @param data_length
      */
-    void write(char const* data, size_t data_length) override;
+    auto write(char const* data, size_t data_length) -> void override;
+
     /**
      * Writes any internally buffered data to file and ends the current frame
      */
-    void flush() override;
+    auto flush() -> void override;
 
     /**
      * Tries to get the current position of the write head
@@ -86,20 +91,28 @@ public:
      * @return ErrorCode_NotInit if the compressor is not open
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_get_pos(size_t& pos) const override;
-
-    // Methods implementing the Compressor interface
-    /**
-     * Initialize streaming compressor
-     * @param file_writer
-     * @param compression_level
-     */
-    void open(FileWriter& file_writer, int compression_level) override;
+    auto try_get_pos(size_t& pos) const -> ErrorCode override;
 
     /**
      * Closes the compressor
      */
-    void close() override;
+    auto close() -> void override;
+
+    // Methods implementing the Compressor interface
+    /**
+     * Initializes the compression stream with the default compression level
+     * @param file_writer
+     */
+    auto open(FileWriter& file_writer) -> void override {
+        this->open(file_writer, cDefaultCompressionLevel);
+    }
+
+    /**
+     * Initializes the compression stream with the given compression level
+     * @param file_writer
+     * @param compression_level
+     */
+    auto open(FileWriter& file_writer, int compression_level) -> void;
 
     // Methods
     static auto set_compression_level(int compression_level) -> void {
@@ -109,25 +122,28 @@ public:
     static auto set_dict_size(uint32_t dict_size) -> void { m_option.set_dict_size(dict_size); }
 
 private:
+    using LzmaStream = lzma_stream;
+
     /**
      * Flushes the stream and closes it
      */
     void flush_and_close_compression_stream();
 
-    static void init_lzma_encoder(lzma_stream* strm);
+    static void init_lzma_encoder(LzmaStream* strm);
     static LzmaOption m_option;
+    static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     // Variables
-    FileWriter* m_compressed_stream_file_writer;
+    FileWriter* m_compressed_stream_file_writer{nullptr};
 
     // Compressed stream variables
-    lzma_stream* m_compression_stream;
-    bool m_compression_stream_contains_data;
+    std::unique_ptr<LzmaStream> m_compression_stream{std::make_unique<LzmaStream>()};
+    bool m_compression_stream_contains_data{false};
 
-    std::unique_ptr<Bytef[]> m_compressed_stream_block_buffer;
+    Array<Bytef> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
 
-    size_t m_uncompressed_stream_pos;
+    size_t m_uncompressed_stream_pos{0};
 };
-}  // namespace streaming_compression::lzma
+}  // namespace clp::streaming_compression::lzma
 
-#endif  // STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
+#endif  // CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
