@@ -1,31 +1,40 @@
 #include "TimestampDictionaryWriter.hpp"
 
+#include <sstream>
+
 #include "Utils.hpp"
+
+namespace {
+template <typename T>
+void write_numeric_value(std::stringstream& stream, T value) {
+    stream.write(reinterpret_cast<char*>(&value), sizeof(value));
+}
+}  // namespace
 
 namespace clp_s {
 void TimestampDictionaryWriter::write_timestamp_entries(
         std::map<std::string, TimestampEntry> const& ranges,
-        ZstdCompressor& compressor
+        std::stringstream& stream
 ) {
-    compressor.write_numeric_value<uint64_t>(ranges.size());
+    write_numeric_value<uint64_t>(stream, ranges.size());
 
     for (auto const& range : ranges) {
-        range.second.write_to_file(compressor);
+        range.second.write_to_stream(stream);
     }
 }
 
-void TimestampDictionaryWriter::write(ZstdCompressor& compressor) {
+void TimestampDictionaryWriter::write(std::stringstream& stream) {
     merge_range();
-    write_timestamp_entries(m_column_key_to_range, compressor);
+    write_timestamp_entries(m_column_key_to_range, stream);
 
-    compressor.write_numeric_value<uint64_t>(m_pattern_to_id.size());
+    write_numeric_value<uint64_t>(stream, m_pattern_to_id.size());
     for (auto& it : m_pattern_to_id) {
         // write pattern ID
-        compressor.write_numeric_value<uint64_t>(it.second);
+        write_numeric_value<uint64_t>(stream, it.second);
 
         std::string const& pattern = it.first->get_format();
-        compressor.write_numeric_value<uint64_t>(pattern.length());
-        compressor.write_string(pattern);
+        write_numeric_value<uint64_t>(stream, pattern.length());
+        stream.write(pattern.data(), pattern.size());
     }
 }
 
@@ -155,19 +164,5 @@ void TimestampDictionaryWriter::clear() {
     m_pattern_to_id.clear();
     m_column_key_to_range.clear();
     m_column_id_to_range.clear();
-}
-
-size_t TimestampDictionaryWriter::size_in_bytes() {
-    merge_range();
-    size_t size{2 * sizeof(uint64_t)};
-    for (auto const& range : m_column_key_to_range) {
-        size += range.second.size_in_bytes();
-    }
-
-    for (auto& pattern : m_pattern_to_id) {
-        size += 2 * sizeof(uint64_t);
-        size += pattern.first->get_format().size();
-    }
-    return size;
 }
 }  // namespace clp_s

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <sstream>
 
 #include <json/single_include/nlohmann/json.hpp>
 
@@ -106,7 +107,10 @@ size_t ArchiveWriter::write_timestamp_dict() {
     ZstdCompressor timestamp_dict_compressor;
     timestamp_dict_file_writer.open(timestamp_dict_path, FileWriter::OpenMode::CreateForWriting);
     timestamp_dict_compressor.open(timestamp_dict_file_writer, m_compression_level);
-    m_timestamp_dict.write(timestamp_dict_compressor);
+    std::stringstream timestamp_dict_stream;
+    m_timestamp_dict.write(timestamp_dict_stream);
+    std::string encoded_timestamp_dict = timestamp_dict_stream.str();
+    timestamp_dict_compressor.write(encoded_timestamp_dict.data(), encoded_timestamp_dict.size());
     timestamp_dict_compressor.close();
     auto compressed_size = timestamp_dict_file_writer.get_pos();
     timestamp_dict_file_writer.close();
@@ -161,8 +165,11 @@ void ArchiveWriter::write_archive_metadata(
 
     // Write timestamp dictionary
     compressor.write_numeric_value(ArchiveMetadataPacketType::TimestampDictionary);
-    compressor.write_numeric_value(static_cast<uint32_t>(m_timestamp_dict.size_in_bytes()));
-    m_timestamp_dict.write(compressor);
+    std::stringstream timestamp_dict_stream;
+    m_timestamp_dict.write(timestamp_dict_stream);
+    std::string encoded_timestamp_dict = timestamp_dict_stream.str();
+    compressor.write_numeric_value(static_cast<uint32_t>(encoded_timestamp_dict.size()));
+    compressor.write(encoded_timestamp_dict.data(), encoded_timestamp_dict.size());
 
     compressor.close();
 }

@@ -2,6 +2,7 @@
 #define CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 
 #include <map>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -9,7 +10,6 @@
 #include "SchemaTree.hpp"
 #include "TimestampEntry.hpp"
 #include "TimestampPattern.hpp"
-#include "ZstdCompressor.hpp"
 
 namespace clp_s {
 class TimestampDictionaryWriter {
@@ -26,10 +26,10 @@ public:
     TimestampDictionaryWriter() {}
 
     /**
-     * Writes the timestamp dictionary to a compression stream.
-     * @param compressor
+     * Writes the timestamp dictionary to a buffered stream.
+     * @param stream
      */
-    void write(ZstdCompressor& compressor);
+    void write(std::stringstream& stream);
 
     /**
      * Gets the pattern id for a given pattern
@@ -84,11 +84,6 @@ public:
      */
     void clear();
 
-    /**
-     * Merge ranges by key name then return the size of data to be compressed in bytes
-     */
-    size_t size_in_bytes();
-
 private:
     /**
      * Merges timestamp ranges with the same key name but different node ids.
@@ -96,13 +91,13 @@ private:
     void merge_range();
 
     /**
-     * Writes timestamp entries to a compression stream.
+     * Writes timestamp entries to a buffered stream.
      * @param ranges
      * @param compressor
      */
     static void write_timestamp_entries(
             std::map<std::string, TimestampEntry> const& ranges,
-            ZstdCompressor& compressor
+            std::stringstream& stream
     );
 
     using pattern_to_id_t = std::unordered_map<TimestampPattern const*, uint64_t>;
