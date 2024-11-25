@@ -72,6 +72,7 @@ class QueryTaskStatus(IntEnum):
 class QueryJobType(IntEnum):
     SEARCH_OR_AGGREGATION = 0
     EXTRACT_IR = auto()
+    EXTRACT_JSON = auto()
 
     def __str__(self) -> str:
         return str(self.value)

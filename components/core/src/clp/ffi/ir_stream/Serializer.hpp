@@ -14,7 +14,7 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * A work-in-progress class for serializing log events into the kv-pair IR format.
+ * Class for serializing log events into the kv-pair IR format.
  *
  * This class:
  * - maintains all necessary internal data structures to track serialization state;
