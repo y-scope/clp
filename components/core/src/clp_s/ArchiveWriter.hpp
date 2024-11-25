@@ -230,6 +230,7 @@ private:
 
     std::string m_id;
 
+    std::string m_archives_dir;
     std::string m_archive_path;
     std::string m_encoded_messages_dir;
 

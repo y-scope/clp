@@ -5,7 +5,7 @@
 
 namespace clp_s::constants {
 // Single file archive
-constexpr char cArchiveFile[] = "/archive";
+constexpr char cTmpPostfix[] = ".tmp";
 
 // Schema files
 constexpr char cArchiveSchemaMapFile[] = "/schema_ids";

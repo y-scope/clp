@@ -1,6 +1,7 @@
 #include "ArchiveWriter.hpp"
 
 #include <algorithm>
+#include <filesystem>
 
 #include <json/single_include/nlohmann/json.hpp>
 
@@ -15,17 +16,21 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_print_archive_stats = option.print_archive_stats;
     m_single_file_archive = option.single_file_archive;
     m_min_table_size = option.min_table_size;
-    auto archive_path = boost::filesystem::path(option.archives_dir) / m_id;
+    m_archives_dir = option.archives_dir;
+    std::string working_dir_name = m_id;
+    if (option.single_file_archive) {
+        working_dir_name += constants::cTmpPostfix;
+    }
+    auto archive_path = std::filesystem::path(option.archives_dir) / working_dir_name;
 
-    boost::system::error_code boost_error_code;
-    bool path_exists = boost::filesystem::exists(archive_path, boost_error_code);
-    if (path_exists) {
+    std::error_code ec;
+    if (std::filesystem::exists(archive_path, ec)) {
         SPDLOG_ERROR("Archive path already exists: {}", archive_path.c_str());
         throw OperationFailed(ErrorCodeUnsupported, __FILENAME__, __LINE__);
     }
 
     m_archive_path = archive_path.string();
-    if (false == boost::filesystem::create_directory(m_archive_path)) {
+    if (false == std::filesystem::create_directory(m_archive_path, ec)) {
         throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
     }
 
@@ -109,9 +114,9 @@ size_t ArchiveWriter::write_timestamp_dict() {
 }
 
 void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files) {
-    std::string archive_path = m_archive_path + constants::cArchiveFile;
+    std::string single_file_archive_path = (std::filesystem::path(m_archives_dir) / m_id).string();
     FileWriter archive_writer;
-    archive_writer.open(archive_path, FileWriter::OpenMode::CreateForWriting);
+    archive_writer.open(single_file_archive_path, FileWriter::OpenMode::CreateForWriting);
 
     write_archive_metadata(archive_writer, files);
     size_t metadata_section_size = archive_writer.get_pos() - sizeof(ArchiveHeader);
@@ -120,6 +125,10 @@ void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const
     write_archive_header(archive_writer, metadata_section_size);
 
     archive_writer.close();
+    std::error_code ec;
+    if (false == std::filesystem::remove(m_archive_path, ec)) {
+        throw OperationFailed(ErrorCodeFileExists, __FILENAME__, __LINE__);
+    }
 }
 
 void ArchiveWriter::write_archive_metadata(
@@ -179,7 +188,9 @@ void ArchiveWriter::write_archive_files(
             archive_writer.write(read_buffer, num_bytes_read);
         }
         reader.close();
-        boost::filesystem::remove(file_path);
+        if (false == std::filesystem::remove(file_path)) {
+            throw OperationFailed(ErrorCodeFileExists, __FILENAME__, __LINE__);
+        }
     }
 }
 
