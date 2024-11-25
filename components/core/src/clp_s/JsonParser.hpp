@@ -38,6 +38,7 @@ struct JsonParserOption {
     bool print_archive_stats{};
     bool structurize_arrays{};
     bool record_log_order{true};
+    bool single_file_archive{false};
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
