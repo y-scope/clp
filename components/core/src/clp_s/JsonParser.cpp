@@ -2,14 +2,82 @@
 
 #include <iostream>
 #include <stack>
+#include <unordered_map>
 
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
+#include "../clp/ffi/ir_stream/decoding_methods.hpp"
+#include "../clp/ffi/ir_stream/Deserializer.hpp"
+#include "../clp/ffi/KeyValuePairLogEvent.hpp"
+#include "../clp/ffi/SchemaTree.hpp"
+#include "../clp/ffi/utils.hpp"
+#include "../clp/ffi/Value.hpp"
+#include "../clp/streaming_compression/zstd/Decompressor.hpp"
+#include "../clp/time_types.hpp"
 #include "archive_constants.hpp"
+#include "ErrorCode.hpp"
 #include "JsonFileIterator.hpp"
 
+using clp::ffi::ir_stream::Deserializer;
+using clp::ffi::ir_stream::IRErrorCode;
+using clp::ffi::KeyValuePairLogEvent;
+using clp::UtcOffset;
+
 namespace clp_s {
+
+/**
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ */
+class IrUnitHandler {
+public:
+    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+        m_deserialized_log_event.emplace(std::move(log_event));
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] static auto handle_utc_offset_change(
+            [[maybe_unused]] UtcOffset utc_offset_old,
+            [[maybe_unused]] UtcOffset utc_offset_new
+    ) -> IRErrorCode {
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] auto handle_schema_tree_node_insertion(
+            [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator
+    ) -> IRErrorCode {
+        // new_nodes.push_back(schema_tree_node_locator);
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    [[nodiscard]] auto handle_end_of_stream() -> IRErrorCode {
+        m_is_complete = true;
+        return IRErrorCode::IRErrorCode_Success;
+    }
+
+    /*[[nodiscard]] auto get_new_schema_nodes() const ->
+    std::vector<clp::ffi::SchemaTree::NodeLocator> const& { return new_nodes;
+    }*/
+
+    [[nodiscard]] auto get_deserialized_log_event(
+    ) const -> std::optional<KeyValuePairLogEvent> const& {
+        return m_deserialized_log_event;
+    }
+
+    void clear() {
+        // new_nodes.clear();
+        // m_deserialized_log_event.clear();
+        m_is_complete = false;
+    }
+
+    [[nodiscard]] auto is_complete() const -> bool { return m_is_complete; }
+
+private:
+    // std::vector<clp::ffi::SchemaTree::NodeLocator> new_nodes;
+    std::optional<KeyValuePairLogEvent> m_deserialized_log_event;
+    bool m_is_complete{false};
+};
+
 JsonParser::JsonParser(JsonParserOption const& option)
         : m_num_messages(0),
           m_target_encoded_size(option.target_encoded_size),
@@ -517,6 +585,276 @@ bool JsonParser::parse() {
                     file_path.c_str()
             );
         }
+    }
+    return true;
+}
+
+auto JsonParser::get_archive_node_type(
+        clp::ffi::SchemaTree::Node::Type ir_node_type,
+        bool node_has_value,
+        std::optional<clp::ffi::Value> const& node_value
+) -> NodeType {
+    // figure out what type the node is in archive node type
+    NodeType archive_node_type = NodeType::Unknown;
+    switch (ir_node_type) {
+        case clp::ffi::SchemaTree::Node::Type::Int:
+            archive_node_type = NodeType::Integer;
+            break;
+        case clp::ffi::SchemaTree::Node::Type::Float:
+            archive_node_type = NodeType::Float;
+            break;
+        case clp::ffi::SchemaTree::Node::Type::Bool:
+            archive_node_type = NodeType::Boolean;
+            break;
+        case clp::ffi::SchemaTree::Node::Type::UnstructuredArray:
+            archive_node_type = NodeType::UnstructuredArray;
+            break;
+        case clp::ffi::SchemaTree::Node::Type::Str:
+            if (node_value && node_value->is<std::string>()) {
+                archive_node_type = NodeType::VarString;
+            } else {
+                archive_node_type = NodeType::ClpString;
+            }
+            break;
+        case clp::ffi::SchemaTree::Node::Type::Obj:
+            if (node_has_value) {
+                if (node_value->is_null()) {
+                    archive_node_type = NodeType::NullValue;
+                } else {
+                    archive_node_type = NodeType::Object;
+                }
+            } else {
+                archive_node_type = NodeType::Object;
+            }
+            break;
+        default:
+            break;
+    }
+    return archive_node_type;
+}
+
+auto JsonParser::get_archive_node_id(
+        std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&
+                ir_node_to_archive_node_unordered_map,
+        uint32_t ir_node_id,
+        NodeType archive_node_type,
+        clp::ffi::SchemaTree const& ir_tree
+) -> int {
+    auto unordered_map_location = ir_node_to_archive_node_unordered_map.find(ir_node_id);
+    if (ir_node_to_archive_node_unordered_map.end() != unordered_map_location) {
+        auto translation_vector = unordered_map_location->second;
+        for (int i = 0; i < translation_vector.size(); i++) {
+            if (translation_vector[i].first == archive_node_type) {
+                return translation_vector[i].second;
+            }
+        }
+    }
+
+    auto const& curr_node = ir_tree.get_node(ir_node_id);
+    int32_t parent_node_id{-1};
+    // Modify this check to look for null ... or the ir_streams version of null
+    auto parent_of_curr_node_id = curr_node.get_parent_id();
+    // if (ir_node_id != parent_of_curr_node_id) {
+    if (parent_of_curr_node_id.has_value()) {
+        parent_node_id = get_archive_node_id(
+                ir_node_to_archive_node_unordered_map,
+                parent_of_curr_node_id.value(),
+                NodeType::Object,
+                ir_tree
+        );
+    }
+    auto validated_escaped_key
+            = clp::ffi::validate_and_escape_utf8_string(curr_node.get_key_name());
+    std::string node_key = "";
+    if (validated_escaped_key.has_value()) {
+        node_key = validated_escaped_key.value();
+    } else {
+        throw "Key is not UTF-8 compliant";
+    }
+    int curr_node_archive_id
+            = m_archive_writer->add_node(parent_node_id, archive_node_type, node_key);
+    auto p = std::make_pair(archive_node_type, curr_node_archive_id);
+    if (ir_node_to_archive_node_unordered_map.end() != unordered_map_location) {
+        unordered_map_location->second.push_back(p);
+    } else {
+        std::vector<std::pair<NodeType, int32_t>> v;
+        v.push_back(p);
+        ir_node_to_archive_node_unordered_map.emplace(ir_node_id, v);
+    }
+    return curr_node_archive_id;
+}
+
+void JsonParser::parse_kv_log_event(
+        KeyValuePairLogEvent const& kv,
+        std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>&
+                ir_node_to_archive_node_unordered_map
+) {
+    clp::ffi::SchemaTree const& tree = kv.get_schema_tree();
+    for (auto const& pair : kv.get_node_id_value_pairs()) {
+        clp::ffi::SchemaTree::Node const& tree_node = tree.get_node(pair.first);
+        clp::ffi::SchemaTree::Node::Type ir_node_type = tree_node.get_type();
+        bool node_has_value = pair.second.has_value();
+        NodeType archive_node_type = NodeType::Unknown;
+        if (node_has_value) {
+            archive_node_type
+                    = get_archive_node_type(ir_node_type, node_has_value, pair.second.value());
+        } else {
+            archive_node_type = get_archive_node_type(ir_node_type, node_has_value, {});
+        }
+        int node_id;
+        try {
+            node_id = get_archive_node_id(
+                    ir_node_to_archive_node_unordered_map,
+                    pair.first,
+                    archive_node_type,
+                    tree
+            );
+        } catch (...) {
+            throw;
+        }
+
+        switch (archive_node_type) {
+            case NodeType::Integer: {
+                int64_t i64_value = pair.second.value().get_immutable_view<clp::ffi::value_int_t>();
+                m_current_parsed_message.add_value(node_id, i64_value);
+            } break;
+            case NodeType::Float: {
+                double d_value = pair.second.value().get_immutable_view<clp::ffi::value_float_t>();
+                m_current_parsed_message.add_value(node_id, d_value);
+            } break;
+            case NodeType::Boolean: {
+                bool b_value = pair.second.value().get_immutable_view<clp::ffi::value_bool_t>();
+                m_current_parsed_message.add_value(node_id, b_value);
+            } break;
+            case NodeType::VarString: {
+                auto validated_escaped_string = clp::ffi::validate_and_escape_utf8_string(
+                        pair.second.value().get_immutable_view<std::string>()
+                );
+                std::string str = "";
+                if (validated_escaped_string.has_value()) {
+                    str = validated_escaped_string.value();
+                } else {
+                    throw "String is not utf8 compliant";
+                }
+                m_current_parsed_message.add_value(node_id, str);
+            } break;
+            case NodeType::ClpString: {
+                std::string encoded_str = "";
+                std::string decodedValue = "";
+                if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
+                    decodedValue = pair.second.value()
+                                           .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                           .decode_and_unparse()
+                                           .value();
+
+                } else {
+                    decodedValue = pair.second.value()
+                                           .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                           .decode_and_unparse()
+                                           .value();
+                }
+                auto validated_escaped_encoded_string
+                        = clp::ffi::validate_and_escape_utf8_string(decodedValue.c_str());
+                if (validated_escaped_encoded_string.has_value()) {
+                    encoded_str = validated_escaped_encoded_string.value();
+                } else {
+                    throw "Encoded string is not utf8 compliant";
+                }
+                m_current_parsed_message.add_value(node_id, encoded_str);
+            } break;
+            case NodeType::UnstructuredArray: {
+                std::string array_str;
+                if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
+                    array_str = pair.second.value()
+                                        .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                        .decode_and_unparse()
+                                        .value();
+                } else {
+                    array_str = pair.second.value()
+                                        .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                        .decode_and_unparse()
+                                        .value();
+                }
+                m_current_parsed_message.add_value(node_id, array_str);
+                break;
+            }
+            default:
+                // Don't need to add value for obj or null
+                break;
+        }
+        m_current_schema.insert_ordered(node_id);
+    }
+
+    int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
+    m_current_parsed_message.set_id(current_schema_id);
+    m_archive_writer->append_message(current_schema_id, m_current_schema, m_current_parsed_message);
+}
+
+auto JsonParser::parse_from_ir() -> bool {
+    std::unordered_map<int32_t, std::vector<std::pair<NodeType, int32_t>>>
+            ir_node_to_archive_node_unordered_map;
+
+    for (auto& file_path : m_file_paths) {
+        int fsize = std::filesystem::file_size(file_path);
+        if (0 == fsize) {
+            m_archive_writer->close();
+            return false;
+        }
+        clp::streaming_compression::zstd::Decompressor zd;
+        zd.open(file_path);
+
+        auto deserializer_result{Deserializer<IrUnitHandler>::create(zd, IrUnitHandler{})};
+        if (deserializer_result.has_error()) {
+            zd.close();
+            m_archive_writer->close();
+            return false;
+        }
+        auto& deserializer = deserializer_result.value();
+        auto& ir_unit_handler{deserializer.get_ir_unit_handler()};
+        do {
+            auto const kv_log_event_result{deserializer.deserialize_next_ir_unit(zd)};
+
+            if (kv_log_event_result.has_error()) {
+                break;
+            }
+            if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
+                break;
+            } else if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::LogEvent) {
+                // auto new_nodes = ir_unit_handler.get_new_schema_nodes();
+                auto kv_log_event = &(ir_unit_handler.get_deserialized_log_event().value());
+
+                m_current_schema.clear();
+
+                try {
+                    parse_kv_log_event(
+                            *kv_log_event,
+                            ir_node_to_archive_node_unordered_map
+                    );  //, new_nodes);
+                } catch (std::string msg) {
+                    SPDLOG_ERROR("ERROR: {}" + msg);
+                    zd.close();
+                    return false;
+                } catch (...) {
+                    SPDLOG_ERROR("ERROR: Encountered error while parsing a kv log event");
+                    zd.close();
+                    return false;
+                }
+
+                if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
+                    ir_node_to_archive_node_unordered_map.clear();
+                    split_archive();
+                }
+
+                ir_unit_handler.clear();
+                m_current_parsed_message.clear();
+
+            } else {
+                continue;
+            }
+
+        } while (true);
+        ir_node_to_archive_node_unordered_map.clear();
+        zd.close();
     }
     return true;
 }
