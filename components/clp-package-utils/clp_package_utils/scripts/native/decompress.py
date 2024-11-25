@@ -299,7 +299,7 @@ def main(argv):
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
     json_extraction_parser.add_argument(
-        "--target-chunk-size", type=int, help="Target chunk size.", required=True
+        "--target-chunk-size", type=int, help="Target chunk size (B)."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])

@@ -97,6 +97,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.print_archive_stats = command_line_arguments.print_archive_stats();
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
+    option.record_log_order = command_line_arguments.get_record_log_order();
 
     auto const& db_config_container = command_line_arguments.get_metadata_db_config();
     if (db_config_container.has_value()) {
@@ -300,7 +301,7 @@ int main(int argc, char const* argv[]) {
         option.output_dir = command_line_arguments.get_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.archives_dir = archives_dir;
-        option.ordered_chunk_size = command_line_arguments.get_ordered_chunk_size();
+        option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
                     = {command_line_arguments.get_mongodb_uri(),

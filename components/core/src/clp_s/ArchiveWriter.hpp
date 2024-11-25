@@ -1,6 +1,7 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <string_view>
 #include <utility>
 
 #include <boost/filesystem.hpp>
@@ -95,9 +96,14 @@ public:
      * @param key
      * @return the node id
      */
-    int32_t add_node(int parent_node_id, NodeType type, std::string const& key) {
+    int32_t add_node(int parent_node_id, NodeType type, std::string_view const key) {
         return m_schema_tree.add_node(parent_node_id, type, key);
     }
+
+    /**
+     * @return The Id that will be assigned to the next log event when appended to the archive.
+     */
+    int64_t get_next_log_event_id() const { return m_next_log_event_id; }
 
     /**
      * Return a schema's Id and add the schema to the
@@ -220,6 +226,7 @@ private:
     size_t m_encoded_message_size{};
     size_t m_uncompressed_size{};
     size_t m_compressed_size{};
+    int64_t m_next_log_event_id{};
 
     std::string m_id;
 
