@@ -1,0 +1,15 @@
+{
+    "SqlDbHost": "localhost",
+    "SqlDbPort": 3306,
+    "SqlDbName": "clp-db",
+    "SqlDbQueryJobsTableName": "query_jobs",
+    "MongoDbHost": "localhost",
+    "MongoDbPort": 27017,
+    "MongoDbName": "clp-query-results",
+    "MongoDbStreamFilesCollectionName": "stream-files",
+
+    "ClientDir": "../client/dist",
+    "StreamFilesDir": "../../../build/clp-package/var/data/streams",
+    "StreamTargetUncompressedSize": 134217728,
+    "LogViewerDir": "../yscope-log-viewer/dist"
+}

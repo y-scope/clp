@@ -8,6 +8,9 @@ inputs:
   use_published_image:
     description: "Whether to use the published container image"
     required: true
+  use_shared_libs:
+    description: "Whether to build the core binaries by linking against shared libraries"
+    required: true
   upload_binaries:
     description: "Whether to upload the core binaries"
     required: true
@@ -18,10 +21,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - shell: "bash"
-      working-directory: "./components/core"
-      run: "./tools/scripts/deps-download/download-all.sh"
-
     - if: "inputs.use_published_image == 'false'"
       uses: "actions/download-artifact@v4"
       with:
@@ -46,13 +45,21 @@ runs:
         fi
       shell: "bash"
 
+    - run: "./tools/scripts/deps-download/init.sh"
+      shell: "bash"
+
     - run: >-
         docker run
         --user $(id -u):$(id -g)
-        --volume "$GITHUB_WORKSPACE/components/core":/mnt/clp
+        --volume "$GITHUB_WORKSPACE":/mnt/clp
         --workdir /mnt/clp
         ${{steps.get_image_props.outputs.qualified_image_name}}
-        /mnt/clp/tools/scripts/utils/build-and-run-unit-tests.sh . build
+        bash -c "task deps:core &&
+        python3 /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+        ${{inputs.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+        --source-dir /mnt/clp/components/core
+        --build-dir /mnt/clp/components/core/build
+        --num-jobs $(getconf _NPROCESSORS_ONLN)"
       shell: "bash"
 
     - if: "inputs.upload_binaries == 'true'"

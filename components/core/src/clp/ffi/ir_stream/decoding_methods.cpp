@@ -1,10 +1,15 @@
 #include "decoding_methods.hpp"
 
+#include <algorithm>
+#include <array>
 #include <regex>
+#include <string>
+#include <string_view>
 
 #include "../../ir/types.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
+#include "utils.hpp"
 
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
@@ -23,16 +28,6 @@ namespace clp::ffi::ir_stream {
  */
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var);
-
-/**
- * Deserializes an integer from the given reader
- * @tparam integer_t Type of the integer to deserialize
- * @param reader
- * @param value Returns the deserialized integer
- * @return true on success, false if the reader doesn't contain enough data to deserialize
- */
-template <typename integer_t>
-static bool deserialize_int(ReaderInterface& reader, integer_t& value);
 
 /**
  * Deserializes a logtype from the given reader
@@ -136,27 +131,6 @@ static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
         }
     }
     return false;
-}
-
-template <typename integer_t>
-static bool deserialize_int(ReaderInterface& reader, integer_t& value) {
-    integer_t value_little_endian;
-    if (reader.try_read_numeric_value(value_little_endian) != ErrorCode_Success) {
-        return false;
-    }
-
-    constexpr auto read_size = sizeof(integer_t);
-    static_assert(read_size == 1 || read_size == 2 || read_size == 4 || read_size == 8);
-    if constexpr (read_size == 1) {
-        value = value_little_endian;
-    } else if constexpr (read_size == 2) {
-        value = bswap_16(value_little_endian);
-    } else if constexpr (read_size == 4) {
-        value = bswap_32(value_little_endian);
-    } else if constexpr (read_size == 8) {
-        value = bswap_64(value_little_endian);
-    }
-    return true;
 }
 
 static IRErrorCode
@@ -363,6 +337,38 @@ auto deserialize_log_event(
         vector<string>& dict_vars,
         epoch_time_ms_t& timestamp_or_timestamp_delta
 ) -> IRErrorCode {
+    if (auto const err
+        = deserialize_encoded_text_ast(reader, encoded_tag, logtype, encoded_vars, dict_vars);
+        IRErrorCode_Success != err)
+    {
+        return err;
+    }
+
+    // NOTE: for the eight-byte encoding, the timestamp is the actual timestamp; for the four-byte
+    // encoding, the timestamp is a timestamp delta
+    if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
+        return IRErrorCode_Incomplete_IR;
+    }
+    if (auto error_code = deserialize_timestamp<encoded_variable_t>(
+                reader,
+                encoded_tag,
+                timestamp_or_timestamp_delta
+        );
+        IRErrorCode_Success != error_code)
+    {
+        return error_code;
+    }
+    return IRErrorCode_Success;
+}
+
+template <typename encoded_variable_t>
+auto deserialize_encoded_text_ast(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        std::string& logtype,
+        std::vector<encoded_variable_t>& encoded_vars,
+        std::vector<std::string>& dict_vars
+) -> IRErrorCode {
     // Handle variables
     string var_str;
     bool is_encoded_var{false};
@@ -393,20 +399,6 @@ auto deserialize_log_event(
         return error_code;
     }
 
-    // NOTE: for the eight-byte encoding, the timestamp is the actual timestamp; for the four-byte
-    // encoding, the timestamp is a timestamp delta
-    if (ErrorCode_Success != reader.try_read_numeric_value(encoded_tag)) {
-        return IRErrorCode_Incomplete_IR;
-    }
-    if (auto error_code = deserialize_timestamp<encoded_variable_t>(
-                reader,
-                encoded_tag,
-                timestamp_or_timestamp_delta
-        );
-        IRErrorCode_Success != error_code)
-    {
-        return error_code;
-    }
     return IRErrorCode_Success;
 }
 
@@ -480,13 +472,23 @@ IRErrorCode deserialize_preamble(
     return IRErrorCode_Success;
 }
 
-IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version) {
-    if ("v0.0.0" == protocol_version) {
-        // This version is hardcoded to support the oldest IR protocol version. When this version is
-        // no longer supported, this branch should be removed.
-        return IRProtocolErrorCode_Supported;
+auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolErrorCode {
+    // These versions are hardcoded to support the IR protocol version that predates the key-value
+    // pair IR format.
+    constexpr std::array<std::string_view, 3> cBackwardCompatibleVersions{
+            "v0.0.0",
+            "0.0.1",
+            cProtocol::Metadata::LatestBackwardCompatibleVersion
+    };
+    if (cBackwardCompatibleVersions.cend()
+        != std::ranges::find(cBackwardCompatibleVersions, protocol_version))
+    {
+        return IRProtocolErrorCode::BackwardCompatible;
     }
-    std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};
+
+    std::regex const protocol_version_regex{
+            static_cast<char const*>(cProtocol::Metadata::VersionRegex)
+    };
     if (false
         == std::regex_match(
                 protocol_version.begin(),
@@ -494,19 +496,16 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
                 protocol_version_regex
         ))
     {
-        return IRProtocolErrorCode_Invalid;
+        return IRProtocolErrorCode::Invalid;
     }
-    std::string_view current_build_protocol_version{cProtocol::Metadata::VersionValue};
-    auto get_major_version{[](std::string_view version) {
-        return version.substr(0, version.find('.'));
-    }};
-    if (current_build_protocol_version < protocol_version) {
-        return IRProtocolErrorCode_Too_New;
+
+    // TODO: Currently, we hardcode the supported versions. This should be removed once we
+    // implement a proper version parser.
+    if (cProtocol::Metadata::VersionValue == protocol_version) {
+        return IRProtocolErrorCode::Supported;
     }
-    if (get_major_version(current_build_protocol_version) > get_major_version(protocol_version)) {
-        return IRProtocolErrorCode_Too_Old;
-    }
-    return IRProtocolErrorCode_Supported;
+
+    return IRProtocolErrorCode::Unsupported;
 }
 
 IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset) {
@@ -567,5 +566,21 @@ template auto deserialize_log_event<eight_byte_encoded_variable_t>(
         vector<eight_byte_encoded_variable_t>& encoded_vars,
         vector<string>& dict_vars,
         epoch_time_ms_t& timestamp_or_timestamp_delta
+) -> IRErrorCode;
+
+template auto deserialize_encoded_text_ast<four_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        std::string& logtype,
+        std::vector<four_byte_encoded_variable_t>& encoded_vars,
+        std::vector<std::string>& dict_vars
+) -> IRErrorCode;
+
+template auto deserialize_encoded_text_ast<eight_byte_encoded_variable_t>(
+        ReaderInterface& reader,
+        encoded_tag_t encoded_tag,
+        std::string& logtype,
+        std::vector<eight_byte_encoded_variable_t>& encoded_vars,
+        std::vector<std::string>& dict_vars
 ) -> IRErrorCode;
 }  // namespace clp::ffi::ir_stream

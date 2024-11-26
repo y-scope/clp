@@ -7,17 +7,26 @@ CLP core is the low-level component that performs compression, decompression, an
 * We have built and tested CLP on the OSes listed [below](#native-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A compiler that supports C++20 and std::span (e.g., gcc-10)
+* [Task](https://taskfile.dev/) >= 3.38.0
 
 To build, we require some source dependencies, packages from package managers, and libraries built
 from source.
 
-### Source Dependencies
+### Set up
 
-We use both git submodules and third-party source packages. To download all, you can run this
-script:
+To initialize the project, run:
 
 ```shell
-components/core/tools/scripts/deps-download/download-all.sh
+tools/scripts/deps-download/init.sh
+```
+
+### Source Dependencies
+
+We use both git submodules and third-party source packages. To download all, run this `task`
+command:
+
+```shell
+task deps:core
 ```
 
 This will download:
@@ -27,6 +36,7 @@ This will download:
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
 * [json](https://github.com/nlohmann/json.git) (v3.10.4)
 * [log-surgeon](https://github.com/y-scope/log-surgeon) (895f464)
+* [outcome](https://github.com/ned14/outcome) (v2.2.9)
 * [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
@@ -43,8 +53,8 @@ A handful of packages and libraries are required to build CLP. There are two opt
 
 See the relevant README for your OS:
 
-* [CentOS 7.4](centos7.4-deps-install)
-* [macOS 12](macos12-deps-install)
+* [CentOS Stream 9](centos-stream-9-deps-install)
+* [macOS](macos-deps-install)
 * [Ubuntu 20.04](ubuntu-focal-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
@@ -87,8 +97,8 @@ the relevant paths on your machine.
 :::{toctree}
 :hidden:
 
-centos7.4-deps-install
-macos12-deps-install
+centos-stream-9-deps-install
+macos-deps-install
 ubuntu-focal-deps-install
 ubuntu-jammy-deps-install
 regex-utils

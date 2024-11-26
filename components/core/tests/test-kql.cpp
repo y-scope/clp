@@ -187,4 +187,49 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         auto failure = parse_kql_expression(incorrect_query);
         REQUIRE(nullptr == failure);
     }
+
+    SECTION("Escape sequences in column name") {
+        auto query = GENERATE(
+                "a\\.b.c: *",
+                "\"a\\.b.c\": *",
+                "a\\.b: {c: *}",
+                "\"a\\.b\": {\"c\": *}"
+        );
+        stringstream escaped_column_query{query};
+        auto filter
+                = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(escaped_column_query));
+        REQUIRE(nullptr != filter);
+        REQUIRE(nullptr != filter->get_operand());
+        REQUIRE(nullptr != filter->get_column());
+        REQUIRE(false == filter->has_only_expression_operands());
+        REQUIRE(false == filter->is_inverted());
+        REQUIRE(FilterOperation::EQ == filter->get_operation());
+        REQUIRE(2 == filter->get_column()->get_descriptor_list().size());
+        auto it = filter->get_column()->descriptor_begin();
+        REQUIRE(DescriptorToken{"a.b"} == *it++);
+        REQUIRE(DescriptorToken{"c"} == *it++);
+    }
+
+    SECTION("Illegal escape sequences in column name") {
+        auto query = GENERATE(
+                //"a\\:*", this case is technically legal since ':' gets escaped
+                "\"a\\\":*",
+                "a\\ :*",
+                "\"a\\\" :*",
+                "a.:*",
+                "\"a.\":*",
+                "a. :*",
+                "\"a.\" :*"
+        );
+        stringstream illegal_escape{query};
+        auto filter = parse_kql_expression(illegal_escape);
+        REQUIRE(nullptr == filter);
+    }
+
+    SECTION("Empty token in column name") {
+        auto query = GENERATE(".a:*", "a.:*", "a..c:*", "a.b.:*");
+        stringstream empty_token_column{query};
+        auto filter = parse_kql_expression(empty_token_column);
+        REQUIRE(nullptr == filter);
+    }
 }

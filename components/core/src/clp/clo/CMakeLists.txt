@@ -34,6 +34,8 @@ set(
         ../FileWriter.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../ir/EncodedTextAst.cpp
+        ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
         ../ir/LogEventSerializer.cpp
         ../ir/LogEventSerializer.hpp
@@ -156,7 +158,7 @@ target_compile_features(clo PRIVATE cxx_std_20)
 target_include_directories(clo PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(clo
         PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
+        Boost::filesystem Boost::program_options
         fmt::fmt
         log_surgeon::log_surgeon
         ${MONGOCXX_TARGET}

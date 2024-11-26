@@ -1,36 +1,51 @@
 import fastify from "fastify";
-import * as path from "node:path";
 import process from "node:process";
 
-import {fastifyStatic} from "@fastify/static";
-
-import exampleRoutes from "./routes/examples.js";
+import settings from "../settings.json" with {type: "json"};
+import DbManager from "./DbManager.js";
+import exampleRoutes from "./routes/example.js";
+import queryRoutes from "./routes/query.js";
+import staticRoutes from "./routes/static.js";
 
 
 /**
  * Creates the Fastify app with the given options.
  *
- * @param {string} clientDir Absolute path to the client directory to serve when in running in a
- * production environment.
- * @param {import("fastify").FastifyServerOptions} fastifyOptions
+ * @param {object} props
+ * @param {import("fastify").FastifyServerOptions} props.fastifyOptions
+ * @param {string} props.sqlDbUser
+ * @param {string} props.sqlDbPass
  * @return {Promise<import("fastify").FastifyInstance>}
  */
-const app = async (clientDir, fastifyOptions = {}) => {
+const app = async ({
+    fastifyOptions,
+    sqlDbUser,
+    sqlDbPass,
+}) => {
     const server = fastify(fastifyOptions);
 
-    if ("production" === process.env.NODE_ENV) {
-        // In the development environment, we expect the client to use a separate webserver that
-        // supports live reloading.
-        if (false === path.isAbsolute(clientDir)) {
-            throw new Error("`clientDir` must be an absolute path.");
-        }
-
-        await server.register(fastifyStatic, {
-            prefix: "/",
-            root: clientDir,
+    if ("test" !== process.env.NODE_ENV) {
+        await server.register(DbManager, {
+            mysqlConfig: {
+                database: settings.SqlDbName,
+                host: settings.SqlDbHost,
+                password: sqlDbPass,
+                port: settings.SqlDbPort,
+                queryJobsTableName: settings.SqlDbQueryJobsTableName,
+                user: sqlDbUser,
+            },
+            mongoConfig: {
+                database: settings.MongoDbName,
+                host: settings.MongoDbHost,
+                streamFilesCollectionName: settings.MongoDbStreamFilesCollectionName,
+                port: settings.MongoDbPort,
+            },
         });
     }
+
+    await server.register(staticRoutes);
     await server.register(exampleRoutes);
+    await server.register(queryRoutes);
 
     return server;
 };

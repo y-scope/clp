@@ -11,11 +11,10 @@
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
-#include "../SchemaTreeNode.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
- * A work-in-progress class for serializing log events into the kv-pair IR format.
+ * Class for serializing log events into the kv-pair IR format.
  *
  * This class:
  * - maintains all necessary internal data structures to track serialization state;
@@ -104,10 +103,9 @@ private:
     /**
      * Serializes the given key ID into `m_key_group_buf`.
      * @param id
-     * @return true on success.
-     * @return false if the ID exceeds the representable range.
+     * @return Forwards `encode_and_serialize_schema_tree_node_id`'s return values.
      */
-    [[nodiscard]] auto serialize_key(SchemaTreeNode::id_t id) -> bool;
+    [[nodiscard]] auto serialize_key(SchemaTree::Node::id_t id) -> bool;
 
     /**
      * Serializes the given MessagePack value into `m_value_group_buf`.
@@ -116,7 +114,7 @@ private:
      * @return Whether serialization succeeded.
      */
     [[nodiscard]] auto
-    serialize_val(msgpack::object const& val, SchemaTreeNode::Type schema_tree_node_type) -> bool;
+    serialize_val(msgpack::object const& val, SchemaTree::Node::Type schema_tree_node_type) -> bool;
 
     UtcOffset m_curr_utc_offset{0};
     Buffer m_ir_buf;

@@ -65,8 +65,19 @@ auto ErrorCodeCategory::message(int ev) const -> string {
         case ErrorCode::IllegalDollarSign:
             return "Failed to translate due to end anchor `$` in the middle of the string.";
 
+        case ErrorCode::IllegalEscapeSequence:
+            return "Currently only supports escape sequences that are used to suppress special "
+                   "meanings of regex metacharacters. Alphanumeric characters are disallowed.";
+
         case ErrorCode::UnmatchedParenthesis:
             return "Unmatched opening `(` or closing `)`.";
+
+        case ErrorCode::IncompleteCharsetStructure:
+            return "Unmatched closing `]` at the end of the string.";
+
+        case ErrorCode::UnsupportedCharsetPattern:
+            return "Currently only supports character set that can be reduced to a single "
+                   "character.";
 
         default:
             return "(unrecognized error)";

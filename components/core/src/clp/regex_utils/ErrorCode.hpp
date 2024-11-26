@@ -19,7 +19,10 @@ enum class ErrorCode : uint8_t {
     UnsupportedPipe,
     IllegalCaret,
     IllegalDollarSign,
+    IllegalEscapeSequence,
     UnmatchedParenthesis,
+    IncompleteCharsetStructure,
+    UnsupportedCharsetPattern,
 };
 
 /**

@@ -11,7 +11,7 @@
 
 namespace clp_s {
 // Types
-typedef int64_t epochtime_t;
+using epochtime_t = int64_t;
 static epochtime_t const cEpochTimeMin = INT64_MIN;
 static epochtime_t const cEpochTimeMax = INT64_MAX;
 static double const cDoubleEpochTimeMin = std::numeric_limits<double>::lowest();
@@ -20,21 +20,21 @@ static double const cDoubleEpochTimeMax = std::numeric_limits<double>::max();
 #define MICROSECONDS_TO_EPOCHTIME(x) 0
 #define EPOCHTIME_T_PRINTF_FMT PRId64
 
-typedef uint64_t variable_dictionary_id_t;
+using variable_dictionary_id_t = uint64_t;
 static variable_dictionary_id_t const cVariableDictionaryIdMax = UINT64_MAX;
-typedef int64_t logtype_dictionary_id_t;
+using logtype_dictionary_id_t = int64_t;
 static logtype_dictionary_id_t const cLogtypeDictionaryIdMax = INT64_MAX;
 
-typedef uint16_t archive_format_version_t;
+using archive_format_version_t = uint16_t;
 // This flag is used to maintain two separate streams of archive format versions:
 // - Development versions (which can change frequently as necessary) which should have the flag
 // - Production versions (which should be changed with care and as infrequently as possible)
 // which should not have the flag
 constexpr archive_format_version_t cArchiveFormatDevelopmentVersionFlag = 0x8000;
 
-typedef uint64_t file_id_t;
-typedef uint64_t segment_id_t;
-typedef int64_t encoded_variable_t;
+using file_id_t = uint64_t;
+using segment_id_t = uint64_t;
+using encoded_variable_t = int64_t;
 }  // namespace clp_s
 
 // Macros

@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <mariadb/mysql.h>
+#include <mysql.h>
 
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"

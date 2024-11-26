@@ -24,9 +24,9 @@
     "mini-css-extract-plugin": "^2.9.0",
     "react-refresh": "^0.14.2",
     "style-loader": "^4.0.0",
-    "webpack": "^5.92.1",
+    "webpack": "^5.95.0",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.0.4"
+    "webpack-dev-server": "^5.1.0"
   },
   "eslintConfig": {
     "extends": [
@@ -34,6 +34,11 @@
     ]
   },
   "dependencies": {
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@mui/joy": "^5.0.0-beta.48",
+    "@types/react": "^18.3.3",
+    "axios": "^1.7.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }

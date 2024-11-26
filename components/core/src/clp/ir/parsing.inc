@@ -1,6 +1,7 @@
 #ifndef CLP_IR_PARSING_INC
 #define CLP_IR_PARSING_INC
 
+#include <cstddef>
 #include <string>
 #include <string_view>
 

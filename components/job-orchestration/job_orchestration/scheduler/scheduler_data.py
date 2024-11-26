@@ -11,6 +11,7 @@ from job_orchestration.scheduler.constants import (
 )
 from job_orchestration.scheduler.job_config import (
     ExtractIrJobConfig,
+    ExtractJsonJobConfig,
     QueryJobConfig,
     SearchJobConfig,
 )
@@ -59,13 +60,22 @@ class QueryJob(BaseModel, ABC):
 
 class ExtractIrJob(QueryJob):
     extract_ir_config: ExtractIrJobConfig
-    archive_id: str
 
     def get_type(self) -> QueryJobType:
         return QueryJobType.EXTRACT_IR
 
     def get_config(self) -> QueryJobConfig:
         return self.extract_ir_config
+
+
+class ExtractJsonJob(QueryJob):
+    extract_json_config: ExtractJsonJobConfig
+
+    def get_type(self) -> QueryJobType:
+        return QueryJobType.EXTRACT_JSON
+
+    def get_config(self) -> QueryJobConfig:
+        return self.extract_json_config
 
 
 class SearchJob(QueryJob):

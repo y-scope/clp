@@ -161,6 +161,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Target size (B) for the dictionaries and encoded messages before a new "
                     "archive is created."
             )(
+                    "min-table-size",
+                    po::value<size_t>(&m_minimum_table_size)->value_name("MIN_TABLE_SIZE")->
+                        default_value(m_minimum_table_size),
+                    "Minimum size (B) for a packed table before it gets compressed."
+            )(
                     "max-document-size",
                     po::value<size_t>(&m_max_document_size)->value_name("DOC_SIZE")->
                         default_value(m_max_document_size),
@@ -189,6 +194,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "structurize-arrays",
                     po::bool_switch(&m_structurize_arrays),
                     "Structurize arrays instead of compressing them as clp strings."
+            )(
+                    "disable-log-order",
+                    po::bool_switch(&m_disable_log_order),
+                    "Do not record log order at ingestion time."
             );
             // clang-format on
 
@@ -291,16 +300,31 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             decompression_options.add_options()(
                     "ordered",
                     po::bool_switch(&m_ordered_decompression),
-                    "Enable decompression in ascending timestamp order for this archive"
+                    "Enable decompression in log order for this archive"
             )(
-                    "ordered-chunk-size",
-                    po::value<size_t>(&m_ordered_chunk_size)
-                            ->default_value(m_ordered_chunk_size),
-                    "Number of records to include in each output file when decompressing records "
-                    "in ascending timestamp order"
+                    "target-ordered-chunk-size",
+                    po::value<size_t>(&m_target_ordered_chunk_size)
+                            ->default_value(m_target_ordered_chunk_size)
+                            ->value_name("SIZE"),
+                    "Chunk size (B) for each output file when decompressing records in log order."
+                    " When set to 0, no chunking is performed."
             );
             // clang-format on
             extraction_options.add(decompression_options);
+
+            po::options_description output_metadata_options("Output Metadata Options");
+            // clang-format off
+            output_metadata_options.add_options()(
+                    "mongodb-uri",
+                    po::value<std::string>(&m_mongodb_uri)->value_name("URI"),
+                    "MongoDB URI for the database to write decompression metadata to"
+            )(
+                    "mongodb-collection",
+                    po::value<std::string>(&m_mongodb_collection)->value_name("COLLECTION"),
+                    "MongoDB collection to write decompression metadata to"
+            );
+            // clang-format on
+            extraction_options.add(output_metadata_options);
 
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
@@ -333,6 +357,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(general_options);
                 visible_options.add(input_options);
                 visible_options.add(decompression_options);
+                visible_options.add(output_metadata_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
@@ -345,8 +370,23 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (0 != m_ordered_chunk_size && false == m_ordered_decompression) {
-                throw std::invalid_argument("ordered-chunk-size must be used with ordered argument"
+            if (0 != m_target_ordered_chunk_size && false == m_ordered_decompression) {
+                throw std::invalid_argument(
+                        "target-ordered-chunk-size must be used with ordered argument"
+                );
+            }
+
+            // We use xor to check that these arguments are either both specified or both
+            // unspecified.
+            if (m_mongodb_uri.empty() ^ m_mongodb_collection.empty()) {
+                throw std::invalid_argument(
+                        "mongodb-uri and mongodb-collection must both be non-empty"
+                );
+            }
+
+            if (false == m_mongodb_uri.empty() && false == m_ordered_decompression) {
+                throw std::invalid_argument(
+                        "Recording decompression metadata only supported for ordered decompression"
                 );
             }
         } else if ((char)Command::Search == command_input) {
@@ -396,6 +436,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "archive-id",
                 po::value<std::string>(&m_archive_id)->value_name("ID"),
                 "Limit search to the archive with the given ID"
+            )(
+                "projection",
+                po::value<std::vector<std::string>>(&m_projection_columns)
+                    ->multitoken()
+                    ->value_name("COLUMN_A COLUMN_B ..."),
+                "Project only the given set of columns for matching results. This option must be"
+                " specified after all positional options. Values that are objects or structured"
+                " arrays are currently unsupported."
             );
             // clang-format on
             search_options.add(match_options);

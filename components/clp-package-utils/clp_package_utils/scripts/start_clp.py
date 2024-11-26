@@ -50,7 +50,7 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
-    validate_log_viewer_config,
+    validate_log_viewer_webui_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
@@ -87,6 +87,21 @@ def append_docker_port_settings_for_host_ips(
     for ip in set(socket.gethostbyname_ex(hostname)[2]):
         cmd.append("-p")
         cmd.append(f"{ip}:{host_port}:{container_port}")
+
+
+def chown_recursively(
+    path: pathlib.Path,
+    user_id: int,
+    group_id: int,
+):
+    """
+    Recursively changes the owner of the given path to the given user ID and group ID.
+    :param path:
+    :param user_id:
+    :param group_id:
+    """
+    chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
+    subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
 
 
 def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int):
@@ -234,6 +249,54 @@ def create_db_tables(
     logger.info(f"Created {component_name} tables.")
 
 
+def create_results_cache_indices(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
+):
+    component_name = RESULTS_CACHE_COMPONENT_NAME
+    logger.info(f"Creating {component_name} indices...")
+
+    container_name = f"clp-{component_name}-indices-creator-{instance_id}"
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-i",
+        "--network", "host",
+        "--rm",
+        "--name", container_name,
+        "--log-driver", "local",
+        "-e", f"PYTHONPATH={clp_site_packages_dir}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+    ]
+    # fmt: on
+    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
+    for mount in necessary_mounts:
+        if mount:
+            container_start_cmd.append("--mount")
+            container_start_cmd.append(str(mount))
+    container_start_cmd.append(clp_config.execution_container)
+
+    clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
+    # fmt: off
+    create_tables_cmd = [
+        "python3",
+        str(clp_py_utils_dir / "create-results-cache-indices.py"),
+        "--uri", container_clp_config.results_cache.get_uri(),
+        "--stream-collection", container_clp_config.results_cache.stream_collection_name,
+    ]
+    # fmt: on
+
+    cmd = container_start_cmd + create_tables_cmd
+    logger.debug(" ".join(cmd))
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Created {component_name} indices.")
+
+
 def start_queue(instance_id: str, clp_config: CLPConfig):
     component_name = QUEUE_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
@@ -270,6 +333,19 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         DockerMount(DockerMountType.BIND, queue_logs_dir, rabbitmq_logs_dir),
     ]
     rabbitmq_pid_file_path = pathlib.Path("/") / "tmp" / "rabbitmq.pid"
+
+    host_user_id = os.getuid()
+    if 0 != host_user_id:
+        container_user = f"{host_user_id}:{os.getgid()}"
+    else:
+        # The host user is `root` so use the container's default user and make this component's
+        # directories writable by that user.
+        # NOTE: This doesn't affect the host user's access to the directories since they're `root`.
+        container_user = "rabbitmq"
+        default_container_user_id = 999
+        default_container_group_id = 999
+        chown_recursively(queue_logs_dir, default_container_user_id, default_container_group_id)
+
     # fmt: off
     cmd = [
         "docker", "run",
@@ -279,7 +355,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
         "-e", f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
         "-e", f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
+        "-u", container_user
     ]
     # fmt: on
     append_docker_port_settings_for_host_ips(
@@ -332,13 +408,27 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
         ),
         DockerMount(DockerMountType.BIND, redis_data_dir, pathlib.Path("/") / "data"),
     ]
+
+    host_user_id = os.getuid()
+    if 0 != host_user_id:
+        container_user = f"{host_user_id}:{os.getgid()}"
+    else:
+        # The host user is `root` so use the container's default user and make this component's
+        # directories writable by that user.
+        # NOTE: This doesn't affect the host user's access to the directories since they're `root`.
+        container_user = "redis"
+        default_container_user_id = 999
+        default_container_group_id = 999
+        chown_recursively(redis_data_dir, default_container_user_id, default_container_group_id)
+        chown_recursively(redis_logs_dir, default_container_user_id, default_container_group_id)
+
     # fmt: off
     cmd = [
         "docker", "run",
         "-d",
         "--name", container_name,
         "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
+        "-u", container_user,
     ]
     # fmt: on
     for mount in mounts:
@@ -351,6 +441,19 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     cmd.append("redis-server")
     cmd.append(str(config_file_path))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    # fmt: off
+    redis_ping_cmd = [
+        "redis-cli",
+        "-h", "127.0.0.1",
+        "-p", "6379",
+        "-a", clp_config.redis.password,
+        "PING"
+    ]
+    # fmt: on
+
+    if not wait_for_container_cmd(container_name, redis_ping_cmd, 30):
+        raise EnvironmentError(f"{component_name} did not initialize in time")
 
     logger.info(f"Started {component_name}.")
 
@@ -378,13 +481,27 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         DockerMount(DockerMountType.BIND, data_dir, pathlib.Path("/") / "data" / "db"),
         DockerMount(DockerMountType.BIND, logs_dir, pathlib.Path("/") / "var" / "log" / "mongodb"),
     ]
+
+    host_user_id = os.getuid()
+    if 0 != host_user_id:
+        container_user = f"{host_user_id}:{os.getgid()}"
+    else:
+        # The host user is `root` so use the container's default user and make this component's
+        # directories writable by that user.
+        # NOTE: This doesn't affect the host user's access to the directories since they're `root`.
+        container_user = "mongodb"
+        default_container_user_id = 999
+        default_container_group_id = 999
+        chown_recursively(data_dir, default_container_user_id, default_container_group_id)
+        chown_recursively(logs_dir, default_container_user_id, default_container_group_id)
+
     # fmt: off
     cmd = [
         "docker", "run",
         "-d",
         "--name", container_name,
         "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
+        "-u", container_user,
     ]
     # fmt: on
     for mount in mounts:
@@ -543,10 +660,10 @@ def start_query_worker(
     celery_method = "job_orchestration.executor.query"
     celery_route = f"{QueueName.QUERY}"
 
-    query_worker_mount = [mounts.ir_output_dir]
+    query_worker_mount = [mounts.stream_output_dir]
     query_worker_env = {
-        "CLP_IR_OUTPUT_DIR": container_clp_config.ir_output.directory,
-        "CLP_IR_COLLECTION": clp_config.results_cache.ir_collection_name,
+        "CLP_STREAM_OUTPUT_DIR": container_clp_config.stream_output.directory,
+        "CLP_STREAM_COLLECTION_NAME": clp_config.results_cache.stream_collection_name,
     }
 
     generic_start_worker(
@@ -593,7 +710,7 @@ def generic_start_worker(
 
     # Create necessary directories
     clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
-    clp_config.ir_output.directory.mkdir(parents=True, exist_ok=True)
+    clp_config.stream_output.directory.mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
@@ -668,13 +785,13 @@ def generic_start_worker(
     logger.info(f"Started {component_name}.")
 
 
-def update_meteor_settings(
+def update_settings_object(
     parent_key_prefix: str,
     settings: Dict[str, Any],
     updates: Dict[str, Any],
 ):
     """
-    Recursively updates the given Meteor settings object with the values from `updates`.
+    Recursively updates the given settings object with the values from `updates`.
 
     :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
     :param settings: The settings to update.
@@ -686,9 +803,23 @@ def update_meteor_settings(
             error_msg = f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
             raise ValueError(error_msg)
         if isinstance(value, dict):
-            update_meteor_settings(f"{parent_key_prefix}{key}.", settings[key], value)
+            update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
         else:
             settings[key] = updates[key]
+
+
+def read_and_update_settings_json(settings_file_path: pathlib.Path, updates: Dict[str, Any]):
+    """
+    Reads and updates a settings JSON file.
+
+    :param settings_file_path:
+    :param updates:
+    """
+    with open(settings_file_path, "r") as settings_json_file:
+        settings_object = json.loads(settings_json_file.read())
+    update_settings_object("", settings_object, updates)
+
+    return settings_object
 
 
 def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
@@ -710,8 +841,8 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     webui_logs_dir.mkdir(exist_ok=True, parents=True)
 
     container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
-    with open(settings_json_path, "r") as settings_json_file:
-        meteor_settings = json.loads(settings_json_file.read())
+
+    # Read and update settings.json
     meteor_settings_updates = {
         "private": {
             "SqlDbHost": clp_config.database.host,
@@ -724,9 +855,12 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         },
         "public": {
             "ClpStorageEngine": clp_config.package.storage_engine,
+            "LogViewerWebuiUrl": (
+                f"http://{clp_config.log_viewer_webui.host}:{clp_config.log_viewer_webui.port}",
+            ),
         },
     }
-    update_meteor_settings("", meteor_settings, meteor_settings_updates)
+    meteor_settings = read_and_update_settings_json(settings_json_path, meteor_settings_updates)
 
     # Start container
     # fmt: off
@@ -769,7 +903,12 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     logger.info(f"Started {component_name}.")
 
 
-def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
+def start_log_viewer_webui(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
+):
     component_name = LOG_VIEWER_WEBUI_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
 
@@ -777,16 +916,32 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
     if container_exists(container_name):
         return
 
-    log_viewer_webui_logs_dir = clp_config.logs_directory / component_name
-    container_log_viewer_dir = CONTAINER_CLP_HOME / "var" / "www" / "log_viewer"
-    node_path = str(container_log_viewer_dir / "server" / "node_modules")
+    container_log_viewer_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log_viewer_webui"
+    node_path = str(container_log_viewer_webui_dir / "server" / "node_modules")
+    settings_json_path = (
+        get_clp_home() / "var" / "www" / "log_viewer_webui" / "server" / "settings.json"
+    )
 
-    validate_log_viewer_config(clp_config, log_viewer_webui_logs_dir)
+    validate_log_viewer_webui_config(clp_config, settings_json_path)
 
-    # Create directories
-    log_viewer_webui_logs_dir.mkdir(exist_ok=True, parents=True)
-
-    container_log_viewer_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
+    # Read, update, and write back settings.json
+    settings_json_updates = {
+        "SqlDbHost": clp_config.database.host,
+        "SqlDbPort": clp_config.database.port,
+        "SqlDbName": clp_config.database.name,
+        "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+        "MongoDbHost": clp_config.results_cache.host,
+        "MongoDbPort": clp_config.results_cache.port,
+        "MongoDbName": clp_config.results_cache.db_name,
+        "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
+        "ClientDir": str(container_log_viewer_webui_dir / "client"),
+        "StreamFilesDir": str(container_clp_config.stream_output.directory),
+        "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
+        "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
+    }
+    settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
+    with open(settings_json_path, "w") as settings_json_file:
+        settings_json_file.write(json.dumps(settings_json))
 
     # Start container
     # fmt: off
@@ -797,19 +952,17 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
         "--name", container_name,
         "--log-driver", "local",
         "-e", f"NODE_PATH={node_path}",
-        "-e", f"CLIENT_DIR={container_log_viewer_dir}/client/dist",
-        "-e", f"PORT={clp_config.log_viewer_webui.port}",
         "-e", f"HOST={clp_config.log_viewer_webui.host}",
+        "-e", f"PORT={clp_config.log_viewer_webui.port}",
+        "-e", f"CLP_DB_USER={clp_config.database.username}",
+        "-e", f"CLP_DB_PASS={clp_config.database.password}",
         "-e", f"NODE_ENV=production",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
     necessary_mounts = [
         mounts.clp_home,
-        mounts.ir_output_dir,
-        DockerMount(
-            DockerMountType.BIND, log_viewer_webui_logs_dir, container_log_viewer_webui_logs_dir
-        ),
+        mounts.stream_output_dir,
     ]
     for mount in necessary_mounts:
         if mount:
@@ -819,7 +972,7 @@ def start_log_viewer_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPD
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
-        str(container_log_viewer_dir / "server" / "src" / "main.js"),
+        str(container_log_viewer_webui_dir / "server" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -1027,6 +1180,8 @@ def main(argv):
             start_redis(instance_id, clp_config, conf_dir)
         if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             start_results_cache(instance_id, clp_config, conf_dir)
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+            create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
         if target in (
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
@@ -1046,7 +1201,7 @@ def main(argv):
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, mounts)
         if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME):
-            start_log_viewer_webui(instance_id, clp_config, mounts)
+            start_log_viewer_webui(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:

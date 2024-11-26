@@ -2,7 +2,6 @@ version: "3"
 
 vars:
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
-  G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/log-viewer-webui"
   G_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
 
 tasks:
@@ -22,6 +21,8 @@ tasks:
 
   cpp-check:
     sources: &cpp_source_files
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
       - "{{.TASKFILE}}"
       - ".clang-format"
       - "src/**/*.cpp"
@@ -51,12 +52,13 @@ tasks:
       - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
       - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/package.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.css"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/package.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/package.json"
+      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/settings.json"
       - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/*.js"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/package.json"
       - "{{.G_WEBUI_SRC_DIR}}/client/**/*.js"
       - "{{.G_WEBUI_SRC_DIR}}/client/**/*.jsx"
       - "{{.G_WEBUI_SRC_DIR}}/imports/**/*.js"
@@ -110,6 +112,7 @@ tasks:
           components/core/config \
           components/package-template/src/etc \
           docs \
+          deps-tasks.yml \
           lint-tasks.yml \
           Taskfile.yml
 
@@ -118,7 +121,7 @@ tasks:
     requires:
       vars: ["FLAGS"]
     dir: "components/core"
-    deps: ["venv"]
+    deps: ["cpp-lint-configs", "venv"]
     cmds:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
@@ -127,6 +130,10 @@ tasks:
           \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
           -print0 | \
             xargs -0 clang-format {{.FLAGS}} -Werror
+
+  cpp-lint-configs:
+    internal: true
+    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/lint-configs/symlink-cpp-lint-configs.sh"
 
   js:
     internal: true
@@ -150,7 +157,9 @@ tasks:
       - for:
           - "components/clp-package-utils/clp_package_utils"
           - "components/clp-py-utils/clp_py_utils"
+          - "components/core/tools/scripts/utils"
           - "components/job-orchestration/job_orchestration"
+          - "tools/scripts"
           - "docs/conf"
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"

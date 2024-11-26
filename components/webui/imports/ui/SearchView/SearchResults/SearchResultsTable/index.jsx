@@ -1,9 +1,11 @@
+import {Meteor} from "meteor/meteor";
 import {useEffect} from "react";
 import Table from "react-bootstrap/Table";
 
 import dayjs from "dayjs";
 
 import {
+    faFileLines,
     faSort,
     faSortDown,
     faSortUp,
@@ -26,6 +28,25 @@ import "./SearchResultsTable.scss";
  */
 const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
 
+const IS_IR_STREAM = ("clp" === Meteor.settings.public.ClpStorageEngine);
+const STREAM_TYPE = IS_IR_STREAM ?
+    "ir" :
+    "json";
+
+
+/**
+ * Gets the stream id for an extraction job from the search result.
+ *
+ * @param {object} searchResult
+ * @return {string} stream_id
+ */
+const getStreamId = (searchResult) => {
+    return IS_IR_STREAM ?
+        searchResult.orig_file_id :
+        searchResult.archive_id;
+};
+
+
 /**
  * Represents a table component to display search results.
  *
@@ -35,7 +56,7 @@ const SEARCH_RESULT_MESSAGE_LINE_HEIGHT = 1.5;
  * @param {boolean} props.hasMoreResultsInTotal
  * @param {number} props.maxLinesPerResult
  * @param {Function} props.onLoadMoreResults
- * @param {object} props.searchResults
+ * @param {object[]} props.searchResults
  * @param {Function} props.setFieldToSortBy
  * @return {React.ReactElement}
  */
@@ -91,25 +112,6 @@ const SearchResultsTable = ({
         );
     }, [maxLinesPerResult]);
 
-    const rows = [];
-    for (let i = 0; i < searchResults.length; ++i) {
-        const searchResult = searchResults[i];
-        rows.push(
-            <tr key={searchResult._id}>
-                <td className={"search-results-content search-results-timestamp"}>
-                    {searchResult.timestamp ?
-                        dayjs.utc(searchResult.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
-                        "N/A"}
-                </td>
-                <td>
-                    <pre className={"search-results-content search-results-message"}>
-                        {searchResult.message}
-                    </pre>
-                </td>
-            </tr>
-        );
-    }
-
     return (
         <div className={"search-results-container"}>
             <Table
@@ -123,7 +125,6 @@ const SearchResultsTable = ({
                         <th
                             className={"search-results-th search-results-th-sortable"}
                             data-column-name={SEARCH_RESULTS_FIELDS.TIMESTAMP}
-                            key={SEARCH_RESULTS_FIELDS.TIMESTAMP}
                             onClick={toggleSortDirection}
                         >
                             <div className={"search-results-table-header"}>
@@ -134,7 +135,6 @@ const SearchResultsTable = ({
                         </th>
                         <th
                             className={"search-results-th"}
-                            key={"message"}
                         >
                             <div className={"search-results-table-header"}>
                                 Log message
@@ -143,7 +143,38 @@ const SearchResultsTable = ({
                     </tr>
                 </thead>
                 <tbody>
-                    {rows}
+                    {searchResults.map((result) => (
+                        <tr key={result._id}>
+                            <td className={"search-results-content search-results-timestamp"}>
+                                {result.timestamp ?
+                                    dayjs.utc(result.timestamp).format(DATETIME_FORMAT_TEMPLATE) :
+                                    "N/A"}
+                            </td>
+                            <td>
+                                <pre className={"search-results-content search-results-message"}>
+                                    {result.message}
+                                </pre>
+                                <div className={"search-results-file-link"}>
+                                    <FontAwesomeIcon icon={faFileLines}/>
+                                    {" "}
+                                    <a
+                                        className={"search-results-file-link"}
+                                        rel={"noopener noreferrer"}
+                                        target={"_blank"}
+                                        title={"View log event in context"}
+                                        href={`${Meteor.settings.public.LogViewerWebuiUrl}` +
+                                            `?type=${STREAM_TYPE}` +
+                                            `&streamId=${getStreamId(result)}` +
+                                            `&logEventIdx=${result.log_event_ix}`}
+                                    >
+                                        {IS_IR_STREAM ?
+                                            result.orig_file_path :
+                                            "Original File"}
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </Table>
             <SearchResultsLoadSensor

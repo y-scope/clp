@@ -1,5 +1,7 @@
 #include "ArchiveWriter.hpp"
 
+#include <algorithm>
+
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "archive_constants.hpp"
@@ -11,6 +13,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_id = boost::uuids::to_string(option.id);
     m_compression_level = option.compression_level;
     m_print_archive_stats = option.print_archive_stats;
+    m_min_table_size = option.min_table_size;
     auto archive_path = boost::filesystem::path(option.archives_dir) / m_id;
 
     boost::system::error_code boost_error_code;
@@ -65,6 +68,7 @@ void ArchiveWriter::close() {
     m_encoded_message_size = 0UL;
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
+    m_next_log_event_id = 0;
 }
 
 void ArchiveWriter::append_message(
@@ -83,6 +87,7 @@ void ArchiveWriter::append_message(
     }
 
     m_encoded_message_size += schema_writer->append_message(message);
+    ++m_next_log_event_id;
 }
 
 size_t ArchiveWriter::get_data_size() {
@@ -138,18 +143,103 @@ size_t ArchiveWriter::store_tables() {
             FileWriter::OpenMode::CreateForWriting
     );
     m_table_metadata_compressor.open(m_table_metadata_file_writer, m_compression_level);
-    m_table_metadata_compressor.write_numeric_value(m_id_to_schema_writer.size());
-    for (auto& i : m_id_to_schema_writer) {
-        m_table_metadata_compressor.write_numeric_value(i.first);
-        m_table_metadata_compressor.write_numeric_value(i.second->get_num_messages());
-        m_table_metadata_compressor.write_numeric_value(m_tables_file_writer.get_pos());
 
-        m_tables_compressor.open(m_tables_file_writer, m_compression_level);
-        size_t uncompressed_size = i.second->store(m_tables_compressor);
-        m_tables_compressor.close();
-        delete i.second;
+    /**
+     * Packed stream metadata schema
+     * ------------------------------
+     * Schema tables are packed into a series of compression streams. Each of those compression
+     * streams is identified by a 64 bit stream id. In the first half of the metadata we identify
+     * how many streams there are, and the offset into the file where each compression stream can
+     * be found. In the second half of the metadata we record how many schema tables there are,
+     * which compression stream they belong to, the offset into that compression stream where
+     * they can be found, and how many messages that schema table contains.
+     *
+     * Section 1: Compression Streams Metadata
+     * - Contains metadata about each compression stream.
+     * - Structure:
+     *   - Number of packed streams: <64-bit integer>
+     *   - For each stream:
+     *     - Offset into the file: <64-bit integer>
+     *     - Uncompressed size: <64-bit integer>
+     *   - Number of separate column schemas: <64-bit integer>
+     *     It is always 0 in the current implementation.
+     *   - Undefined section for separate column schemas, reserved for future support.
+     *
+     * Section 2: Schema Tables Metadata
+     * - Contains metadata about schema tables associated with each compression stream.
+     * - Structure:
+     *   - Number of schema tables: <64-bit integer>
+     *   - For each schema table:
+     *     - Stream ID: <64-bit integer>
+     *     - Offset into the stream: <64-bit integer>
+     *     - Schema ID: <32-bit integer>
+     *     - Number of messages: <64-bit integer>
+     *
+     * We buffer the first half of the metadata in the "stream_metadata" vector, and the second half
+     * of the metadata in the "schema_metadata" vector as we compress the tables. The metadata is
+     * flushed once all of the schema tables have been compressed.
+     */
+    using schema_map_it = decltype(m_id_to_schema_writer)::iterator;
+    std::vector<schema_map_it> schemas;
+    std::vector<StreamMetadata> stream_metadata;
+    std::vector<SchemaMetadata> schema_metadata;
 
-        m_table_metadata_compressor.write_numeric_value(uncompressed_size);
+    schema_metadata.reserve(m_id_to_schema_writer.size());
+    schemas.reserve(m_id_to_schema_writer.size());
+    for (auto it = m_id_to_schema_writer.begin(); it != m_id_to_schema_writer.end(); ++it) {
+        schemas.push_back(it);
+    }
+    auto comp = [](schema_map_it const& lhs, schema_map_it const& rhs) -> bool {
+        return lhs->second->get_total_uncompressed_size()
+               > rhs->second->get_total_uncompressed_size();
+    };
+    std::sort(schemas.begin(), schemas.end(), comp);
+
+    uint64_t current_stream_offset = 0;
+    uint64_t current_stream_id = 0;
+    uint64_t current_table_file_offset = 0;
+    m_tables_compressor.open(m_tables_file_writer, m_compression_level);
+    for (auto it : schemas) {
+        it->second->store(m_tables_compressor);
+        schema_metadata.emplace_back(
+                current_stream_id,
+                current_stream_offset,
+                it->first,
+                it->second->get_num_messages()
+        );
+        current_stream_offset += it->second->get_total_uncompressed_size();
+        delete it->second;
+
+        if (current_stream_offset > m_min_table_size || schemas.size() == schema_metadata.size()) {
+            stream_metadata.emplace_back(current_table_file_offset, current_stream_offset);
+            m_tables_compressor.close();
+            current_stream_offset = 0;
+            ++current_stream_id;
+            current_table_file_offset = m_tables_file_writer.get_pos();
+
+            if (schemas.size() != schema_metadata.size()) {
+                m_tables_compressor.open(m_tables_file_writer, m_compression_level);
+            }
+        }
+    }
+
+    m_table_metadata_compressor.write_numeric_value(stream_metadata.size());
+    for (auto& stream : stream_metadata) {
+        m_table_metadata_compressor.write_numeric_value(stream.file_offset);
+        m_table_metadata_compressor.write_numeric_value(stream.uncompressed_size);
+    }
+
+    // The current implementation doesn't store large tables as separate columns, so this is always
+    // zero.
+    size_t const num_separate_column_schemas{0};
+    m_table_metadata_compressor.write_numeric_value(num_separate_column_schemas);
+
+    m_table_metadata_compressor.write_numeric_value(schema_metadata.size());
+    for (auto& schema : schema_metadata) {
+        m_table_metadata_compressor.write_numeric_value(schema.stream_id);
+        m_table_metadata_compressor.write_numeric_value(schema.stream_offset);
+        m_table_metadata_compressor.write_numeric_value(schema.schema_id);
+        m_table_metadata_compressor.write_numeric_value(schema.num_messages);
     }
     m_table_metadata_compressor.close();
 
