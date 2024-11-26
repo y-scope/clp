@@ -254,8 +254,13 @@ inline T2 bit_cast(T1 t1) {
     return t2;
 }
 
-template <typename T>
-void write_numeric_value(std::stringstream& stream, T value) {
+/**
+ * Writes a numeric value to a stringstream.
+ * @param val
+ * @tparam ValueType
+ */
+template <typename ValueType>
+void write_numeric_value(std::stringstream& stream, ValueType value) {
     stream.write(reinterpret_cast<char*>(&value), sizeof(value));
 }
 
