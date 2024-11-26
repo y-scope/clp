@@ -1,12 +1,12 @@
 #ifndef CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
 
-#include <cstdint>
+#include <zconf.h>
+
 #include <cstddef>
 #include <memory>
 
 #include <lzma.h>
-#include <zconf.h>
 
 #include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
@@ -31,35 +31,8 @@ public:
         }
     };
 
-    class LzmaOption {
-    public:
-        LzmaOption()
-                : m_compression_level{cDefaultCompressionLevel},
-                  m_dict_size{cDefaultDictionarySize} {}
-
-        auto set_compression_level(int compression_level) -> void {
-            if (compression_level < cMinCompressionLevel) {
-                m_compression_level = cMinCompressionLevel;
-            } else if (compression_level > cMaxCompressionLevel) {
-                m_compression_level = cMaxCompressionLevel;
-            } else {
-                m_compression_level = compression_level;
-            }
-        }
-
-        auto set_dict_size(uint32_t dict_size) -> void { m_dict_size = dict_size; }
-
-        [[nodiscard]] auto get_compression_level() const -> int { return m_compression_level; }
-
-        [[nodiscard]] auto get_dict_size() const -> uint32_t { return m_dict_size; }
-
-    private:
-        int m_compression_level;
-        uint32_t m_dict_size;
-    };
-
     // Constructor
-    Compressor();
+    Compressor() = default;
 
     // Destructor
     ~Compressor() override = default;
@@ -114,24 +87,22 @@ public:
      */
     auto open(FileWriter& file_writer, int compression_level) -> void;
 
-    // Methods
-    static auto set_compression_level(int compression_level) -> void {
-        m_option.set_compression_level(compression_level);
-    }
-
-    static auto set_dict_size(uint32_t dict_size) -> void { m_option.set_dict_size(dict_size); }
-
 private:
+    using LzmaAction = lzma_action;
+    using LzmaFilter = lzma_filter;
+    using LzmaOptionsLzma = lzma_options_lzma;
     using LzmaStream = lzma_stream;
+
+    static auto
+    init_lzma_encoder(LzmaStream* strm, int compression_level, size_t dict_size) -> void;
+    static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     /**
      * Flushes the stream and closes it
      */
-    void flush_and_close_compression_stream();
-
-    static void init_lzma_encoder(LzmaStream* strm);
-    static LzmaOption m_option;
-    static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
+    auto flush_and_close_compression_stream() -> void;
+    auto write_data() -> void;
+    auto run_lzma(lzma_action action) -> void;
 
     // Variables
     FileWriter* m_compressed_stream_file_writer{nullptr};
@@ -139,6 +110,7 @@ private:
     // Compressed stream variables
     std::unique_ptr<LzmaStream> m_compression_stream{std::make_unique<LzmaStream>()};
     bool m_compression_stream_contains_data{false};
+    size_t m_dict_size{cDefaultDictionarySize};
 
     Array<Bytef> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
 
