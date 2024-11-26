@@ -256,7 +256,8 @@ inline T2 bit_cast(T1 t1) {
 
 /**
  * Writes a numeric value to a stringstream.
- * @param val
+ * @param stream
+ * @param value
  * @tparam ValueType
  */
 template <typename ValueType>
