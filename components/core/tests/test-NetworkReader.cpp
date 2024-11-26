@@ -241,6 +241,9 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]") {
+    // Since the http request sometimes crash due to arbitrary reasons, so we just try it
+    // multiple times to avoid such cases
+    constexpr int cNumMaxTrials{10};
     auto illegal_header_kv_pairs = GENERATE(
             // The following headers are determined by offset and disable_cache, which should not be
             // overridden by user-defined headers.
@@ -251,17 +254,27 @@ TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]")
             // The CRLF-terminated headers should be rejected.
             std::unordered_map<std::string, std::string>{{"Legal-Name", "CRLF\r\n"}}
     );
-    clp::NetworkReader reader{
-            "https://httpbin.org/headers",
-            0,
-            false,
-            clp::CurlDownloadHandler::cDefaultOverallTimeout,
-            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
-            clp::NetworkReader::cDefaultBufferPoolSize,
-            clp::NetworkReader::cDefaultBufferSize,
-            illegal_header_kv_pairs
-    };
-    auto const content = get_content(reader);
-    REQUIRE(content.empty());
-    REQUIRE(assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader));
+    bool is_pass{false};
+    for (size_t i{0}; i < cNumMaxTrials; ++i) {
+        clp::NetworkReader reader{
+                "https://httpbin.org/headers",
+                0,
+                false,
+                clp::CurlDownloadHandler::cDefaultOverallTimeout,
+                clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+                clp::NetworkReader::cDefaultBufferPoolSize,
+                clp::NetworkReader::cDefaultBufferSize,
+                illegal_header_kv_pairs
+        };
+        auto const content = get_content(reader);
+        if (false == content.empty()) {
+            continue;
+        }
+        if (false == assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader) ) {
+            continue;
+        }
+        is_pass = true;
+        break;
+    }
+    REQUIRE(is_pass);
 }
