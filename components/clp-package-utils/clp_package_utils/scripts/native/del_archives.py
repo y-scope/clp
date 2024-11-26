@@ -1,9 +1,9 @@
 import argparse
 import logging
-from pathlib import Path
 import shutil
 import sys
 from contextlib import closing
+from pathlib import Path
 from typing import List
 
 from clp_py_utils.clp_config import Database

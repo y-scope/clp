@@ -1,8 +1,8 @@
 import argparse
 import logging
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
