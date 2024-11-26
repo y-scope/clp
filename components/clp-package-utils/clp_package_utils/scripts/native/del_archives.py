@@ -99,7 +99,7 @@ def _delete_archives(
                 WHERE begin_timestamp >= %s AND end_timestamp <= %s
                 RETURNING id
                 """,
-                (begin_ts, end_ts)
+                (begin_ts, end_ts),
             )
             results = db_cursor.fetchall()
 
