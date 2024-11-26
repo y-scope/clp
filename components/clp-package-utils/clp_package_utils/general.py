@@ -51,7 +51,6 @@ class JobType(KebabCaseStrEnum):
     FILE_EXTRACTION = auto()
     IR_EXTRACTION = auto()
     SEARCH = auto()
-    DEL_ARCHIVE = auto()
 
 
 class DockerMount:

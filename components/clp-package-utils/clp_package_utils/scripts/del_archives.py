@@ -69,7 +69,7 @@ def main(argv):
         logger.error("begin_ts and end_ts must be non-negative.")
         return -1
 
-    container_name = generate_container_name(str(JobType.DEL_ARCHIVE))
+    container_name = generate_container_name("del-archives")
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
