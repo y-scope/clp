@@ -24,15 +24,8 @@ from clp_package_utils.general import (
     validate_path_could_be_dir,
 )
 
-# Setup logging
 # Create logger
-logger = logging.getLogger("clp")
-logger.setLevel(logging.DEBUG)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
+logger = logging.getLogger(__file__)
 
 
 def validate_and_load_config(

@@ -16,15 +16,8 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
 )
 
-# Setup logging
 # Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
 
 
 def main(argv):
