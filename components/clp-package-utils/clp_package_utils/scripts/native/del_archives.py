@@ -95,10 +95,11 @@ def _delete_archives(
         ) as db_cursor:
             db_cursor.execute(
                 f"""
-                DELETE FROM `{table_prefix}archives` WHERE
-                begin_timestamp >= {begin_ts} AND end_timestamp <= {end_ts}
+                DELETE FROM `{table_prefix}archives`
+                WHERE begin_timestamp >= %s AND end_timestamp <= %s
                 RETURNING id
-                """
+                """,
+                (begin_ts, end_ts)
             )
             results = db_cursor.fetchall()
 
