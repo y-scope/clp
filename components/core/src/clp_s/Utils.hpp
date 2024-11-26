@@ -254,6 +254,11 @@ inline T2 bit_cast(T1 t1) {
     return t2;
 }
 
+template <typename T>
+void write_numeric_value(std::stringstream& stream, T value) {
+    stream.write(reinterpret_cast<char*>(&value), sizeof(value));
+}
+
 /**
  * A span of memory where the underlying memory may not be aligned correctly for type T.
  *

@@ -3,12 +3,7 @@
 #include <cmath>
 #include <sstream>
 
-namespace {
-template <typename T>
-void write_numeric_value(std::stringstream& stream, T value) {
-    stream.write(reinterpret_cast<char*>(&value), sizeof(value));
-}
-}  // namespace
+#include "Utils.hpp"
 
 namespace clp_s {
 void TimestampEntry::ingest_timestamp(epochtime_t timestamp) {

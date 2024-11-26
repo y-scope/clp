@@ -4,13 +4,6 @@
 
 #include "Utils.hpp"
 
-namespace {
-template <typename T>
-void write_numeric_value(std::stringstream& stream, T value) {
-    stream.write(reinterpret_cast<char*>(&value), sizeof(value));
-}
-}  // namespace
-
 namespace clp_s {
 void TimestampDictionaryWriter::write_timestamp_entries(
         std::map<std::string, TimestampEntry> const& ranges,
