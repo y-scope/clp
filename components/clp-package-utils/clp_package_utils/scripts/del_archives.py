@@ -1,6 +1,6 @@
 import argparse
 import logging
-import pathlib
+from pathlib import Path
 import subprocess
 import sys
 
@@ -56,7 +56,7 @@ def main(argv):
 
     # Validate and load config file
     try:
-        config_file_path = pathlib.Path(parsed_args.config)
+        config_file_path = Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
 
@@ -76,7 +76,7 @@ def main(argv):
         logger.error("begin_ts and end_ts must be non-negative.")
         return -1
 
-    container_name = generate_container_name(JobType.DEL_ARCHIVE)
+    container_name = generate_container_name(str(JobType.DEL_ARCHIVE))
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(

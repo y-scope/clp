@@ -1,6 +1,6 @@
 import argparse
 import logging
-import pathlib
+from pathlib import Path
 import shutil
 import sys
 from contextlib import closing
@@ -53,7 +53,7 @@ def main(argv):
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
-    config_file_path = pathlib.Path(parsed_args.config)
+    config_file_path = Path(parsed_args.config)
     try:
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
@@ -76,7 +76,7 @@ def main(argv):
 
 
 def _delete_archives(
-    archives_dir: pathlib.Path,
+    archives_dir: Path,
     database_config: Database,
     begin_ts: int,
     end_ts: int,

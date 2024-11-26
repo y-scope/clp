@@ -88,7 +88,7 @@ def handle_extract_file_cmd(
     if clp_config is None:
         return -1
 
-    container_name = generate_container_name(JobType.FILE_EXTRACTION)
+    container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, container_name

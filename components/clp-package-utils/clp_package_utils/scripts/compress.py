@@ -66,7 +66,7 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    container_name = generate_container_name(JobType.COMPRESSION)
+    container_name = generate_container_name(str(JobType.COMPRESSION))
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
