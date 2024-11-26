@@ -270,7 +270,7 @@ TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]")
         if (false == content.empty()) {
             continue;
         }
-        if (false == assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader) ) {
+        if (false == assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader)) {
             continue;
         }
         is_pass = true;
