@@ -113,7 +113,7 @@ private:
      * Repeatedly invoke lzma_code() compression workflow until LZMA_STREAM_END
      * is reached.
      * The workflow action needs to be kept the same throughout this process.
-     * See also: https://github.com/frida/xz/blob/main/src/liblzma/api/lzma/base.h#L246
+     * See also: https://github.com/tukaani-project/xz/blob/master/src/liblzma/api/lzma/base.h#L274
      *
      * @param action
      */
