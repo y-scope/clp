@@ -83,13 +83,13 @@ auto Compressor::open(FileWriter& file_writer, int compression_level) -> void {
         throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
     }
 
-    memset(m_compression_stream.get(), 0, sizeof(LzmaStream));
-    init_lzma_encoder(m_compression_stream.get(), compression_level, m_dict_size);
+    m_compression_stream = LZMA_STREAM_INIT;
+    init_lzma_encoder(&m_compression_stream, compression_level, m_dict_size);
     // Setup compressed stream parameters
-    m_compression_stream->next_in = nullptr;
-    m_compression_stream->avail_in = 0;
-    m_compression_stream->next_out = m_compressed_stream_block_buffer.data();
-    m_compression_stream->avail_out = m_compressed_stream_block_buffer.size();
+    m_compression_stream.next_in = nullptr;
+    m_compression_stream.avail_in = 0;
+    m_compression_stream.next_out = m_compressed_stream_block_buffer.data();
+    m_compression_stream.avail_out = m_compressed_stream_block_buffer.size();
 
     m_compressed_stream_file_writer = &file_writer;
 
@@ -119,14 +119,14 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 
-    m_compression_stream->next_in = size_checked_pointer_cast<uint8_t const>(data);
-    m_compression_stream->avail_in = data_length;
+    m_compression_stream.next_in = size_checked_pointer_cast<uint8_t const>(data);
+    m_compression_stream.avail_in = data_length;
 
     // Normal compression encoding workflow. Continue until the input buffer is
     // exhausted.
     compress(LZMA_RUN);
 
-    m_compression_stream->next_in = nullptr;
+    m_compression_stream.next_in = nullptr;
 
     m_compression_stream_contains_data = true;
     m_uncompressed_stream_pos += data_length;
@@ -161,44 +161,44 @@ auto Compressor::flush_and_close_compression_stream() -> void {
 
     m_compression_stream_contains_data = false;
 
-    lzma_end(m_compression_stream.get());
-    m_compression_stream->avail_out = 0;
-    m_compression_stream->next_out = nullptr;
+    lzma_end(&m_compression_stream);
+    m_compression_stream.avail_out = 0;
+    m_compression_stream.next_out = nullptr;
 }
 
 auto Compressor::compress(LzmaAction action) -> void {
-    bool hit_input_eof{false};
+    bool hit_stream_end{false};
     while (true) {
-        auto const rc = lzma_code(m_compression_stream.get(), action);
+        auto const rc = lzma_code(&m_compression_stream, action);
         switch (rc) {
             case LZMA_OK:
             case LZMA_BUF_ERROR:
                 break;
             case LZMA_STREAM_END:
-                hit_input_eof = true;
+                hit_stream_end = true;
                 break;
             default:
                 SPDLOG_ERROR("lzma() returned an unexpected value - {}.", static_cast<int>(rc));
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }
 
-        if (LZMA_RUN == action && 0 == m_compression_stream->avail_in) {
+        if (LZMA_RUN == action && 0 == m_compression_stream.avail_in) {
             // No more data to compress
             break;
         }
 
-        if (hit_input_eof) {
+        if (hit_stream_end) {
             break;
         }
 
         // Write output buffer to file if it's full
-        if (0 == m_compression_stream->avail_out) {
+        if (0 == m_compression_stream.avail_out) {
             pipe_data();
         }
     }
 
     // Write remaining compressed data
-    if (m_compression_stream->avail_out < cCompressedStreamBlockBufferSize) {
+    if (m_compression_stream.avail_out < cCompressedStreamBlockBufferSize) {
         pipe_data();
     }
 }
@@ -206,9 +206,9 @@ auto Compressor::compress(LzmaAction action) -> void {
 auto Compressor::pipe_data() -> void {
     m_compressed_stream_file_writer->write(
             size_checked_pointer_cast<char>(m_compressed_stream_block_buffer.data()),
-            cCompressedStreamBlockBufferSize - m_compression_stream->avail_out
+            cCompressedStreamBlockBufferSize - m_compression_stream.avail_out
     );
-    m_compression_stream->next_out = m_compressed_stream_block_buffer.data();
-    m_compression_stream->avail_out = cCompressedStreamBlockBufferSize;
+    m_compression_stream.next_out = m_compressed_stream_block_buffer.data();
+    m_compression_stream.avail_out = cCompressedStreamBlockBufferSize;
 }
 }  // namespace clp::streaming_compression::lzma

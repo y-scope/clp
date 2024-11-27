@@ -1,8 +1,6 @@
 #ifndef CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
 
-#include <zconf.h>
-
 #include <cstddef>
 #include <memory>
 
@@ -129,11 +127,11 @@ private:
     FileWriter* m_compressed_stream_file_writer{nullptr};
 
     // Compressed stream variables
-    std::unique_ptr<LzmaStream> m_compression_stream{std::make_unique<LzmaStream>()};
+    LzmaStream m_compression_stream;
     bool m_compression_stream_contains_data{false};
     size_t m_dict_size{cDefaultDictionarySize};
 
-    Array<Bytef> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
+    Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
 
     size_t m_uncompressed_stream_pos{0};
 };

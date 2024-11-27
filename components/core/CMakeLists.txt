@@ -232,13 +232,13 @@ endif()
 # TODO: add a script in ./cmake/Modules to resolve .a vs. .so
 find_package(LibLZMA REQUIRED)
 if(LIBLZMA_FOUND)
-    message(STATUS "Found LIBLZMA_FOUND ${LIBLZMA_VERSION_STRING}")
+    message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
     message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
 else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LIBLZMA_FOUND")
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
 endif()
 include_directories(${LIBLZMA_INCLUDE_DIRS})
-message("LZMA Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
+message("Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
 
 # sqlite dependencies
 set(sqlite_DYNAMIC_LIBS "dl;m;pthread")

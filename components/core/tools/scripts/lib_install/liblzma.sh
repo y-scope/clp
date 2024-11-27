@@ -1,16 +1,23 @@
 #!/bin/bash
 
+# Exit on any error
+set -e
+
+# Error on undefined variable
+set -u
+
 # Dependencies:
 # - curl
 # - make
 # - gcc
 # NOTE: Dependencies should be installed outside the script to allow the script to be largely distro-agnostic
 
-# Exit on any error
-set -e
-
-# Error on undefined variable
-set -u
+for cmd in curl make gcc; do
+    if ! $cmd --version >/dev/null 2>&1; then
+        echo "Error: Required dependency '$cmd' not found"
+        exit 1
+    fi
+done
 
 cUsage="Usage: ${BASH_SOURCE[0]} <version>[ <.deb output directory>]"
 if [ "$#" -lt 1 ] ; then
@@ -31,13 +38,6 @@ if [[ "$#" -gt 1 ]] ; then
 fi
 
 # Note: we won't check if the package already exists
-
-echo "Checking for elevated privileges..."
-privileged_command_prefix=""
-if [ ${EUID:-$(id -u)} -ne 0 ] ; then
-  sudo echo "Script can elevate privileges."
-  privileged_command_prefix="${privileged_command_prefix} sudo"
-fi
 
 # Get number of cpu cores
 num_cpus=$(grep -c ^processor /proc/cpuinfo)
