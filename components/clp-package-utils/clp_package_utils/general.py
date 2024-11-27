@@ -107,7 +107,7 @@ def get_clp_home():
     return clp_home.resolve()
 
 
-def generate_container_name(job_type: JobType) -> str:
+def generate_container_name(job_type: str) -> str:
     """
     :param job_type:
     :return: A unique container name for the given job type.
