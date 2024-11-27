@@ -21,7 +21,7 @@ auto Compressor::init_lzma_encoder(LzmaStream* strm, int compression_level, size
         -> void {
     LzmaOptionsLzma options;
     if (0 != lzma_lzma_preset(&options, compression_level)) {
-        SPDLOG_ERROR("Failed to initialize LZMA options.");
+        SPDLOG_ERROR("Failed to initialize LZMA options' compression level.");
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     options.dict_size = dict_size;
@@ -122,7 +122,9 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
     m_compression_stream->next_in = size_checked_pointer_cast<uint8_t const>(data);
     m_compression_stream->avail_in = data_length;
 
-    run_lzma(LZMA_RUN);
+    // Normal compression encoding workflow. Continue until the input buffer is
+    // exhausted.
+    compress(LZMA_RUN);
 
     m_compression_stream->next_in = nullptr;
 
@@ -134,18 +136,9 @@ auto Compressor::flush() -> void {
     if (false == m_compression_stream_contains_data) {
         return;
     }
-    // Z_NO_FLUSH - deflate decides how much data to accumulate before producing output
-    // Z_SYNC_FLUSH - All pending output flushed to output buf and output aligned to byte
-    // boundary (completes current block and follows it with empty block that is 3 bits plus
-    // filler to next byte, followed by 4 bytes Z_PARTIAL_FLUSH - Same as Z_SYNC_FLUSH but
-    // output not aligned to byte boundary (completes current block and follows it with empty
-    // fixed codes block that is 10 bits long) Z_BLOCK - Same as Z_SYNC_FLUSH but output not
-    // aligned on a byte boundary and up to 7 bits of current block held to be written
-    // Z_FULL_FLUSH - Same as Z_SYNC_FLUSH but compression state reset so that decompression can
-    // restart from this point if the previous compressed data has been damaged Z_FINISH -
-    // Pending output flushed and deflate returns Z_STREAM_END if there was enough output space,
-    // or Z_OK or Z_BUF_ERROR if it needs to be called again with more space
-    run_lzma(LZMA_SYNC_FLUSH);
+
+    // Forces all the buffered data to be available at output
+    compress(LZMA_SYNC_FLUSH);
     m_compression_stream_contains_data = false;
 }
 
@@ -163,7 +156,8 @@ auto Compressor::flush_and_close_compression_stream() -> void {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    run_lzma(LZMA_FINISH);
+    // Same as flush but all the input data must have been given to the encoder
+    compress(LZMA_FINISH);
 
     m_compression_stream_contains_data = false;
 
@@ -172,8 +166,7 @@ auto Compressor::flush_and_close_compression_stream() -> void {
     m_compression_stream->next_out = nullptr;
 }
 
-auto Compressor::run_lzma(LzmaAction action) -> void {
-    // Compress all data
+auto Compressor::compress(LzmaAction action) -> void {
     bool hit_input_eof{false};
     while (true) {
         auto const rc = lzma_code(m_compression_stream.get(), action);
@@ -200,17 +193,17 @@ auto Compressor::run_lzma(LzmaAction action) -> void {
 
         // Write output buffer to file if it's full
         if (0 == m_compression_stream->avail_out) {
-            write_data();
+            pipe_data();
         }
     }
 
-    // Write any compressed data
+    // Write remaining compressed data
     if (m_compression_stream->avail_out < cCompressedStreamBlockBufferSize) {
-        write_data();
+        pipe_data();
     }
 }
 
-auto Compressor::write_data() -> void {
+auto Compressor::pipe_data() -> void {
     m_compressed_stream_file_writer->write(
             size_checked_pointer_cast<char>(m_compressed_stream_block_buffer.data()),
             cCompressedStreamBlockBufferSize - m_compression_stream->avail_out

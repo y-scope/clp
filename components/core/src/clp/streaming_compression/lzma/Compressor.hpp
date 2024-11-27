@@ -93,6 +93,13 @@ private:
     using LzmaOptionsLzma = lzma_options_lzma;
     using LzmaStream = lzma_stream;
 
+    /**
+     * Initialize the Lzma compression stream
+     * @param strm A pre-allocated `lzma_stream` object
+     * @param compression_level
+     * @param dict_size Dictionary size that indicates how many bytes of the
+     *                  recently processed uncompressed data is kept in memory
+     */
     static auto
     init_lzma_encoder(LzmaStream* strm, int compression_level, size_t dict_size) -> void;
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
@@ -101,8 +108,22 @@ private:
      * Flushes the stream and closes it
      */
     auto flush_and_close_compression_stream() -> void;
-    auto write_data() -> void;
-    auto run_lzma(lzma_action action) -> void;
+
+    /**
+     * Repeatedly invoke lzma_code() compression workflow until LZMA_STREAM_END
+     * is reached.
+     * The workflow action needs to be kept the same throughout this process.
+     * See also: https://github.com/frida/xz/blob/main/src/liblzma/api/lzma/base.h#L246
+     *
+     * @param action
+     */
+    auto compress(lzma_action action) -> void;
+
+    /**
+     * Pipes the current compressed data in the lzma buffer to the output file
+     * and reset the compression buffer to receive new data.
+     */
+    auto pipe_data() -> void;
 
     // Variables
     FileWriter* m_compressed_stream_file_writer{nullptr};
