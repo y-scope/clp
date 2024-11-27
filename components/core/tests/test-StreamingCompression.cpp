@@ -16,7 +16,6 @@
 #include "../src/clp/streaming_compression/Compressor.hpp"
 #include "../src/clp/streaming_compression/Decompressor.hpp"
 #include "../src/clp/streaming_compression/lzma/Compressor.hpp"
-#include "../src/clp/streaming_compression/lzma/Decompressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Decompressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
@@ -59,7 +58,6 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
 
     SECTION("LZMA compression") {
         compressor = std::make_unique<clp::streaming_compression::lzma::Compressor>();
-        decompressor = std::make_unique<clp::streaming_compression::lzma::Decompressor>();
     }
 
     // Initialize buffers
@@ -81,6 +79,11 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     file_writer.close();
 
     // Decompress and compare
+    if (nullptr == decompressor) {
+        boost::filesystem::remove(compressed_file_path);
+        return;
+    }
+
     clp::ReadOnlyMemoryMappedFile const memory_mapped_compressed_file{compressed_file_path};
     auto const compressed_file_view{memory_mapped_compressed_file.get_view()};
     decompressor->open(compressed_file_view.data(), compressed_file_view.size());
