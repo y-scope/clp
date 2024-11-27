@@ -3,6 +3,7 @@
 
 #include <charconv>
 #include <cstring>
+#include <sstream>
 #include <string>
 
 #include <boost/filesystem.hpp>
@@ -252,6 +253,17 @@ inline T2 bit_cast(T1 t1) {
     T2 t2;
     std::memcpy(std::addressof(t2), std::addressof(t1), sizeof(T1));
     return t2;
+}
+
+/**
+ * Writes a numeric value to a stringstream.
+ * @param stream
+ * @param value
+ * @tparam ValueType
+ */
+template <typename ValueType>
+void write_numeric_value(std::stringstream& stream, ValueType value) {
+    stream.write(reinterpret_cast<char*>(&value), sizeof(value));
 }
 
 /**
