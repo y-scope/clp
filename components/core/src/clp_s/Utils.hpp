@@ -3,6 +3,7 @@
 
 #include <charconv>
 #include <cstring>
+#include <sstream>
 #include <string>
 
 #include <boost/filesystem.hpp>
