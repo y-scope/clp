@@ -23,15 +23,7 @@ from clp_package_utils.general import (
     load_config_file,
 )
 
-# Setup logging
-# Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
 
 
 def print_compression_job_status(job_row, current_time):
