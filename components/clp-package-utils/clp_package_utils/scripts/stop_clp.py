@@ -31,7 +31,6 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
 )
 
-# Create logger
 logger = logging.getLogger(__file__)
 
 

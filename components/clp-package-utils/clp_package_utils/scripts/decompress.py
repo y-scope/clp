@@ -24,7 +24,6 @@ from clp_package_utils.general import (
     validate_path_could_be_dir,
 )
 
-# Create logger
 logger = logging.getLogger(__file__)
 
 

@@ -11,12 +11,10 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
-    JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
 )
 
-# Create logger
 logger = logging.getLogger(__file__)
 
 

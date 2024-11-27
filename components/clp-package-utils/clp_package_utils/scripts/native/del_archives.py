@@ -15,7 +15,6 @@ from clp_package_utils.general import (
     load_config_file,
 )
 
-# Create logger
 logger = logging.getLogger(__file__)
 
 

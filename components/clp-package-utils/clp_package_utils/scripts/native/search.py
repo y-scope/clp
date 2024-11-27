@@ -26,7 +26,6 @@ from clp_package_utils.scripts.native.utils import (
     wait_for_query_job,
 )
 
-# Create logger
 logger = logging.getLogger(__file__)
 
 

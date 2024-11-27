@@ -59,7 +59,6 @@ from clp_package_utils.general import (
     validate_worker_config,
 )
 
-# Create logger
 logger = logging.getLogger(__file__)
 
 
