@@ -193,7 +193,6 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
-    constexpr size_t cNumMaxTrials{10};
     std::unordered_map<std::string, std::string> valid_http_header_kv_pairs;
     // We use httpbin (https://httpbin.org/) to test the user-specified headers. On success, it is
     // supposed to respond all the user-specified headers as key-value pairs in JSON form.
@@ -204,9 +203,10 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
                 fmt::format("Unit-Test-Value{}", i)
         );
     }
-    std::optional<std::vector<char>> content;
+    std::optional<std::vector<char>> optional_content;
     // Retry the unit test a limited number of times to handle transient server-side HTTP errors.
     // This ensures the test is not marked as failed due to temporary issues beyond our control.
+    constexper size_t cNumMaxTrials{10};
     for (size_t i{0}; i < cNumMaxTrials; ++i) {
         clp::NetworkReader reader{
                 "https://httpbin.org/headers",
@@ -218,14 +218,14 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
                 clp::NetworkReader::cDefaultBufferSize,
                 valid_http_header_kv_pairs
         };
-        content.emplace(get_content(reader));
-        if (false == assert_curl_error_code(CURLE_OK, reader)) {
-            continue;
+        auto const content = get_content(reader);
+        if (assert_curl_error_code(CURLE_OK, reader)) {
+            optional_content.emplace(content);
+            break;
         }
-        break;
     }
-    REQUIRE(content.has_value());
-    auto const parsed_content = nlohmann::json::parse(content.value());
+    REQUIRE(optional_content.has_value());
+    auto const parsed_content = nlohmann::json::parse(optional_content.value());
     auto const& headers{parsed_content.at("headers")};
     for (auto const& [key, value] : valid_http_header_kv_pairs) {
         REQUIRE((value == headers.at(key).get<std::string_view>()));
