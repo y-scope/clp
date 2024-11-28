@@ -1,15 +1,15 @@
 #ifndef CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 #define CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 
+#include <map>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <utility>
 
-#include "FileWriter.hpp"
 #include "SchemaTree.hpp"
 #include "TimestampEntry.hpp"
 #include "TimestampPattern.hpp"
-#include "ZstdCompressor.hpp"
 
 namespace clp_s {
 class TimestampDictionaryWriter {
@@ -23,25 +23,13 @@ public:
     };
 
     // Constructors
-    TimestampDictionaryWriter() : m_is_open(false) {}
+    TimestampDictionaryWriter() {}
 
     /**
-     * Opens the timestamp dictionary for writing
-     * @param dictionary_path
-     * @param compression_level
+     * Writes the timestamp dictionary to a buffered stream.
+     * @param stream
      */
-    void open(std::string const& dictionary_path, int compression_level);
-
-    /**
-     * Closes the timestamp dictionary
-     * @return the compressed size of the global timestamp dictionary in bytes
-     */
-    [[nodiscard]] size_t close();
-
-    /**
-     * Writes the timestamp dictionary to disk
-     */
-    void write_and_flush_to_disk();
+    void write(std::stringstream& stream);
 
     /**
      * Gets the pattern id for a given pattern
@@ -91,33 +79,30 @@ public:
      */
     epochtime_t get_end_timestamp() const;
 
+    /**
+     * Clears and resets all internal state.
+     */
+    void clear();
+
 private:
     /**
-     * Merges timestamp ranges with the same key name
+     * Merges timestamp ranges with the same key name but different node ids.
      */
     void merge_range();
 
     /**
-     * Writes timestamp entries to the disk
+     * Writes timestamp entries to a buffered stream.
      * @param ranges
      * @param compressor
      */
     static void write_timestamp_entries(
             std::map<std::string, TimestampEntry> const& ranges,
-            ZstdCompressor& compressor
+            std::stringstream& stream
     );
 
     using pattern_to_id_t = std::unordered_map<TimestampPattern const*, uint64_t>;
 
     // Variables
-    bool m_is_open;
-
-    // Variables related to on-disk storage
-    FileWriter m_dictionary_file_writer;
-    ZstdCompressor m_dictionary_compressor;
-    FileWriter m_dictionary_file_writer_local;
-    ZstdCompressor m_dictionary_compressor_local;
-
     pattern_to_id_t m_pattern_to_id;
     uint64_t m_next_id{};
 
