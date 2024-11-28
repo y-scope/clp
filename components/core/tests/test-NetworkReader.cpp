@@ -193,13 +193,13 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
 }
 
 TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
-    // Since the http request sometimes crash due to arbitrary reasons, so we just try it
-    // multiple times to avoid such cases
-    constexpr int cNumMaxTrials{10};
+    // Retry the unit test a limited number of times to handle transient server-side HTTP errors.
+    // This ensures the test is not marked as failed due to temporary issues beyond our control.
+    constexpr size_t cNumMaxTrials{10};
     std::unordered_map<std::string, std::string> valid_http_header_kv_pairs;
     // We use httpbin (https://httpbin.org/) to test the user-specified headers. On success, it is
     // supposed to respond all the user-specified headers as key-value pairs in JSON form.
-    constexpr int cNumHttpHeaderKeyValuePairs{10};
+    constexpr size_t cNumHttpHeaderKeyValuePairs{10};
     for (size_t i{0}; i < cNumHttpHeaderKeyValuePairs; ++i) {
         valid_http_header_kv_pairs.emplace(
                 fmt::format("Unit-Test-Key{}", i),
@@ -224,26 +224,16 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
         }
         auto const parsed_content = nlohmann::json::parse(content);
         auto const& headers{parsed_content.at("headers")};
-        bool are_headers_same{true};
         for (auto const& [key, value] : valid_http_header_kv_pairs) {
-            if (value != headers.at(key).get<std::string_view>()) {
-                are_headers_same = false;
-                break;
-            }
+            is_pass = value == headers.at(key).get<std::string_view>();
+            REQUIRE(is_pass);
         }
-        if (!are_headers_same) {
-            continue;
-        }
-        is_pass = true;
         break;
     }
     REQUIRE(is_pass);
 }
 
 TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]") {
-    // Since the http request sometimes crash due to arbitrary reasons, so we just try it
-    // multiple times to avoid such cases
-    constexpr int cNumMaxTrials{10};
     auto illegal_header_kv_pairs = GENERATE(
             // The following headers are determined by offset and disable_cache, which should not be
             // overridden by user-defined headers.
@@ -254,27 +244,17 @@ TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]")
             // The CRLF-terminated headers should be rejected.
             std::unordered_map<std::string, std::string>{{"Legal-Name", "CRLF\r\n"}}
     );
-    bool is_pass{false};
-    for (size_t i{0}; i < cNumMaxTrials; ++i) {
-        clp::NetworkReader reader{
-                "https://httpbin.org/headers",
-                0,
-                false,
-                clp::CurlDownloadHandler::cDefaultOverallTimeout,
-                clp::CurlDownloadHandler::cDefaultConnectionTimeout,
-                clp::NetworkReader::cDefaultBufferPoolSize,
-                clp::NetworkReader::cDefaultBufferSize,
-                illegal_header_kv_pairs
-        };
-        auto const content = get_content(reader);
-        if (false == content.empty()) {
-            continue;
-        }
-        if (false == assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader)) {
-            continue;
-        }
-        is_pass = true;
-        break;
-    }
-    REQUIRE(is_pass);
+    clp::NetworkReader reader{
+            "https://httpbin.org/headers",
+            0,
+            false,
+            clp::CurlDownloadHandler::cDefaultOverallTimeout,
+            clp::CurlDownloadHandler::cDefaultConnectionTimeout,
+            clp::NetworkReader::cDefaultBufferPoolSize,
+            clp::NetworkReader::cDefaultBufferSize,
+            illegal_header_kv_pairs
+    };
+    auto const content = get_content(reader);
+    REQUIRE(content.empty());
+    REQUIRE(assert_curl_error_code(CURLE_BAD_FUNCTION_ARGUMENT, reader));
 }
