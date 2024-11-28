@@ -206,7 +206,7 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
     std::optional<std::vector<char>> optional_content;
     // Retry the unit test a limited number of times to handle transient server-side HTTP errors.
     // This ensures the test is not marked as failed due to temporary issues beyond our control.
-    constexper size_t cNumMaxTrials{10};
+    constexpr size_t cNumMaxTrials{10};
     for (size_t i{0}; i < cNumMaxTrials; ++i) {
         clp::NetworkReader reader{
                 "https://httpbin.org/headers",
