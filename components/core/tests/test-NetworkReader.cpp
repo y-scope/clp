@@ -204,7 +204,7 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
                 fmt::format("Unit-Test-Value{}", i)
         );
     }
-    std::optional<std::vector<char>> content{std::nullopt};
+    std::optional<std::vector<char>> content;
     // Retry the unit test a limited number of times to handle transient server-side HTTP errors.
     // This ensures the test is not marked as failed due to temporary issues beyond our control.
     for (size_t i{0}; i < cNumMaxTrials; ++i) {
