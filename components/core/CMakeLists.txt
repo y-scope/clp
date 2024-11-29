@@ -548,9 +548,9 @@ set(SOURCE_FILES_unitTest
         tests/LogSuppressor.hpp
         tests/test-Array.cpp
         tests/test-BufferedFileReader.cpp
+        tests/test-clp_s-end_to_end.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-end_to_end.cpp
         tests/test-ffi_IrUnitHandlerInterface.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
