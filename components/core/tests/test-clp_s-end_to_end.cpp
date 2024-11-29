@@ -120,7 +120,7 @@ auto extract() -> std::filesystem::path {
 void compare(std::filesystem::path const& extracted_json_path) {
     int result{std::system("command -v jq >/dev/null 2>&1")};
     REQUIRE((0 == result));
-    std::string command = fmt::format(
+    auto command = fmt::format(
             "jq --sort-keys --compact-output '.' {} | sort > {}",
             extracted_json_path.string(),
             cTestEndToEndOutputSortedJson
