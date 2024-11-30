@@ -86,11 +86,6 @@ public:
     auto open(FileWriter& file_writer, int compression_level) -> void;
 
 private:
-    using LzmaAction = lzma_action;
-    using LzmaFilter = lzma_filter;
-    using LzmaOptionsLzma = lzma_options_lzma;
-    using LzmaStream = lzma_stream;
-
     /**
      * Initialize the Lzma compression stream
      * @param strm A pre-allocated `lzma_stream` object
@@ -99,13 +94,8 @@ private:
      *                  recently processed uncompressed data is kept in memory
      */
     static auto
-    init_lzma_encoder(LzmaStream* strm, int compression_level, size_t dict_size) -> void;
+    init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_size) -> void;
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
-
-    /**
-     * Flushes the stream and closes it
-     */
-    auto flush_and_close_compression_stream() -> void;
 
     /**
      * Repeatedly invoke lzma_code() compression workflow until LZMA_STREAM_END
@@ -115,7 +105,7 @@ private:
      *
      * @param action
      */
-    auto compress(lzma_action action) -> void;
+    auto run_lzma(lzma_action action) -> void;
 
     /**
      * Pipes the current compressed data in the lzma buffer to the output file
@@ -127,8 +117,8 @@ private:
     FileWriter* m_compressed_stream_file_writer{nullptr};
 
     // Compressed stream variables
-    LzmaStream m_compression_stream;
-    bool m_compression_stream_contains_data{false};
+    lzma_stream m_compression_stream;
+    bool m_compression_stream_is_flushed{true};
     size_t m_dict_size{cDefaultDictionarySize};
 
     Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
