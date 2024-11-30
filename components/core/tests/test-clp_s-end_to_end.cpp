@@ -145,7 +145,6 @@ void compare(std::filesystem::path const& extracted_json_path) {
 // NOLINTEND(cert-env33-c,concurrency-mt-unsafe)
 }  // namespace
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
     auto structurize_arrays = GENERATE(true, false);
 
@@ -153,7 +152,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
 
     compress(structurize_arrays);
 
-    std::filesystem::path extracted_json_path = extract();
+    auto extracted_json_path = extract();
 
     compare(extracted_json_path);
 }
