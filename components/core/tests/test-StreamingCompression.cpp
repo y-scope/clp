@@ -58,7 +58,9 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
         decompressor = std::make_unique<clp::streaming_compression::passthrough::Decompressor>();
     }
 
-    SECTION("LZMA compression") {
+    SECTION("LZMA compression (compression-only test)") {
+        // Note: Decompressor initialization is intentionally omitted as this is a
+        // compression-only test. See early termination logic below.
         compressor = std::make_unique<clp::streaming_compression::lzma::Compressor>();
     }
 
