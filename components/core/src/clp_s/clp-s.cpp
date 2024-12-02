@@ -51,6 +51,13 @@ namespace {
 bool compress(CommandLineArguments const& command_line_arguments);
 
 /**
+ * Compresses the input IR files specified by the command line arguments into an archive.
+ * @param command_line_arguments
+ * @return Whether compression was successful
+ */
+auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool;
+
+/**
  * Decompresses the archive specified by the given JsonConstructorOption.
  * @param json_constructor_option
  */
@@ -118,6 +125,61 @@ bool compress(CommandLineArguments const& command_line_arguments) {
         return false;
     }
     parser.store();
+    return true;
+}
+
+auto setup_compression_options(
+        CommandLineArguments const& command_line_arguments,
+        clp_s::JsonParserOption& option
+) -> bool {
+    auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
+    // Create output directory in case it doesn't exist
+    try {
+        std::filesystem::create_directory(archives_dir.string());
+    } catch (std::exception& e) {
+        SPDLOG_ERROR(
+                "Failed to create archives directory {} - {}",
+                archives_dir.string(),
+                e.what()
+        );
+        return false;
+    }
+    option.file_paths = command_line_arguments.get_file_paths();
+    option.archives_dir = archives_dir.string();
+    option.target_encoded_size = command_line_arguments.get_target_encoded_size();
+    option.max_document_size = command_line_arguments.get_max_document_size();
+    option.min_table_size = command_line_arguments.get_minimum_table_size();
+    option.compression_level = command_line_arguments.get_compression_level();
+    option.timestamp_key = command_line_arguments.get_timestamp_key();
+    option.print_archive_stats = command_line_arguments.print_archive_stats();
+    option.single_file_archive = command_line_arguments.get_single_file_archive();
+    option.record_log_order = command_line_arguments.get_record_log_order();
+
+    auto const& db_config_container = command_line_arguments.get_metadata_db_config();
+    if (db_config_container.has_value()) {
+        auto const& db_config = db_config_container.value();
+        option.metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
+                db_config.get_metadata_db_host(),
+                db_config.get_metadata_db_port(),
+                db_config.get_metadata_db_username(),
+                db_config.get_metadata_db_password(),
+                db_config.get_metadata_db_name(),
+                db_config.get_metadata_table_prefix()
+        );
+    }
+    return true;
+}
+
+auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool {
+    clp_s::JsonParserOption option{};
+    if (false == setup_compression_options(command_line_arguments, option)) {
+        return false;
+    }
+
+    // Functionality Coming in later PR
+    //  -->Instantiate Json Parser
+    //  -->Call new parsing function in Json Parser to parse IRv2 to archive
+    //  -->Store Archive
     return true;
 }
 
@@ -288,6 +350,10 @@ int main(int argc, char const* argv[]) {
 
     if (CommandLineArguments::Command::Compress == command_line_arguments.get_command()) {
         if (false == compress(command_line_arguments)) {
+            return 1;
+        }
+    } else if (CommandLineArguments::Command::IrCompress == command_line_arguments.get_command()) {
+        if (false == ir_compress(command_line_arguments)) {
             return 1;
         }
     } else if (CommandLineArguments::Command::Extract == command_line_arguments.get_command()) {

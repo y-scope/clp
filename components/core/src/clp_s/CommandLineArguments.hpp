@@ -26,7 +26,8 @@ public:
     enum class Command : char {
         Compress = 'c',
         Extract = 'x',
-        Search = 's'
+        Search = 's',
+        IrCompress = 'i'
     };
 
     enum class OutputHandlerType : uint8_t {
@@ -162,6 +163,8 @@ private:
     void print_compression_usage() const;
 
     void print_decompression_usage() const;
+
+    void print_ir_compression_usage() const;
 
     void print_search_usage() const;
 
