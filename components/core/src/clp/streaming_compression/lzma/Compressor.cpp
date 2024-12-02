@@ -170,9 +170,8 @@ auto Compressor::run_lzma(lzma_action action) -> void {
                 break;
             }
         } else if (LZMA_FINISH == action) {
-                SPDLOG_ERROR("Tried to close LZMA compressor with unprocessed input data.");
-                throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-            }
+            SPDLOG_ERROR("Tried to close LZMA compressor with unprocessed input data.");
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }
 
         auto const rc = lzma_code(&m_compression_stream, action);
