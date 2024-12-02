@@ -145,7 +145,7 @@ private:
     void append_escaped_key(std::string_view const key) {
         m_json_string.push_back('"');
         m_json_string.append(key);
-        m_json_string.push_back('"');
+        m_json_string.append("\":");
     }
 
     std::string m_json_string;
