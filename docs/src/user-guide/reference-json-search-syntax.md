@@ -37,7 +37,7 @@ Keys or values with the following literal characters must escape the characters 
  (backslash): `\`, `"`.
 
 Unquoted keys or values must also escape the following characters: `(`, `)`, `:`, `<`, `>`, `{`,
- `}`. The unquoted keywords `and`, `or`, and `not` can also be escaped with a `\`.
+ `}`.
 
 Values containing `?` and `*` can escape these characters with a `\` to differentiate them from the
  `?` and `*` characters used to specify arbitrary single character match and wildcard match.
