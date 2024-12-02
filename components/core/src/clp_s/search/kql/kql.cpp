@@ -83,7 +83,11 @@ public:
     }
 
     static std::shared_ptr<Literal> unquote_literal(std::string const& text) {
-        std::string token = unquote_string(text);
+        std::string token;
+        if (false == StringUtils::unescape_kql_value(unquote_string(text), token)) {
+            SPDLOG_ERROR("Can not parse invalid literal: {}", text);
+            return nullptr;
+        }
 
         if (auto ret = Integral::create_from_string(token)) {
             return ret;
@@ -97,7 +101,11 @@ public:
     }
 
     static std::shared_ptr<Literal> unquote_date_literal(std::string const& text) {
-        std::string token = unquote_date_string(text);
+        std::string token;
+        if (false == StringUtils::unescape_kql_value(unquote_date_string(text), token)) {
+            SPDLOG_ERROR("Can not parse invalid date literal: {}", text);
+            return nullptr;
+        }
 
         return DateLiteral::create_from_string(token);
     }

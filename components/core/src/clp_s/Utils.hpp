@@ -1,6 +1,7 @@
 #ifndef CLP_S_UTILS_HPP
 #define CLP_S_UTILS_HPP
 
+#include <array>
 #include <charconv>
 #include <cstring>
 #include <sstream>
@@ -217,6 +218,10 @@ public:
     [[nodiscard]] static bool
     tokenize_column_descriptor(std::string const& descriptor, std::vector<std::string>& tokens);
 
+    static void escape_json_string(std::string& destination, std::string_view const source);
+
+    static bool unescape_kql_value(std::string const& value, std::string& unescaped);
+
 private:
     /**
      * Helper for ``wildcard_match_unsafe_case_sensitive`` to advance the
@@ -236,6 +241,28 @@ private:
             char const*& wild_current,
             char const*& wild_bookmark
     );
+
+    static std::array<char, 2> char_to_hex(char c) {
+        std::array<char, 2> ret;
+        auto nibble_to_hex = [](char nibble) -> char {
+            if ('\x00' <= nibble && nibble <= '\x09') {
+                return '0' + (nibble - '\x00');
+            } else {
+                return 'a' + (nibble - '\x10');
+            }
+        };
+
+        return std::array<char, 2>{nibble_to_hex(0x0F & (c >> 4)), nibble_to_hex(0x0f & c)};
+    }
+
+    static void char_to_escaped_four_char_hex(std::string& dest, char c) {
+        dest.append("\\u00");
+        auto hex = char_to_hex(c);
+        dest.append(hex.data(), hex.size());
+    }
+
+    static bool
+    unescape_kql_internal(std::string const& value, std::string& unescaped, bool is_value);
 };
 
 enum EvaluatedValue {

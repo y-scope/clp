@@ -48,19 +48,18 @@ QUOTED_STRING: '"' QUOTED_CHARACTER* '"' ;
 
 UNQUOTED_LITERAL: UNQUOTED_CHARACTER+ ;
 
-// TODO handle unicode
 fragment QUOTED_CHARACTER
     : ESCAPED_SPACE
     | '\\"'
     | ~'"'
     ;
 
-// TODO:  handle unicode
 fragment UNQUOTED_CHARACTER
     : ESCAPED_SPACE
     | ESCAPED_SPECIAL_CHARACTER
     | ESCAPED_KEYWORD
     | WILDCARD
+    | UNICODE
     |  ~[\\():<>"{} \r\n\t]
     ;
 
@@ -101,7 +100,7 @@ fragment SPECIAL_CHARACTER
 
 
 // For unicode hex
-//UNICODE: 'u' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT ;
-//fragment HEXDIGIT: [0-9a-fA-F]+ ;
+fragment UNICODE: '\\u' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT ;
+fragment HEXDIGIT: [0-9a-fA-F]+ ;
 
 SPACE:  [ \t\r\n] -> skip ;
