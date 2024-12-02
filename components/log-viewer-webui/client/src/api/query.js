@@ -2,22 +2,11 @@ import axios from "axios";
 
 
 /**
- * @typedef {object} ExtractIrResp
- * @property {number} begin_msg_ix
- * @property {number} end_msg_ix
- * @property {string} file_split_id
- * @property {boolean} is_last_ir_chunk
- * @property {string} orig_file_id
- * @property {string} path
- * @property {string} _id
- */
-
-/**
- * @typedef {object} ExtractJsonResp
+ * @typedef {object} ExtractStreamResp
+ * @property {string} stream_id
  * @property {number} begin_msg_ix
  * @property {number} end_msg_ix
  * @property {boolean} is_last_ir_chunk
- * @property {string} orig_file_id
  * @property {string} path
  * @property {string} _id
  */
@@ -30,7 +19,7 @@ import axios from "axios";
  * @param {string} streamId
  * @param {number} logEventIdx
  * @param {Function} onUploadProgress Callback to handle upload progress events.
- * @return {Promise<axios.AxiosResponse<ExtractIrResp|ExtractJsonResp>>}
+ * @return {Promise<axios.AxiosResponse<ExtractStreamResp>>}
  */
 const submitExtractStreamJob = async (extractJobType, streamId, logEventIdx, onUploadProgress) => {
     return await axios.post(
