@@ -4,8 +4,10 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <utility>
 
 #include <boost/filesystem/operations.hpp>
+#include <boost/pointer_cast.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <zstd.h>
 
@@ -78,12 +80,16 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     compressor->close();
     file_writer.close();
 
-    // Decompress and compare
-    if (nullptr == decompressor) {
+    if (boost::dynamic_pointer_cast<clp::streaming_compression::lzma::Compressor>(
+                std::move(compressor)
+        ))
+    {
+        // TODO: remove this LZMA testing early termination
         boost::filesystem::remove(compressed_file_path);
         return;
     }
 
+    // Decompress and compare
     clp::ReadOnlyMemoryMappedFile const memory_mapped_compressed_file{compressed_file_path};
     auto const compressed_file_view{memory_mapped_compressed_file.get_view()};
     decompressor->open(compressed_file_view.data(), compressed_file_view.size());
