@@ -86,15 +86,6 @@ public:
     auto open(FileWriter& file_writer, int compression_level) -> void;
 
 private:
-    /**
-     * Initialize the Lzma compression stream
-     * @param strm A pre-allocated `lzma_stream` object
-     * @param compression_level
-     * @param dict_size Dictionary size that indicates how many bytes of the
-     *                  recently processed uncompressed data is kept in memory
-     */
-    static auto
-    init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_size) -> void;
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     /**
@@ -108,10 +99,10 @@ private:
     auto run_lzma(lzma_action action) -> void;
 
     /**
-     * Pipes the current compressed data in the lzma buffer to the output file
-     * and reset the compression buffer to receive new data.
+     * Flushes the current compressed data in the lzma output buffer to the
+     * output file handler. Reset the compression buffer to receive new data.
      */
-    auto pipe_data() -> void;
+    auto flush_stream_output_block_buffer() -> void;
 
     // Variables
     FileWriter* m_compressed_stream_file_writer{nullptr};

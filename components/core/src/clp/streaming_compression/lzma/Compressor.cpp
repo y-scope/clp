@@ -14,13 +14,21 @@
 #include "../../type_utils.hpp"
 #include "Constants.hpp"
 
-namespace clp::streaming_compression::lzma {
-auto Compressor::init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_size)
-        -> void {
+namespace {
+using clp::streaming_compression::lzma::Compressor;
+
+/**
+ * Initialize the Lzma compression stream
+ * @param strm A pre-allocated `lzma_stream` object
+ * @param compression_level
+ * @param dict_size Dictionary size that indicates how many bytes of the
+ *                  recently processed uncompressed data is kept in memory
+ */
+auto init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_size) -> void {
     lzma_options_lzma options;
     if (0 != lzma_lzma_preset(&options, compression_level)) {
         SPDLOG_ERROR("Failed to initialize LZMA options' compression level.");
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+        throw Compressor::OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     options.dict_size = dict_size;
     std::array<lzma_filter, 2> filters{{
@@ -64,9 +72,11 @@ auto Compressor::init_lzma_encoder(lzma_stream* strm, int compression_level, siz
     }
 
     SPDLOG_ERROR("Error initializing the encoder: {} (error code {})", msg, static_cast<int>(rc));
-    throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+    throw Compressor::OperationFailed(clp::ErrorCode_BadParam, __FILENAME__, __LINE__);
 }
+}  // namespace
 
+namespace clp::streaming_compression::lzma {
 auto Compressor::open(FileWriter& file_writer, int compression_level) -> void {
     if (nullptr != m_compressed_stream_file_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
@@ -186,17 +196,17 @@ auto Compressor::run_lzma(lzma_action action) -> void {
 
         // Write output buffer to file if it's full
         if (0 == m_compression_stream.avail_out) {
-            pipe_data();
+            flush_stream_output_block_buffer();
         }
     }
 
     // Write remaining compressed data
     if (m_compression_stream.avail_out < cCompressedStreamBlockBufferSize) {
-        pipe_data();
+        flush_stream_output_block_buffer();
     }
 }
 
-auto Compressor::pipe_data() -> void {
+auto Compressor::flush_stream_output_block_buffer() -> void {
     m_compressed_stream_file_writer->write(
             clp::size_checked_pointer_cast<char>(m_compressed_stream_block_buffer.data()),
             cCompressedStreamBlockBufferSize - m_compression_stream.avail_out
