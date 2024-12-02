@@ -17,6 +17,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   gcc \
   gcc-10 \
   git \
+  jq \
   libcurl4 \
   libcurl4-openssl-dev \
   libmariadb-dev \
