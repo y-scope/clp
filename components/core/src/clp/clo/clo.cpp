@@ -195,12 +195,8 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                             dest_ir_file_name
                     ),
                     bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::OrigFileId,
+                            clp::clo::cResultsCacheKeys::IrOutput::StreamId,
                             orig_file_id
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::FileSplitId,
-                            file_split_id
                     ),
                     bsoncxx::builder::basic::kvp(
                             clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,

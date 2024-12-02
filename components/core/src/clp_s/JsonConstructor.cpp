@@ -122,7 +122,7 @@ void JsonConstructor::construct_in_order() {
                             new_file_path.filename()
                     ),
                     bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cOrigFileId,
+                            constants::results_cache::decompression::cStreamId,
                             m_option.archive_id
                     ),
                     bsoncxx::builder::basic::kvp(
