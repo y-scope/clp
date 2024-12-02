@@ -33,8 +33,17 @@ To search for a key or value with multiple words, you must quote the key/value w
 "multi-word key": "multi-word value"
 ```
 
-Queries for keys or values with the following literal characters must escape the characters using a
-`\` (backslash): `\`, `(`, `)`, `:`, `<`, `>`, `"`, `*`, `{`, `}`.
+Keys or values with the following literal characters must escape the characters using a `\`
+ (backslash): `\`, `"`.
+
+Unquoted keys or values must also escape the following characters: `(`, `)`, `:`, `<`, `>`, `{`,
+ `}`. The unquoted keywords `and`, `or`, and `not` can also be escaped with a `\`.
+
+Values containing `?` and `*` can escape these characters with a `\` to differentiate them from the
+ `?` and `*` characters used to specify arbitrary single character match and wildcard match.
+
+Keys containing `.` can escape the `.` with `\` to differentiate from the special `.` character that
+indicates nested keys.
 
 :::{caution}
 Currently, a query that contains spaces is interpreted as a substring search, i.e., it will match
