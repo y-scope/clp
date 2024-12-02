@@ -181,10 +181,6 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     // clang-format off
     options_ir_extraction
             .add_options()(
-                    "temp-output-dir",
-                    po::value<string>(&m_ir_temp_output_dir)->value_name("DIR"),
-                    "Temporary output directory for IR chunks while they're being written"
-            )(
                     "target-size",
                     po::value<size_t>(&m_ir_target_size)->value_name("SIZE"),
                     "Target size (B) for each IR chunk before a new chunk is created"
@@ -286,10 +282,6 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
 
     if (m_ir_mongodb_collection.empty()) {
         throw invalid_argument("COLLECTION not specified or empty.");
-    }
-
-    if (m_ir_temp_output_dir.empty()) {
-        m_ir_temp_output_dir = m_ir_output_dir;
     }
     return ParsingResult::Success;
 }
