@@ -57,7 +57,6 @@ fragment QUOTED_CHARACTER
 fragment UNQUOTED_CHARACTER
     : ESCAPED_SPACE
     | ESCAPED_SPECIAL_CHARACTER
-    | ESCAPED_KEYWORD
     | WILDCARD
     | UNICODE
     |  ~[\\():<>"{} \r\n\t]
@@ -65,17 +64,11 @@ fragment UNQUOTED_CHARACTER
 
 fragment WILDCARD:   '*' | '?';
 
-// TODO: unescape keywords
-fragment ESCAPED_KEYWORD
-    : '\\' KEYWORD
-    ;
-
 fragment KEYWORD
     : AND
     | OR
     | NOT
     ;
-
 
 RANGE_OPERATOR
     : '<='
@@ -97,7 +90,6 @@ fragment ESCAPED_SPACE
 fragment SPECIAL_CHARACTER
     : [\\():<>"*?{}.]
     ;
-
 
 // For unicode hex
 fragment UNICODE: '\\u' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT ;
