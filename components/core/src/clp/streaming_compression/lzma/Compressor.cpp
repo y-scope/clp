@@ -107,7 +107,14 @@ auto Compressor::close() -> void {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    run_lzma(LZMA_FINISH);
+    if (m_compression_stream.avail_in > 0) {
+        SPDLOG_ERROR("Tried to close LZMA compressor with unprocessed input data.");
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+
+    while (false == m_compression_stream_is_flushed) {
+        run_lzma(LZMA_FINISH);
+    }
     lzma_end(&m_compression_stream);
 
     // Detach output buffer from LZMA stream
@@ -134,19 +141,22 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
     // Attach input data to LZMA stream
     m_compression_stream.next_in = clp::size_checked_pointer_cast<uint8_t const>(data);
     m_compression_stream.avail_in = data_length;
+    m_compression_stream_is_flushed = false;
 
-    run_lzma(LZMA_RUN);
+    while (m_compression_stream.avail_in > 0) {
+        run_lzma(LZMA_RUN);
+    }
+
+    // All input data have been encoded so detach input data
+    m_compression_stream.next_in = nullptr;
 
     m_uncompressed_stream_pos += data_length;
 }
 
 auto Compressor::flush() -> void {
-    if (m_compression_stream_is_flushed) {
-        return;
+    while (false == m_compression_stream_is_flushed) {
+        run_lzma(LZMA_SYNC_FLUSH);
     }
-
-    // Forces all the buffered data to be available at output
-    run_lzma(LZMA_SYNC_FLUSH);
 }
 
 auto Compressor::try_get_pos(size_t& pos) const -> ErrorCode {
@@ -159,52 +169,35 @@ auto Compressor::try_get_pos(size_t& pos) const -> ErrorCode {
 }
 
 auto Compressor::run_lzma(lzma_action action) -> void {
-    m_compression_stream_is_flushed = false;
-    bool end_of_stream{false};
-    while (true) {
-        if (0 == m_compression_stream.avail_in) {  // No more input data
-            if (LZMA_RUN == action) {
-                // All input data have been processed, so we can safely detach
-                // input data from LZMA stream.
-                m_compression_stream.next_in = nullptr;
-                break;
-            }
-        } else if (LZMA_FINISH == action) {
-            SPDLOG_ERROR("Tried to close LZMA compressor with unprocessed input data.");
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-        }
-
-        auto const rc = lzma_code(&m_compression_stream, action);
-        switch (rc) {
-            case LZMA_OK:
-            case LZMA_BUF_ERROR:
-                break;
-            case LZMA_STREAM_END:
-                end_of_stream = true;
-                break;
-            default:
-                SPDLOG_ERROR("lzma() returned an unexpected value - {}.", static_cast<int>(rc));
+    auto const rc = lzma_code(&m_compression_stream, action);
+    switch (rc) {
+        case LZMA_OK:
+            break;
+        case LZMA_BUF_ERROR:  // No encoding progress can be made
+            if (m_compression_stream.avail_in > 0) {
+                SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-        }
-
-        if (end_of_stream) {
+            }
+            break;
+        case LZMA_STREAM_END:
             m_compression_stream_is_flushed = true;
             break;
-        }
-
-        // Write output buffer to file if it's full
-        if (0 == m_compression_stream.avail_out) {
-            flush_stream_output_block_buffer();
-        }
+        default:
+            SPDLOG_ERROR("lzma() returned an unexpected value - {}.", static_cast<int>(rc));
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    // Write remaining compressed data
-    if (m_compression_stream.avail_out < cCompressedStreamBlockBufferSize) {
+    // Write output buffer to file if it's full or flushed
+    if (0 == m_compression_stream.avail_out || m_compression_stream_is_flushed) {
         flush_stream_output_block_buffer();
     }
 }
 
 auto Compressor::flush_stream_output_block_buffer() -> void {
+    if (cCompressedStreamBlockBufferSize == m_compression_stream.avail_out) {
+        // Nothing to flush
+        return;
+    }
     m_compressed_stream_file_writer->write(
             clp::size_checked_pointer_cast<char>(m_compressed_stream_block_buffer.data()),
             cCompressedStreamBlockBufferSize - m_compression_stream.avail_out

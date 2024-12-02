@@ -53,6 +53,8 @@ public:
 
     /**
      * Writes any internally buffered data to file and ends the current frame
+     *
+     * Forces all the encoded data buffered by LZMA to be available at output
      */
     auto flush() -> void override;
 
