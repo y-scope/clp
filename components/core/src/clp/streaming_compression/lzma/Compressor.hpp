@@ -91,9 +91,10 @@ private:
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     /**
-     * Repeatedly invoke lzma_code() compression workflow until LZMA_STREAM_END
-     * is reached.
-     * The workflow action needs to be kept the same throughout this process.
+     * Invoke lzma_code() encoding workflow for one time with the given action.
+     *
+     * Once flushing starts, the workflow action needs to stay the same until
+     * flushing is complete (aka LZMA_STREAM_END is reached).
      * See also: https://github.com/tukaani-project/xz/blob/master/src/liblzma/api/lzma/base.h#L274
      *
      * @param action
