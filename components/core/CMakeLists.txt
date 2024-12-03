@@ -99,7 +99,7 @@ endif()
 # NOTE:
 # - We only try to link to the static library
 # - spdlog uses fmt, so their versions need to be kept in-sync
-find_package(fmt 8.0.1 REQUIRED)
+find_package(fmt 8.0.1 EXACT REQUIRED)
 if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}")
 else()
@@ -114,7 +114,7 @@ if(CLP_USE_STATIC_LIBS)
     # source.
     set(spdlog_USE_STATIC_LIBS ON)
 endif()
-find_package(spdlog 1.9.2 REQUIRED)
+find_package(spdlog 1.9.2 EXACT REQUIRED)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
 else()
