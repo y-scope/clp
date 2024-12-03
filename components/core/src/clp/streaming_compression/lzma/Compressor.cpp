@@ -17,6 +17,11 @@
 namespace {
 using clp::streaming_compression::lzma::Compressor;
 
+auto is_flush_action(lzma_action action) {
+    return LZMA_SYNC_FLUSH == action || LZMA_FULL_FLUSH == action || LZMA_FULL_BARRIER == action
+           || LZMA_FINISH == action;
+}
+
 /**
  * Initialize the Lzma compression stream
  * @param strm A pre-allocated `lzma_stream` object
@@ -42,7 +47,6 @@ auto init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_siz
     // LZMA_CHECK_CRC32 instead.
     auto const rc{lzma_stream_encoder(strm, filters.data(), LZMA_CHECK_CRC64)};
 
-    // Return successfully if the initialization went fine.
     if (LZMA_OK == rc) {
         return;
     }
@@ -112,9 +116,7 @@ auto Compressor::close() -> void {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    while (false == m_compression_stream_is_flushed) {
-        run_lzma(LZMA_FINISH);
-    }
+    flush_lzma(LZMA_FINISH);
     lzma_end(&m_compression_stream);
 
     // Detach output buffer from LZMA stream
@@ -141,10 +143,9 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
     // Attach input data to LZMA stream
     m_compression_stream.next_in = clp::size_checked_pointer_cast<uint8_t const>(data);
     m_compression_stream.avail_in = data_length;
-    m_compression_stream_is_flushed = false;
 
     while (m_compression_stream.avail_in > 0) {
-        run_lzma(LZMA_RUN);
+        encode_lzma_once();
     }
 
     // All input data have been encoded so detach input data
@@ -154,9 +155,7 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
 }
 
 auto Compressor::flush() -> void {
-    while (false == m_compression_stream_is_flushed) {
-        run_lzma(LZMA_SYNC_FLUSH);
-    }
+    flush_lzma(LZMA_SYNC_FLUSH);
 }
 
 auto Compressor::try_get_pos(size_t& pos) const -> ErrorCode {
@@ -168,29 +167,70 @@ auto Compressor::try_get_pos(size_t& pos) const -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto Compressor::run_lzma(lzma_action action) -> void {
-    auto const rc = lzma_code(&m_compression_stream, action);
+auto Compressor::encode_lzma_once() -> void {
+    if (0 == m_compression_stream.avail_in) {
+        return;
+    }
+
+    if (0 == m_compression_stream.avail_out) {
+        flush_stream_output_block_buffer();
+    }
+
+    auto const rc = lzma_code(&m_compression_stream, LZMA_RUN);
     switch (rc) {
         case LZMA_OK:
             break;
         case LZMA_BUF_ERROR:  // No encoding progress can be made
-            if (m_compression_stream.avail_in > 0) {
-                SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
-                throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-            }
-            break;
-        case LZMA_STREAM_END:
-            m_compression_stream_is_flushed = true;
-            break;
+            SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
+            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         default:
-            SPDLOG_ERROR("lzma() returned an unexpected value - {}.", static_cast<int>(rc));
+            SPDLOG_ERROR("lzma_code() returned an unexpected value - {}.", static_cast<int>(rc));
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
+}
 
-    // Write output buffer to file if it's full or flushed
-    if (0 == m_compression_stream.avail_out || m_compression_stream_is_flushed) {
-        flush_stream_output_block_buffer();
+auto Compressor::flush_lzma(lzma_action flush_action) -> void {
+    if (false == is_flush_action(flush_action)) {
+        SPDLOG_ERROR(
+                "lzma_code() supplied with invalid flush action - {}.",
+                static_cast<int>(flush_action)
+        );
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
+
+    bool flushed{false};
+    while (false == flushed) {
+        auto const rc = lzma_code(&m_compression_stream, flush_action);
+        switch (rc) {
+            case LZMA_OK:
+                break;
+            case LZMA_STREAM_END:
+                // NOTE: this might not be true when multithreaded encoder is
+                // used with LZMA_FULL_BARRIER. For now, we skip this check.
+                flushed = true;
+                break;
+            case LZMA_BUF_ERROR:  // No encoding progress can be made
+                // NOTE: this can happen if we are using LZMA_FULL_FLUSH or
+                // LZMA_FULL_BARRIER. These two actions keeps encoding input
+                // data alongside flushing already encoded but buffered data.
+                SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
+                throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+            default:
+                SPDLOG_ERROR(
+                        "lzma_code() returned an unexpected value - {}.",
+                        static_cast<int>(rc)
+                );
+                throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
+
+        // Write output buffer to file if it's full
+        if (0 == m_compression_stream.avail_out) {
+            flush_stream_output_block_buffer();
+        }
+    }
+
+    // Write the last chunk of output
+    flush_stream_output_block_buffer();
 }
 
 auto Compressor::flush_stream_output_block_buffer() -> void {

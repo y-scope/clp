@@ -91,15 +91,24 @@ private:
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     /**
-     * Invoke lzma_code() encoding workflow for one time with the given action.
+     * Invoke lzma_code() encoding workflow once with LZMA_RUN
+     *
+     * The encoded data may be buffered and thus not immediately available at
+     * the output block.
+     */
+    auto encode_lzma_once() -> void;
+
+    /**
+     * Invoke lzma_code() repeatedly with the given flushing action until all
+     * encoded data is made available at the output block
      *
      * Once flushing starts, the workflow action needs to stay the same until
-     * flushing is complete (aka LZMA_STREAM_END is reached).
+     * flushing is signaled completed by LZMA (aka LZMA_STREAM_END is reached).
      * See also: https://github.com/tukaani-project/xz/blob/master/src/liblzma/api/lzma/base.h#L274
      *
-     * @param action
+     * @param flush_action
      */
-    auto run_lzma(lzma_action action) -> void;
+    auto flush_lzma(lzma_action flush_action) -> void;
 
     /**
      * Flushes the current compressed data in the lzma output buffer to the
@@ -112,7 +121,6 @@ private:
 
     // Compressed stream variables
     lzma_stream m_compression_stream;
-    bool m_compression_stream_is_flushed{true};
     size_t m_dict_size{cDefaultDictionarySize};
 
     Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
