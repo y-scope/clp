@@ -26,8 +26,8 @@ auto is_flush_action(lzma_action action) {
  * Initialize the Lzma compression stream
  * @param strm A pre-allocated `lzma_stream` object
  * @param compression_level
- * @param dict_size Dictionary size that indicates how many bytes of the
- *                  recently processed uncompressed data is kept in memory
+ * @param dict_size Dictionary size that specifies how many bytes of the
+ *                  recently processed uncompressed data to keep in the memory
  */
 auto init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_size) -> void {
     lzma_options_lzma options;
