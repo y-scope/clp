@@ -485,39 +485,57 @@ bool StringUtils::tokenize_column_descriptor(
 }
 
 void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
-    // credit to https://stackoverflow.com/questions/7724448/simple-json-string-escape-for-c
-    for (char c : source) {
+    // Escaping is implemented using this `append_unescaped_slice` approach to offer a fast path
+    // when strings are mostly or entirely valid escaped JSON. Benchmarking shows that this offers
+    // a net decompression speedup of ~30% compared to adding every character to the destination one
+    // character at a time.
+    size_t slice_begin{0ULL};
+    auto append_unescaped_slice = [&](size_t i) {
+        if (slice_begin < i) {
+            destination.append(source.substr(slice_begin, i - slice_begin));
+        }
+        slice_begin = i + 1;
+    };
+    for (size_t i = 0; i < source.size(); ++i) {
+        char c = source[i];
         switch (c) {
             case '"':
+                append_unescaped_slice(i);
                 destination.append("\\\"");
                 break;
             case '\\':
+                append_unescaped_slice(i);
                 destination.append("\\\\");
                 break;
             case '\t':
+                append_unescaped_slice(i);
                 destination.append("\\t");
                 break;
             case '\r':
+                append_unescaped_slice(i);
                 destination.append("\\r");
                 break;
             case '\n':
+                append_unescaped_slice(i);
                 destination.append("\\n");
                 break;
             case '\b':
+                append_unescaped_slice(i);
                 destination.append("\\b");
                 break;
             case '\f':
+                append_unescaped_slice(i);
                 destination.append("\\f");
                 break;
             default:
                 if ('\x00' <= c && c <= '\x1f') {
+                    append_unescaped_slice(i);
                     char_to_escaped_four_char_hex(destination, c);
-                } else {
-                    destination.push_back(c);
                 }
                 break;
         }
     }
+    append_unescaped_slice(source.size());
 }
 
 namespace {
