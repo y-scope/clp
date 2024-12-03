@@ -26,7 +26,6 @@ using clp::Array;
 using clp::ErrorCode_Success;
 using clp::FileWriter;
 using clp::streaming_compression::Compressor;
-using clp::streaming_compression::Decompressor;
 using std::string;
 using std::string_view;
 
