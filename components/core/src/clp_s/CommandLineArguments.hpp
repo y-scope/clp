@@ -26,8 +26,7 @@ public:
     enum class Command : char {
         Compress = 'c',
         Extract = 'x',
-        Search = 's',
-        IrCompress = 'i'
+        Search = 's'
     };
 
     enum class OutputHandlerType : uint8_t {
@@ -117,6 +116,8 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
+    [[nodiscard]] auto get_file_type() const -> std::string { return m_file_type; }
+
 private:
     // Methods
     /**
@@ -164,8 +165,6 @@ private:
 
     void print_decompression_usage() const;
 
-    void print_ir_compression_usage() const;
-
     void print_search_usage() const;
 
     // Variables
@@ -187,6 +186,7 @@ private:
     size_t m_target_ordered_chunk_size{};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
+    std::string m_file_type{"Json"};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
