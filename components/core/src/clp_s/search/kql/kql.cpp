@@ -55,7 +55,7 @@ class ParseTreeVisitor : public KqlBaseVisitor {
 private:
     static void
     prepend_column(std::shared_ptr<ColumnDescriptor> const& desc, DescriptorList const& prefix) {
-        desc->get_descriptor_list().insert(desc->descriptor_begin(), prefix.begin(), prefix.end());
+        desc->insert(desc->get_descriptor_list().begin(), prefix);
     }
 
     void prepend_column(std::shared_ptr<Expression> const& expr, DescriptorList const& prefix) {
@@ -126,7 +126,7 @@ public:
             return nullptr;
         }
 
-        return ColumnDescriptor::create(descriptor_tokens);
+        return ColumnDescriptor::create_from_escaped_tokens(descriptor_tokens);
     }
 
     std::any visitNestedQuery(KqlParser::NestedQueryContext* ctx) override {
@@ -202,7 +202,7 @@ public:
 
     std::any visitValue_expression(KqlParser::Value_expressionContext* ctx) override {
         auto lit = unquote_literal(ctx->LITERAL()->getText());
-        auto descriptor = ColumnDescriptor::create("*");
+        auto descriptor = ColumnDescriptor::create_from_escaped_token("*");
         return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
     }
 
@@ -222,7 +222,7 @@ public:
             base = OrExpr::create();
         }
 
-        auto empty_descriptor = ColumnDescriptor::create(DescriptorList());
+        auto empty_descriptor = ColumnDescriptor::create_from_descriptors(DescriptorList());
         for (auto token : ctx->literals) {
             auto literal = unquote_literal(token->getText());
             auto expr = FilterExpr::create(

@@ -590,11 +590,7 @@ bool StringUtils::unescape_kql_internal(
         escaped = false;
         switch (value[i]) {
             case '\\':
-                if (is_value) {
-                    unescaped.append("\\\\");
-                } else {
-                    unescaped.push_back('\\');
-                }
+                unescaped.append("\\\\");
                 break;
             case '"':
                 unescaped.push_back('"');
@@ -621,11 +617,24 @@ bool StringUtils::unescape_kql_internal(
                 }
 
                 auto four_byte_hex = std::string_view{value}.substr(i + 1, 4);
-                if (false == convert_four_byte_hex_to_utf8(four_byte_hex, unescaped)) {
+                i += 4;
+
+                std::string tmp;
+                if (false == convert_four_byte_hex_to_utf8(four_byte_hex, tmp)) {
                     return false;
                 }
-                i += 4;
-                continue;
+
+                // Make sure unicode escape sequences are always treated as literal characters
+                if ("\\" == tmp) {
+                    unescaped.append("\\\\");
+                } else if ("?" == tmp && is_value) {
+                    unescaped.append("\\?");
+                } else if ("*" == tmp) {
+                    unescaped.append("\\*");
+                } else {
+                    unescaped.append(tmp);
+                }
+                break;
             }
             case '{':
                 unescaped.push_back('{');
