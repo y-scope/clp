@@ -148,6 +148,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::options_description compression_options("Compression options");
             std::string metadata_db_config_file_path;
             std::string input_path_list_file_path;
+            std::string file_type;
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -204,9 +205,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Do not record log order at ingestion time."
             )(
                     "file-type",
-                    po::value<std::string>(&m_file_type)->value_name("FILE_TYPE")->
-                        default_value(m_file_type),
-                    "The type of file that is to be compressed to archive (e.g Json or IR)"
+                    po::value<std::string>(&file_type)->value_name("FILE_TYPE"),
+                    "The type of file that is to be compressed to archive (e.g json or kv-ir)"
             );
             // clang-format on
 
@@ -258,6 +258,27 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_file_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
+            }
+
+            constexpr std::string_view cJsonFileType{"json"};
+            constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
+
+            if (parsed_command_line_options.count("file-type") > 0) {
+                if (cJsonFileType == file_type) {
+                    m_file_type = FileType::Json;
+                } else if (cKeyValueIrFileType == file_type) {
+                    m_file_type = FileType::KeyValueIr;
+                    if (m_structurize_arrays) {
+                        SPDLOG_ERROR(
+                                "Invalid combination of arguments; --file-type {} and "
+                                "--structurize-arrays can't be used together",
+                                cKeyValueIrFileType
+                        );
+                        return ParsingResult::Failure;
+                    }
+                } else {
+                    throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
+                }
             }
 
             // Parse and validate global metadata DB config
@@ -814,5 +835,4 @@ void CommandLineArguments::print_search_usage() const {
                  " [OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS]]"
               << std::endl;
 }
-
 }  // namespace clp_s

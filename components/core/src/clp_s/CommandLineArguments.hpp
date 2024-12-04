@@ -36,6 +36,11 @@ public:
         Stdout,
     };
 
+    enum class FileType : uint8_t {
+        Json = 0,
+        KeyValueIr
+    };
+
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 
@@ -116,7 +121,7 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
-    [[nodiscard]] auto get_file_type() const -> std::string { return m_file_type; }
+    [[nodiscard]] auto get_file_type() const -> FileType { return m_file_type; }
 
 private:
     // Methods
@@ -186,7 +191,7 @@ private:
     size_t m_target_ordered_chunk_size{};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
-    std::string m_file_type{"Json"};
+    FileType m_file_type{FileType::Json};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;

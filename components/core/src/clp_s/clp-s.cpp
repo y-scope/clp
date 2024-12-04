@@ -72,16 +72,6 @@ bool search_archive(
 );
 
 bool compress(CommandLineArguments const& command_line_arguments) {
-    auto file_type = command_line_arguments.get_file_type();
-    if ("IR" != file_type && "Json" != file_type) {
-        SPDLOG_ERROR("File Type specified is Invalid");
-        return false;
-    }
-    if ("IR" == file_type && command_line_arguments.get_structurize_arrays()) {
-        SPDLOG_ERROR("ERROR: structurized arrays are not supported for IR files");
-        return false;
-    }
-
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
     // Create output directory in case it doesn't exist
@@ -98,6 +88,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
 
     clp_s::JsonParserOption option{};
     option.file_paths = command_line_arguments.get_file_paths();
+    option.input_file_type = command_line_arguments.get_file_type();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
     option.max_document_size = command_line_arguments.get_max_document_size();
@@ -123,7 +114,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     }
 
     clp_s::JsonParser parser(option);
-    if ("IR" == file_type) {
+    if (CommandLineArguments::FileType::KeyValueIr == option.input_file_type) {
         // Functionality Coming in later PR
         //  -->Call new parsing function in Json Parser to parse IRv2 to archive
         //  -->Check for error from parsing function
