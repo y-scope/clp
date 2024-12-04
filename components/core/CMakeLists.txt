@@ -105,18 +105,10 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
 endif()
 
-# Find and setup fmt
-# NOTE:
-# - We only try to link to the static library
-# - spdlog uses fmt, so their versions need to be kept in-sync
-find_package(fmt 8.0.1 EXACT REQUIRED)
-if(fmt_FOUND)
-    message(STATUS "Found fmt ${fmt_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find static libraries for fmt")
-endif()
+# Find and setup spdlog and fmt transitive dependency
 
-# Find and setup spdlog
+# Specify the minimum required spdlog version (can be overridden by the user)
+set (spdlog_MIN_VERSION "1.9.0" CACHE STRING "Minimum required version of spdlog")
 if(CLP_USE_STATIC_LIBS)
     # NOTE: On some Linux distributions (e.g. Ubuntu), the spdlog package only contains a dynamic
     # library. If the `find_package(spdlog)` call below fails, re-run
@@ -124,7 +116,7 @@ if(CLP_USE_STATIC_LIBS)
     # source.
     set(spdlog_USE_STATIC_LIBS ON)
 endif()
-find_package(spdlog 1.9.2 EXACT REQUIRED)
+find_package(spdlog ${spdlog_MIN_VERSION} REQUIRED)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
 else()
@@ -135,6 +127,33 @@ else()
         message(FATAL_ERROR "Could not find libraries for spdlog.")
     endif()
 endif()
+
+# Determine the compatible fmt w.r.t to spdlog
+if(spdlog_VERSION VERSION_GREATER_EQUAL "1.15.0")
+    set(FMT_MIN_VERSION "11.0.0")
+elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.12.0")
+    set(FMT_MIN_VERSION "10.0.0")
+elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.11.0")
+    set(FMT_MIN_VERSION "9.0.0")
+elseif(spdlog_VERSION VERSION_GREATER_EQUAL "1.9.0")
+    set(FMT_MIN_VERSION "8.0.0")
+else()
+    message(FATAL_ERROR "Unsupported spdlog version (${spdlog_VERSION}). Minimum supported version is 1.9.0.")
+endif()
+
+# Find fmt with the compatible version
+# NOTE:
+# - We only try to link to the static library
+find_package(fmt ${FMT_MIN_VERSION} REQUIRED)
+if(fmt_FOUND)
+    message(STATUS "Found fmt ${fmt_VERSION}")
+else()
+    message(FATAL_ERROR "Could not find static libraries for fmt")
+endif()
+
+# Print the selected versions for debugging
+message(STATUS "Using spdlog version ${spdlog_VERSION}")
+message(STATUS "Using fmt version ${FMT_MIN_VERSION}")
 
 # Find and setup libarchive
 if(CLP_USE_STATIC_LIBS)
