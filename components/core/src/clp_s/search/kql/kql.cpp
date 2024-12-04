@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -69,7 +70,7 @@ private:
 
 public:
     static std::string unquote_string(std::string const& text) {
-        if (text.at(0) == '"') {
+        if (false == text.empty() && '"' == text.at(0)) {
             return text.substr(1, text.length() - 2);
         } else {
             return text;
@@ -86,7 +87,7 @@ public:
         std::string token;
         if (false == StringUtils::unescape_kql_value(unquote_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid literal: {}", text);
-            return nullptr;
+            throw std::runtime_error{"Invalid literal."};
         }
 
         if (auto ret = Integral::create_from_string(token)) {
@@ -104,7 +105,7 @@ public:
         std::string token;
         if (false == StringUtils::unescape_kql_value(unquote_date_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid date literal: {}", text);
-            return nullptr;
+            throw std::runtime_error{"Invalid date literal."};
         }
 
         return DateLiteral::create_from_string(token);
