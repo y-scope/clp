@@ -51,13 +51,6 @@ namespace {
 bool compress(CommandLineArguments const& command_line_arguments);
 
 /**
- * Compresses the input IR files specified by the command line arguments into an archive.
- * @param command_line_arguments
- * @return Whether compression was successful
- */
-auto ir_compress(CommandLineArguments const& command_line_arguments) -> bool;
-
-/**
  * Decompresses the archive specified by the given JsonConstructorOption.
  * @param json_constructor_option
  */
