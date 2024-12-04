@@ -153,7 +153,7 @@ endif()
 
 # Print the selected versions for debugging
 message(STATUS "Using spdlog version ${spdlog_VERSION}")
-message(STATUS "Using fmt version ${FMT_MIN_VERSION}")
+message(STATUS "Using fmt version ${fmt_VERSION}")
 
 # Find and setup libarchive
 if(CLP_USE_STATIC_LIBS)
