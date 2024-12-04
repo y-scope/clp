@@ -7,7 +7,8 @@
 
 namespace clp::ffi::ir_stream {
 /**
- * Enums that define all
+ * This enum class represents all possible error codes related to serializing or deserializing CLP
+ * IR streams.
  */
 enum class IrErrorCodeEnum : uint8_t {
     DecodingMethodFailure,
