@@ -16,6 +16,7 @@
 #include "../src/clp/FileWriter.hpp"
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
 #include "../src/clp/streaming_compression/Compressor.hpp"
+#include "../src/clp/streaming_compression/Decompressor.hpp"
 #include "../src/clp/streaming_compression/lzma/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Decompressor.hpp"
@@ -26,6 +27,7 @@ using clp::Array;
 using clp::ErrorCode_Success;
 using clp::FileWriter;
 using clp::streaming_compression::Compressor;
+using clp::streaming_compression::Decompressor;
 using std::string;
 using std::string_view;
 

@@ -91,22 +91,24 @@ private:
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     /**
-     * Invoke lzma_code() encoding workflow once with LZMA_RUN
+     * Invoke lzma_code() repeatedly with LZMA_RUN until the input is exhausted
      *
-     * The encoded data may be buffered and thus not immediately available at
-     * the output block.
+     * At the end of the workflow, the last bytes of encoded data may still be
+     * buffered and thus not immediately available at the output block buffer.
+     *
+     * Assumes input stream and output block buffer are both in valid states.
+     * @throw `OperationFailed` if LZMA returns an unexpected error value
      */
-    auto encode_lzma_once() -> void;
+    auto encode_lzma() -> void;
 
     /**
      * Invoke lzma_code() repeatedly with the given flushing action until all
      * encoded data is made available at the output block buffer
      *
-     * Once flushing starts, the workflow action needs to stay the same until
-     * flushing is signaled completed by LZMA (aka LZMA_STREAM_END is reached).
-     * See also: https://github.com/tukaani-project/xz/blob/master/src/liblzma/api/lzma/base.h#L274
-     *
+     * Assumes input stream and output block buffer are both in valid states.
      * @param flush_action
+     * @throw `OperationFailed` if the provided action is not an LZMA flush
+     *        action, or if LZMA returns an unexpected error value
      */
     auto flush_lzma(lzma_action flush_action) -> void;
 

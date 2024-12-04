@@ -144,12 +144,11 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
     m_compression_stream.next_in = clp::size_checked_pointer_cast<uint8_t const>(data);
     m_compression_stream.avail_in = data_length;
 
-    while (m_compression_stream.avail_in > 0) {
-        encode_lzma_once();
-    }
+    encode_lzma();
 
     // All input data have been encoded so detach input data
     m_compression_stream.next_in = nullptr;
+    m_compression_stream.avail_in = 0;
 
     m_uncompressed_stream_pos += data_length;
 }
@@ -167,26 +166,31 @@ auto Compressor::try_get_pos(size_t& pos) const -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto Compressor::encode_lzma_once() -> void {
-    if (0 == m_compression_stream.avail_in) {
-        return;
+auto Compressor::encode_lzma() -> void {
+    while (m_compression_stream.avail_in > 0) {
+        // Write output buffer to file if it's full
+        if (0 == m_compression_stream.avail_out) {
+            flush_stream_output_block_buffer();
+        }
+
+        auto const rc = lzma_code(&m_compression_stream, LZMA_RUN);
+        switch (rc) {
+            case LZMA_OK:
+                break;
+            case LZMA_BUF_ERROR:  // No encoding progress can be made
+                SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
+                throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+            default:
+                SPDLOG_ERROR(
+                        "lzma_code() returned an unexpected value - {}.",
+                        static_cast<int>(rc)
+                );
+                throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        }
     }
 
-    if (0 == m_compression_stream.avail_out) {
-        flush_stream_output_block_buffer();
-    }
-
-    auto const rc = lzma_code(&m_compression_stream, LZMA_RUN);
-    switch (rc) {
-        case LZMA_OK:
-            break;
-        case LZMA_BUF_ERROR:  // No encoding progress can be made
-            SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-        default:
-            SPDLOG_ERROR("lzma_code() returned an unexpected value - {}.", static_cast<int>(rc));
-            throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
+    // Write the last chunk of output
+    flush_stream_output_block_buffer();
 }
 
 auto Compressor::flush_lzma(lzma_action flush_action) -> void {
@@ -198,8 +202,18 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
 
+    /**
+     * Once flushing starts, the workflow action needs to stay the same until
+     * flushing is signaled completed by LZMA (aka LZMA_STREAM_END is reached).
+     * See also: https://github.com/tukaani-project/xz/blob/master/src/liblzma/api/lzma/base.h#L274
+     */
     bool flushed{false};
     while (false == flushed) {
+        // Write output buffer to file if it's full
+        if (0 == m_compression_stream.avail_out) {
+            flush_stream_output_block_buffer();
+        }
+
         auto const rc = lzma_code(&m_compression_stream, flush_action);
         switch (rc) {
             case LZMA_OK:
@@ -221,11 +235,6 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
                         static_cast<int>(rc)
                 );
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-        }
-
-        // Write output buffer to file if it's full
-        if (0 == m_compression_stream.avail_out) {
-            flush_stream_output_block_buffer();
         }
     }
 
