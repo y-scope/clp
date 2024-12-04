@@ -100,7 +100,7 @@ private:
 
     /**
      * Invoke lzma_code() repeatedly with the given flushing action until all
-     * encoded data is made available at the output block
+     * encoded data is made available at the output block buffer
      *
      * Once flushing starts, the workflow action needs to stay the same until
      * flushing is signaled completed by LZMA (aka LZMA_STREAM_END is reached).
@@ -111,7 +111,7 @@ private:
     auto flush_lzma(lzma_action flush_action) -> void;
 
     /**
-     * Flushes the current compressed data in the lzma output buffer to the
+     * Flushes the current compressed data in the LZMA output buffer to the
      * output file handler. Reset the compression buffer to receive new data.
      */
     auto flush_stream_output_block_buffer() -> void;

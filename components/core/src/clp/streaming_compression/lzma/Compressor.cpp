@@ -17,13 +17,13 @@
 namespace {
 using clp::streaming_compression::lzma::Compressor;
 
-auto is_flush_action(lzma_action action) {
+auto is_flush_action(lzma_action action) -> bool {
     return LZMA_SYNC_FLUSH == action || LZMA_FULL_FLUSH == action || LZMA_FULL_BARRIER == action
            || LZMA_FINISH == action;
 }
 
 /**
- * Initialize the Lzma compression stream
+ * Initialize the LZMA compression stream
  * @param strm A pre-allocated `lzma_stream` object
  * @param compression_level
  * @param dict_size Dictionary size that specifies how many bytes of the
