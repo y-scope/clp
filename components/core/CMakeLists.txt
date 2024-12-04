@@ -55,11 +55,14 @@ if (CLP_USE_STATIC_LIBS AND APPLE)
     message(AUTHOR_WARNING "Building with static libraries is unsupported on macOS."
             " Switching to shared libraries.")
     set(CLP_USE_STATIC_LIBS OFF)
+    message(AUTHOR_WARNING "Use the system libraries for building,
+    as library version pinning is not supported on macOS.")
+    set(CLP_USE_SYSTEM_LIBS ON)
 endif ()
-if(CLP_USE_STATIC_LIBS)
-    set(CLP_LIBS_STRING "static")
-else()
-    set(CLP_LIBS_STRING "shared")
+    if(CLP_USE_STATIC_LIBS)
+        set(CLP_LIBS_STRING "static")
+    else()
+        set(CLP_LIBS_STRING "shared")
 endif()
 message(STATUS "Building using ${CLP_LIBS_STRING} libraries")
 
@@ -99,7 +102,14 @@ endif()
 # NOTE:
 # - We only try to link to the static library
 # - spdlog uses fmt, so their versions need to be kept in-sync
-find_package(fmt 8.0.1 EXACT REQUIRED)
+if (CLP_USE_SYSTEM_LIBS)
+    # - Attempt to use a compatible version of fmt;
+    #   it is the user's responsibility to install the appropriate fmt library version.
+    find_package(fmt 8.0.1 REQUIRED)
+else()
+    # - spdlog uses fmt, so their versions need to be kept in-sync
+    find_package(fmt 8.0.1 EXACT REQUIRED)
+endif()
 if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}")
 else()
@@ -114,7 +124,13 @@ if(CLP_USE_STATIC_LIBS)
     # source.
     set(spdlog_USE_STATIC_LIBS ON)
 endif()
-find_package(spdlog 1.9.2 EXACT REQUIRED)
+if (CLP_USE_SYSTEM_LIBS)
+    # - Attempt to use a compatible version of spdlog;
+    #   it is the user's responsibility to install the appropriate spdlog library version.
+    find_package(spdlog 1.9.2 REQUIRED)
+else()
+    # - spdlog uses fmt, so their versions need to be kept in-sync
+    find_package(spdlog 1.9.2 EXACT REQUIRED)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
 else()
