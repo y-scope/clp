@@ -23,9 +23,6 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructors
-    DescriptorToken() = default;
-
     /**
      * Creates a DescriptorToken from an escaped token string. The escape sequences '\\' and '\*'
      * are supported in order to distinguish the literal '*' from the '*' used to match hierarchies
@@ -101,7 +98,7 @@ private:
         }
     }
 
-    bool m_wildcard{};
+    bool m_wildcard{false};
     std::string m_token;
 };
 
