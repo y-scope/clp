@@ -117,6 +117,8 @@ auto Compressor::close() -> void {
     }
 
     flush_lzma(LZMA_FINISH);
+
+    // Deallocates LZMA stream's internal data structures
     lzma_end(&m_compression_stream);
 
     // Detach output buffer from LZMA stream
