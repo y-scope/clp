@@ -262,22 +262,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No input paths specified.");
             }
 
-            if (parsed_command_line_options.count("file-type") > 0) {
-                if (cJsonFileType == file_type) {
-                    m_file_type = FileType::Json;
-                } else if (cKeyValueIrFileType == file_type) {
-                    m_file_type = FileType::KeyValueIr;
-                    if (m_structurize_arrays) {
-                        SPDLOG_ERROR(
-                                "Invalid combination of arguments; --file-type {} and "
-                                "--structurize-arrays can't be used together",
-                                cKeyValueIrFileType
-                        );
-                        return ParsingResult::Failure;
-                    }
-                } else {
-                    throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
+            if (cJsonFileType == file_type) {
+                m_file_type = FileType::Json;
+            } else if (cKeyValueIrFileType == file_type) {
+                m_file_type = FileType::KeyValueIr;
+                if (m_structurize_arrays) {
+                    SPDLOG_ERROR(
+                            "Invalid combination of arguments; --file-type {} and "
+                            "--structurize-arrays can't be used together",
+                            cKeyValueIrFileType
+                    );
+                    return ParsingResult::Failure;
                 }
+            } else {
+                throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
             }
 
             // Parse and validate global metadata DB config

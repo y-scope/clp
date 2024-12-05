@@ -118,7 +118,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
         // Functionality Coming in later PR
         //  -->Call new parsing function in Json Parser to parse IRv2 to archive
         //  -->Check for error from parsing function
-        SPDLOG_ERROR("Compressing Key Valur IR Files is not yet supported");
+        SPDLOG_ERROR("Compressing Key Value IR Files is not yet supported");
         return false;
     } else {
         if (false == parser.parse()) {
