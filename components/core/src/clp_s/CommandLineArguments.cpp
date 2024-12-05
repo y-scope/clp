@@ -148,7 +148,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::options_description compression_options("Compression options");
             std::string metadata_db_config_file_path;
             std::string input_path_list_file_path;
-            std::string file_type;
+            constexpr std::string_view cJsonFileType{"json"};
+            constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
+            std::string file_type{cJsonFileType};
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -205,8 +207,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Do not record log order at ingestion time."
             )(
                     "file-type",
-                    po::value<std::string>(&file_type)->value_name("FILE_TYPE"),
-                    "The type of file that is to be compressed to archive (e.g json or kv-ir)"
+                    po::value<std::string>(&file_type)->value_name("FILE_TYPE")->default_value(file_type),
+                    "The type of file being compressed (json or kv-ir)"
             );
             // clang-format on
 
@@ -259,9 +261,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             if (m_file_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
             }
-
-            constexpr std::string_view cJsonFileType{"json"};
-            constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
 
             if (parsed_command_line_options.count("file-type") > 0) {
                 if (cJsonFileType == file_type) {
