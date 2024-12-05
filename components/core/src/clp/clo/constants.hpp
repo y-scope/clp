@@ -8,7 +8,7 @@ constexpr char Path[]{"path"};
 constexpr char StreamId[]{"stream_id"};
 constexpr char BeginMsgIx[]{"begin_msg_ix"};
 constexpr char EndMsgIx[]{"end_msg_ix"};
-constexpr char IsLastIrChunk[]{"is_last_ir_chunk"};
+constexpr char IsLastChunk[]{"is_last_chunk"};
 }  // namespace IrOutput
 
 namespace SearchOutput {

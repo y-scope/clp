@@ -134,7 +134,7 @@ void JsonConstructor::construct_in_order() {
                             last_idx
                     ),
                     bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cIsLastIrChunk,
+                            constants::results_cache::decompression::cIsLastChunk,
                             false == open_new_writer
                     )
             )));

@@ -6,7 +6,7 @@ import axios from "axios";
  * @property {string} stream_id
  * @property {number} begin_msg_ix
  * @property {number} end_msg_ix
- * @property {boolean} is_last_ir_chunk
+ * @property {boolean} is_last_chunk
  * @property {string} path
  * @property {string} _id
  */
