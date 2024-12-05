@@ -224,7 +224,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                     archive_reader,
                     *file_metadata_ix_ptr,
                     command_line_args.get_ir_target_size(),
-                    command_line_args.get_ir_temp_output_dir(),
+                    command_line_args.get_ir_output_dir(),
                     ir_output_handler
             ))
         {

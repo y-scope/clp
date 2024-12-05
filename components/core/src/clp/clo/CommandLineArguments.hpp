@@ -54,10 +54,6 @@ public:
 
     [[nodiscard]] auto get_ir_output_dir() const -> std::string const& { return m_ir_output_dir; }
 
-    [[nodiscard]] auto get_ir_temp_output_dir() const -> std::string const& {
-        return m_ir_temp_output_dir;
-    }
-
     [[nodiscard]] auto get_ir_mongodb_uri() const -> std::string const& { return m_ir_mongodb_uri; }
 
     [[nodiscard]] auto get_ir_mongodb_collection() const -> std::string const& {
@@ -187,7 +183,6 @@ private:
     std::string m_file_split_id;
     size_t m_ir_target_size{128ULL * 1024 * 1024};
     std::string m_ir_output_dir;
-    std::string m_ir_temp_output_dir;
     std::string m_ir_mongodb_uri;
     std::string m_ir_mongodb_collection;
 
