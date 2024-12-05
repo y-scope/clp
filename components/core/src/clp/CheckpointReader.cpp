@@ -1,7 +1,7 @@
 #include "CheckpointReader.hpp"
 
 namespace clp {
-ErrorCode CheckpointReader::try_seek_from_begin(size_t pos) {
+auto CheckpointReader::try_seek_from_begin(size_t pos) -> ErrorCode {
     m_cur_pos = pos > m_checkpoint ? m_checkpoint : pos;
     auto rc = m_reader->try_seek_from_begin(m_cur_pos);
     if (ErrorCode_Success != rc) {
@@ -13,7 +13,8 @@ ErrorCode CheckpointReader::try_seek_from_begin(size_t pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode CheckpointReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+auto CheckpointReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+        -> ErrorCode {
     if ((m_cur_pos + num_bytes_to_read) > m_checkpoint) {
         num_bytes_to_read = m_checkpoint - m_cur_pos;
     }

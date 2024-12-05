@@ -5,13 +5,17 @@
 
 namespace clp {
 /**
- * CheckpointReader is a ReaderInterface designed to wrap other ReaderInterfaces, and prevent users
- * from reading beyond a certain point in the underlying ReaderInterface. This can help prevent
- * needing to seek backwards in the underlying ReaderInterface by setting a checkpoint at the start
- * of the next section to be read.
+ * CheckpointReader is a ReaderInterface designed to wrap other ReaderInterfaces and prevent users
+ * from reading or seeking beyond a certain point in the underlying input stream.
+ *
+ * This is useful when the underlying input stream is divided into several logical segments and we
+ * want to prevent a reader for an earlier segment consuming any bytes from a later segment. In
+ * particular, reading part of a later segment may force the reader for that later segment to seek
+ * backwards, which can be either inefficient or impossible for certain kinds of input streams.
  */
 class CheckpointReader : public ReaderInterface {
 public:
+    // Constructor
     explicit CheckpointReader(ReaderInterface* reader, size_t checkpoint)
             : m_reader(reader),
               m_checkpoint(checkpoint) {
@@ -30,7 +34,7 @@ public:
      * @return ErrorCode_Success on success
      * @return ErrorCode_errno on failure
      */
-    ErrorCode try_get_pos(size_t& pos) override { return m_reader->try_get_pos(pos); }
+    auto try_get_pos(size_t& pos) -> ErrorCode override { return m_reader->try_get_pos(pos); }
 
     /**
      * Tries to seek to the given position, limited by the checkpoint. If pos is past the checkpoint
@@ -41,7 +45,7 @@ public:
      * @return ErrorCode_EndOfFile on EOF or if trying to seek beyond the checkpoint
      * @return ErrorCode_errno on failure
      */
-    ErrorCode try_seek_from_begin(size_t pos) override;
+    auto try_seek_from_begin(size_t pos) -> ErrorCode override;
 
     /**
      * Tries to read up to a given number of bytes from the file, limited by the checkpoint. If the
@@ -55,10 +59,11 @@ public:
      * @return ErrorCode_EndOfFile on EOF or trying to read after hitting checkpoint
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    auto
+    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
 
-    ErrorCode
-    try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str) override {
+    auto try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+            -> ErrorCode override {
         return ErrorCode_Unsupported;
     }
 
