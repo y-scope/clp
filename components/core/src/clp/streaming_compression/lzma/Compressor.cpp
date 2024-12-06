@@ -156,6 +156,9 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
 }
 
 auto Compressor::flush() -> void {
+    if (nullptr == m_compressed_stream_file_writer) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
     flush_lzma(LZMA_SYNC_FLUSH);
 }
 
@@ -228,7 +231,7 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
             case LZMA_BUF_ERROR:  // No encoding progress can be made
                 // NOTE: this can happen if we are using LZMA_FULL_FLUSH or
                 // LZMA_FULL_BARRIER. These two actions keeps encoding input
-                // data alongside flushing already encoded but buffered data.
+                // data alongside flushing buffered encoded data.
                 SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             default:
