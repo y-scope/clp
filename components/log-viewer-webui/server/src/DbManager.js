@@ -171,7 +171,7 @@ class DbManager {
      */
     async getExtractedStreamFileMetadata (streamId, logEventIdx) {
         return await this.#streamFilesCollection.findOne({
-            orig_file_id: streamId,
+            stream_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},
             end_msg_ix: {$gt: logEventIdx},
         });
