@@ -15,6 +15,7 @@ auto CheckpointReader::try_seek_from_begin(size_t pos) -> ErrorCode {
 auto CheckpointReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
         -> ErrorCode {
     if (m_cur_pos == m_checkpoint) {
+        num_bytes_read = 0;
         return ErrorCode_EndOfFile;
     }
 
