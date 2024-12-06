@@ -3,8 +3,7 @@
 namespace clp {
 auto CheckpointReader::try_seek_from_begin(size_t pos) -> ErrorCode {
     m_cur_pos = pos > m_checkpoint ? m_checkpoint : pos;
-    if (auto const rc = m_reader->try_seek_from_begin(m_cur_pos);
-        ErrorCode_Success != rc) {
+    if (auto const rc = m_reader->try_seek_from_begin(m_cur_pos); ErrorCode_Success != rc) {
         return rc;
     }
     if (m_cur_pos >= m_checkpoint) {
@@ -18,7 +17,7 @@ auto CheckpointReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num
     if (m_cur_pos == m_checkpoint) {
         return ErrorCode_EndOfFile;
     }
-    
+
     if ((m_cur_pos + num_bytes_to_read) > m_checkpoint) {
         num_bytes_to_read = m_checkpoint - m_cur_pos;
     }

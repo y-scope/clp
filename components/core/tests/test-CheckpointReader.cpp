@@ -43,6 +43,11 @@ TEST_CASE("Test Checkpoint Reader", "[CheckpointReader]") {
         REQUIRE(1 == num_bytes_read);
         REQUIRE(1 == string_reader.get_pos());
         REQUIRE(1 == checkpoint_reader.get_pos());
+        rc = checkpoint_reader.try_read(buf, 1, num_bytes_read);
+        REQUIRE(clp::ErrorCode_EndOfFile == rc);
+        REQUIRE(0 == num_bytes_read);
+        REQUIRE(1 == string_reader.get_pos());
+        REQUIRE(1 == checkpoint_reader.get_pos());
     }
 
     SECTION("CheckpointReader does allow reads before checkpoint.") {

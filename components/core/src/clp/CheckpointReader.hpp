@@ -19,9 +19,10 @@ public:
     explicit CheckpointReader(ReaderInterface* reader, size_t checkpoint)
             : m_reader(reader),
               m_checkpoint(checkpoint) {
-        if (nullptr != m_reader) {
-            m_cur_pos = m_reader->get_pos();
+        if (nullptr == m_reader) {
+            throw ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
         }
+        m_cur_pos = m_reader->get_pos();
         if (m_cur_pos > m_checkpoint) {
             throw ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
         }
