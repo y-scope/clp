@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -34,6 +35,10 @@ public:
         m_message.emplace(node_id, value);
     }
 
+    inline void add_value(int32_t node_id, std::string_view const value) {
+        m_message.emplace(node_id, std::string{value});
+    }
+
     /**
      * Adds a timestamp value and its encoding to the message for a given MST node ID.
      * @param node_id
@@ -53,6 +58,10 @@ public:
     template <typename T>
     inline void add_unordered_value(T const& value) {
         m_unordered_message.emplace_back(value);
+    }
+
+    inline void add_unordered_value(std::string_view const value) {
+        m_unordered_message.emplace_back(std::string{value});
     }
 
     /**
