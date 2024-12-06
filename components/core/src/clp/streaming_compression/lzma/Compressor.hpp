@@ -93,8 +93,8 @@ private:
     /**
      * Invoke lzma_code() repeatedly with LZMA_RUN until the input is exhausted
      *
-     * At the end of the workflow, the last bytes of encoded data may still be
-     * buffered in the LZMA stream and thus not immediately available at the output block buffer.
+     * At the end of the workflow, the last bytes of encoded data may still be buffered in the LZMA
+     * stream and thus not immediately available at the output block buffer.
      *
      * Assumes input stream and output block buffer are both in valid states.
      * @throw `OperationFailed` if LZMA returns an unexpected error value
@@ -102,8 +102,8 @@ private:
     auto encode_lzma() -> void;
 
     /**
-     * Invoke lzma_code() repeatedly with the given flushing action until all
-     * encoded data is made available at the output block buffer
+     * Invoke lzma_code() repeatedly with the given flushing action until all encoded data is made
+     * available at the output block buffer
      *
      * Assumes input stream and output block buffer are both in valid states.
      * @param flush_action
@@ -113,8 +113,8 @@ private:
     auto flush_lzma(lzma_action flush_action) -> void;
 
     /**
-     * Flushes the current compressed data in the output block buffer to the
-     * output file handler. Reset the output block buffer to receive new data.
+     * Flushes the current compressed data in the output block buffer to the output file handler.
+     * Reset the output block buffer to receive new data.
      */
     auto flush_stream_output_block_buffer() -> void;
 

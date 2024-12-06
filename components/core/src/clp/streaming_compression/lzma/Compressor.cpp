@@ -41,20 +41,18 @@ auto init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_siz
             {.id = LZMA_VLI_UNKNOWN, .options = nullptr},
     }};
 
-    // Initialize the encoder using a preset. Set the integrity to check
-    // to CRC64, which is the default in the xz command line tool. If
-    // the .xz file needs to be decompressed with XZ Embedded, use
-    // LZMA_CHECK_CRC32 instead.
+    // Initialize the encoder using a preset. Set the integrity to check to CRC64, which is the
+    // default in the xz command line tool. If the .xz file needs to be decompressed with
+    // XZ-Embedded, use LZMA_CHECK_CRC32 instead.
     auto const rc{lzma_stream_encoder(strm, filters.data(), LZMA_CHECK_CRC64)};
 
     if (LZMA_OK == rc) {
         return;
     }
 
-    // Something went wrong. The possible errors are documented in
-    // lzma/container.h (src/liblzma/api/lzma/container.h in the source
-    // package or e.g. /usr/include/lzma/container.h depending on the
-    // install prefix).
+    // Something went wrong. The possible errors are documented in lzma/container.h
+    // (src/liblzma/api/lzma/container.h in the source package or e.g. /usr/include/lzma/container.h
+    // depending on the install prefix).
     char const* msg{nullptr};
     switch (rc) {
         case LZMA_MEM_ERROR:
@@ -193,9 +191,6 @@ auto Compressor::encode_lzma() -> void {
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }
     }
-
-    // Write the last chunk of output
-    flush_stream_output_block_buffer();
 }
 
 auto Compressor::flush_lzma(lzma_action flush_action) -> void {
@@ -208,8 +203,8 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
     }
 
     /**
-     * Once flushing starts, the workflow action needs to stay the same until
-     * flushing is signaled completed by LZMA (aka LZMA_STREAM_END is reached).
+     * Once flushing starts, the workflow action needs to stay the same until flushing is signaled
+     * complete by LZMA (aka LZMA_STREAM_END is reached).
      * See also: https://github.com/tukaani-project/xz/blob/master/src/liblzma/api/lzma/base.h#L274
      */
     bool flushed{false};
@@ -224,14 +219,13 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
             case LZMA_OK:
                 break;
             case LZMA_STREAM_END:
-                // NOTE: this might not be true when multithreaded encoder is
-                // used with LZMA_FULL_BARRIER. For now, we skip this check.
+                // NOTE: this might not be true when multithreaded encoder is used with
+                // LZMA_FULL_BARRIER. For now, we skip this check.
                 flushed = true;
                 break;
             case LZMA_BUF_ERROR:  // No encoding progress can be made
-                // NOTE: this can happen if we are using LZMA_FULL_FLUSH or
-                // LZMA_FULL_BARRIER. These two actions keeps encoding input
-                // data alongside flushing buffered encoded data.
+                // NOTE: this can happen if we are using LZMA_FULL_FLUSH or LZMA_FULL_BARRIER. These
+                // two actions keeps encoding input data alongside flushing buffered encoded data.
                 SPDLOG_ERROR("LZMA compressor input stream is corrupt.");
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             default:
