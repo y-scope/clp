@@ -9,6 +9,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 
 #include "../src/clp/error_handling/ErrorCode.hpp"
+#include "../src/clp/ffi/ir_stream/IrErrorCode.hpp"
 
 using clp::error_handling::ErrorCategory;
 using clp::error_handling::ErrorCode;
@@ -138,4 +139,18 @@ TEST_CASE("test_error_code_implementation", "[error_handling][ErrorCode]") {
     REQUIRE((success_error_code != always_success_error_code));
     REQUIRE((AlwaysSuccessErrorCode{AlwaysSuccessErrorCodeEnum::Success} != success_error_code));
     REQUIRE((BinaryErrorCode{BinaryErrorCodeEnum::Success} != always_success_error_code));
+}
+
+TEST_CASE("test_ir_error_code", "[error_handling][ErrorCode][IrErrorCode]") {
+    using clp::ffi::ir_stream::IrErrorCode;
+    using clp::ffi::ir_stream::IrErrorCodeEnum;
+
+    auto assert_error_code_matches_error_code_enum = [](IrErrorCodeEnum error_code_enum) -> bool {
+        std::error_code const error_code{IrErrorCode{error_code_enum}};
+        return error_code == IrErrorCode{error_code_enum};
+    };
+
+    REQUIRE(assert_error_code_matches_error_code_enum(IrErrorCodeEnum::DecodingMethodFailure));
+    REQUIRE(assert_error_code_matches_error_code_enum(IrErrorCodeEnum::EndOfStream));
+    REQUIRE(assert_error_code_matches_error_code_enum(IrErrorCodeEnum::IncompleteStream));
 }
