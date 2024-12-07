@@ -1,11 +1,11 @@
-#ifndef CLP_CHECKPOINTREADER_HPP
-#define CLP_CHECKPOINTREADER_HPP
+#ifndef CLP_BOUNDEDREADER_HPP
+#define CLP_BOUNDEDREADER_HPP
 
 #include "ReaderInterface.hpp"
 
 namespace clp {
 /**
- * CheckpointReader is a ReaderInterface designed to wrap other ReaderInterfaces and prevent users
+ * BoundedReader is a ReaderInterface designed to wrap other ReaderInterfaces and prevent users
  * from reading or seeking beyond a certain point in the underlying input stream.
  *
  * This is useful when the underlying input stream is divided into several logical segments and we
@@ -13,17 +13,17 @@ namespace clp {
  * particular, reading part of a later segment may force the reader for that later segment to seek
  * backwards, which can be either inefficient or impossible for certain kinds of input streams.
  */
-class CheckpointReader : public ReaderInterface {
+class BoundedReader : public ReaderInterface {
 public:
     // Constructor
-    explicit CheckpointReader(ReaderInterface* reader, size_t checkpoint)
+    explicit BoundedReader(ReaderInterface* reader, size_t bound)
             : m_reader(reader),
-              m_checkpoint(checkpoint) {
+              m_bound(bound) {
         if (nullptr == m_reader) {
             throw ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
         }
-        m_cur_pos = m_reader->get_pos();
-        if (m_cur_pos > m_checkpoint) {
+        m_curr_pos = m_reader->get_pos();
+        if (m_curr_pos > m_bound) {
             throw ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
         }
     }
@@ -70,9 +70,9 @@ public:
 
 private:
     ReaderInterface* m_reader{nullptr};
-    size_t m_checkpoint{};
-    size_t m_cur_pos{};
+    size_t m_bound{};
+    size_t m_curr_pos{};
 };
 }  // namespace clp
 
-#endif  // CLP_CHECKPOINTREADER_HPP
+#endif  // CLP_BOUNDEDREADER_HPP

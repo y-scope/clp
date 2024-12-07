@@ -334,6 +334,8 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
+        src/clp/BoundedReader.cpp
+        src/clp/BoundedReader.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -353,8 +355,6 @@ set(SOURCE_FILES_unitTest
         src/clp/clp/run.hpp
         src/clp/clp/utils.cpp
         src/clp/clp/utils.hpp
-        src/clp/CheckpointReader.cpp
-        src/clp/CheckpointReader.hpp
         src/clp/CurlDownloadHandler.cpp
         src/clp/CurlDownloadHandler.hpp
         src/clp/CurlEasyHandle.hpp
@@ -550,8 +550,8 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
         tests/test-Array.cpp
+        tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
-        tests/test-CheckpointReader.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
