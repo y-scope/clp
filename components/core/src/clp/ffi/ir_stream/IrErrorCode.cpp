@@ -16,7 +16,7 @@ auto IrErrorCategory::message(IrErrorCodeEnum error_enum) const -> std::string {
         case IrErrorCodeEnum::DecodingMethodFailure:
             return "Decoding methods failed.";
         case IrErrorCodeEnum::EndOfStream:
-            return "The end-of-stream IR unit was already consumed.";
+            return "The end-of-stream IR unit has already been consumed.";
         case IrErrorCodeEnum::IncompleteStream:
             return "The IR stream ended with a truncated IR unit or did not terminate with an "
                    "end-of-stream IR unit.";
