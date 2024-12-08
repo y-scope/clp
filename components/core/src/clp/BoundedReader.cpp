@@ -2,7 +2,7 @@
 
 namespace clp {
 auto BoundedReader::try_seek_from_begin(size_t pos) -> ErrorCode {
-    auto next_pos = pos > m_bound ? m_bound : pos;
+    auto const next_pos = pos > m_bound ? m_bound : pos;
     if (auto const rc = m_reader->try_seek_from_begin(next_pos); ErrorCode_Success != rc) {
         m_curr_pos = ErrorCode_EndOfFile == rc ? next_pos : m_curr_pos;
         return rc;
