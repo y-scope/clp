@@ -8,8 +8,8 @@
 
 #include <boost/program_options.hpp>
 
+#include "../../reducer/types.hpp"
 #include "../cli_utils.hpp"
-#include "../reducer/types.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../version.hpp"
 
