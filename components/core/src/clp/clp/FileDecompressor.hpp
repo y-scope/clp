@@ -39,7 +39,7 @@ public:
      *
      * @tparam IrOutputHandler Function to handle the resulting IR chunks.
      * Signature: (std::filesystem::path const& ir_file_path, string const& orig_file_id,
-     * size_t begin_message_ix, size_t end_message_ix, bool is_last_ir_chunk) -> bool;
+     * size_t begin_message_ix, size_t end_message_ix, bool is_last_chunk) -> bool;
      * The function returns whether it succeeded.
      * @param archive_reader
      * @param file_metadata_ix

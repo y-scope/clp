@@ -282,7 +282,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
                                      size_t end_message_ix,
-                                     [[maybe_unused]] bool is_last_ir_chunk) {
+                                     [[maybe_unused]] bool is_last_chunk) {
             auto dest_ir_file_name = orig_file_id;
             dest_ir_file_name += "_" + std::to_string(begin_message_ix);
             dest_ir_file_name += "_" + std::to_string(end_message_ix);
@@ -310,7 +310,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
                     archive_reader,
                     *file_metadata_ix_ptr,
                     command_line_args.get_ir_target_size(),
-                    command_line_args.get_ir_temp_output_dir(),
+                    command_line_args.get_output_dir(),
                     ir_output_handler
             ))
         {
