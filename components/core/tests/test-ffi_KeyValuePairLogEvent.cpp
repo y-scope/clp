@@ -84,8 +84,8 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 
 /**
  * Asserts that `KeyValuePairLogEvent` creation fails with the expected error code.
- * @param auto_generated_schema_tree
- * @param user_generated_schema_tree
+ * @param auto_gen_keys_schema_tree
+ * @param user_gen_keys_schema_tree
  * @param auto_generated_node_id_value_pairs
  * @param user_generated_node_id_value_pairs
  * @param utc_offset
@@ -93,8 +93,8 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
  * @return Whether the assertion succeeded.
  */
 [[nodiscard]] auto assert_kv_pair_log_event_creation_failure(
-        std::shared_ptr<SchemaTree> auto_generated_schema_tree,
-        std::shared_ptr<SchemaTree> user_generated_schema_tree,
+        std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
+        std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
         KeyValuePairLogEvent::NodeIdValuePairs auto_generated_node_id_value_pairs,
         KeyValuePairLogEvent::NodeIdValuePairs user_generated_node_id_value_pairs,
         UtcOffset utc_offset,
@@ -219,16 +219,16 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 }
 
 auto assert_kv_pair_log_event_creation_failure(
-        std::shared_ptr<SchemaTree> auto_generated_schema_tree,
-        std::shared_ptr<SchemaTree> user_generated_schema_tree,
+        std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
+        std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
         KeyValuePairLogEvent::NodeIdValuePairs auto_generated_node_id_value_pairs,
         KeyValuePairLogEvent::NodeIdValuePairs user_generated_node_id_value_pairs,
         UtcOffset utc_offset,
         std::errc expected_error_code
 ) -> bool {
     auto const result{KeyValuePairLogEvent::create(
-            std::move(auto_generated_schema_tree),
-            std::move(user_generated_schema_tree),
+            std::move(auto_gen_keys_schema_tree),
+            std::move(user_gen_keys_schema_tree),
             std::move(auto_generated_node_id_value_pairs),
             std::move(user_generated_node_id_value_pairs),
             utc_offset
@@ -300,8 +300,8 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
      *                         |                           |
      *                         |--> <13:b:Bool>            |--> <11:f:Obj>
      */
-    auto const auto_generated_schema_tree{std::make_shared<SchemaTree>()};
-    auto const user_generated_schema_tree{std::make_shared<SchemaTree>()};
+    auto const auto_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
+    auto const user_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
     std::vector<SchemaTree::NodeLocator> const locators{
             {SchemaTree::cRootId, "a", SchemaTree::Node::Type::Obj},
             {SchemaTree::cRootId, "b", SchemaTree::Node::Type::Int},
@@ -318,18 +318,18 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             {1, "b", SchemaTree::Node::Type::Bool}
     };
     for (auto const& locator : locators) {
-        REQUIRE_NOTHROW(auto_generated_schema_tree->insert_node(locator));
-        REQUIRE_NOTHROW(user_generated_schema_tree->insert_node(locator));
+        REQUIRE_NOTHROW(auto_gen_keys_schema_tree->insert_node(locator));
+        REQUIRE_NOTHROW(user_gen_keys_schema_tree->insert_node(locator));
     }
 
     // This test case implicitly requires the auto-generated and user-generated schema trees to
     // be identical. Adding this check to prevent this assumption is broken by future development.
-    REQUIRE((*auto_generated_schema_tree == *user_generated_schema_tree));
+    REQUIRE((*auto_gen_keys_schema_tree == *user_gen_keys_schema_tree));
 
     SECTION("Test empty ID-value pairs") {
         auto const result{KeyValuePairLogEvent::create(
-                auto_generated_schema_tree,
-                user_generated_schema_tree,
+                auto_gen_keys_schema_tree,
+                user_gen_keys_schema_tree,
                 {},
                 {},
                 UtcOffset{0}
@@ -340,14 +340,14 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
     SECTION("Test schema tree pointers being null") {
         REQUIRE(assert_kv_pair_log_event_creation_failure(
                 nullptr,
-                user_generated_schema_tree,
+                user_gen_keys_schema_tree,
                 {},
                 {},
                 UtcOffset{0},
                 std::errc::invalid_argument
         ));
         REQUIRE(assert_kv_pair_log_event_creation_failure(
-                auto_generated_schema_tree,
+                auto_gen_keys_schema_tree,
                 nullptr,
                 {},
                 {},
@@ -361,42 +361,42 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
         // Int:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *user_generated_schema_tree,
+                *user_gen_keys_schema_tree,
                 2,
                 invalid_node_id_value_pairs
         );
 
         // Float:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *user_generated_schema_tree,
+                *user_gen_keys_schema_tree,
                 9,
                 invalid_node_id_value_pairs
         );
 
         // Bool:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *user_generated_schema_tree,
+                *user_gen_keys_schema_tree,
                 6,
                 invalid_node_id_value_pairs
         );
 
         // Str:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *user_generated_schema_tree,
+                *user_gen_keys_schema_tree,
                 5,
                 invalid_node_id_value_pairs
         );
 
         // UnstructuredArray:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *user_generated_schema_tree,
+                *user_gen_keys_schema_tree,
                 7,
                 invalid_node_id_value_pairs
         );
 
         // Obj:
         insert_invalid_node_id_value_pairs_with_node_type_errors(
-                *user_generated_schema_tree,
+                *user_gen_keys_schema_tree,
                 3,
                 invalid_node_id_value_pairs
         );
@@ -411,16 +411,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             }
 
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     node_id_value_pair_to_test,
                     {},
                     UtcOffset{0},
                     std::errc::protocol_error
             ));
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     {},
                     node_id_value_pair_to_test,
                     UtcOffset{0},
@@ -466,8 +466,8 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         valid_node_id_value_pairs.emplace(11, std::nullopt);
         // NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
         auto const result{KeyValuePairLogEvent::create(
-                auto_generated_schema_tree,
-                user_generated_schema_tree,
+                auto_gen_keys_schema_tree,
+                user_gen_keys_schema_tree,
                 valid_node_id_value_pairs,
                 valid_node_id_value_pairs,
                 UtcOffset{0}
@@ -501,16 +501,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     invalid_node_id_value_pairs,
                     valid_node_id_value_pairs,
                     UtcOffset{0},
                     std::errc::protocol_not_supported
             ));
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     valid_node_id_value_pairs,
                     invalid_node_id_value_pairs,
                     UtcOffset{0},
@@ -523,16 +523,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     invalid_node_id_value_pairs,
                     valid_node_id_value_pairs,
                     UtcOffset{0},
                     std::errc::protocol_not_supported
             ));
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     valid_node_id_value_pairs,
                     invalid_node_id_value_pairs,
                     UtcOffset{0},
@@ -546,16 +546,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             invalid_node_id_value_pairs.emplace(12, static_cast<value_int_t>(0));
             // Node #12 has the same key as its sibling node #1
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     invalid_node_id_value_pairs,
                     valid_node_id_value_pairs,
                     UtcOffset{0},
                     std::errc::protocol_not_supported
             ));
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     valid_node_id_value_pairs,
                     invalid_node_id_value_pairs,
                     UtcOffset{0},
@@ -569,16 +569,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             invalid_node_id_value_pairs.emplace(13, false);
             // Node #13 has the same key as its sibling node #3
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     invalid_node_id_value_pairs,
                     valid_node_id_value_pairs,
                     UtcOffset{0},
                     std::errc::protocol_not_supported
             ));
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     valid_node_id_value_pairs,
                     invalid_node_id_value_pairs,
                     UtcOffset{0},
@@ -591,16 +591,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             invalid_node_id_value_pairs.emplace(3, std::nullopt);
             // Node #3 is empty, but its descendants appear in the sub schema tree (node #5 & #10)
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     invalid_node_id_value_pairs,
                     valid_node_id_value_pairs,
                     UtcOffset{0},
                     std::errc::operation_not_permitted
             ));
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     valid_node_id_value_pairs,
                     invalid_node_id_value_pairs,
                     UtcOffset{0},
@@ -613,16 +613,16 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             invalid_node_id_value_pairs.emplace(4, Value{});
             // Node #4 is null, but its descendants appear in the sub schema tree (node #5 & #10)
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     invalid_node_id_value_pairs,
                     valid_node_id_value_pairs,
                     UtcOffset{0},
                     std::errc::operation_not_permitted
             ));
             REQUIRE(assert_kv_pair_log_event_creation_failure(
-                    auto_generated_schema_tree,
-                    user_generated_schema_tree,
+                    auto_gen_keys_schema_tree,
+                    user_gen_keys_schema_tree,
                     valid_node_id_value_pairs,
                     invalid_node_id_value_pairs,
                     UtcOffset{0},
@@ -634,20 +634,20 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
     SECTION("Test out-of-bound node ID") {
         KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs_out_of_bound;
         node_id_value_pairs_out_of_bound.emplace(
-                static_cast<SchemaTree::Node::id_t>(user_generated_schema_tree->get_size()),
+                static_cast<SchemaTree::Node::id_t>(user_gen_keys_schema_tree->get_size()),
                 Value{}
         );
         REQUIRE(assert_kv_pair_log_event_creation_failure(
-                auto_generated_schema_tree,
-                user_generated_schema_tree,
+                auto_gen_keys_schema_tree,
+                user_gen_keys_schema_tree,
                 node_id_value_pairs_out_of_bound,
                 {},
                 UtcOffset{0},
                 std::errc::operation_not_permitted
         ));
         REQUIRE(assert_kv_pair_log_event_creation_failure(
-                auto_generated_schema_tree,
-                user_generated_schema_tree,
+                auto_gen_keys_schema_tree,
+                user_gen_keys_schema_tree,
                 {},
                 node_id_value_pairs_out_of_bound,
                 UtcOffset{0},

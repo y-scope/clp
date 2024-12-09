@@ -32,10 +32,10 @@ public:
 
     // Factory functions
     /**
-     * @param auto_generated_schema_tree
-     * @param user_generated_schema_tree
-     * @param auto_generated_node_id_value_pairs
-     * @param user_generated_node_id_value_pairs
+     * @param auto_gen_keys_schema_tree
+     * @param user_gen_keys_schema_tree
+     * @param auto_gen_node_id_value_pairs
+     * @param user_gen_node_id_value_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
      * failure:
@@ -43,10 +43,10 @@ public:
      * - Forwards `validate_node_id_value_pairs`'s return values.
      */
     [[nodiscard]] static auto create(
-            std::shared_ptr<SchemaTree const> auto_generated_schema_tree,
-            std::shared_ptr<SchemaTree const> user_generated_schema_tree,
-            NodeIdValuePairs auto_generated_node_id_value_pairs,
-            NodeIdValuePairs user_generated_node_id_value_pairs,
+            std::shared_ptr<SchemaTree const> auto_gen_keys_schema_tree,
+            std::shared_ptr<SchemaTree const> user_gen_keys_schema_tree,
+            NodeIdValuePairs auto_gen_node_id_value_pairs,
+            NodeIdValuePairs user_gen_node_id_value_pairs,
             UtcOffset utc_offset
     ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
 
@@ -62,28 +62,28 @@ public:
     ~KeyValuePairLogEvent() = default;
 
     // Methods
-    [[nodiscard]] auto get_auto_generated_schema_tree() const -> SchemaTree const& {
-        return *m_auto_generated_schema_tree;
+    [[nodiscard]] auto get_auto_gen_keys_schema_tree() const -> SchemaTree const& {
+        return *m_auto_gen_keys_schema_tree;
     }
 
-    [[nodiscard]] auto get_user_generated_schema_tree() const -> SchemaTree const& {
-        return *m_user_generated_schema_tree;
+    [[nodiscard]] auto get_user_gen_keys_schema_tree() const -> SchemaTree const& {
+        return *m_user_gen_keys_schema_tree;
     }
 
-    [[nodiscard]] auto get_auto_generated_node_id_value_pairs() const -> NodeIdValuePairs const& {
-        return m_auto_generated_node_id_value_pairs;
+    [[nodiscard]] auto get_auto_gen_node_id_value_pairs() const -> NodeIdValuePairs const& {
+        return m_auto_gen_node_id_value_pairs;
     }
 
-    [[nodiscard]] auto get_user_generated_node_id_value_pairs() const -> NodeIdValuePairs const& {
-        return m_user_generated_node_id_value_pairs;
+    [[nodiscard]] auto get_user_gen_node_id_value_pairs() const -> NodeIdValuePairs const& {
+        return m_user_gen_node_id_value_pairs;
     }
 
     /**
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
      * schema tree for auto-generated keys, and the set bits correspond to the nodes in the subtree
      * defined by all paths from the root node to the nodes in
-     * `m_auto_generated_node_id_value_pairs`; or an error code indicating a failure:
-     * - std::errc::result_out_of_range if a node ID in `m_auto_generated_node_id_value_pairs`
+     * `m_auto_gen_node_id_value_pairs`; or an error code indicating a failure:
+     * - std::errc::result_out_of_range if a node ID in `m_auto_gen_node_id_value_pairs`
      *   doesn't exist in the schema tree.
      */
     [[nodiscard]] auto get_auto_generated_schema_subtree_bitmap(
@@ -93,8 +93,8 @@ public:
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
      * schema tree for user-generated keys, and the set bits correspond to the nodes in the subtree
      * defined by all paths from the root node to the nodes in
-     * `m_user_generated_node_id_value_pairs`; or an error code indicating a failure:
-     * - std::errc::result_out_of_range if a node ID in `m_user_generated_node_id_value_pairs`
+     * `m_user_gen_node_id_value_pairs`; or an error code indicating a failure:
+     * - std::errc::result_out_of_range if a node ID in `m_user_gen_node_id_value_pairs`
      *   doesn't exist in the schema tree.
      */
     [[nodiscard]] auto get_user_generated_schema_subtree_bitmap(
@@ -118,23 +118,23 @@ public:
 private:
     // Constructor
     KeyValuePairLogEvent(
-            std::shared_ptr<SchemaTree const> auto_generated_schema_tree,
-            std::shared_ptr<SchemaTree const> user_generated_schema_tree,
-            NodeIdValuePairs auto_generated_node_id_value_pairs,
-            NodeIdValuePairs user_generated_node_id_value_pairs,
+            std::shared_ptr<SchemaTree const> auto_gen_keys_schema_tree,
+            std::shared_ptr<SchemaTree const> user_gen_keys_schema_tree,
+            NodeIdValuePairs auto_gen_node_id_value_pairs,
+            NodeIdValuePairs user_gen_node_id_value_pairs,
             UtcOffset utc_offset
     )
-            : m_auto_generated_schema_tree{std::move(auto_generated_schema_tree)},
-              m_user_generated_schema_tree{std::move(user_generated_schema_tree)},
-              m_auto_generated_node_id_value_pairs{std::move(auto_generated_node_id_value_pairs)},
-              m_user_generated_node_id_value_pairs{std::move(user_generated_node_id_value_pairs)},
+            : m_auto_gen_keys_schema_tree{std::move(auto_gen_keys_schema_tree)},
+              m_user_gen_keys_schema_tree{std::move(user_gen_keys_schema_tree)},
+              m_auto_gen_node_id_value_pairs{std::move(auto_gen_node_id_value_pairs)},
+              m_user_gen_node_id_value_pairs{std::move(user_gen_node_id_value_pairs)},
               m_utc_offset{utc_offset} {}
 
     // Variables
-    std::shared_ptr<SchemaTree const> m_auto_generated_schema_tree;
-    std::shared_ptr<SchemaTree const> m_user_generated_schema_tree;
-    NodeIdValuePairs m_auto_generated_node_id_value_pairs;
-    NodeIdValuePairs m_user_generated_node_id_value_pairs;
+    std::shared_ptr<SchemaTree const> m_auto_gen_keys_schema_tree;
+    std::shared_ptr<SchemaTree const> m_user_gen_keys_schema_tree;
+    NodeIdValuePairs m_auto_gen_node_id_value_pairs;
+    NodeIdValuePairs m_user_gen_node_id_value_pairs;
     UtcOffset m_utc_offset{0};
 };
 }  // namespace clp::ffi

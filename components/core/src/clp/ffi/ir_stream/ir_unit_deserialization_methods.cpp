@@ -551,8 +551,8 @@ auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader
 auto deserialize_ir_unit_kv_pair_log_event(
         ReaderInterface& reader,
         encoded_tag_t tag,
-        std::shared_ptr<SchemaTree> auto_generated_schema_tree,
-        std::shared_ptr<SchemaTree> user_generated_schema_tree,
+        std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
+        std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
     auto const schema_result{deserialize_schema(reader, tag)};
@@ -580,8 +580,8 @@ auto deserialize_ir_unit_kv_pair_log_event(
     }
 
     return KeyValuePairLogEvent::create(
-            std::move(auto_generated_schema_tree),
-            std::move(user_generated_schema_tree),
+            std::move(auto_gen_keys_schema_tree),
+            std::move(user_gen_keys_schema_tree),
             {},
             std::move(node_id_value_pairs),
             utc_offset

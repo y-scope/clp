@@ -523,19 +523,19 @@ auto check_key_uniqueness_among_sibling_nodes(
 }  // namespace
 
 auto KeyValuePairLogEvent::create(
-        std::shared_ptr<SchemaTree const> auto_generated_schema_tree,
-        std::shared_ptr<SchemaTree const> user_generated_schema_tree,
-        NodeIdValuePairs auto_generated_node_id_value_pairs,
-        NodeIdValuePairs user_generated_node_id_value_pairs,
+        std::shared_ptr<SchemaTree const> auto_gen_keys_schema_tree,
+        std::shared_ptr<SchemaTree const> user_gen_keys_schema_tree,
+        NodeIdValuePairs auto_gen_node_id_value_pairs,
+        NodeIdValuePairs user_gen_node_id_value_pairs,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
-    if (nullptr == auto_generated_schema_tree || nullptr == user_generated_schema_tree) {
+    if (nullptr == auto_gen_keys_schema_tree || nullptr == user_gen_keys_schema_tree) {
         return std::errc::invalid_argument;
     }
 
     if (auto const ret_val{validate_node_id_value_pairs(
-                *auto_generated_schema_tree,
-                auto_generated_node_id_value_pairs
+                *auto_gen_keys_schema_tree,
+                auto_gen_node_id_value_pairs
         )};
         std::errc{} != ret_val)
     {
@@ -543,8 +543,8 @@ auto KeyValuePairLogEvent::create(
     }
 
     if (auto const ret_val{validate_node_id_value_pairs(
-                *user_generated_schema_tree,
-                user_generated_node_id_value_pairs
+                *user_gen_keys_schema_tree,
+                user_gen_node_id_value_pairs
         )};
         std::errc{} != ret_val)
     {
@@ -552,28 +552,22 @@ auto KeyValuePairLogEvent::create(
     }
 
     return KeyValuePairLogEvent{
-            std::move(auto_generated_schema_tree),
-            std::move(user_generated_schema_tree),
-            std::move(auto_generated_node_id_value_pairs),
-            std::move(user_generated_node_id_value_pairs),
+            std::move(auto_gen_keys_schema_tree),
+            std::move(user_gen_keys_schema_tree),
+            std::move(auto_gen_node_id_value_pairs),
+            std::move(user_gen_node_id_value_pairs),
             utc_offset
     };
 }
 
 auto KeyValuePairLogEvent::get_auto_generated_schema_subtree_bitmap(
 ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>> {
-    return get_schema_subtree_bitmap(
-            m_auto_generated_node_id_value_pairs,
-            *m_auto_generated_schema_tree
-    );
+    return get_schema_subtree_bitmap(m_auto_gen_node_id_value_pairs, *m_auto_gen_keys_schema_tree);
 }
 
 auto KeyValuePairLogEvent::get_user_generated_schema_subtree_bitmap(
 ) const -> outcome_v2::std_result<std::vector<bool>> {
-    return get_schema_subtree_bitmap(
-            m_user_generated_node_id_value_pairs,
-            *m_user_generated_schema_tree
-    );
+    return get_schema_subtree_bitmap(m_user_gen_node_id_value_pairs, *m_user_gen_keys_schema_tree);
 }
 
 auto KeyValuePairLogEvent::serialize_to_json(
@@ -584,8 +578,8 @@ auto KeyValuePairLogEvent::serialize_to_json(
         return auto_generated_schema_subtree_bitmap_result.error();
     }
     auto serialized_auto_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
-            *m_auto_generated_schema_tree,
-            m_auto_generated_node_id_value_pairs,
+            *m_auto_gen_keys_schema_tree,
+            m_auto_gen_node_id_value_pairs,
             auto_generated_schema_subtree_bitmap_result.value()
     )};
     if (serialized_auto_generated_kv_pairs_result.has_error()) {
@@ -598,8 +592,8 @@ auto KeyValuePairLogEvent::serialize_to_json(
         return user_generated_schema_subtree_bitmap_result.error();
     }
     auto serialized_user_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
-            *m_user_generated_schema_tree,
-            m_user_generated_node_id_value_pairs,
+            *m_user_gen_keys_schema_tree,
+            m_user_gen_node_id_value_pairs,
             user_generated_schema_subtree_bitmap_result.value()
     )};
     if (serialized_user_generated_kv_pairs_result.has_error()) {
