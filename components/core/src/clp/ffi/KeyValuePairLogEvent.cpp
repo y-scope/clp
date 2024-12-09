@@ -560,41 +560,41 @@ auto KeyValuePairLogEvent::create(
     };
 }
 
-auto KeyValuePairLogEvent::get_auto_generated_schema_subtree_bitmap(
+auto KeyValuePairLogEvent::get_auto_gen_keys_schema_subtree_bitmap(
 ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>> {
     return get_schema_subtree_bitmap(m_auto_gen_node_id_value_pairs, *m_auto_gen_keys_schema_tree);
 }
 
-auto KeyValuePairLogEvent::get_user_generated_schema_subtree_bitmap(
+auto KeyValuePairLogEvent::get_user_gen_keys_schema_subtree_bitmap(
 ) const -> outcome_v2::std_result<std::vector<bool>> {
     return get_schema_subtree_bitmap(m_user_gen_node_id_value_pairs, *m_user_gen_keys_schema_tree);
 }
 
 auto KeyValuePairLogEvent::serialize_to_json(
 ) const -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
-    auto const auto_generated_schema_subtree_bitmap_result{get_auto_generated_schema_subtree_bitmap(
-    )};
-    if (auto_generated_schema_subtree_bitmap_result.has_error()) {
-        return auto_generated_schema_subtree_bitmap_result.error();
+    auto const auto_gen_keys_schema_subtree_bitmap_result{get_auto_gen_keys_schema_subtree_bitmap()
+    };
+    if (auto_gen_keys_schema_subtree_bitmap_result.has_error()) {
+        return auto_gen_keys_schema_subtree_bitmap_result.error();
     }
     auto serialized_auto_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
             *m_auto_gen_keys_schema_tree,
             m_auto_gen_node_id_value_pairs,
-            auto_generated_schema_subtree_bitmap_result.value()
+            auto_gen_keys_schema_subtree_bitmap_result.value()
     )};
     if (serialized_auto_generated_kv_pairs_result.has_error()) {
         return serialized_auto_generated_kv_pairs_result.error();
     }
 
-    auto const user_generated_schema_subtree_bitmap_result{get_user_generated_schema_subtree_bitmap(
-    )};
-    if (user_generated_schema_subtree_bitmap_result.has_error()) {
-        return user_generated_schema_subtree_bitmap_result.error();
+    auto const user_gen_keys_schema_subtree_bitmap_result{get_user_gen_keys_schema_subtree_bitmap()
+    };
+    if (user_gen_keys_schema_subtree_bitmap_result.has_error()) {
+        return user_gen_keys_schema_subtree_bitmap_result.error();
     }
     auto serialized_user_generated_kv_pairs_result{serialize_node_id_value_pairs_to_json(
             *m_user_gen_keys_schema_tree,
             m_user_gen_node_id_value_pairs,
-            user_generated_schema_subtree_bitmap_result.value()
+            user_gen_keys_schema_subtree_bitmap_result.value()
     )};
     if (serialized_user_generated_kv_pairs_result.has_error()) {
         return serialized_user_generated_kv_pairs_result.error();

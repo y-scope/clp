@@ -86,7 +86,7 @@ public:
      * - std::errc::result_out_of_range if a node ID in `m_auto_gen_node_id_value_pairs`
      *   doesn't exist in the schema tree.
      */
-    [[nodiscard]] auto get_auto_generated_schema_subtree_bitmap(
+    [[nodiscard]] auto get_auto_gen_keys_schema_subtree_bitmap(
     ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
 
     /**
@@ -97,7 +97,7 @@ public:
      * - std::errc::result_out_of_range if a node ID in `m_user_gen_node_id_value_pairs`
      *   doesn't exist in the schema tree.
      */
-    [[nodiscard]] auto get_user_generated_schema_subtree_bitmap(
+    [[nodiscard]] auto get_user_gen_keys_schema_subtree_bitmap(
     ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
@@ -109,7 +109,7 @@ public:
      *   - Serialized auto-generated key-value pairs as a JSON object
      *   - Serialized user-generated key-value pairs as a JSON object
      * - The possible error codes:
-     *   - Forwards `get_auto_generated_schema_subtree_bitmap`'s return values on failure.
+     *   - Forwards `get_auto_gen_keys_schema_subtree_bitmap`'s return values on failure.
      *   - Forwards `serialize_node_id_value_pairs_to_json`'s return values on failure.
      */
     [[nodiscard]] auto serialize_to_json(
