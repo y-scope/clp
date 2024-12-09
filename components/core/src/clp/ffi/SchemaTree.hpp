@@ -127,9 +127,9 @@ public:
         // Destructor
         ~Node() = default;
 
+        // Methods
         [[nodiscard]] auto operator==(Node const& rhs) const -> bool = default;
 
-        // Methods
         [[nodiscard]] auto get_id() const -> id_t { return m_id; }
 
         [[nodiscard]] auto is_root() const -> bool { return false == m_parent_id.has_value(); }
@@ -250,11 +250,11 @@ public:
     // Destructor
     ~SchemaTree() = default;
 
+    // Methods
     [[nodiscard]] auto operator==(SchemaTree const& rhs) const -> bool {
         return m_tree_nodes == rhs.m_tree_nodes;
     }
 
-    // Methods
     [[nodiscard]] auto get_size() const -> size_t { return m_tree_nodes.size(); }
 
     [[nodiscard]] auto get_root() const -> Node const& { return m_tree_nodes[cRootId]; }
