@@ -14,7 +14,7 @@ template <>
 auto IrErrorCategory::message(IrErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
         case IrErrorCodeEnum::DecodingMethodFailure:
-            return "Decoding methods failed.";
+            return "The decoding method failed.";
         case IrErrorCodeEnum::EndOfStream:
             return "The end-of-stream IR unit has already been consumed.";
         case IrErrorCodeEnum::IncompleteStream:
