@@ -81,10 +81,9 @@ public:
     /**
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
      * schema tree for auto-generated keys, and the set bits correspond to the nodes in the subtree
-     * defined by all paths from the root node to the nodes in
-     * `m_auto_gen_node_id_value_pairs`; or an error code indicating a failure:
-     * - std::errc::result_out_of_range if a node ID in `m_auto_gen_node_id_value_pairs`
-     *   doesn't exist in the schema tree.
+     * defined by all paths from the root node to the nodes in `m_auto_gen_node_id_value_pairs`; or
+     * an error code indicating a failure:
+     * - Forwards `get_schema_subtree_bitmap`'s return values.
      */
     [[nodiscard]] auto get_auto_gen_keys_schema_subtree_bitmap(
     ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
@@ -92,10 +91,9 @@ public:
     /**
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
      * schema tree for user-generated keys, and the set bits correspond to the nodes in the subtree
-     * defined by all paths from the root node to the nodes in
-     * `m_user_gen_node_id_value_pairs`; or an error code indicating a failure:
-     * - std::errc::result_out_of_range if a node ID in `m_user_gen_node_id_value_pairs`
-     *   doesn't exist in the schema tree.
+     * defined by all paths from the root node to the nodes in `m_user_gen_node_id_value_pairs`; or
+     * an error code indicating a failure:
+     * - Forwards `get_schema_subtree_bitmap`'s return values.
      */
     [[nodiscard]] auto get_user_gen_keys_schema_subtree_bitmap(
     ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
