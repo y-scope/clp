@@ -86,8 +86,8 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
  * Asserts that `KeyValuePairLogEvent` creation fails with the expected error code.
  * @param auto_gen_keys_schema_tree
  * @param user_gen_keys_schema_tree
- * @param auto_generated_node_id_value_pairs
- * @param user_generated_node_id_value_pairs
+ * @param auto_gen_node_id_value_pairs
+ * @param user_gen_node_id_value_pairs
  * @param utc_offset
  * @param expected_error_code
  * @return Whether the assertion succeeded.
@@ -95,8 +95,8 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 [[nodiscard]] auto assert_kv_pair_log_event_creation_failure(
         std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
         std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
-        KeyValuePairLogEvent::NodeIdValuePairs auto_generated_node_id_value_pairs,
-        KeyValuePairLogEvent::NodeIdValuePairs user_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs auto_gen_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs user_gen_node_id_value_pairs,
         UtcOffset utc_offset,
         std::errc expected_error_code
 ) -> bool;
@@ -221,16 +221,16 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 auto assert_kv_pair_log_event_creation_failure(
         std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
         std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
-        KeyValuePairLogEvent::NodeIdValuePairs auto_generated_node_id_value_pairs,
-        KeyValuePairLogEvent::NodeIdValuePairs user_generated_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs auto_gen_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs user_gen_node_id_value_pairs,
         UtcOffset utc_offset,
         std::errc expected_error_code
 ) -> bool {
     auto const result{KeyValuePairLogEvent::create(
             std::move(auto_gen_keys_schema_tree),
             std::move(user_gen_keys_schema_tree),
-            std::move(auto_generated_node_id_value_pairs),
-            std::move(user_generated_node_id_value_pairs),
+            std::move(auto_gen_node_id_value_pairs),
+            std::move(user_gen_node_id_value_pairs),
             utc_offset
     )};
     return result.has_error() && result.error() == expected_error_code;
@@ -487,11 +487,11 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             auto const& kv_pair_log_event{result.value()};
             auto const serialized_json_result{kv_pair_log_event.serialize_to_json()};
             REQUIRE_FALSE(serialized_json_result.has_error());
-            auto const& [serialized_auto_generated_kv_pairs, serialized_user_generated_kv_pairs]{
+            auto const& [serialized_auto_gen_kv_pairs, serialized_user_gen_kv_pairs]{
                     serialized_json_result.value()
             };
-            REQUIRE((serialized_auto_generated_kv_pairs == expected));
-            REQUIRE((serialized_user_generated_kv_pairs == expected));
+            REQUIRE((serialized_auto_gen_kv_pairs == expected));
+            REQUIRE((serialized_user_gen_kv_pairs == expected));
         }
 
         SECTION("Test duplicated key conflict under node #3") {
@@ -538,7 +538,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             ));
         }
 
-        SECTION("Test duplicated keys amongst siblings of node #1") {
+        SECTION("Test duplicated keys among siblings of node #1") {
             auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(12, static_cast<value_int_t>(0));
@@ -561,7 +561,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             ));
         }
 
-        SECTION("Test duplicated keys amongst siblings of node #3") {
+        SECTION("Test duplicated keys among siblings of node #3") {
             auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(13, false);
