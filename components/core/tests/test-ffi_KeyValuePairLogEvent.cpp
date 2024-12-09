@@ -322,8 +322,6 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         REQUIRE_NOTHROW(user_gen_keys_schema_tree->insert_node(locator));
     }
 
-    // This test case implicitly requires the auto-generated and user-generated schema trees to
-    // be identical. Adding this check to prevent this assumption is broken by future development.
     REQUIRE((*auto_gen_keys_schema_tree == *user_gen_keys_schema_tree));
 
     SECTION("Test empty ID-value pairs") {

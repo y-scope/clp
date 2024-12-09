@@ -62,8 +62,7 @@ namespace clp::ffi::ir_stream {
  * @param user_gen_keys_schema_tree Schema tree for user-generated keys, used to construct the
  * KV-pair log event.
  * @param utc_offset UTC offset used to construct the KV-pair log event.
- * @return A result containing the deserialized log event or an error code indicating the
- * failure:
+ * @return A result containing the deserialized log event or an error code indicating the failure:
  * - std::errc::result_out_of_range if the IR stream is truncated.
  * - std::errc::protocol_error if the IR stream is corrupted.
  * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
