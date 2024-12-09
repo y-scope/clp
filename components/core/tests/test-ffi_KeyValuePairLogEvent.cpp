@@ -83,7 +83,7 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 ) -> void;
 
 /**
- * Asserts the kv pair log event creation fails with the expected error code.
+ * Asserts that `KeyValuePairLogEvent` creation fails with the expected error code.
  * @param auto_generated_schema_tree
  * @param user_generated_schema_tree
  * @param auto_generated_node_id_value_pairs
@@ -496,7 +496,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             REQUIRE((serialized_user_generated_kv_pairs == expected));
         }
 
-        SECTION("Test duplicated key conflict on node #3") {
+        SECTION("Test duplicated key conflict under node #3") {
             auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(6, Value{static_cast<value_bool_t>(false)});
@@ -518,7 +518,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             ));
         }
 
-        SECTION("Test duplicated key conflict on node #4") {
+        SECTION("Test duplicated key conflict under node #4") {
             auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(9, Value{static_cast<value_float_t>(0.0)});
@@ -540,7 +540,7 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             ));
         }
 
-        SECTION("Test duplicated keys among siblings of node #1") {
+        SECTION("Test duplicated keys amongst siblings of node #1") {
             auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(12, static_cast<value_int_t>(0));
@@ -563,11 +563,11 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
             ));
         }
 
-        SECTION("Test duplicated keys among siblings of node #3") {
+        SECTION("Test duplicated keys amongst siblings of node #3") {
             auto invalid_node_id_value_pairs{valid_node_id_value_pairs};
             // NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             invalid_node_id_value_pairs.emplace(13, false);
-            // Node #12 has the same key as its sibling node #3
+            // Node #13 has the same key as its sibling node #3
             REQUIRE(assert_kv_pair_log_event_creation_failure(
                     auto_generated_schema_tree,
                     user_generated_schema_tree,

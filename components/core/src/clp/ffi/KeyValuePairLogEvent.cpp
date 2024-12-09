@@ -190,14 +190,13 @@ node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) ->
 [[nodiscard]] auto decode_as_encoded_text_ast(Value const& val) -> std::optional<string>;
 
 /**
- * Serializes the given node ID value pairs into a `nlohmann::json` object.
+ * Serializes the given node-ID-value pairs into a `nlohmann::json` object.
  * @param schema_tree
  * @param node_id_value_pairs
  * @param schema_subtree_bitmap
  * @return A result containing the serialized JSON object or an error code indicating the failure:
- * - std::errc::protocol_error if a value in the log event couldn't be decoded or it couldn't be
+ * - std::errc::protocol_error if a value in the log event couldn't be decoded, or it couldn't be
  *   inserted into a JSON object.
- * - std::errc::result_out_of_range if a node ID in the log event doesn't exist in the schema tree.
  */
 [[nodiscard]] auto serialize_node_id_value_pairs_to_json(
         SchemaTree const& schema_tree,
@@ -210,7 +209,7 @@ node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) ->
  * @param parent_node_id_to_key_names
  * @return true if `node`'s key is unique among its sibling nodes with `parent_node_id_to_key_names`
  * updated to keep track of this unique key name.
- * @return false if `node`'s key already exists in other sibling nodes.
+ * @return false if a sibling of `node` has the same key.
  */
 [[nodiscard]] auto check_key_uniqueness_among_sibling_nodes(
         SchemaTree::Node const& node,
@@ -276,12 +275,12 @@ auto validate_node_id_value_pairs(
                 return std::errc::protocol_not_supported;
             }
 
-            // Iteratively check if there's any key duplication in ancestors until:
-            // 1. The ancestor is already checked. We only need to check an ancestor node once. If
-            //    there are key duplications among its sibling, it will be caught when the sibling
-            //    is first checked. The order of which sibling gets checked first doesn't affect the
-            //    results.
-            // 2. Reached the root node.
+            // Iteratively check if there's any key duplication in the node's ancestors until:
+            // 1. The ancestor has already been checked. We only need to check an ancestor node
+            //    once since if there are key duplications among its siblings, it would've been
+            //    caught when the sibling was first checked (the order in which siblings get checked
+            //    doesn't affect the results).
+            // 2. We reach the root node.
             auto next_ancestor_node_id_to_check{node.get_parent_id_unsafe()};
             while (false == key_duplication_checked_node_id_bitmap[next_ancestor_node_id_to_check])
             {
@@ -335,7 +334,7 @@ auto get_schema_subtree_bitmap(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         SchemaTree const& schema_tree
 ) -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>> {
-    auto schema_subtree_bitmap{vector<bool>(schema_tree.get_size(), false)};
+    vector<bool> schema_subtree_bitmap(schema_tree.get_size(), false);
     for (auto const& [node_id, val] : node_id_value_pairs) {
         if (node_id >= schema_subtree_bitmap.size()) {
             return std::errc::result_out_of_range;
@@ -505,8 +504,8 @@ auto check_key_uniqueness_among_sibling_nodes(
         std::unordered_map<SchemaTree::Node::id_t, std::unordered_set<std::string_view>>&
                 parent_node_id_to_key_names
 ) -> bool {
-    // The given node must not be the root (checked by the caller), so we can query the underlying
-    // ID safely without a repeated check.
+    // The caller checks that the given node is not the root, so we can query the underlying
+    // parent ID safely without a check.
     auto const parent_node_id{node.get_parent_id_unsafe()};
     auto const key_name{node.get_key_name()};
     auto const parent_node_id_to_key_names_it{parent_node_id_to_key_names.find(parent_node_id)};

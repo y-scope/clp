@@ -17,12 +17,12 @@
 namespace clp::ffi {
 /**
  * A log event containing key-value pairs. Each event contains:
- * - A reference to the schema tree of auto-generated keys.
- * - A reference to the schema tree of user-generated keys.
+ * - A reference to the schema tree for auto-generated keys.
+ * - A reference to the schema tree for user-generated keys.
  * - A collection of auto-generated node-ID & value pairs, where each pair represents a leaf
- *   `SchemaTree::Node` in the `SchemaTree`.
+ *   `SchemaTree::Node` in the schema tree for auto-generated keys.
  * - A collection of user-generated node-ID & value pairs, where each pair represents a leaf
- *   `SchemaTree::Node` in the `SchemaTree`.
+ *   `SchemaTree::Node` in the schema tree for user-generated keys.
  * - The UTC offset of the current log event.
  */
 class KeyValuePairLogEvent {
@@ -38,7 +38,7 @@ public:
      * @param user_generated_node_id_value_pairs
      * @param utc_offset
      * @return A result containing the key-value pair log event or an error code indicating the
-     * failure, or an error code indicating the failure:
+     * failure:
      * - std::errc::invalid_argument if any of the given schema tree pointers are null.
      * - Forwards `validate_node_id_value_pairs`'s return values.
      */
@@ -80,9 +80,9 @@ public:
 
     /**
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
-     * auto-generated schema tree, and the set bits correspond to the nodes in the subtree defined
-     * by all paths from the root node to the nodes in `m_auto_generated_node_id_value_pairs`; or an
-     * error code indicating a failure:
+     * schema tree for auto-generated keys, and the set bits correspond to the nodes in the subtree
+     * defined by all paths from the root node to the nodes in
+     * `m_auto_generated_node_id_value_pairs`; or an error code indicating a failure:
      * - std::errc::result_out_of_range if a node ID in `m_auto_generated_node_id_value_pairs`
      *   doesn't exist in the schema tree.
      */
@@ -91,9 +91,9 @@ public:
 
     /**
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
-     * user-generated schema tree, and the set bits correspond to the nodes in the subtree defined
-     * by all paths from the root node to the nodes in `m_user_generated_node_id_value_pairs`; or an
-     * error code indicating a failure:
+     * schema tree for user-generated keys, and the set bits correspond to the nodes in the subtree
+     * defined by all paths from the root node to the nodes in
+     * `m_user_generated_node_id_value_pairs`; or an error code indicating a failure:
      * - std::errc::result_out_of_range if a node ID in `m_user_generated_node_id_value_pairs`
      *   doesn't exist in the schema tree.
      */
@@ -109,6 +109,7 @@ public:
      *   - Serialized auto-generated key-value pairs as a JSON object
      *   - Serialized user-generated key-value pairs as a JSON object
      * - The possible error codes:
+     *   - Forwards `get_auto_generated_schema_subtree_bitmap`'s return values on failure.
      *   - Forwards `serialize_node_id_value_pairs_to_json`'s return values on failure.
      */
     [[nodiscard]] auto serialize_to_json(
