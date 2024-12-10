@@ -17,8 +17,8 @@ class BoundedReader : public ReaderInterface {
 public:
     // Constructor
     explicit BoundedReader(ReaderInterface* reader, size_t bound)
-            : m_reader(reader),
-              m_bound(bound) {
+            : m_reader{reader},
+              m_bound{bound} {
         if (nullptr == m_reader) {
             throw ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
         }
@@ -31,7 +31,7 @@ public:
     // Methods implementing the ReaderInterface
     /**
      * Tries to get the current position of the read head in the underlying reader.
-     * @param pos Position of the read head in the underlying reader
+     * @param pos Returns the position of the underlying reader's head
      * @return ErrorCode_Success on success
      * @return ErrorCode_errno on failure
      */
