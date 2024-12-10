@@ -1,6 +1,7 @@
 #ifndef CLP_S_UTILS_HPP
 #define CLP_S_UTILS_HPP
 
+#include <array>
 #include <charconv>
 #include <cstring>
 #include <sstream>
@@ -209,13 +210,44 @@ public:
     static bool convert_string_to_double(std::string const& raw, double& converted);
 
     /**
-     * Converts a string column descriptor delimited by '.' into a list of tokens
+     * Converts a KQL string column descriptor delimited by '.' into a list of tokens. The
+     * descriptor is tokenized and unescaped per the escaping rules for KQL columns.
      * @param descriptor
      * @param tokens
      * @return true if the descriptor was tokenized successfully, false otherwise
      */
     [[nodiscard]] static bool
     tokenize_column_descriptor(std::string const& descriptor, std::vector<std::string>& tokens);
+
+    /**
+     * Escapes a string according to JSON string escaping rules and appends the escaped string to
+     * a buffer. The input string can be either ascii or UTF-8.
+     *
+     * According to the JSON spec JSON strings must escape control sequences (characters 0x00
+     * through 0x1f) as well as the '"' and '\' characters.
+     *
+     * This function escapes common control sequences like newline with short escape sequences
+     * (e.g. \n) and less common control sequences with unicode escape sequences (e.g. \u001f). The
+     * '"' and '\' characters are escaped with a backslash.
+     *
+     * @param source
+     * @param destination
+     */
+    static void escape_json_string(std::string& destination, std::string_view const source);
+
+    /**
+     * Unescapes a KQL value string according to the escaping rules for KQL value strings and
+     * converts it into a valid CLP search string.
+     *
+     * Specifically this means that the string is unescaped, but the escape sequences '\\', '\*',
+     * and '\?' are preserved so that the resulting string can be interpreted correctly by CLP
+     * search.
+     *
+     * @param value
+     * @param unescaped
+     * @return true if the value was escaped succesfully and false otherwise.
+     */
+    static bool unescape_kql_value(std::string const& value, std::string& unescaped);
 
 private:
     /**
@@ -236,6 +268,47 @@ private:
             char const*& wild_current,
             char const*& wild_bookmark
     );
+
+    /**
+     * Converts a character into its two byte hexadecimal representation.
+     * @param c
+     * @return the two byte hexadecimal representation of c as an array of two characters.
+     */
+    static std::array<char, 2> char_to_hex(char c) {
+        std::array<char, 2> ret;
+        auto nibble_to_hex = [](char nibble) -> char {
+            if ('\x00' <= nibble && nibble <= '\x09') {
+                return '0' + (nibble - '\x00');
+            } else {
+                return 'a' + (nibble - '\x10');
+            }
+        };
+
+        return std::array<char, 2>{nibble_to_hex(0x0F & (c >> 4)), nibble_to_hex(0x0f & c)};
+    }
+
+    /**
+     * Converts a character into a unicode escape sequence (e.g. \u0000) and appends the escape
+     * sequences to the `destination` buffer.
+     * @param destination
+     * @param c
+     */
+    static void char_to_escaped_four_char_hex(std::string& destination, char c) {
+        destination.append("\\u00");
+        auto hex = char_to_hex(c);
+        destination.append(hex.data(), hex.size());
+    }
+
+    /**
+     * Unescape a KQL key or value with special handling for each case and append the unescaped
+     * value to the `unescaped` buffer.
+     * @param value
+     * @param unescaped
+     * @param is_value
+     * @return true if the value was unescaped succesfully and false otherwise.
+     */
+    static bool
+    unescape_kql_internal(std::string const& value, std::string& unescaped, bool is_value);
 };
 
 enum EvaluatedValue {

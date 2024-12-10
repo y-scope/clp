@@ -3,6 +3,7 @@
 
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <variant>
 
@@ -43,7 +44,7 @@ public:
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin) {}
 
-    TimestampEntry(std::string const& key_name)
+    TimestampEntry(std::string_view const key_name)
             : m_encoding(UnkownTimestampEncoding),
               m_epoch_start_double(cDoubleEpochTimeMax),
               m_epoch_end_double(cDoubleEpochTimeMin),
