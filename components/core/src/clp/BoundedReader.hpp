@@ -35,7 +35,9 @@ public:
      * @return ErrorCode_Success on success
      * @return ErrorCode_errno on failure
      */
-    auto try_get_pos(size_t& pos) -> ErrorCode override { return m_reader->try_get_pos(pos); }
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override {
+        return m_reader->try_get_pos(pos);
+    }
 
     /**
      * Tries to seek to the given position, limited by the bound.
@@ -44,7 +46,7 @@ public:
      * @return ErrorCode_EndOfFile on EOF or if trying to seek beyond the checkpoint
      * @return ErrorCode_errno on failure
      */
-    auto try_seek_from_begin(size_t pos) -> ErrorCode override;
+    [[nodicard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
 
     /**
      * Tries to read up to a given number of bytes from the file, limited by the bound.
@@ -55,11 +57,21 @@ public:
      * @return ErrorCode_EndOfFile on EOF or trying to read after hitting checkpoint
      * @return ErrorCode_Success on success
      */
-    auto
+    [[nodiscard]] auto
     try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override;
 
-    auto try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
-            -> ErrorCode override {
+    /**
+     * This function is unsupported because BoundedReader can not delegate to a potentially
+     * efficient implementation in the underlying reader, as the underlying reader's implementation
+     * will not respect the bound.
+     * @return ErrorCode_Unsupported
+     */
+    [[nodicard]] auto try_read_to_delimiter(
+            [[maybe_unused]] char delim,
+            [[maybe_unused]] bool keep_delimiter,
+            [[maybe_unused]] bool append,
+            [[maybe_unused]] std::string& str
+    ) -> ErrorCode override {
         return ErrorCode_Unsupported;
     }
 
