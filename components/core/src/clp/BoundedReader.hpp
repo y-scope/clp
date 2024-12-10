@@ -38,9 +38,7 @@ public:
     auto try_get_pos(size_t& pos) -> ErrorCode override { return m_reader->try_get_pos(pos); }
 
     /**
-     * Tries to seek to the given position, limited by the checkpoint. If pos is past the checkpoint
-     * then this reader seeks up to the checkpoint in the underlying stream, then returns
-     * ErrorCode_EndOfFile on success or ErrorCode_errno otherwise.
+     * Tries to seek to the given position, limited by the bound.
      * @param pos
      * @return ErrorCode_Success on success
      * @return ErrorCode_EndOfFile on EOF or if trying to seek beyond the checkpoint
@@ -49,10 +47,7 @@ public:
     auto try_seek_from_begin(size_t pos) -> ErrorCode override;
 
     /**
-     * Tries to read up to a given number of bytes from the file, limited by the checkpoint. If the
-     * requested read would advance the read head beyond the checkpoint then the read size is
-     * adjusted such that the read head is advanced to the checkpoint. If a read is attempted when
-     * the read head is at the checkpoint then ErrorCode_EndOfFile is returned.
+     * Tries to read up to a given number of bytes from the file, limited by the bound.
      * @param buf
      * @param num_bytes_to_read The number of bytes to try and read
      * @param num_bytes_read The actual number of bytes read
