@@ -624,8 +624,6 @@ def start_compression_worker(
     num_cpus: int,
     mounts: CLPDockerMounts,
 ):
-    print(clp_config)
-    print(container_clp_config)
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
     generic_start_worker(
@@ -703,7 +701,7 @@ def generic_start_worker(
     container_logs_dir = container_clp_config.logs_directory / component_name
 
     # Create necessary directories
-    clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
+    clp_config.archive_output.archive_directory().mkdir(parents=True, exist_ok=True)
     clp_config.stream_output.directory.mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -731,14 +729,15 @@ def generic_start_worker(
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
+        "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.archive_directory()}",
     ]
     if worker_specific_env:
         for env_name, env_value in worker_specific_env.items():
             container_start_cmd.append("-e")
             container_start_cmd.append(f"{env_name}={env_value}")
 
-    s3_config = clp_config.archive_output.s3_config
-    if s3_config is not None:
+    if "s3" == clp_config.archive_output.storage.type:
+        s3_config = clp_config.archive_output.storage.s3_config
         container_start_cmd += [
             "-e", f"ENABLE_S3_ARCHIVE=1",
             "-e", f"REGION_NAME={s3_config.region_name}",
@@ -750,10 +749,6 @@ def generic_start_worker(
                 "-e", f"ACCESS_KEY_ID={s3_config.access_key_id}",
                 "-e", f"SECRET_ACCESS_KEY={s3_config.secret_access_key}"
             ]
-    else:
-        container_start_cmd += [
-            "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}",
-        ]
 
     # fmt: on
     necessary_mounts = [
@@ -761,12 +756,10 @@ def generic_start_worker(
         mounts.data_dir,
         mounts.logs_dir,
         mounts.input_logs_dir,
+        mounts.archives_output_dir
     ]
     if worker_specific_mount:
         necessary_mounts.extend(worker_specific_mount)
-
-    if s3_config is None:
-        necessary_mounts.append(mounts.archives_output_dir)
 
     for mount in necessary_mounts:
         if not mount:

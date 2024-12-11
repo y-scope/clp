@@ -239,17 +239,19 @@ def generate_container_config(
             DockerMountType.BIND, clp_config.logs_directory, container_clp_config.logs_directory
         )
 
-    container_clp_config.archive_output.directory = pathlib.Path("/") / "mnt" / "archive-output"
+    container_clp_config.archive_output.set_archive_directory(
+        pathlib.Path("/") / "mnt" / "archive-output"
+    )
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.archive_output.directory,
-        container_clp_config.archive_output.directory,
+        clp_config.archive_output.archive_directory(),
+        container_clp_config.archive_output.archive_directory(),
     ):
         docker_mounts.archives_output_dir = DockerMount(
             DockerMountType.BIND,
-            clp_config.archive_output.directory,
-            container_clp_config.archive_output.directory,
+            clp_config.archive_output.archive_directory(),
+            container_clp_config.archive_output.archive_directory(),
         )
 
     container_clp_config.stream_output.directory = pathlib.Path("/") / "mnt" / "stream-output"

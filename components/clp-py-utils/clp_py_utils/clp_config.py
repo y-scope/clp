@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, validator
@@ -340,13 +340,64 @@ class S3Config(BaseModel):
         return field
 
 
-class ArchiveOutput(BaseModel):
+class FSStorage(BaseModel):
+    type: Literal["fs"]
     directory: pathlib.Path = pathlib.Path("var") / "data" / "archives"
+
+    @validator("directory")
+    def validate_directory(cls, field):
+        if "" == field:
+            raise ValueError("directory can not be empty")
+        return field
+
+    def make_config_path_absolute(self, clp_home: pathlib.Path):
+        self.directory = make_config_path_absolute(clp_home, self.directory)
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        d["directory"] = str(d["directory"])
+        return d
+
+
+class S3Storage(BaseModel):
+    type: Literal["s3"]
+    staging_directory: pathlib.Path = pathlib.Path("var") / "data" / "staged_archives"
+    s3_config: S3Config
+
+    @validator("staging_directory")
+    def validate_staging_directory(cls, field):
+        if "" == field:
+            raise ValueError("staging_directory can not be empty")
+        return field
+
+    @validator("s3_config")
+    def validate_s3_config(cls, field):
+        if None == field:
+            raise ValueError("s3_config must be provided")
+        return field
+
+    def make_config_path_absolute(self, clp_home: pathlib.Path):
+        self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        d["staging_directory"] = str(d["staging_directory"])
+        return d
+
+
+class ArchiveOutput(BaseModel):
+    # TODO: For whatever weird reason, must first assign it to Null
+    storage: Union[FSStorage, S3Storage, None]
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
-    s3_config: Optional[S3Config] = None
+
+    @validator("storage")
+    def validate_storage(cls, field) -> bool:
+        if None == field:
+            raise ValueError("storage must be provided")
+        return field
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -372,14 +423,18 @@ class ArchiveOutput(BaseModel):
             raise ValueError("target_segment_size must be greater than 0")
         return field
 
-    def make_config_paths_absolute(self, clp_home: pathlib.Path):
-        self.directory = make_config_path_absolute(clp_home, self.directory)
+    def set_archive_directory(self, directory: pathlib.Path) -> None:
+        storage_config = self.storage
+        if "fs" == storage_config.type:
+            storage_config.directory = directory
+        else:
+            storage_config.staging_directory = directory
 
-    def dump_to_primitive_dict(self):
-        d = self.dict()
-        # Turn directory (pathlib.Path) into a primitive string
-        d["directory"] = str(d["directory"])
-        return d
+    def archive_directory(self) -> pathlib.Path:
+        storage_config = self.storage
+        if "fs" == storage_config.type:
+            return storage_config.directory
+        return storage_config.staging_directory
 
 
 class StreamOutput(BaseModel):
@@ -473,7 +528,7 @@ class CLPConfig(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
-        self.archive_output.make_config_paths_absolute(clp_home)
+        self.archive_output.storage.make_config_path_absolute(clp_home)
         self.stream_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
@@ -490,7 +545,7 @@ class CLPConfig(BaseModel):
 
     def validate_archive_output_dir(self):
         try:
-            validate_path_could_be_dir(self.archive_output.directory)
+            validate_path_could_be_dir(self.archive_output.archive_directory())
         except ValueError as ex:
             raise ValueError(f"archive_output.directory is invalid: {ex}")
 
@@ -566,7 +621,7 @@ class CLPConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
+        d["archive_output"]["storage"] = self.archive_output.storage.dump_to_primitive_dict()
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
         d["input_logs_directory"] = str(self.input_logs_directory)
