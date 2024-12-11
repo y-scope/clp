@@ -7,12 +7,12 @@
 #include "../FileWriter.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../ir/constants.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
 #include "FileDecompressor.hpp"
-#include "ir/constants.hpp"
 #include "utils.hpp"
 
 using std::cerr;
