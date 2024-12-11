@@ -18,4 +18,5 @@ dnf install -y \
     libzstd-devel \
     make \
     mariadb-connector-c-devel \
-    openssl-devel
+    openssl-devel \
+    xz-devel
