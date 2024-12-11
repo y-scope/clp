@@ -17,18 +17,22 @@
 namespace {
 using clp::streaming_compression::lzma::Compressor;
 
-auto is_flush_action(lzma_action action) -> bool {
-    return LZMA_SYNC_FLUSH == action || LZMA_FULL_FLUSH == action || LZMA_FULL_BARRIER == action
-           || LZMA_FINISH == action;
-}
+auto is_flush_action(lzma_action action) -> bool;
 
 /**
- * Initialize the LZMA compression stream
+ * Initializes the LZMA compression stream
  * @param strm A pre-allocated `lzma_stream` object
  * @param compression_level
  * @param dict_size Dictionary size that specifies how many bytes of the
  *                  recently processed uncompressed data to keep in the memory
  */
+auto init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_size) -> void;
+
+auto is_flush_action(lzma_action action) -> bool {
+    return LZMA_SYNC_FLUSH == action || LZMA_FULL_FLUSH == action || LZMA_FULL_BARRIER == action
+           || LZMA_FINISH == action;
+}
+
 auto init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_size) -> void {
     lzma_options_lzma options;
     if (0 != lzma_lzma_preset(&options, compression_level)) {
@@ -41,7 +45,7 @@ auto init_lzma_encoder(lzma_stream* strm, int compression_level, size_t dict_siz
             {.id = LZMA_VLI_UNKNOWN, .options = nullptr},
     }};
 
-    // Initialize the encoder using a preset. Set the integrity to check to CRC64, which is the
+    // Initializes the encoder using a preset. Set the integrity to check to CRC64, which is the
     // default in the xz command line tool. If the .xz file needs to be decompressed with
     // XZ-Embedded, use LZMA_CHECK_CRC32 instead.
     auto const rc{lzma_stream_encoder(strm, filters.data(), LZMA_CHECK_CRC64)};

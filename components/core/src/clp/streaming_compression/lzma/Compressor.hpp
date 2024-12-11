@@ -43,6 +43,13 @@ public:
     Compressor(Compressor&&) noexcept = default;
     auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
+    /**
+     * Initializes the compression stream with the given compression level
+     * @param file_writer
+     * @param compression_level
+     */
+    auto open(FileWriter& file_writer, int compression_level) -> void;
+
     // Methods implementing the WriterInterface
     /**
      * Writes the given data to the compressor
@@ -80,18 +87,11 @@ public:
         this->open(file_writer, cDefaultCompressionLevel);
     }
 
-    /**
-     * Initializes the compression stream with the given compression level
-     * @param file_writer
-     * @param compression_level
-     */
-    auto open(FileWriter& file_writer, int compression_level) -> void;
-
 private:
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     /**
-     * Invoke lzma_code() repeatedly with LZMA_RUN until the input is exhausted
+     * Invokes lzma_code() repeatedly with LZMA_RUN until the input is exhausted
      *
      * At the end of the workflow, the last bytes of encoded data may still be buffered in the LZMA
      * stream and thus not immediately available at the output block buffer.
@@ -102,7 +102,7 @@ private:
     auto encode_lzma() -> void;
 
     /**
-     * Invoke lzma_code() repeatedly with the given flushing action until all encoded data is made
+     * Invokes lzma_code() repeatedly with the given flushing action until all encoded data is made
      * available at the output block buffer
      *
      * Assumes input stream and output block buffer are both in valid states.
