@@ -701,7 +701,7 @@ def generic_start_worker(
     container_logs_dir = container_clp_config.logs_directory / component_name
 
     # Create necessary directories
-    clp_config.archive_output.archive_directory().mkdir(parents=True, exist_ok=True)
+    clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
     clp_config.stream_output.directory.mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -729,7 +729,8 @@ def generic_start_worker(
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
-        "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.archive_directory()}",
+        # need a way to remove this maybe?
+        "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.get_directory()}",
     ]
     if worker_specific_env:
         for env_name, env_value in worker_specific_env.items():
@@ -755,8 +756,8 @@ def generic_start_worker(
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
+        mounts.archives_output_dir,
         mounts.input_logs_dir,
-        mounts.archives_output_dir
     ]
     if worker_specific_mount:
         necessary_mounts.extend(worker_specific_mount)
@@ -1139,13 +1140,6 @@ def main(argv):
             QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
-
-        # Might be a good place to verification for s3 config.
-        # if target in (
-        #     ALL_TARGET_NAME,
-        #     COMPRESSION_WORKER_COMPONENT_NAME
-        # ):
-        #     validate_s3_config(clp_config.archive_output, clp_home)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()

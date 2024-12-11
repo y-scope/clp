@@ -4,7 +4,7 @@ from typing import Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, validator
-from strenum import KebabCaseStrEnum
+from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
 from .core import (
@@ -46,6 +46,11 @@ CLP_METADATA_TABLE_PREFIX = "clp_"
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
+
+
+class StorageType(LowercaseStrEnum):
+    FS = auto()
+    S3 = auto()
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
@@ -341,7 +346,7 @@ class S3Config(BaseModel):
 
 
 class FSStorage(BaseModel):
-    type: Literal["fs"]
+    type: Literal[StorageType.FS.value]
     directory: pathlib.Path = pathlib.Path("var") / "data" / "archives"
 
     @validator("directory")
@@ -360,7 +365,7 @@ class FSStorage(BaseModel):
 
 
 class S3Storage(BaseModel):
-    type: Literal["s3"]
+    type: Literal[StorageType.S3.value]
     staging_directory: pathlib.Path = pathlib.Path("var") / "data" / "staged_archives"
     s3_config: S3Config
 
@@ -423,16 +428,16 @@ class ArchiveOutput(BaseModel):
             raise ValueError("target_segment_size must be greater than 0")
         return field
 
-    def set_archive_directory(self, directory: pathlib.Path) -> None:
+    def set_directory(self, directory: pathlib.Path) -> None:
         storage_config = self.storage
-        if "fs" == storage_config.type:
+        if StorageType.FS == storage_config.type:
             storage_config.directory = directory
         else:
             storage_config.staging_directory = directory
 
-    def archive_directory(self) -> pathlib.Path:
+    def get_directory(self) -> pathlib.Path:
         storage_config = self.storage
-        if "fs" == storage_config.type:
+        if StorageType.FS == storage_config.type:
             return storage_config.directory
         return storage_config.staging_directory
 
@@ -543,11 +548,18 @@ class CLPConfig(BaseModel):
         if not input_logs_dir.is_dir():
             raise ValueError(f"input_logs_directory '{input_logs_dir}' is not a directory.")
 
-    def validate_archive_output_dir(self):
+    def validate_archive_output_config(self):
+        if (
+            StorageType.S3 == self.archive_output.storage.type
+            and StorageEngine.CLP_S != self.package.storage_engine
+        ):
+            raise ValueError(
+                f"S3 storage is only supported with storage engine: {StorageEngine.CLP_S}"
+            )
         try:
-            validate_path_could_be_dir(self.archive_output.archive_directory())
+            validate_path_could_be_dir(self.archive_output.get_directory())
         except ValueError as ex:
-            raise ValueError(f"archive_output.directory is invalid: {ex}")
+            raise ValueError(f"directory of storage config is invalid: {ex}")
 
     def validate_stream_output_dir(self):
         try:

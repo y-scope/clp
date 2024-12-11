@@ -20,6 +20,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    StorageType,
     WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.core import (
@@ -28,6 +29,7 @@ from clp_py_utils.core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
+from clp_py_utils.s3_utils import verify_s3_config_for_archive_output
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
@@ -239,19 +241,17 @@ def generate_container_config(
             DockerMountType.BIND, clp_config.logs_directory, container_clp_config.logs_directory
         )
 
-    container_clp_config.archive_output.set_archive_directory(
-        pathlib.Path("/") / "mnt" / "archive-output"
-    )
+    container_clp_config.archive_output.set_directory(pathlib.Path("/") / "mnt" / "archive-output")
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.archive_output.archive_directory(),
-        container_clp_config.archive_output.archive_directory(),
+        clp_config.archive_output.get_directory(),
+        container_clp_config.archive_output.get_directory(),
     ):
         docker_mounts.archives_output_dir = DockerMount(
             DockerMountType.BIND,
-            clp_config.archive_output.archive_directory(),
-            container_clp_config.archive_output.archive_directory(),
+            clp_config.archive_output.get_directory(),
+            container_clp_config.archive_output.get_directory(),
         )
 
     container_clp_config.stream_output.directory = pathlib.Path("/") / "mnt" / "stream-output"
@@ -484,8 +484,13 @@ def validate_results_cache_config(
 
 def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
-    clp_config.validate_archive_output_dir()
+    clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_dir()
+    storage_config = clp_config.archive_output.storage
+    if StorageType.S3 == storage_config.type:
+        result = verify_s3_config_for_archive_output(storage_config.s3_config)
+        if not result.success:
+            raise ValueError(f"S3 config verification failed: {result.error}")
 
 
 def validate_webui_config(

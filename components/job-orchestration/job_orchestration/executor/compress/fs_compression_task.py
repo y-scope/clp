@@ -263,8 +263,8 @@ def run_clp(
     }
 
     while not last_line_decoded:
-        stats = None
         line = proc.stdout.readline()
+        stats: Dict[str, Any] = None
         if line:
             stats = json.loads(line.decode("ascii"))
         else:
@@ -338,11 +338,8 @@ def compress(
 ):
     clp_home_str = os.getenv("CLP_HOME")
     data_dir_str = os.getenv("CLP_DATA_DIR")
-    logs_dir_str = os.getenv("CLP_LOGS_DIR")
-
     archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
-    if archive_output_dir_str is None:
-        archive_output_dir_str = "/tmp/archives"
+    logs_dir_str = os.getenv("CLP_LOGS_DIR")
 
     # Set logging level
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
