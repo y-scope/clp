@@ -105,9 +105,10 @@ def get_s3_config() -> Optional[S3Config]:
         bucket=os.getenv("BUCKET"),
         key_prefix=os.getenv("KEY_PREFIX"),
         access_key_id=os.getenv("ACCESS_KEY_ID"),
-        secret_access_key=os.getenv("SECRET_ACCESS_KEY")
+        secret_access_key=os.getenv("SECRET_ACCESS_KEY"),
     )
     return s3_config
+
 
 def make_clp_command(
     clp_home: pathlib.Path,
@@ -205,6 +206,10 @@ def run_clp(
     yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
 
+    # Get s3 config
+    s3_config = get_s3_config()
+    s3_upload_failed = False
+
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd = make_clp_command(
             clp_home=clp_home,
@@ -251,26 +256,32 @@ def run_clp(
 
     # Compute the total amount of data compressed
     last_archive_stats = None
+    last_line_decoded = False
     worker_output = {
         "total_uncompressed_size": 0,
         "total_compressed_size": 0,
     }
 
-    s3_config = get_s3_config()
-
-    while True:
+    while not last_line_decoded:
+        stats = None
         line = proc.stdout.readline()
-        if not line:
-            break
-        stats = json.loads(line.decode("ascii"))
-        if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
+        if line:
+            stats = json.loads(line.decode("ascii"))
+        else:
+            last_line_decoded = True
+
+        if last_archive_stats is not None and (
+            last_line_decoded or stats["id"] != last_archive_stats["id"]
+        ):
             if s3_config is not None:
                 result = upload_single_file_archive_to_s3(
                     last_archive_stats, archive_output_dir, s3_config
                 )
                 if not result.success:
-                    # TODO: think about how to handle S3 only error
-                    continue
+                    worker_output["error_message"] = result.error
+                    s3_upload_failed = True
+                    # Upon failure, skip updating the archive tags and job metadata.
+                    break
 
             # We've started a new archive so add the previous archive's last
             # reported size to the total
@@ -290,30 +301,6 @@ def run_clp(
 
         last_archive_stats = stats
 
-    if last_archive_stats is not None:
-        if s3_config is not None:
-            result = upload_single_file_archive_to_s3(
-                last_archive_stats, archive_output_dir, s3_config
-            )
-            if not result.success:
-                logger.error(f"THINK ABOUT WHAT TO DO HERE")
-                # TODO: think about how to handle S3 only error
-
-        # Add the last archive's last reported size
-        worker_output["total_uncompressed_size"] += last_archive_stats["uncompressed_size"]
-        worker_output["total_compressed_size"] += last_archive_stats["size"]
-        with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
-        ) as db_cursor:
-            update_job_metadata_and_tags(
-                db_cursor,
-                job_id,
-                clp_metadata_db_connection_config["table_prefix"],
-                tag_ids,
-                last_archive_stats,
-            )
-            db_conn.commit()
-
     # Wait for compression to finish
     return_code = proc.wait()
     if 0 != return_code:
@@ -330,6 +317,8 @@ def run_clp(
     # Close stderr log file
     stderr_log_file.close()
 
+    if s3_upload_failed:
+        return CompressionTaskStatus.FAILED, worker_output
     if compression_successful:
         return CompressionTaskStatus.SUCCEEDED, worker_output
     else:
@@ -349,8 +338,11 @@ def compress(
 ):
     clp_home_str = os.getenv("CLP_HOME")
     data_dir_str = os.getenv("CLP_DATA_DIR")
-    archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
     logs_dir_str = os.getenv("CLP_LOGS_DIR")
+
+    archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
+    if archive_output_dir_str is None:
+        archive_output_dir_str = "/tmp/archives"
 
     # Set logging level
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))

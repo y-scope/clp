@@ -728,7 +728,6 @@ def generic_start_worker(
         ),
         "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
         "-e", f"CLP_DATA_DIR={container_clp_config.data_directory}",
-        "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
@@ -751,17 +750,23 @@ def generic_start_worker(
                 "-e", f"ACCESS_KEY_ID={s3_config.access_key_id}",
                 "-e", f"SECRET_ACCESS_KEY={s3_config.secret_access_key}"
             ]
+    else:
+        container_start_cmd += [
+            "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}",
+        ]
 
     # fmt: on
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
-        mounts.archives_output_dir,
         mounts.input_logs_dir,
     ]
     if worker_specific_mount:
         necessary_mounts.extend(worker_specific_mount)
+
+    if s3_config is None:
+        necessary_mounts.append(mounts.archives_output_dir)
 
     for mount in necessary_mounts:
         if not mount:

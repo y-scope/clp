@@ -5,6 +5,7 @@ from botocore.exceptions import ClientError
 from clp_py_utils.clp_config import S3Config
 from clp_py_utils.result import Result
 
+
 def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> Result:
 
     if not src_file.exists():
@@ -15,12 +16,13 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> Result:
     s3_client_args = {
         "region_name": s3_config.region_name,
         "aws_access_key_id": s3_config.access_key_id,
-        "aws_secret_access_key": s3_config.secret_access_key
+        "aws_secret_access_key": s3_config.secret_access_key,
     }
 
     my_s3_client = boto3.client("s3", **s3_client_args)
 
     with open(src_file, "rb") as file_data:
+        # TODO: Consider retry?
         try:
             my_s3_client.put_object(
                 Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_file_name
