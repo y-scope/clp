@@ -4,6 +4,7 @@ import os
 import pathlib
 import subprocess
 from contextlib import closing
+from typing import Any, Dict, Optional
 
 import yaml
 from celery.app.task import Task
@@ -12,11 +13,14 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
+    S3Config,
     StorageEngine,
 )
 from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.result import Result
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
+from job_orchestration.executor.s3_utils import s3_put
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
@@ -71,6 +75,40 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
     )
 
 
+def upload_single_file_archive_to_s3(
+    archive_stats: Dict[str, Any],
+    archive_dir: pathlib.Path,
+    s3_config: S3Config,
+) -> Result:
+    logger.info("Starting to upload to S3...")
+    archive_id = archive_stats["id"]
+    src_file = archive_dir / archive_id
+    result = s3_put(s3_config, src_file, archive_id)
+    if not result.success:
+        logger.error(f"Failed to upload to S3: {result.error}")
+        return result
+
+    logger.info("Finished uploading to S3...")
+    src_file.unlink()
+    return Result(success=True)
+
+
+def get_s3_config() -> Optional[S3Config]:
+    enable_s3_write = os.getenv("ENABLE_S3_ARCHIVE")
+    if enable_s3_write is None:
+        return None
+
+    # TODO: this method is very errorprone since it doesn't check individual members
+    # Let's leave this for now before we properly implement the config file.
+    s3_config = S3Config(
+        region_name=os.getenv("REGION_NAME"),
+        bucket=os.getenv("BUCKET"),
+        key_prefix=os.getenv("KEY_PREFIX"),
+        access_key_id=os.getenv("ACCESS_KEY_ID"),
+        secret_access_key=os.getenv("SECRET_ACCESS_KEY")
+    )
+    return s3_config
+
 def make_clp_command(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
@@ -113,6 +151,7 @@ def make_clp_s_command(
     compression_cmd = [
         str(clp_home / "bin" / "clp-s"),
         "c", str(archive_output_dir),
+        "--single-file-archive",
         "--print-archive-stats",
         "--target-encoded-size",
         str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
@@ -212,18 +251,31 @@ def run_clp(
 
     # Compute the total amount of data compressed
     last_archive_stats = None
-    total_uncompressed_size = 0
-    total_compressed_size = 0
+    worker_output = {
+        "total_uncompressed_size": 0,
+        "total_compressed_size": 0,
+    }
+
+    s3_config = get_s3_config()
+
     while True:
         line = proc.stdout.readline()
         if not line:
             break
         stats = json.loads(line.decode("ascii"))
         if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
+            if s3_config is not None:
+                result = upload_single_file_archive_to_s3(
+                    last_archive_stats, archive_output_dir, s3_config
+                )
+                if not result.success:
+                    # TODO: think about how to handle S3 only error
+                    continue
+
             # We've started a new archive so add the previous archive's last
             # reported size to the total
-            total_uncompressed_size += last_archive_stats["uncompressed_size"]
-            total_compressed_size += last_archive_stats["size"]
+            worker_output["total_uncompressed_size"] += last_archive_stats["uncompressed_size"]
+            worker_output["total_compressed_size"] += last_archive_stats["size"]
             with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                 db_conn.cursor(dictionary=True)
             ) as db_cursor:
@@ -239,9 +291,17 @@ def run_clp(
         last_archive_stats = stats
 
     if last_archive_stats is not None:
+        if s3_config is not None:
+            result = upload_single_file_archive_to_s3(
+                last_archive_stats, archive_output_dir, s3_config
+            )
+            if not result.success:
+                logger.error(f"THINK ABOUT WHAT TO DO HERE")
+                # TODO: think about how to handle S3 only error
+
         # Add the last archive's last reported size
-        total_uncompressed_size += last_archive_stats["uncompressed_size"]
-        total_compressed_size += last_archive_stats["size"]
+        worker_output["total_uncompressed_size"] += last_archive_stats["uncompressed_size"]
+        worker_output["total_compressed_size"] += last_archive_stats["size"]
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
@@ -270,10 +330,6 @@ def run_clp(
     # Close stderr log file
     stderr_log_file.close()
 
-    worker_output = {
-        "total_uncompressed_size": total_uncompressed_size,
-        "total_compressed_size": total_compressed_size,
-    }
     if compression_successful:
         return CompressionTaskStatus.SUCCEEDED, worker_output
     else:

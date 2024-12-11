@@ -624,6 +624,8 @@ def start_compression_worker(
     num_cpus: int,
     mounts: CLPDockerMounts,
 ):
+    print(clp_config)
+    print(container_clp_config)
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
     generic_start_worker(
@@ -713,6 +715,7 @@ def generic_start_worker(
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
         "--log-driver", "local",
+        "-u", f"{os.getuid()}:{os.getgid()}",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
             f"BROKER_URL=amqp://"
@@ -729,12 +732,25 @@ def generic_start_worker(
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     if worker_specific_env:
         for env_name, env_value in worker_specific_env.items():
             container_start_cmd.append("-e")
             container_start_cmd.append(f"{env_name}={env_value}")
+
+    s3_config = clp_config.archive_output.s3_config
+    if s3_config is not None:
+        container_start_cmd += [
+            "-e", f"ENABLE_S3_ARCHIVE=1",
+            "-e", f"REGION_NAME={s3_config.region_name}",
+            "-e", f"BUCKET={s3_config.bucket}",
+            "-e", f"KEY_PREFIX={s3_config.key_prefix}"
+        ]
+        if s3_config.secret_access_key is not None and s3_config.secret_access_key is not None:
+            container_start_cmd += [
+                "-e", f"ACCESS_KEY_ID={s3_config.access_key_id}",
+                "-e", f"SECRET_ACCESS_KEY={s3_config.secret_access_key}"
+            ]
 
     # fmt: on
     necessary_mounts = [
@@ -1125,6 +1141,13 @@ def main(argv):
             QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+
+        # Might be a good place to verification for s3 config.
+        # if target in (
+        #     ALL_TARGET_NAME,
+        #     COMPRESSION_WORKER_COMPONENT_NAME
+        # ):
+        #     validate_s3_config(clp_config.archive_output, clp_home)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()

@@ -1,6 +1,6 @@
 import pathlib
-import typing
 from enum import auto
+from typing import Optional
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, validator
@@ -69,12 +69,12 @@ class Database(BaseModel):
     host: str = "localhost"
     port: int = 3306
     name: str = "clp-db"
-    ssl_cert: typing.Optional[str] = None
+    ssl_cert: Optional[str] = None
     auto_commit: bool = False
     compress: bool = True
 
-    username: typing.Optional[str] = None
-    password: typing.Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
 
     @validator("type")
     def validate_database_type(cls, field):
@@ -227,7 +227,7 @@ class Redis(BaseModel):
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
-    password: typing.Optional[str]
+    password: Optional[str]
 
     @validator("host")
     def validate_host(cls, field):
@@ -300,8 +300,44 @@ class Queue(BaseModel):
     host: str = "localhost"
     port: int = 5672
 
-    username: typing.Optional[str]
-    password: typing.Optional[str]
+    username: Optional[str]
+    password: Optional[str]
+
+
+class S3Config(BaseModel):
+    # TODO: need to think of a way to verify the account and
+    # keys. Maybe need to be outside of the config because every config
+    # can have different privilege
+    # Things to verify:
+    # 1. Can only be enabled if clp-s is used.
+    # 2. Does key_prefix need to end with '/'? maybe it doesn't but will cause some issue for list bucket.
+
+    # Required fields
+    region_name: str
+    bucket: str
+    key_prefix: str
+
+    # Optional fields
+    access_key_id: Optional[str] = None
+    secret_access_key: Optional[str] = None
+
+    @validator("region_name")
+    def validate_region_name(cls, field):
+        if field == "":
+            raise ValueError("region_name is not provided")
+        return field
+
+    @validator("bucket")
+    def validate_bucket(cls, field):
+        if field == "":
+            raise ValueError("bucket is not provided")
+        return field
+
+    @validator("key_prefix")
+    def validate_key_prefix(cls, field):
+        if field == "":
+            raise ValueError("key_prefix is not provided")
+        return field
 
 
 class ArchiveOutput(BaseModel):
@@ -310,6 +346,7 @@ class ArchiveOutput(BaseModel):
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
+    s3_config: Optional[S3Config] = None
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -408,7 +445,7 @@ class LogViewerWebUi(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    execution_container: typing.Optional[str]
+    execution_container: Optional[str]
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
