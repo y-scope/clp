@@ -1,5 +1,9 @@
 #include "BoundedReader.hpp"
 
+#include <cstddef>
+
+#include "ErrorCode.hpp"
+
 namespace clp {
 auto BoundedReader::try_seek_from_begin(size_t pos) -> ErrorCode {
     auto const next_pos = pos > m_bound ? m_bound : pos;

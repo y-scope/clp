@@ -1,6 +1,10 @@
 #ifndef CLP_BOUNDEDREADER_HPP
 #define CLP_BOUNDEDREADER_HPP
 
+#include <cstddef>
+#include <string>
+
+#include "ErrorCode.hpp"
 #include "ReaderInterface.hpp"
 
 namespace clp {
@@ -46,7 +50,7 @@ public:
      * @return ErrorCode_EndOfFile on EOF or if trying to seek beyond the checkpoint
      * @return ErrorCode_errno on failure
      */
-    [[nodicard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
+    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
 
     /**
      * Tries to read up to a given number of bytes from the file, limited by the bound.
@@ -66,7 +70,7 @@ public:
      * will not respect the bound.
      * @return ErrorCode_Unsupported
      */
-    [[nodicard]] auto try_read_to_delimiter(
+    [[nodiscard]] auto try_read_to_delimiter(
             [[maybe_unused]] char delim,
             [[maybe_unused]] bool keep_delimiter,
             [[maybe_unused]] bool append,
