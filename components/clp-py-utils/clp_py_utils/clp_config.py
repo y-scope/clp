@@ -310,15 +310,10 @@ class Queue(BaseModel):
 
 
 class S3Config(BaseModel):
-    # Todo:
-    # Does key_prefix need to end with '/'? maybe it doesn't.
-
-    # Required fields
     region_name: str
     bucket: str
     key_prefix: str
 
-    # Optional fields
     access_key_id: Optional[str] = None
     secret_access_key: Optional[str] = None
 
@@ -338,6 +333,8 @@ class S3Config(BaseModel):
     def validate_key_prefix(cls, field):
         if field == "":
             raise ValueError("key_prefix is not provided")
+        if not field.endswith("/"):
+            raise ValueError(r'key_prefix must end with "/"')
         return field
 
 
