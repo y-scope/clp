@@ -497,7 +497,7 @@ class LogViewerWebUi(BaseModel):
 
 
 class CLPConfig(BaseModel):
-    execution_container: Optional[str]
+    execution_container: Optional[str] = None
 
     input_logs_directory: pathlib.Path = pathlib.Path("/")
 
