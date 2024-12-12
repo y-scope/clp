@@ -80,15 +80,16 @@ def upload_single_file_archive_to_s3(
     archive_dir: pathlib.Path,
     s3_config: S3Config,
 ) -> Result:
-    logger.info("Starting to upload to S3...")
     archive_id = archive_stats["id"]
+
+    logger.info(f"Starting to upload archive {archive_id} to S3...")
     src_file = archive_dir / archive_id
     result = s3_put(s3_config, src_file, archive_id)
     if not result.success:
-        logger.error(f"Failed to upload to S3: {result.error}")
+        logger.error(f"Failed to upload archive {archive_id}: {result.error}")
         return result
 
-    logger.info("Finished uploading to S3...")
+    logger.info(f"Finished uploading archive {archive_id} to S3...")
     src_file.unlink()
     return Result(success=True)
 
@@ -318,6 +319,7 @@ def run_clp(
     stderr_log_file.close()
 
     if s3_upload_failed:
+        logger.error(f"Failed to upload to S3.")
         return CompressionTaskStatus.FAILED, worker_output
     if compression_successful:
         return CompressionTaskStatus.SUCCEEDED, worker_output
