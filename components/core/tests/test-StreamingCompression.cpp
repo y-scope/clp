@@ -44,7 +44,15 @@ constexpr auto cCompressionChunkSizes = std::to_array<size_t>(
          cBufferSize}
 );
 
-auto compress(std::unique_ptr<Compressor> compressor, char const* const src) -> void {
+auto compress(std::unique_ptr<Compressor> compressor, char const* src) -> void;
+
+auto decompress_and_compare(
+        std::unique_ptr<Decompressor> decompressor,
+        Array<char> const& uncompressed_buffer,
+        Array<char>& decompressed_buffer
+) -> void;
+
+auto compress(std::unique_ptr<Compressor> compressor, char const* src) -> void {
     FileWriter file_writer;
     file_writer.open(string(cCompressedFilePath), FileWriter::OpenMode::CREATE_FOR_WRITING);
     compressor->open(file_writer);
@@ -84,7 +92,6 @@ auto decompress_and_compare(
         num_uncompressed_bytes += chunk_size;
     }
 
-    // Sanity check
     REQUIRE(
             (std::accumulate(
                      cCompressionChunkSizes.cbegin(),
@@ -97,14 +104,11 @@ auto decompress_and_compare(
 }  // namespace
 
 TEST_CASE("StreamingCompression", "[StreamingCompression]") {
-    // Initialize constants
     constexpr size_t cAlphabetLength{26};
 
-    // Initialize compression devices
     std::unique_ptr<Compressor> compressor;
     std::unique_ptr<Decompressor> decompressor;
 
-    // Initialize buffers
     Array<char> decompressed_buffer{cBufferSize};
     Array<char> uncompressed_buffer{cBufferSize};
     for (size_t i{0}; i < cBufferSize; ++i) {
@@ -130,6 +134,5 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
         compress(std::move(compressor), uncompressed_buffer.data());
     }
 
-    // Cleanup
     boost::filesystem::remove(string(cCompressedFilePath));
 }

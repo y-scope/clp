@@ -45,6 +45,7 @@ public:
 
     /**
      * Initializes the compression stream with the given compression level
+     *
      * @param file_writer
      * @param compression_level
      */
@@ -104,6 +105,10 @@ private:
     /**
      * Invokes lzma_code() repeatedly with the given flushing action until all encoded data is made
      * available at the output block buffer
+     *
+     * Once flushing starts, the workflow action needs to stay the same until flushing is signaled
+     * complete by LZMA (aka LZMA_STREAM_END is reached).
+     * See also: https://github.com/tukaani-project/xz/blob/master/src/liblzma/api/lzma/base.h#L274
      *
      * Assumes input stream and output block buffer are both in valid states.
      * @param flush_action
