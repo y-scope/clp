@@ -264,14 +264,14 @@ def run_clp(
 
     while not last_line_decoded:
         line = proc.stdout.readline()
-        stats: Dict[str, Any] = None
+        stats: Optional[Dict[str, Any]] = None
         if line:
             stats = json.loads(line.decode("ascii"))
         else:
             last_line_decoded = True
 
         if last_archive_stats is not None and (
-            last_line_decoded or stats["id"] != last_archive_stats["id"]
+            None is stats or stats["id"] != last_archive_stats["id"]
         ):
             if s3_config is not None:
                 result = upload_single_file_archive_to_s3(
