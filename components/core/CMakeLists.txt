@@ -228,8 +228,10 @@ else()
 endif()
 
 # Find and setup LZMA Library
-# TODO: Add support to enforce static linking against LZMA when desired. For a hack, we can set
-#       `CMAKE_FIND_LIBRARY_SUFFIXES` to ask CMake to prefer the static lib over the shared one.
+# TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
+if(CLP_USE_STATIC_LIBS)
+    set(LibLZMA_USE_STATIC_LIBS ON)
+endif()
 find_package(LibLZMA REQUIRED)
 if(LIBLZMA_FOUND)
     message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
