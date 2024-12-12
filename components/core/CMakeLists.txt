@@ -11,16 +11,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
-set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd lzma)
-if ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
+set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS lzma passthrough zstd)
+if ("${GENERAL_COMPRESSOR}" STREQUAL "lzma")
+    add_definitions(-DUSE_LZMA_COMPRESSION=1)
+    message(STATUS "Using Lempel–Ziv–Markov chain Algorithm compression")
+elseif ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
     add_definitions(-DUSE_PASSTHROUGH_COMPRESSION=1)
     message(STATUS "Using passthrough compression")
 elseif ("${GENERAL_COMPRESSOR}" STREQUAL "zstd")
     add_definitions(-DUSE_ZSTD_COMPRESSION=1)
     message(STATUS "Using Zstandard compression")
-elseif ("${GENERAL_COMPRESSOR}" STREQUAL "lzma")
-    add_definitions(-DUSE_LZMA_COMPRESSION=1)
-    message(STATUS "Using Lempel–Ziv–Markov chain Algorithm compression")
 else()
     message(SEND_ERROR "GENERAL_COMPRESSOR=${GENERAL_COMPRESSOR} is unimplemented.")
 endif()
@@ -228,17 +228,17 @@ else()
 endif()
 
 # Find and setup LZMA Library
-# Notice that we don't have support to switch between static and shared libraries.
-# TODO: add a script in ./cmake/Modules to resolve .a vs. .so
+# TODO: Add support to enforce static linking against LZMA when desired. For a hack, we can set
+#       `CMAKE_FIND_LIBRARY_SUFFIXES` to ask CMake to prefer the static lib over the shared one.
 find_package(LibLZMA REQUIRED)
 if(LIBLZMA_FOUND)
     message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
     message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
+    message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
 else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
 endif()
 include_directories(${LIBLZMA_INCLUDE_DIRS})
-message("Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
 
 # sqlite dependencies
 set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
