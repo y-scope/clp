@@ -238,7 +238,7 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
             case LZMA_OK:
                 break;
             case LZMA_STREAM_END:
-                // NOTE: this might not be true when multithreaded encoder is used with
+                // NOTE: flush may not have completed if a multithreaded encoder is using action
                 // LZMA_FULL_BARRIER. For now, we skip this check.
                 flushed = true;
                 break;
