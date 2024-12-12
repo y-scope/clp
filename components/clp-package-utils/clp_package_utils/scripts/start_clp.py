@@ -42,6 +42,7 @@ from clp_package_utils.general import (
     DockerMount,
     DockerMountType,
     generate_container_config,
+    generate_worker_config,
     get_clp_home,
     is_container_exited,
     is_container_running,
@@ -638,7 +639,6 @@ def start_compression_worker(
         num_cpus,
         mounts,
         None,
-        None,
     )
 
 
@@ -653,10 +653,6 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mount = [mounts.stream_output_dir]
-    query_worker_env = {
-        "CLP_STREAM_OUTPUT_DIR": container_clp_config.stream_output.directory,
-        "CLP_STREAM_COLLECTION_NAME": clp_config.results_cache.stream_collection_name,
-    }
 
     generic_start_worker(
         QUERY_WORKER_COMPONENT_NAME,
@@ -669,7 +665,6 @@ def start_query_worker(
         clp_config.redis.query_backend_database,
         num_cpus,
         mounts,
-        query_worker_env,
         query_worker_mount,
     )
 
@@ -685,14 +680,19 @@ def generic_start_worker(
     redis_database: int,
     num_cpus: int,
     mounts: CLPDockerMounts,
-    worker_specific_env: Dict[str, Any],
-    worker_specific_mount: List[Optional[DockerMount]],
+    worker_specific_mount: Optional[List[Optional[DockerMount]]],
 ):
     logger.info(f"Starting {component_name}...")
 
     container_name = f"clp-{component_name}-{instance_id}"
     if container_exists(container_name):
         return
+
+    container_config_filename = f"{container_name}.yml"
+    container_config_file_path = clp_config.logs_directory / container_config_filename
+    container_worker_config = generate_worker_config(container_clp_config)
+    with open(container_config_file_path, "w") as f:
+        yaml.safe_dump(container_worker_config.dump_to_primitive_dict(), f)
 
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -723,39 +723,19 @@ def generic_start_worker(
             f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
         ),
         "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
-        "-e", f"CLP_DATA_DIR={container_clp_config.data_directory}",
+        "-e", f"WORKER_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
+        # Follow the other method.
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
-        "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
-        # need a way to remove this maybe
-        "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.get_directory()}",
     ]
-    if worker_specific_env:
-        for env_name, env_value in worker_specific_env.items():
-            container_start_cmd.append("-e")
-            container_start_cmd.append(f"{env_name}={env_value}")
-
-    if "s3" == clp_config.archive_output.storage.type:
-        s3_config = clp_config.archive_output.storage.s3_config
-        container_start_cmd += [
-            "-e", f"ENABLE_S3_ARCHIVE=1",
-            "-e", f"REGION_NAME={s3_config.region_name}",
-            "-e", f"BUCKET={s3_config.bucket}",
-            "-e", f"KEY_PREFIX={s3_config.key_prefix}"
-        ]
-        if s3_config.secret_access_key is not None and s3_config.secret_access_key is not None:
-            container_start_cmd += [
-                "-e", f"ACCESS_KEY_ID={s3_config.access_key_id}",
-                "-e", f"SECRET_ACCESS_KEY={s3_config.secret_access_key}"
-            ]
 
     # fmt: on
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
-        # need a way to remove this maybe, since reader doesn't need it if it is staged.
-        # one option is to move it to the worker_specific_mount
+        # TODO: need a way to remove this maybe, since reader doesn't need it if it
+        # is staged. one option is to move it to the worker_specific_mount
         mounts.archives_output_dir,
         mounts.input_logs_dir,
     ]

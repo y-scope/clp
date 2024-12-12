@@ -15,8 +15,11 @@ from clp_py_utils.clp_config import (
     Database,
     S3Config,
     StorageEngine,
+    StorageType,
+    WorkerConfig
 )
 from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.result import Result
 from clp_py_utils.s3_utils import s3_put
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -24,6 +27,7 @@ from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
+from pydantic import ValidationError
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -94,23 +98,6 @@ def upload_single_file_archive_to_s3(
     return Result(success=True)
 
 
-def get_s3_config() -> Optional[S3Config]:
-    enable_s3_write = os.getenv("ENABLE_S3_ARCHIVE")
-    if enable_s3_write is None:
-        return None
-
-    # TODO: this method is very errorprone since it doesn't check individual members
-    # Let's leave this for now before we properly implement the config file.
-    s3_config = S3Config(
-        region_name=os.getenv("REGION_NAME"),
-        bucket=os.getenv("BUCKET"),
-        key_prefix=os.getenv("KEY_PREFIX"),
-        access_key_id=os.getenv("ACCESS_KEY_ID"),
-        secret_access_key=os.getenv("SECRET_ACCESS_KEY"),
-    )
-    return s3_config
-
-
 def make_clp_command(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
@@ -169,6 +156,7 @@ def make_clp_s_command(
 
 
 def run_clp(
+    worker_config: WorkerConfig,
     clp_config: ClpIoConfig,
     clp_home: pathlib.Path,
     data_dir: pathlib.Path,
@@ -184,6 +172,7 @@ def run_clp(
     """
     Compresses files from an FS into archives on an FS
 
+    :param worker_config: WorkerConfig
     :param clp_config: ClpIoConfig
     :param clp_home:
     :param data_dir:
@@ -197,7 +186,7 @@ def run_clp(
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
-    clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
+    clp_storage_engine = worker_config.package.storage_engine
 
     instance_id_str = f"compression-job-{job_id}-task-{task_id}"
 
@@ -208,7 +197,8 @@ def run_clp(
     db_config_file.close()
 
     # Get s3 config
-    s3_config = get_s3_config()
+    storage_config = worker_config.archive_output.storage
+    s3_config = storage_config.s3_config if StorageType.S3 == storage_config.type else None
     s3_upload_failed = False
 
     if StorageEngine.CLP == clp_storage_engine:
@@ -338,10 +328,20 @@ def compress(
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
 ):
-    clp_home_str = os.getenv("CLP_HOME")
-    data_dir_str = os.getenv("CLP_DATA_DIR")
-    archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
-    logs_dir_str = os.getenv("CLP_LOGS_DIR")
+    clp_home = pathlib.Path(os.getenv("CLP_HOME"))
+    logs_dir = pathlib.Path(os.getenv("CLP_LOGS_DIR"))
+
+    # Load configuration
+    worker_config_path = pathlib.Path(os.getenv("WORKER_CONFIG_PATH"))
+    try:
+        worker_config = WorkerConfig.parse_obj(read_yaml_config_file(worker_config_path))
+    except ValidationError as err:
+        logger.error(err)
+        return -1
+    except Exception as ex:
+        logger.error(ex)
+        return -1
+
 
     # Set logging level
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
@@ -355,11 +355,12 @@ def compress(
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
     compression_task_status, worker_output = run_clp(
+        worker_config,
         clp_io_config,
-        pathlib.Path(clp_home_str),
-        pathlib.Path(data_dir_str),
-        pathlib.Path(archive_output_dir_str),
-        pathlib.Path(logs_dir_str),
+        clp_home,
+        worker_config.data_directory,
+        worker_config.archive_output.get_directory(),
+        logs_dir,
         job_id,
         task_id,
         tag_ids,

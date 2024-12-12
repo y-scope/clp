@@ -633,3 +633,20 @@ class CLPConfig(BaseModel):
         d["data_directory"] = str(self.data_directory)
         d["logs_directory"] = str(self.logs_directory)
         return d
+
+
+class WorkerConfig(BaseModel):
+    package: Package = Package()
+    archive_output: ArchiveOutput = ArchiveOutput()
+    # Only needed by query worker. Consider inheriting at some point.
+    stream_output: StreamOutput = StreamOutput()
+
+    data_directory: pathlib.Path = pathlib.Path("var") / "data"
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        d["archive_output"]["storage"] = self.archive_output.storage.dump_to_primitive_dict()
+        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
+        # Turn paths into primitive strings
+        d["data_directory"] = str(self.data_directory)
+        return d

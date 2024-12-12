@@ -14,6 +14,7 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
+    WorkerConfig,
     DB_COMPONENT_NAME,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
@@ -268,6 +269,16 @@ def generate_container_config(
         )
 
     return container_clp_config, docker_mounts
+
+
+def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
+    worker_config = WorkerConfig()
+    worker_config.archive_output = clp_config.archive_output.copy(deep=True)
+    worker_config.stream_output = clp_config.stream_output.copy(deep=True)
+    worker_config.package = clp_config.package.copy(deep=True)
+    worker_config.data_directory = clp_config.data_directory
+
+    return worker_config
 
 
 def dump_container_config(
