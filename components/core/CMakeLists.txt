@@ -230,7 +230,7 @@ endif()
 # Find and setup LZMA Library
 # TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
 if(CLP_USE_STATIC_LIBS)
-    set(LibLZMA_USE_STATIC_LIBS ON)
+    set(LIBLZMA_USE_STATIC_LIBS ON)
 endif()
 find_package(LibLZMA REQUIRED)
 if(LIBLZMA_FOUND)
