@@ -53,13 +53,14 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
+    field_set_expressions = [f"{k} = %s" for k in kv.keys()]
     query = f"""
-    UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-    SET {", ".join(field_set_expressions)}
-    WHERE id={task_id}
+        UPDATE {COMPRESSION_TASKS_TABLE_NAME}
+        SET {", ".join(field_set_expressions)}
+        WHERE id = %s
     """
-    db_cursor.execute(query)
+    values = [v for v in kv.values()] + [task_id]
+    db_cursor.execute(query, values)
 
 
 def update_compression_job_metadata(db_cursor, job_id, kv):
@@ -67,13 +68,14 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f'{k}="{v}"' for k, v in kv.items()]
+    field_set_expressions = [f"{k} = %s" for k in kv.keys()]
     query = f"""
-    UPDATE {COMPRESSION_JOBS_TABLE_NAME}
-    SET {", ".join(field_set_expressions)}
-    WHERE id={job_id}
+        UPDATE {COMPRESSION_JOBS_TABLE_NAME}
+        SET {", ".join(field_set_expressions)}
+        WHERE id = %s
     """
-    db_cursor.execute(query)
+    values = [v for v in kv.values()] + [job_id]
+    db_cursor.execute(query, values)
 
 
 def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
