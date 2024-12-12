@@ -3,6 +3,7 @@ from pathlib import Path
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
+
 from clp_py_utils.clp_config import S3Config
 from clp_py_utils.result import Result
 
