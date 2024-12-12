@@ -9,10 +9,7 @@ from clp_py_utils.result import Result
 
 
 def verify_s3_config_for_archive_output(s3_config: S3Config) -> Result:
-    # TODO: need to verify:
-    # 1. Have write priveldge so archive can be compressed
-    # 2. Have read priviledge so archive can be readed
-    # 3. bucket and region are the same, this should run into issue but not sure
+    # TODO: properly verify the s3 config
     return Result(success=True)
 
 
