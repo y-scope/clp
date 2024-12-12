@@ -310,12 +310,8 @@ class Queue(BaseModel):
 
 
 class S3Config(BaseModel):
-    # TODO: need to think of a way to verify the account and
-    # keys. Maybe need to be outside of the config because every config
-    # can have different privilege
-    # Things to verify:
-    # 1. Can only be enabled if clp-s is used.
-    # 2. Does key_prefix need to end with '/'? maybe it doesn't but will cause some issue for list bucket.
+    # Todo:
+    # Does key_prefix need to end with '/'? maybe it doesn't.
 
     # Required fields
     region_name: str
@@ -346,7 +342,7 @@ class S3Config(BaseModel):
 
 
 class FSStorage(BaseModel):
-    type: Literal[StorageType.FS.value]
+    type: Literal[StorageType.FS.value] = StorageType.FS.value
     directory: pathlib.Path = pathlib.Path("var") / "data" / "archives"
 
     @validator("directory")
@@ -365,7 +361,7 @@ class FSStorage(BaseModel):
 
 
 class S3Storage(BaseModel):
-    type: Literal[StorageType.S3.value]
+    type: Literal[StorageType.S3.value] = StorageType.S3.value
     staging_directory: pathlib.Path = pathlib.Path("var") / "data" / "staged_archives"
     s3_config: S3Config
 
@@ -391,8 +387,7 @@ class S3Storage(BaseModel):
 
 
 class ArchiveOutput(BaseModel):
-    # TODO: For whatever weird reason, must first assign it to Null
-    storage: Union[FSStorage, S3Storage, None]
+    storage: Union[FSStorage, S3Storage] = FSStorage()
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB

@@ -486,6 +486,7 @@ def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_dir()
+
     storage_config = clp_config.archive_output.storage
     if StorageType.S3 == storage_config.type:
         result = verify_s3_config_for_archive_output(storage_config.s3_config)

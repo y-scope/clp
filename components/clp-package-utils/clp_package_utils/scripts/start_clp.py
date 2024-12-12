@@ -694,8 +694,6 @@ def generic_start_worker(
     if container_exists(container_name):
         return
 
-    validate_worker_config(clp_config)
-
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
@@ -729,7 +727,7 @@ def generic_start_worker(
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
-        # need a way to remove this maybe?
+        # need a way to remove this maybe
         "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.get_directory()}",
     ]
     if worker_specific_env:
@@ -756,6 +754,8 @@ def generic_start_worker(
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
+        # need a way to remove this maybe, since reader doesn't need it if it is staged.
+        # one option is to move it to the worker_specific_mount
         mounts.archives_output_dir,
         mounts.input_logs_dir,
     ]
@@ -1140,6 +1140,12 @@ def main(argv):
             QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+        if target in (
+            ALL_TARGET_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
+        ):
+            validate_worker_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
