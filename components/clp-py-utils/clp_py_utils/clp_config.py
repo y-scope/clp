@@ -433,6 +433,11 @@ class ArchiveOutput(BaseModel):
             return storage_config.directory
         return storage_config.staging_directory
 
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        # Turn directory (pathlib.Path) into a primitive string
+        d["storage"] = self.storage.dump_to_primitive_dict()
+        return d
 
 class StreamOutput(BaseModel):
     directory: pathlib.Path = pathlib.Path("var") / "data" / "streams"
@@ -625,7 +630,7 @@ class CLPConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        d["archive_output"]["storage"] = self.archive_output.storage.dump_to_primitive_dict()
+        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
         d["input_logs_directory"] = str(self.input_logs_directory)
@@ -646,7 +651,7 @@ class WorkerConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        d["archive_output"]["storage"] = self.archive_output.storage.dump_to_primitive_dict()
+        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
         d["data_directory"] = str(self.data_directory)
         d["stream_output_dir"] = str(self.stream_output_dir)
