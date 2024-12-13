@@ -10,7 +10,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 lib_install_scripts_dir="${script_dir}/.."
 
 # NOTE: The remaining installation scripts depend on boost, so we install it beforehand.
-"${lib_install_scripts_dir}/install-boost.sh" 1.76.0
+"${lib_install_scripts_dir}/install-boost.sh" 1.81.0
 
 "${lib_install_scripts_dir}/fmtlib.sh" 8.0.1
 "${lib_install_scripts_dir}/spdlog.sh" 1.9.2
