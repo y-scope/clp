@@ -53,6 +53,17 @@ public:
      */
     virtual void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) = 0;
 
+    /**
+     * Extracts a value from the column, escapes it, and serializes it into a provided buffer as a
+     * string.
+     * @param cur_message
+     * @param buffer
+     */
+    virtual void
+    extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
+        extract_string_value_into_buffer(cur_message, buffer);
+    }
+
 private:
     int32_t m_id;
 };
@@ -152,6 +163,9 @@ public:
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
+    void
+    extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
     /**
      * Gets the encoded id of the variable
      * @param cur_message
@@ -195,6 +209,9 @@ public:
     ) override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
+    void
+    extract_escaped_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
     /**
      * Gets the encoded id of the variable

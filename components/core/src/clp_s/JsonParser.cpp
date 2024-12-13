@@ -63,7 +63,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
     size_t object_start = m_current_schema.start_unordered_object(NodeType::Object);
     ondemand::field cur_field;
     ondemand::value cur_value;
-    std::string cur_key;
+    std::string_view cur_key;
     int32_t node_id;
     while (true) {
         while (false == object_stack.empty() && object_it_stack.top() == object_stack.top().end()) {
@@ -81,7 +81,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
         }
 
         cur_field = *object_it_stack.top();
-        cur_key = std::string_view(cur_field.unescaped_key(true));
+        cur_key = cur_field.unescaped_key(true);
         cur_value = cur_field.value();
 
         switch (cur_value.type()) {
@@ -131,9 +131,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 break;
             }
             case ondemand::json_type::string: {
-                std::string value = std::string(
-                        cur_value.raw_json_token().substr(1, cur_value.raw_json_token().size() - 2)
-                );
+                std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
@@ -209,9 +207,7 @@ void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
                 break;
             }
             case ondemand::json_type::string: {
-                std::string value = std::string(
-                        cur_value.raw_json_token().substr(1, cur_value.raw_json_token().size() - 2)
-                );
+                std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
                 } else {
@@ -246,7 +242,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
     ondemand::field cur_field;
 
-    std::string cur_key = key;
+    std::string_view cur_key = key;
     node_id_stack.push(parent_node_id);
 
     bool can_match_timestamp = !m_timestamp_column.empty();
@@ -257,7 +253,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     do {
         if (false == object_stack.empty()) {
             cur_field = *object_it_stack.top();
-            cur_key = std::string(std::string_view(cur_field.unescaped_key(true)));
+            cur_key = cur_field.unescaped_key(true);
             line = cur_field.value();
             if (may_match_timestamp) {
                 if (object_stack.size() <= m_timestamp_column.size()
@@ -353,10 +349,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 break;
             }
             case ondemand::json_type::string: {
-                auto raw_json_token = line.raw_json_token();
-                std::string value
-                        = std::string(raw_json_token.substr(1, raw_json_token.rfind('"') - 1));
-
+                std::string_view value = line.get_string(true);
                 if (matches_timestamp) {
                     node_id = m_archive_writer->add_node(
                             node_id_stack.top(),
