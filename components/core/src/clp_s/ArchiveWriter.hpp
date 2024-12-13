@@ -124,7 +124,7 @@ public:
     epochtime_t ingest_timestamp_entry(
             std::string const& key,
             int32_t node_id,
-            std::string const& timestamp,
+            std::string_view const timestamp,
             uint64_t& pattern_id
     ) {
         return m_timestamp_dict.ingest_entry(key, node_id, timestamp, pattern_id);

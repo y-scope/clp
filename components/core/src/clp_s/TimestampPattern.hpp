@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <utility>
 
 #include "Defs.hpp"
@@ -83,7 +84,7 @@ public:
      * @return pointer to the timestamp pattern if found, nullptr otherwise
      */
     static TimestampPattern const* search_known_ts_patterns(
-            std::string const& line,
+            std::string_view const line,
             epochtime_t& timestamp,
             size_t& timestamp_begin_pos,
             size_t& timestamp_end_pos
@@ -121,7 +122,7 @@ public:
      * @return true if parsed successfully, false otherwise
      */
     bool parse_timestamp(
-            std::string const& line,
+            std::string_view const line,
             epochtime_t& timestamp,
             size_t& timestamp_begin_pos,
             size_t& timestamp_end_pos
