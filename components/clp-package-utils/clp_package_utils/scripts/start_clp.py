@@ -724,9 +724,9 @@ def generic_start_worker(
         ),
         "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
         "-e", f"WORKER_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
-        # Follow the other method.
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
+        "-u", f"{os.getuid()}:{os.getgid()}",
     ]
 
     # fmt: on
