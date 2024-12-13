@@ -44,7 +44,7 @@ public:
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin) {}
 
-    TimestampEntry(std::string_view const key_name)
+    TimestampEntry(std::string_view key_name)
             : m_encoding(UnkownTimestampEncoding),
               m_epoch_start_double(cDoubleEpochTimeMax),
               m_epoch_end_double(cDoubleEpochTimeMin),

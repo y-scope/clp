@@ -69,7 +69,6 @@ private:
             m_string_type = LiteralType::VarStringT;
         }
 
-        // If '?' and '*' are not escaped, we add LiteralType::ClpStringT to m_string_type
         if (StringUtils::has_unescaped_wildcards(m_v)) {
             m_string_type |= LiteralType::ClpStringT;
         }

@@ -44,9 +44,9 @@ uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* patte
 }
 
 epochtime_t TimestampDictionaryWriter::ingest_entry(
-        std::string_view const key,
+        std::string_view key,
         int32_t node_id,
-        std::string_view const timestamp,
+        std::string_view timestamp,
         uint64_t& pattern_id
 ) {
     epochtime_t ret;
@@ -90,7 +90,7 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
 }
 
 void TimestampDictionaryWriter::ingest_entry(
-        std::string_view const key,
+        std::string_view key,
         int32_t node_id,
         double timestamp
 ) {
@@ -105,7 +105,7 @@ void TimestampDictionaryWriter::ingest_entry(
 }
 
 void TimestampDictionaryWriter::ingest_entry(
-        std::string_view const key,
+        std::string_view key,
         int32_t node_id,
         int64_t timestamp
 ) {

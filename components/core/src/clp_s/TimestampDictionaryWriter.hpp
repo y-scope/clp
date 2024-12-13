@@ -49,9 +49,9 @@ public:
      * @return the epoch time corresponding to the string timestamp
      */
     epochtime_t ingest_entry(
-            std::string_view const key,
+            std::string_view key,
             int32_t node_id,
-            std::string_view const timestamp,
+            std::string_view timestamp,
             uint64_t& pattern_id
     );
 
@@ -61,9 +61,9 @@ public:
      * @param node_id
      * @param timestamp
      */
-    void ingest_entry(std::string_view const key, int32_t node_id, double timestamp);
+    void ingest_entry(std::string_view key, int32_t node_id, double timestamp);
 
-    void ingest_entry(std::string_view const key, int32_t node_id, int64_t timestamp);
+    void ingest_entry(std::string_view key, int32_t node_id, int64_t timestamp);
 
     /**
      * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and

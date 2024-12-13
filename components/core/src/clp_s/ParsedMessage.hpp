@@ -36,7 +36,7 @@ public:
         m_message.emplace(node_id, value);
     }
 
-    inline void add_value(int32_t node_id, std::string_view const value) {
+    inline void add_value(int32_t node_id, std::string_view value) {
         m_message.emplace(node_id, std::string{value});
     }
 
@@ -61,7 +61,7 @@ public:
         m_unordered_message.emplace_back(value);
     }
 
-    inline void add_unordered_value(std::string_view const value) {
+    inline void add_unordered_value(std::string_view value) {
         m_unordered_message.emplace_back(std::string{value});
     }
 

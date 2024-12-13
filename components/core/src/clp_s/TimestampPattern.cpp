@@ -73,7 +73,7 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
  * @return true if conversion succeeds, false otherwise
  */
 static bool convert_string_to_number(
-        std::string_view const str,
+        std::string_view str,
         size_t begin_ix,
         size_t end_ix,
         char padding_character,
@@ -91,7 +91,7 @@ static bool convert_string_to_number(
  * @return true if conversion succeeds, false otherwise
  */
 static bool convert_string_to_number_notz(
-        std::string_view const str,
+        std::string_view str,
         size_t max_digits,
         size_t begin_ix,
         size_t& end_ix,
@@ -127,7 +127,7 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
 }
 
 static bool convert_string_to_number(
-        std::string_view const str,
+        std::string_view str,
         size_t begin_ix,
         size_t end_ix,
         char padding_character,
@@ -156,7 +156,7 @@ static bool convert_string_to_number(
 }
 
 static bool convert_string_to_number_notz(
-        std::string_view const str,
+        std::string_view str,
         size_t max_digits,
         size_t begin_ix,
         size_t& end_ix,
@@ -308,7 +308,7 @@ void TimestampPattern::init() {
 }
 
 TimestampPattern const* TimestampPattern::search_known_ts_patterns(
-        std::string_view const line,
+        std::string_view line,
         epochtime_t& timestamp,
         size_t& timestamp_begin_pos,
         size_t& timestamp_end_pos
@@ -344,7 +344,7 @@ void TimestampPattern::clear() {
 }
 
 bool TimestampPattern::parse_timestamp(
-        std::string_view const line,
+        std::string_view line,
         epochtime_t& timestamp,
         size_t& timestamp_begin_pos,
         size_t& timestamp_end_pos

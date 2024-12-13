@@ -85,7 +85,7 @@ public:
      * @return pointer to the timestamp pattern if found, nullptr otherwise
      */
     static TimestampPattern const* search_known_ts_patterns(
-            std::string_view const line,
+            std::string_view line,
             epochtime_t& timestamp,
             size_t& timestamp_begin_pos,
             size_t& timestamp_end_pos
@@ -123,7 +123,7 @@ public:
      * @return true if parsed successfully, false otherwise
      */
     bool parse_timestamp(
-            std::string_view const line,
+            std::string_view line,
             epochtime_t& timestamp,
             size_t& timestamp_begin_pos,
             size_t& timestamp_end_pos
