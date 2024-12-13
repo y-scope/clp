@@ -660,7 +660,6 @@ def start_query_worker(
     if clp_config.archive_output.storage.type == StorageType.FS:
         query_worker_mount.append(mounts.archives_output_dir)
 
-
     generic_start_worker(
         QUERY_WORKER_COMPONENT_NAME,
         instance_id,
