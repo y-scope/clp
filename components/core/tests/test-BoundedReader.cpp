@@ -1,3 +1,5 @@
+#include <array>
+#include <cstddef>
 #include <string>
 
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -23,9 +25,9 @@ TEST_CASE("Test Bounded Reader", "[BoundedReader]") {
         clp::StringReader string_reader;
         string_reader.open(cTestString);
         clp::BoundedReader bounded_reader{&string_reader, cTestStringLen + 1};
-        char buf[cTestStringLen + 1];
+        std::array<char, cTestStringLen + 1> buf{};
         size_t num_bytes_read{};
-        auto rc = bounded_reader.try_read(buf, cTestStringLen + 1, num_bytes_read);
+        auto rc = bounded_reader.try_read(buf.data(), cTestStringLen + 1, num_bytes_read);
         REQUIRE(clp::ErrorCode_Success == rc);
         REQUIRE(num_bytes_read == cTestStringLen);
         REQUIRE(cTestStringLen == string_reader.get_pos());
@@ -36,14 +38,14 @@ TEST_CASE("Test Bounded Reader", "[BoundedReader]") {
         clp::StringReader string_reader;
         string_reader.open(cTestString);
         clp::BoundedReader bounded_reader{&string_reader, 1};
-        char buf[cTestStringLen];
+        std::array<char, cTestStringLen> buf{};
         size_t num_bytes_read{};
-        auto rc = bounded_reader.try_read(buf, cTestStringLen, num_bytes_read);
+        auto rc = bounded_reader.try_read(buf.data(), cTestStringLen, num_bytes_read);
         REQUIRE(clp::ErrorCode_Success == rc);
         REQUIRE(1 == num_bytes_read);
         REQUIRE(1 == string_reader.get_pos());
         REQUIRE(1 == bounded_reader.get_pos());
-        rc = bounded_reader.try_read(buf, 1, num_bytes_read);
+        rc = bounded_reader.try_read(buf.data(), 1, num_bytes_read);
         REQUIRE(clp::ErrorCode_EndOfFile == rc);
         REQUIRE(0 == num_bytes_read);
         REQUIRE(1 == string_reader.get_pos());
@@ -77,7 +79,6 @@ TEST_CASE("Test Bounded Reader", "[BoundedReader]") {
         clp::StringReader string_reader;
         string_reader.open(cTestString);
         clp::BoundedReader bounded_reader{&string_reader, 1};
-        char buf[cTestStringLen];
         size_t num_bytes_read{};
         auto rc = bounded_reader.try_seek_from_begin(cTestStringLen);
         REQUIRE(clp::ErrorCode_EndOfFile == rc);
@@ -89,7 +90,6 @@ TEST_CASE("Test Bounded Reader", "[BoundedReader]") {
         clp::StringReader string_reader;
         string_reader.open(cTestString);
         clp::BoundedReader bounded_reader{&string_reader, 2};
-        char buf[cTestStringLen];
         size_t num_bytes_read{};
         auto rc = bounded_reader.try_seek_from_begin(1);
         REQUIRE(clp::ErrorCode_Success == rc);
