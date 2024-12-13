@@ -7,6 +7,7 @@
 #include <string_view>
 #include <vector>
 
+#include "../TraceableException.hpp"
 #include "Literal.hpp"
 
 namespace clp_s::search {
@@ -15,27 +16,29 @@ namespace clp_s::search {
  */
 class DescriptorToken {
 public:
-    // Constructors
-    DescriptorToken() = default;
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
 
     /**
-     * Initialize the token from a string and set flags based on whether the token contains
-     * wildcards
-     * @param token the string to initialize the token from
+     * Creates a DescriptorToken from an escaped token string. The escape sequences '\\' and '\*'
+     * are supported in order to distinguish the literal '*' from the '*' used to match hierarchies
+     * of keys.
+     * @param token
      */
-    explicit DescriptorToken(std::string_view const token)
-            : m_token(token),
-              m_wildcard(false),
-              m_regex(false) {
-        if (token == "*") {
-            m_wildcard = true;
-        }
+    static DescriptorToken create_descriptor_from_escaped_token(std::string_view const token) {
+        return DescriptorToken{token, false};
+    }
 
-        for (char c : token) {
-            if (c == '*') {
-                m_regex = true;
-            }
-        }
+    /**
+     * Creates a DescriptorToken from a literal token string. The token is copied verbatim, and is
+     * never treated as a wildcard.
+     */
+    static DescriptorToken create_descriptor_from_literal_token(std::string_view const token) {
+        return DescriptorToken{token, true};
     }
 
     /**
@@ -43,13 +46,6 @@ public:
      * @return true if the descriptor is a single wildcard
      */
     bool wildcard() const { return m_wildcard; }
-
-    /**
-     * Whether the descriptor contains a wildcard somewhere
-     * TODO: Not currently used, and regex isn't currently supported
-     * @return true if the descriptor contains a wildcard
-     */
-    bool regex() const { return m_regex; }
 
     /**
      * Get a reference to the underlying token string
@@ -62,14 +58,47 @@ public:
      * @return Whether this token is equal to the given token
      */
     bool operator==(DescriptorToken const& rhs) const {
-        // Note: we only need to compare the m_token field because m_regex and m_wildcard are
-        // derived from m_token.
-        return m_token == rhs.m_token;
+        return m_token == rhs.m_token && m_wildcard == rhs.m_wildcard;
     }
 
 private:
-    bool m_wildcard{};
-    bool m_regex{};
+    /**
+     * Initialize the token from a string and set flags based on whether the token contains
+     * wildcards
+     * @param token the string to initialize the token from
+     * @param bool true if the string should be interpreted as literal, and false
+     */
+    explicit DescriptorToken(std::string_view const token, bool is_literal) : m_wildcard(false) {
+        if (is_literal) {
+            m_token = token;
+            return;
+        }
+
+        if (token == "*") {
+            m_wildcard = true;
+        }
+
+        bool escaped{false};
+        for (size_t i = 0; i < token.size(); ++i) {
+            if (false == escaped) {
+                if ('\\' == token[i]) {
+                    escaped = true;
+                } else {
+                    m_token.push_back(token[i]);
+                }
+                continue;
+            } else {
+                m_token.push_back(token[i]);
+                escaped = false;
+            }
+        }
+
+        if (escaped) {
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+    }
+
+    bool m_wildcard{false};
     std::string m_token;
 };
 
@@ -92,9 +121,27 @@ public:
      * @param descriptor(s) the token or list of tokens making up the descriptor
      * @return A ColumnDescriptor
      */
-    static std::shared_ptr<ColumnDescriptor> create(std::string const& descriptor);
-    static std::shared_ptr<ColumnDescriptor> create(std::vector<std::string> const& descriptors);
-    static std::shared_ptr<ColumnDescriptor> create(DescriptorList const& descriptors);
+    static std::shared_ptr<ColumnDescriptor> create_from_escaped_token(std::string const& token);
+    static std::shared_ptr<ColumnDescriptor> create_from_escaped_tokens(
+            std::vector<std::string> const& tokens
+    );
+    static std::shared_ptr<ColumnDescriptor> create_from_descriptors(
+            DescriptorList const& descriptors
+    );
+
+    /**
+     * Insert an entire DescriptorList into this ColumnDescriptor at before given position.
+     * @param pos an iterator to the position inside of the internal descriptor list to insert
+     * before.
+     * @param source the list of descriptors to insert
+     */
+    void insert(DescriptorList::iterator pos, DescriptorList const& source) {
+        m_descriptors.insert(pos, source.begin(), source.end());
+        check_and_set_unresolved_descriptor_flag();
+        if (is_unresolved_descriptor()) {
+            simplify_descriptor_wildcards();
+        }
+    }
 
     /**
      * Deep copy of this ColumnDescriptor

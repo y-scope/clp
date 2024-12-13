@@ -206,7 +206,7 @@ bool search_archive(
                 SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
                 return false;
             }
-            projection->add_column(ColumnDescriptor::create(descriptor_tokens));
+            projection->add_column(ColumnDescriptor::create_from_escaped_tokens(descriptor_tokens));
         }
     } catch (clp_s::TraceableException& e) {
         SPDLOG_ERROR("{}", e.what());

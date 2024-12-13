@@ -1,6 +1,7 @@
 #include "Utils.hpp"
 
 #include <boost/filesystem.hpp>
+#include <simdjson.h>
 #include <spdlog/spdlog.h>
 
 using std::string;
@@ -431,30 +432,246 @@ bool StringUtils::tokenize_column_descriptor(
         std::string const& descriptor,
         std::vector<std::string>& tokens
 ) {
-    // TODO: add support for unicode sequences e.g. \u263A
     std::string cur_tok;
-    for (size_t cur = 0; cur < descriptor.size(); ++cur) {
-        if ('\\' == descriptor[cur]) {
-            ++cur;
-            if (cur >= descriptor.size()) {
-                return false;
+    bool escaped{false};
+    for (size_t i = 0; i < descriptor.size(); ++i) {
+        if (false == escaped) {
+            if ('\\' == descriptor[i]) {
+                escaped = true;
+            } else if ('.' == descriptor[i]) {
+                if (cur_tok.empty()) {
+                    return false;
+                }
+                std::string unescaped_token;
+                if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
+                    tokens.push_back(unescaped_token);
+                    cur_tok.clear();
+                } else {
+                    return false;
+                }
+            } else {
+                cur_tok.push_back(descriptor[i]);
             }
-        } else if ('.' == descriptor[cur]) {
-            if (cur_tok.empty()) {
-                return false;
-            }
-            tokens.push_back(cur_tok);
-            cur_tok.clear();
             continue;
         }
-        cur_tok.push_back(descriptor[cur]);
+
+        escaped = false;
+        switch (descriptor[i]) {
+            case '.':
+                cur_tok.push_back('.');
+                break;
+            default:
+                cur_tok.push_back('\\');
+                cur_tok.push_back(descriptor[i]);
+                break;
+        }
+    }
+
+    if (escaped) {
+        return false;
     }
 
     if (cur_tok.empty()) {
         return false;
     }
 
-    tokens.push_back(cur_tok);
+    std::string unescaped_token;
+    if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
+        tokens.push_back(unescaped_token);
+    } else {
+        return false;
+    }
+    return true;
+}
+
+void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
+    // Escaping is implemented using this `append_unescaped_slice` approach to offer a fast path
+    // when strings are mostly or entirely valid escaped JSON. Benchmarking shows that this offers
+    // a net decompression speedup of ~30% compared to adding every character to the destination one
+    // character at a time.
+    size_t slice_begin{0ULL};
+    auto append_unescaped_slice = [&](size_t i) {
+        if (slice_begin < i) {
+            destination.append(source.substr(slice_begin, i - slice_begin));
+        }
+        slice_begin = i + 1;
+    };
+    for (size_t i = 0; i < source.size(); ++i) {
+        char c = source[i];
+        switch (c) {
+            case '"':
+                append_unescaped_slice(i);
+                destination.append("\\\"");
+                break;
+            case '\\':
+                append_unescaped_slice(i);
+                destination.append("\\\\");
+                break;
+            case '\t':
+                append_unescaped_slice(i);
+                destination.append("\\t");
+                break;
+            case '\r':
+                append_unescaped_slice(i);
+                destination.append("\\r");
+                break;
+            case '\n':
+                append_unescaped_slice(i);
+                destination.append("\\n");
+                break;
+            case '\b':
+                append_unescaped_slice(i);
+                destination.append("\\b");
+                break;
+            case '\f':
+                append_unescaped_slice(i);
+                destination.append("\\f");
+                break;
+            default:
+                if ('\x00' <= c && c <= '\x1f') {
+                    append_unescaped_slice(i);
+                    char_to_escaped_four_char_hex(destination, c);
+                }
+                break;
+        }
+    }
+    append_unescaped_slice(source.size());
+}
+
+namespace {
+/**
+ * Convert a four byte hex sequence to utf8. We perform the conversion in this cumbersome way
+ * because c++20 deprecates most of the much more convenient std::codecvt utilities.
+ */
+bool convert_four_byte_hex_to_utf8(std::string_view const hex, std::string& destination) {
+    std::string buf = "\"\\u";
+    buf += hex;
+    buf.push_back('"');
+    buf.reserve(buf.size() + simdjson::SIMDJSON_PADDING);
+    simdjson::ondemand::parser parser;
+    auto value = parser.iterate(buf);
+    try {
+        if (false == value.is_scalar()) {
+            return false;
+        }
+
+        if (simdjson::ondemand::json_type::string != value.type()) {
+            return false;
+        }
+
+        std::string_view unescaped_utf8 = value.get_string(false);
+        destination.append(unescaped_utf8);
+    } catch (std::exception const& e) {
+        return false;
+    }
+    return true;
+}
+}  // namespace
+
+bool StringUtils::unescape_kql_value(std::string const& value, std::string& unescaped) {
+    return unescape_kql_internal(value, unescaped, true);
+}
+
+bool StringUtils::unescape_kql_internal(
+        std::string const& value,
+        std::string& unescaped,
+        bool is_value
+) {
+    bool escaped{false};
+    for (size_t i = 0; i < value.size(); ++i) {
+        if (false == escaped && '\\' != value[i]) {
+            unescaped.push_back(value[i]);
+            continue;
+        } else if (false == escaped && '\\' == value[i]) {
+            escaped = true;
+            continue;
+        }
+
+        escaped = false;
+        switch (value[i]) {
+            case '\\':
+                unescaped.append("\\\\");
+                break;
+            case '"':
+                unescaped.push_back('"');
+                break;
+            case 't':
+                unescaped.push_back('\t');
+                break;
+            case 'r':
+                unescaped.push_back('\r');
+                break;
+            case 'n':
+                unescaped.push_back('\n');
+                break;
+            case 'b':
+                unescaped.push_back('\b');
+                break;
+            case 'f':
+                unescaped.push_back('\f');
+                break;
+            case 'u': {
+                size_t last_char_in_codepoint = i + 4;
+                if (value.size() <= last_char_in_codepoint) {
+                    return false;
+                }
+
+                auto four_byte_hex = std::string_view{value}.substr(i + 1, 4);
+                i += 4;
+
+                std::string tmp;
+                if (false == convert_four_byte_hex_to_utf8(four_byte_hex, tmp)) {
+                    return false;
+                }
+
+                // Make sure unicode escape sequences are always treated as literal characters
+                if ("\\" == tmp) {
+                    unescaped.append("\\\\");
+                } else if ("?" == tmp && is_value) {
+                    unescaped.append("\\?");
+                } else if ("*" == tmp) {
+                    unescaped.append("\\*");
+                } else {
+                    unescaped.append(tmp);
+                }
+                break;
+            }
+            case '{':
+                unescaped.push_back('{');
+                break;
+            case '}':
+                unescaped.push_back('}');
+                break;
+            case '(':
+                unescaped.push_back('(');
+                break;
+            case ')':
+                unescaped.push_back(')');
+                break;
+            case '<':
+                unescaped.push_back('<');
+                break;
+            case '>':
+                unescaped.push_back('>');
+                break;
+            case '*':
+                unescaped.append("\\*");
+                break;
+            case '?':
+                if (is_value) {
+                    unescaped.append("\\?");
+                } else {
+                    unescaped.push_back('?');
+                }
+                break;
+            default:
+                return false;
+        }
+    }
+
+    if (escaped) {
+        return false;
+    }
     return true;
 }
 }  // namespace clp_s

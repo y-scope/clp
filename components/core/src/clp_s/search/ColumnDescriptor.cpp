@@ -6,7 +6,7 @@ namespace clp_s::search {
 DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors) {
     DescriptorList list;
     for (std::string const& descriptor : descriptors) {
-        list.push_back(DescriptorToken(descriptor));
+        list.push_back(DescriptorToken::create_descriptor_from_escaped_token(descriptor));
     }
     return list;
 }
@@ -15,7 +15,7 @@ void ColumnDescriptor::check_and_set_unresolved_descriptor_flag() {
     m_unresolved_descriptors = false;
     m_pure_wildcard = m_descriptors.size() == 1 && m_descriptors[0].wildcard();
     for (auto const& token : m_descriptors) {
-        if (token.wildcard() || token.regex()) {
+        if (token.wildcard()) {
             m_unresolved_descriptors = true;
             break;
         }
@@ -24,7 +24,7 @@ void ColumnDescriptor::check_and_set_unresolved_descriptor_flag() {
 
 ColumnDescriptor::ColumnDescriptor(std::string const& descriptor) {
     m_flags = cAllTypes;
-    m_descriptors.emplace_back(descriptor);
+    m_descriptors.emplace_back(DescriptorToken::create_descriptor_from_escaped_token(descriptor));
     check_and_set_unresolved_descriptor_flag();
     if (is_unresolved_descriptor()) {
         simplify_descriptor_wildcards();
@@ -49,17 +49,21 @@ ColumnDescriptor::ColumnDescriptor(DescriptorList const& descriptors) {
     }
 }
 
-std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create(std::string const& descriptor) {
-    return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(descriptor));
-}
-
-std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create(
-        std::vector<std::string> const& descriptors
+std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_escaped_token(
+        std::string const& token
 ) {
-    return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(descriptors));
+    return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(token));
 }
 
-std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create(DescriptorList const& descriptors) {
+std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_escaped_tokens(
+        std::vector<std::string> const& tokens
+) {
+    return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(tokens));
+}
+
+std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_descriptors(
+        DescriptorList const& descriptors
+) {
     return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(descriptors));
 }
 
