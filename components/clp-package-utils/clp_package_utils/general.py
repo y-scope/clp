@@ -14,7 +14,6 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
-    WorkerConfig,
     DB_COMPONENT_NAME,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
@@ -23,6 +22,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
+    WorkerConfig,
 )
 from clp_py_utils.core import (
     get_config_value,

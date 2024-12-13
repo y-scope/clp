@@ -8,12 +8,12 @@ from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import Database, StorageEngine, StorageType, WorkerConfig
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.utils import try_load_worker_config
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
     report_task_failure,
     run_query_task,
 )
+from job_orchestration.executor.utils import try_load_worker_config
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 

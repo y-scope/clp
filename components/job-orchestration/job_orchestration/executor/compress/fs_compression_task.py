@@ -16,7 +16,7 @@ from clp_py_utils.clp_config import (
     S3Config,
     StorageEngine,
     StorageType,
-    WorkerConfig
+    WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.core import read_yaml_config_file
@@ -223,7 +223,7 @@ def run_clp(
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
-            enable_s3_write=enable_s3_write
+            enable_s3_write=enable_s3_write,
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
@@ -347,7 +347,9 @@ def compress(
 
     # Load configuration
     try:
-        worker_config = WorkerConfig.parse_obj(read_yaml_config_file(pathlib.Path(os.getenv("WORKER_CONFIG_PATH"))))
+        worker_config = WorkerConfig.parse_obj(
+            read_yaml_config_file(pathlib.Path(os.getenv("WORKER_CONFIG_PATH")))
+        )
     except Exception as ex:
         error_msg = "Failed to load worker config"
         logger.exception(error_msg)
@@ -355,7 +357,7 @@ def compress(
             task_id=task_id,
             status=CompressionTaskStatus.FAILED,
             duration=0,
-            error_message=error_msg
+            error_message=error_msg,
         )
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
