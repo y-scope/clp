@@ -29,6 +29,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    StorageType,
     WEBUI_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
@@ -627,6 +628,9 @@ def start_compression_worker(
 ):
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
+
+    compression_worker_mount = [mounts.archives_output_dir]
+
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -638,7 +642,7 @@ def start_compression_worker(
         clp_config.redis.compression_backend_database,
         num_cpus,
         mounts,
-        None,
+        compression_worker_mount,
     )
 
 
@@ -653,6 +657,9 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mount = [mounts.stream_output_dir]
+    if clp_config.archive_output.storage.type == StorageType.FS:
+        query_worker_mount.append(mounts.archives_output_dir)
+
 
     generic_start_worker(
         QUERY_WORKER_COMPONENT_NAME,
@@ -734,9 +741,6 @@ def generic_start_worker(
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
-        # TODO: need a way to remove this maybe, since reader doesn't need it if it
-        # is staged. one option is to move it to the worker_specific_mount
-        mounts.archives_output_dir,
         mounts.input_logs_dir,
     ]
     if worker_specific_mount:
