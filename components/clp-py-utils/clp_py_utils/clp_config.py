@@ -638,10 +638,11 @@ class CLPConfig(BaseModel):
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
-    # Only needed by query worker. Consider inheriting at some point.
-    stream_output: StreamOutput = StreamOutput()
-
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
+
+    # Only needed by query worker. Consider inheriting at some point.
+    stream_output = StreamOutput()
+    results_cache: ResultsCache = ResultsCache()
 
     def dump_to_primitive_dict(self):
         d = self.dict()

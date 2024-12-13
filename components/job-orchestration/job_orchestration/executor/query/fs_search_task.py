@@ -5,14 +5,15 @@ from typing import Any, Dict, List, Optional
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import Database, StorageEngine
+from clp_py_utils.clp_config import Database, StorageEngine, StorageType, WorkerConfig
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
-    report_command_creation_failure,
+    report_task_failure,
     run_query_task,
 )
+from job_orchestration.executor.utils import try_load_worker_config
 from job_orchestration.scheduler.job_config import SearchJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
@@ -21,14 +22,16 @@ logger = get_task_logger(__name__)
 
 
 def make_command(
-    storage_engine: str,
     clp_home: Path,
-    archives_dir: Path,
+    worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
     results_cache_uri: str,
     results_collection: str,
 ) -> Optional[List[str]]:
+    storage_engine = worker_config.package.storage_engine
+    archives_dir = worker_config.archive_output.get_directory()
+
     if StorageEngine.CLP == storage_engine:
         command = [str(clp_home / "bin" / "clo"), "s", str(archives_dir / archive_id)]
         if search_config.path_filter is not None:
@@ -116,26 +119,39 @@ def search(
     task_status: QueryTaskStatus
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
+    # Load configuration
+    worker_config = try_load_worker_config(os.getenv("WORKER_CONFIG_PATH"), logger)
+    if worker_config is None:
+        return report_task_failure(
+            sql_adapter=sql_adapter,
+            task_id=task_id,
+            start_time=start_time,
+        )
+
+    if worker_config.archive_output.storage.type == StorageType.S3:
+        logger.error(f"Search is not supported for S3 storage type")
+        return report_task_failure(
+            sql_adapter=sql_adapter,
+            task_id=task_id,
+            start_time=start_time,
+        )
+
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
-    archive_directory = Path(os.getenv("CLP_ARCHIVE_OUTPUT_DIR"))
-    clp_storage_engine = os.getenv("CLP_STORAGE_ENGINE")
     search_config = SearchJobConfig.parse_obj(job_config)
 
     task_command = make_command(
-        storage_engine=clp_storage_engine,
         clp_home=clp_home,
-        archives_dir=archive_directory,
+        worker_config=worker_config,
         archive_id=archive_id,
         search_config=search_config,
         results_cache_uri=results_cache_uri,
         results_collection=job_id,
     )
     if not task_command:
-        return report_command_creation_failure(
+        logger.error(f"Error creating {task_name} command")
+        return report_task_failure(
             sql_adapter=sql_adapter,
-            logger=logger,
-            task_name=task_name,
             task_id=task_id,
             start_time=start_time,
         )

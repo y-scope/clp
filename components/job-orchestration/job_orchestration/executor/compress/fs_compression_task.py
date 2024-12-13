@@ -135,18 +135,21 @@ def make_clp_s_command(
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
+    enable_s3_write: bool,
 ):
     # fmt: off
     compression_cmd = [
         str(clp_home / "bin" / "clp-s"),
         "c", str(archive_output_dir),
-        "--single-file-archive",
         "--print-archive-stats",
         "--target-encoded-size",
         str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
+
+    if enable_s3_write:
+        compression_cmd.append("--single-file-archive")
 
     if clp_config.input.timestamp_key is not None:
         compression_cmd.append("--timestamp-key")
@@ -159,8 +162,6 @@ def run_clp(
     worker_config: WorkerConfig,
     clp_config: ClpIoConfig,
     clp_home: pathlib.Path,
-    data_dir: pathlib.Path,
-    archive_output_dir: pathlib.Path,
     logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
@@ -175,8 +176,6 @@ def run_clp(
     :param worker_config: WorkerConfig
     :param clp_config: ClpIoConfig
     :param clp_home:
-    :param data_dir:
-    :param archive_output_dir:
     :param logs_dir:
     :param job_id:
     :param task_id:
@@ -186,9 +185,11 @@ def run_clp(
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
-    clp_storage_engine = worker_config.package.storage_engine
-
     instance_id_str = f"compression-job-{job_id}-task-{task_id}"
+
+    clp_storage_engine = worker_config.package.storage_engine
+    data_dir = worker_config.data_directory
+    archive_output_dir = worker_config.archive_output.get_directory()
 
     # Generate database config file for clp
     db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
@@ -197,9 +198,18 @@ def run_clp(
     db_config_file.close()
 
     # Get s3 config
-    storage_config = worker_config.archive_output.storage
-    s3_config = storage_config.s3_config if StorageType.S3 == storage_config.type else None
-    s3_upload_failed = False
+    s3_config = None
+    enable_s3_write = False
+    s3_write_failed = False
+    storage_type = worker_config.archive_output.storage.type
+    if StorageType.S3 == storage_type:
+        # This should be caught by start-clp and could be redundant, but let's be safe for now.
+        if StorageEngine.CLP == clp_storage_engine:
+            logger.error(f"S3 is not supported for {clp_storage_engine}")
+            return False, {"error_message": f"S3 is not supported for {clp_storage_engine}"}
+
+        s3_config = worker_config.archive_output.storage.s3_config
+        enable_s3_write = True
 
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd = make_clp_command(
@@ -214,6 +224,7 @@ def run_clp(
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
+            enable_s3_write=enable_s3_write
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
@@ -264,13 +275,13 @@ def run_clp(
         if last_archive_stats is not None and (
             None is stats or stats["id"] != last_archive_stats["id"]
         ):
-            if s3_config is not None:
+            if enable_s3_write:
                 result = upload_single_file_archive_to_s3(
                     last_archive_stats, archive_output_dir, s3_config
                 )
                 if not result.success:
                     worker_output["error_message"] = result.error
-                    s3_upload_failed = True
+                    s3_write_failed = True
                     # Upon failure, skip updating the archive tags and job metadata.
                     break
 
@@ -308,7 +319,7 @@ def run_clp(
     # Close stderr log file
     stderr_log_file.close()
 
-    if s3_upload_failed:
+    if s3_write_failed:
         logger.error(f"Failed to upload to S3.")
         return CompressionTaskStatus.FAILED, worker_output
     if compression_successful:
@@ -329,23 +340,24 @@ def compress(
     clp_metadata_db_connection_config,
 ):
     clp_home = pathlib.Path(os.getenv("CLP_HOME"))
-    logs_dir = pathlib.Path(os.getenv("CLP_LOGS_DIR"))
-
-    # Load configuration
-    worker_config_path = pathlib.Path(os.getenv("WORKER_CONFIG_PATH"))
-    try:
-        worker_config = WorkerConfig.parse_obj(read_yaml_config_file(worker_config_path))
-    except ValidationError as err:
-        logger.error(err)
-        return -1
-    except Exception as ex:
-        logger.error(ex)
-        return -1
-
 
     # Set logging level
+    logs_dir = pathlib.Path(os.getenv("CLP_LOGS_DIR"))
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
     set_logging_level(logger, clp_logging_level)
+
+    # Load configuration
+    try:
+        worker_config = WorkerConfig.parse_obj(read_yaml_config_file(pathlib.Path(os.getenv("WORKER_CONFIG_PATH"))))
+    except Exception as ex:
+        error_msg = "Failed to load worker config"
+        logger.exception(error_msg)
+        return CompressionTaskResult(
+            task_id=task_id,
+            status=CompressionTaskStatus.FAILED,
+            duration=0,
+            error_message=error_msg
+        )
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
@@ -358,8 +370,6 @@ def compress(
         worker_config,
         clp_io_config,
         clp_home,
-        worker_config.data_directory,
-        worker_config.archive_output.get_directory(),
         logs_dir,
         job_id,
         task_id,
