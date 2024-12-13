@@ -30,7 +30,6 @@ from clp_py_utils.core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
-from clp_py_utils.s3_utils import verify_s3_config_for_archive_output
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
@@ -498,12 +497,6 @@ def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_input_logs_dir()
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_dir()
-
-    storage_config = clp_config.archive_output.storage
-    if StorageType.S3 == storage_config.type:
-        result = verify_s3_config_for_archive_output(storage_config.s3_config)
-        if not result.success:
-            raise ValueError(f"S3 config verification failed: {result.error}")
 
 
 def validate_webui_config(

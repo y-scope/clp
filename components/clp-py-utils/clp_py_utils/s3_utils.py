@@ -8,11 +8,6 @@ from clp_py_utils.clp_config import S3Config
 from clp_py_utils.result import Result
 
 
-def verify_s3_config_for_archive_output(s3_config: S3Config) -> Result:
-    # TODO: properly verify the s3 config
-    return Result(success=True)
-
-
 def s3_put(
     s3_config: S3Config, src_file: Path, dest_file_name: str, total_max_attempts: int = 3
 ) -> Result:
