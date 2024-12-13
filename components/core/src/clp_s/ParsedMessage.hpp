@@ -1,6 +1,7 @@
 #ifndef CLP_S_PARSEDMESSAGE_HPP
 #define CLP_S_PARSEDMESSAGE_HPP
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <string_view>
