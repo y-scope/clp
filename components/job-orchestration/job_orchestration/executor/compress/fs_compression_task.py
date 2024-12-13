@@ -281,7 +281,6 @@ def run_clp(
                 if not result.success:
                     worker_output["error_message"] = result.error
                     s3_write_failed = True
-                    # Upon failure, skip updating the archive tags and job metadata.
                     break
 
             # We've started a new archive so add the previous archive's last
