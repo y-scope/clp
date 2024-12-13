@@ -30,8 +30,8 @@ def make_command(
 ) -> Optional[List[str]]:
     storage_engine = worker_config.package.storage_engine
     archives_dir = worker_config.archive_output.get_directory()
-    stream_output_dir = worker_config.stream_output.directory
-    stream_collection_name = worker_config.results_cache.stream_collection_name
+    stream_output_dir = worker_config.stream_output_dir
+    stream_collection_name = worker_config.stream_collection_name
 
     if StorageEngine.CLP == storage_engine:
         logger.info("Starting IR extraction")
