@@ -3,12 +3,14 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
-#include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
+#include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
 #include <simdjson.h>
 
@@ -100,22 +102,32 @@ private:
      * @return The clp-s archive Node Type that should be used for the archive node
      */
     static auto get_archive_node_type(
-            clp::ffi::SchemaTree::Node::Type ir_node_type,
-            bool node_has_value,
-            std::optional<clp::ffi::Value> const& node_value
+            clp::ffi::SchemaTree const& tree,
+            std::pair<clp::ffi::SchemaTree::Node::id_t, std::optional<clp::ffi::Value>> const&
+                    kv_pair
     ) -> NodeType;
 
     /**
      * Get archive node id for ir node
-     * @param ir_node_to_archive_node_unordered_map cache of node id conversions between
-     * deserializer schema tree nodes and archive schema tree nodes
+     * @param ir_node_id ID of the IR node
+     * @param ir_node_to_add IR Schema Node that is being translated to archive
+     * @param archive_node_type Type of the archive node
+     * @param parent_node_id ID of the parent of the IR node
+     */
+    auto add_node_to_archive_and_translations(
+            uint32_t ir_node_id,
+            clp::ffi::SchemaTree::Node const& ir_node_to_add,
+            NodeType archive_node_type,
+            int32_t parent_node_id
+    ) -> int;
+
+    /**
+     * Get archive node id for ir node
      * @param ir_node_id ID of the IR node
      * @param archive_node_type Type of the archive node
      * @param ir_tree The IR schema tree
      */
     auto get_archive_node_id(
-            std::unordered_map<uint32_t, std::vector<std::pair<NodeType, int32_t>>>&
-                    ir_node_to_archive_node_unordered_map,
             uint32_t ir_node_id,
             NodeType archive_node_type,
             clp::ffi::SchemaTree const& ir_tree
@@ -124,14 +136,8 @@ private:
     /**
      * Parses a Key Value Log Event
      * @param kv the key value log event
-     * @param ir_node_to_archive_node_unordered_map cache of node id conversions between
-     * deserializer schema tree nodes and archive schema tree nodes
      */
-    void parse_kv_log_event(
-            KeyValuePairLogEvent const& kv,
-            std::unordered_map<uint32_t, std::vector<std::pair<NodeType, int32_t>>>&
-                    ir_node_to_archive_node_unordered_map
-    );
+    void parse_kv_log_event(KeyValuePairLogEvent const& kv);
 
     /**
      * Parses an array within a JSON line
@@ -176,6 +182,9 @@ private:
     size_t m_max_document_size;
     bool m_structurize_arrays{false};
     bool m_record_log_order{true};
+
+    absl::flat_hash_map<std::pair<uint32_t, NodeType>, int32_t>
+            m_ir_node_to_archive_node_id_mapping;
 };
 }  // namespace clp_s
 
