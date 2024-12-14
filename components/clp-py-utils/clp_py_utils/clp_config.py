@@ -439,6 +439,7 @@ class ArchiveOutput(BaseModel):
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
+
 class StreamOutput(BaseModel):
     directory: pathlib.Path = pathlib.Path("var") / "data" / "streams"
     target_uncompressed_size: int = 128 * 1024 * 1024
