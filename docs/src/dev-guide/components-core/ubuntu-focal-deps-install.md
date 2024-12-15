@@ -10,7 +10,7 @@ Before you run any commands below, you should review the scripts to ensure they 
 any dependencies or apply any configurations that you don't expect.
 :::
 
-To install all dependencies, run:
+To install all dependencies, To install all dependencies, run with elevated privileges::
 
 ```shell
 components/core/tools/scripts/lib_install/ubuntu-focal/install-all.sh
