@@ -3,9 +3,9 @@ from pathlib import Path
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
+from result import Err, Ok, Result
 
 from clp_py_utils.clp_config import S3Config
-from result import Ok, Err, Result
 
 
 def s3_put(
