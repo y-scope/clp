@@ -628,7 +628,7 @@ def start_compression_worker(
 ):
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
-    compression_worker_mount = [mounts.archives_output_dir]
+    compression_worker_mounts = [mounts.archives_output_dir]
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -640,7 +640,7 @@ def start_compression_worker(
         clp_config.redis.compression_backend_database,
         num_cpus,
         mounts,
-        compression_worker_mount,
+        compression_worker_mounts,
     )
 
 
@@ -654,9 +654,9 @@ def start_query_worker(
     celery_method = "job_orchestration.executor.query"
     celery_route = f"{QueueName.QUERY}"
 
-    query_worker_mount = [mounts.stream_output_dir]
+    query_worker_mounts = [mounts.stream_output_dir]
     if clp_config.archive_output.storage.type == StorageType.FS:
-        query_worker_mount.append(mounts.archives_output_dir)
+        query_worker_mounts.append(mounts.archives_output_dir)
 
     generic_start_worker(
         QUERY_WORKER_COMPONENT_NAME,
@@ -669,7 +669,7 @@ def start_query_worker(
         clp_config.redis.query_backend_database,
         num_cpus,
         mounts,
-        query_worker_mount,
+        query_worker_mounts,
     )
 
 
@@ -727,13 +727,13 @@ def generic_start_worker(
             f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
         ),
         "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
-        "-e", f"WORKER_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
+        "-e", f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
-
     # fmt: on
+
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,

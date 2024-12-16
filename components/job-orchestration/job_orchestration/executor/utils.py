@@ -6,16 +6,12 @@ from clp_py_utils.clp_config import WorkerConfig
 from clp_py_utils.core import read_yaml_config_file
 
 
-def try_load_worker_config(
-    config_path_str: str,
+def load_worker_config(
+    config_path: Path,
     logger: Logger,
 ) -> Optional[WorkerConfig]:
-    if config_path_str is None:
-        logger.error("config_path_str can't be empty")
-        return None
-
     try:
-        return WorkerConfig.parse_obj(read_yaml_config_file(Path(config_path_str)))
+        return WorkerConfig.parse_obj(read_yaml_config_file(config_path))
     except Exception:
         logger.exception("Failed to load worker config")
         return None

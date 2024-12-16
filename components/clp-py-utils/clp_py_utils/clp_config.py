@@ -310,35 +310,35 @@ class Queue(BaseModel):
 
 
 class S3Config(BaseModel):
-    region_name: str
+    region_code: str
     bucket: str
     key_prefix: str
 
     access_key_id: Optional[str] = None
     secret_access_key: Optional[str] = None
 
-    @validator("region_name")
-    def validate_region_name(cls, field):
+    @validator("region_code")
+    def validate_region_code(cls, field):
         if field == "":
-            raise ValueError("region_name is not provided")
+            raise ValueError("region_code can not be empty")
         return field
 
     @validator("bucket")
     def validate_bucket(cls, field):
         if field == "":
-            raise ValueError("bucket is not provided")
+            raise ValueError("bucket can not be empty")
         return field
 
     @validator("key_prefix")
     def validate_key_prefix(cls, field):
         if field == "":
-            raise ValueError("key_prefix is not provided")
+            raise ValueError("key_prefix can not be empty")
         if not field.endswith("/"):
             raise ValueError('key_prefix must end with "/"')
         return field
 
 
-class FSStorage(BaseModel):
+class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
     directory: pathlib.Path = pathlib.Path("var") / "data" / "archives"
 
@@ -348,7 +348,7 @@ class FSStorage(BaseModel):
             raise ValueError("directory cannot be empty")
         return field
 
-    def make_config_path_absolute(self, clp_home: pathlib.Path):
+    def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.directory = make_config_path_absolute(clp_home, self.directory)
 
     def dump_to_primitive_dict(self):
@@ -368,13 +368,7 @@ class S3Storage(BaseModel):
             raise ValueError("staging_directory cannot be empty")
         return field
 
-    @validator("s3_config")
-    def validate_s3_config(cls, field):
-        if None == field:
-            raise ValueError("s3_config must be provided")
-        return field
-
-    def make_config_path_absolute(self, clp_home: pathlib.Path):
+    def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
     def dump_to_primitive_dict(self):
@@ -384,17 +378,11 @@ class S3Storage(BaseModel):
 
 
 class ArchiveOutput(BaseModel):
-    storage: Union[FSStorage, S3Storage] = FSStorage()
+    storage: Union[FsStorage, S3Storage] = FsStorage()
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
-
-    @validator("storage")
-    def validate_storage(cls, field) -> bool:
-        if None == field:
-            raise ValueError("storage must be provided")
-        return field
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -422,16 +410,23 @@ class ArchiveOutput(BaseModel):
 
     def set_directory(self, directory: pathlib.Path):
         storage_config = self.storage
-        if StorageType.FS == storage_config.type:
+        storage_type = storage_config.type
+        if StorageType.FS == storage_type:
             storage_config.directory = directory
-        else:
+        elif StorageType.S3 == storage_type:
             storage_config.staging_directory = directory
+        else:
+            raise NotImplementedError(f"storage.type {storage_type} is not supported")
 
     def get_directory(self) -> pathlib.Path:
         storage_config = self.storage
+        storage_type = storage_config.type
         if StorageType.FS == storage_config.type:
             return storage_config.directory
-        return storage_config.staging_directory
+        elif StorageType.S3 == storage_type:
+            return storage_config.staging_directory
+        else:
+            raise NotImplementedError(f"storage.type {storage_type} is not supported")
 
     def dump_to_primitive_dict(self):
         d = self.dict()
@@ -531,7 +526,7 @@ class CLPConfig(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
-        self.archive_output.storage.make_config_path_absolute(clp_home)
+        self.archive_output.storage.make_config_paths_absolute(clp_home)
         self.stream_output.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)

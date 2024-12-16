@@ -17,15 +17,15 @@ def s3_put(
     if not src_file.is_file():
         return Result(success=False, error=f"{src_file} is not a file")
 
-    s3_client_args = {
-        "region_name": s3_config.region_name,
-        "aws_access_key_id": s3_config.access_key_id,
-        "aws_secret_access_key": s3_config.secret_access_key,
-    }
-
     config = Config(retries=dict(total_max_attempts=total_max_attempts, mode="adaptive"))
 
-    my_s3_client = boto3.client("s3", **s3_client_args, config=config)
+    my_s3_client = boto3.client(
+        "s3",
+        region_name=s3_config.region_code,
+        aws_access_key_id=s3_config.access_key_id,
+        aws_secret_access_key=s3_config.secret_access_key,
+        config=config,
+    )
 
     with open(src_file, "rb") as file_data:
         try:

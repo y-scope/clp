@@ -59,7 +59,7 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
         SET {", ".join(field_set_expressions)}
         WHERE id = %s
     """
-    values = [v for v in kv.values()] + [task_id]
+    values = list(kv.values()) + [task_id]
     db_cursor.execute(query, values)
 
 
@@ -74,7 +74,7 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
         SET {", ".join(field_set_expressions)}
         WHERE id = %s
     """
-    values = [v for v in kv.values()] + [job_id]
+    values = list(kv.values()) + [job_id]
     db_cursor.execute(query, values)
 
 

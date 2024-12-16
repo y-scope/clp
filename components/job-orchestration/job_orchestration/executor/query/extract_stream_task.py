@@ -13,7 +13,7 @@ from job_orchestration.executor.query.utils import (
     report_task_failure,
     run_query_task,
 )
-from job_orchestration.executor.utils import try_load_worker_config
+from job_orchestration.executor.utils import load_worker_config
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
@@ -101,7 +101,8 @@ def extract_stream(
     sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
 
     # Load configuration
-    worker_config = try_load_worker_config(os.getenv("WORKER_CONFIG_PATH"), logger)
+    clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))
+    worker_config = load_worker_config(clp_config_path, logger)
     if worker_config is None:
         return report_task_failure(
             sql_adapter=sql_adapter,
