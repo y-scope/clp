@@ -10,7 +10,7 @@ Before you run any commands below, you should review the scripts to ensure they 
 any dependencies or apply any configurations that you don't expect.
 :::
 
-To install all dependencies, run:
+To install all dependencies, run the following with elevated privileges:
 
 :::{note}
 The packages built from source ([install-packages-from-source.sh][src-install-script]) are installed
