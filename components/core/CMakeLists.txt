@@ -257,6 +257,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
     src/clp_s/FileWriter.hpp
+    src/clp_s/InputConfig.cpp
+    src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
     src/clp_s/JsonConstructor.hpp
     src/clp_s/JsonFileIterator.cpp
@@ -592,7 +594,7 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
+        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
         ${CURL_LIBRARIES}
         fmt::fmt
         kql
