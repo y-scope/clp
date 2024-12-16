@@ -2,7 +2,6 @@ import datetime
 import json
 import os
 import pathlib
-from result import Result, is_err
 import subprocess
 from contextlib import closing
 from typing import Any, Dict, Optional
@@ -27,6 +26,7 @@ from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
+from result import is_err, Result
 
 # Setup logging
 logger = get_task_logger(__name__)
@@ -279,7 +279,7 @@ def run_clp(
 
                 result = upload_single_file_archive_to_s3(archive_id, src_archive_file, s3_config)
                 if result.is_err():
-                    s3_write_failed = False
+                    s3_write_failed = True
                     s3_error_msg = result.err_value
                     break
                 src_archive_file.unlink()

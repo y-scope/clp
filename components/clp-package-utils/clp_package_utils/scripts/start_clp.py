@@ -715,7 +715,6 @@ def generic_start_worker(
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
         "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
         "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-e", (
             f"BROKER_URL=amqp://"
