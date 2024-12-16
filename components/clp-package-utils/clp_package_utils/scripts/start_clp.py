@@ -628,9 +628,7 @@ def start_compression_worker(
 ):
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
-
     compression_worker_mount = [mounts.archives_output_dir]
-
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,

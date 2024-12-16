@@ -85,14 +85,14 @@ def upload_single_file_archive_to_s3(
 ) -> Result:
     archive_id = archive_stats["id"]
 
-    logger.info(f"Starting to upload archive {archive_id} to S3...")
+    logger.info(f"Uploading archive {archive_id} to S3...")
     src_file = archive_dir / archive_id
     result = s3_put(s3_config, src_file, archive_id)
     if not result.success:
         logger.error(f"Failed to upload archive {archive_id}: {result.error}")
         return result
 
-    logger.info(f"Finished uploading archive {archive_id} to S3...")
+    logger.info(f"Finished uploading archive {archive_id} to S3.")
     src_file.unlink()
     return Result(success=True)
 
@@ -197,15 +197,15 @@ def run_clp(
     db_config_file.close()
 
     # Get s3 config
-    s3_config = None
+    s3_config: S3Config
     enable_s3_write = False
     s3_write_failed = False
     storage_type = worker_config.archive_output.storage.type
     if StorageType.S3 == storage_type:
-        # This should be caught by start-clp and could be redundant, but let's be safe for now.
         if StorageEngine.CLP == clp_storage_engine:
-            logger.error(f"S3 is not supported for {clp_storage_engine}")
-            return False, {"error_message": f"S3 is not supported for {clp_storage_engine}"}
+            error_msg = f"S3 storage is not supported for the {clp_storage_engine} storage engine."
+            logger.error(error_msg)
+            return False, {"error_message": error_msg}
 
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
@@ -262,7 +262,6 @@ def run_clp(
         "total_uncompressed_size": 0,
         "total_compressed_size": 0,
     }
-
     while not last_line_decoded:
         line = proc.stdout.readline()
         stats: Optional[Dict[str, Any]] = None

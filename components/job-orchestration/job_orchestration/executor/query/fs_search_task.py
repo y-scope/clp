@@ -129,7 +129,7 @@ def search(
         )
 
     if worker_config.archive_output.storage.type == StorageType.S3:
-        logger.error(f"Search is not supported for S3 storage type")
+        logger.error(f"Search is not supported for the S3 storage type")
         return report_task_failure(
             sql_adapter=sql_adapter,
             task_id=task_id,

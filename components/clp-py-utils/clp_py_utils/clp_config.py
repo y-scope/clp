@@ -334,7 +334,7 @@ class S3Config(BaseModel):
         if field == "":
             raise ValueError("key_prefix is not provided")
         if not field.endswith("/"):
-            raise ValueError(r'key_prefix must end with "/"')
+            raise ValueError('key_prefix must end with "/"')
         return field
 
 
@@ -345,7 +345,7 @@ class FSStorage(BaseModel):
     @validator("directory")
     def validate_directory(cls, field):
         if "" == field:
-            raise ValueError("directory can not be empty")
+            raise ValueError("directory cannot be empty")
         return field
 
     def make_config_path_absolute(self, clp_home: pathlib.Path):
@@ -365,7 +365,7 @@ class S3Storage(BaseModel):
     @validator("staging_directory")
     def validate_staging_directory(cls, field):
         if "" == field:
-            raise ValueError("staging_directory can not be empty")
+            raise ValueError("staging_directory cannot be empty")
         return field
 
     @validator("s3_config")
@@ -420,7 +420,7 @@ class ArchiveOutput(BaseModel):
             raise ValueError("target_segment_size must be greater than 0")
         return field
 
-    def set_directory(self, directory: pathlib.Path) -> None:
+    def set_directory(self, directory: pathlib.Path):
         storage_config = self.storage
         if StorageType.FS == storage_config.type:
             storage_config.directory = directory
@@ -552,12 +552,13 @@ class CLPConfig(BaseModel):
             and StorageEngine.CLP_S != self.package.storage_engine
         ):
             raise ValueError(
-                f"S3 storage is only supported with storage engine: {StorageEngine.CLP_S}"
+                f"archive_output.storage.type = 's3' is only supported with package.storage_engine"
+                f" = '{StorageEngine.CLP_S}'"
             )
         try:
             validate_path_could_be_dir(self.archive_output.get_directory())
         except ValueError as ex:
-            raise ValueError(f"directory of storage config is invalid: {ex}")
+            raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
     def validate_stream_output_dir(self):
         try:
@@ -653,7 +654,9 @@ class WorkerConfig(BaseModel):
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
+
         # Turn paths into primitive strings
         d["data_directory"] = str(self.data_directory)
         d["stream_output_dir"] = str(self.stream_output_dir)
+
         return d
