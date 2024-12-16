@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import pathlib
+from result import Result, is_err
 import subprocess
 from contextlib import closing
 from typing import Any, Dict, Optional
@@ -20,7 +21,6 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.result import Result
 from clp_py_utils.s3_utils import s3_put
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
@@ -82,15 +82,15 @@ def upload_single_file_archive_to_s3(
     archive_id: str,
     src_archive_file: pathlib.Path,
     s3_config: S3Config,
-) -> Result:
+) -> Result[bool, str]:
     logger.info(f"Uploading archive {archive_id} to S3...")
     result = s3_put(s3_config, src_archive_file, archive_id)
-    if not result.success:
-        logger.error(f"Failed to upload archive {archive_id}: {result.error}")
+    if result.is_err():
+        logger.error(f"Failed to upload archive {archive_id}: {result.err_value}")
         return result
 
     logger.info(f"Finished uploading archive {archive_id} to S3.")
-    return Result(success=True)
+    return result
 
 
 def make_clp_command(
@@ -257,8 +257,11 @@ def run_clp(
     total_uncompressed_size = 0
     total_compressed_size = 0
 
-    # Handle job metadata update and s3 write if enabled
+    # Variables to track s3 write status.
     s3_error_msg = None
+    s3_write_failed = False
+
+    # Handle job metadata update and s3 write if enabled
     while not last_line_decoded:
         line = proc.stdout.readline()
         stats: Optional[Dict[str, Any]] = None
@@ -275,8 +278,9 @@ def run_clp(
                 src_archive_file = archive_output_dir / archive_id
 
                 result = upload_single_file_archive_to_s3(archive_id, src_archive_file, s3_config)
-                if not result.success:
-                    s3_error_msg = result.error
+                if result.is_err():
+                    s3_write_failed = False
+                    s3_error_msg = result.err_value
                     break
                 src_archive_file.unlink()
 
@@ -320,7 +324,7 @@ def run_clp(
     }
 
     # TODO: think about how to deal with error messages
-    if s3_error_msg is not None:
+    if s3_write_failed:
         worker_output["error_message"] = s3_error_msg
         return CompressionTaskStatus.FAILED, worker_output
     if compression_successful:
