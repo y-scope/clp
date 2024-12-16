@@ -93,6 +93,6 @@ fragment SPECIAL_CHARACTER
 
 // For unicode hex
 fragment UNICODE: '\\u' HEXDIGIT HEXDIGIT HEXDIGIT HEXDIGIT ;
-fragment HEXDIGIT: [0-9a-fA-F]+ ;
+fragment HEXDIGIT: [0-9a-fA-F] ;
 
 SPACE:  [ \t\r\n] -> skip ;

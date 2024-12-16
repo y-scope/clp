@@ -230,8 +230,8 @@ public:
      * (e.g. \n) and less common control sequences with unicode escape sequences (e.g. \u001f). The
      * '"' and '\' characters are escaped with a backslash.
      *
-     * @param source
      * @param destination
+     * @param source
      */
     static void escape_json_string(std::string& destination, std::string_view const source);
 
@@ -245,7 +245,7 @@ public:
      *
      * @param value
      * @param unescaped
-     * @return true if the value was escaped succesfully and false otherwise.
+     * @return true if the value was unescaped successfully, false otherwise.
      */
     static bool unescape_kql_value(std::string const& value, std::string& unescaped);
 
@@ -280,7 +280,7 @@ private:
             if ('\x00' <= nibble && nibble <= '\x09') {
                 return '0' + (nibble - '\x00');
             } else {
-                return 'a' + (nibble - '\x10');
+                return 'a' + (nibble - '\x0a');
             }
         };
 
