@@ -9,6 +9,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <fmt/format.h>
 
+#include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonConstructor.hpp"
 #include "../src/clp_s/JsonParser.hpp"
 
@@ -70,7 +71,9 @@ void compress(bool structurize_arrays) {
     REQUIRE((std::filesystem::is_directory(cTestEndToEndArchiveDirectory)));
 
     clp_s::JsonParserOption parser_option{};
-    parser_option.file_paths.push_back(get_test_input_local_path());
+    parser_option.input_paths.emplace_back(
+            clp_s::Path{.source{clp_s::InputSource::Filesystem}, .path{get_test_input_local_path()}}
+    );
     parser_option.archives_dir = cTestEndToEndArchiveDirectory;
     parser_option.target_encoded_size = cDefaultTargetEncodedSize;
     parser_option.max_document_size = cDefaultMaxDocumentSize;
@@ -94,17 +97,19 @@ auto extract() -> std::filesystem::path {
     REQUIRE(std::filesystem::is_directory(cTestEndToEndOutputDirectory));
 
     clp_s::JsonConstructorOption constructor_option{};
-    constructor_option.archives_dir = cTestEndToEndArchiveDirectory;
     constructor_option.output_dir = cTestEndToEndOutputDirectory;
     constructor_option.ordered = cDefaultOrdered;
     constructor_option.target_ordered_chunk_size = cDefaultTargetOrderedChunkSize;
-    for (auto const& entry : std::filesystem::directory_iterator(constructor_option.archives_dir)) {
+    for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
         if (false == entry.is_directory()) {
             // Skip non-directories
             continue;
         }
 
-        constructor_option.archive_id = entry.path().filename();
+        constructor_option.archive_path = clp_s::Path{
+                .source{clp_s::InputSource::Filesystem},
+                .path{entry.path().string()}
+        };
         clp_s::JsonConstructor constructor{constructor_option};
         constructor.store();
     }
