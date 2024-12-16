@@ -353,7 +353,12 @@ int main(int argc, char const* argv[]) {
 
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         for (auto const& archive_path : command_line_arguments.get_input_paths()) {
-            archive_reader->open(archive_path, command_line_arguments.get_network_auth());
+            try {
+                archive_reader->open(archive_path, command_line_arguments.get_network_auth());
+            } catch (std::exception const& e) {
+                SPDLOG_ERROR("Failed to open archive - {}", e.what());
+                return 1;
+            }
             if (false
                 == search_archive(
                         command_line_arguments,
