@@ -3,6 +3,7 @@
 
 #include <simdjson.h>
 
+#include "../clp/ReaderInterface.hpp"
 #include "FileReader.hpp"
 
 namespace clp_s {
@@ -22,7 +23,7 @@ public:
      * @param buf_size the initial buffer size
      */
     explicit JsonFileIterator(
-            std::string const& file_name,
+            clp::ReaderInterface& reader,
             size_t max_document_size,
             size_t buf_size = 1024 * 1024 /*1MB default*/
     );
@@ -34,12 +35,6 @@ public:
      * @return true if the iterator is valid, false otherwise
      */
     [[nodiscard]] bool get_json(simdjson::ondemand::document_stream::iterator& it);
-
-    /**
-     * Checks if the file is open
-     * @return true if the file opened successfully
-     */
-    [[nodiscard]] bool is_open() const { return m_reader.is_open(); }
 
     /**
      * @return number of truncated bytes after json documents
@@ -86,7 +81,7 @@ private:
     size_t m_buf_occupied{0};
     size_t m_max_document_size{0};
     char* m_buf{nullptr};
-    FileReader m_reader;
+    clp::ReaderInterface& m_reader;
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
     bool m_eof{false};
