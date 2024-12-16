@@ -122,7 +122,7 @@ public:
      * @return the epoch time corresponding to the string timestamp
      */
     epochtime_t ingest_timestamp_entry(
-            std::string const& key,
+            std::string_view key,
             int32_t node_id,
             std::string_view timestamp,
             uint64_t& pattern_id
@@ -136,11 +136,11 @@ public:
      * @param node_id
      * @param timestamp
      */
-    void ingest_timestamp_entry(std::string const& key, int32_t node_id, double timestamp) {
+    void ingest_timestamp_entry(std::string_view key, int32_t node_id, double timestamp) {
         m_timestamp_dict.ingest_entry(key, node_id, timestamp);
     }
 
-    void ingest_timestamp_entry(std::string const& key, int32_t node_id, int64_t timestamp) {
+    void ingest_timestamp_entry(std::string_view key, int32_t node_id, int64_t timestamp) {
         m_timestamp_dict.ingest_entry(key, node_id, timestamp);
     }
 
