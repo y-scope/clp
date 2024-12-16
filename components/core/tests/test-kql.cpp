@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
 #include "../src/clp_s/search/AndExpr.hpp"
@@ -237,5 +238,31 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         stringstream empty_token_column{query};
         auto filter = parse_kql_expression(empty_token_column);
         REQUIRE(nullptr == filter);
+    }
+
+    SECTION("Escape sequences in value") {
+        auto translated_pair = GENERATE(
+                std::pair{"\\\\", "\\\\"},
+                std::pair{"\\??", "\\??"},
+                std::pair{"\\**", "\\**"},
+                std::pair{"\u9999", "香"},
+                std::pair{"\\r\\n\\t\\b\\f", "\r\n\t\b\f"},
+                std::pair{"\\\"", "\""},
+                std::pair{"\\{\\}\\(\\)\\<\\>", "{}()<>"}
+        );
+
+        auto formatted_query = fmt::format("*: \"{}\"", translated_pair.first);
+        stringstream query{formatted_query};
+        auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query));
+        REQUIRE(nullptr != filter);
+        REQUIRE(nullptr != filter->get_operand());
+        REQUIRE(nullptr != filter->get_column());
+        REQUIRE(false == filter->has_only_expression_operands());
+        REQUIRE(false == filter->is_inverted());
+        REQUIRE(FilterOperation::EQ == filter->get_operation());
+        REQUIRE(true == filter->get_column()->is_pure_wildcard());
+        std::string literal;
+        REQUIRE(true == filter->get_operand()->as_var_string(literal, FilterOperation::EQ));
+        REQUIRE(literal == translated_pair.second);
     }
 }
