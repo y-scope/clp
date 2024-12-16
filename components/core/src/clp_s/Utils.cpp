@@ -1,42 +1,53 @@
 #include "Utils.hpp"
 
-#include <boost/filesystem.hpp>
+#include <exception>
+#include <filesystem>
+#include <set>
+
+#include <boost/url.hpp>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
+
+#include "archive_constants.hpp"
+#include "Utils.hpp"
 
 using std::string;
 using std::string_view;
 
 namespace clp_s {
-bool FileUtils::find_all_files(std::string const& path, std::vector<std::string>& file_paths) {
+bool FileUtils::find_all_files_in_directory(
+        std::string const& path,
+        std::vector<std::string>& file_paths
+) {
     try {
-        if (false == boost::filesystem::is_directory(path)) {
+        if (false == std::filesystem::is_directory(path)) {
             // path is a file
             file_paths.push_back(path);
             return true;
         }
 
-        if (boost::filesystem::is_empty(path)) {
+        if (std::filesystem::is_empty(path)) {
             // path is an empty directory
             return true;
         }
 
         // Iterate directory
-        boost::filesystem::recursive_directory_iterator iter(
+        std::filesystem::recursive_directory_iterator iter(
                 path,
-                boost::filesystem::directory_options::follow_directory_symlink
+                std::filesystem::directory_options::follow_directory_symlink
         );
-        boost::filesystem::recursive_directory_iterator end;
+        std::filesystem::recursive_directory_iterator end;
         for (; iter != end; ++iter) {
             // Check if current entry is an empty directory or a file
-            if (boost::filesystem::is_directory(iter->path())) {
-                if (boost::filesystem::is_empty(iter->path())) {
+            if (std::filesystem::is_directory(iter->path())) {
+                if (std::filesystem::is_empty(iter->path())) {
                     iter.disable_recursion_pending();
                 }
             } else {
                 file_paths.push_back(iter->path().string());
             }
         }
-    } catch (boost::filesystem::filesystem_error& exception) {
+    } catch (std::exception const& exception) {
         SPDLOG_ERROR(
                 "Failed to find files/directories at '{}' - {}.",
                 path.c_str(),
@@ -48,16 +59,106 @@ bool FileUtils::find_all_files(std::string const& path, std::vector<std::string>
     return true;
 }
 
-bool FileUtils::validate_path(std::vector<std::string> const& paths) {
-    bool all_paths_exist = true;
-    for (auto const& path : paths) {
-        if (false == boost::filesystem::exists(path)) {
-            SPDLOG_ERROR("'{}' does not exist.", path.c_str());
-            all_paths_exist = false;
+namespace {
+/**
+ * Determines if a directory is a multi-file archive.
+ * @param path
+ * @return true if this directory is a multi-file archive, false otherwise
+ */
+bool directory_is_multi_file_archive(std::string_view const path) {
+    for (auto const& entry : std::filesystem::directory_iterator{path}) {
+        if (entry.is_directory()) {
+            return false;
+        }
+
+        std::string file_name;
+        if (false == FileUtils::get_last_non_empty_path_component(entry.path().string(), file_name))
+        {
+            return false;
+        }
+        auto formatted_name = fmt::format("/{}", file_name);
+        if (constants::cArchiveTimestampDictFile == formatted_name
+            || constants::cArchiveSchemaTreeFile == formatted_name
+            || constants::cArchiveSchemaMapFile == formatted_name
+            || constants::cArchiveVarDictFile == formatted_name
+            || constants::cArchiveLogDictFile == formatted_name
+            || constants::cArchiveArrayDictFile == formatted_name
+            || constants::cArchiveTableMetadataFile == formatted_name
+            || constants::cArchiveTablesFile == formatted_name)
+        {
+            continue;
+        } else {
+            try {
+                auto segment_file_number = std::stoi(file_name);
+                continue;
+            } catch (std::exception const& e) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+}  // namespace
+
+bool FileUtils::find_all_archives_in_directory(
+        std::string_view const path,
+        std::vector<std::string>& archive_paths
+) {
+    try {
+        if (false == std::filesystem::is_directory(path)) {
+            return false;
+        }
+    } catch (std::exception const& e) {
+        return false;
+    }
+
+    if (directory_is_multi_file_archive(path)) {
+        archive_paths.emplace_back(path);
+        return true;
+    }
+
+    for (auto const& entry : std::filesystem::directory_iterator{path}) {
+        archive_paths.emplace_back(entry.path().string());
+    }
+    return true;
+}
+
+bool FileUtils::get_last_non_empty_path_component(std::string_view const path, std::string& name) {
+    std::filesystem::path fs_path;
+    try {
+        fs_path = std::filesystem::path{path}.lexically_normal();
+    } catch (std::exception const& e) {
+        return false;
+    }
+
+    if (fs_path.has_filename() && false == fs_path.filename().string().empty()) {
+        name = fs_path.filename().string();
+        return true;
+    }
+
+    while (fs_path.has_parent_path()) {
+        fs_path = fs_path.parent_path();
+        if (fs_path.has_filename() && false == fs_path.filename().string().empty()) {
+            name = fs_path.filename().string();
+            return true;
         }
     }
 
-    return all_paths_exist;
+    return false;
+}
+
+bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& name) {
+    auto parsed_result = boost::urls::parse_uri(uri);
+    if (false == parsed_result.has_value()) {
+        return false;
+    }
+    auto parsed_uri = parsed_result.value();
+    auto path_segments_view = parsed_uri.segments();
+    if (path_segments_view.empty()) {
+        return false;
+    }
+    name = path_segments_view.back();
+    return true;
 }
 
 bool StringUtils::get_bounds_of_next_var(string const& msg, size_t& begin_pos, size_t& end_pos) {
