@@ -245,10 +245,13 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
                 std::pair{"\\\\", "\\\\"},
                 std::pair{"\\??", "\\??"},
                 std::pair{"\\**", "\\**"},
-                std::pair{"\u9999", "香"},
+                std::pair{"\\u9999", "香"},
                 std::pair{"\\r\\n\\t\\b\\f", "\r\n\t\b\f"},
                 std::pair{"\\\"", "\""},
-                std::pair{"\\{\\}\\(\\)\\<\\>", "{}()<>"}
+                std::pair{"\\{\\}\\(\\)\\<\\>", "{}()<>"},
+                std::pair{"\\u003F", "\\?"},
+                std::pair{"\\u002A", "\\*"},
+                std::pair{"\\u005C", "\\\\"}
         );
 
         auto formatted_query = fmt::format("*: \"{}\"", translated_pair.first);
