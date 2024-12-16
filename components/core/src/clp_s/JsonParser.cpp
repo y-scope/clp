@@ -749,8 +749,8 @@ auto JsonParser::get_archive_node_id(
 }
 
 void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
-    clp::ffi::SchemaTree const& tree = kv.get_schema_tree();
-    for (auto const& pair : kv.get_node_id_value_pairs()) {
+    clp::ffi::SchemaTree const& tree = kv.get_user_gen_keys_schema_tree();
+    for (auto const& pair : kv.get_user_gen_node_id_value_pairs()) {
         NodeType const archive_node_type = get_archive_node_type(tree, pair);
         auto const node_id = get_archive_node_id(pair.first, archive_node_type, tree);
 
