@@ -99,7 +99,7 @@ private:
      * @param ir_node_type schema node type from the IR stream
      * @param node_has_value Boolean that says whether or not the node has value.
      * @param node_value The IR schema node value if the node has value
-     * @return The clp-s archive Node Type that should be used for the archive node
+     * @return The NodeType that should be used for the archive node
      */
     static auto get_archive_node_type(
             clp::ffi::SchemaTree const& tree,
@@ -108,7 +108,7 @@ private:
     ) -> NodeType;
 
     /**
-     * Get archive node id for ir node
+     * Adds new schema node to archive and adds translation for IR node ID and NodeType to mapping
      * @param ir_node_id ID of the IR node
      * @param ir_node_to_add IR Schema Node that is being translated to archive
      * @param archive_node_type Type of the archive node
@@ -122,7 +122,7 @@ private:
     ) -> int;
 
     /**
-     * Get archive node id for ir node
+     * Gets the archive node ID for an IR node.
      * @param ir_node_id ID of the IR node
      * @param archive_node_type Type of the archive node
      * @param ir_tree The IR schema tree
@@ -134,8 +134,8 @@ private:
     ) -> int;
 
     /**
-     * Parses a Key Value Log Event
-     * @param kv the key value log event
+     * Parses a Key Value Log Event.
+     * @param kv the Key Value Log Event
      */
     void parse_kv_log_event(KeyValuePairLogEvent const& kv);
 

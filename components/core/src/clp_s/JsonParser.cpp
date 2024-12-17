@@ -628,7 +628,7 @@ auto JsonParser::get_archive_node_type(
     clp::ffi::SchemaTree::Node const& tree_node = tree.get_node(kv_pair.first);
     clp::ffi::SchemaTree::Node::Type const ir_node_type = tree_node.get_type();
     bool const node_has_value = kv_pair.second.has_value();
-    std::optional<clp::ffi::Value> node_value{};
+    clp::ffi::Value node_value{};
     if (node_has_value) {
         node_value = kv_pair.second.value();
     }
@@ -642,20 +642,16 @@ auto JsonParser::get_archive_node_type(
         case clp::ffi::SchemaTree::Node::Type::UnstructuredArray:
             return NodeType::UnstructuredArray;
         case clp::ffi::SchemaTree::Node::Type::Str:
-            if (node_value && node_value->is<std::string>()) {
+            if (node_value.is<std::string>()) {
                 return NodeType::VarString;
-            } else {
-                return NodeType::ClpString;
             }
+            return NodeType::ClpString;
         case clp::ffi::SchemaTree::Node::Type::Obj:
-            if (node_has_value) {
-                if (node_value->is_null()) {
-                    return NodeType::NullValue;
-                }
+            if (node_has_value && node_value.is_null()) {
+                return NodeType::NullValue;
             }
             return NodeType::Object;
         default:
-            SPDLOG_ERROR("Unknown IR Node Type Detected");
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 }
@@ -692,7 +688,7 @@ auto JsonParser::get_archive_node_id(
 ) -> int {
     int curr_node_archive_id{constants::cRootNodeId};
     auto flat_map_location
-            = m_ir_node_to_archive_node_id_mapping.find(std::pair(ir_node_id, archive_node_type));
+            = m_ir_node_to_archive_node_id_mapping.find(std::pair{ir_node_id, archive_node_type});
 
     if (m_ir_node_to_archive_node_id_mapping.end() != flat_map_location) {
         return flat_map_location->second;
@@ -715,7 +711,7 @@ auto JsonParser::get_archive_node_id(
         }
 
         flat_map_location = m_ir_node_to_archive_node_id_mapping.find(
-                std::pair(ir_id_stack.back(), next_node_type)
+                std::pair{ir_id_stack.back(), next_node_type}
         );
         if (m_ir_node_to_archive_node_id_mapping.end() != flat_map_location) {
             curr_node_archive_id = flat_map_location->second;
@@ -725,7 +721,7 @@ auto JsonParser::get_archive_node_id(
         }
     }
 
-    while (not ir_id_stack.empty()) {
+    while (false == ir_id_stack.empty()) {
         auto const& curr_node = ir_tree.get_node(ir_id_stack.back());
         if (1 == ir_id_stack.size()) {
             curr_node_archive_id = add_node_to_archive_and_translations(
@@ -846,12 +842,15 @@ auto JsonParser::parse_from_ir() -> bool {
             m_archive_writer->close();
             return false;
         }
-        clp::streaming_compression::zstd::Decompressor zd;
-        zd.open(file_path);
+        clp::streaming_compression::zstd::Decompressor decompressor;
+        size_t curr_pos = 0;
+        size_t last_pos = 0;
+        decompressor.open(file_path);
 
-        auto deserializer_result{Deserializer<IrUnitHandler>::create(zd, IrUnitHandler{})};
+        auto deserializer_result{Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
+        };
         if (deserializer_result.has_error()) {
-            zd.close();
+            decompressor.close();
             m_archive_writer->close();
             return false;
         }
@@ -867,7 +866,7 @@ auto JsonParser::parse_from_ir() -> bool {
         };
         add_log_event_idx_node();
         while (true) {
-            auto const kv_log_event_result{deserializer.deserialize_next_ir_unit(zd)};
+            auto const kv_log_event_result{deserializer.deserialize_next_ir_unit(decompressor)};
 
             if (kv_log_event_result.has_error()) {
                 break;
@@ -891,18 +890,21 @@ auto JsonParser::parse_from_ir() -> bool {
 
                 try {
                     parse_kv_log_event(*kv_log_event);
-                } catch (OperationFailed const& e) {
-                    zd.close();
-                    return false;
-                } catch (...) {
-                    SPDLOG_ERROR("ERROR: Encountered error while parsing a kv log event");
-                    zd.close();
+                } catch (std::exception const& e) {
+                    SPDLOG_ERROR("Encountered error while parsing a kv log event - {}", e.what());
+                    decompressor.try_get_pos(curr_pos);
+                    m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
+                    decompressor.close();
                     return false;
                 }
 
                 if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
                     m_ir_node_to_archive_node_id_mapping.clear();
+                    decompressor.try_get_pos(curr_pos);
+                    m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
+                    last_pos = curr_pos;
                     split_archive();
+                    add_log_event_idx_node();
                 }
 
                 ir_unit_handler.clear();
@@ -913,7 +915,9 @@ auto JsonParser::parse_from_ir() -> bool {
             }
         }
         m_ir_node_to_archive_node_id_mapping.clear();
-        zd.close();
+        decompressor.try_get_pos(curr_pos);
+        m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
+        decompressor.close();
     }
     return true;
 }
