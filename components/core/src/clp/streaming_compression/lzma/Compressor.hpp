@@ -2,7 +2,7 @@
 #define CLP_STREAMING_COMPRESSION_LZMA_COMPRESSOR_HPP
 
 #include <cstddef>
-#include <memory>
+#include <cstdint>
 
 #include <lzma.h>
 
@@ -89,6 +89,48 @@ public:
     }
 
 private:
+    class LzmaStreamOperations {
+    public:
+        // Constructor
+        LzmaStreamOperations(Compressor* parent) : m_p(parent) {}
+
+        // Destructor
+        ~LzmaStreamOperations() = default;
+
+        // Delete copy constructor and assignment operator
+        LzmaStreamOperations(LzmaStreamOperations const&) = delete;
+        auto operator=(LzmaStreamOperations const&) -> LzmaStreamOperations& = delete;
+
+        // Default move constructor and assignment operator
+        LzmaStreamOperations(LzmaStreamOperations&&) noexcept = default;
+        auto operator=(LzmaStreamOperations&&) noexcept -> LzmaStreamOperations& = default;
+
+        [[nodiscard]] static auto is_flush_action(lzma_action action) -> bool;
+
+        /**
+         * Attaches a pre-allocated block buffer to the encoder's output stream
+         *
+         * Subsequent calls to this function resets the output buffer to its initial state.
+         */
+        auto attach_output_buffer() -> void;
+
+        auto detach_input_src() -> void;
+
+        auto detach_output_buffer() -> void;
+
+        /**
+         * Initializes an LZMA compression encoder and its streams
+         *
+         * @param check Type of integrity check calculated from the uncompressed data.
+         * LZMA_CHECK_CRC64 is the default in the xz command line tool. If the .xz file needs to be
+         * decompressed with XZ-Embedded, use LZMA_CHECK_CRC32 instead.
+         */
+        auto init_lzma_encoder(lzma_check check = LZMA_CHECK_CRC64) -> void;
+
+    private:
+        Compressor* m_p;
+    };
+
     static constexpr size_t cCompressedStreamBlockBufferSize{4096};  // 4KiB
 
     /**
@@ -119,7 +161,8 @@ private:
 
     /**
      * Flushes the current compressed data in the output block buffer to the output file handler.
-     * Reset the output block buffer to receive new data.
+     *
+     * Also resets the output block buffer to receive new data.
      */
     auto flush_stream_output_block_buffer() -> void;
 
@@ -127,11 +170,12 @@ private:
     FileWriter* m_compressed_stream_file_writer{nullptr};
 
     // Compressed stream variables
-    lzma_stream m_compression_stream;
-    size_t m_dict_size{cDefaultDictionarySize};
-
+    LzmaStreamOperations m_lzma_ops{this};
     Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
-
+    int m_compression_level{cDefaultCompressionLevel};
+    lzma_stream m_compression_stream = LZMA_STREAM_INIT;
+    // Specifies how many bytes of the recently processed uncompressed data to keep in the memory
+    size_t m_dict_size{cDefaultDictionarySize};
     size_t m_uncompressed_stream_pos{0};
 };
 }  // namespace clp::streaming_compression::lzma
