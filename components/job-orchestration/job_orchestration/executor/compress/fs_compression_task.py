@@ -259,32 +259,37 @@ def run_clp(
                 archive_id = last_archive_stats["id"]
                 src_archive_file = archive_output_dir / archive_id
 
-                logger.info(f"Uploading archive {archive_id} to S3...")
-                result = s3_put(s3_config, src_archive_file, archive_id)
+                if s3_error is None:
+                    logger.info(f"Uploading archive {archive_id} to S3...")
+                    result = s3_put(s3_config, src_archive_file, archive_id)
 
-                if result.is_err():
-                    logger.error(f"Failed to upload archive {archive_id}: {result.err_value}")
-                    s3_error = result.err_value
-                    break
+                    if result.is_err():
+                        logger.error(f"Failed to upload archive {archive_id}: {result.err_value}")
+                        s3_error = result.err_value
+                        # Note: it's possible proc finishes before we call terminate() on it. In
+                        # Which case the process will still return success.
+                        proc.terminate()
+                    else:
+                        logger.info(f"Finished uploading archive {archive_id} to S3.")
 
-                logger.info(f"Finished uploading archive {archive_id} to S3.")
                 src_archive_file.unlink()
 
-            # We've started a new archive so add the previous archive's last
-            # reported size to the total
-            total_uncompressed_size += last_archive_stats["uncompressed_size"]
-            total_compressed_size += last_archive_stats["size"]
-            with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-                db_conn.cursor(dictionary=True)
-            ) as db_cursor:
-                update_job_metadata_and_tags(
-                    db_cursor,
-                    job_id,
-                    clp_metadata_db_connection_config["table_prefix"],
-                    tag_ids,
-                    last_archive_stats,
-                )
-                db_conn.commit()
+            if s3_error is None:
+                # We've started a new archive so add the previous archive's last
+                # reported size to the total
+                total_uncompressed_size += last_archive_stats["uncompressed_size"]
+                total_compressed_size += last_archive_stats["size"]
+                with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+                    db_conn.cursor(dictionary=True)
+                ) as db_cursor:
+                    update_job_metadata_and_tags(
+                        db_cursor,
+                        job_id,
+                        clp_metadata_db_connection_config["table_prefix"],
+                        tag_ids,
+                        last_archive_stats,
+                    )
+                    db_conn.commit()
 
         last_archive_stats = stats
 
@@ -309,14 +314,16 @@ def run_clp(
         "total_compressed_size": total_compressed_size,
     }
 
-    # TODO: think about how to deal with error messages
-    if s3_error is not None:
-        worker_output["error_message"] = s3_error
-        return CompressionTaskStatus.FAILED, worker_output
-    if compression_successful:
+    if compression_successful and s3_error is None:
         return CompressionTaskStatus.SUCCEEDED, worker_output
     else:
-        worker_output["error_message"] = f"See logs {stderr_log_path}"
+        worker_output["error_message"] = ""
+        if compression_successful is False:
+            worker_output["error_message"] += f"See logs {stderr_log_path}"
+        if s3_error is not None:
+            if worker_output["error_message"]:
+                worker_output["error_message"] += "\n"
+            worker_output["error_message"] += s3_error
         return CompressionTaskStatus.FAILED, worker_output
 
 
