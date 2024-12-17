@@ -176,6 +176,20 @@ def run_clp(
     yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
 
+    # Get input config
+    input_config = clp_config.input
+    input_type = input_config.type
+    if "s3" == input_type:
+        logger.info(paths_to_compress.file_paths)
+        logger.error("Unsupported for now")
+        worker_output = {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": "unsupported"
+        }
+        return CompressionTaskStatus.FAILED, worker_output
+
+
     # Get s3 config
     s3_config: S3Config
     enable_s3_write = False
@@ -209,8 +223,9 @@ def run_clp(
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
     # Prepare list of paths to compress for clp
-    file_paths = paths_to_compress.file_paths
     log_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
+    file_paths = paths_to_compress.file_paths
+
     with open(log_list_path, "w") as file:
         if len(file_paths) > 0:
             for path_str in file_paths:
@@ -222,8 +237,8 @@ def run_clp(
                 file.write(path_str)
                 file.write("\n")
 
-        compression_cmd.append("--files-from")
-        compression_cmd.append(str(log_list_path))
+    compression_cmd.append("--files-from")
+    compression_cmd.append(str(log_list_path))
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"

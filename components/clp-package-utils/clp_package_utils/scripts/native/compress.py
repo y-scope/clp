@@ -15,7 +15,7 @@ from job_orchestration.scheduler.constants import (
     CompressionJobCompletionStatus,
     CompressionJobStatus,
 )
-from job_orchestration.scheduler.job_config import ClpIoConfig, InputConfig, OutputConfig
+from job_orchestration.scheduler.job_config import ClpIoConfig, FsInputConfig, OutputConfig, S3InputConfig
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -194,7 +194,7 @@ def main(argv):
                 paths_to_compress.append(resolved_path_str)
 
     mysql_adapter = SQL_Adapter(clp_config.database)
-    clp_input_config = InputConfig(
+    clp_input_config = FsInputConfig(
         paths_to_compress=paths_to_compress, timestamp_key=parsed_args.timestamp_key
     )
     if parsed_args.remove_path_prefix:

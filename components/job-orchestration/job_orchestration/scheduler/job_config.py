@@ -12,10 +12,23 @@ class PathsToCompress(BaseModel):
     empty_directories: typing.List[str] = None
 
 
-class InputConfig(BaseModel):
+class FsInputConfig(BaseModel):
+    type: typing.Literal["fs"] = "fs"
     paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
     timestamp_key: typing.Optional[str] = None
+
+
+class S3InputConfig(BaseModel):
+    type: typing.Literal["s3"] = "s3"
+    timestamp_key: typing.Optional[str] = None
+
+    region_code: str
+    bucket: str
+    key_prefix: str
+
+    aws_access_key_id: typing.Optional[str] = None
+    aws_secret_access_key: typing.Optional[str] = None
 
 
 class OutputConfig(BaseModel):
@@ -27,7 +40,7 @@ class OutputConfig(BaseModel):
 
 
 class ClpIoConfig(BaseModel):
-    input: InputConfig
+    input: typing.Union[S3InputConfig, FsInputConfig]
     output: OutputConfig
 
 
