@@ -181,8 +181,8 @@ def run_clp(
     enable_s3_write = False
     storage_type = worker_config.archive_output.storage.type
     if StorageType.S3 == storage_type:
-        if StorageEngine.CLP == clp_storage_engine:
-            error_msg = f"S3 storage is not supported for the {clp_storage_engine} storage engine."
+        if StorageEngine.CLP_S != clp_storage_engine:
+            error_msg = f"S3 storage is not supported for storage engine: {clp_storage_engine}."
             logger.error(error_msg)
             return False, {"error_message": error_msg}
 
