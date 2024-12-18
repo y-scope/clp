@@ -245,7 +245,11 @@ def run_clp(
     while not last_line_decoded:
         line = proc.stdout.readline()
         stats: Optional[Dict[str, Any]] = None
-        if line:
+        if "" == line:
+            # Skip empty lines that could be caused by potential errors in printing archive stats
+            continue
+
+        if line is not None:
             stats = json.loads(line.decode("ascii"))
         else:
             last_line_decoded = True
