@@ -255,11 +255,11 @@ def run_clp(
         ):
             if enable_s3_write:
                 archive_id = last_archive_stats["id"]
-                src_archive_file = archive_output_dir / archive_id
+                archive_path = archive_output_dir / archive_id
 
                 if s3_error is None:
                     logger.info(f"Uploading archive {archive_id} to S3...")
-                    result = s3_put(s3_config, src_archive_file, archive_id)
+                    result = s3_put(s3_config, archive_path, archive_id)
 
                     if result.is_err():
                         logger.error(f"Failed to upload archive {archive_id}: {result.err_value}")
@@ -270,7 +270,7 @@ def run_clp(
                     else:
                         logger.info(f"Finished uploading archive {archive_id} to S3.")
 
-                src_archive_file.unlink()
+                archive_path.unlink()
 
             if s3_error is None:
                 # We've started a new archive so add the previous archive's last reported size to
