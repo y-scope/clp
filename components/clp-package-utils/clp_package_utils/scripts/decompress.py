@@ -83,7 +83,7 @@ def handle_extract_file_cmd(
 
     storage_type = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:
-        logger.error(f"File extraction is not supported for storage type: {storage_type}.")
+        logger.error(f"File extraction is not supported for archive storage type: {storage_type}.")
         return -1
 
     container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
@@ -163,7 +163,9 @@ def handle_extract_stream_cmd(
 
     storage_type = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:
-        logger.error(f"Stream extraction is not supported for storage type: {storage_type}.")
+        logger.error(
+            f"Stream extraction is not supported for archive storage type: {storage_type}."
+        )
         return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
