@@ -77,9 +77,7 @@ def main(argv):
 
     storage_type = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:
-        logger.error(
-            f"Search is not supported for archive storage type: {storage_type}."
-        )
+        logger.error(f"Search is not supported for archive storage type: {storage_type}.")
         return -1
 
     container_name = generate_container_name(str(JobType.SEARCH))
