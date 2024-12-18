@@ -20,7 +20,7 @@ python-dotenv = "^1.0.1"
 python-Levenshtein = "~0.22"
 sqlalchemy = "~2.0"
 PyYAML = "^6.0.1"
-result = "~0.17.0"
+result = "^0.17.0"
 StrEnum = "^0.4.15"
 
 [build-system]
