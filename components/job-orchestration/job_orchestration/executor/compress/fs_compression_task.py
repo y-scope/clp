@@ -179,7 +179,6 @@ def run_clp(
     # Get s3 config
     s3_config: S3Config
     enable_s3_write = False
-
     storage_type = worker_config.archive_output.storage.type
     if StorageType.S3 == storage_type:
         if StorageEngine.CLP == clp_storage_engine:
@@ -265,8 +264,8 @@ def run_clp(
                     if result.is_err():
                         logger.error(f"Failed to upload archive {archive_id}: {result.err_value}")
                         s3_error = result.err_value
-                        # Note: it's possible proc finishes before we call terminate() on it. In
-                        # Which case the process will still return success.
+                        # NOTE: It's possible `proc` finishes before we call `terminate` on it, in
+                        # which case the process will still return success.
                         proc.terminate()
                     else:
                         logger.info(f"Finished uploading archive {archive_id} to S3.")
@@ -274,8 +273,8 @@ def run_clp(
                 src_archive_file.unlink()
 
             if s3_error is None:
-                # We've started a new archive so add the previous archive's last
-                # reported size to the total
+                # We've started a new archive so add the previous archive's last reported size to
+                # the total
                 total_uncompressed_size += last_archive_stats["uncompressed_size"]
                 total_compressed_size += last_archive_stats["size"]
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -316,13 +315,12 @@ def run_clp(
     if compression_successful and s3_error is None:
         return CompressionTaskStatus.SUCCEEDED, worker_output
     else:
-        worker_output["error_message"] = ""
+        error_msgs = []
         if compression_successful is False:
-            worker_output["error_message"] += f"See logs {stderr_log_path}"
+            error_msgs.append(f"See logs {stderr_log_path}")
         if s3_error is not None:
-            if worker_output["error_message"]:
-                worker_output["error_message"] += "\n"
-            worker_output["error_message"] += s3_error
+            error_msgs.append(s3_error)
+        worker_output["error_message"] = "\n".join(error_msgs)
         return CompressionTaskStatus.FAILED, worker_output
 
 

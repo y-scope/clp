@@ -13,7 +13,7 @@ def load_worker_config(
     """
     Loads a WorkerConfig object from the specified configuration file.
     :param config_path: Path to the configuration file.
-    :param logger: Logger instance for reporting error if loading fails.
+    :param logger: Logger instance for reporting errors if loading fails.
     :return: The loaded WorkerConfig object on success, None otherwise.
     """
     try:
