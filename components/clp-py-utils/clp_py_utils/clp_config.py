@@ -320,19 +320,19 @@ class S3Config(BaseModel):
     @validator("region_code")
     def validate_region_code(cls, field):
         if field == "":
-            raise ValueError("region_code can not be empty")
+            raise ValueError("region_code cannot be empty")
         return field
 
     @validator("bucket")
     def validate_bucket(cls, field):
         if field == "":
-            raise ValueError("bucket can not be empty")
+            raise ValueError("bucket cannot be empty")
         return field
 
     @validator("key_prefix")
     def validate_key_prefix(cls, field):
         if field == "":
-            raise ValueError("key_prefix can not be empty")
+            raise ValueError("key_prefix cannot be empty")
         if not field.endswith("/"):
             raise ValueError('key_prefix must end with "/"')
         return field
@@ -442,7 +442,7 @@ class StreamOutput(BaseModel):
     @validator("directory")
     def validate_directory(cls, field):
         if "" == field:
-            raise ValueError("directory can not be empty")
+            raise ValueError("directory cannot be empty")
         return field
 
     @validator("target_uncompressed_size")
