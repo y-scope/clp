@@ -5,7 +5,7 @@ import subprocess
 import sys
 from typing import Optional
 
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import CLPConfig, StorageType
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -81,6 +81,11 @@ def handle_extract_file_cmd(
     if clp_config is None:
         return -1
 
+    storage_type = clp_config.archive_output.storage.type
+    if StorageType.FS != storage_type:
+        logger.error(f"File extraction is not supported for storage type: {storage_type}.")
+        return -1
+
     container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
@@ -154,6 +159,11 @@ def handle_extract_stream_cmd(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
     if clp_config is None:
+        return -1
+
+    storage_type = clp_config.archive_output.storage.type
+    if StorageType.FS != storage_type:
+        logger.error(f"Stream extraction is not supported for storage type: {storage_type}.")
         return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))

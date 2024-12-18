@@ -167,7 +167,7 @@ def validate_and_load_config_file(
     """
     try:
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_archive_output_dir()
+        clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
         return clp_config
     except Exception:
