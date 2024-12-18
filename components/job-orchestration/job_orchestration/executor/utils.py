@@ -10,6 +10,12 @@ def load_worker_config(
     config_path: Path,
     logger: Logger,
 ) -> Optional[WorkerConfig]:
+    """
+    Loads a WorkerConfig object from the specified configuration file.
+    :param config_path: Path to the configuration file.
+    :param logger: Logger instance for reporting error if loading fails.
+    :return: The loaded WorkerConfig object on success, None otherwise.
+    """
     try:
         return WorkerConfig.parse_obj(read_yaml_config_file(config_path))
     except Exception:
