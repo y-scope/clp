@@ -46,7 +46,7 @@ public:
             [[maybe_unused]] UtcOffset utc_offset_old,
             [[maybe_unused]] UtcOffset utc_offset_new
     ) -> IRErrorCode {
-        return IRErrorCode::IRErrorCode_Success;
+        return IRErrorCode::IRErrorCode_Decode_Error;
     }
 
     [[nodiscard]] auto handle_schema_tree_node_insertion(
@@ -843,8 +843,8 @@ auto JsonParser::parse_from_ir() -> bool {
             return false;
         }
         clp::streaming_compression::zstd::Decompressor decompressor;
-        size_t curr_pos = 0;
-        size_t last_pos = 0;
+        size_t curr_pos{};
+        size_t last_pos{};
         decompressor.open(file_path);
 
         auto deserializer_result{Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
@@ -869,7 +869,9 @@ auto JsonParser::parse_from_ir() -> bool {
             auto const kv_log_event_result{deserializer.deserialize_next_ir_unit(decompressor)};
 
             if (kv_log_event_result.has_error()) {
-                break;
+                m_archive_writer->close();
+                decompressor.close();
+                return false;
             }
             if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
                 break;
@@ -892,8 +894,7 @@ auto JsonParser::parse_from_ir() -> bool {
                     parse_kv_log_event(*kv_log_event);
                 } catch (std::exception const& e) {
                     SPDLOG_ERROR("Encountered error while parsing a kv log event - {}", e.what());
-                    decompressor.try_get_pos(curr_pos);
-                    m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
+                    m_archive_writer->close();
                     decompressor.close();
                     return false;
                 }
@@ -910,8 +911,14 @@ auto JsonParser::parse_from_ir() -> bool {
                 ir_unit_handler.clear();
                 m_current_parsed_message.clear();
 
-            } else {
+            } else if (kv_log_event_result.value()
+                       == clp::ffi::ir_stream::IrUnitType::SchemaTreeNodeInsertion)
+            {
                 continue;
+            } else {
+                m_archive_writer->close();
+                decompressor.close();
+                return false;
             }
         }
         m_ir_node_to_archive_node_id_mapping.clear();
