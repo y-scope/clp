@@ -1,7 +1,6 @@
 #include "JsonParser.hpp"
 
 #include <cstdint>
-#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <stack>
@@ -837,11 +836,6 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
 
 auto JsonParser::parse_from_ir() -> bool {
     for (auto& file_path : m_file_paths) {
-        auto const fsize = std::filesystem::file_size(file_path);
-        if (0 == fsize) {
-            m_archive_writer->close();
-            return false;
-        }
         clp::streaming_compression::zstd::Decompressor decompressor;
         size_t curr_pos{};
         size_t last_pos{};
