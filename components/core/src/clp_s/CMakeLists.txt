@@ -23,8 +23,6 @@ set(
         ../clp/ffi/KeyValuePairLogEvent.hpp
         ../clp/ffi/SchemaTree.cpp
         ../clp/ffi/SchemaTree.hpp
-        ../clp/ffi/utils.cpp
-        ../clp/ffi/utils.hpp
         ../clp/ffi/Value.hpp
         ../clp/FileDescriptor.cpp
         ../clp/FileDescriptor.hpp

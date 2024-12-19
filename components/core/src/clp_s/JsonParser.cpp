@@ -16,7 +16,6 @@
 #include "../clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../clp/ffi/SchemaTree.hpp"
-#include "../clp/ffi/utils.hpp"
 #include "../clp/ffi/Value.hpp"
 #include "../clp/ir/EncodedTextAst.hpp"
 #include "../clp/streaming_compression/zstd/Decompressor.hpp"
@@ -654,18 +653,11 @@ auto JsonParser::add_node_to_archive_and_translations(
         NodeType archive_node_type,
         int32_t parent_node_id
 ) -> int {
-    auto validated_escaped_key
-            = clp::ffi::validate_and_escape_utf8_string(ir_node_to_add.get_key_name());
-    std::string node_key;
-    if (validated_escaped_key.has_value()) {
-        node_key = validated_escaped_key.value();
-    } else {
-        SPDLOG_ERROR("Key is not UTF-8 compliant: \"{}\"", ir_node_to_add.get_key_name());
-        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-    }
-    int const curr_node_archive_id
-            = m_archive_writer->add_node(parent_node_id, archive_node_type, node_key);
-
+    int const curr_node_archive_id = m_archive_writer->add_node(
+            parent_node_id,
+            archive_node_type,
+            ir_node_to_add.get_key_name()
+    );
     m_ir_node_to_archive_node_id_mapping.emplace(
             std::make_pair(ir_node_id, archive_node_type),
             curr_node_archive_id
@@ -759,23 +751,10 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                 m_current_parsed_message.add_value(node_id, b_value);
             } break;
             case NodeType::VarString: {
-                auto const validated_escaped_string = clp::ffi::validate_and_escape_utf8_string(
-                        pair.second.value().get_immutable_view<std::string>()
-                );
-                std::string str;
-                if (validated_escaped_string.has_value()) {
-                    str = validated_escaped_string.value();
-                } else {
-                    SPDLOG_ERROR(
-                            "String is not utf8 compliant: \"{}\"",
-                            pair.second.value().get_immutable_view<std::string>()
-                    );
-                    throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-                }
-                m_current_parsed_message.add_value(node_id, str);
+                auto const var_value{pair.second.value().get_immutable_view<std::string>()};
+                m_current_parsed_message.add_value(node_id, var_value);
             } break;
             case NodeType::ClpString: {
-                std::string encoded_str;
                 std::string decoded_value;
                 if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
                     decoded_value = pair.second.value()
@@ -789,15 +768,7 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                                             .decode_and_unparse()
                                             .value();
                 }
-                auto const validated_escaped_encoded_string
-                        = clp::ffi::validate_and_escape_utf8_string(decoded_value.c_str());
-                if (validated_escaped_encoded_string.has_value()) {
-                    encoded_str = validated_escaped_encoded_string.value();
-                } else {
-                    SPDLOG_ERROR("Encoded string is not utf8 compliant: \"{}\"", decoded_value);
-                    throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-                }
-                m_current_parsed_message.add_value(node_id, encoded_str);
+                m_current_parsed_message.add_value(node_id, decoded_value);
             } break;
             case NodeType::UnstructuredArray: {
                 std::string array_str;
