@@ -19,14 +19,11 @@ def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Pat
     return worker_logs_dir / f"{task_id}-clo.log"
 
 
-def report_command_creation_failure(
+def report_task_failure(
     sql_adapter: SQL_Adapter,
-    logger: Logger,
-    task_name: str,
     task_id: int,
     start_time: datetime.datetime,
 ):
-    logger.error(f"Error creating {task_name} command")
     task_status = QueryTaskStatus.FAILED
     update_query_task_metadata(
         sql_adapter,

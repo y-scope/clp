@@ -4,6 +4,7 @@ import os
 import pathlib
 import subprocess
 from contextlib import closing
+from typing import Any, Dict, Optional
 
 import yaml
 from celery.app.task import Task
@@ -12,9 +13,14 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
+    S3Config,
     StorageEngine,
+    StorageType,
+    WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.s3_utils import s3_put
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
@@ -108,6 +114,7 @@ def make_clp_s_command(
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
+    enable_s3_write: bool,
 ):
     # fmt: off
     compression_cmd = [
@@ -120,6 +127,9 @@ def make_clp_s_command(
     ]
     # fmt: on
 
+    if enable_s3_write:
+        compression_cmd.append("--single-file-archive")
+
     if clp_config.input.timestamp_key is not None:
         compression_cmd.append("--timestamp-key")
         compression_cmd.append(clp_config.input.timestamp_key)
@@ -128,10 +138,9 @@ def make_clp_s_command(
 
 
 def run_clp(
+    worker_config: WorkerConfig,
     clp_config: ClpIoConfig,
     clp_home: pathlib.Path,
-    data_dir: pathlib.Path,
-    archive_output_dir: pathlib.Path,
     logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
@@ -143,10 +152,9 @@ def run_clp(
     """
     Compresses files from an FS into archives on an FS
 
+    :param worker_config: WorkerConfig
     :param clp_config: ClpIoConfig
     :param clp_home:
-    :param data_dir:
-    :param archive_output_dir:
     :param logs_dir:
     :param job_id:
     :param task_id:
@@ -156,15 +164,30 @@ def run_clp(
     :param clp_metadata_db_connection_config
     :return: tuple -- (whether compression was successful, output messages)
     """
-    clp_storage_engine = str(os.getenv("CLP_STORAGE_ENGINE"))
-
     instance_id_str = f"compression-job-{job_id}-task-{task_id}"
+
+    clp_storage_engine = worker_config.package.storage_engine
+    data_dir = worker_config.data_directory
+    archive_output_dir = worker_config.archive_output.get_directory()
 
     # Generate database config file for clp
     db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
     db_config_file = open(db_config_file_path, "w")
     yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
+
+    # Get s3 config
+    s3_config: S3Config
+    enable_s3_write = False
+    storage_type = worker_config.archive_output.storage.type
+    if StorageType.S3 == storage_type:
+        if StorageEngine.CLP_S != clp_storage_engine:
+            error_msg = f"S3 storage is not supported for storage engine: {clp_storage_engine}."
+            logger.error(error_msg)
+            return False, {"error_message": error_msg}
+
+        s3_config = worker_config.archive_output.storage.s3_config
+        enable_s3_write = True
 
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd = make_clp_command(
@@ -179,6 +202,7 @@ def run_clp(
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
+            enable_s3_write=enable_s3_write,
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
@@ -212,47 +236,64 @@ def run_clp(
 
     # Compute the total amount of data compressed
     last_archive_stats = None
+    last_line_decoded = False
     total_uncompressed_size = 0
     total_compressed_size = 0
-    while True:
+
+    # Handle job metadata update and s3 write if enabled
+    s3_error = None
+    while not last_line_decoded:
         line = proc.stdout.readline()
-        if not line:
-            break
-        stats = json.loads(line.decode("ascii"))
-        if last_archive_stats is not None and stats["id"] != last_archive_stats["id"]:
-            # We've started a new archive so add the previous archive's last
-            # reported size to the total
-            total_uncompressed_size += last_archive_stats["uncompressed_size"]
-            total_compressed_size += last_archive_stats["size"]
-            with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-                db_conn.cursor(dictionary=True)
-            ) as db_cursor:
-                update_job_metadata_and_tags(
-                    db_cursor,
-                    job_id,
-                    clp_metadata_db_connection_config["table_prefix"],
-                    tag_ids,
-                    last_archive_stats,
-                )
-                db_conn.commit()
+        stats: Optional[Dict[str, Any]] = None
+        if "" == line:
+            # Skip empty lines that could be caused by potential errors in printing archive stats
+            continue
+
+        if line is not None:
+            stats = json.loads(line.decode("ascii"))
+        else:
+            last_line_decoded = True
+
+        if last_archive_stats is not None and (
+            None is stats or stats["id"] != last_archive_stats["id"]
+        ):
+            if enable_s3_write:
+                archive_id = last_archive_stats["id"]
+                archive_path = archive_output_dir / archive_id
+
+                if s3_error is None:
+                    logger.info(f"Uploading archive {archive_id} to S3...")
+                    result = s3_put(s3_config, archive_path, archive_id)
+
+                    if result.is_err():
+                        logger.error(f"Failed to upload archive {archive_id}: {result.err_value}")
+                        s3_error = result.err_value
+                        # NOTE: It's possible `proc` finishes before we call `terminate` on it, in
+                        # which case the process will still return success.
+                        proc.terminate()
+                    else:
+                        logger.info(f"Finished uploading archive {archive_id} to S3.")
+
+                archive_path.unlink()
+
+            if s3_error is None:
+                # We've started a new archive so add the previous archive's last reported size to
+                # the total
+                total_uncompressed_size += last_archive_stats["uncompressed_size"]
+                total_compressed_size += last_archive_stats["size"]
+                with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+                    db_conn.cursor(dictionary=True)
+                ) as db_cursor:
+                    update_job_metadata_and_tags(
+                        db_cursor,
+                        job_id,
+                        clp_metadata_db_connection_config["table_prefix"],
+                        tag_ids,
+                        last_archive_stats,
+                    )
+                    db_conn.commit()
 
         last_archive_stats = stats
-
-    if last_archive_stats is not None:
-        # Add the last archive's last reported size
-        total_uncompressed_size += last_archive_stats["uncompressed_size"]
-        total_compressed_size += last_archive_stats["size"]
-        with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
-        ) as db_cursor:
-            update_job_metadata_and_tags(
-                db_cursor,
-                job_id,
-                clp_metadata_db_connection_config["table_prefix"],
-                tag_ids,
-                last_archive_stats,
-            )
-            db_conn.commit()
 
     # Wait for compression to finish
     return_code = proc.wait()
@@ -274,10 +315,16 @@ def run_clp(
         "total_uncompressed_size": total_uncompressed_size,
         "total_compressed_size": total_compressed_size,
     }
-    if compression_successful:
+
+    if compression_successful and s3_error is None:
         return CompressionTaskStatus.SUCCEEDED, worker_output
     else:
-        worker_output["error_message"] = f"See logs {stderr_log_path}"
+        error_msgs = []
+        if compression_successful is False:
+            error_msgs.append(f"See logs {stderr_log_path}")
+        if s3_error is not None:
+            error_msgs.append(s3_error)
+        worker_output["error_message"] = "\n".join(error_msgs)
         return CompressionTaskStatus.FAILED, worker_output
 
 
@@ -291,14 +338,27 @@ def compress(
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
 ):
-    clp_home_str = os.getenv("CLP_HOME")
-    data_dir_str = os.getenv("CLP_DATA_DIR")
-    archive_output_dir_str = os.getenv("CLP_ARCHIVE_OUTPUT_DIR")
-    logs_dir_str = os.getenv("CLP_LOGS_DIR")
+    clp_home = pathlib.Path(os.getenv("CLP_HOME"))
 
     # Set logging level
+    logs_dir = pathlib.Path(os.getenv("CLP_LOGS_DIR"))
     clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
     set_logging_level(logger, clp_logging_level)
+
+    # Load configuration
+    try:
+        worker_config = WorkerConfig.parse_obj(
+            read_yaml_config_file(pathlib.Path(os.getenv("CLP_CONFIG_PATH")))
+        )
+    except Exception as ex:
+        error_msg = "Failed to load worker config"
+        logger.exception(error_msg)
+        return CompressionTaskResult(
+            task_id=task_id,
+            status=CompressionTaskStatus.FAILED,
+            duration=0,
+            error_message=error_msg,
+        )
 
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
@@ -308,11 +368,10 @@ def compress(
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
     compression_task_status, worker_output = run_clp(
+        worker_config,
         clp_io_config,
-        pathlib.Path(clp_home_str),
-        pathlib.Path(data_dir_str),
-        pathlib.Path(archive_output_dir_str),
-        pathlib.Path(logs_dir_str),
+        clp_home,
+        logs_dir,
         job_id,
         task_id,
         tag_ids,

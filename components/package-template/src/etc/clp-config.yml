@@ -66,7 +66,9 @@
 #
 ## Where archives should be output to
 #archive_output:
-#  directory: "var/data/archives"
+#  storage:
+#    type: "fs"
+#    directory: "var/data/archives"
 #
 #  # How much data CLP should try to compress into each archive
 #  target_archive_size: 268435456  # 256 MB
