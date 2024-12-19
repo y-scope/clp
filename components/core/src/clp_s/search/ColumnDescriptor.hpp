@@ -63,7 +63,7 @@ public:
 
 private:
     /**
-     * Initialize the token from a string and set flags based on whether the token contains
+     * Initializes the token from a string and sets flags based on whether the token contains
      * wildcards
      * @param token the string to initialize the token from
      * @param bool true if the string should be interpreted as literal, and false
@@ -130,10 +130,10 @@ public:
     );
 
     /**
-     * Insert an entire DescriptorList into this ColumnDescriptor at before given position.
-     * @param pos an iterator to the position inside of the internal descriptor list to insert
+     * Inserts an entire DescriptorList into this ColumnDescriptor before the specified position.
+     * @param an iterator indicating the position in the internal descriptor list before which the new descriptors will be inserted.
      * before.
-     * @param source the list of descriptors to insert
+     * @param source the list of descriptors to be inserted
      */
     void insert(DescriptorList::iterator pos, DescriptorList const& source) {
         m_descriptors.insert(pos, source.begin(), source.end());

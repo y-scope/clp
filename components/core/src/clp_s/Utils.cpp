@@ -540,7 +540,7 @@ void StringUtils::escape_json_string(std::string& destination, std::string_view 
 
 namespace {
 /**
- * Convert a four byte hex sequence to utf8. We perform the conversion in this cumbersome way
+ * Converts a four byte hex sequence to utf8. We perform the conversion in this cumbersome way
  * because c++20 deprecates most of the much more convenient std::codecvt utilities.
  */
 bool convert_four_byte_hex_to_utf8(std::string_view const hex, std::string& destination) {

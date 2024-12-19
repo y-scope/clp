@@ -300,7 +300,7 @@ private:
     }
 
     /**
-     * Unescape a KQL key or value with special handling for each case and append the unescaped
+     * Unescapes a KQL key or value with special handling for each case and append the unescaped
      * value to the `unescaped` buffer.
      * @param value
      * @param unescaped
