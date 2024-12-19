@@ -4,7 +4,7 @@ import os
 import pathlib
 import subprocess
 from contextlib import closing
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Tuple
 
 import yaml
 from celery.app.task import Task
@@ -20,11 +20,11 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import s3_put
+from clp_py_utils.s3_utils import s3_put, generate_s3_virtual_hosted_style_url
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
-from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
+from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress, InputType, S3InputConfig
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
 # Setup logging
@@ -76,13 +76,43 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
         ),
     )
 
+def generate_fs_log_list_path_file(
+    output_file_path: pathlib.Path,
+    paths_to_compress: PathsToCompress,
+):
+    file_paths = paths_to_compress.file_paths
+    empty_directories = paths_to_compress.empty_directories
+    with open(output_file_path, "w") as file:
+        if len(file_paths) > 0:
+            for path_str in file_paths:
+                file.write(path_str)
+                file.write("\n")
+        if empty_directories and len(empty_directories) > 0:
+            # Prepare list of paths to compress for clp
+            for path_str in empty_directories:
+                file.write(path_str)
+                file.write("\n")
+
+
+def generate_s3_log_list_path_file(
+    output_file_path: pathlib.Path,
+    paths_to_compress: PathsToCompress,
+    s3_input_config: S3InputConfig,
+):
+    file_paths = paths_to_compress.file_paths
+    with open(output_file_path, "w") as file:
+        if len(file_paths) > 0:
+            for path_str in file_paths:
+                file.write(generate_s3_virtual_hosted_style_url(s3_input_config.region_code, s3_input_config.bucket, path_str))
+                file.write("\n")
+
 
 def make_clp_command(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
-):
+) -> Tuple[List[str], Optional[Dict[str, str]]]:
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
 
     # fmt: off
@@ -106,7 +136,7 @@ def make_clp_command(
         compression_cmd.append("--schema-path")
         compression_cmd.append(str(schema_path))
 
-    return compression_cmd
+    return compression_cmd, None
 
 
 def make_clp_s_command(
@@ -115,7 +145,7 @@ def make_clp_s_command(
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
     enable_s3_write: bool,
-):
+) -> Tuple[List[str], Optional[Dict[str, str]]]:
     # fmt: off
     compression_cmd = [
         str(clp_home / "bin" / "clp-s"),
@@ -127,6 +157,17 @@ def make_clp_s_command(
     ]
     # fmt: on
 
+    if InputType.S3 == clp_config.input.type:
+        compression_env = {
+            **os.environ,
+            "AWS_ACCESS_KEY_ID": clp_config.input.aws_access_key_id,
+            "AWS_SECRET_ACCESS_KEY": clp_config.input.aws_secret_access_key,
+        }
+        compression_cmd.append("--auth")
+        compression_cmd.append("s3")
+    else:
+        compression_env = None
+
     if enable_s3_write:
         compression_cmd.append("--single-file-archive")
 
@@ -134,7 +175,7 @@ def make_clp_s_command(
         compression_cmd.append("--timestamp-key")
         compression_cmd.append(clp_config.input.timestamp_key)
 
-    return compression_cmd
+    return compression_cmd, compression_env
 
 
 def run_clp(
@@ -176,20 +217,6 @@ def run_clp(
     yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
 
-    # Get input config
-    input_config = clp_config.input
-    input_type = input_config.type
-    if "s3" == input_type:
-        logger.info(paths_to_compress.file_paths)
-        logger.error("Unsupported for now")
-        worker_output = {
-            "total_uncompressed_size": 0,
-            "total_compressed_size": 0,
-            "error_message": "unsupported"
-        }
-        return CompressionTaskStatus.FAILED, worker_output
-
-
     # Get s3 config
     s3_config: S3Config
     enable_s3_write = False
@@ -204,14 +231,14 @@ def run_clp(
         enable_s3_write = True
 
     if StorageEngine.CLP == clp_storage_engine:
-        compression_cmd = make_clp_command(
+        compression_cmd, compression_env = make_clp_command(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
-        compression_cmd = make_clp_s_command(
+        compression_cmd, compression_env = make_clp_s_command(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
@@ -223,19 +250,16 @@ def run_clp(
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
     # Prepare list of paths to compress for clp
+    input_type = clp_config.input.type
     log_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
-    file_paths = paths_to_compress.file_paths
-
-    with open(log_list_path, "w") as file:
-        if len(file_paths) > 0:
-            for path_str in file_paths:
-                file.write(path_str)
-                file.write("\n")
-        if paths_to_compress.empty_directories and len(paths_to_compress.empty_directories) > 0:
-            # Prepare list of paths to compress for clp
-            for path_str in paths_to_compress.empty_directories:
-                file.write(path_str)
-                file.write("\n")
+    if InputType.FS == input_type:
+        generate_fs_log_list_path_file(log_list_path, paths_to_compress)
+    elif InputType.S3 == input_type:
+        generate_s3_log_list_path_file(log_list_path, paths_to_compress, clp_config.input)
+    else:
+        error_msg = f"Unsupported input type: {input_type}."
+        logger.error(error_msg)
+        return False, {"error_message": error_msg}
 
     compression_cmd.append("--files-from")
     compression_cmd.append(str(log_list_path))
@@ -247,7 +271,12 @@ def run_clp(
     # Start compression
     logger.debug("Compressing...")
     compression_successful = False
-    proc = subprocess.Popen(compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file)
+    proc = subprocess.Popen(
+        compression_cmd,
+        stdout=subprocess.PIPE,
+        stderr=stderr_log_file,
+        env=compression_env
+    )
 
     # Compute the total amount of data compressed
     last_archive_stats = None
@@ -260,11 +289,7 @@ def run_clp(
     while not last_line_decoded:
         line = proc.stdout.readline()
         stats: Optional[Dict[str, Any]] = None
-        if "" == line:
-            # Skip empty lines that could be caused by potential errors in printing archive stats
-            continue
-
-        if line is not None:
+        if line:
             stats = json.loads(line.decode("ascii"))
         else:
             last_line_decoded = True

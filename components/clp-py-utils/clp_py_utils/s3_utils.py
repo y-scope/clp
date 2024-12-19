@@ -21,6 +21,10 @@ def verify_s3_ingestion_config(s3_input_config: S3InputConfig) -> Result[boto3.c
     )
     return Ok(s3_client)
 
+def generate_s3_virtual_hosted_style_url(region_code: str, bucket_name: str, object_key: str) -> str:
+    return f"https://{bucket_name}.s3.{region_code}.amazonaws.com/{object_key}"
+
+
 def get_file_metadata_with_bucket_prefix(
     s3_client: boto3.client,
     s3_config: S3InputConfig

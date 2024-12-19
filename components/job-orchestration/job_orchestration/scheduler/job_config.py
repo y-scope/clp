@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import typing
-
+from enum import auto
 from pydantic import BaseModel, validator
+from strenum import LowercaseStrEnum
 
+class InputType(LowercaseStrEnum):
+    FS = auto()
+    S3 = auto()
 
 class PathsToCompress(BaseModel):
     file_paths: typing.List[str]
@@ -13,14 +17,14 @@ class PathsToCompress(BaseModel):
 
 
 class FsInputConfig(BaseModel):
-    type: typing.Literal["fs"] = "fs"
+    type: typing.Literal[InputType.FS.value] = InputType.FS.value
     paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
     timestamp_key: typing.Optional[str] = None
 
 
 class S3InputConfig(BaseModel):
-    type: typing.Literal["s3"] = "s3"
+    type: typing.Literal[InputType.S3.value] = InputType.S3.value
     timestamp_key: typing.Optional[str] = None
 
     region_code: str
