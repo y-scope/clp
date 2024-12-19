@@ -4,16 +4,46 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from result import Err, Ok, Result
-
-from typing import List
+import re
+from typing import List, Tuple
 
 from clp_py_utils.clp_config import S3Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 from clp_py_utils.compression import FileMetadata
 
+# Constants
+AWS_ENDPOINT = "amazonaws.com"
+
+def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
+    host_style_url_regex = re.compile(
+        r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z0-9-]+))?"
+        r"\.(?P<endpoint>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
+    )
+    match = host_style_url_regex.match(s3_url)
+
+    if match is None:
+        path_style_url_regex = re.compile(
+            r"https://s3(\.(?P<region_code>[a-z0-9-]+))?\.(?P<endpoint>[a-z0-9.-]+)/"
+            r"(?P<bucket_name>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
+        )
+        match = path_style_url_regex.match(s3_url)
+
+    if match is None:
+        raise ValueError(f"Unsupported URL format: {s3_url}")
+
+    region_code = match.group("region_code")
+    bucket_name = match.group("bucket_name")
+    endpoint = match.group("endpoint")
+    key_prefix = match.group("key_prefix")
+
+    if AWS_ENDPOINT != endpoint:
+        raise ValueError(f"Unsupported endpoint: {endpoint}")
+
+    return region_code, bucket_name, key_prefix
+
 
 def generate_s3_virtual_hosted_style_url(region_code: str, bucket_name: str, object_key: str) -> str:
-    return f"https://{bucket_name}.s3.{region_code}.amazonaws.com/{object_key}"
+    return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
 
 def get_s3_file_metadata(
