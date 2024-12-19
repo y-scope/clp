@@ -6,9 +6,9 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/cli_utils.hpp"
+#include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
-#include "type_utils.hpp"
 
 namespace po = boost::program_options;
 
