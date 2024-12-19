@@ -117,22 +117,35 @@ DescriptorList tokenize_descriptor(std::vector<std::string> const& descriptors);
 class ColumnDescriptor : public Literal {
 public:
     /**
-     * Create a ColumnDescriptor literal from an integral value
-     * @param descriptor(s) the token or list of tokens making up the descriptor
-     * @return A ColumnDescriptor
+     * Creates a ColumnDescriptor literal from a list of escaped tokens.
+     *
+     * In particular there are escaping rules for literal '\' and '*':
+     * \\ -> literal \
+     * \* -> literal *
+     *
+     * A '*' that is not escaped is treated as a wildcard descriptor.
+     *
+     * @param token(s) the escaped token or list of escaped tokens making up the descriptor
+     * @return A ColumnDescriptor literal
      */
     static std::shared_ptr<ColumnDescriptor> create_from_escaped_token(std::string const& token);
     static std::shared_ptr<ColumnDescriptor> create_from_escaped_tokens(
             std::vector<std::string> const& tokens
     );
+
+    /**
+     * Create a ColumnDescriptor literal from a list of already-parsed DescriptorToken.
+     * @param descriptors the list of parsed DescriptorToken
+     * @return A ColumnDescriptor literal
+     */
     static std::shared_ptr<ColumnDescriptor> create_from_descriptors(
             DescriptorList const& descriptors
     );
 
     /**
      * Inserts an entire DescriptorList into this ColumnDescriptor before the specified position.
-     * @param an iterator indicating the position in the internal descriptor list before which the new descriptors will be inserted.
-     * before.
+     * @param an iterator indicating the position in the internal descriptor list before which the
+     * new descriptors will be inserted.
      * @param source the list of descriptors to be inserted
      */
     void insert(DescriptorList::iterator pos, DescriptorList const& source) {

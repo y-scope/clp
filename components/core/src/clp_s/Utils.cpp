@@ -579,11 +579,12 @@ bool StringUtils::unescape_kql_internal(
 ) {
     bool escaped{false};
     for (size_t i = 0; i < value.size(); ++i) {
-        if (false == escaped && '\\' != value[i]) {
-            unescaped.push_back(value[i]);
-            continue;
-        } else if (false == escaped && '\\' == value[i]) {
-            escaped = true;
+        if (false == escaped) {
+            if ('\\' == value[i]) {
+                escaped = true;
+            } else {
+                unescaped.push_back(value[i]);
+            }
             continue;
         }
 

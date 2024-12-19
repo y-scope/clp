@@ -22,18 +22,18 @@ void ColumnDescriptor::check_and_set_unresolved_descriptor_flag() {
     }
 }
 
-ColumnDescriptor::ColumnDescriptor(std::string const& descriptor) {
+ColumnDescriptor::ColumnDescriptor(std::string const& token) {
     m_flags = cAllTypes;
-    m_descriptors.emplace_back(DescriptorToken::create_descriptor_from_escaped_token(descriptor));
+    m_descriptors.emplace_back(DescriptorToken::create_descriptor_from_escaped_token(token));
     check_and_set_unresolved_descriptor_flag();
     if (is_unresolved_descriptor()) {
         simplify_descriptor_wildcards();
     }
 }
 
-ColumnDescriptor::ColumnDescriptor(std::vector<std::string> const& descriptors) {
+ColumnDescriptor::ColumnDescriptor(std::vector<std::string> const& tokens) {
     m_flags = cAllTypes;
-    m_descriptors = std::move(tokenize_descriptor(descriptors));
+    m_descriptors = std::move(tokenize_descriptor(tokens));
     check_and_set_unresolved_descriptor_flag();
     if (is_unresolved_descriptor()) {
         simplify_descriptor_wildcards();
