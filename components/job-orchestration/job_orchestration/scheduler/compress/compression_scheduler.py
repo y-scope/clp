@@ -22,7 +22,7 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
-from clp_py_utils.s3_utils import get_s3_files_metadata
+from clp_py_utils.s3_utils import get_s3_file_metadata
 from job_orchestration.executor.compress.fs_compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
