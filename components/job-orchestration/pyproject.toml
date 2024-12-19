@@ -10,7 +10,6 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8 || ^3.10"
-boto3 = "^1.35.81"
 Brotli = "^1.1.0"
 celery = "^5.3.6"
 # mariadb version must be compatible with libmariadev installed in runtime env.

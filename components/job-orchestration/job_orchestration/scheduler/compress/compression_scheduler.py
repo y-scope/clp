@@ -6,8 +6,8 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
+from result import Ok, Result
 
-import boto3
 import brotli
 import celery
 import msgpack
@@ -22,7 +22,7 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_adapter import SQL_Adapter
-from clp_py_utils.s3_utils import verify_s3_ingestion_config, get_file_metadata_with_bucket_prefix
+from clp_py_utils.s3_utils import get_s3_files_metadata
 from job_orchestration.executor.compress.fs_compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
@@ -117,20 +117,20 @@ def process_fs_input_paths(
 
 
 def process_s3_input(
-    s3_client: boto3.client,
     input_config: S3InputConfig,
     paths_to_compress_buffer: PathsToCompressBuffer,
-):
-    try:
-        file_metadata_list = get_file_metadata_with_bucket_prefix(s3_client, input_config)
-    except Exception:
-        logger.exception("Failed to get file metadata from s3")
-        return False
+) -> Result[bool, str]:
+    res = get_s3_file_metadata(input_config)
 
+    if res.is_err():
+        logger.error(f"Failed to process s3 input: {res.err_value}")
+        return res
+
+    file_metadata_list = res.ok_value
     for file_metadata in file_metadata_list:
         paths_to_compress_buffer.add_file(file_metadata)
 
-    return True
+    return Ok(True)
 
 
 def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
@@ -163,27 +163,14 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         if input_type == "fs":
             process_fs_input_paths(input_config, paths_to_compress_buffer)
         elif input_type == "s3":
-            res = verify_s3_ingestion_config(input_config)
+            res = process_s3_input(input_config, paths_to_compress_buffer)
             if res.is_err():
-                logger.error(f"S3 verification failed: {res.err_value}")
                 update_compression_job_metadata(
                     db_cursor,
                     job_id,
                     {
                         "status": CompressionJobStatus.FAILED,
-                        "status_msg": f"invalid input type: {input_type}",
-                    },
-                )
-                db_conn.commit()
-                continue
-
-            if not process_s3_input(res.ok_value, input_config, paths_to_compress_buffer):
-                update_compression_job_metadata(
-                    db_cursor,
-                    job_id,
-                    {
-                        "status": CompressionJobStatus.FAILED,
-                        "status_msg": f"S3 somehow failed during scheduling",
+                        "status_msg": f"Scheduler Failed for s3 input: {res.err_value}",
                     },
                 )
                 db_conn.commit()
