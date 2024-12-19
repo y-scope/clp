@@ -7,6 +7,7 @@ import sys
 import uuid
 
 import yaml
+from clp_py_utils.clp_config import StorageType
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -41,12 +42,12 @@ def main(argv):
     args_parser.add_argument(
         "--begin-time",
         type=int,
-        help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time range filter lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "--end-time",
         type=int,
-        help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time range filter upper-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "--ignore-case",
@@ -60,6 +61,9 @@ def main(argv):
         type=int,
         help="Count the number of results in each time span of the given size (ms).",
     )
+    args_parser.add_argument(
+        "--raw", action="store_true", help="Output the search results as raw logs."
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -72,6 +76,11 @@ def main(argv):
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
+        return -1
+
+    storage_type = clp_config.archive_output.storage.type
+    if StorageType.FS != storage_type:
+        logger.error(f"Search is not supported for archive storage type: {storage_type}.")
         return -1
 
     container_name = generate_container_name(str(JobType.SEARCH))
@@ -113,6 +122,8 @@ def main(argv):
     if parsed_args.count_by_time is not None:
         search_cmd.append("--count-by-time")
         search_cmd.append(str(parsed_args.count_by_time))
+    if parsed_args.raw:
+        search_cmd.append("--raw")
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 
