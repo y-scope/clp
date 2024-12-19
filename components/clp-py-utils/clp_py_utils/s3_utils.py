@@ -39,7 +39,7 @@ def get_s3_file_metadata(
 
             for obj in contents:
                 object_key = obj["Key"]
-                if not object_key.endswith("/"):
+                if object_key.endswith("/"):
                     # Skip any object that resolves to a directory like path
                     continue
 
