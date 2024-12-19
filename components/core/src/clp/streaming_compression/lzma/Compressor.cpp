@@ -37,8 +37,9 @@ auto Compressor::close() -> void {
     }
 
     if (m_compression_stream.avail_in > 0) {
-        SPDLOG_ERROR("Tried to close LZMA compressor with unprocessed input data.");
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+        SPDLOG_WARN("Trying to close LZMA compressor with unprocessed input data. Processing and "
+                    "flushing remaining data.");
+        flush_lzma(LZMA_FULL_FLUSH);
     }
 
     flush_lzma(LZMA_FINISH);
