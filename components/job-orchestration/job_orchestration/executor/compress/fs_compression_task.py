@@ -243,16 +243,13 @@ def run_clp(
     # Handle job metadata update and s3 write if enabled
     s3_error = None
     while not last_line_decoded:
-        line = proc.stdout.readline()
         stats: Optional[Dict[str, Any]] = None
-        if "" == line:
-            # Skip empty lines that could be caused by potential errors in printing archive stats
-            continue
 
-        if line is not None:
-            stats = json.loads(line.decode("ascii"))
-        else:
+        line = proc.stdout.readline()
+        if not line:
             last_line_decoded = True
+        else:
+            stats = json.loads(line.decode("ascii"))
 
         if last_archive_stats is not None and (
             None is stats or stats["id"] != last_archive_stats["id"]
