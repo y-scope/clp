@@ -47,6 +47,7 @@ def get_file_metadata_with_bucket_prefix(
 
     return file_metadata_list
 
+
 def s3_put(
     s3_config: S3Config, src_file: Path, dest_file_name: str, total_max_attempts: int = 3
 ) -> Result[bool, str]:

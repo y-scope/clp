@@ -98,7 +98,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system regex)
+find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
 if(Boost_FOUND)
     message(STATUS "Found Boost ${Boost_VERSION}")
 else()
@@ -334,6 +334,8 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
+        src/clp/BoundedReader.cpp
+        src/clp/BoundedReader.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -382,6 +384,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
+        src/clp/ffi/ir_stream/IrErrorCode.cpp
+        src/clp/ffi/ir_stream/IrErrorCode.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
@@ -548,6 +552,7 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
         tests/test-Array.cpp
+        tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-EncodedVariableInterpreter.cpp
