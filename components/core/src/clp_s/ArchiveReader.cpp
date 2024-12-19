@@ -4,20 +4,30 @@
 #include <string_view>
 
 #include "archive_constants.hpp"
+#include "InputConfig.hpp"
 #include "ReaderUtils.hpp"
 
 using std::string_view;
 
 namespace clp_s {
-void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
+void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
-    m_archive_id = archive_id;
-    std::filesystem::path archive_path{archives_dir};
-    archive_path /= m_archive_id;
-    auto const archive_path_str = archive_path.string();
+
+    if (false == get_archive_id_from_path(archive_path, m_archive_id)) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    if (InputSource::Filesystem != archive_path.source) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    if (false == std::filesystem::is_directory(archive_path.path)) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    auto const archive_path_str = archive_path.path;
 
     m_var_dict = ReaderUtils::get_variable_dictionary_reader(archive_path_str);
     m_log_dict = ReaderUtils::get_log_type_dictionary_reader(archive_path_str);

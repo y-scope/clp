@@ -1,8 +1,10 @@
 #include "CommandLineArguments.hpp"
 
+#include <filesystem>
 #include <iostream>
 
 #include <boost/program_options.hpp>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/cli_utils.hpp"
@@ -131,8 +133,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument(std::string("Unknown action '") + command_input + "'");
         }
 
+        constexpr std::string_view cNoAuth{"none"};
+        constexpr std::string_view cS3Auth{"s3"};
         if (Command::Compress == m_command) {
             po::options_description compression_positional_options;
+            std::vector<std::string> input_paths;
             // clang-format off
              compression_positional_options.add_options()(
                      "archives-dir",
@@ -140,7 +145,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                      "output directory"
              )(
                      "input-paths",
-                     po::value<std::vector<std::string>>(&m_file_paths)->value_name("PATHS"),
+                     po::value<std::vector<std::string>>(&input_paths)->value_name("PATHS"),
                      "input paths"
              );
             // clang-format on
@@ -151,6 +156,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             constexpr std::string_view cJsonFileType{"json"};
             constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
             std::string file_type{cJsonFileType};
+            std::string auth{cNoAuth};
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -209,6 +215,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "file-type",
                     po::value<std::string>(&file_type)->value_name("FILE_TYPE")->default_value(file_type),
                     "The type of file being compressed (json or kv-ir)"
+            )(
+                    "auth",
+                    po::value<std::string>(&auth)
+                        ->value_name("AUTH_TYPE")
+                        ->default_value(auth),
+                    "Type of authentication required for network requests (s3 | none). Authentication"
+                    " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
+                    " variables."
             );
             // clang-format on
 
@@ -252,13 +266,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (false == input_path_list_file_path.empty()) {
-                if (false == read_paths_from_file(input_path_list_file_path, m_file_paths)) {
+                if (false == read_paths_from_file(input_path_list_file_path, input_paths)) {
                     SPDLOG_ERROR("Failed to read paths from {}", input_path_list_file_path);
                     return ParsingResult::Failure;
                 }
             }
 
-            if (m_file_paths.empty()) {
+            for (auto const& path : input_paths) {
+                if (false == get_input_files_for_raw_path(path, m_input_paths)) {
+                    throw std::invalid_argument(fmt::format("Invalid input path \"{}\".", path));
+                }
+            }
+
+            if (m_input_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
             }
 
@@ -276,6 +296,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 }
             } else {
                 throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
+            }
+
+            if (cS3Auth == auth) {
+                m_network_auth.method = AuthMethod::S3PresignedUrlV4;
+            } else if (cNoAuth != auth) {
+                throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth)
+                );
             }
 
             // Parse and validate global metadata DB config
@@ -302,11 +329,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
+            std::string archive_path;
             // clang-format off
             extraction_options.add_options()(
-                    "archives-dir",
-                    po::value<std::string>(&m_archives_dir),
-                    "The directory containing the archives"
+                    "archive-path",
+                    po::value<std::string>(&archive_path),
+                    "Path to a directory containing archives, or the path to a single archive"
             )(
                     "output-dir",
                     po::value<std::string>(&m_output_dir),
@@ -314,15 +342,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
-            po::options_description input_options("Input Options");
-            input_options.add_options()(
-                    "archive-id",
-                    po::value<std::string>(&m_archive_id)->value_name("ID"),
-                    "ID of the archive to decompress"
-            );
-            extraction_options.add(input_options);
-
             po::options_description decompression_options("Decompression Options");
+            std::string auth{cNoAuth};
+            std::string archive_id;
             // clang-format off
             decompression_options.add_options()(
                     "ordered",
@@ -335,6 +357,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             ->value_name("SIZE"),
                     "Chunk size (B) for each output file when decompressing records in log order."
                     " When set to 0, no chunking is performed."
+            )(
+                    "archive-id",
+                    po::value<std::string>(&archive_id)->value_name("ID"),
+                    "Limit decompression to the archive with the given ID in a subdirectory of"
+                    " archive-path"
+            )(
+                    "auth",
+                    po::value<std::string>(&auth)
+                        ->value_name("AUTH_TYPE")
+                        ->default_value(auth),
+                    "Type of authentication required for network requests (s3 | none). Authentication"
+                    " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
+                    " variables."
             );
             // clang-format on
             extraction_options.add(decompression_options);
@@ -354,7 +389,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             extraction_options.add(output_metadata_options);
 
             po::positional_options_description positional_options;
-            positional_options.add("archives-dir", 1);
+            positional_options.add("archive-path", 1);
             positional_options.add("output-dir", 1);
 
             std::vector<std::string> unrecognized_options
@@ -382,15 +417,38 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
-                visible_options.add(input_options);
                 visible_options.add(decompression_options);
                 visible_options.add(output_metadata_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
 
-            if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archives directory specified");
+            if (archive_path.empty()) {
+                throw std::invalid_argument("No archive path specified");
+            }
+
+            if (false == archive_id.empty()) {
+                auto archive_fs_path = std::filesystem::path(archive_path) / archive_id;
+                if (false == std::filesystem::exists(archive_fs_path)) {
+                    throw std::invalid_argument("Requested archive does not exist");
+                }
+                m_input_paths.emplace_back(clp_s::Path{
+                        .source{clp_s::InputSource::Filesystem},
+                        .path{archive_fs_path.string()}
+                });
+            } else if (false == get_input_archives_for_raw_path(archive_path, m_input_paths)) {
+                throw std::invalid_argument("Invalid archive path");
+            }
+
+            if (m_input_paths.empty()) {
+                throw std::invalid_argument("No archive paths specified");
+            }
+
+            if (cS3Auth == auth) {
+                m_network_auth.method = AuthMethod::S3PresignedUrlV4;
+            } else if (cNoAuth != auth) {
+                throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth)
+                );
             }
 
             if (m_output_dir.empty()) {
@@ -422,11 +480,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::options_description search_options;
             std::string output_handler_name;
+            std::string archive_path;
             // clang-format off
             search_options.add_options()(
-                    "archives-dir",
-                    po::value<std::string>(&m_archives_dir),
-                    "The directory containing the archives"
+                    "archive-path",
+                    po::value<std::string>(&archive_path),
+                    "Path to a directory containing archives, or the path to a single archive"
             )(
                     "query,q",
                     po::value<std::string>(&m_query),
@@ -440,12 +499,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
             po::positional_options_description positional_options;
-            positional_options.add("archives-dir", 1);
+            positional_options.add("archive-path", 1);
             positional_options.add("query", 1);
             positional_options.add("output-handler", 1);
             positional_options.add("output-handler-args", -1);
 
             po::options_description match_options("Match Controls");
+            std::string auth{cNoAuth};
+            std::string archive_id;
             // clang-format off
             match_options.add_options()(
                 "tge",
@@ -461,8 +522,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "Ignore case distinctions between values in the query and the compressed data"
             )(
                 "archive-id",
-                po::value<std::string>(&m_archive_id)->value_name("ID"),
-                "Limit search to the archive with the given ID"
+                po::value<std::string>(&archive_id)->value_name("ID"),
+                "Limit search to the archive with the given ID in a subdirectory of archive-path"
             )(
                 "projection",
                 po::value<std::vector<std::string>>(&m_projection_columns)
@@ -471,6 +532,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "Project only the given set of columns for matching results. This option must be"
                 " specified after all positional options. Values that are objects or structured"
                 " arrays are currently unsupported."
+            )(
+                "auth",
+                po::value<std::string>(&auth)
+                    ->value_name("AUTH_TYPE")
+                    ->default_value(auth),
+                "Type of authentication required for network requests (s3 | none). Authentication"
+                " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
+                " variables."
             );
             // clang-format on
             search_options.add(match_options);
@@ -622,8 +691,32 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
 
-            if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archives directory specified");
+            if (archive_path.empty()) {
+                throw std::invalid_argument("No archive path specified");
+            }
+
+            if (false == archive_id.empty()) {
+                auto archive_fs_path = std::filesystem::path(archive_path) / archive_id;
+                if (false == std::filesystem::exists(archive_fs_path)) {
+                    throw std::invalid_argument("Requested archive does not exist");
+                }
+                m_input_paths.emplace_back(clp_s::Path{
+                        .source{clp_s::InputSource::Filesystem},
+                        .path{archive_fs_path.string()}
+                });
+            } else if (false == get_input_archives_for_raw_path(archive_path, m_input_paths)) {
+                throw std::invalid_argument("Invalid archive path");
+            }
+
+            if (m_input_paths.empty()) {
+                throw std::invalid_argument("No archive paths specified");
+            }
+
+            if (cS3Auth == auth) {
+                m_network_auth.method = AuthMethod::S3PresignedUrlV4;
+            } else if (cNoAuth != auth) {
+                throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth)
+                );
             }
 
             if (m_query.empty()) {
