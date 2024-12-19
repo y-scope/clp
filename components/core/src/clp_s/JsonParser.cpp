@@ -4,9 +4,11 @@
 #include <memory>
 #include <stack>
 
+#include <curl/curl.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
+#include "../clp/NetworkReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "archive_constants.hpp"
 #include "JsonFileIterator.hpp"
@@ -541,6 +543,23 @@ bool JsonParser::parse() {
                     json_file_iterator.truncated_bytes(),
                     path.path
             );
+        }
+
+        if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
+            nullptr != network_reader)
+        {
+            if (auto const rc = network_reader->get_curl_ret_code();
+                rc.has_value() && CURLcode::CURLE_OK != rc.value())
+            {
+                auto curl_error_message = network_reader->get_curl_error_msg();
+                std::string error_msg_str;
+                if (curl_error_message.has_value()) {
+                    error_msg_str = curl_error_message.value();
+                }
+                SPDLOG_ERROR("Encountered curl error during ingestion - {}", error_msg_str);
+            }
+            m_archive_writer->close();
+            return false;
         }
     }
     return true;
