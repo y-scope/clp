@@ -7,7 +7,6 @@ import uuid
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CONTAINER_INPUT_LOGS_ROOT_DIR,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -46,6 +45,16 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
+    paths_to_compress = parsed_args.paths
+    compression_path_list = parsed_args.path_list
+    # Validate some input paths were specified
+    if len(paths_to_compress) == 0 and compression_path_list is None:
+        args_parser.error("No paths specified.")
+
+    # Validate paths were specified using only one method
+    if len(paths_to_compress) > 0 and compression_path_list is not None:
+        args_parser.error("Paths cannot be specified on the command line AND through a file.")
+
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
@@ -74,8 +83,7 @@ def main(argv):
     compress_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
-        "--config", str(generated_config_path_on_container),
-        "--remove-path-prefix", str(CONTAINER_INPUT_LOGS_ROOT_DIR),
+        "--config", str(generated_config_path_on_container)
     ]
     # fmt: on
     if parsed_args.timestamp_key is not None:
@@ -84,30 +92,28 @@ def main(argv):
     if parsed_args.tags is not None:
         compress_cmd.append("--tags")
         compress_cmd.append(parsed_args.tags)
-    for path in parsed_args.paths:
-        # Resolve path and prefix it with CONTAINER_INPUT_LOGS_ROOT_DIR
-        resolved_path = pathlib.Path(path).resolve()
-        path = str(CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(resolved_path.anchor))
-        compress_cmd.append(path)
-    if parsed_args.path_list is not None:
-        # Get unused output path
-        while True:
-            container_path_list_filename = f"{uuid.uuid4()}.txt"
-            container_path_list_path = clp_config.logs_directory / container_path_list_filename
-            if not container_path_list_path.exists():
-                break
 
-        with open(parsed_args.path_list, "r") as path_list_file:
-            with open(container_path_list_path, "w") as container_path_list_file:
+    # Write paths to compress to a file
+    while True:
+        # Get unused output path
+        container_path_list_filename = f"{uuid.uuid4()}.txt"
+        container_path_list_path = clp_config.logs_directory / container_path_list_filename
+        if not container_path_list_path.exists():
+            break
+
+    with open(container_path_list_path, "w") as container_path_list_file:
+        if compression_path_list is not None:
+            with open(parsed_args.path_list, "r") as path_list_file:
                 for line in path_list_file:
                     resolved_path = pathlib.Path(line.rstrip()).resolve()
-                    path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                        resolved_path.anchor
-                    )
-                    container_path_list_file.write(f"{path}\n")
+                    container_path_list_file.write(f"{resolved_path}\n")
 
-        compress_cmd.append("--path-list")
-        compress_cmd.append(container_clp_config.logs_directory / container_path_list_filename)
+        for path in paths_to_compress:
+            resolved_path = pathlib.Path(path).resolve()
+            container_path_list_file.write(f"{resolved_path}\n")
+
+    compress_cmd.append("--path-list")
+    compress_cmd.append(container_clp_config.logs_directory / container_path_list_filename)
 
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)
