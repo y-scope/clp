@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import typing
 from enum import auto
+
 from pydantic import BaseModel, validator
 from strenum import LowercaseStrEnum
+
 
 class InputType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
+
 
 class PathsToCompress(BaseModel):
     file_paths: typing.List[str]

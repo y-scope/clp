@@ -6,7 +6,6 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
-from result import Ok, Result
 
 import brotli
 import celery
@@ -21,8 +20,8 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.sql_adapter import SQL_Adapter
 from clp_py_utils.s3_utils import get_s3_file_metadata
+from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.fs_compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
@@ -32,6 +31,7 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionTaskResult,
 )
 from pydantic import ValidationError
+from result import Ok, Result
 
 # Setup logging
 logger = get_logger("compression_scheduler")
@@ -81,16 +81,13 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
 
 
 def process_fs_input_paths(
-    fs_input_conf: FsInputConfig,
-    paths_to_compress_buffer: PathsToCompressBuffer
+    fs_input_conf: FsInputConfig, paths_to_compress_buffer: PathsToCompressBuffer
 ):
     for path_idx, path in enumerate(fs_input_conf.paths_to_compress, start=1):
         path = Path(path)
 
         try:
-            file, empty_directory = validate_path_and_get_info(
-                CONTAINER_INPUT_LOGS_ROOT_DIR, path
-            )
+            file, empty_directory = validate_path_and_get_info(CONTAINER_INPUT_LOGS_ROOT_DIR, path)
         except ValueError as ex:
             logger.error(str(ex))
             continue

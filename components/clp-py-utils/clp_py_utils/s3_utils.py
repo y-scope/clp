@@ -1,18 +1,19 @@
+import re
 from pathlib import Path
+from typing import List, Tuple
 
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
+from job_orchestration.scheduler.job_config import S3InputConfig
 from result import Err, Ok, Result
-import re
-from typing import List, Tuple
 
 from clp_py_utils.clp_config import S3Config
-from job_orchestration.scheduler.job_config import S3InputConfig
 from clp_py_utils.compression import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
+
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     host_style_url_regex = re.compile(
@@ -42,13 +43,13 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     return region_code, bucket_name, key_prefix
 
 
-def generate_s3_virtual_hosted_style_url(region_code: str, bucket_name: str, object_key: str) -> str:
+def generate_s3_virtual_hosted_style_url(
+    region_code: str, bucket_name: str, object_key: str
+) -> str:
     return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
 
-def get_s3_file_metadata(
-    s3_input_config: S3InputConfig
-) -> Result[List[FileMetadata], str]:
+def get_s3_file_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMetadata], str]:
     file_metadata_list: List[FileMetadata] = list()
 
     s3_client = boto3.client(

@@ -4,7 +4,7 @@ import os
 import pathlib
 import subprocess
 from contextlib import closing
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 from celery.app.task import Task
@@ -20,11 +20,16 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import s3_put, generate_s3_virtual_hosted_style_url
+from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, s3_put
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
-from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress, InputType, S3InputConfig
+from job_orchestration.scheduler.job_config import (
+    ClpIoConfig,
+    InputType,
+    PathsToCompress,
+    S3InputConfig,
+)
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
 # Setup logging
@@ -76,10 +81,11 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
         ),
     )
 
+
 def generate_fs_log_list_path_file(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
-):
+) -> None:
     file_paths = paths_to_compress.file_paths
     empty_directories = paths_to_compress.empty_directories
     with open(output_file_path, "w") as file:
@@ -98,12 +104,16 @@ def generate_s3_log_list_path_file(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
     s3_input_config: S3InputConfig,
-):
+) -> None:
     file_paths = paths_to_compress.file_paths
     with open(output_file_path, "w") as file:
         if len(file_paths) > 0:
             for path_str in file_paths:
-                file.write(generate_s3_virtual_hosted_style_url(s3_input_config.region_code, s3_input_config.bucket, path_str))
+                file.write(
+                    generate_s3_virtual_hosted_style_url(
+                        s3_input_config.region_code, s3_input_config.bucket, path_str
+                    )
+                )
                 file.write("\n")
 
 
@@ -272,10 +282,7 @@ def run_clp(
     logger.debug("Compressing...")
     compression_successful = False
     proc = subprocess.Popen(
-        compression_cmd,
-        stdout=subprocess.PIPE,
-        stderr=stderr_log_file,
-        env=compression_env
+        compression_cmd, stdout=subprocess.PIPE, stderr=stderr_log_file, env=compression_env
     )
 
     # Compute the total amount of data compressed

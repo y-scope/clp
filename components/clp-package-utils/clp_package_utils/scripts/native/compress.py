@@ -15,7 +15,11 @@ from job_orchestration.scheduler.constants import (
     CompressionJobCompletionStatus,
     CompressionJobStatus,
 )
-from job_orchestration.scheduler.job_config import ClpIoConfig, FsInputConfig, OutputConfig, S3InputConfig
+from job_orchestration.scheduler.job_config import (
+    ClpIoConfig,
+    FsInputConfig,
+    OutputConfig,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
