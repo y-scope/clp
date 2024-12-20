@@ -121,11 +121,11 @@ private:
         /**
          * Attaches a pre-allocated block buffer to the encoder's input stream.
          *
-         * @return false if the data buffer is null or empty.
+         * @return false if the data buffer is null.
          * @return true on success.
          */
         [[nodiscard]] auto attach_input(uint8_t const* data_ptr, size_t data_length) -> bool {
-            if (nullptr == data_ptr || 0 == data_length) {
+            if (nullptr == data_ptr) {
                 return false;
             }
             m_stream.next_in = data_ptr;
