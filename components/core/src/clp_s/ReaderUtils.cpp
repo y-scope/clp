@@ -161,10 +161,18 @@ std::shared_ptr<clp::ReaderInterface> try_create_file_reader(std::string_view co
 }
 
 bool try_sign_url(std::string& url) {
-    clp::aws::AwsAuthenticationSigner signer{
-            std::getenv(cAwsAccessKeyIdEnvVar),
-            std::getenv(cAwsSecretAccessKeyEnvVar)
-    };
+    auto const aws_access_key = std::getenv(cAwsAccessKeyIdEnvVar);
+    auto const aws_secret_access_key = std::getenv(cAwsSecretAccessKeyEnvVar);
+    if (nullptr == aws_access_key || nullptr == aws_secret_access_key) {
+        SPDLOG_ERROR(
+                "{} and {} environment variables not available for presigned url authentication.",
+                cAwsAccessKeyIdEnvVar,
+                cAwsSecretAccessKeyEnvVar
+        );
+        return false;
+    }
+
+    clp::aws::AwsAuthenticationSigner signer{aws_access_key, aws_secret_access_key};
 
     try {
         clp::aws::S3Url s3_url{url};
