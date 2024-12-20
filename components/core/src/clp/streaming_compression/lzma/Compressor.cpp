@@ -129,14 +129,13 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
             case LZMA_OK:
                 break;
             case LZMA_STREAM_END:
-                // NOTE: flush may not have completed if a multithreaded encoder is using
-                // action LZMA_FULL_BARRIER. For now, we skip this check.
+                // NOTE: flush may not have completed if a multithreaded encoder is using action
+                // LZMA_FULL_BARRIER. For now, we skip this check.
                 flushed = true;
                 break;
             case LZMA_BUF_ERROR:
-                // NOTE: this can happen if we are using LZMA_FULL_FLUSH or
-                // LZMA_FULL_BARRIER. These two actions keeps encoding input data
-                // alongside flushing buffered encoded data.
+                // NOTE: this can happen if we are using LZMA_FULL_FLUSH or LZMA_FULL_BARRIER. These
+                // two actions keeps encoding input data alongside flushing buffered encoded data.
                 SPDLOG_ERROR("LZMA compressor input stream is corrupt. No encoding "
                              "progress can be made.");
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
