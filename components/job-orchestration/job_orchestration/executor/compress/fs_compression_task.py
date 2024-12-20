@@ -82,7 +82,7 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
     )
 
 
-def generate_fs_log_list_path_file(
+def generate_fs_log_path_list_file(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
 ) -> None:
@@ -100,20 +100,20 @@ def generate_fs_log_list_path_file(
                 file.write("\n")
 
 
-def generate_s3_log_list_path_file(
+def generate_s3_log_url_list_file(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
     s3_input_config: S3InputConfig,
 ) -> None:
-    file_paths = paths_to_compress.file_paths
+    # S3 object keys are stored as file_paths in `PathsToCompress`
+    object_keys = paths_to_compress.file_paths
     with open(output_file_path, "w") as file:
-        if len(file_paths) > 0:
-            for path_str in file_paths:
-                file.write(
-                    generate_s3_virtual_hosted_style_url(
-                        s3_input_config.region_code, s3_input_config.bucket, path_str
-                    )
+        if len(object_keys) > 0:
+            for object_key in object_keys:
+                s3_virtual_hosted_style_url = generate_s3_virtual_hosted_style_url(
+                    s3_input_config.region_code, s3_input_config.bucket, object_key
                 )
+                file.write(s3_virtual_hosted_style_url)
                 file.write("\n")
 
 
@@ -259,20 +259,20 @@ def run_clp(
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
-    # Prepare list of paths to compress for clp
+    # Prepare list of targets to compress
     input_type = clp_config.input.type
-    log_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
+    targets_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
     if InputType.FS == input_type:
-        generate_fs_log_list_path_file(log_list_path, paths_to_compress)
+        generate_fs_log_path_list_file(targets_list_path, paths_to_compress)
     elif InputType.S3 == input_type:
-        generate_s3_log_list_path_file(log_list_path, paths_to_compress, clp_config.input)
+        generate_s3_log_url_list_file(targets_list_path, paths_to_compress, clp_config.input)
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)
         return False, {"error_message": error_msg}
 
     compression_cmd.append("--files-from")
-    compression_cmd.append(str(log_list_path))
+    compression_cmd.append(str(targets_list_path))
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
@@ -351,8 +351,8 @@ def run_clp(
         compression_successful = True
 
         # Remove generated temporary files
-        if log_list_path:
-            log_list_path.unlink()
+        if targets_list_path:
+            targets_list_path.unlink()
         db_config_file_path.unlink()
     logger.debug("Compressed.")
 
