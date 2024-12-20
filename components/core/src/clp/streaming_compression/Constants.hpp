@@ -7,6 +7,7 @@
 namespace clp::streaming_compression {
 enum class CompressorType : uint8_t {
     ZSTD = 0x10,
+    LZMA = 0x20,
     Passthrough = 0xFF,
 };
 }  // namespace clp::streaming_compression

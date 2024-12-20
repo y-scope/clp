@@ -17,6 +17,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   jq \
   libcurl4 \
   libcurl4-openssl-dev \
+  liblzma-dev \
   libmariadb-dev \
   libssl-dev \
   openjdk-11-jdk \
