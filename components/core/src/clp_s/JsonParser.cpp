@@ -557,9 +557,9 @@ bool JsonParser::parse() {
                     error_msg_str = curl_error_message.value();
                 }
                 SPDLOG_ERROR("Encountered curl error during ingestion - {}", error_msg_str);
+                m_archive_writer->close();
+                return false;
             }
-            m_archive_writer->close();
-            return false;
         }
     }
     return true;
