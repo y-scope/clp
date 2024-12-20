@@ -551,12 +551,13 @@ bool JsonParser::parse() {
             if (auto const rc = network_reader->get_curl_ret_code();
                 rc.has_value() && CURLcode::CURLE_OK != rc.value())
             {
-                auto curl_error_message = network_reader->get_curl_error_msg();
-                std::string error_msg_str;
-                if (curl_error_message.has_value()) {
-                    error_msg_str = curl_error_message.value();
-                }
-                SPDLOG_ERROR("Encountered curl error during ingestion - {}", error_msg_str);
+                auto const curl_error_message = network_reader->get_curl_error_msg();
+                SPDLOG_ERROR(
+                        "Encountered curl error while ingesting {} - Code: {} - Message: {}",
+                        path.path,
+                        rc.value(),
+                        curl_error_message.value_or("Unkown error")
+                );
                 m_archive_writer->close();
                 return false;
             }
