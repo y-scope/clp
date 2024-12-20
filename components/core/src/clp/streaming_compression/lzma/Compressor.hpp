@@ -31,7 +31,8 @@ public:
         }
     };
 
-    // Constructor
+    // Constructors
+    Compressor() : Compressor{cDefaultCompressionLevel, cDefaultDictionarySize, LZMA_CHECK_CRC64} {}
     Compressor(int compression_level, size_t dict_size, lzma_check check)
             : m_lzma_stream{compression_level, dict_size, check} {}
 

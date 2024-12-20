@@ -26,7 +26,7 @@ auto Compressor::open(FileWriter& file_writer) -> void {
                 m_compressed_stream_block_buffer.size()
         ))
     {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
     m_compressed_stream_file_writer = &file_writer;
     m_uncompressed_stream_pos = 0;
@@ -52,20 +52,11 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
     if (nullptr == m_compressed_stream_file_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
-
-    if (0 == data_length) {
-        return;
-    }
-
-    if (nullptr == data) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
     if (false
         == m_lzma_stream
                    .attach_input(clp::size_checked_pointer_cast<uint8_t const>(data), data_length))
     {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
     encode_lzma();
     m_lzma_stream.detach_input();
@@ -164,7 +155,7 @@ auto Compressor::flush_stream_output_block_buffer() -> void {
                 m_compressed_stream_block_buffer.size()
         ))
     {
-        throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 }
 
