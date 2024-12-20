@@ -19,7 +19,6 @@
 #include "../src/clp/streaming_compression/Compressor.hpp"
 #include "../src/clp/streaming_compression/Decompressor.hpp"
 #include "../src/clp/streaming_compression/lzma/Compressor.hpp"
-#include "../src/clp/streaming_compression/lzma/Constants.hpp"
 #include "../src/clp/streaming_compression/passthrough/Compressor.hpp"
 #include "../src/clp/streaming_compression/passthrough/Decompressor.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
@@ -132,11 +131,7 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     }
 
     SECTION("LZMA compression") {
-        compressor = std::make_unique<clp::streaming_compression::lzma::Compressor>(
-                clp::streaming_compression::lzma::cDefaultCompressionLevel,
-                clp::streaming_compression::lzma::cDefaultDictionarySize,
-                LZMA_CHECK_CRC64
-        );
+        compressor = std::make_unique<clp::streaming_compression::lzma::Compressor>();
         compress(std::move(compressor), uncompressed_buffer.data());
     }
 
