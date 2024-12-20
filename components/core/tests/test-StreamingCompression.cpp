@@ -35,13 +35,20 @@ using std::string_view;
 namespace {
 constexpr string_view cCompressedFilePath{"test_streaming_compressed_file.bin"};
 constexpr size_t cBufferSize{128L * 1024 * 1024};  // 128MB
+// Interleave no-ops to ensure the integrity of the compressor states at all times.
 constexpr auto cCompressionChunkSizes = std::to_array<size_t>(
         {cBufferSize / 100,
+         0,
          cBufferSize / 50,
+         0,
          cBufferSize / 25,
+         0,
          cBufferSize / 10,
+         0,
          cBufferSize / 5,
+         0,
          cBufferSize / 2,
+         0,
          cBufferSize}
 );
 

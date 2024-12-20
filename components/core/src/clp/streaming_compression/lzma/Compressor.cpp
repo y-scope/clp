@@ -26,7 +26,7 @@ auto Compressor::open(FileWriter& file_writer) -> void {
                 m_compressed_stream_block_buffer.size()
         ))
     {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode_NoMem, __FILENAME__, __LINE__);
     }
     m_compressed_stream_file_writer = &file_writer;
     m_uncompressed_stream_pos = 0;
@@ -153,7 +153,7 @@ auto Compressor::flush_stream_output_block_buffer() -> void {
                 m_compressed_stream_block_buffer.size()
         ))
     {
-        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+        throw OperationFailed(ErrorCode_NoMem, __FILENAME__, __LINE__);
     }
 }
 
