@@ -35,7 +35,7 @@ namespace {
 constexpr string_view cCompressedFilePath{"test_streaming_compressed_file.bin"};
 constexpr size_t cBufferSize{128L * 1024 * 1024};  // 128MB
 constexpr auto cCompressionChunkSizes = std::to_array<size_t>(
-        {0,  // no-op
+        {0,
          cBufferSize / 100,
          cBufferSize / 50,
          cBufferSize / 25,
