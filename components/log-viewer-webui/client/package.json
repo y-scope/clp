@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/index.tsx",
   "scripts": {
-    "build": "webpack --define-process-env-node-env production",
+    "build": "webpack --config-node-env production",
     "lint:check": "npx eslint --no-eslintrc --config package.json src webpack.config.js",
     "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src webpack.config.js",
     "start": "webpack serve"
