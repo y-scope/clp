@@ -6,7 +6,8 @@ import App from "./App";
 import "./index.css";
 
 
-const root = createRoot(document.getElementById("root"));
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+const root = createRoot(document.getElementById("root")!);
 root.render(
     <StrictMode>
         <App/>

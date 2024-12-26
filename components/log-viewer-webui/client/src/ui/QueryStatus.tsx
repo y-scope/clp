@@ -4,30 +4,16 @@ import {
     useState,
 } from "react";
 
-import {AxiosError} from "axios";
+import {isAxiosError} from "axios";
 
-import {submitExtractStreamJob} from "../api/query.js";
-import {QUERY_LOADING_STATES} from "../typings/query.js";
-import Loading from "./Loading.jsx";
+import {submitExtractStreamJob} from "../api/query";
+import {Nullable} from "../typings/common";
+import {
+    QUERY_JOB_TYPE,
+    QUERY_LOADING_STATE,
+} from "../typings/query";
+import Loading from "./Loading";
 
-
-let enumQueryType;
-/* eslint-disable sort-keys */
-/**
- * Note: This enum is duplicated from server, as it is non-trivial to include server enums from the
- * client.
- *
- * Enum of job types, matching the `QueryJobType` class in
- * `job_orchestration.query_scheduler.constants`.
- *
- * @enum {number}
- */
-const QUERY_JOB_TYPE = Object.freeze({
-    SEARCH_OR_AGGREGATION: (enumQueryType = 0),
-    EXTRACT_IR: ++enumQueryType,
-    EXTRACT_JSON: ++enumQueryType,
-});
-/* eslint-enable sort-keys */
 
 /**
  * Mapping between job type enums and stream type
@@ -40,11 +26,13 @@ const EXTRACT_JOB_TYPE = Object.freeze({
 /**
  * Submits queries and renders the query states.
  *
- * @return {React.ReactElement}
+ * @return
  */
 const QueryStatus = () => {
-    const [queryState, setQueryState] = useState(QUERY_LOADING_STATES.SUBMITTING);
-    const [errorMsg, setErrorMsg] = useState(null);
+    const [queryState, setQueryState] = useState<QUERY_LOADING_STATE>(
+        QUERY_LOADING_STATE.SUBMITTING
+    );
+    const [errorMsg, setErrorMsg] = useState<Nullable<string>>(null);
     const isFirstRun = useRef(true);
 
     useEffect(() => {
@@ -66,33 +54,34 @@ const QueryStatus = () => {
             return;
         }
 
-        const extractJobType = EXTRACT_JOB_TYPE[streamType];
-        if ("undefined" === typeof extractJobType) {
+        if (false === streamType in EXTRACT_JOB_TYPE) {
             const error = `Unsupported Stream type: ${streamType}`;
             console.error(error);
             setErrorMsg(error);
 
             return;
         }
+        const sanitizedLogEventIdx = Number(logEventIdx);
+        const extractJobType = EXTRACT_JOB_TYPE[streamType as keyof typeof EXTRACT_JOB_TYPE];
 
         submitExtractStreamJob(
             extractJobType,
             streamId,
-            Number(logEventIdx),
+            sanitizedLogEventIdx,
             () => {
-                setQueryState(QUERY_LOADING_STATES.WAITING);
+                setQueryState(QUERY_LOADING_STATE.WAITING);
             }
         )
             .then(({data}) => {
-                setQueryState(QUERY_LOADING_STATES.LOADING);
+                setQueryState(QUERY_LOADING_STATE.LOADING);
 
-                const innerLogEventNum = logEventIdx - data.begin_msg_ix + 1;
-                window.location = `/log-viewer/index.html?filePath=/streams/${data.path}` +
+                const innerLogEventNum = sanitizedLogEventIdx - data.begin_msg_ix + 1;
+                window.location.href = `/log-viewer/index.html?filePath=/streams/${data.path}` +
                     `#logEventNum=${innerLogEventNum}`;
             })
-            .catch((e) => {
+            .catch((e: unknown) => {
                 let msg = "Unknown error.";
-                if (e instanceof AxiosError) {
+                if (isAxiosError<{message?: string}>(e)) {
                     msg = e.message;
                     if ("undefined" !== typeof e.response) {
                         if ("undefined" !== typeof e.response.data.message) {

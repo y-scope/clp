@@ -33,11 +33,14 @@ const config = {
     devtool: isProduction ?
         "source-map" :
         "eval-source-map",
-    entry: path.resolve(dirname, "src", "index.jsx"),
+    entry: path.resolve(dirname, "src", "index.tsx"),
+    mode: isProduction ?
+        "production" :
+        "development",
     module: {
         rules: [
             {
-                test: /\.(js|jsx)$/i,
+                test: /\.(ts|tsx)$/i,
                 exclude: /node_modules/,
                 use: {
                     loader: "babel-loader",
@@ -50,6 +53,7 @@ const config = {
                                     runtime: "automatic",
                                 },
                             ],
+                            "@babel/preset-typescript",
                         ],
                         plugins: isProduction ?
                             [] :
@@ -66,6 +70,21 @@ const config = {
             },
         ],
     },
+    optimization: {
+        moduleIds: isProduction ?
+            "deterministic" :
+            "named",
+        runtimeChunk: "single",
+        splitChunks: {
+            cacheGroups: {
+                vendor: {
+                    test: /[\\/]node_modules[\\/]/,
+                    name: "vendors",
+                    chunks: "all",
+                },
+            },
+        },
+    },
     output: {
         path: path.resolve(dirname, "dist"),
         filename: isProduction ?
@@ -80,16 +99,11 @@ const config = {
     resolve: {
         extensions: [
             ".js",
-            ".jsx",
             ".json",
+            ".ts",
+            ".tsx",
         ],
     },
 };
 
-export default () => {
-    config.mode = isProduction ?
-        "production" :
-        "development";
-
-    return config;
-};
+export default config;

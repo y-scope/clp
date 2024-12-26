@@ -2,7 +2,7 @@
   "name": "log-viewer-webui-client",
   "version": "0.1.0",
   "description": "",
-  "main": "src/index.jsx",
+  "main": "src/index.tsx",
   "scripts": {
     "build": "webpack --define-process-env-node-env production",
     "lint:check": "npx eslint --no-eslintrc --config package.json src webpack.config.js",
@@ -13,33 +13,76 @@
   "license": "Apache-2.0",
   "type": "module",
   "devDependencies": {
-    "@babel/core": "^7.24.7",
-    "@babel/preset-env": "^7.24.7",
-    "@babel/preset-react": "^7.24.7",
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.3",
+    "@babel/preset-typescript": "^7.26.0",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
-    "babel-loader": "^9.1.3",
+    "babel-loader": "^9.2.1",
     "css-loader": "^7.1.2",
     "eslint-config-yscope": "latest",
-    "html-webpack-plugin": "^5.6.0",
-    "mini-css-extract-plugin": "^2.9.0",
-    "react-refresh": "^0.14.2",
+    "eslint-import-resolver-typescript": "^3.7.0",
+    "html-webpack-plugin": "^5.6.3",
+    "mini-css-extract-plugin": "^2.9.2",
+    "react-refresh": "^0.16.0",
     "style-loader": "^4.0.0",
-    "webpack": "^5.95.0",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.1.0"
-  },
-  "eslintConfig": {
-    "extends": [
-      "yscope/react"
-    ]
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
   },
   "dependencies": {
-    "@emotion/react": "^11.13.0",
-    "@emotion/styled": "^11.13.0",
-    "@mui/joy": "^5.0.0-beta.48",
-    "@types/react": "^18.3.3",
-    "axios": "^1.7.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/joy": "^5.0.0-beta.51",
+    "axios": "^1.7.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "yscope/react"
+    ],
+    "ignorePatterns": [
+      "dist/",
+      "node_modules/"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "*.ts",
+          "*.tsx"
+        ],
+        "extends": [
+          "yscope/typescript"
+        ]
+      }
+    ],
+    "rules": {
+      "no-restricted-imports": [
+        "error",
+        {
+          "paths": [
+            {
+              "message": "Please use path imports and name your imports with postfix \"Icon\" to avoid confusions.",
+              "name": "@mui/icons-material"
+            }
+          ],
+          "patterns": [
+            {
+              "group": [
+                "@mui/joy/*",
+                "!@mui/joy/styles"
+              ],
+              "message": "Please use the default import from \"@mui/joy\" instead."
+            }
+          ]
+        }
+      ]
+    }
   }
 }
