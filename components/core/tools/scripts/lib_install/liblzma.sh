@@ -37,7 +37,22 @@ if [[ "$#" -gt 1 ]] ; then
   fi
 fi
 
-# Note: we won't check if the package already exists
+# Check if already installed
+set +e
+dpkg -l "${package_name}" | grep "${version}"
+installed=$?
+set -e
+if [ $installed -eq 0 ] ; then
+  # Nothing to do
+  exit
+fi
+
+echo "Checking for elevated privileges..."
+install_cmd_args=()
+if [ ${EUID:-$(id -u)} -ne 0 ] ; then
+  sudo echo "Script can elevate privileges."
+  install_cmd_args+=("sudo")
+fi
 
 # Get number of cpu cores
 num_cpus=$(grep -c ^processor /proc/cpuinfo)
@@ -60,7 +75,30 @@ mkdir build
 cd build
 cmake -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE ../
 make -j${num_cpus}
-make install liblzma
+
+# Check if checkinstall is installed
+set +e
+command -v checkinstall
+checkinstall_installed=$?
+set -e
+
+# Install
+if [ $checkinstall_installed -eq 0 ] ; then
+  install_cmd_args+=(
+    checkinstall
+    --default
+    --fstrans=no
+    --nodoc
+    --pkgname "${package_name}"
+    --pkgversion "${version}"
+    --provides "${package_name}"
+    --pakdir "${deb_output_dir}"
+  )
+fi
+install_cmd_args+=(
+    make install liblzma
+)
+"${install_cmd_args[@]}"
 
 # Clean up
 rm -rf $temp_dir
