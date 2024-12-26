@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+from urllib.parse import urlparse
 
 from pymongo import IndexModel, MongoClient
 from pymongo.errors import OperationFailure
@@ -16,20 +17,69 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def initialize_replica_set(client, uri):
+def check_replica_set_status(client, netloc):
+    is_already_initialized = False
+    should_configure_replica_set = False
+
     try:
         result = client.admin.command("replSetGetStatus")
-        logger.info("Replica set already initialized: %s", result)
+        is_already_initialized = True
+        existing_netloc = result["members"][0]["name"]
+        if netloc == existing_netloc:
+            logger.debug("Replica set is already initialized at %s", existing_netloc)
+        else:
+            logger.warning(
+                "Replica set is already initialized at %s, but requested at %s",
+                existing_netloc,
+                netloc,
+            )
+            should_configure_replica_set = True
     except OperationFailure as e:
-        logger.info("Initializing replica set")
+        should_configure_replica_set = True
 
-        # Explicit host specification is required, or the docker's ID would be used as the hostname.
-        config = {
-            "_id": "rs0",
-            "members": [{"_id": 0, "host": "localhost:27017"}],
-        }
+        if 94 == e.code:  # codeName: NotYetInitialized
+            logger.debug("Replica set has not been previously initialized.")
+        elif 93 == e.code:  # codeName: InvalidReplicaSetConfig
+            logger.debug("Replica set is already initialized but reports invalid config.")
+            is_already_initialized = True
+        else:
+            raise e
+
+    return is_already_initialized, should_configure_replica_set
+
+
+def configure_replica_set(client, is_already_initialized, netloc):
+    logger.debug("Initializing replica set at %s", netloc)
+
+    # `replSetInitiate` can be called without a config object. However, explicit host
+    # specification is required, or the docker's ID would be used as the hostname.
+    config = {
+        "_id": "rs0",
+        "members": [{"_id": 0, "host": netloc}],
+        "version": 1,
+    }
+
+    if is_already_initialized:
+        # Use `force=True` so that we do not have to increment the version
+        client.admin.command("replSetReconfig", config, force=True)
+    else:
         client.admin.command("replSetInitiate", config)
-        logger.info("Replica set initialized successfully.")
+
+    logger.debug("Replica set initialized successfully.")
+
+
+def configure_replica_set_if_needed(client, uri):
+    parsed_uri = urlparse(uri)
+    netloc = parsed_uri.netloc
+    if 0 == len(netloc):
+        raise ValueError("Invalid URI: %s", uri)
+
+    logger.debug("Replica set initialization requested for %s", netloc)
+
+    is_already_initialized, should_configure_replica_set = check_replica_set_status(client, netloc)
+
+    if should_configure_replica_set:
+        configure_replica_set(client, is_already_initialized, netloc)
 
 
 def main(argv):
@@ -45,7 +95,7 @@ def main(argv):
 
     try:
         with MongoClient(results_cache_uri, directConnection=True) as results_cache_client:
-            initialize_replica_set(results_cache_client, results_cache_uri)
+            configure_replica_set_if_needed(results_cache_client, results_cache_uri)
 
         with MongoClient(results_cache_uri) as results_cache_client:
             stream_collection = results_cache_client.get_default_database()[stream_collection_name]
