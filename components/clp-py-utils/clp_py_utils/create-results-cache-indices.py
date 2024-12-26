@@ -99,6 +99,7 @@ def main(argv):
 
         with MongoClient(results_cache_uri) as results_cache_client:
             stream_collection = results_cache_client.get_default_database()[stream_collection_name]
+
             file_split_id_index = IndexModel(["file_split_id"])
             orig_file_id_index = IndexModel(["orig_file_id", "begin_msg_ix", "end_msg_ix"])
             stream_collection.create_indexes([file_split_id_index, orig_file_id_index])
