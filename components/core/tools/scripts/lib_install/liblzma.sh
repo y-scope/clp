@@ -96,7 +96,7 @@ if [ $checkinstall_installed -eq 0 ] ; then
   )
 fi
 install_cmd_args+=(
-    make install liblzma
+    make install
 )
 "${install_cmd_args[@]}"
 
