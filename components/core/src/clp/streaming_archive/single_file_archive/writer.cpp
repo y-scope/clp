@@ -9,7 +9,6 @@
 #include <msgpack.hpp>
 
 #include "../../ErrorCode.hpp"
-#include "../../ffi/encoding_methods.hpp"
 #include "../../TraceableException.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
@@ -91,7 +90,7 @@ auto get_file_infos(
     std::vector<FileInfo> files;
     uint64_t offset = 0;
 
-    for (auto const& static_archive_file_name : static_archive_file_names) {
+    for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
         files.emplace_back(static_archive_file_name, offset);
         update_offset(multi_file_archive_path / static_archive_file_name, offset);
     }
@@ -105,33 +104,20 @@ auto get_file_infos(
     // Add sentinel indicating total size of all files.
     files.emplace_back(FileInfo{"", offset});
 
-    // Print the file paths and offsets to ensure it works
-    // Remove this later
-    for (auto const& file : files) {
-        std::cout << "File: " << file.n << ", Offset: " << file.o << std::endl;
-    }
-
     return files;
 }
 
 auto pack_single_file_archive_metadata(
         clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
         std::vector<FileInfo> const& file_infos,
-        uint64_t const num_segments
+        std::vector<std::string> const& segment_ids
 ) -> std::stringstream {
     ArchiveMetadata archive_metadata{
             .archive_format_version = multi_file_archive_metadata.get_archive_format_version(),
-            // TODO: The following fields are required for single-file archive metadata format;
-            // however, they are not yet implemented in multi-file archive metadata. Currently,
-            // they are set to default values, but should reference the actual values from the
-            // multi-file archive metadata once implemented.
-            // - variable_encoding_methods_version
-            // - variables_schema_version
-            // - compression_type
             .variable_encoding_methods_version
-            = static_cast<char const*>(ffi::cVariableEncodingMethodsVersion),
-            .variables_schema_version = static_cast<char const*>(ffi::cVariablesSchemaVersion),
-            .compression_type = std::string(cCompressionTypeZstd),
+            = multi_file_archive_metadata.get_variable_encoding_methods_version(),
+            .variables_schema_version = multi_file_archive_metadata.get_variables_schema_version(),
+            .compression_type = multi_file_archive_metadata.get_compression_type(),
             .creator_id = multi_file_archive_metadata.get_creator_id(),
             .begin_timestamp = multi_file_archive_metadata.get_begin_timestamp(),
             .end_timestamp = multi_file_archive_metadata.get_end_timestamp(),
@@ -142,13 +128,22 @@ auto pack_single_file_archive_metadata(
     SingleFileArchiveMetadata single_file_archive{
             .archive_files = file_infos,
             .archive_metadata = archive_metadata,
-            .num_segments = num_segments,
+            .num_segments = segment_ids.size(),
     };
 
     std::stringstream buf;
     msgpack::pack(buf, single_file_archive);
 
     return buf;
+}
+
+auto create_single_file_archive_metadata(
+        clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
+        std::filesystem::path const& multi_file_archive_path,
+        std::vector<std::string> const& segment_ids
+) -> std::stringstream {
+    auto file_infos = get_file_infos(multi_file_archive_path, segment_ids);
+    return pack_single_file_archive_metadata(multi_file_archive_metadata, file_infos, segment_ids);
 }
 
 auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_size) -> void {
@@ -174,7 +169,7 @@ auto write_archive_files(
         std::filesystem::path const& multi_file_archive_path,
         std::vector<std::string> const& segment_ids
 ) -> void {
-    for (auto const& file_name : static_archive_file_names) {
+    for (auto const& file_name : cStaticArchiveFileNames) {
         std::filesystem::path static_archive_file_path = multi_file_archive_path / file_name;
         write_archive_file(static_archive_file_path, archive_writer);
     }

@@ -756,18 +756,15 @@ void Archive::write_single_file_archive() {
 
     auto segment_ids = single_file_archive::get_segment_ids(m_next_segment_id - 1);
 
-    // Put this all together
-    auto file_infos = single_file_archive::get_file_infos(multi_file_archive_path, segment_ids);
-
     if (false == m_local_metadata.has_value()) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     auto& multi_file_archive_metadata = m_local_metadata.value();
 
-    auto packed_metadata = single_file_archive::pack_single_file_archive_metadata(
+    auto packed_metadata = single_file_archive::create_single_file_archive_metadata(
             multi_file_archive_metadata,
-            file_infos,
-            m_next_segment_id
+            multi_file_archive_path,
+            segment_ids
     );
 
     msgpack::object_handle oh

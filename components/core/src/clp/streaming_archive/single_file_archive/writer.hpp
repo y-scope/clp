@@ -41,6 +41,12 @@ private:
  */
 auto get_segment_ids(segment_id_t last_segment_id) -> std::vector<std::string>;
 
+auto create_single_file_archive_metadata(
+        clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
+        std::filesystem::path const& multi_file_archive_path,
+        std::vector<std::string> const& segment_ids
+) -> std::stringstream;
+
 /**
  * @param multi_file_archive_path Path to the multi-file archive.
  * @param segment_ids Vector of segment IDs.
@@ -57,13 +63,13 @@ auto get_file_infos(
  *
  * @param multi_file_archive_metadata Multi-file archive metadata.
  * @param file_infos Vector containing a `FileInfo` struct for every file in the multi-file archive.
- * @param num_segments
+ * @param segment_ids Vector of segment IDs.
  * @return Packed metadata.
  */
 auto pack_single_file_archive_metadata(
         clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
         std::vector<FileInfo> const& file_infos,
-        uint64_t num_segments
+        std::vector<std::string> const& segment_ids
 ) -> std::stringstream;
 
 /**
