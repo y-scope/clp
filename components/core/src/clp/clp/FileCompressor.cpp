@@ -337,9 +337,7 @@ bool FileCompressor::try_compressing_as_archive(
             parent_directories.emplace(file_parent_path);
         }
 
-        if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts
-            && false == archive_writer.get_use_single_file_archive())
-        {
+        if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dicts) {
             split_archive(archive_user_config, archive_writer);
         }
 
