@@ -10,6 +10,9 @@
 #include "../ffi/encoding_methods.hpp"
 
 namespace clp::streaming_archive {
+
+static constexpr std::string_view cCompressionTypeZstd = "ZSTD";
+
 /**
  * A class to encapsulate metadata directly relating to an archive.
  */
@@ -114,7 +117,7 @@ private:
     // disk format is potentially a breaking change and not currently required.
     std::string m_variable_encoding_methods_version{ffi::cVariableEncodingMethodsVersion};
     std::string m_variables_schema_version{ffi::cVariablesSchemaVersion};
-    std::string m_compression_type{"ZSTD"};
+    std::string m_compression_type{cCompressionTypeZstd};
 };
 }  // namespace clp::streaming_archive
 

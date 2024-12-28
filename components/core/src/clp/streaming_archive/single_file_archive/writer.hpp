@@ -21,7 +21,7 @@ public:
             char const* const filename,
             int line_number,
             std::string message
-            = "streaming_archive::writer::single_file_archive::utils operation failed"
+            = "streaming_archive::single_file_archive operation failed"
     )
             : TraceableException{error_code, filename, line_number},
               m_message{std::move(message)} {}
@@ -48,7 +48,7 @@ auto get_segment_ids(segment_id_t last_segment_id) -> std::vector<std::string>;
  * @return Packed metadata.
  */
 auto create_single_file_archive_metadata(
-        clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
+        ArchiveMetadata const& multi_file_archive_metadata,
         std::filesystem::path const& multi_file_archive_path,
         std::vector<std::string> const& segment_ids
 ) -> std::stringstream;

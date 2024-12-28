@@ -19,7 +19,7 @@ namespace {
 constexpr size_t cReadBlockSize = 4096;
 
 /**
- * Gets the size of a file specified by `file_path` and adds it to `offset`.
+ * Gets the size of a file specified by `file_path` and adds it to file section `offset`.
  * @param file_path
  * @param[out] offset File section offset for the single-file archive. The returned offset
  * represents the starting position of the next file in single-file archive.
@@ -42,8 +42,8 @@ auto get_file_infos(
 ) -> std::vector<FileInfo>;
 
 /**
-* Combines file section metadata, multi-file archive metadata, and the number of segments into single-file archive metadata.
-* Once combined, serializes the metadata into MsgPack format.
+ * Combines file section metadata, multi-file archive metadata, and the number of segments into single-file archive metadata.
+ * Once combined, serializes the metadata into MsgPack format.
  *
  * @param multi_file_archive_metadata
  * @param file_infos Vector containing a `FileInfo` struct for every file in the multi-file archive.
@@ -51,18 +51,10 @@ auto get_file_infos(
  * @return Packed metadata.
  */
 auto pack_single_file_archive_metadata(
-        clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
+        ArchiveMetadata const& multi_file_archive_metadata,
         std::vector<FileInfo> const& file_infos,
         std::vector<std::string> const& segment_ids
 ) -> std::stringstream;
-
-/**
- * Reads the content of a file and writes it to the single-file archive.
- * @param file_path
- * @param archive_writer
- * @throws OperationFailed if reading the file fails.
- */
-void write_archive_file(std::string const& file_path, FileWriter& archive_writer);
 
 /**
  * Writes single-file archive header.
@@ -80,6 +72,14 @@ auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_siz
  */
 auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const& packed_metadata)
     -> void;
+
+/**
+ * Reads the content of a file and writes it to the single-file archive.
+ * @param file_path
+ * @param archive_writer
+ * @throws OperationFailed if reading the file fails.
+ */
+void write_archive_file(std::string const& file_path, FileWriter& archive_writer);
 
 /**
  * Iterates over files in the multi-file archive copying their contents to the single-file archive.
@@ -135,11 +135,11 @@ auto get_file_infos(
 }
 
 auto pack_single_file_archive_metadata(
-        clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
+        ArchiveMetadata const& multi_file_archive_metadata,
         std::vector<FileInfo> const& file_infos,
         std::vector<std::string> const& segment_ids
 ) -> std::stringstream {
-    ArchiveMetadata archive_metadata{
+    MultiFileArchiveMetadata archive_metadata{
             .archive_format_version = multi_file_archive_metadata.get_archive_format_version(),
             .variable_encoding_methods_version
             = multi_file_archive_metadata.get_variable_encoding_methods_version(),
@@ -164,24 +164,6 @@ auto pack_single_file_archive_metadata(
     return buf;
 }
 
-auto write_archive_file(std::filesystem::path const& file_path, FileWriter& archive_writer)
-        -> void {
-    FileReader reader(file_path.string());
-    std::array<char, cReadBlockSize> read_buffer{};
-    while (true) {
-        size_t num_bytes_read{0};
-        ErrorCode const error_code
-                = reader.try_read(read_buffer.data(), cReadBlockSize, num_bytes_read);
-        if (ErrorCode_EndOfFile == error_code) {
-            break;
-        }
-        if (ErrorCode_Success != error_code) {
-            throw OperationFailed(error_code, __FILENAME__, __LINE__);
-        }
-        archive_writer.write(read_buffer.data(), num_bytes_read);
-    }
-}
-
 auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_size) -> void {
     SingleFileArchiveHeader header{
             .magic{},
@@ -200,13 +182,31 @@ auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const&
     archive_writer.write(packed_metadata.str().data(), packed_metadata.str().size());
 }
 
+auto write_archive_file(std::filesystem::path const& file_path, FileWriter& archive_writer)
+        -> void {
+    FileReader reader(file_path.string());
+    std::array<char, cReadBlockSize> read_buffer{};
+    while (true) {
+        size_t num_bytes_read{};
+        ErrorCode const error_code
+                = reader.try_read(read_buffer.data(), cReadBlockSize, num_bytes_read);
+        if (ErrorCode_EndOfFile == error_code) {
+            break;
+        }
+        if (ErrorCode_Success != error_code) {
+            throw OperationFailed(error_code, __FILENAME__, __LINE__);
+        }
+        archive_writer.write(read_buffer.data(), num_bytes_read);
+    }
+}
+
 auto write_archive_files(
         FileWriter& archive_writer,
         std::filesystem::path const& multi_file_archive_path,
         std::vector<std::string> const& segment_ids
 ) -> void {
-    for (auto const& file_name : cStaticArchiveFileNames) {
-        std::filesystem::path static_archive_file_path = multi_file_archive_path / file_name;
+    for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
+        std::filesystem::path static_archive_file_path = multi_file_archive_path / static_archive_file_name;
         write_archive_file(static_archive_file_path, archive_writer);
     }
 
@@ -233,7 +233,7 @@ auto get_segment_ids(segment_id_t last_segment_id) -> std::vector<std::string> {
 }
 
 auto create_single_file_archive_metadata(
-        clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
+        ArchiveMetadata const& multi_file_archive_metadata,
         std::filesystem::path const& multi_file_archive_path,
         std::vector<std::string> const& segment_ids
 ) -> std::stringstream {

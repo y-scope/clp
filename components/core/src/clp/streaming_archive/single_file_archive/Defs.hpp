@@ -7,7 +7,6 @@
 #include "../clp/Defs.h"
 #include "../Constants.hpp"
 #include "msgpack.hpp"
-#include "../ArchiveMetadata.hpp"
 
 namespace clp::streaming_archive::single_file_archive {
 
@@ -24,15 +23,6 @@ constexpr single_file_archive_format_version_t cArchiveVersion{
 static constexpr size_t cNumMagicNumberChars = 4;
 static constexpr std::array<uint8_t, cNumMagicNumberChars> cUnstructuredSfaMagicNumber = {'Y', 'C', 'L', 'P'};
 static constexpr std::string_view cUnstructuredSfaExtension = ".clp";
-static constexpr std::string_view cCompressionTypeZstd = "ZSTD";
-static constexpr size_t cNumUnused = 4;
-
-struct __attribute__((packed)) SingleFileArchiveHeader {
-    std::array<uint8_t, cNumMagicNumberChars> magic;
-    single_file_archive_format_version_t version;
-    uint64_t metadata_size;
-    std::array<uint64_t, cNumUnused> unused;
-};
 
 static constexpr size_t cNumStaticFiles = 5;
 constexpr std::array<const char*, cNumStaticFiles> cStaticArchiveFileNames = {
@@ -43,13 +33,21 @@ constexpr std::array<const char*, cNumStaticFiles> cStaticArchiveFileNames = {
         cVarSegmentIndexFilename
 };
 
+static constexpr size_t cNumUnused = 4;
+struct __attribute__((packed)) SingleFileArchiveHeader {
+    std::array<uint8_t, cNumMagicNumberChars> magic;
+    single_file_archive_format_version_t version;
+    uint64_t metadata_size;
+    std::array<uint64_t, cNumUnused> unused;
+};
+
 struct FileInfo {
     std::string n;
     uint64_t o;
     MSGPACK_DEFINE_MAP(n, o);
 };
 
-struct ArchiveMetadata {
+struct MultiFileArchiveMetadata {
     archive_format_version_t archive_format_version;
     std::string variable_encoding_methods_version;
     std::string variables_schema_version;
@@ -74,7 +72,7 @@ struct ArchiveMetadata {
 
 struct SingleFileArchiveMetadata {
     std::vector<FileInfo> archive_files;
-    ArchiveMetadata archive_metadata;
+    MultiFileArchiveMetadata archive_metadata;
     uint64_t num_segments;
     MSGPACK_DEFINE_MAP(archive_files, archive_metadata, num_segments);
 };
