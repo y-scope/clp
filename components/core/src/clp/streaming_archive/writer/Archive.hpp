@@ -283,9 +283,9 @@ private:
     void update_metadata();
 
     /**
-     * Writes the archive to a single file.
+     * Writes archive to disk in single-file format then removes existing multi-file archive.
      */
-    void write_single_file_archive();
+    void create_single_file_archive();
 
     // Variables
     boost::uuids::uuid m_id;

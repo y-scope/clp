@@ -41,6 +41,14 @@ private:
  */
 auto get_segment_ids(segment_id_t last_segment_id) -> std::vector<std::string>;
 
+/**
+ * Generates single-file archive metadata then serializes into MsgPack.
+ *
+ * @param multi_file_archive_metadata
+ * @param multi_file_archive_path
+ * @param segment_ids
+ * @return Packed metadata.
+ */
 auto create_single_file_archive_metadata(
         clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
         std::filesystem::path const& multi_file_archive_path,
@@ -48,61 +56,18 @@ auto create_single_file_archive_metadata(
 ) -> std::stringstream;
 
 /**
- * @param multi_file_archive_path Path to the multi-file archive.
- * @param segment_ids Vector of segment IDs.
- * @return Vector containing a `FileInfo` struct for every file in the multi-file archive.
- * @throws OperationFailed if error getting file size.
- */
-auto get_file_infos(
-        std::filesystem::path const& multi_file_archive_path,
-        std::vector<std::string> const& segment_ids
-) -> std::vector<FileInfo>;
-
-/**
- * Serializes single-file archive metadata into MsgPack.
+ * Writes the single-file archive to disk.
  *
- * @param multi_file_archive_metadata Multi-file archive metadata.
- * @param file_infos Vector containing a `FileInfo` struct for every file in the multi-file archive.
- * @param segment_ids Vector of segment IDs.
- * @return Packed metadata.
- */
-auto pack_single_file_archive_metadata(
-        clp::streaming_archive::ArchiveMetadata const& multi_file_archive_metadata,
-        std::vector<FileInfo> const& file_infos,
-        std::vector<std::string> const& segment_ids
-) -> std::stringstream;
-
-/**
- * Writes single-file archive header.
- *
- * @param archive_writer
- * @param metadata_size
- */
-auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_size) -> void;
-
-/**
- * Writes single-file archive metadata.
- *
- * @param archive_writer
- * @param packed_metadata Packed metadata.
- */
-auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const& packed_metadata)
-        -> void;
-
-/**
- * Iterates over files in the multi-file archive copying their contents to the single-file archive.
- * Skips metadata since already written in `write_archive_metadata`.
- *
- * @param archive_writer
  * @param multi_file_archive_path
- * @param segment_ids Vector of segment IDs.
- * @throws OperationFailed if reading a file fails.
+ * @param packed_metadata
+ * @param segment_ids
+ * @throws OperationFailed if writing the archive fails.
  */
-auto write_archive_files(
-        FileWriter& archive_writer,
+void write_single_file_archive(
         std::filesystem::path const& multi_file_archive_path,
+        std::stringstream const& packed_metadata,
         std::vector<std::string> const& segment_ids
-) -> void;
+);
 
 }  // namespace clp::streaming_archive::single_file_archive
 
