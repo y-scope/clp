@@ -137,7 +137,8 @@ bool compress(
     }
     for (auto it = files_to_compress.cbegin(); it != files_to_compress.cend(); ++it) {
         if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries
-            && false == archive_writer.get_use_single_file_archive()) {
+            && false == archive_writer.get_use_single_file_archive())
+        {
             split_archive(archive_user_config, archive_writer);
         }
         if (false
@@ -166,7 +167,8 @@ bool compress(
     // Compress grouped files
     for (auto const& file_to_compress : grouped_files_to_compress) {
         if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries
-            && false == archive_writer.get_use_single_file_archive()) {
+            && false == archive_writer.get_use_single_file_archive())
+        {
             split_archive(archive_user_config, archive_writer);
         }
         if (false

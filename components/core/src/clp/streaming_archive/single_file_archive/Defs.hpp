@@ -21,12 +21,13 @@ constexpr single_file_archive_format_version_t cArchiveVersion{
 };
 
 static constexpr size_t cNumMagicNumberChars{4};
-static constexpr std::array<uint8_t, cNumMagicNumberChars> cUnstructuredSfaMagicNumber{'Y', 'C', 'L', 'P'};
+static constexpr std::array<uint8_t, cNumMagicNumberChars>
+        cUnstructuredSfaMagicNumber{'Y', 'C', 'L', 'P'};
 static constexpr std::string_view cUnstructuredSfaExtension{".clp"};
 static constexpr size_t cFileSizeWarningThreshold{100L * 1024 * 1024};
 
 static constexpr size_t cNumStaticFiles{5};
-constexpr std::array<const char*, cNumStaticFiles> cStaticArchiveFileNames{
+constexpr std::array<char const*, cNumStaticFiles> cStaticArchiveFileNames{
         cMetadataDBFileName,
         cLogTypeDictFilename,
         cLogTypeSegmentIndexFilename,
@@ -35,6 +36,7 @@ constexpr std::array<const char*, cNumStaticFiles> cStaticArchiveFileNames{
 };
 
 static constexpr size_t cNumUnused{6};
+
 struct __attribute__((packed)) SingleFileArchiveHeader {
     std::array<uint8_t, cNumMagicNumberChars> magic;
     single_file_archive_format_version_t version;

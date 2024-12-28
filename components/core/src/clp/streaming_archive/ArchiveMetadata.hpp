@@ -4,10 +4,10 @@
 #include <cstdint>
 
 #include "../Defs.h"
+#include "../ffi/encoding_methods.hpp"
 #include "../FileReader.hpp"
 #include "../FileWriter.hpp"
 #include "Constants.hpp"
-#include "../ffi/encoding_methods.hpp"
 
 namespace clp::streaming_archive {
 
@@ -83,11 +83,17 @@ public:
 
     [[nodiscard]] auto get_end_timestamp() const { return m_end_timestamp; }
 
-    [[nodiscard]] auto get_variable_encoding_methods_version() const -> std::string const& { return m_variable_encoding_methods_version; }
+    [[nodiscard]] auto get_variable_encoding_methods_version() const -> std::string const& {
+        return m_variable_encoding_methods_version;
+    }
 
-    [[nodiscard]] auto get_variables_schema_version() const -> std::string const& { return m_variables_schema_version; }
+    [[nodiscard]] auto get_variables_schema_version() const -> std::string const& {
+        return m_variables_schema_version;
+    }
 
-    [[nodiscard]] auto get_compression_type() const -> std::string const& { return m_compression_type; }
+    [[nodiscard]] auto get_compression_type() const -> std::string const& {
+        return m_compression_type;
+    }
 
     /**
      * Expands the archive's time range based to encompass the given time range

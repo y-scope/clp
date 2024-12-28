@@ -2,11 +2,11 @@
 
 #include <cstring>
 #include <filesystem>
-#include <spdlog.h>
 #include <sstream>
 
 #include <fmt/core.h>
 #include <msgpack.hpp>
+#include <spdlog.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
@@ -43,8 +43,8 @@ auto get_file_infos(
 ) -> std::vector<FileInfo>;
 
 /**
- * Combines file section metadata, multi-file archive metadata, and the number of segments into single-file archive metadata.
- * Once combined, serializes the metadata into MsgPack format.
+ * Combines file section metadata, multi-file archive metadata, and the number of segments into
+ * single-file archive metadata. Once combined, serializes the metadata into MsgPack format.
  *
  * @param multi_file_archive_metadata
  * @param file_infos Vector containing a `FileInfo` struct for every file in the multi-file archive.
@@ -72,7 +72,7 @@ auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_siz
  * @param packed_metadata Packed metadata.
  */
 auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const& packed_metadata)
-    -> void;
+        -> void;
 
 /**
  * Reads the content of a file and writes it to the single-file archive.
@@ -136,10 +136,10 @@ auto get_file_infos(
     // single-file archives are not split.
     if (offset > cFileSizeWarningThreshold) {
         SPDLOG_WARN(
-            "Single file archive size exceeded {}. "
-            "The single-file archive format is not intended for large archives, "
-            " consider using multi-file archive format instead.",
-            cFileSizeWarningThreshold
+                "Single file archive size exceeded {}. "
+                "The single-file archive format is not intended for large archives, "
+                " consider using multi-file archive format instead.",
+                cFileSizeWarningThreshold
         );
     }
 
@@ -218,7 +218,8 @@ auto write_archive_files(
         std::vector<std::string> const& segment_ids
 ) -> void {
     for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
-        std::filesystem::path static_archive_file_path = multi_file_archive_path / static_archive_file_name;
+        std::filesystem::path static_archive_file_path
+                = multi_file_archive_path / static_archive_file_name;
         write_archive_file(static_archive_file_path, archive_writer);
     }
 

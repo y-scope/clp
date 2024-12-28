@@ -339,7 +339,8 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
         }
     }
     if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts
-        && false == m_use_single_file_archive) {
+        && false == m_use_single_file_archive)
+    {
         split_file_and_archive(
                 m_archive_user_config,
                 m_path_for_compression,
@@ -675,7 +676,11 @@ void Archive::create_single_file_archive() {
             segment_ids
     );
 
-    single_file_archive::write_single_file_archive(multi_file_archive_path, packed_metadata, segment_ids);
+    single_file_archive::write_single_file_archive(
+            multi_file_archive_path,
+            packed_metadata,
+            segment_ids
+    );
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
