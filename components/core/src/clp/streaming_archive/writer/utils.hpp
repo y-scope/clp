@@ -10,7 +10,6 @@
 namespace clp::streaming_archive::writer {
 /**
  * Closes the current archive and starts a new one
- *
  * @param archive_user_config
  * @param archive_writer
  */
