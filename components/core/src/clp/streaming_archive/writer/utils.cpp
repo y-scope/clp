@@ -12,6 +12,10 @@ using std::string;
 
 namespace clp::streaming_archive::writer {
 auto split_archive(Archive::UserConfig& archive_user_config, Archive& archive_writer) -> void {
+    if (archive_writer.get_use_single_file_archive()) {
+        SPDLOG_WARN("Single-file archive cannot be split.");
+        return;
+    }
     archive_writer.close();
     archive_user_config.id = boost::uuids::random_generator()();
     ++archive_user_config.creation_num;

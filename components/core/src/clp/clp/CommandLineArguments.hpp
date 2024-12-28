@@ -23,9 +23,9 @@ public:
     explicit CommandLineArguments(std::string const& program_name)
             : CommandLineArgumentsBase(program_name),
               m_show_progress(false),
+              m_single_file_archive(false),
               m_sort_input_files(true),
               m_print_archive_stats_progress(false),
-              m_single_file_archive(false),
               m_target_segment_uncompressed_size(1L * 1024 * 1024 * 1024),
               m_target_encoded_file_size(512L * 1024 * 1024),
               m_target_data_size_of_dictionaries(100L * 1024 * 1024),
@@ -46,11 +46,11 @@ public:
 
     bool show_progress() const { return m_show_progress; }
 
+    bool get_use_single_file_archive() const { return m_single_file_archive; }
+
     bool sort_input_files() const { return m_sort_input_files; }
 
     bool print_archive_stats_progress() const { return m_print_archive_stats_progress; }
-
-    bool get_single_file_archive() const { return m_single_file_archive; }
 
     size_t get_target_encoded_file_size() const { return m_target_encoded_file_size; }
 
@@ -95,8 +95,8 @@ private:
     std::string m_output_dir;
     std::string m_schema_file_path;
     bool m_show_progress;
-    bool m_print_archive_stats_progress;
     bool m_single_file_archive;
+    bool m_print_archive_stats_progress;
     size_t m_target_encoded_file_size;
     size_t m_target_segment_uncompressed_size;
     size_t m_target_data_size_of_dictionaries;

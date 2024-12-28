@@ -376,7 +376,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             )(
                     "single-file-archive",
                     po::bool_switch(&m_single_file_archive),
-                    "Compress using single-file format."
+                    "Output archive as a single-file"
             );
 
             po::options_description all_compression_options;
