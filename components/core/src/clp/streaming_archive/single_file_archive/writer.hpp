@@ -1,5 +1,5 @@
-#ifndef CLP_STREAMING_ARCHIVE_SINGLE_FILE_ARCHIVE_UTILS_HPP
-#define CLP_STREAMING_ARCHIVE_SINGLE_FILE_ARCHIVE_UTILS_HPP
+#ifndef CLP_STREAMING_ARCHIVE_SINGLE_FILE_ARCHIVE_WRITER_HPP
+#define CLP_STREAMING_ARCHIVE_SINGLE_FILE_ARCHIVE_WRITER_HPP
 
 #include <filesystem>
 #include <string>
@@ -8,10 +8,8 @@
 #include <msgpack.hpp>
 
 #include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../ArchiveMetadata.hpp"
-#include "Defs.hpp"
 
 namespace clp::streaming_archive::single_file_archive {
 
@@ -36,13 +34,13 @@ private:
 };
 
 /**
- * @param last_segment_id ID of last written segment.
+ * @param last_segment_id ID of last written segment in archive.
  * @return Vector of segment IDs.
  */
 auto get_segment_ids(segment_id_t last_segment_id) -> std::vector<std::string>;
 
 /**
- * Generates single-file archive metadata then serializes into MsgPack.
+ * Generates packed single-file archive metadata.
  *
  * @param multi_file_archive_metadata
  * @param multi_file_archive_path
@@ -56,12 +54,13 @@ auto create_single_file_archive_metadata(
 ) -> std::stringstream;
 
 /**
- * Writes the single-file archive to disk.
+ * Writes header, metadata and archive files in single-file format then
+ * removes existing multi-file archive.
  *
  * @param multi_file_archive_path
  * @param packed_metadata
  * @param segment_ids
- * @throws OperationFailed if writing the archive fails.
+ * @throws OperationFailed if single-file archive path already exists.
  */
 void write_single_file_archive(
         std::filesystem::path const& multi_file_archive_path,
@@ -71,4 +70,4 @@ void write_single_file_archive(
 
 }  // namespace clp::streaming_archive::single_file_archive
 
-#endif  // CLP_STREAMING_ARCHIVE_SINGLE_FILE_ARCHIVE_UTILS_HPP
+#endif  // CLP_STREAMING_ARCHIVE_SINGLE_FILE_ARCHIVE_WRITER_HPP

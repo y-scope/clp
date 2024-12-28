@@ -229,7 +229,6 @@ void Archive::close() {
     // Persist all metadata including dictionaries
     write_dir_snapshot();
 
-    // I dont understand this code we already closed in write dir snapshot?
     m_logtype_dict.close();
     m_logtype_dict_entry.clear();
     m_var_dict.close();
@@ -569,9 +568,7 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
 
     m_metadata_db.update_files(files);
 
-    if (false == m_use_single_file_archive) {
-        m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
-    }
+    m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
 
     // Mark files' metadata as clean
     for (auto file : files) {
@@ -669,8 +666,8 @@ void Archive::create_single_file_archive() {
     if (false == m_local_metadata.has_value()) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    auto& multi_file_archive_metadata = m_local_metadata.value();
 
+    auto& multi_file_archive_metadata = m_local_metadata.value();
     auto packed_metadata = single_file_archive::create_single_file_archive_metadata(
             multi_file_archive_metadata,
             multi_file_archive_path,

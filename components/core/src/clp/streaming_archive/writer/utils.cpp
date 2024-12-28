@@ -13,7 +13,10 @@ using std::string;
 namespace clp::streaming_archive::writer {
 auto split_archive(Archive::UserConfig& archive_user_config, Archive& archive_writer) -> void {
     if (archive_writer.get_use_single_file_archive()) {
-        SPDLOG_WARN("Single-file archive cannot be split.");
+        SPDLOG_WARN(
+            "Target size of dictionaries exceeded. "
+            "Single-file archive cannot be split into multiple archives."
+        );
         return;
     }
     archive_writer.close();

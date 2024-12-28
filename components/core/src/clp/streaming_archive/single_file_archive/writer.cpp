@@ -2,7 +2,6 @@
 
 #include <cstring>
 #include <filesystem>
-#include <iostream>
 #include <sstream>
 
 #include <fmt/core.h>
@@ -17,22 +16,25 @@
 namespace clp::streaming_archive::single_file_archive {
 
 namespace {
-
 constexpr size_t cReadBlockSize = 4096;
 
 /**
  * Gets the size of a file specified by `file_path` and adds it to `offset`.
  * @param file_path
- * @param offset The current offset of the single file archive.
+ * @param[out] offset File section offset for the single-file archive. The returned offset
+ * represents the starting position of the next file in single-file archive.
  * @throws OperationFailed if error getting file size.
  */
 void update_offset(std::filesystem::path const& file_path, uint64_t& offset);
 
 /**
- * @param multi_file_archive_path Path to the multi-file archive.
- * @param segment_ids Vector of segment IDs.
+ * Generates metadata for the file section of a single-file archive. The metadata consists
+ * of a list of file names and their corresponding starting offsets.
+ *
+ * @param multi_file_archive_path
+ * @param segment_ids
  * @return Vector containing a `FileInfo` struct for every file in the multi-file archive.
- * @throws OperationFailed if error getting file size.
+ * @throws Propagates `update_offset`'s exceptions.
  */
 auto get_file_infos(
         std::filesystem::path const& multi_file_archive_path,
@@ -40,7 +42,8 @@ auto get_file_infos(
 ) -> std::vector<FileInfo>;
 
 /**
- * Generates single-file archive metadata then serializes into MsgPack.
+* Combines file section metadata, multi-file archive metadata, and the number of segments into single-file archive metadata.
+* Once combined, serializes the metadata into MsgPack format.
  *
  * @param multi_file_archive_metadata
  * @param file_infos Vector containing a `FileInfo` struct for every file in the multi-file archive.
@@ -54,9 +57,9 @@ auto pack_single_file_archive_metadata(
 ) -> std::stringstream;
 
 /**
- * Reads the content of a file and writes it to the archive.
- * @param file_path Path to the file to be read.
- * @param archive_writer Writer to write the file content to the archive.
+ * Reads the content of a file and writes it to the single-file archive.
+ * @param file_path
+ * @param archive_writer
  * @throws OperationFailed if reading the file fails.
  */
 void write_archive_file(std::string const& file_path, FileWriter& archive_writer);
@@ -65,7 +68,7 @@ void write_archive_file(std::string const& file_path, FileWriter& archive_writer
  * Writes single-file archive header.
  *
  * @param archive_writer
- * @param metadata_size
+ * @param packed_metadata_size
  */
 auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_size) -> void;
 
@@ -76,16 +79,16 @@ auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_siz
  * @param packed_metadata Packed metadata.
  */
 auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const& packed_metadata)
-        -> void;
+    -> void;
 
 /**
  * Iterates over files in the multi-file archive copying their contents to the single-file archive.
- * Skips metadata since already written in `write_archive_metadata`.
+ * Skips metadata file since already written in `write_archive_metadata`.
  *
  * @param archive_writer
  * @param multi_file_archive_path
  * @param segment_ids
- * @throws OperationFailed if reading a file fails.
+ * @throws Propagates `update_offset`'s exceptions.
  */
 auto write_archive_files(
         FileWriter& archive_writer,

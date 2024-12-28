@@ -4,10 +4,10 @@
 #include <cstdint>
 #include <string>
 
-#include "../ArchiveMetadata.hpp"
 #include "../clp/Defs.h"
 #include "../Constants.hpp"
 #include "msgpack.hpp"
+#include "../ArchiveMetadata.hpp"
 
 namespace clp::streaming_archive::single_file_archive {
 
@@ -21,26 +21,27 @@ constexpr single_file_archive_format_version_t cArchiveVersion{
         cArchiveMajorVersion << 24 | cArchiveMinorVersion << 16 | cArchivePatchVersion
 };
 
-static constexpr std::array<uint8_t, 4> cUnstructuredSfaMagicNumber = {'Y', 'C', 'L', 'P'};
+static constexpr size_t cNumMagicNumberChars = 4;
+static constexpr std::array<uint8_t, cNumMagicNumberChars> cUnstructuredSfaMagicNumber = {'Y', 'C', 'L', 'P'};
 static constexpr std::string_view cUnstructuredSfaExtension = ".clp";
 static constexpr std::string_view cCompressionTypeZstd = "ZSTD";
-
-static constexpr size_t cMagicNumberSize = 4;
-static constexpr size_t cUnusedSize = 4;
+static constexpr size_t cNumUnused = 4;
 
 struct __attribute__((packed)) SingleFileArchiveHeader {
-    std::array<uint8_t, cMagicNumberSize> magic;
+    std::array<uint8_t, cNumMagicNumberChars> magic;
     single_file_archive_format_version_t version;
     uint64_t metadata_size;
-    std::array<uint64_t, cUnusedSize> unused;
+    std::array<uint64_t, cNumUnused> unused;
 };
 
-constexpr std::array<char const*, 5> cStaticArchiveFileNames
-        = {cMetadataDBFileName,
-           cLogTypeDictFilename,
-           cLogTypeSegmentIndexFilename,
-           cVarDictFilename,
-           cVarSegmentIndexFilename};
+static constexpr size_t cNumStaticFiles = 5;
+constexpr std::array<const char*, cNumStaticFiles> cStaticArchiveFileNames = {
+        cMetadataDBFileName,
+        cLogTypeDictFilename,
+        cLogTypeSegmentIndexFilename,
+        cVarDictFilename,
+        cVarSegmentIndexFilename
+};
 
 struct FileInfo {
     std::string n;
@@ -49,7 +50,7 @@ struct FileInfo {
 };
 
 struct ArchiveMetadata {
-    single_file_archive_format_version_t archive_format_version;
+    archive_format_version_t archive_format_version;
     std::string variable_encoding_methods_version;
     std::string variables_schema_version;
     std::string compression_type;
