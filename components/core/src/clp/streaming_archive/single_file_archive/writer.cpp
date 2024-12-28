@@ -119,13 +119,13 @@ auto get_file_infos(
     uint64_t offset = 0;
 
     for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
-        files.emplace_back(std::string(static_archive_file_name), offset);
+        files.emplace_back(FileInfo{std::string(static_archive_file_name), offset});
         update_offset(multi_file_archive_path / static_archive_file_name, offset);
     }
 
     std::filesystem::path segment_dir_path = multi_file_archive_path / cSegmentsDirname;
     for (auto const& segment_id : segment_ids) {
-        files.emplace_back(segment_id, offset);
+        files.emplace_back(FileInfo{segment_id, offset});
         update_offset(segment_dir_path / segment_id, offset);
     }
 
