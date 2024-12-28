@@ -338,7 +338,8 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
             m_old_ts_pattern = timestamp_pattern;
         }
     }
-    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
+    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts
+        && false == m_use_single_file_archive) {
         split_file_and_archive(
                 m_archive_user_config,
                 m_path_for_compression,

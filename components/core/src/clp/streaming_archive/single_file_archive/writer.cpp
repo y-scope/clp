@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <filesystem>
+#include <spdlog.h>
 #include <sstream>
 
 #include <fmt/core.h>
@@ -130,6 +131,17 @@ auto get_file_infos(
 
     // Add sentinel indicating total size of all files.
     files.emplace_back(FileInfo{"", offset});
+
+    // Decompression of large single-file archives will consume excessive memory since
+    // single-file archives are not split.
+    if (offset > cFileSizeWarningThreshold) {
+        SPDLOG_WARN(
+            "Single file archive size exceeded {}. "
+            "The single-file archive format is not intended for large archives, "
+            " consider using multi-file archive format instead.",
+            cFileSizeWarningThreshold
+        );
+    }
 
     return files;
 }
