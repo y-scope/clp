@@ -13,12 +13,15 @@
 #include <json/single_include/nlohmann/json.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParser.hpp>
+#include <spdlog.h>
 
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"
 #include "../../spdlog_with_specializations.hpp"
 #include "../../Utils.hpp"
 #include "../Constants.hpp"
+#include "../single_file_archive/Defs.hpp"
+#include "../single_file_archive/writer.hpp"
 #include "utils.hpp"
 
 using clp::ir::eight_byte_encoded_variable_t;
@@ -56,6 +59,7 @@ void Archive::open(UserConfig const& user_config) {
     m_creator_id_as_string = boost::uuids::to_string(m_creator_id);
     m_creation_num = user_config.creation_num;
     m_print_archive_stats_progress = user_config.print_archive_stats_progress;
+    m_use_single_file_archive = user_config.use_single_file_archive;
 
     std::error_code std_error_code;
 
@@ -225,6 +229,7 @@ void Archive::close() {
     // Persist all metadata including dictionaries
     write_dir_snapshot();
 
+    // I dont understand this code we already closed in write dir snapshot?
     m_logtype_dict.close();
     m_logtype_dict_entry.clear();
     m_var_dict.close();
@@ -241,6 +246,10 @@ void Archive::close() {
     m_global_metadata_db = nullptr;
 
     m_metadata_db.close();
+
+    if (m_use_single_file_archive) {
+        write_single_file_archive();
+    }
 
     m_creator_id_as_string.clear();
     m_id_as_string.clear();
@@ -330,7 +339,9 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
             m_old_ts_pattern = timestamp_pattern;
         }
     }
-    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
+    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts
+        && false == m_use_single_file_archive)
+    {
         split_file_and_archive(
                 m_archive_user_config,
                 m_path_for_compression,
@@ -560,7 +571,9 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
 
     m_metadata_db.update_files(files);
 
-    m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
+    if (false == m_use_single_file_archive) {
+        m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
+    }
 
     // Mark files' metadata as clean
     for (auto file : files) {
@@ -648,6 +661,150 @@ void Archive::update_metadata() {
         std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                   << std::endl;
     }
+}
+
+void print_msgpack_object(msgpack::object const& obj, int depth = 0) {
+    // Indentation for better readability
+    std::string indent(depth * 2, ' ');
+
+    switch (obj.type) {
+        case msgpack::type::NIL:
+            std::cout << indent << "NIL" << std::endl;
+            break;
+        case msgpack::type::BOOLEAN:
+            std::cout << indent << "BOOLEAN: " << (obj.as<bool>() ? "true" : "false") << std::endl;
+            break;
+        case msgpack::type::POSITIVE_INTEGER:
+        case msgpack::type::NEGATIVE_INTEGER:
+            std::cout << indent << "Integer: " << obj.as<int64_t>() << std::endl;
+            break;
+        case msgpack::type::FLOAT32:
+        case msgpack::type::FLOAT64:
+            std::cout << indent << "Float: " << obj.as<double>() << std::endl;
+            break;
+        case msgpack::type::STR:
+            std::cout << indent << "String: " << obj.as<std::string>() << std::endl;
+            break;
+        case msgpack::type::BIN:
+            std::cout << indent << "Binary (size " << obj.via.bin.size << "): ";
+            for (size_t i = 0; i < obj.via.bin.size; ++i) {
+                std::cout << std::hex << static_cast<int>(obj.via.bin.ptr[i]) << " ";
+            }
+            std::cout << std::dec << std::endl;
+            break;
+        case msgpack::type::ARRAY:
+            std::cout << indent << "Array (size " << obj.via.array.size << "):" << std::endl;
+            for (size_t i = 0; i < obj.via.array.size; ++i) {
+                print_msgpack_object(
+                        obj.via.array.ptr[i],
+                        depth + 1
+                );  // Recursively print array elements
+            }
+            break;
+        case msgpack::type::MAP:
+            std::cout << indent << "Map (size " << obj.via.map.size << "):" << std::endl;
+            for (size_t i = 0; i < obj.via.map.size; ++i) {
+                // Print key
+                std::cout << indent << "  Key " << i + 1 << ": ";
+                print_msgpack_object(obj.via.map.ptr[i].key, depth + 1);
+
+                // Print value
+                std::cout << indent << "  Value " << i + 1 << ": ";
+                print_msgpack_object(obj.via.map.ptr[i].val, depth + 1);
+            }
+            break;
+        default:
+            std::cout << indent << "Unknown type" << std::endl;
+            break;
+    }
+}
+
+void unpackMetadata(std::string const& packed_data) {
+    msgpack::object_handle oh = msgpack::unpack(packed_data.data(), packed_data.size());
+    msgpack::object obj = oh.get();
+    print_msgpack_object(obj);
+
+    single_file_archive::SingleFileArchiveMetadata metadata;
+    obj.convert(metadata);
+
+    // Print archive files
+    std::cout << "\nArchive Files:" << std::endl;
+    for (auto const& file : metadata.archive_files) {
+        std::cout << "  Name: " << file.n << ", Offset: " << file.o << std::endl;
+    }
+
+    // Print archive metadata
+    std::cout << "\nArchive Metadata:" << std::endl;
+    std::cout << "  Archive Format Version: " << metadata.archive_metadata.archive_format_version
+              << std::endl;
+    std::cout << "  Begin Timestamp: " << metadata.archive_metadata.begin_timestamp << std::endl;
+    std::cout << "  Compressed Size: " << metadata.archive_metadata.compressed_size << std::endl;
+    std::cout << "  Compression Type: " << metadata.archive_metadata.compression_type << std::endl;
+    std::cout << "  Creator ID: " << metadata.archive_metadata.creator_id << std::endl;
+    std::cout << "  End Timestamp: " << metadata.archive_metadata.end_timestamp << std::endl;
+    std::cout << "  Uncompressed Size: " << metadata.archive_metadata.uncompressed_size
+              << std::endl;
+    std::cout << "  Variable Encoding Methods Version: "
+              << metadata.archive_metadata.variable_encoding_methods_version << std::endl;
+    std::cout << "  Variables Schema Version: "
+              << metadata.archive_metadata.variables_schema_version << std::endl;
+
+    // Print num segments
+    std::cout << "\nNum Segments: " << metadata.num_segments << std::endl;
+}
+
+void Archive::write_single_file_archive() {
+    std::filesystem::path multi_file_archive_path = m_path;
+
+    auto segment_ids = single_file_archive::get_segment_ids(m_next_segment_id - 1);
+
+    // Put this all together
+    auto file_infos = single_file_archive::get_file_infos(multi_file_archive_path, segment_ids);
+
+    if (false == m_local_metadata.has_value()) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    auto& multi_file_archive_metadata = m_local_metadata.value();
+
+    auto packed_metadata = single_file_archive::pack_single_file_archive_metadata(
+            multi_file_archive_metadata,
+            file_infos,
+            m_next_segment_id
+    );
+
+    msgpack::object_handle oh
+            = msgpack::unpack(packed_metadata.str().data(), packed_metadata.str().size());
+    msgpack::object obj = oh.get();
+    print_msgpack_object(obj);
+
+    // Return packed metadata
+
+    // Put this all together
+    FileWriter archive_writer;
+    std::filesystem::path single_file_archive_path
+            = multi_file_archive_path.string()
+              + std::string(single_file_archive::cUnstructuredSfaExtension);
+
+    if (std::filesystem::exists(single_file_archive_path)) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+
+    archive_writer.open(
+            single_file_archive_path.string(),
+            FileWriter::OpenMode::CREATE_FOR_WRITING
+    );
+
+    single_file_archive::write_archive_header(archive_writer, packed_metadata.str().size());
+    single_file_archive::write_archive_metadata(archive_writer, packed_metadata);
+    single_file_archive::write_archive_files(archive_writer, multi_file_archive_path, segment_ids);
+
+    archive_writer.close();
+    try {
+        // std::filesystem::remove_all(multi_file_archive_path);
+    } catch (std::filesystem::filesystem_error& e) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    // Here
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this

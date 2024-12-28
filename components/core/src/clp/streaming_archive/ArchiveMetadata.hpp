@@ -91,6 +91,8 @@ public:
 private:
     // Variables
     archive_format_version_t m_archive_format_version{cArchiveFormatVersion};
+    std::string m_variable_encoding_methods_version{};
+    std::string m_variables_schema_version{};
     std::string m_creator_id;
     uint16_t m_creator_id_len{0};
     uint64_t m_creation_idx{0};
