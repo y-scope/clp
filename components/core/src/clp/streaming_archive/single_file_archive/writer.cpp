@@ -119,7 +119,7 @@ auto get_file_infos(
     uint64_t offset = 0;
 
     for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
-        files.emplace_back(static_archive_file_name, offset);
+        files.emplace_back(std::string(static_archive_file_name), offset);
         update_offset(multi_file_archive_path / static_archive_file_name, offset);
     }
 
