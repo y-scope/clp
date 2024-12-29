@@ -184,9 +184,7 @@ auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_siz
             .unused{}
     };
     std::memcpy(&header.magic, cUnstructuredSfaMagicNumber.data(), sizeof(header.magic));
-
-    auto char_buffer = std::bit_cast<std::array<char, sizeof(header)>>(header);
-    archive_writer.write(char_buffer.data(), char_buffer.size());
+    archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
 auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const& packed_metadata)
