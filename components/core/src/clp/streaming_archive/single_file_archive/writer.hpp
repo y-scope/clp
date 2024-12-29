@@ -7,6 +7,7 @@
 
 #include <msgpack.hpp>
 
+#include "../../Defs.h"
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
 #include "../ArchiveMetadata.hpp"

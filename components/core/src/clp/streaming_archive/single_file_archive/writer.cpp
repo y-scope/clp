@@ -8,6 +8,7 @@
 #include <msgpack.hpp>
 #include <spdlog.h>
 
+#include "../../Defs.h"
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
 #include "../ArchiveMetadata.hpp"
