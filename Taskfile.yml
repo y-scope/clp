@@ -250,11 +250,11 @@ tasks:
       - |-
         cd "client"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --outDir "{{.OUTPUT_DIR}}/client"
+          --outDir "{{.OUTPUT_DIR}}/client"
       - |-
         cd "yscope-log-viewer"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --output-path "{{.OUTPUT_DIR}}/yscope-log-viewer"
+          --output-path "{{.OUTPUT_DIR}}/yscope-log-viewer"
       - task: "utils:compute-checksum"
         vars:
           DATA_DIR: "{{.OUTPUT_DIR}}"
