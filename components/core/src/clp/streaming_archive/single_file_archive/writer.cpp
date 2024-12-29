@@ -3,6 +3,7 @@
 #include <cstring>
 #include <filesystem>
 #include <sstream>
+#include <vector>
 
 #include <fmt/core.h>
 #include <msgpack.hpp>
@@ -10,6 +11,7 @@
 
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"
+#include "../../FileReader.hpp"
 #include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../ArchiveMetadata.hpp"
@@ -254,11 +256,11 @@ auto create_single_file_archive_metadata(
     return pack_single_file_archive_metadata(multi_file_archive_metadata, file_infos, segment_ids);
 }
 
-void write_single_file_archive(
+auto write_single_file_archive(
         std::filesystem::path const& multi_file_archive_path,
         std::stringstream const& packed_metadata,
         std::vector<std::string> const& segment_ids
-) {
+) -> void {
     FileWriter archive_writer;
     std::filesystem::path single_file_archive_path
             = multi_file_archive_path.string()

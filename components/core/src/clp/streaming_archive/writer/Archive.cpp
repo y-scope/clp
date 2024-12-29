@@ -15,6 +15,7 @@
 #include <log_surgeon/LogParser.hpp>
 #include <spdlog.h>
 
+#include "../../Defs.h"
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"
 #include "../../spdlog_with_specializations.hpp"

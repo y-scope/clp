@@ -62,11 +62,11 @@ auto create_single_file_archive_metadata(
  * @param segment_ids
  * @throws OperationFailed if single-file archive path already exists.
  */
-void write_single_file_archive(
+auto write_single_file_archive(
         std::filesystem::path const& multi_file_archive_path,
         std::stringstream const& packed_metadata,
         std::vector<std::string> const& segment_ids
-);
+) -> void;
 
 }  // namespace clp::streaming_archive::single_file_archive
 
