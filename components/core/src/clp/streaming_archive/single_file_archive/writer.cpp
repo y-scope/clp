@@ -10,6 +10,7 @@
 
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"
+#include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
 #include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
