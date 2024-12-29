@@ -2,38 +2,16 @@
   "name": "log-viewer-webui-client",
   "version": "0.1.0",
   "description": "",
-  "main": "src/index.tsx",
+  "main": "src/main.tsx",
   "scripts": {
-    "build": "webpack --config-node-env production",
-    "lint:check": "npx eslint --no-eslintrc --config package.json src webpack.config.js",
-    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src webpack.config.js",
-    "start": "webpack serve"
+    "build": "tsc -b && vite build",
+    "lint:check": "eslint",
+    "lint:fix": "eslint --fix",
+    "start": "vite"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "type": "module",
-  "devDependencies": {
-    "@babel/core": "^7.26.0",
-    "@babel/preset-env": "^7.26.0",
-    "@babel/preset-react": "^7.26.3",
-    "@babel/preset-typescript": "^7.26.0",
-    "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
-    "@typescript-eslint/eslint-plugin": "^8.18.2",
-    "@typescript-eslint/parser": "^8.18.2",
-    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
-    "babel-loader": "^9.2.1",
-    "css-loader": "^7.1.2",
-    "eslint-config-yscope": "latest",
-    "eslint-import-resolver-typescript": "^3.7.0",
-    "html-webpack-plugin": "^5.6.3",
-    "mini-css-extract-plugin": "^2.9.2",
-    "react-refresh": "^0.16.0",
-    "style-loader": "^4.0.0",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.0"
-  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -42,47 +20,12 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
-  "eslintConfig": {
-    "root": true,
-    "extends": [
-      "yscope/react"
-    ],
-    "ignorePatterns": [
-      "dist/",
-      "node_modules/"
-    ],
-    "overrides": [
-      {
-        "files": [
-          "*.ts",
-          "*.tsx"
-        ],
-        "extends": [
-          "yscope/typescript"
-        ]
-      }
-    ],
-    "rules": {
-      "no-restricted-imports": [
-        "error",
-        {
-          "paths": [
-            {
-              "message": "Please use path imports and name your imports with postfix \"Icon\" to avoid confusions.",
-              "name": "@mui/icons-material"
-            }
-          ],
-          "patterns": [
-            {
-              "group": [
-                "@mui/joy/*",
-                "!@mui/joy/styles"
-              ],
-              "message": "Please use the default import from \"@mui/joy\" instead."
-            }
-          ]
-        }
-      ]
-    }
+  "devDependencies": {
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint-config-yscope": "latest",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.6"
   }
 }
