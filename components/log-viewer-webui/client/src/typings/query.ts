@@ -18,15 +18,15 @@ enum QUERY_JOB_TYPE {
 }
 
 interface QueryLoadingStateDescription {
-    label: string,
-    description: string,
+    label: string;
+    description: string;
 }
 
 /**
  * Descriptions for query loading states.
  */
 const QUERY_LOADING_STATE_DESCRIPTIONS
-    : Record<QUERY_LOADING_STATE, QueryLoadingStateDescription> =
+: Record<QUERY_LOADING_STATE, QueryLoadingStateDescription> =
     Object.freeze({
         [QUERY_LOADING_STATE.SUBMITTING]: {
             label: "Submitting query Job",

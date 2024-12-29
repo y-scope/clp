@@ -22,11 +22,11 @@ import "./Loading.css";
 
 
 interface LoadingStepProps {
-    description: string,
-    isActive: boolean,
-    isError: boolean,
-    label: string,
-    stepIndicatorText: number | string,
+    description: string;
+    isActive: boolean;
+    isError: boolean;
+    label: string;
+    stepIndicatorText: number | string;
 }
 
 /**
@@ -82,7 +82,7 @@ const LoadingStep = ({
 };
 
 interface LoadingProps {
-    currentState: QUERY_LOADING_STATE,
+    currentState: QUERY_LOADING_STATE;
     errorMsg: Nullable<string>;
 }
 
@@ -125,26 +125,24 @@ const Loading = ({
     });
 
     return (
-        <>
-            <Sheet className={"loading-sheet"}>
-                <Box className={"loading-progress-container"}>
-                    <LinearProgress
-                        determinate={null !== errorMsg}
-                        color={null === errorMsg ?
-                            "primary" :
-                            "danger"}/>
-                </Box>
-                <Box className={"loading-stepper-container"}>
-                    <Stepper
-                        className={"loading-stepper"}
-                        orientation={"vertical"}
-                        size={"lg"}
-                    >
-                        {steps}
-                    </Stepper>
-                </Box>
-            </Sheet>
-        </>
+        <Sheet className={"loading-sheet"}>
+            <Box className={"loading-progress-container"}>
+                <LinearProgress
+                    determinate={null !== errorMsg}
+                    color={null === errorMsg ?
+                        "primary" :
+                        "danger"}/>
+            </Box>
+            <Box className={"loading-stepper-container"}>
+                <Stepper
+                    className={"loading-stepper"}
+                    orientation={"vertical"}
+                    size={"lg"}
+                >
+                    {steps}
+                </Stepper>
+            </Box>
+        </Sheet>
     );
 };
 
