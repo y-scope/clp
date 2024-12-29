@@ -1,8 +1,5 @@
-/**
- * Enum of `window.localStorage` keys.
- */
-const LOCAL_STORAGE_KEY = Object.freeze({
-    THEME: "theme",
-});
+enum LOCAL_STORAGE_KEY {
+    THEME = "theme",
+}
 
 export default LOCAL_STORAGE_KEY;
