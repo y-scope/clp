@@ -13,7 +13,7 @@ constexpr char cAwsAccessKeyIdEnvVar[] = "AWS_ACCESS_KEY_ID";
 constexpr char cAwsSecretAccessKeyEnvVar[] = "AWS_SECRET_ACCESS_KEY";
 
 /**
- * Enum class definining the source of some resource.
+ * Enum class defining the source of a resource.
  */
 enum class InputSource : uint8_t {
     Filesystem,
@@ -21,7 +21,7 @@ enum class InputSource : uint8_t {
 };
 
 /**
- * Enum class defining the auth that needs to be performed to access some resource.
+ * Enum class defining the authentication method required for accessing a resource.
  */
 enum class AuthMethod : uint8_t {
     None,
@@ -36,7 +36,7 @@ struct NetworkAuthOption {
 };
 
 /**
- * Struct describing a path to some resource as well as its source.
+ * Struct representing a resource path with its source type.
  */
 struct Path {
     InputSource source{InputSource::Filesystem};
@@ -58,7 +58,7 @@ struct Path {
 [[nodiscard]] auto get_path_object_for_raw_path(std::string_view const path) -> Path;
 
 /**
- * Recursively records all file paths from the given raw path, including the path itself.
+ * Recursively collects all file paths from the given raw path, including the path itself.
  * @param path
  * @param files Returned paths
  * @return true on success, false otherwise
@@ -66,16 +66,16 @@ struct Path {
 auto get_input_files_for_raw_path(std::string_view const path, std::vector<Path>& files) -> bool;
 
 /**
- * Recursively records all file paths that are children of the the given Path, including the Path
+ * Recursively collects all file paths that are children of the the given Path, including the Path
  * itself.
- * @param option
+ * @param path
  * @param files Returned paths
  * @return true on success, false otherwise
  */
 [[nodiscard]] auto get_input_files_for_path(Path const& path, std::vector<Path>& files) -> bool;
 
 /**
- * Records all archives that are children of the given raw path, including the path itself.
+ * Collects all archives that are children of the given raw path, including the path itself.
  * @param path
  * @param archives Returned archives
  * @return true on success, false otherwise
@@ -84,7 +84,7 @@ auto get_input_files_for_raw_path(std::string_view const path, std::vector<Path>
 get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& archives) -> bool;
 
 /**
- * Records all archives from the given Path, including the Path itself.
+ * Collects all archives from the given Path, including the Path itself.
  * @param path
  * @param archives Returned archives
  * @return true on success, false otherwise
@@ -93,7 +93,7 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
 get_input_archives_for_path(Path const& path, std::vector<Path>& archives) -> bool;
 
 /**
- * Determines the archive id of a given archive based on a path to that archive.
+ * Determines the archive id of an archive based on the archive path.
  * @param path
  * @param archive_id Returned archive id
  * @return true on success, false otherwise

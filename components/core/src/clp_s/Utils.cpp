@@ -65,7 +65,7 @@ namespace {
  * @param path
  * @return true if this directory is a multi-file archive, false otherwise
  */
-bool directory_is_multi_file_archive(std::string_view const path) {
+bool is_multi_file_archive(std::string_view const path) {
     for (auto const& entry : std::filesystem::directory_iterator{path}) {
         if (entry.is_directory()) {
             return false;

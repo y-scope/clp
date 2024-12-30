@@ -21,7 +21,7 @@ public:
     find_all_files_in_directory(std::string const& path, std::vector<std::string>& file_paths);
 
     /**
-     * Find all archives in a directory, including the directory itself
+     * Finds all archives in a directory, including the directory itself
      * @param path
      * @param archive_paths
      * @return true if successful, false otherwise
