@@ -2,6 +2,7 @@
 
 #include "BufferViewReader.hpp"
 #include "ColumnWriter.hpp"
+#include "Utils.hpp"
 #include "VariableDecoder.hpp"
 
 namespace clp_s {
@@ -88,6 +89,20 @@ void ClpStringColumnReader::extract_string_value_into_buffer(
     VariableDecoder::decode_variables_into_message(entry, *m_var_dict, encoded_vars, buffer);
 }
 
+void ClpStringColumnReader::extract_escaped_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer
+) {
+    if (false == m_is_array) {
+        // TODO: escape while decoding instead of after.
+        std::string tmp;
+        extract_string_value_into_buffer(cur_message, tmp);
+        StringUtils::escape_json_string(buffer, tmp);
+    } else {
+        extract_string_value_into_buffer(cur_message, buffer);
+    }
+}
+
 int64_t ClpStringColumnReader::get_encoded_id(uint64_t cur_message) {
     auto value = m_logtypes[cur_message];
     return ClpStringColumnWriter::get_encoded_log_dict_id(value);
@@ -123,6 +138,13 @@ void VariableStringColumnReader::extract_string_value_into_buffer(
         std::string& buffer
 ) {
     buffer.append(m_var_dict->get_value(m_variables[cur_message]));
+}
+
+void VariableStringColumnReader::extract_escaped_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer
+) {
+    StringUtils::escape_json_string(buffer, m_var_dict->get_value(m_variables[cur_message]));
 }
 
 int64_t VariableStringColumnReader::get_variable_id(uint64_t cur_message) {

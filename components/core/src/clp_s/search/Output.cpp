@@ -666,9 +666,7 @@ bool Output::evaluate_array_filter_object(
     }
 
     for (auto field : object) {
-        // Note: field.key() yields the escaped JSON key, so the descriptor tokens passed to search
-        // must likewise be escaped.
-        if (field.key() != unresolved_tokens[cur_idx].get_token()) {
+        if (field.unescaped_key(true).value() != unresolved_tokens[cur_idx].get_token()) {
             continue;
         }
 
