@@ -10,7 +10,7 @@ namespace clp_s {
 class JsonFileIterator {
 public:
     /**
-     * An iterator over a file containing json objects. JSON is parsed
+     * An iterator over an input stream containing json objects. JSON is parsed
      * using simdjson::parse_many. This allows simdjson to efficiently find
      * delimeters between JSON objects, and if enabled parse JSON ahead of time
      * in another thread while the JSON is being iterated over.
@@ -18,7 +18,7 @@ public:
      * The buffer grows automatically if there are JSON objects larger than the buffer size.
      * The buffer is padded to be SIMDJSON_PADDING bytes larger than the specified size.
 
-     * @param file_name the file containing JSON
+     * @param reader the input stream containing JSON
      * @param max_document_size the maximum allowed size of a single document
      * @param buf_size the initial buffer size
      */

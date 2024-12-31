@@ -218,7 +218,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "auth",
                     po::value<std::string>(&auth)
-                        ->value_name("AUTH_TYPE")
+                        ->value_name("AUTH_METHOD")
                         ->default_value(auth),
                     "Type of authentication required for network requests (s3 | none). Authentication"
                     " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
@@ -365,7 +365,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "auth",
                     po::value<std::string>(&auth)
-                        ->value_name("AUTH_TYPE")
+                        ->value_name("AUTH_METHOD")
                         ->default_value(auth),
                     "Type of authentication required for network requests (s3 | none). Authentication"
                     " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
@@ -535,7 +535,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                 "auth",
                 po::value<std::string>(&auth)
-                    ->value_name("AUTH_TYPE")
+                    ->value_name("AUTH_METHOD")
                     ->default_value(auth),
                 "Type of authentication required for network requests (s3 | none). Authentication"
                 " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"

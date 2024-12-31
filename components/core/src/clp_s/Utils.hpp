@@ -12,7 +12,7 @@ namespace clp_s {
 class FileUtils {
 public:
     /**
-     * Find all files in a directory
+     * Finds all files in a directory
      * @param path
      * @param file_paths
      * @return true if successful, false otherwise

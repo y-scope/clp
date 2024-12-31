@@ -70,6 +70,12 @@ public:
             std::string const& archive_path
     );
 
+    /**
+     * Tries to open a clp::ReaderInterface using the given Path and NetworkAuthOption.
+     * @param path
+     * @param network_auth
+     * @return the opened clp::ReaderInterface or nullptr on error
+     */
     static std::shared_ptr<clp::ReaderInterface>
     try_create_reader(Path const& path, NetworkAuthOption const& network_auth);
 
