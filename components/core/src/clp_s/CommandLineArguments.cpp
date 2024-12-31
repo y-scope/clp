@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <string_view>
 
 #include <boost/program_options.hpp>
 #include <fmt/core.h>
@@ -16,6 +17,10 @@ namespace po = boost::program_options;
 
 namespace clp_s {
 namespace {
+// Authorization method constants
+constexpr std::string_view cNoAuth{"none"};
+constexpr std::string_view cS3Auth{"s3"};
+
 /**
  * Read a list of newline-delimited paths from a file and put them into a vector passed by reference
  * TODO: deduplicate this code with the version in clp
@@ -56,6 +61,20 @@ bool read_paths_from_file(
         return false;
     }
     return true;
+}
+
+/**
+ * Validates and populates network authorization options.
+ * @param auth_method
+ * @param network_auth
+ * @throws std::invalid_argument if the authorization option is invalid
+ */
+void validate_network_auth(std::string_view auth_method, NetworkAuthOption& auth) {
+    if (cS3Auth == auth_method) {
+        auth.method = AuthMethod::S3PresignedUrlV4;
+    } else if (cNoAuth != auth_method) {
+        throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth_method));
+    }
 }
 }  // namespace
 
@@ -133,8 +152,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument(std::string("Unknown action '") + command_input + "'");
         }
 
-        constexpr std::string_view cNoAuth{"none"};
-        constexpr std::string_view cS3Auth{"s3"};
         if (Command::Compress == m_command) {
             po::options_description compression_positional_options;
             std::vector<std::string> input_paths;
@@ -306,12 +323,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
             }
 
-            if (cS3Auth == auth) {
-                m_network_auth.method = AuthMethod::S3PresignedUrlV4;
-            } else if (cNoAuth != auth) {
-                throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth)
-                );
-            }
+            validate_network_auth(auth, m_network_auth);
 
             // Parse and validate global metadata DB config
             if (false == metadata_db_config_file_path.empty()) {
@@ -452,12 +464,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No archive paths specified");
             }
 
-            if (cS3Auth == auth) {
-                m_network_auth.method = AuthMethod::S3PresignedUrlV4;
-            } else if (cNoAuth != auth) {
-                throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth)
-                );
-            }
+            validate_network_auth(auth, m_network_auth);
 
             if (m_output_dir.empty()) {
                 throw std::invalid_argument("No output directory specified");
@@ -720,12 +727,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No archive paths specified");
             }
 
-            if (cS3Auth == auth) {
-                m_network_auth.method = AuthMethod::S3PresignedUrlV4;
-            } else if (cNoAuth != auth) {
-                throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth)
-                );
-            }
+            validate_network_auth(auth, m_network_auth);
 
             if (m_query.empty()) {
                 throw std::invalid_argument("No query specified");
