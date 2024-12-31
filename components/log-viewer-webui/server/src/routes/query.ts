@@ -5,10 +5,8 @@ import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
 
 import settings from "../../settings.json" with {type: "json"};
-import {
-    EXTRACT_JOB_TYPES,
-    QUERY_JOB_TYPE,
-} from "../DbManager.js";
+import {QUERY_JOB_TYPE} from "../DbManager.js";
+import {EXTRACT_JOB_TYPES} from "../typings/DbManager.js";
 
 
 /**
@@ -38,6 +36,7 @@ const routes: FastifyPluginAsync = async (app) => {
             streamId,
             logEventIdx
         );
+
         if (null === streamMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
                 jobType: extractJobType,

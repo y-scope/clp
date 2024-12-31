@@ -1,25 +1,30 @@
-import fastifyPlugin from "fastify-plugin";
-
-
+import {
+    FastifyInstance,
+    FastifyPluginAsync,
+} from "fastify";
+import {fastifyPlugin} from "fastify-plugin";
 import {Collection} from "mongodb";
+import {
+    Pool as PromisePool,
+    ResultSetHeader,
+} from "mysql2/promise";
+
 import fastifyMongo from "@fastify/mongodb";
-import fastifyMysql, {MySQLPromisePool} from "@fastify/mysql";
+import {
+    fastifyMysql,
+    MySQLPromisePool,
+} from "@fastify/mysql";
 import {encode as msgpackEncode} from "@msgpack/msgpack";
 
+import {
+    QUERY_JOB_STATUS,
+    QUERY_JOB_STATUS_WAITING_STATES,
+    QUERY_JOB_TYPE,
+    QUERY_JOBS_TABLE_COLUMN_NAMES,
+    QueryJob,
+} from "./typings/DbManager.js";
 import {sleep} from "./utils.js";
-import {FastifyInstance, FastifyPluginCallback} from "fastify";
-import {Pool as PromisePool, RowDataPacket, ResultSetHeader} from "mysql2/promise";
 
-
-declare module 'fastify' {
-    interface FastifyInstance {
-        // The typing of `@fastify/mysql` needs to be manually specified.
-        // See https://github.com/fastify/fastify-mysql#typescript
-        mysql: MySQLPromisePool
-
-        dbManager: DbManager
-    }
-}
 
 interface DbManagerOptions {
     mysqlConfig: {
@@ -48,64 +53,11 @@ interface StreamFileMongoDocument {
 
 type StreamFilesCollection = Collection<StreamFileMongoDocument>;
 
-
 /**
  * Interval in milliseconds for polling the completion status of a job.
  */
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 0.5;
 
-/**
- * The `query_jobs` table's column names.
- *
- * @enum {string}
- */
-enum QUERY_JOBS_TABLE_COLUMN_NAMES {
-    ID = "id",
-    STATUS = "status",
-    TYPE = "type",
-    JOB_CONFIG = "job_config",
-}
-
-/**
- * Matching the `QueryJobStatus` class in
- * `job_orchestration.query_scheduler.constants`.
- *
- * @enum {number}
- */
-enum QUERY_JOB_STATUS {
-    PENDING = 0,
-    RUNNING,
-    SUCCEEDED,
-    FAILED,
-    CANCELLING,
-    CANCELLED,
-}
-
-/**
- * List of states that indicate the job is either pending or in progress.
- */
-const QUERY_JOB_STATUS_WAITING_STATES = Object.freeze([
-    QUERY_JOB_STATUS.PENDING,
-    QUERY_JOB_STATUS.RUNNING,
-    QUERY_JOB_STATUS.CANCELLING,
-]);
-
-/**
- * Matching the `QueryJobType` class in `job_orchestration.query_scheduler.constants`.
- */
-enum QUERY_JOB_TYPE {
-    SEARCH_OR_AGGREGATION = 0,
-    EXTRACT_IR,
-    EXTRACT_JSON,
-}
-
-/**
- * List of valid extract job types.
- */
-const EXTRACT_JOB_TYPES = Object.freeze([
-    QUERY_JOB_TYPE.EXTRACT_IR,
-    QUERY_JOB_TYPE.EXTRACT_JSON,
-]);
 
 /**
  * Class to manage connections to the jobs database (MySQL) and results cache (MongoDB).
@@ -119,20 +71,14 @@ class DbManager {
 
     readonly #queryJobsTableName: string;
 
-    static async create(app: FastifyInstance, dbConfig: DbManagerOptions) {
-        const mysqlConnectionPool = await DbManager.#initMySql(app, dbConfig.mysqlConfig);
-        const {streamFilesCollection} = await DbManager.#initMongo(app, dbConfig.mongoConfig);
-        return new DbManager({
-            app: app,
-            mysqlConnectionPool: mysqlConnectionPool,
-            streamFilesCollection: streamFilesCollection,
-            queryJobsTableName: dbConfig.mysqlConfig.queryJobsTableName
-        });
-    }
-
     /**
+     * @param props
+     * @param props.app
+     * @param props.mysqlConnectionPool
+     * @param props.queryJobsTableName
+     * @param props.streamFilesCollection
      */
-    constructor({app, mysqlConnectionPool, queryJobsTableName, streamFilesCollection}: {
+    constructor ({app, mysqlConnectionPool, queryJobsTableName, streamFilesCollection}: {
         app: FastifyInstance,
         mysqlConnectionPool: PromisePool,
         queryJobsTableName: string
@@ -146,23 +92,74 @@ class DbManager {
         this.#queryJobsTableName = queryJobsTableName;
     }
 
+    static async create (app: FastifyInstance, dbConfig: DbManagerOptions) {
+        const mysqlConnectionPool = await DbManager.#initMySql(app, dbConfig.mysqlConfig);
+        const {streamFilesCollection} = await DbManager.#initMongo(app, dbConfig.mongoConfig);
+        return new DbManager({
+            app: app,
+            mysqlConnectionPool: mysqlConnectionPool,
+            streamFilesCollection: streamFilesCollection,
+            queryJobsTableName: dbConfig.mysqlConfig.queryJobsTableName,
+        });
+    }
+
+    /**
+     * Initializes the MySQL plugin.
+     *
+     * @param app
+     * @param config
+     * @return The MySQL connection pool created during initialization.
+     */
+    static async #initMySql (app: FastifyInstance, config: DbManagerOptions["mysqlConfig"]) {
+        await app.register(fastifyMysql, {
+            promise: true,
+            connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
+                `${config.port}/${config.database}`,
+        });
+
+        return app.mysql.pool;
+    }
+
+    /**
+     * Initializes the MongoDB plugin.
+     *
+     * @param app
+     * @param config
+     * @return The MongoDB Collection objects created during initialization.
+     */
+    static async #initMongo (app: FastifyInstance, config: DbManagerOptions["mongoConfig"])
+    : Promise<{
+        streamFilesCollection: StreamFilesCollection,
+    }> {
+        await app.register(fastifyMongo, {
+            forceClose: true,
+            url: `mongodb://${config.host}:${config.port}/${config.database}`,
+        });
+        if ("undefined" === typeof app.mongo.db) {
+            throw new Error("Failed to initialize MongoDB plugin.");
+        }
+
+        return {streamFilesCollection: app.mongo.db.collection(config.streamFilesCollectionName)};
+    }
+
+
     /**
      * Submits a stream extraction job to the scheduler and waits for it to finish.
      *
      * @param props
-     * @param {number} props.jobType
-     * @param {number} props.logEventIdx
-     * @param {string} props.streamId
-     * @param {number} props.targetUncompressedSize
-     * @return {Promise<number|null>} The ID of the job or null if an error occurred.
+     * @param props.jobType
+     * @param props.logEventIdx
+     * @param props.streamId
+     * @param props.targetUncompressedSize
+     * @return The ID of the job or null if an error occurred.
      */
-    async submitAndWaitForExtractStreamJob({
-                                               jobType,
-                                               logEventIdx,
-                                               streamId,
-                                               targetUncompressedSize,
-                                           }: {
-        jobType: number,
+    async submitAndWaitForExtractStreamJob ({
+        jobType,
+        logEventIdx,
+        streamId,
+        targetUncompressedSize,
+    }: {
+        jobType: QUERY_JOB_TYPE,
         logEventIdx: number,
         streamId: string,
         targetUncompressedSize: number,
@@ -208,11 +205,12 @@ class DbManager {
      * Gets the metadata for the extracted stream that has the given streamId and contains the
      * given logEventIdx.
      *
-     * @param {string} streamId
-     * @param {number} logEventIdx
-     * @return {Promise<object>} A promise that resolves to the extracted stream's metadata.
+     * @param streamId
+     * @param logEventIdx
+     * @return A promise that resolves to the extracted stream's metadata.
      */
-    async getExtractedStreamFileMetadata(streamId: string, logEventIdx: number): Promise<StreamFileMongoDocument | null> {
+    async getExtractedStreamFileMetadata (streamId: string, logEventIdx: number)
+    : Promise<StreamFileMongoDocument | null> {
         return await this.#streamFilesCollection.findOne({
             stream_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},
@@ -221,47 +219,18 @@ class DbManager {
     }
 
     /**
-     * Initializes the MySQL plugin.
-     */
-    static async #initMySql(app: FastifyInstance, config: DbManagerOptions['mysqlConfig']) {
-        await app.register(fastifyMysql, {
-            promise: true,
-            connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
-                `${config.port}/${config.database}`,
-        })
-
-        return app.mysql.pool
-    }
-
-    /**
-     * Initializes the MongoDB plugin.
-     */
-    static async #initMongo(app: FastifyInstance, config: DbManagerOptions['mongoConfig']): Promise<{
-        streamFilesCollection: StreamFilesCollection,
-    }> {
-        await app.register(fastifyMongo, {
-            forceClose: true,
-            url: `mongodb://${config.host}:${config.port}/${config.database}`,
-        })
-        if ("undefined" === typeof app.mongo.db) {
-            throw new Error("Failed to initialize MongoDB plugin.");
-        }
-
-        return {streamFilesCollection: app.mongo.db.collection(config.streamFilesCollectionName)};
-    }
-
-    /**
      * Waits for the job with the given ID to finish.
      *
-     * @param {number} jobId
+     * @param jobId
      * @throws {Error} If there's an error querying the job's status, the job is not found in the
      * database, the job was cancelled, or it exited with an unexpected status.
      */
-    async #awaitJobCompletion(jobId: number) {
+    async #awaitJobCompletion (jobId: number) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         while (true) {
-            let rows: RowDataPacket[];
+            let rows: QueryJob[];
             try {
-                const [queryResult] = await this.#mysqlConnectionPool.query<RowDataPacket[]>(
+                const [queryResult] = await this.#mysqlConnectionPool.query<QueryJob[]>(
                     `
                         SELECT ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
                         FROM ${this.#queryJobsTableName}
@@ -271,13 +240,15 @@ class DbManager {
                 );
 
                 rows = queryResult;
-            } catch (e) {
-                throw new Error(`Failed to query status for job ${jobId} - ${e}`);
+            } catch (e: unknown) {
+                throw new Error(`Failed to query status for job ${jobId} - ${e?.toString()}`);
             }
-            if (0 === rows.length) {
+
+            const [job] = rows;
+            if ("undefined" === typeof job) {
                 throw new Error(`Job ${jobId} not found in database.`);
             }
-            const status = rows[0][QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
+            const status = job[QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
 
             if (false === QUERY_JOB_STATUS_WAITING_STATES.includes(status)) {
                 if (QUERY_JOB_STATUS.CANCELLED === status) {
@@ -294,13 +265,28 @@ class DbManager {
     }
 }
 
-const dbManagerPluginCallback: FastifyPluginCallback<DbManagerOptions> = async (app, options) => {
+/**
+ * A Fastify plugin callback for setting up the `DbManager`.
+ *
+ * @param app
+ * @param options
+ */
+const dbManagerPluginCallback: FastifyPluginAsync<DbManagerOptions> = async (app, options) => {
     const dbManager = await DbManager.create(app, options);
     app.decorate("dbManager", dbManager);
+};
+
+declare module "fastify" {
+    interface FastifyInstance {
+
+        // The typing of `@fastify/mysql` needs to be manually specified.
+        // See https://github.com/fastify/fastify-mysql#typescript
+        mysql: MySQLPromisePool
+
+        dbManager: DbManager
+    }
 }
 
-export {
-    EXTRACT_JOB_TYPES,
-    QUERY_JOB_TYPE,
-};
+
+export {QUERY_JOB_TYPE};
 export default fastifyPlugin(dbManagerPluginCallback);
