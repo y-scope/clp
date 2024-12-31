@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "lib": [
+      "es2023"
+    ],
+    "module": "nodenext",
+    "moduleResolution": "node16",
+    "outDir": "dist",
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2022"
+  },
+  "include": [
+    "src/**/*"
+  ]
+}
