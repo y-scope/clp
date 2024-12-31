@@ -13,7 +13,7 @@ enum QUERY_JOB_TYPE {
 /**
  * List of valid extract job types.
  */
-const EXTRACT_JOB_TYPES = Object.freeze([
+const EXTRACT_JOB_TYPES = new Set([
     QUERY_JOB_TYPE.EXTRACT_IR,
     QUERY_JOB_TYPE.EXTRACT_JSON,
 ]);
@@ -36,7 +36,7 @@ enum QUERY_JOB_STATUS {
 /**
  * List of states that indicate the job is either pending or in progress.
  */
-const QUERY_JOB_STATUS_WAITING_STATES = Object.freeze([
+const QUERY_JOB_STATUS_WAITING_STATES = new Set([
     QUERY_JOB_STATUS.PENDING,
     QUERY_JOB_STATUS.RUNNING,
     QUERY_JOB_STATUS.CANCELLING,

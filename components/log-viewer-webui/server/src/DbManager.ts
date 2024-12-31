@@ -250,7 +250,7 @@ class DbManager {
             }
             const status = job[QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
 
-            if (false === QUERY_JOB_STATUS_WAITING_STATES.includes(status)) {
+            if (false === QUERY_JOB_STATUS_WAITING_STATES.has(status)) {
                 if (QUERY_JOB_STATUS.CANCELLED === status) {
                     throw new Error(`Job ${jobId} was cancelled.`);
                 } else if (QUERY_JOB_STATUS.SUCCEEDED !== status) {

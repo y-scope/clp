@@ -9,6 +9,11 @@ import app from "./app.js";
 
 
 type NodeEnv = "development" | "production" | "test";
+const KNOWN_NODE_ENVS = new Set<NodeEnv>([
+    "development",
+    "production",
+    "test",
+]);
 
 const NODE_ENV_DEFAULT: NodeEnv = "development";
 
@@ -33,11 +38,7 @@ const ENV_TO_LOGGER
  * @return True if the `value` is a known Node.js environment; otherwise, false.
  */
 const isKnownNodeEnv = (value: string): value is NodeEnv => {
-    return [
-        "development",
-        "production",
-        "test",
-    ].includes(value);
+    return KNOWN_NODE_ENVS.has(value as NodeEnv);
 };
 
 interface EnvVars {

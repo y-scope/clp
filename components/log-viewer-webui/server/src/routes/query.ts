@@ -27,7 +27,7 @@ const routes: FastifyPluginAsync = async (app) => {
         },
     }, async (req, resp) => {
         const {extractJobType, logEventIdx, streamId} = req.body;
-        if (false === EXTRACT_JOB_TYPES.includes(extractJobType)) {
+        if (false === EXTRACT_JOB_TYPES.has(extractJobType)) {
             resp.code(StatusCodes.BAD_REQUEST);
             throw new Error(`Invalid extractJobType="${extractJobType}".`);
         }
