@@ -117,11 +117,10 @@ bool compress(CommandLineArguments const& command_line_arguments) {
 
     clp_s::JsonParser parser(option);
     if (CommandLineArguments::FileType::KeyValueIr == option.input_file_type) {
-        // Functionality Coming in later PR
-        //  -->Call new parsing function in Json Parser to parse IRv2 to archive
-        //  -->Check for error from parsing function
-        SPDLOG_ERROR("Compressing Key Value IR Files is not yet supported");
-        return false;
+        if (false == parser.parse_from_ir()) {
+            SPDLOG_ERROR("Encountered error while parsing input");
+            return false;
+        }
     } else {
         if (false == parser.parse()) {
             SPDLOG_ERROR("Encountered error while parsing input");

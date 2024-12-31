@@ -52,7 +52,7 @@ def main(argv):
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `status` INT NOT NULL DEFAULT '{CompressionJobStatus.PENDING}',
-                    `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
+                    `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
                     `duration` FLOAT NULL DEFAULT NULL,

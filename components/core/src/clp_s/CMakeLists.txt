@@ -19,6 +19,26 @@ set(
         ../clp/database_utils.hpp
         ../clp/Defs.h
         ../clp/ErrorCode.hpp
+        ../clp/ffi/ir_stream/decoding_methods.cpp
+        ../clp/ffi/ir_stream/decoding_methods.hpp
+        ../clp/ffi/ir_stream/Deserializer.hpp
+        ../clp/ffi/ir_stream/encoding_methods.cpp
+        ../clp/ffi/ir_stream/encoding_methods.hpp
+        ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
+        ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
+        ../clp/ffi/ir_stream/Serializer.cpp
+        ../clp/ffi/ir_stream/Serializer.hpp
+        ../clp/ffi/ir_stream/utils.cpp
+        ../clp/ffi/ir_stream/utils.hpp
+        ../clp/ffi/KeyValuePairLogEvent.cpp
+        ../clp/ffi/KeyValuePairLogEvent.hpp
+        ../clp/ffi/SchemaTree.cpp
+        ../clp/ffi/SchemaTree.hpp
+        ../clp/ffi/utils.cpp
+        ../clp/ffi/utils.hpp
+        ../clp/ffi/Value.hpp
+        ../clp/FileDescriptor.cpp
+        ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
         ../clp/GlobalMetadataDB.hpp
@@ -28,6 +48,10 @@ set(
         ../clp/GlobalMySQLMetadataDB.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
+        ../clp/ir/EncodedTextAst.cpp
+        ../clp/ir/EncodedTextAst.hpp
+        ../clp/ir/parsing.cpp
+        ../clp/ir/parsing.hpp
         ../clp/MySQLDB.cpp
         ../clp/MySQLDB.hpp
         ../clp/MySQLParamBindings.cpp
@@ -40,13 +64,20 @@ set(
         ../clp/networking/socket_utils.hpp
         ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.hpp
+        ../clp/ReadOnlyMemoryMappedFile.cpp
+        ../clp/ReadOnlyMemoryMappedFile.hpp
         ../clp/spdlog_with_specializations.hpp
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
+        ../clp/streaming_compression/zstd/Decompressor.cpp
+        ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/Thread.cpp
         ../clp/Thread.hpp
         ../clp/TraceableException.hpp
+        ../clp/time_types.hpp
         ../clp/type_utils.hpp
+        ../clp/utf8_utils.cpp
+        ../clp/utf8_utils.hpp
         ../clp/WriterInterface.cpp
         ../clp/WriterInterface.hpp
 )
