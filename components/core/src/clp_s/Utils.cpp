@@ -112,7 +112,7 @@ bool FileUtils::find_all_archives_in_directory(
         return false;
     }
 
-    if (directory_is_multi_file_archive(path)) {
+    if (is_multi_file_archive(path)) {
         archive_paths.emplace_back(path);
         return true;
     }
