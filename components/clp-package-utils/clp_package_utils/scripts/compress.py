@@ -6,7 +6,8 @@ import sys
 import uuid
 from typing import List
 
-from clp_py_utils.clp_config import StorageEngine
+from clp_py_utils.clp_config import CLPConfig, StorageEngine
+from clp_py_utils.s3_utils import parse_aws_credentials_file
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
@@ -56,13 +57,17 @@ def append_input_specific_args(compress_cmd: List[str], parsed_args: argparse.Na
     if InputType.FS == input_type:
         return
     elif InputType.S3 == input_type:
-        # TODO: also think about credentials from file.
-        if parsed_args.aws_access_key_id is not None:
+        aws_access_key_id = parsed_args.aws_access_key_id
+        aws_secret_access_key = parsed_args.aws_secret_access_key
+        if parsed_args.aws_credentials_file:
+            aws_access_key_id, aws_secret_access_key = parse_aws_credentials_file(
+                pathlib.Path(parsed_args.aws_credentials_file)
+            )
+        if aws_access_key_id and aws_secret_access_key:
             compress_cmd.append("--aws-access-key-id")
-            compress_cmd.append(parsed_args.aws_access_key_id)
-        if parsed_args.aws_secret_access_key is not None:
+            compress_cmd.append(aws_access_key_id)
             compress_cmd.append("--aws-secret-access-key")
-            compress_cmd.append(parsed_args.aws_secret_access_key)
+            compress_cmd.append(aws_secret_access_key)
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 
@@ -88,6 +93,46 @@ def add_common_arguments(
     )
 
 
+def validate_fs_input_args(
+    parsed_args: argparse.Namespace,
+    args_parser: argparse.ArgumentParser,
+) -> None:
+    # Validate some input paths were specified
+    if len(parsed_args.paths) == 0 and parsed_args.path_list is None:
+        args_parser.error("No paths specified.")
+
+    # Validate paths were specified using only one method
+    if len(parsed_args.paths) > 0 and parsed_args.path_list is not None:
+        args_parser.error("Paths cannot be specified on the command line AND through a file.")
+
+
+def validate_s3_input_args(
+    parsed_args: argparse.Namespace, args_parser: argparse.ArgumentParser, clp_config: CLPConfig
+) -> None:
+    if StorageEngine.CLP_S != clp_config.package.storage_engine:
+        raise ValueError(
+            f"input type {InputType.S3} is only supported with storage engine {StorageEngine.CLP_S}"
+        )
+
+    # Validate aws credentials were specified using only one method
+    aws_credential_file = parsed_args.aws_credentials_file
+    aws_access_key_id = parsed_args.aws_access_key_id
+    aws_secret_access_key = parsed_args.aws_secret_access_key
+    if aws_credential_file is not None:
+        if not pathlib.Path(aws_credential_file).exists():
+            raise ValueError(f"{aws_credential_file} doesn't exist.")
+
+        if aws_access_key_id is not None or aws_secret_access_key is not None:
+            args_parser.error(
+                "aws_credentials_file can not be specified together with aws_access_key_id or aws_secret_access_key."
+            )
+
+    elif bool(aws_access_key_id) != bool(aws_secret_access_key):
+        args_parser.error(
+            "aws_access_key_id and aws_secret_access_key must be both set or left unset."
+        )
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -111,10 +156,9 @@ def main(argv):
     s3_compressor_parser.add_argument(
         "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."
     )
-    # args_parser.add_argument(
-    #     "--aws-credentials-file", type=str, default=None, help="Access key id."
-    # )
-
+    s3_compressor_parser.add_argument(
+        "--aws-credentials-file", type=str, default=None, help="Path to AWS credentials file."
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -131,20 +175,9 @@ def main(argv):
 
     input_type = parsed_args.input_type
     if InputType.FS == input_type:
-        # Validate some input paths were specified
-        if len(parsed_args.paths) == 0 and parsed_args.path_list is None:
-            args_parser.error("No paths specified.")
-
-        # Validate paths were specified using only one method
-        if len(parsed_args.paths) > 0 and parsed_args.path_list is not None:
-            args_parser.error("Paths cannot be specified on the command line AND through a file.")
-
+        validate_fs_input_args(parsed_args, args_parser)
     elif InputType.S3 == input_type:
-        if StorageEngine.CLP_S != clp_config.package.storage_engine:
-            raise ValueError(
-                f"input type {InputType.S3} is only supported with storage engine {StorageEngine.CLP_S}"
-            )
-
+        validate_s3_input_args(parsed_args, args_parser, clp_config)
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 

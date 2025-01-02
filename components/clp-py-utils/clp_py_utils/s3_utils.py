@@ -15,6 +15,29 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
+def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
+    aws_access_key_id = None
+    aws_secret_access_key = None
+
+    if not credentials_file_path.exists():
+        raise ValueError(f"File {credentials_file_path} doesn't exist.")
+
+    with open(credentials_file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("aws_access_key_id"):
+                aws_access_key_id = line.split("=", 1)[1].strip()
+            elif line.startswith("aws_secret_access_key"):
+                aws_secret_access_key = line.split("=", 1)[1].strip()
+
+    if aws_access_key_id is None or aws_secret_access_key is None:
+        raise ValueError(
+            "The credentials file must contain both 'aws_access_key_id' and 'aws_secret_access_key'."
+        )
+
+    return aws_access_key_id, aws_secret_access_key
+
+
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     host_style_url_regex = re.compile(
         r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z0-9-]+))?"
