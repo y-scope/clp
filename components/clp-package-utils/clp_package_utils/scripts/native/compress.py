@@ -21,9 +21,9 @@ from job_orchestration.scheduler.constants import (
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
-    S3InputConfig,
+    InputType,
     OutputConfig,
-    InputType
+    S3InputConfig,
 )
 
 from clp_package_utils.general import (
@@ -128,8 +128,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def generate_clp_io_config(
-    targets_to_compress: List[str],
-    parsed_args: argparse.Namespace
+    targets_to_compress: List[str], parsed_args: argparse.Namespace
 ) -> typing.Union[S3InputConfig, FsInputConfig]:
     input_type = parsed_args.input_type
 
@@ -158,8 +157,7 @@ def generate_clp_io_config(
 
 
 def get_targets_to_compress(
-    compress_path_list_path: pathlib.Path,
-    input_type: InputType
+    compress_path_list_path: pathlib.Path, input_type: InputType
 ) -> List[str]:
     # Define the path processing function based on the input type
     process_path_func: typing.Callable[[str], str]
@@ -195,8 +193,7 @@ def get_targets_to_compress(
 
 
 def add_common_arguments(
-    args_parser: argparse.ArgumentParser,
-    default_config_file_path: pathlib.Path
+    args_parser: argparse.ArgumentParser, default_config_file_path: pathlib.Path
 ) -> None:
     args_parser.add_argument(
         "--config",
@@ -258,8 +255,7 @@ def main(argv):
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)
 
     targets_to_compress = get_targets_to_compress(
-        pathlib.Path(parsed_args.path_list).resolve(),
-        input_type
+        pathlib.Path(parsed_args.path_list).resolve(), input_type
     )
 
     clp_input_config = generate_clp_io_config(targets_to_compress, parsed_args)

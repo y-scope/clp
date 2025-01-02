@@ -6,6 +6,9 @@ import sys
 import uuid
 from typing import List
 
+from clp_py_utils.clp_config import StorageEngine
+from job_orchestration.scheduler.job_config import InputType
+
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     dump_container_config,
@@ -17,8 +20,6 @@ from clp_package_utils.general import (
     load_config_file,
     validate_and_load_db_credentials_file,
 )
-from clp_py_utils.clp_config import StorageEngine
-from job_orchestration.scheduler.job_config import InputType
 
 logger = logging.getLogger(__file__)
 
@@ -49,10 +50,7 @@ def generate_targets_list(
         raise ValueError(f"Unsupported input type: {input_type}.")
 
 
-def append_input_specific_args(
-    compress_cmd: List[str],
-    parsed_args: argparse.Namespace
-) -> None:
+def append_input_specific_args(compress_cmd: List[str], parsed_args: argparse.Namespace) -> None:
     input_type = parsed_args.input_type
 
     if InputType.FS == input_type:
@@ -70,8 +68,7 @@ def append_input_specific_args(
 
 
 def add_common_arguments(
-    args_parser: argparse.ArgumentParser,
-    default_config_file_path: pathlib.Path
+    args_parser: argparse.ArgumentParser, default_config_file_path: pathlib.Path
 ) -> None:
     args_parser.add_argument(
         "--config",
@@ -144,7 +141,9 @@ def main(argv):
 
     elif InputType.S3 == input_type:
         if StorageEngine.CLP_S != clp_config.package.storage_engine:
-            raise ValueError(f"input type {InputType.S3} is only supported with storage engine {StorageEngine.CLP_S}")
+            raise ValueError(
+                f"input type {InputType.S3} is only supported with storage engine {StorageEngine.CLP_S}"
+            )
 
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
@@ -188,11 +187,7 @@ def main(argv):
         if not container_path_list_path.exists():
             break
 
-    generate_targets_list(
-        input_type,
-        container_path_list_path,
-        parsed_args
-    )
+    generate_targets_list(input_type, container_path_list_path, parsed_args)
     compress_cmd.append("--path-list")
     compress_cmd.append(str(container_clp_config.logs_directory / container_path_list_filename))
 
