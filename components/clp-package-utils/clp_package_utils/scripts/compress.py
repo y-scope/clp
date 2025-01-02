@@ -4,6 +4,7 @@ import pathlib
 import subprocess
 import sys
 import uuid
+from typing import List
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -16,24 +17,67 @@ from clp_package_utils.general import (
     load_config_file,
     validate_and_load_db_credentials_file,
 )
+from clp_py_utils.clp_config import StorageEngine
+from job_orchestration.scheduler.job_config import InputType
 
 logger = logging.getLogger(__file__)
 
 
-def main(argv):
-    clp_home = get_clp_home()
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+def generate_targets_list(
+    input_type: InputType,
+    container_targets_list_path: pathlib.Path,
+    parsed_args: argparse.Namespace,
+) -> None:
+    if InputType.FS == input_type:
+        compression_targets_list_file = parsed_args.path_list
+        with open(container_targets_list_path, "w") as container_targets_list_file:
+            if compression_targets_list_file is not None:
+                with open(compression_targets_list_file, "r") as targets_list_file:
+                    for line in targets_list_file:
+                        resolved_path = pathlib.Path(line.rstrip()).resolve()
+                        container_targets_list_file.write(f"{resolved_path}\n")
 
-    args_parser = argparse.ArgumentParser(description="Compresses files/directories")
+            for path in parsed_args.paths:
+                resolved_path = pathlib.Path(path).resolve()
+                container_targets_list_file.write(f"{resolved_path}\n")
+
+    elif InputType.S3 == input_type:
+        with open(container_targets_list_path, "w") as container_targets_list_file:
+            container_targets_list_file.write(f"{parsed_args.url}\n")
+
+    else:
+        raise ValueError(f"Unsupported input type: {input_type}.")
+
+
+def append_input_specific_args(
+    compress_cmd: List[str],
+    parsed_args: argparse.Namespace
+) -> None:
+    input_type = parsed_args.input_type
+
+    if InputType.FS == input_type:
+        return
+    elif InputType.S3 == input_type:
+        # TODO: also think about credentials from file.
+        if parsed_args.aws_access_key_id is not None:
+            compress_cmd.append("--aws-access-key-id")
+            compress_cmd.append(parsed_args.aws_access_key_id)
+        if parsed_args.aws_secret_access_key is not None:
+            compress_cmd.append("--aws-secret-access-key")
+            compress_cmd.append(parsed_args.aws_secret_access_key)
+    else:
+        raise ValueError(f"Unsupported input type: {input_type}.")
+
+
+def add_common_arguments(
+    args_parser: argparse.ArgumentParser,
+    default_config_file_path: pathlib.Path
+) -> None:
     args_parser.add_argument(
         "--config",
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
-    )
-    args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
-    args_parser.add_argument(
-        "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
     args_parser.add_argument(
         "--timestamp-key",
@@ -42,18 +86,39 @@ def main(argv):
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
+    args_parser.add_argument(
+        "--no-progress-reporting", action="store_true", help="Disables progress reporting."
+    )
+
+
+def main(argv):
+    clp_home = get_clp_home()
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+    args_parser = argparse.ArgumentParser(description="Compresses files from filesystem/s3")
+    input_type_args_parser = args_parser.add_subparsers(dest="input_type")
+
+    fs_compressor_parser = input_type_args_parser.add_parser(InputType.FS)
+    add_common_arguments(fs_compressor_parser, default_config_file_path)
+    fs_compressor_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
+    fs_compressor_parser.add_argument(
+        "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
+    )
+
+    s3_compressor_parser = input_type_args_parser.add_parser(InputType.S3)
+    add_common_arguments(s3_compressor_parser, default_config_file_path)
+    s3_compressor_parser.add_argument("url", metavar="URL", help="URL of object to be compressed")
+    s3_compressor_parser.add_argument(
+        "--aws-access-key-id", type=str, default=None, help="AWS access key id."
+    )
+    s3_compressor_parser.add_argument(
+        "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."
+    )
+    # args_parser.add_argument(
+    #     "--aws-credentials-file", type=str, default=None, help="Access key id."
+    # )
 
     parsed_args = args_parser.parse_args(argv[1:])
-
-    paths_to_compress = parsed_args.paths
-    compression_path_list = parsed_args.path_list
-    # Validate some input paths were specified
-    if len(paths_to_compress) == 0 and compression_path_list is None:
-        args_parser.error("No paths specified.")
-
-    # Validate paths were specified using only one method
-    if len(paths_to_compress) > 0 and compression_path_list is not None:
-        args_parser.error("Paths cannot be specified on the command line AND through a file.")
 
     # Validate and load config file
     try:
@@ -66,6 +131,23 @@ def main(argv):
     except:
         logger.exception("Failed to load config.")
         return -1
+
+    input_type = parsed_args.input_type
+    if InputType.FS == input_type:
+        # Validate some input paths were specified
+        if len(parsed_args.paths) == 0 and parsed_args.path_list is None:
+            args_parser.error("No paths specified.")
+
+        # Validate paths were specified using only one method
+        if len(parsed_args.paths) > 0 and parsed_args.path_list is not None:
+            args_parser.error("Paths cannot be specified on the command line AND through a file.")
+
+    elif InputType.S3 == input_type:
+        if StorageEngine.CLP_S != clp_config.package.storage_engine:
+            raise ValueError(f"input type {InputType.S3} is only supported with storage engine {StorageEngine.CLP_S}")
+
+    else:
+        raise ValueError(f"Unsupported input type: {input_type}.")
 
     container_name = generate_container_name(str(JobType.COMPRESSION))
 
@@ -83,6 +165,7 @@ def main(argv):
     compress_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
+        input_type,
         "--config", str(generated_config_path_on_container)
     ]
     # fmt: on
@@ -92,8 +175,12 @@ def main(argv):
     if parsed_args.tags is not None:
         compress_cmd.append("--tags")
         compress_cmd.append(parsed_args.tags)
+    if parsed_args.no_progress_reporting is True:
+        compress_cmd.append("--no-progress-reporting")
 
-    # Write paths to compress to a file
+    append_input_specific_args(compress_cmd, parsed_args)
+
+    # Write targets to compress to a file
     while True:
         # Get unused output path
         container_path_list_filename = f"{uuid.uuid4()}.txt"
@@ -101,19 +188,13 @@ def main(argv):
         if not container_path_list_path.exists():
             break
 
-    with open(container_path_list_path, "w") as container_path_list_file:
-        if compression_path_list is not None:
-            with open(parsed_args.path_list, "r") as path_list_file:
-                for line in path_list_file:
-                    resolved_path = pathlib.Path(line.rstrip()).resolve()
-                    container_path_list_file.write(f"{resolved_path}\n")
-
-        for path in paths_to_compress:
-            resolved_path = pathlib.Path(path).resolve()
-            container_path_list_file.write(f"{resolved_path}\n")
-
+    generate_targets_list(
+        input_type,
+        container_path_list_path,
+        parsed_args
+    )
     compress_cmd.append("--path-list")
-    compress_cmd.append(container_clp_config.logs_directory / container_path_list_filename)
+    compress_cmd.append(str(container_clp_config.logs_directory / container_path_list_filename))
 
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)

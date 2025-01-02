@@ -4,12 +4,15 @@ import logging
 import pathlib
 import sys
 import time
+import typing
 from contextlib import closing
+from typing import List
 
 import brotli
 import msgpack
 from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME
 from clp_py_utils.pretty_size import pretty_size
+from clp_py_utils.s3_utils import parse_s3_url
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import (
     CompressionJobCompletionStatus,
@@ -18,7 +21,9 @@ from job_orchestration.scheduler.constants import (
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
+    S3InputConfig,
     OutputConfig,
+    InputType
 )
 
 from clp_package_utils.general import (
@@ -122,11 +127,77 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
         return CompressionJobCompletionStatus.SUCCEEDED
 
 
-def main(argv):
-    clp_home = get_clp_home()
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+def generate_clp_io_config(
+    targets_to_compress: List[str],
+    parsed_args: argparse.Namespace
+) -> typing.Union[S3InputConfig, FsInputConfig]:
+    input_type = parsed_args.input_type
 
-    args_parser = argparse.ArgumentParser(description="Compresses log files.")
+    if InputType.FS == input_type:
+        return FsInputConfig(
+            paths_to_compress=targets_to_compress,
+            timestamp_key=parsed_args.timestamp_key,
+            path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
+        )
+    elif InputType.S3 == input_type:
+        if len(targets_to_compress) != 1:
+            logger.error(f"Unexpected number of targets: {targets_to_compress}")
+            exit(-1)
+        s3_url = targets_to_compress[0]
+        region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
+        return S3InputConfig(
+            region_code=region_code,
+            bucket=bucket_name,
+            key_prefix=key_prefix,
+            aws_access_key_id=parsed_args.aws_access_key_id,
+            aws_secret_access_key=parsed_args.aws_secret_access_key,
+            timestamp_key=parsed_args.timestamp_key,
+        )
+    else:
+        raise ValueError(f"Unsupported input type: {input_type}")
+
+
+def get_targets_to_compress(
+    compress_path_list_path: pathlib.Path,
+    input_type: InputType
+) -> List[str]:
+    # Define the path processing function based on the input type
+    process_path_func: typing.Callable[[str], str]
+
+    def process_fs_path(path_str: str) -> str:
+        stripped_path = pathlib.Path(path_str)
+        container_file_path = CONTAINER_INPUT_LOGS_ROOT_DIR / pathlib.Path(
+            stripped_path
+        ).relative_to(stripped_path.anchor)
+        return str(container_file_path.resolve())
+
+    def process_s3_path(path_str: str) -> str:
+        return path_str
+
+    if input_type == InputType.FS:
+        process_path_func = process_fs_path
+    elif input_type == InputType.S3:
+        process_path_func = process_s3_path
+    else:
+        raise ValueError(f"Unsupported input type: {input_type}")
+
+    targets_to_compress = []
+    # Read targets from the input file
+    with open(compress_path_list_path, "r") as f:
+        for path in f:
+            stripped_path_str = path.strip()
+            if "" == stripped_path_str:
+                # Skip empty paths
+                continue
+            targets_to_compress.append(process_path_func(stripped_path_str))
+
+    return targets_to_compress
+
+
+def add_common_arguments(
+    args_parser: argparse.ArgumentParser,
+    default_config_file_path: pathlib.Path
+) -> None:
     args_parser.add_argument(
         "--config",
         "-c",
@@ -150,9 +221,29 @@ def main(argv):
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
-    parsed_args = args_parser.parse_args(argv[1:])
-    compress_path_list_arg = parsed_args.path_list
 
+
+def main(argv):
+    clp_home = get_clp_home()
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+    args_parser = argparse.ArgumentParser(description="Compresses files from filesystem/s3")
+    input_type_args_parser = args_parser.add_subparsers(dest="input_type")
+
+    fs_compressor_parser = input_type_args_parser.add_parser(InputType.FS)
+    add_common_arguments(fs_compressor_parser, default_config_file_path)
+
+    s3_compressor_parser = input_type_args_parser.add_parser(InputType.S3)
+    add_common_arguments(s3_compressor_parser, default_config_file_path)
+    s3_compressor_parser.add_argument(
+        "--aws-access-key-id", type=str, default=None, help="AWS access key id."
+    )
+    s3_compressor_parser.add_argument(
+        "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."
+    )
+
+    parsed_args = args_parser.parse_args(argv[1:])
+
+    input_type = parsed_args.input_type
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
@@ -166,28 +257,12 @@ def main(argv):
     comp_jobs_dir = clp_config.logs_directory / "comp-jobs"
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)
 
-    paths_to_compress = []
-    # Read paths from the input file
-    compress_path_list_path = pathlib.Path(compress_path_list_arg).resolve()
-    with open(compress_path_list_path, "r") as f:
-        for path in f:
-            stripped_path_str = path.strip()
-            if "" == stripped_path_str:
-                # Skip empty paths
-                continue
-            stripped_path = pathlib.Path(stripped_path_str)
-            container_file_path = CONTAINER_INPUT_LOGS_ROOT_DIR / pathlib.Path(
-                stripped_path
-            ).relative_to(stripped_path.anchor)
-            resolved_path_str = str(container_file_path.resolve())
-            paths_to_compress.append(resolved_path_str)
-
-    mysql_adapter = SQL_Adapter(clp_config.database)
-    clp_input_config = FsInputConfig(
-        paths_to_compress=paths_to_compress,
-        timestamp_key=parsed_args.timestamp_key,
-        path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
+    targets_to_compress = get_targets_to_compress(
+        pathlib.Path(parsed_args.path_list).resolve(),
+        input_type
     )
+
+    clp_input_config = generate_clp_io_config(targets_to_compress, parsed_args)
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
     if parsed_args.tags:
         tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]
@@ -195,6 +270,7 @@ def main(argv):
             clp_output_config.tags = tag_list
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
+    mysql_adapter = SQL_Adapter(clp_config.database)
     return handle_job(
         sql_adapter=mysql_adapter,
         clp_io_config=clp_io_config,
