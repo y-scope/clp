@@ -47,7 +47,7 @@ def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     """
-    Parses the region_code, bucket and key_prefix from the given s3 url. The url must be either a
+    Parses the region_code, bucket and key_prefix from the given S3 url. The url must be either a
     host_style_url or path_style_url.
     :param s3_url: a host_style_url or path_style_url.
     :return: A tuple of (region_code, bucket, key_prefix)
@@ -90,6 +90,9 @@ def generate_s3_virtual_hosted_style_url(
 def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMetadata], str]:
     """
     Gets the metadata of objects under the <bucket>/<key_prefix> specified by s3_input_config.
+    Note: We reuse FileMetadata class to store the metadata of S3 objects. The object_key is stored
+    as path in FileMetadata.
+
     :param s3_input_config: S3 configuration specifying the bucket, key_prefix and credentials.
     :return: Result.OK(List[FileMetadata]) containing the object metadata on success,
              otherwise Result.Err(str) with the error message.

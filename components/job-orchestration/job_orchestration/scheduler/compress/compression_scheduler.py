@@ -128,7 +128,7 @@ def _process_s3_input(
 ) -> Result[bool, str]:
     """
     Iterate through all objects under the <bucket>/<key_prefix> specified by s3_input_config,
-    and adds their metadata to the paths_to_compress_buffer
+    and adds their metadata to the paths_to_compress_buffer.
     :param s3_input_config: S3 configuration specifying the bucket, key_prefix and credentials.
     :param paths_to_compress_buffer: PathsToCompressBuffer containing the scheduling information
     :return: Result.OK(True) on success, or Result.Err(str) with the error message otherwise.
@@ -137,7 +137,7 @@ def _process_s3_input(
     res = get_s3_object_metadata(s3_input_config)
 
     if res.is_err():
-        logger.error(f"Failed to process s3 input: {res.err_value}")
+        logger.error(f"Failed to process S3 input: {res.err_value}")
         return res
 
     object_metadata_list = res.ok_value
@@ -189,7 +189,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                     job_id,
                     {
                         "status": CompressionJobStatus.FAILED,
-                        "status_msg": f"Scheduler Failed for s3 input: {res.err_value}",
+                        "status_msg": f"Scheduler Failed for S3 input: {res.err_value}",
                     },
                 )
                 db_conn.commit()

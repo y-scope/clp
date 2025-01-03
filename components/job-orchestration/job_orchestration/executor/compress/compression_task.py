@@ -246,7 +246,7 @@ def run_clp(
     yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
     db_config_file.close()
 
-    # Get s3 config
+    # Get S3 config
     s3_config: S3Config
     enable_s3_write = False
     storage_type = worker_config.archive_output.storage.type
@@ -310,7 +310,7 @@ def run_clp(
     total_uncompressed_size = 0
     total_compressed_size = 0
 
-    # Handle job metadata update and s3 write if enabled
+    # Handle job metadata update and S3 write if enabled
     s3_error = None
     while not last_line_decoded:
         stats: Optional[Dict[str, Any]] = None
