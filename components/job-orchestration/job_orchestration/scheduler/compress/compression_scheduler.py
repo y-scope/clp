@@ -31,7 +31,7 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionTaskResult,
 )
 from pydantic import ValidationError
-from result import Ok, Result
+from result import Ok, Err, Result
 
 # Setup logging
 logger = get_logger("compression_scheduler")
@@ -141,6 +141,11 @@ def _process_s3_input(
         return res
 
     object_metadata_list = res.ok_value
+    if len(object_metadata_list) == 0:
+        error_msg = "Input url doesn't resolve to any object"
+        logger.error(error_msg)
+        return Err(error_msg)
+
     for object_metadata in object_metadata_list:
         paths_to_compress_buffer.add_file(object_metadata)
 
