@@ -4,7 +4,6 @@
 #include <string_view>
 #include <utility>
 
-#include <boost/filesystem.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
