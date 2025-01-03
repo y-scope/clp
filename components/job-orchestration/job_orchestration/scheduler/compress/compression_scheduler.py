@@ -22,7 +22,7 @@ from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import get_s3_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compress.fs_compression_task import compress
+from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
 from job_orchestration.scheduler.job_config import ClpIoConfig, FsInputConfig, S3InputConfig
@@ -31,7 +31,7 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionTaskResult,
 )
 from pydantic import ValidationError
-from result import Ok, Err, Result
+from result import Err, Ok, Result
 
 # Setup logging
 logger = get_logger("compression_scheduler")
