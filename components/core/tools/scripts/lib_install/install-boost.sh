@@ -28,9 +28,9 @@ mkdir -p $temp_dir
 cd $temp_dir
 
 # Download source
-tar_filename=boost_${version_with_underscores}.tar.bz2
+tar_filename=boost_${version_with_underscores}.tar.gz
 curl -fsSL https://archives.boost.io/release/${version}/source/${tar_filename} -o ${tar_filename}
-tar xf ${tar_filename}
+tar xzf ${tar_filename}
 cd boost_${version_with_underscores}
 
 # Build
