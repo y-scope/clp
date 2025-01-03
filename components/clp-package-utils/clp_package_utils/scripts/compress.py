@@ -216,7 +216,7 @@ def main(argv):
 
     necessary_mounts = [mounts.clp_home, mounts.input_logs_dir, mounts.data_dir, mounts.logs_dir]
 
-    # Write targets to compress to a file
+    # Write compression targets to a file
     while True:
         # Get unused output path
         container_target_list_filename = f"{uuid.uuid4()}.txt"
