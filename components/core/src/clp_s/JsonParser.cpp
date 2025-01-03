@@ -618,8 +618,8 @@ bool JsonParser::parse() {
                 SPDLOG_ERROR(
                         "Encountered curl error while ingesting {} - Code: {} - Message: {}",
                         path.path,
-                        rc.value(),
-                        curl_error_message.value_or("Unkown error")
+                        static_cast<int64_t>(rc.value()),
+                        curl_error_message.value_or("Unknown error")
                 );
                 m_archive_writer->close();
                 return false;

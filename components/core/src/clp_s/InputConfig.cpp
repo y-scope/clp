@@ -17,7 +17,7 @@ auto get_source_for_path(std::string_view const path) -> InputSource {
 }
 
 auto get_path_object_for_raw_path(std::string_view const path) -> Path {
-    return Path{.source{get_source_for_path(path)}, .path{std::string{path}}};
+    return Path{.source = get_source_for_path(path), .path = std::string{path}};
 }
 
 auto get_input_files_for_raw_path(std::string_view const path, std::vector<Path>& files) -> bool {
@@ -41,7 +41,7 @@ auto get_input_files_for_path(Path const& path, std::vector<Path>& files) -> boo
     }
 
     for (auto& file : file_paths) {
-        files.emplace_back(Path{.source{InputSource::Filesystem}, .path{std::move(file)}});
+        files.emplace_back(Path{.source = InputSource::Filesystem, .path = std::move(file)});
     }
     return true;
 }
@@ -68,7 +68,7 @@ auto get_input_archives_for_path(Path const& path, std::vector<Path>& archives) 
     }
 
     for (auto& archive : archive_paths) {
-        archives.emplace_back(Path{.source{InputSource::Filesystem}, .path{std::move(archive)}});
+        archives.emplace_back(Path{.source = InputSource::Filesystem, .path = std::move(archive)});
     }
     return true;
 }

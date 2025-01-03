@@ -4,7 +4,6 @@
 #include <simdjson.h>
 
 #include "../clp/ReaderInterface.hpp"
-#include "FileReader.hpp"
 
 namespace clp_s {
 class JsonFileIterator {

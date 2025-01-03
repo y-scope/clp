@@ -208,8 +208,9 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new DateStringColumnReader(column_id, m_timestamp_dict);
             break;
         // No need to push columns without associated object readers into the SchemaReader.
-        case NodeType::Object:
+        case NodeType::Metadata:
         case NodeType::NullValue:
+        case NodeType::Object:
         case NodeType::StructuredArray:
         case NodeType::Unknown:
             break;

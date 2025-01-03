@@ -76,6 +76,41 @@ void validate_network_auth(std::string_view auth_method, NetworkAuthOption& auth
         throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth_method));
     }
 }
+
+/**
+ * Validates and populates archive paths.
+ * @param archive_path
+ * @param archive_id
+ * @param archive_paths
+ * @throws std::invalid_argument on any error
+ */
+void validate_archive_paths(
+        std::string_view archive_path,
+        std::string_view archive_id,
+        std::vector<Path>& archive_paths
+) {
+    if (archive_path.empty()) {
+        throw std::invalid_argument("No archive path specified");
+    }
+
+    if (false == archive_id.empty()) {
+        auto archive_fs_path = std::filesystem::path(archive_path) / archive_id;
+        std::error_code ec;
+        if (false == std::filesystem::exists(archive_fs_path, ec) || ec) {
+            throw std::invalid_argument("Requested archive does not exist");
+        }
+        archive_paths.emplace_back(clp_s::Path{
+                .source = clp_s::InputSource::Filesystem,
+                .path = archive_fs_path.string()
+        });
+    } else if (false == get_input_archives_for_raw_path(archive_path, archive_paths)) {
+        throw std::invalid_argument("Invalid archive path");
+    }
+
+    if (archive_paths.empty()) {
+        throw std::invalid_argument("No archive paths specified");
+    }
+}
 }  // namespace
 
 CommandLineArguments::ParsingResult
@@ -443,26 +478,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
 
-            if (archive_path.empty()) {
-                throw std::invalid_argument("No archive path specified");
-            }
-
-            if (false == archive_id.empty()) {
-                auto archive_fs_path = std::filesystem::path(archive_path) / archive_id;
-                if (false == std::filesystem::exists(archive_fs_path)) {
-                    throw std::invalid_argument("Requested archive does not exist");
-                }
-                m_input_paths.emplace_back(clp_s::Path{
-                        .source{clp_s::InputSource::Filesystem},
-                        .path{archive_fs_path.string()}
-                });
-            } else if (false == get_input_archives_for_raw_path(archive_path, m_input_paths)) {
-                throw std::invalid_argument("Invalid archive path");
-            }
-
-            if (m_input_paths.empty()) {
-                throw std::invalid_argument("No archive paths specified");
-            }
+            validate_archive_paths(archive_path, archive_id, m_input_paths);
 
             validate_network_auth(auth, m_network_auth);
 
@@ -706,26 +722,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
 
-            if (archive_path.empty()) {
-                throw std::invalid_argument("No archive path specified");
-            }
-
-            if (false == archive_id.empty()) {
-                auto archive_fs_path = std::filesystem::path(archive_path) / archive_id;
-                if (false == std::filesystem::exists(archive_fs_path)) {
-                    throw std::invalid_argument("Requested archive does not exist");
-                }
-                m_input_paths.emplace_back(clp_s::Path{
-                        .source{clp_s::InputSource::Filesystem},
-                        .path{archive_fs_path.string()}
-                });
-            } else if (false == get_input_archives_for_raw_path(archive_path, m_input_paths)) {
-                throw std::invalid_argument("Invalid archive path");
-            }
-
-            if (m_input_paths.empty()) {
-                throw std::invalid_argument("No archive paths specified");
-            }
+            validate_archive_paths(archive_path, archive_id, m_input_paths);
 
             validate_network_auth(auth, m_network_auth);
 
