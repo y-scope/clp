@@ -82,7 +82,7 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
     )
 
 
-def generate_fs_log_path_list_file(
+def _generate_fs_targets_file(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
 ) -> None:
@@ -100,7 +100,7 @@ def generate_fs_log_path_list_file(
                 file.write("\n")
 
 
-def generate_s3_log_url_list_file(
+def _generate_s3_targets_file(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
     s3_input_config: S3InputConfig,
@@ -117,12 +117,21 @@ def generate_s3_log_url_list_file(
                 file.write("\n")
 
 
-def make_clp_command(
+def make_clp_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
+    """
+    Generates the command and environment for a clp compression job
+    :param clp_home:
+    :param archive_output_dir:
+    :param clp_config:
+    :param db_config_file_path:
+    :return: Tuple of (compression_command, compression_env)
+    """
+
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
 
     # fmt: off
@@ -149,13 +158,23 @@ def make_clp_command(
     return compression_cmd, None
 
 
-def make_clp_s_command(
+def make_clp_s_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
     enable_s3_write: bool,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
+    """
+    Generates the command and environment for a clp_s compression job
+    :param clp_home:
+    :param archive_output_dir:
+    :param clp_config:
+    :param db_config_file_path:
+    :param enable_s3_write: Whether to write output to S3 storage.
+    :return: Tuple of (compression_command, compression_env)
+    """
+
     # fmt: off
     compression_cmd = [
         str(clp_home / "bin" / "clp-s"),
@@ -241,14 +260,14 @@ def run_clp(
         enable_s3_write = True
 
     if StorageEngine.CLP == clp_storage_engine:
-        compression_cmd, compression_env = make_clp_command(
+        compression_cmd, compression_env = make_clp_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
-        compression_cmd, compression_env = make_clp_s_command(
+        compression_cmd, compression_env = make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
@@ -259,13 +278,13 @@ def run_clp(
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
-    # Prepare list of targets to compress
+    # generate list of targets to compress
     input_type = clp_config.input.type
     targets_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
     if InputType.FS == input_type:
-        generate_fs_log_path_list_file(targets_list_path, paths_to_compress)
+        _generate_fs_targets_file(targets_list_path, paths_to_compress)
     elif InputType.S3 == input_type:
-        generate_s3_log_url_list_file(targets_list_path, paths_to_compress, clp_config.input)
+        _generate_s3_targets_file(targets_list_path, paths_to_compress, clp_config.input)
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)

@@ -16,6 +16,13 @@ AWS_ENDPOINT = "amazonaws.com"
 
 
 def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
+    """
+    Parses the `aws_access_key_id` and `aws_secret_access_key` from the given credentials_file_path.
+    :param credentials_file_path: path to the file containing aws credentials.
+    :return: A tuple of (aws_access_key_id, aws_secret_access_key)
+    :raise: ValueError if the file doesn't exist, or doesn't contain the aws credentials.
+    """
+
     aws_access_key_id = None
     aws_secret_access_key = None
 
@@ -39,6 +46,14 @@ def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
 
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
+    """
+    Parses the region_code, bucket and key_prefix from the given s3 url. The url must be either a
+    host_style_url or path_style_url.
+    :param s3_url: a host_style_url or path_style_url.
+    :return: A tuple of (region_code, bucket, key_prefix)
+    :raise: ValueError if the given s3_url is not a valid host_style_url or path_style_url.
+    """
+
     host_style_url_regex = re.compile(
         r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z0-9-]+))?"
         r"\.(?P<endpoint>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
@@ -72,7 +87,14 @@ def generate_s3_virtual_hosted_style_url(
     return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
 
-def get_s3_file_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMetadata], str]:
+def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMetadata], str]:
+    """
+    Gets the metadata of objects under the <bucket>/<key_prefix> specified by s3_input_config.
+    :param s3_input_config: S3 configuration specifying the bucket, key_prefix and credentials.
+    :return: Result.OK(List[FileMetadata]) containing the object metadata on success,
+             otherwise Result.Err(str) with the error message.
+    """
+
     file_metadata_list: List[FileMetadata] = list()
 
     s3_client = boto3.client(
