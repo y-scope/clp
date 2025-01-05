@@ -1386,8 +1386,8 @@ TEMPLATE_TEST_CASE(
     auto& serializer{result.value()};
     serializer.clear_ir_buf();
 
-    auto assert_invalid_serialization = [&]<typename T>(T invalid_input) -> bool {
-        std::map<string, T> const invalid_map{{"valid_key", invalid_input}};
+    auto assert_invalid_serialization = [&]<typename T>(T invalid_value) -> bool {
+        std::map<string, T> const invalid_map{{"valid_key", invalid_value}};
         msgpack::pack(msgpack_serialization_buffer, invalid_map);
         return unpack_and_assert_serialization_failure(msgpack_serialization_buffer, serializer);
     };
