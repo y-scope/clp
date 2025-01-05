@@ -212,11 +212,13 @@ template <typename encoded_variable_t>
 [[nodiscard]] auto count_num_leaves(nlohmann::json const& root) -> size_t;
 
 /**
- * Unpacks and asserts the serialization of the msgpack bytes fails.
+ * Unpacks the given bytes into a msgpack object and asserts that serializing it into the KV-pair IR
+ * format fails.
  * @tparam encoded_variable_t
- * @param buffer A buffer containing msgpack byte sequence.
+ * @param buffer A buffer containing a msgpack byte sequence that cannot be serialized into the
+ * KV-pair IR format.
  * @param serializer
- * @return Whether serialization failed with the underlying IR buffer being empty.
+ * @return Whether serialization failed and the underlying IR buffer remains empty.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_assert_serialization_failure(
@@ -1339,8 +1341,8 @@ TEMPLATE_TEST_CASE(
     auto& serializer{result.value()};
     serializer.clear_ir_buf();
 
-    auto assert_invalid_serialization = [&](auto invalid_input) -> bool {
-        std::map<string, decltype(invalid_input)> const invalid_map{{"valid_key", invalid_input}};
+    auto assert_invalid_serialization = [&]<typename T>(T invalid_input) -> bool {
+        std::map<string, T> const invalid_map{{"valid_key", invalid_input}};
         msgpack::pack(msgpack_serialization_buffer, invalid_map);
         return unpack_and_assert_serialization_failure(msgpack_serialization_buffer, serializer);
     };

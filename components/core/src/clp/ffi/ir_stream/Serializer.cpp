@@ -147,12 +147,12 @@ template <typename encoded_variable_t>
 ) -> bool;
 
 /**
- * Checks whether the given msgpack array can be serialized in the key-value pair IR format.
+ * Checks whether the given msgpack array can be serialized into the key-value pair IR format.
  * @param array
- * @return true if the array is serializable
+ * @return true if the array is serializable.
  * @return false if:
- * - Any object inside the array has its type unsupported (`BIN` or `EXT`).
- * - Any object inside the array is `MAP` and it has non-string keys.
+ * - Any value inside the array an unsupported type (i.e., `BIN` or `EXT`).
+ * - Any value inside the array has type `MAP` and the map has non-string keys.
  */
 [[nodiscard]] auto is_msgpack_array_serializable(msgpack::object const& array) -> bool;
 
@@ -251,7 +251,7 @@ auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
         auto const* curr{validation_stack.back()};
         validation_stack.pop_back();
         if (msgpack::type::MAP == curr->type) {
-            // Validate maps
+            // Validate map
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             auto const& as_map{curr->via.map};
             for (auto const& [key, value] : span{as_map.ptr, as_map.size}) {
@@ -265,7 +265,7 @@ auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
             continue;
         }
 
-        // Validate arrays
+        // Validate array
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
         auto const& as_array{curr->via.array};
         for (auto const& obj : span{as_array.ptr, as_array.size}) {
