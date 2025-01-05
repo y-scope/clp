@@ -27,6 +27,8 @@ void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
     m_schema_tree = ReaderUtils::read_schema_tree(archive_path_str);
     m_schema_map = ReaderUtils::read_schemas(archive_path_str);
 
+    m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
+
     m_table_metadata_file_reader.open(archive_path_str + constants::cArchiveTableMetadataFile);
     m_stream_reader.open_packed_streams(archive_path_str + constants::cArchiveTablesFile);
 }
@@ -310,6 +312,12 @@ void ArchiveReader::initialize_schema_reader(
         }
         BaseColumnReader* column_reader = append_reader_column(reader, column_id);
 
+        if (column_id == m_log_event_idx_column_id
+            && nullptr != dynamic_cast<Int64ColumnReader*>(column_reader))
+        {
+            reader.mark_column_as_log_event_idx(static_cast<Int64ColumnReader*>(column_reader));
+        }
+
         if (should_extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0)
         {
             reader.mark_column_as_timestamp(column_reader);
@@ -346,6 +354,7 @@ void ArchiveReader::close() {
     m_cur_stream_id = 0;
     m_stream_buffer.reset();
     m_stream_buffer_size = 0ULL;
+    m_log_event_idx_column_id = -1;
 }
 
 std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_buffer) {

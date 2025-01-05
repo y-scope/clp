@@ -20,15 +20,7 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
 )
 
-# Setup logging
-# Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
 
 
 def main(argv):
@@ -82,7 +74,7 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    container_name = generate_container_name(JobType.SEARCH)
+    container_name = generate_container_name(str(JobType.SEARCH))
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(

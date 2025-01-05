@@ -14,6 +14,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   curl \
   build-essential \
   git \
+  jq \
   libboost-filesystem-dev \
   libboost-iostreams-dev \
   libboost-program-options-dev \

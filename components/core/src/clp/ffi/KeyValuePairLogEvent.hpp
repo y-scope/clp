@@ -5,6 +5,7 @@
 #include <optional>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
@@ -59,6 +60,17 @@ public:
     }
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
+
+    /**
+     * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
+     * schema tree, and the set bits correspond to the nodes in the subtree defined by all paths
+     * from the root node to the nodes in `node_id_value_pairs`; or an error code indicating a
+     * failure:
+     * - std::errc::result_out_of_range if a node ID in `node_id_value_pairs` doesn't exist in the
+     *   schema tree.
+     */
+    [[nodiscard]] auto get_schema_subtree_bitmap(
+    ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
 
     /**
      * Serializes the log event into a `nlohmann::json` object.

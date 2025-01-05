@@ -13,20 +13,31 @@ import axios from "axios";
  */
 
 /**
- * Submits a job to extract the split of an original file that contains a given log event. The file
- * is extracted as a CLP IR file.
- *
- * @param {number|string} origFileId The ID of the original file
- * @param {number} logEventIdx The index of the log event
- * @param {Function} onUploadProgress Callback to handle upload progress events.
- * @return {Promise<axios.AxiosResponse<ExtractIrResp>>}
+ * @typedef {object} ExtractJsonResp
+ * @property {number} begin_msg_ix
+ * @property {number} end_msg_ix
+ * @property {boolean} is_last_ir_chunk
+ * @property {string} orig_file_id
+ * @property {string} path
+ * @property {string} _id
  */
-const submitExtractIrJob = async (origFileId, logEventIdx, onUploadProgress) => {
+
+/**
+ * Submits a job to extract the stream that contains a given log event. The stream is extracted
+ * either as a CLP IR or a JSON Lines file.
+ *
+ * @param {QUERY_JOB_TYPE} extractJobType
+ * @param {string} streamId
+ * @param {number} logEventIdx
+ * @param {Function} onUploadProgress Callback to handle upload progress events.
+ * @return {Promise<axios.AxiosResponse<ExtractIrResp|ExtractJsonResp>>}
+ */
+const submitExtractStreamJob = async (extractJobType, streamId, logEventIdx, onUploadProgress) => {
     return await axios.post(
-        "/query/extract-ir",
-        {logEventIdx, origFileId},
+        "/query/extract-stream",
+        {extractJobType, streamId, logEventIdx},
         {onUploadProgress}
     );
 };
 
-export {submitExtractIrJob};
+export {submitExtractStreamJob};

@@ -15,7 +15,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * `md5sum`
 * Python 3.8 or newer
 * python3-venv
-* [Task]
+* [Task] >= 3.38.0
 
 ## Running the linters
 

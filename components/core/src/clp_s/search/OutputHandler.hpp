@@ -43,9 +43,14 @@ public:
      * @param message The message in the log event.
      * @param timestamp The timestamp of the log event.
      * @param archive_id The archive containing the log event.
+     * @param log_event_idx The index of the log event within an archive.
      */
-    virtual void write(std::string_view message, epochtime_t timestamp, std::string_view archive_id)
-            = 0;
+    virtual void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) = 0;
 
     /**
      * Writes a message to the output handler.
@@ -84,9 +89,13 @@ public:
             : OutputHandler(should_output_metadata, true) {}
 
     // Methods inherited from OutputHandler
-    void
-    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
-        std::cout << archive_id << ": " << timestamp << " " << message;
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override {
+        std::cout << archive_id << ": " << log_event_idx << ": " << timestamp << " " << message;
     }
 
     void write(std::string_view message) override { std::cout << message; }
@@ -120,10 +129,14 @@ public:
     }
 
     // Methods inherited from OutputHandler
-    void
-    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override;
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override;
 
-    void write(std::string_view message) override { write(message, 0, {}); }
+    void write(std::string_view message) override { write(message, 0, {}, 0); }
 
 private:
     std::string m_host;
@@ -143,17 +156,20 @@ public:
                 std::string_view original_path,
                 std::string_view message,
                 epochtime_t timestamp,
-                std::string_view archive_id
+                std::string_view archive_id,
+                int64_t log_event_idx
         )
                 : original_path(original_path),
                   message(message),
                   timestamp(timestamp),
-                  archive_id(archive_id) {}
+                  archive_id(archive_id),
+                  log_event_idx(log_event_idx) {}
 
         std::string original_path;
         std::string message;
         epochtime_t timestamp;
         std::string archive_id;
+        int64_t log_event_idx;
     };
 
     struct QueryResultGreaterTimestampComparator {
@@ -189,10 +205,14 @@ public:
      */
     ErrorCode flush() override;
 
-    void
-    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override;
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override;
 
-    void write(std::string_view message) override { write(message, 0, {}); }
+    void write(std::string_view message) override { write(message, 0, {}, 0); }
 
 private:
     mongocxx::client m_client;
@@ -216,8 +236,12 @@ public:
     CountOutputHandler(int reducer_socket_fd);
 
     // Methods inherited from OutputHandler
-    void
-    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {}
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override {}
 
     void write(std::string_view message) override;
 
@@ -246,8 +270,12 @@ public:
               m_count_by_time_bucket_size{count_by_time_bucket_size} {}
 
     // Methods inherited from OutputHandler
-    void
-    write(std::string_view message, epochtime_t timestamp, std::string_view archive_id) override {
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override {
         int64_t bucket = (timestamp / m_count_by_time_bucket_size) * m_count_by_time_bucket_size;
         m_bucket_counts[bucket] += 1;
     }

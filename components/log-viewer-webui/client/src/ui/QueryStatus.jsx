@@ -6,10 +6,36 @@ import {
 
 import {AxiosError} from "axios";
 
-import {submitExtractIrJob} from "../api/query.js";
+import {submitExtractStreamJob} from "../api/query.js";
 import {QUERY_LOADING_STATES} from "../typings/query.js";
 import Loading from "./Loading.jsx";
 
+
+let enumQueryType;
+/* eslint-disable sort-keys */
+/**
+ * Note: This enum is duplicated from server, as it is non-trivial to include server enums from the
+ * client.
+ *
+ * Enum of job types, matching the `QueryJobType` class in
+ * `job_orchestration.query_scheduler.constants`.
+ *
+ * @enum {number}
+ */
+const QUERY_JOB_TYPE = Object.freeze({
+    SEARCH_OR_AGGREGATION: (enumQueryType = 0),
+    EXTRACT_IR: ++enumQueryType,
+    EXTRACT_JSON: ++enumQueryType,
+});
+/* eslint-enable sort-keys */
+
+/**
+ * Mapping between job type enums and stream type
+ */
+const EXTRACT_JOB_TYPE = Object.freeze({
+    ir: QUERY_JOB_TYPE.EXTRACT_IR,
+    json: QUERY_JOB_TYPE.EXTRACT_JSON,
+});
 
 /**
  * Submits queries and renders the query states.
@@ -28,20 +54,30 @@ const QueryStatus = () => {
         isFirstRun.current = false;
 
         const searchParams = new URLSearchParams(window.location.search);
-        const origFileId = searchParams.get("origFileId");
+        const streamType = searchParams.get("type");
+        const streamId = searchParams.get("streamId");
         const logEventIdx = searchParams.get("logEventIdx");
-        if (null === origFileId || null === logEventIdx) {
-            const error = "Either `origFileId` or `logEventIdx` are missing from the URL " +
-            "parameters. Note that non-IR-extraction queries are not supported at the moment.";
 
+        if (null === streamType || null === streamId || null === logEventIdx) {
+            const error = "Queries parameters are missing from the URL parameters.";
             console.error(error);
             setErrorMsg(error);
 
             return;
         }
 
-        submitExtractIrJob(
-            origFileId,
+        const extractJobType = EXTRACT_JOB_TYPE[streamType];
+        if ("undefined" === typeof extractJobType) {
+            const error = `Unsupported Stream type: ${streamType}`;
+            console.error(error);
+            setErrorMsg(error);
+
+            return;
+        }
+
+        submitExtractStreamJob(
+            extractJobType,
+            streamId,
             Number(logEventIdx),
             () => {
                 setQueryState(QUERY_LOADING_STATES.WAITING);
@@ -51,7 +87,7 @@ const QueryStatus = () => {
                 setQueryState(QUERY_LOADING_STATES.LOADING);
 
                 const innerLogEventNum = logEventIdx - data.begin_msg_ix + 1;
-                window.location = `/log-viewer/index.html?filePath=/ir/${data.path}` +
+                window.location = `/log-viewer/index.html?filePath=/streams/${data.path}` +
                     `#logEventNum=${innerLogEventNum}`;
             })
             .catch((e) => {

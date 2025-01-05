@@ -49,6 +49,11 @@ class ExtractIrJobConfig(QueryJobConfig):
     target_uncompressed_size: typing.Optional[int] = None
 
 
+class ExtractJsonJobConfig(QueryJobConfig):
+    archive_id: str
+    target_chunk_size: typing.Optional[int] = None
+
+
 class SearchJobConfig(QueryJobConfig):
     query_string: str
     max_num_results: int

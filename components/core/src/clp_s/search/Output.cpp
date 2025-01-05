@@ -62,6 +62,7 @@ bool Output::filter() {
         }
     }
 
+    populate_internal_columns();
     populate_string_queries(top_level_expr);
 
     std::string message;
@@ -92,9 +93,10 @@ bool Output::filter() {
         reader.initialize_filter(this);
 
         if (m_output_handler->should_output_metadata()) {
-            epochtime_t timestamp;
-            while (reader.get_next_message_with_timestamp(message, timestamp, this)) {
-                m_output_handler->write(message, timestamp, archive_id);
+            epochtime_t timestamp{};
+            int64_t log_event_idx{};
+            while (reader.get_next_message_with_metadata(message, timestamp, log_event_idx, this)) {
+                m_output_handler->write(message, timestamp, archive_id, log_event_idx);
             }
         } else {
             while (reader.get_next_message(message, this)) {
@@ -136,6 +138,10 @@ void Output::init(
 
     for (auto column_reader : column_readers) {
         auto column_id = column_reader->get_id();
+        if (0 != m_metadata_columns.count(column_id)) {
+            continue;
+        }
+
         if ((0
              != (m_wildcard_type_mask
                  & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
@@ -959,6 +965,19 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
     }
 }
 
+void Output::populate_internal_columns() {
+    int32_t metadata_subtree_root_node_id = m_schema_tree->get_metadata_subtree_node_id();
+    if (-1 == metadata_subtree_root_node_id) {
+        return;
+    }
+
+    // This code assumes that the metadata subtree contains no nested structures
+    auto& metadata_node = m_schema_tree->get_node(metadata_subtree_root_node_id);
+    for (auto child_id : metadata_node.get_children_ids()) {
+        m_metadata_columns.insert(child_id);
+    }
+}
+
 void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> const& expr) {
     if (expr->has_only_expression_operands()) {
         for (auto const& op : expr->get_op_list()) {
@@ -973,6 +992,9 @@ void Output::populate_searched_wildcard_columns(std::shared_ptr<Expression> cons
         LiteralTypeBitmask matching_types{0};
         for (int32_t node : (*m_schemas)[m_schema]) {
             if (Schema::schema_entry_is_unordered_object(node)) {
+                continue;
+            }
+            if (0 != m_metadata_columns.count(node)) {
                 continue;
             }
             auto tree_node_type = m_schema_tree->get_node(node).get_type();

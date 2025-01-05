@@ -48,7 +48,13 @@ void JsonConstructor::store() {
     m_archive_reader = std::make_unique<ArchiveReader>();
     m_archive_reader->open(m_option.archives_dir, m_option.archive_id);
     m_archive_reader->read_dictionaries_and_metadata();
-    if (false == m_option.ordered) {
+
+    if (m_option.ordered && false == m_archive_reader->has_log_order()) {
+        SPDLOG_WARN("This archive is missing ordering information and can not be decompressed in "
+                    "log order. Falling back to out of order decompression.");
+    }
+
+    if (false == m_option.ordered || false == m_archive_reader->has_log_order()) {
         FileWriter writer;
         writer.open(
                 m_option.output_dir + "/original",
@@ -68,16 +74,16 @@ void JsonConstructor::construct_in_order() {
     auto tables = m_archive_reader->read_all_tables();
     using ReaderPointer = std::shared_ptr<SchemaReader>;
     auto cmp = [](ReaderPointer& left, ReaderPointer& right) {
-        return left->get_next_timestamp() > right->get_next_timestamp();
+        return left->get_next_log_event_idx() > right->get_next_log_event_idx();
     };
     std::priority_queue record_queue(tables.begin(), tables.end(), cmp);
     // Clear tables vector so that memory gets deallocated after we have marshalled all records for
     // a given table
     tables.clear();
 
-    epochtime_t first_timestamp{0};
-    epochtime_t last_timestamp{0};
-    size_t num_records_marshalled{0};
+    int64_t first_idx{};
+    int64_t last_idx{};
+    size_t chunk_size{};
     auto src_path = std::filesystem::path(m_option.output_dir) / m_option.archive_id;
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
@@ -97,9 +103,11 @@ void JsonConstructor::construct_in_order() {
 
     std::vector<bsoncxx::document::value> results;
     auto finalize_chunk = [&](bool open_new_writer) {
+        // Add one to last_idx to match clp's behaviour of having the end index be exclusive
+        ++last_idx;
         writer.close();
-        std::string new_file_name = src_path.string() + "_" + std::to_string(first_timestamp) + "_"
-                                    + std::to_string(last_timestamp) + ".jsonl";
+        std::string new_file_name = src_path.string() + "_" + std::to_string(first_idx) + "_"
+                                    + std::to_string(last_idx) + ".jsonl";
         auto new_file_path = std::filesystem::path(new_file_name);
         std::error_code ec;
         std::filesystem::rename(src_path, new_file_path, ec);
@@ -119,11 +127,11 @@ void JsonConstructor::construct_in_order() {
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cBeginMsgIx,
-                            static_cast<int64_t>(first_timestamp)
+                            first_idx
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cEndMsgIx,
-                            static_cast<int64_t>(last_timestamp)
+                            last_idx
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cIsLastIrChunk,
@@ -140,26 +148,26 @@ void JsonConstructor::construct_in_order() {
     while (false == record_queue.empty()) {
         ReaderPointer next = record_queue.top();
         record_queue.pop();
-        last_timestamp = next->get_next_timestamp();
-        if (0 == num_records_marshalled) {
-            first_timestamp = last_timestamp;
+        last_idx = next->get_next_log_event_idx();
+        if (0 == chunk_size) {
+            first_idx = last_idx;
         }
         next->get_next_message(buffer);
         if (false == next->done()) {
             record_queue.emplace(std::move(next));
         }
         writer.write(buffer.c_str(), buffer.length());
-        num_records_marshalled += 1;
+        chunk_size += buffer.length();
 
-        if (0 != m_option.ordered_chunk_size
-            && num_records_marshalled >= m_option.ordered_chunk_size)
+        if (0 != m_option.target_ordered_chunk_size
+            && chunk_size >= m_option.target_ordered_chunk_size)
         {
             finalize_chunk(true);
-            num_records_marshalled = 0;
+            chunk_size = 0;
         }
     }
 
-    if (num_records_marshalled > 0) {
+    if (chunk_size > 0) {
         finalize_chunk(false);
     } else {
         writer.close();
