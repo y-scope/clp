@@ -381,14 +381,13 @@ auto unpack_and_assert_serialization_failure(
         std::stringstream& buffer,
         Serializer<encoded_variable_t>& serializer
 ) -> bool {
+    REQUIRE(serializer.get_ir_buf_view().empty());
     string msgpack_bytes{buffer.str()};
     buffer.str({});
     buffer.clear();
     auto const msgpack_obj_handle{msgpack::unpack(msgpack_bytes.data(), msgpack_bytes.size())};
     auto const msgpack_obj{msgpack_obj_handle.get()};
-    if (msgpack::type::MAP != msgpack_obj.type) {
-        return false;
-    }
+    REQUIRE((msgpack::type::MAP == msgpack_obj.type));
     if (serializer.serialize_msgpack_map(msgpack_obj.via.map)) {
         // Serialization should fail
         return false;
