@@ -117,9 +117,9 @@ private:
     serialize_val(msgpack::object const& val, SchemaTree::Node::Type schema_tree_node_type) -> bool;
 
     /**
-     * Serializes the given msgpack map using depth-first search (DFS).
+     * Serializes the given msgpack map using a depth-first search (DFS).
      * @param msgpack_map
-     * @return Whether the serialization succeeded.
+     * @return Whether serialization succeeded.
      */
     [[nodiscard]] auto serialize_msgpack_map_using_dfs(msgpack::object_map const& msgpack_map
     ) -> bool;
