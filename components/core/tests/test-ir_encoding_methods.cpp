@@ -349,7 +349,15 @@ auto unpack_and_serialize_msgpack_bytes(
     if (msgpack::type::MAP != msgpack_obj.type) {
         return false;
     }
-    return serializer.serialize_msgpack_map(msgpack_obj.via.map);
+
+    auto const msgpack_empty_map_buf{nlohmann::json::to_msgpack(nlohmann::json::parse("{}"))};
+    auto const msgpack_empty_map_obj_handle{msgpack::unpack(
+            size_checked_pointer_cast<char const>(msgpack_empty_map_buf.data()),
+            msgpack_empty_map_buf.size()
+    )};
+    auto const msgpack_empty_map_obj{msgpack_empty_map_obj_handle.get()};
+
+    return serializer.serialize_msgpack_map(msgpack_empty_map_obj.via.map, msgpack_obj.via.map);
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
@@ -388,7 +396,19 @@ auto unpack_and_assert_serialization_failure(
     auto const msgpack_obj_handle{msgpack::unpack(msgpack_bytes.data(), msgpack_bytes.size())};
     auto const msgpack_obj{msgpack_obj_handle.get()};
     REQUIRE((msgpack::type::MAP == msgpack_obj.type));
-    if (serializer.serialize_msgpack_map(msgpack_obj.via.map)) {
+
+    auto const msgpack_empty_map_buf{nlohmann::json::to_msgpack(nlohmann::json::parse("{}"))};
+    auto const msgpack_empty_map_obj_handle{msgpack::unpack(
+            size_checked_pointer_cast<char const>(msgpack_empty_map_buf.data()),
+            msgpack_empty_map_buf.size()
+    )};
+    auto const msgpack_empty_map_obj{msgpack_empty_map_obj_handle.get()};
+
+    if (serializer.serialize_msgpack_map(msgpack_obj.via.map, msgpack_empty_map_obj.via.map)) {
+        // Serialization should fail
+        return false;
+    }
+    if (serializer.serialize_msgpack_map(msgpack_empty_map_obj.via.map, msgpack_obj.via.map)) {
         // Serialization should fail
         return false;
     }
