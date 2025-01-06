@@ -193,15 +193,22 @@ auto flush_and_clear_serializer_buffer(
 /**
  * Unpacks and serializes the given msgpack bytes using kv serializer.
  * @tparam encoded_variable_t
- * @param msgpack_bytes
+ * @param auto_gen_msgpack_bytes
+ * @param user_gen_msgpack_bytes
  * @param serializer
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& msgpack_bytes,
+        vector<uint8_t> const& auto_gen_msgpack_bytes,
+        vector<uint8_t> const& user_gen_msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
 ) -> bool;
+
+/**
+ * @return A msgpack object handle that holds an empty msgpack map.
+ */
+[[nodiscard]] auto create_msgpack_empty_map_obj_handle() -> msgpack::object_handle;
 
 /**
  * Counts the number of leaves in a JSON tree. A node is considered as a leaf if it's a primitive
@@ -338,26 +345,40 @@ auto flush_and_clear_serializer_buffer(
 
 template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& msgpack_bytes,
+        vector<uint8_t> const& auto_gen_msgpack_bytes,
+        vector<uint8_t> const& user_gen_msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
 ) -> bool {
-    auto const msgpack_obj_handle{msgpack::unpack(
-            clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
-            msgpack_bytes.size()
+    auto const auto_gen_msgpack_byte_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(auto_gen_msgpack_bytes.data()),
+            auto_gen_msgpack_bytes.size()
     )};
-    auto const msgpack_obj{msgpack_obj_handle.get()};
-    if (msgpack::type::MAP != msgpack_obj.type) {
+    auto const auto_gen_msgpack_obj{auto_gen_msgpack_byte_handle.get()};
+    if (msgpack::type::MAP != auto_gen_msgpack_obj.type) {
         return false;
     }
 
+    auto const user_gen_msgpack_byte_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(user_gen_msgpack_bytes.data()),
+            user_gen_msgpack_bytes.size()
+    )};
+    auto const user_gen_msgpack_obj{user_gen_msgpack_byte_handle.get()};
+    if (msgpack::type::MAP != user_gen_msgpack_obj.type) {
+        return false;
+    }
+
+    return serializer.serialize_msgpack_map(
+            auto_gen_msgpack_obj.via.map,
+            user_gen_msgpack_obj.via.map
+    );
+}
+
+auto create_msgpack_empty_map_obj_handle() -> msgpack::object_handle {
     auto const msgpack_empty_map_buf{nlohmann::json::to_msgpack(nlohmann::json::parse("{}"))};
-    auto const msgpack_empty_map_obj_handle{msgpack::unpack(
+    return msgpack::unpack(
             size_checked_pointer_cast<char const>(msgpack_empty_map_buf.data()),
             msgpack_empty_map_buf.size()
-    )};
-    auto const msgpack_empty_map_obj{msgpack_empty_map_obj_handle.get()};
-
-    return serializer.serialize_msgpack_map(msgpack_empty_map_obj.via.map, msgpack_obj.via.map);
+    );
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
@@ -397,11 +418,7 @@ auto unpack_and_assert_serialization_failure(
     auto const msgpack_obj{msgpack_obj_handle.get()};
     REQUIRE((msgpack::type::MAP == msgpack_obj.type));
 
-    auto const msgpack_empty_map_buf{nlohmann::json::to_msgpack(nlohmann::json::parse("{}"))};
-    auto const msgpack_empty_map_obj_handle{msgpack::unpack(
-            size_checked_pointer_cast<char const>(msgpack_empty_map_buf.data()),
-            msgpack_empty_map_buf.size()
-    )};
+    auto const msgpack_empty_map_obj_handle{create_msgpack_empty_map_obj_handle()};
     auto const msgpack_empty_map_obj{msgpack_empty_map_obj_handle.get()};
 
     if (serializer.serialize_msgpack_map(msgpack_obj.via.map, msgpack_empty_map_obj.via.map)) {
@@ -1212,7 +1229,11 @@ TEMPLATE_TEST_CASE(
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
     auto const empty_obj = nlohmann::json::parse("{}");
-    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(empty_obj), serializer));
+    REQUIRE(unpack_and_serialize_msgpack_bytes(
+            nlohmann::json::to_msgpack(empty_obj),
+            nlohmann::json::to_msgpack(empty_obj),
+            serializer
+    ));
     serialized_json_objects.emplace_back(empty_obj);
 
     // Test encoding basic object
@@ -1239,7 +1260,11 @@ TEMPLATE_TEST_CASE(
                {"empty_object", empty_obj},
                {"empty_array", empty_array}};
 
-    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(basic_obj), serializer));
+    REQUIRE(unpack_and_serialize_msgpack_bytes(
+            nlohmann::json::to_msgpack(empty_obj),
+            nlohmann::json::to_msgpack(basic_obj),
+            serializer
+    ));
     serialized_json_objects.emplace_back(basic_obj);
 
     auto basic_array = empty_array;
@@ -1255,6 +1280,7 @@ TEMPLATE_TEST_CASE(
         REQUIRE(
                 (false
                  == unpack_and_serialize_msgpack_bytes(
+                         nlohmann::json::to_msgpack(empty_obj),
                          nlohmann::json::to_msgpack(element),
                          serializer
                  ))
@@ -1271,6 +1297,7 @@ TEMPLATE_TEST_CASE(
         recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
         recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
         REQUIRE(unpack_and_serialize_msgpack_bytes(
+                nlohmann::json::to_msgpack(empty_obj),
                 nlohmann::json::to_msgpack(recursive_obj),
                 serializer
         ));
