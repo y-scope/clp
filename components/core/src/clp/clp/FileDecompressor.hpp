@@ -6,17 +6,17 @@
 #include <filesystem>
 #include <string>
 
+#include "../ErrorCode.hpp"
 #include "../FileWriter.hpp"
 #include "../ir/constants.hpp"
 #include "../ir/LogEventSerializer.hpp"
+#include "../ir/types.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/MetadataDB.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
 #include "../streaming_archive/reader/File.hpp"
 #include "../streaming_archive/reader/Message.hpp"
-#include "ErrorCode.hpp"
-#include "ir/types.hpp"
-#include "Utils.hpp"
+#include "../Utils.hpp"
 
 namespace clp::clp {
 /**
@@ -39,7 +39,7 @@ public:
      *
      * @tparam IrOutputHandler Function to handle the resulting IR chunks.
      * Signature: (std::filesystem::path const& ir_file_path, string const& orig_file_id,
-     * size_t begin_message_ix, size_t end_message_ix, bool is_last_ir_chunk) -> bool;
+     * size_t begin_message_ix, size_t end_message_ix, bool is_last_chunk) -> bool;
      * The function returns whether it succeeded.
      * @param archive_reader
      * @param file_metadata_ix

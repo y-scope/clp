@@ -1246,12 +1246,14 @@ TEMPLATE_TEST_CASE(
         auto const& deserialized_log_event{deserialized_log_events.at(idx)};
 
         auto const num_leaves_in_json_obj{count_num_leaves(expect)};
-        auto const num_kv_pairs{deserialized_log_event.get_node_id_value_pairs().size()};
+        auto const num_kv_pairs{deserialized_log_event.get_user_gen_node_id_value_pairs().size()};
         REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
 
         auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
-        REQUIRE((expect == serialized_json_result.value()));
+        auto const& [auto_generated, user_generated]{serialized_json_result.value()};
+        REQUIRE(auto_generated.empty());
+        REQUIRE((expect == user_generated));
     }
 
     auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};

@@ -37,8 +37,6 @@ public:
 
     std::string const& get_path_prefix_to_remove() const { return m_path_prefix_to_remove; }
 
-    std::string const& get_ir_temp_output_dir() const { return m_ir_temp_output_dir; }
-
     std::string const& get_output_dir() const { return m_output_dir; }
 
     std::string const& get_schema_file_path() const { return m_schema_file_path; }
@@ -91,7 +89,6 @@ private:
     size_t m_ir_msg_ix{0};
     size_t m_ir_target_size{128ULL * 1024 * 1024};
     bool m_sort_input_files;
-    std::string m_ir_temp_output_dir;
     std::string m_output_dir;
     std::string m_schema_file_path;
     bool m_show_progress;

@@ -87,9 +87,13 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
 
 auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
 ) -> void {
-    auto test_log_event_result{
-            KeyValuePairLogEvent::create(std::make_shared<SchemaTree>(), {}, cTestUtcOffset)
-    };
+    auto test_log_event_result{KeyValuePairLogEvent::create(
+            std::make_shared<SchemaTree>(),
+            std::make_shared<SchemaTree>(),
+            {},
+            {},
+            cTestUtcOffset
+    )};
     REQUIRE(
             (false == test_log_event_result.has_error()
              && IRErrorCode::IRErrorCode_Success
@@ -127,7 +131,7 @@ TEMPLATE_TEST_CASE(
     REQUIRE(
             (optional_log_event.has_value()
              && optional_log_event.value().get_utc_offset() == cTestUtcOffset
-             && optional_log_event.value().get_node_id_value_pairs().empty())
+             && optional_log_event.value().get_user_gen_node_id_value_pairs().empty())
     );
     auto const& optional_schema_tree_locator{handler.get_schema_tree_node_locator()};
     REQUIRE(

@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "../Utils.hpp"
 #include "Literal.hpp"
 
 namespace clp_s::search {
@@ -68,19 +69,8 @@ private:
             m_string_type = LiteralType::VarStringT;
         }
 
-        // If '?' and '*' are not escaped, we add LiteralType::ClpStringT to m_string_type
-        bool escape = false;
-        for (char const c : m_v) {
-            if ('\\' == c) {
-                escape = !escape;
-            } else if ('?' == c || '*' == c) {
-                if (false == escape) {
-                    m_string_type |= LiteralType::ClpStringT;
-                    break;
-                }
-            } else {
-                escape = false;
-            }
+        if (StringUtils::has_unescaped_wildcards(m_v)) {
+            m_string_type |= LiteralType::ClpStringT;
         }
     }
 };

@@ -100,7 +100,7 @@ ErrorCode ResultsCacheOutputHandler::flush() {
         try {
             m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
                     bsoncxx::builder::basic::kvp(
-                            cResultsCacheKeys::OrigFileId,
+                            cResultsCacheKeys::SearchOutput::OrigFileId,
                             std::move(result.orig_file_id)
                     ),
                     bsoncxx::builder::basic::kvp(

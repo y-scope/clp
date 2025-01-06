@@ -122,7 +122,7 @@ void JsonConstructor::construct_in_order() {
                             new_file_path.filename()
                     ),
                     bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cOrigFileId,
+                            constants::results_cache::decompression::cStreamId,
                             m_option.archive_id
                     ),
                     bsoncxx::builder::basic::kvp(
@@ -134,7 +134,7 @@ void JsonConstructor::construct_in_order() {
                             last_idx
                     ),
                     bsoncxx::builder::basic::kvp(
-                            constants::results_cache::decompression::cIsLastIrChunk,
+                            constants::results_cache::decompression::cIsLastChunk,
                             false == open_new_writer
                     )
             )));

@@ -6,9 +6,9 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/cli_utils.hpp"
+#include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
 #include "FileReader.hpp"
-#include "type_utils.hpp"
 
 namespace po = boost::program_options;
 
@@ -148,6 +148,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::options_description compression_options("Compression options");
             std::string metadata_db_config_file_path;
             std::string input_path_list_file_path;
+            constexpr std::string_view cJsonFileType{"json"};
+            constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
+            std::string file_type{cJsonFileType};
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -202,6 +205,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "disable-log-order",
                     po::bool_switch(&m_disable_log_order),
                     "Do not record log order at ingestion time."
+            )(
+                    "file-type",
+                    po::value<std::string>(&file_type)->value_name("FILE_TYPE")->default_value(file_type),
+                    "The type of file being compressed (json or kv-ir)"
             );
             // clang-format on
 
@@ -253,6 +260,30 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_file_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
+            }
+
+            if (cJsonFileType == file_type) {
+                m_file_type = FileType::Json;
+            } else if (cKeyValueIrFileType == file_type) {
+                m_file_type = FileType::KeyValueIr;
+                if (m_structurize_arrays) {
+                    SPDLOG_ERROR(
+                            "Invalid combination of arguments; --file-type {} and "
+                            "--structurize-arrays can't be used together",
+                            cKeyValueIrFileType
+                    );
+                    return ParsingResult::Failure;
+                }
+                if (false == m_timestamp_key.empty()) {
+                    SPDLOG_ERROR(
+                            "Invalid combination of arguments; --file-type {} and "
+                            "--timestamp-key can't be used together",
+                            cKeyValueIrFileType
+                    );
+                    return ParsingResult::Failure;
+                }
+            } else {
+                throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
             }
 
             // Parse and validate global metadata DB config

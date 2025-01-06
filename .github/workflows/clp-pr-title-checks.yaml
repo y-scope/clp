@@ -2,8 +2,15 @@ name: "clp-pr-title-checks"
 
 on:
   pull_request_target:
+    # NOTE: Workflows triggered by this event give the workflow access to secrets and grant the
+    # `GITHUB_TOKEN` read/write repository access by default. So we need to ensure:
+    # - This workflow doesn't inadvertently check out, build, or execute untrusted code from the
+    #   pull request triggered by this event.
+    # - Each job has `permissions` set to only those necessary.
     types: ["edited", "opened", "reopened"]
     branches: ["main"]
+
+permissions: {}
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
