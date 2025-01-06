@@ -1262,7 +1262,7 @@ TEMPLATE_TEST_CASE(
                {"empty_array", empty_array}};
 
     REQUIRE(unpack_and_serialize_msgpack_bytes(
-            nlohmann::json::to_msgpack(empty_obj),
+            nlohmann::json::to_msgpack(basic_obj),
             nlohmann::json::to_msgpack(basic_obj),
             serializer
     ));
@@ -1298,7 +1298,7 @@ TEMPLATE_TEST_CASE(
         recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
         recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
         REQUIRE(unpack_and_serialize_msgpack_bytes(
-                nlohmann::json::to_msgpack(empty_obj),
+                nlohmann::json::to_msgpack(recursive_obj),
                 nlohmann::json::to_msgpack(recursive_obj),
                 serializer
         ));
@@ -1341,7 +1341,7 @@ TEMPLATE_TEST_CASE(
         auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
         auto const& [auto_generated, user_generated]{serialized_json_result.value()};
-        REQUIRE(auto_generated.empty());
+        REQUIRE((expect == auto_generated));
         REQUIRE((expect == user_generated));
     }
 

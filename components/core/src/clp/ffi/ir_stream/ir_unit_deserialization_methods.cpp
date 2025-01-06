@@ -98,17 +98,24 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
 ) -> IRErrorCode;
 
 /**
- * Deserializes the IDs of all keys in a log event.
+ * Deserializes the auto-generated node-ID-value pairs and the IDs of all user-generated keys in a
+ * log event.
  * @param reader
  * @param tag Takes the current tag as input and returns the last tag read.
- * @return A result containing the deserialized schema or an error code indicating the failure:
- * - std::err::protocol_not_supported if the IR stream contains auto-generated keys (TODO: Remove
- *   this once auto-generated keys are fully supported).
- * - Forwards `deserialize_tag`'s return values.
- * - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
+ * @return A result containing a pair or an error code indicating the failure:
+ * - The pair:
+ *   - The auto-generated node-ID-value pairs.
+ *   - The IDs of all user-generated keys.
+ * - The possible error codes:
+ *   - Forwards `deserialize_tag`'s return values.
+ *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
+ *   - std::err::protocol_error if the IR stream contains auto-generated key IDs after at least one
+ *     user-generated key ID has been deserialized.
  */
-[[nodiscard]] auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
-        -> OUTCOME_V2_NAMESPACE::std_result<Schema>;
+[[nodiscard]] auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
+        ReaderInterface& reader,
+        encoded_tag_t& tag
+) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<KeyValuePairLogEvent::NodeIdValuePairs, Schema>>;
 
 /**
  * Deserializes the next value and pushes the result into `node_id_value_pairs`.
@@ -292,12 +299,59 @@ auto deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string&
     return IRErrorCode::IRErrorCode_Success;
 }
 
-auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
-        -> OUTCOME_V2_NAMESPACE::std_result<Schema> {
-    Schema schema;
+auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
+        ReaderInterface& reader,
+        encoded_tag_t& tag
+) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<KeyValuePairLogEvent::NodeIdValuePairs, Schema>> {
+    KeyValuePairLogEvent::NodeIdValuePairs auto_gen_node_id_value_pairs;
+    Schema user_gen_schema;
+
+    // Deserialize auto generated node id value pairs
     while (true) {
         if (false == is_encoded_key_id_tag(tag)) {
-            // The log event must be an empty value.
+            break;
+        }
+
+        auto const schema_tree_node_id_result{deserialize_and_decode_schema_tree_node_id<
+                cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+                cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+                cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(tag, reader)};
+        if (schema_tree_node_id_result.has_error()) {
+            return schema_tree_node_id_result.error();
+        }
+
+        // Advance to the next tag. This is needed no matter whether the deserialized node ID is
+        // auto-generated.
+        if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
+            return ir_error_code_to_errc(err);
+        }
+
+        auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
+        if (false == is_auto_generated) {
+            // User-generated node ID has been deserialized, pushes the node and terminates
+            // auto-generated node-ID-value pair deserialization.
+            user_gen_schema.push_back(node_id);
+            break;
+        }
+
+        if (auto const err{deserialize_value_and_insert_to_node_id_value_pairs(
+                    reader,
+                    tag,
+                    node_id,
+                    auto_gen_node_id_value_pairs
+            )};
+            IRErrorCode::IRErrorCode_Success != err)
+        {
+            return ir_error_code_to_errc(err);
+        }
+
+        if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
+            return ir_error_code_to_errc(err);
+        }
+    }
+
+    while (true) {
+        if (false == is_encoded_key_id_tag(tag)) {
             break;
         }
 
@@ -310,17 +364,16 @@ auto deserialize_schema(ReaderInterface& reader, encoded_tag_t& tag)
         }
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
         if (is_auto_generated) {
-            // Currently, we don't support auto-generated keys.
-            return std::errc::protocol_not_supported;
+            return std::errc::protocol_error;
         }
-        schema.push_back(node_id);
+        user_gen_schema.push_back(node_id);
 
         if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
             return ir_error_code_to_errc(err);
         }
     }
 
-    return schema;
+    return {std::move(auto_gen_node_id_value_pairs), std::move(user_gen_schema)};
 }
 
 auto deserialize_value_and_insert_to_node_id_value_pairs(
@@ -550,19 +603,22 @@ auto deserialize_ir_unit_kv_pair_log_event(
         std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
         UtcOffset utc_offset
 ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
-    auto const schema_result{deserialize_schema(reader, tag)};
-    if (schema_result.has_error()) {
-        return schema_result.error();
+    auto auto_gen_node_id_value_pairs_and_user_gen_schema_result{
+            deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(reader, tag)
+    };
+    if (auto_gen_node_id_value_pairs_and_user_gen_schema_result.has_error()) {
+        return auto_gen_node_id_value_pairs_and_user_gen_schema_result.error();
     }
-    auto const& schema{schema_result.value()};
+    auto& [auto_gen_node_id_value_pairs,
+           user_gen_schema]{auto_gen_node_id_value_pairs_and_user_gen_schema_result.value()};
 
-    KeyValuePairLogEvent::NodeIdValuePairs node_id_value_pairs;
-    if (false == schema.empty()) {
+    KeyValuePairLogEvent::NodeIdValuePairs user_gen_node_id_value_pairs;
+    if (false == user_gen_schema.empty()) {
         if (auto const err{deserialize_value_and_construct_node_id_value_pairs(
                     reader,
                     tag,
-                    schema,
-                    node_id_value_pairs
+                    user_gen_schema,
+                    user_gen_node_id_value_pairs
             )};
             IRErrorCode::IRErrorCode_Success != err)
         {
@@ -577,8 +633,8 @@ auto deserialize_ir_unit_kv_pair_log_event(
     return KeyValuePairLogEvent::create(
             std::move(auto_gen_keys_schema_tree),
             std::move(user_gen_keys_schema_tree),
-            {},
-            std::move(node_id_value_pairs),
+            std::move(auto_gen_node_id_value_pairs),
+            std::move(user_gen_node_id_value_pairs),
             utc_offset
     );
 }
