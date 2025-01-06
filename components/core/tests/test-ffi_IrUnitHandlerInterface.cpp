@@ -39,6 +39,7 @@ public:
     }
 
     [[nodiscard]] auto handle_schema_tree_node_insertion(
+            [[maybe_unused]] bool is_auto_generated,
             SchemaTree::NodeLocator schema_tree_node_locator
     ) -> IRErrorCode {
         m_schema_tree_node_locator.emplace(schema_tree_node_locator);
@@ -109,6 +110,7 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
     REQUIRE(
             (IRErrorCode::IRErrorCode_Success
              == handler.handle_schema_tree_node_insertion(
+                     true,
                      {SchemaTree::cRootId, cTestSchemaTreeNodeKeyName, SchemaTree::Node::Type::Obj}
              ))
     );

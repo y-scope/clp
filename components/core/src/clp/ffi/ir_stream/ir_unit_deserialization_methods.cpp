@@ -512,7 +512,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::string& key_name
-) -> OUTCOME_V2_NAMESPACE::std_result<SchemaTree::NodeLocator> {
+) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::NodeLocator>> {
     auto const type{schema_tree_node_tag_to_type(tag)};
     if (false == type.has_value()) {
         return ir_error_code_to_errc(IRErrorCode::IRErrorCode_Corrupted_IR);
@@ -523,18 +523,13 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
         return parent_node_id_result.error();
     }
     auto const [is_auto_generated, parent_id]{parent_node_id_result.value()};
-    if (is_auto_generated) {
-        // Currently, we don't support auto-generated keys.
-        return std::errc::protocol_not_supported;
-    }
-
     if (auto const err{deserialize_schema_tree_node_key_name(reader, key_name)};
         IRErrorCode::IRErrorCode_Success != err)
     {
         return ir_error_code_to_errc(err);
     }
 
-    return SchemaTree::NodeLocator{parent_id, key_name, type.value()};
+    return {is_auto_generated, SchemaTree::NodeLocator{parent_id, key_name, type.value()}};
 }
 
 auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader
