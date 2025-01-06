@@ -151,7 +151,7 @@ template <typename encoded_variable_t>
  * @param array
  * @return true if the array is serializable.
  * @return false if:
- * - Any value inside the array an unsupported type (i.e., `BIN` or `EXT`).
+ * - Any value inside the array has an unsupported type (i.e., `BIN` or `EXT`).
  * - Any value inside the array has type `MAP` and the map has non-string keys.
  */
 [[nodiscard]] auto is_msgpack_array_serializable(msgpack::object const& array) -> bool;
