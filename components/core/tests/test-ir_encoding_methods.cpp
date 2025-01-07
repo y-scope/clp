@@ -1221,7 +1221,7 @@ TEMPLATE_TEST_CASE(
         eight_byte_encoded_variable_t
 ) {
     vector<int8_t> ir_buf;
-    vector<nlohmann::json> serialized_json_objects;
+    vector<std::pair<nlohmann::json, nlohmann::json>> expected_serialized_json_object_pairs;
 
     auto result{Serializer<TestType>::create()};
     REQUIRE((false == result.has_error()));
@@ -1230,12 +1230,7 @@ TEMPLATE_TEST_CASE(
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
     auto const empty_obj = nlohmann::json::parse("{}");
-    REQUIRE(unpack_and_serialize_msgpack_bytes(
-            nlohmann::json::to_msgpack(empty_obj),
-            nlohmann::json::to_msgpack(empty_obj),
-            serializer
-    ));
-    serialized_json_objects.emplace_back(empty_obj);
+    expected_serialized_json_object_pairs.emplace_back(empty_obj, empty_obj);
 
     // Test encoding basic object
     constexpr string_view cShortString{"short_string"};
@@ -1260,13 +1255,7 @@ TEMPLATE_TEST_CASE(
                {"null", nullptr},
                {"empty_object", empty_obj},
                {"empty_array", empty_array}};
-
-    REQUIRE(unpack_and_serialize_msgpack_bytes(
-            nlohmann::json::to_msgpack(basic_obj),
-            nlohmann::json::to_msgpack(basic_obj),
-            serializer
-    ));
-    serialized_json_objects.emplace_back(basic_obj);
+    expected_serialized_json_object_pairs.emplace_back(basic_obj, basic_obj);
 
     auto basic_array = empty_array;
     basic_array.emplace_back(1);
@@ -1294,17 +1283,22 @@ TEMPLATE_TEST_CASE(
     auto recursive_array = basic_array;
     constexpr size_t cRecursiveDepth{6};
     for (size_t i{0}; i < cRecursiveDepth; ++i) {
+        auto const original_obj = recursive_obj;
         recursive_array.emplace_back(recursive_obj);
-        recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
+        recursive_obj.emplace("obj_" + std::to_string(i), original_obj);
         recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
-        REQUIRE(unpack_and_serialize_msgpack_bytes(
-                nlohmann::json::to_msgpack(recursive_obj),
-                nlohmann::json::to_msgpack(recursive_obj),
-                serializer
-        ));
-        serialized_json_objects.emplace_back(recursive_obj);
+        expected_serialized_json_object_pairs.emplace_back(original_obj, recursive_obj);
+        expected_serialized_json_object_pairs.emplace_back(empty_obj, recursive_obj);
     }
 
+    for (auto const& [auto_gen_json_obj, user_gen_json_obj] : expected_serialized_json_object_pairs)
+    {
+        REQUIRE(unpack_and_serialize_msgpack_bytes(
+                nlohmann::json::to_msgpack(auto_gen_json_obj),
+                nlohmann::json::to_msgpack(user_gen_json_obj),
+                serializer
+        ));
+    }
     flush_and_clear_serializer_buffer(serializer, ir_buf);
     ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
 
@@ -1327,22 +1321,34 @@ TEMPLATE_TEST_CASE(
     REQUIRE(deserializer.is_stream_completed());
     // Check the number of log events deserialized matches the number of log events serialized
     auto const& deserialized_log_events{ir_unit_handler.get_deserialized_log_events()};
-    REQUIRE((serialized_json_objects.size() == deserialized_log_events.size()));
+    REQUIRE((expected_serialized_json_object_pairs.size() == deserialized_log_events.size()));
 
-    auto const num_log_events{serialized_json_objects.size()};
+    auto const num_log_events{expected_serialized_json_object_pairs.size()};
     for (size_t idx{0}; idx < num_log_events; ++idx) {
-        auto const& expect{serialized_json_objects.at(idx)};
+        auto const& [expected_auto_gen_json_obj, expected_user_gen_json_obj]{
+                expected_serialized_json_object_pairs.at(idx)
+        };
         auto const& deserialized_log_event{deserialized_log_events.at(idx)};
 
-        auto const num_leaves_in_json_obj{count_num_leaves(expect)};
-        auto const num_kv_pairs{deserialized_log_event.get_user_gen_node_id_value_pairs().size()};
-        REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
+        auto const num_leaves_in_auto_gen_json_obj{count_num_leaves(expected_auto_gen_json_obj)};
+        auto const num_auto_gen_kv_pairs{
+                deserialized_log_event.get_auto_gen_node_id_value_pairs().size()
+        };
+        REQUIRE((num_leaves_in_auto_gen_json_obj == num_auto_gen_kv_pairs));
+
+        auto const num_leaves_in_user_gen_json_obj{count_num_leaves(expected_user_gen_json_obj)};
+        auto const num_user_gen_kv_pairs{
+                deserialized_log_event.get_user_gen_node_id_value_pairs().size()
+        };
+        REQUIRE((num_leaves_in_user_gen_json_obj == num_user_gen_kv_pairs));
 
         auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
-        auto const& [auto_generated, user_generated]{serialized_json_result.value()};
-        REQUIRE((expect == auto_generated));
-        REQUIRE((expect == user_generated));
+        auto const& [actual_auto_gen_json_obj, actual_user_gen_json_obj]{
+                serialized_json_result.value()
+        };
+        REQUIRE((expected_auto_gen_json_obj == actual_auto_gen_json_obj));
+        REQUIRE((expected_user_gen_json_obj == actual_user_gen_json_obj));
     }
 
     auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};
