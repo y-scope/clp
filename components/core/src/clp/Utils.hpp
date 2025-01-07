@@ -36,13 +36,6 @@ ErrorCode create_directory(std::string const& path, mode_t mode, bool exist_ok);
 ErrorCode create_directory_structure(std::string const& path, mode_t mode);
 
 /**
- * Removes ".", "..", and consecutive "/" from a given path and returns the result
- * @param path The given path
- * @return The unambiguous path
- */
-std::string get_unambiguous_path(std::string const& path);
-
-/**
  * Read a list of paths from a file
  * @param list_path
  * @param paths
