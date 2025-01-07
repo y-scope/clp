@@ -84,21 +84,6 @@ ErrorCode create_directory_structure(string const& path, mode_t mode) {
     return ErrorCode_Success;
 }
 
-string get_parent_directory_path(string const& path) {
-    string dirname = get_unambiguous_path(path);
-
-    size_t last_slash_pos = dirname.find_last_of('/');
-    if (0 == last_slash_pos) {
-        dirname = "/";
-    } else if (string::npos == last_slash_pos) {
-        dirname = ".";
-    } else {
-        dirname.resize(last_slash_pos);
-    }
-
-    return dirname;
-}
-
 string get_unambiguous_path(string const& path) {
     string unambiguous_path;
     if (path.empty()) {

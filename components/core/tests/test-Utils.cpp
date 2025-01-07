@@ -14,7 +14,6 @@
 
 using clp::create_directory_structure;
 using clp::ErrorCode_Success;
-using clp::get_parent_directory_path;
 using clp::get_unambiguous_path;
 using std::string;
 
@@ -43,22 +42,6 @@ TEST_CASE("create_directory_structure", "[create_directory_structure]") {
     REQUIRE(0 == rmdir("d"));
 
     REQUIRE(0 == rmdir("/tmp/5807"));
-}
-
-TEST_CASE("get_parent_directory_path", "[get_parent_directory_path]") {
-    // Corner cases
-    // Anything without a slash should return "."
-    REQUIRE(get_parent_directory_path(".") == ".");
-    REQUIRE(get_parent_directory_path("..") == ".");
-    REQUIRE(get_parent_directory_path("abc") == ".");
-    // A single slash, at the beginning, should always return "/"
-    REQUIRE(get_parent_directory_path("/") == "/");
-    REQUIRE(get_parent_directory_path("/.") == "/");
-    REQUIRE(get_parent_directory_path("/..") == "/");
-    REQUIRE(get_parent_directory_path("/abc") == "/");
-
-    // Normal cases
-    REQUIRE(get_parent_directory_path("//abc/./def//../def/.///") == "/abc");
 }
 
 TEST_CASE("get_unambiguous_path", "[get_unambiguous_path]") {
