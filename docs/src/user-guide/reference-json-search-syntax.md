@@ -164,7 +164,7 @@ There are three supported boolean operators:
 
 You can use parentheses (`()`) to apply an operator to a group of expressions.
 
-### Escaping special characters
+### Characters that require escaping
 
 Keys containing the following literal characters must escape the characters using a `\` (backslash):
 
@@ -197,11 +197,11 @@ Keys and values can also represent unicode codepoints using the `\uXXXX` escape 
 
 Keys and values also support the following escape sequences to represent control characters:
 
-* `\r`
-* `\n`
-* `\t`
 * `\b`
 * `\f`
+* `\n`
+* `\r`
+* `\t`
 
 ## Examples
 
