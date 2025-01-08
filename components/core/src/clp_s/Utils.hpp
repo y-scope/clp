@@ -6,26 +6,60 @@
 #include <cstring>
 #include <sstream>
 #include <string>
-
-#include <boost/filesystem.hpp>
+#include <string_view>
+#include <vector>
 
 namespace clp_s {
 class FileUtils {
 public:
     /**
-     * Find all files in a directory
+     * Finds all files in a directory
      * @param path
      * @param file_paths
      * @return true if successful, false otherwise
      */
-    static bool find_all_files(std::string const& path, std::vector<std::string>& file_paths);
+    static bool
+    find_all_files_in_directory(std::string const& path, std::vector<std::string>& file_paths);
 
     /**
-     * Validate if all paths exist
-     * @param paths
-     * @return true if all paths exist, false otherwise
+     * Finds all archives in a directory, including the directory itself
+     * @param path
+     * @param archive_paths
+     * @return true if successful, false otherwise
      */
-    static bool validate_path(std::vector<std::string> const& paths);
+    static bool find_all_archives_in_directory(
+            std::string_view const path,
+            std::vector<std::string>& archive_paths
+    );
+
+    /**
+     * Gets the last non-empty component of a path, accounting for trailing forward slashes.
+     *
+     * For example:
+     * ./foo/bar.baz -> bar.baz
+     * ./foo/bar.baz/ -> bar.baz
+     *
+     * @param path
+     * @param name Returned component name
+     * @return true on success, false otherwise
+     */
+    static bool get_last_non_empty_path_component(std::string_view const path, std::string& name);
+};
+
+class UriUtils {
+public:
+    /**
+     * Gets the last component of a uri.
+     *
+     * For example:
+     * https://www.something.org/abc-xyz -> abc-xyz
+     * https://www.something.org/aaa/bbb/abc-xyz?something=something -> abc-xyz
+     *
+     * @param uri
+     * @param name Returned component name
+     * @return true on success, false otherwise
+     */
+    static bool get_last_uri_component(std::string_view const uri, std::string& name);
 };
 
 class StringUtils {

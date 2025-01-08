@@ -21,6 +21,7 @@ brew install \
   mongo-cxx-driver \
   msgpack-cxx \
   spdlog \
+  xz \
   zstd
 
 # Install pkg-config if it isn't already installed

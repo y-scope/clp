@@ -3,8 +3,9 @@
 #include "ZstdDecompressor.hpp"
 
 #include <algorithm>
+#include <filesystem>
 
-#include <boost/filesystem.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
 #include <spdlog/spdlog.h>
 
 namespace clp_s {
@@ -202,14 +203,13 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
     m_input_type = InputType::MemoryMappedCompressedFile;
 
     // Create memory mapping for compressed_file_path, use boost read only memory mapped file
-    boost::system::error_code boost_error_code;
-    size_t compressed_file_size
-            = boost::filesystem::file_size(compressed_file_path, boost_error_code);
-    if (boost_error_code) {
+    std::error_code error_code;
+    size_t compressed_file_size = std::filesystem::file_size(compressed_file_path, error_code);
+    if (error_code) {
         SPDLOG_ERROR(
                 "ZstdDecompressor: Unable to obtain file size for '{}' - {}.",
                 compressed_file_path.c_str(),
-                boost_error_code.message().c_str()
+                error_code.message().c_str()
         );
         return ErrorCodeFailure;
     }

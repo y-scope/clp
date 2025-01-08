@@ -2,12 +2,14 @@
 
 #include <cstdint>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <stack>
 #include <utility>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
+#include <curl/curl.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
@@ -18,11 +20,14 @@
 #include "../clp/ffi/SchemaTree.hpp"
 #include "../clp/ffi/Value.hpp"
 #include "../clp/ir/EncodedTextAst.hpp"
+#include "../clp/NetworkReader.hpp"
+#include "../clp/ReaderInterface.hpp"
 #include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "../clp/time_types.hpp"
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
 #include "JsonFileIterator.hpp"
+#include "JsonParser.hpp"
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -78,11 +83,9 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
           m_structurize_arrays(option.structurize_arrays),
-          m_record_log_order(option.record_log_order) {
-    if (false == FileUtils::validate_path(option.file_paths)) {
-        exit(1);
-    }
-
+          m_record_log_order(option.record_log_order),
+          m_input_paths(option.input_paths),
+          m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column))
@@ -90,10 +93,6 @@ JsonParser::JsonParser(JsonParserOption const& option)
             SPDLOG_ERROR("Can not parse invalid timestamp key: \"{}\"", m_timestamp_key);
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
-    }
-
-    for (auto& file_path : option.file_paths) {
-        FileUtils::find_all_files(file_path, m_file_paths);
     }
 
     m_archive_options.archives_dir = option.archives_dir;
@@ -482,18 +481,19 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 }
 
 bool JsonParser::parse() {
-    for (auto& file_path : m_file_paths) {
-        JsonFileIterator json_file_iterator(file_path, m_max_document_size);
-        if (false == json_file_iterator.is_open()) {
+    for (auto const& path : m_input_paths) {
+        auto reader{ReaderUtils::try_create_reader(path, m_network_auth)};
+        if (nullptr == reader) {
             m_archive_writer->close();
             return false;
         }
 
+        JsonFileIterator json_file_iterator(*reader, m_max_document_size);
         if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
             SPDLOG_ERROR(
                     "Encountered error - {} - while trying to parse {} after parsing 0 bytes",
                     simdjson::error_message(json_file_iterator.get_error()),
-                    file_path
+                    path.path
             );
             m_archive_writer->close();
             return false;
@@ -527,7 +527,7 @@ bool JsonParser::parse() {
                 SPDLOG_ERROR(
                         "Encountered non-json-object while trying to parse {} after parsing {} "
                         "bytes",
-                        file_path,
+                        path.path,
                         bytes_consumed_up_to_prev_record
                 );
                 m_archive_writer->close();
@@ -552,7 +552,7 @@ bool JsonParser::parse() {
                 SPDLOG_ERROR(
                         "Encountered error - {} - while trying to parse {} after parsing {} bytes",
                         error.what(),
-                        file_path,
+                        path.path,
                         bytes_consumed_up_to_prev_record
                 );
                 m_archive_writer->close();
@@ -586,7 +586,7 @@ bool JsonParser::parse() {
             SPDLOG_ERROR(
                     "Encountered error - {} - while trying to parse {} after parsing {} bytes",
                     simdjson::error_message(json_file_iterator.get_error()),
-                    file_path,
+                    path.path,
                     bytes_consumed_up_to_prev_record
             );
             m_archive_writer->close();
@@ -596,8 +596,26 @@ bool JsonParser::parse() {
             SPDLOG_WARN(
                     "Truncated JSON  ({} bytes) at end of file {}",
                     json_file_iterator.truncated_bytes(),
-                    file_path.c_str()
+                    path.path
             );
+        }
+
+        if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
+            nullptr != network_reader)
+        {
+            if (auto const rc = network_reader->get_curl_ret_code();
+                rc.has_value() && CURLcode::CURLE_OK != rc.value())
+            {
+                auto const curl_error_message = network_reader->get_curl_error_msg();
+                SPDLOG_ERROR(
+                        "Encountered curl error while ingesting {} - Code: {} - Message: {}",
+                        path.path,
+                        static_cast<int64_t>(rc.value()),
+                        curl_error_message.value_or("Unknown error")
+                );
+                m_archive_writer->close();
+                return false;
+            }
         }
     }
     return true;
@@ -799,11 +817,16 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
 }
 
 auto JsonParser::parse_from_ir() -> bool {
-    for (auto& file_path : m_file_paths) {
+    for (auto const& path : m_input_paths) {
+        // TODO: add support for ingesting IR from a network source
+        if (InputSource::Filesystem != path.source) {
+            m_archive_writer->close();
+            return false;
+        }
         clp::streaming_compression::zstd::Decompressor decompressor;
         size_t curr_pos{};
         size_t last_pos{};
-        decompressor.open(file_path);
+        decompressor.open(path.path);
 
         auto deserializer_result{Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
         };

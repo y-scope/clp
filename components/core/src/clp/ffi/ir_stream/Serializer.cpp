@@ -16,6 +16,7 @@
 
 #include "../../ir/types.hpp"
 #include "../../time_types.hpp"
+#include "../../TransactionManager.hpp"
 #include "../../type_utils.hpp"
 #include "../encoding_methods.hpp"
 #include "../SchemaTree.hpp"
@@ -145,6 +146,16 @@ template <typename encoded_variable_t>
         vector<int8_t>& output_buf
 ) -> bool;
 
+/**
+ * Checks whether the given msgpack array can be serialized into the key-value pair IR format.
+ * @param array
+ * @return true if the array is serializable.
+ * @return false if:
+ * - Any value inside the array has an unsupported type (i.e., `BIN` or `EXT`).
+ * - Any value inside the array has type `MAP` and the map has non-string keys.
+ */
+[[nodiscard]] auto is_msgpack_array_serializable(msgpack::object const& array) -> bool;
+
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
 ) -> optional<SchemaTree::Node::Type> {
     optional<SchemaTree::Node::Type> ret_val;
@@ -225,10 +236,55 @@ auto serialize_value_array(
         string& logtype_buf,
         vector<int8_t>& output_buf
 ) -> bool {
+    if (false == is_msgpack_array_serializable(val)) {
+        return false;
+    }
     std::ostringstream oss;
     oss << val;
     logtype_buf.clear();
     return serialize_clp_string<encoded_variable_t>(oss.str(), logtype_buf, output_buf);
+}
+
+auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
+    vector<msgpack::object const*> validation_stack{&array};
+    while (false == validation_stack.empty()) {
+        auto const* curr{validation_stack.back()};
+        validation_stack.pop_back();
+        if (msgpack::type::MAP == curr->type) {
+            // Validate map
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+            auto const& as_map{curr->via.map};
+            for (auto const& [key, value] : span{as_map.ptr, as_map.size}) {
+                if (msgpack::type::STR != key.type) {
+                    return false;
+                }
+                if (msgpack::type::MAP == value.type || msgpack::type::ARRAY == value.type) {
+                    validation_stack.push_back(&value);
+                }
+            }
+            continue;
+        }
+
+        // Validate array
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+        auto const& as_array{curr->via.array};
+        for (auto const& obj : span{as_array.ptr, as_array.size}) {
+            switch (obj.type) {
+                case msgpack::type::BIN:
+                case msgpack::type::EXT:
+                    // Unsupported types
+                    return false;
+                case msgpack::type::ARRAY:
+                case msgpack::type::MAP:
+                    validation_stack.push_back(&obj);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    return true;
 }
 }  // namespace
 
@@ -282,86 +338,11 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map c
         return true;
     }
 
-    m_schema_tree.take_snapshot();
     m_schema_tree_node_buf.clear();
     m_key_group_buf.clear();
     m_value_group_buf.clear();
 
-    // Traverse the map using DFS iteratively
-    bool failure{false};
-    vector<MsgpackMapIterator> dfs_stack;
-    dfs_stack.emplace_back(
-            SchemaTree::cRootId,
-            span<MsgpackMapIterator::Child>{msgpack_map.ptr, msgpack_map.size}
-    );
-    while (false == dfs_stack.empty()) {
-        auto& curr{dfs_stack.back()};
-        if (false == curr.has_next_child()) {
-            // Visited all children, so pop node
-            dfs_stack.pop_back();
-            continue;
-        }
-
-        // Convert the current value's type to its corresponding schema-tree node type
-        auto const& [key, val]{curr.get_next_child()};
-        auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
-        if (false == opt_schema_tree_node_type.has_value()) {
-            failure = true;
-            break;
-        }
-        auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
-
-        SchemaTree::NodeLocator const locator{
-                curr.get_schema_tree_node_id(),
-                key.as<string_view>(),
-                schema_tree_node_type
-        };
-
-        // Get the schema-tree node that corresponds with the current kv-pair, or add it if it
-        // doesn't exist.
-        auto opt_schema_tree_node_id{m_schema_tree.try_get_node_id(locator)};
-        if (false == opt_schema_tree_node_id.has_value()) {
-            opt_schema_tree_node_id.emplace(m_schema_tree.insert_node(locator));
-            if (false == serialize_schema_tree_node(locator)) {
-                failure = true;
-                break;
-            }
-        }
-        auto const schema_tree_node_id{opt_schema_tree_node_id.value()};
-
-        if (msgpack::type::MAP == val.type) {
-            // Serialize map
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-            auto const& inner_map{val.via.map};
-            auto const inner_map_size(inner_map.size);
-            if (0 == inner_map_size) {
-                // Value is an empty map, so we can serialize it immediately
-                if (false == serialize_key(schema_tree_node_id)) {
-                    failure = true;
-                    break;
-                }
-                serialize_value_empty_object(m_value_group_buf);
-            } else {
-                // Add map for DFS iteration
-                dfs_stack.emplace_back(
-                        schema_tree_node_id,
-                        span<MsgpackMapIterator::Child>{inner_map.ptr, inner_map_size}
-                );
-            }
-        } else {
-            // Serialize primitive
-            if (false
-                == (serialize_key(schema_tree_node_id) && serialize_val(val, schema_tree_node_type)
-                ))
-            {
-                failure = true;
-                break;
-            }
-        }
-    }
-
-    if (failure) {
-        m_schema_tree.revert();
+    if (false == serialize_msgpack_map_using_dfs(msgpack_map)) {
         return false;
     }
 
@@ -485,6 +466,92 @@ auto Serializer<encoded_variable_t>::serialize_val(
     return true;
 }
 
+template <typename encoded_variable_t>
+auto Serializer<encoded_variable_t>::serialize_msgpack_map_using_dfs(
+        msgpack::object_map const& msgpack_map
+) -> bool {
+    m_schema_tree.take_snapshot();
+    TransactionManager revert_manager{
+            []() noexcept -> void {},
+            [&]() noexcept -> void { m_schema_tree.revert(); }
+    };
+
+    vector<MsgpackMapIterator> dfs_stack;
+    dfs_stack.emplace_back(
+            SchemaTree::cRootId,
+            span<MsgpackMapIterator::Child>{msgpack_map.ptr, msgpack_map.size}
+    );
+    while (false == dfs_stack.empty()) {
+        auto& curr{dfs_stack.back()};
+        if (false == curr.has_next_child()) {
+            // Visited all children, so pop node
+            dfs_stack.pop_back();
+            continue;
+        }
+
+        // Convert the current value's type to its corresponding schema-tree node type
+        auto const& [key, val]{curr.get_next_child()};
+        if (msgpack::type::STR != key.type) {
+            // A map containing non-string keys is not serializable
+            return false;
+        }
+
+        auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
+        if (false == opt_schema_tree_node_type.has_value()) {
+            return false;
+        }
+        auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
+
+        SchemaTree::NodeLocator const locator{
+                curr.get_schema_tree_node_id(),
+                key.as<string_view>(),
+                schema_tree_node_type
+        };
+
+        // Get the schema-tree node that corresponds with the current kv-pair, or add it if it
+        // doesn't exist.
+        auto opt_schema_tree_node_id{m_schema_tree.try_get_node_id(locator)};
+        if (false == opt_schema_tree_node_id.has_value()) {
+            opt_schema_tree_node_id.emplace(m_schema_tree.insert_node(locator));
+            if (false == serialize_schema_tree_node(locator)) {
+                return false;
+            }
+        }
+        auto const schema_tree_node_id{opt_schema_tree_node_id.value()};
+
+        if (msgpack::type::MAP == val.type) {
+            // Serialize map
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+            auto const& inner_map{val.via.map};
+            auto const inner_map_size(inner_map.size);
+            if (0 != inner_map_size) {
+                // Add map for DFS iteration
+                dfs_stack.emplace_back(
+                        schema_tree_node_id,
+                        span<MsgpackMapIterator::Child>{inner_map.ptr, inner_map_size}
+                );
+            } else {
+                // Value is an empty map, so we can serialize it immediately
+                if (false == serialize_key(schema_tree_node_id)) {
+                    return false;
+                }
+                serialize_value_empty_object(m_value_group_buf);
+            }
+            continue;
+        }
+
+        // Serialize primitive
+        if (false
+            == (serialize_key(schema_tree_node_id) && serialize_val(val, schema_tree_node_type)))
+        {
+            return false;
+        }
+    }
+
+    revert_manager.mark_success();
+    return true;
+}
+
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
 template auto Serializer<eight_byte_encoded_variable_t>::create(
@@ -523,5 +590,12 @@ template auto Serializer<eight_byte_encoded_variable_t>::serialize_val(
 template auto Serializer<four_byte_encoded_variable_t>::serialize_val(
         msgpack::object const& val,
         SchemaTree::Node::Type schema_tree_node_type
+) -> bool;
+
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map_using_dfs(
+        msgpack::object_map const& msgpack_map
+) -> bool;
+template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map_using_dfs(
+        msgpack::object_map const& msgpack_map
 ) -> bool;
 }  // namespace clp::ffi::ir_stream
