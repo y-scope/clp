@@ -171,6 +171,7 @@ Keys containing the following literal characters must escape the characters usin
 * `\`
 * `"`
 * `.`
+* `*`
 
 Values containing the following literal characters must escape the characters using a `\`
 (backslash):
@@ -190,6 +191,17 @@ characters using a `\` (backslash):
 * `>`
 * `{`
 * `}`
+
+Keys and values can also represent unicode codepoints using the `\uXXXX` escape sequence, where each
+`X` is a hexadecimal character.
+
+Keys and values also support the following escape sequences to represent control characters:
+
+* `\r`
+* `\n`
+* `\t`
+* `\b`
+* `\f`
 
 ## Examples
 
