@@ -42,7 +42,7 @@ be interpreted as _exact_ searches unless they include [wildcards](#wildcards-in
 :::{note}
 Certain characters have special meanings when used in keys or values, so to search for the
 characters literally, you must escape them. For a list of such characters, see
-[Escaping special characters](#escaping-special-characters).
+[Characters that require escaping](#characters-that-require-escaping).
 :::
 
 ### Querying nested kv-pairs
@@ -191,6 +191,8 @@ characters using a `\` (backslash):
 * `>`
 * `{`
 * `}`
+
+### Supported escape sequences
 
 Keys and values can also represent unicode codepoints using the `\uXXXX` escape sequence, where each
 `X` is a hexadecimal character.
