@@ -5,45 +5,18 @@
 #include "Utils.hpp"
 
 namespace clp_s {
-void TimestampDictionaryReader::open(std::string const& dictionary_path) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-
-    constexpr size_t cDecompressorFileReadBufferCapacity = 16 * 1024;  // 16 KB
-
-    m_dictionary_file_reader.open(dictionary_path);
-    m_dictionary_decompressor.open(m_dictionary_file_reader, cDecompressorFileReadBufferCapacity);
-
-    m_is_open = true;
-}
-
-void TimestampDictionaryReader::close() {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
-    }
-
-    m_dictionary_decompressor.close();
-    m_dictionary_file_reader.close();
-}
-
-void TimestampDictionaryReader::read_new_entries() {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
-    }
-
+ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
     ErrorCode error;
-
     uint64_t range_index_size;
-    error = m_dictionary_decompressor.try_read_numeric_value<uint64_t>(range_index_size);
+    error = decompressor.try_read_numeric_value<uint64_t>(range_index_size);
     if (ErrorCodeSuccess != error) {
-        throw OperationFailed(error, __FILENAME__, __LINE__);
+        return error;
     }
 
     for (uint64_t i = 0; i < range_index_size; ++i) {
         TimestampEntry entry;
         std::vector<std::string> tokens;
-        entry.try_read_from_file(m_dictionary_decompressor);
+        entry.try_read_from_file(decompressor);
         if (false == StringUtils::tokenize_column_descriptor(entry.get_key_name(), tokens)) {
             throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
         }
@@ -62,27 +35,28 @@ void TimestampDictionaryReader::read_new_entries() {
     }
 
     uint64_t num_patterns;
-    error = m_dictionary_decompressor.try_read_numeric_value<uint64_t>(num_patterns);
+    error = decompressor.try_read_numeric_value<uint64_t>(num_patterns);
     if (ErrorCodeSuccess != error) {
-        throw OperationFailed(error, __FILENAME__, __LINE__);
+        return error;
     }
     for (int i = 0; i < num_patterns; ++i) {
         uint64_t id, pattern_len;
         std::string pattern;
-        error = m_dictionary_decompressor.try_read_numeric_value<uint64_t>(id);
+        error = decompressor.try_read_numeric_value<uint64_t>(id);
         if (ErrorCodeSuccess != error) {
-            throw OperationFailed(error, __FILENAME__, __LINE__);
+            return error;
         }
-        error = m_dictionary_decompressor.try_read_numeric_value<uint64_t>(pattern_len);
+        error = decompressor.try_read_numeric_value<uint64_t>(pattern_len);
         if (ErrorCodeSuccess != error) {
-            throw OperationFailed(error, __FILENAME__, __LINE__);
+            return error;
         }
-        error = m_dictionary_decompressor.try_read_string(pattern_len, pattern);
+        error = decompressor.try_read_string(pattern_len, pattern);
         if (ErrorCodeSuccess != error) {
-            throw OperationFailed(error, __FILENAME__, __LINE__);
+            return error;
         }
         m_patterns[id] = TimestampPattern(0, pattern);
     }
+    return ErrorCodeSuccess;
 }
 
 std::string

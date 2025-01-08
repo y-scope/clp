@@ -21,25 +21,13 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructors
-    TimestampDictionaryReader() : m_is_open(false) {}
-
     // Methods
     /**
-     * Opens dictionary for reading
-     * @param dictionary_path
+     * Reads the timestamp dictionary from a decompressor
+     * @param decompressor
+     * @return ErrorCodeSuccess on success, and the relevant ErrorCode otherwise
      */
-    void open(std::string const& dictionary_path);
-
-    /**
-     * Closes the dictionary
-     */
-    void close();
-
-    /**
-     * Reads any new entries from disk
-     */
-    void read_new_entries();
+    ErrorCode read(ZstdDecompressor& decompressor);
 
     /**
      * Gets the string encoding for a given epoch and format ID
@@ -78,10 +66,6 @@ private:
             = std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>;
 
     // Variables
-    bool m_is_open;
-    FileReader m_dictionary_file_reader;
-    ZstdDecompressor m_dictionary_decompressor;
-
     id_to_pattern_t m_patterns;
     std::vector<TimestampEntry> m_entries;
     tokenized_column_to_range_t m_tokenized_column_to_range;
