@@ -52,6 +52,15 @@ struct JsonParserOption {
     std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
 };
 
+struct JsonToIrParserOption {
+    std::vector<std::string> file_paths;
+    std::string irs_dir;
+    size_t max_document_size;
+    size_t max_ir_buffer_size;
+    int compression_level;
+    int encoding;
+};
+
 class JsonParser {
 public:
     class OperationFailed : public TraceableException {
