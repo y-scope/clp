@@ -76,7 +76,7 @@ bool is_multi_file_archive(std::string_view const path) {
             return false;
         }
         auto formatted_name = fmt::format("/{}", file_name);
-        if (constants::cArchiveTimestampDictFile == formatted_name
+        if (constants::cArchiveHeaderFile == formatted_name
             || constants::cArchiveSchemaTreeFile == formatted_name
             || constants::cArchiveSchemaMapFile == formatted_name
             || constants::cArchiveVarDictFile == formatted_name
