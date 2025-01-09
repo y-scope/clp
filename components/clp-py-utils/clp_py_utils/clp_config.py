@@ -647,7 +647,7 @@ class WorkerConfig(BaseModel):
     data_directory: pathlib.Path = CLPConfig().data_directory
 
     # Only needed by query workers.
-    stream_output_dir: pathlib.Path = StreamOutput().get_directory()
+    stream_output: StreamOutput= StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
 
     def dump_to_primitive_dict(self):
@@ -656,6 +656,6 @@ class WorkerConfig(BaseModel):
 
         # Turn paths into primitive strings
         d["data_directory"] = str(self.data_directory)
-        d["stream_output_dir"] = str(self.stream_output_dir)
+        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
 
         return d
