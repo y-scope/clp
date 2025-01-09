@@ -194,8 +194,8 @@ characters using a `\` (backslash):
 
 ### Supported escape sequences
 
-Keys and values can also represent unicode codepoints using the `\uXXXX` escape sequence, where each
-`X` is a hexadecimal character.
+Keys and values can represent Unicode codepoints using the `\uXXXX` escape sequence, where each `X`
+is a hexadecimal character.
 
 Keys and values also support the following escape sequences to represent control characters:
 
