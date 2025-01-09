@@ -258,6 +258,7 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
         // Get number of variables in logtype
         auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
         auto const num_vars = logtype_dictionary_entry.get_num_variables();
+
         auto const var_begin_ix{m_variables_ix};
         auto const vars_end_ix{m_variables_ix + num_vars};
 
