@@ -251,7 +251,6 @@ bool File::find_message_in_time_range(
 
 SubQuery const* File::find_message_matching_query(Query const& query, Message& msg) {
     SubQuery const* matching_sub_query = nullptr;
-
     while (m_msgs_ix < m_num_messages && nullptr == matching_sub_query) {
         auto const curr_msg_ix{m_msgs_ix};
         auto logtype_id = m_logtypes[curr_msg_ix];
