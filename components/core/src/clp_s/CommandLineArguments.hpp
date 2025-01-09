@@ -67,6 +67,8 @@ public:
 
     [[nodiscard]] bool print_archive_stats() const { return m_print_archive_stats; }
 
+    [[nodiscard]] auto print_ordered_stream_stats() const -> bool { return m_print_ordered_stream_stats; }
+
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
     std::string const& get_mongodb_collection() const { return m_mongodb_collection; }
@@ -189,6 +191,7 @@ private:
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
     size_t m_target_ordered_chunk_size{};
+    bool m_print_ordered_stream_stats{false};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
     FileType m_file_type{FileType::Json};

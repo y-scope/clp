@@ -30,6 +30,7 @@ struct JsonConstructorOption {
     std::string archive_id;
     std::string output_dir;
     bool ordered{false};
+    bool print_ordered_stream_stats{false};
     size_t target_ordered_chunk_size{};
     std::optional<MetadataDbOption> metadata_db;
 };

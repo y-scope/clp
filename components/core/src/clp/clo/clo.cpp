@@ -5,6 +5,7 @@
 
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <json/single_include/nlohmann/json.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
@@ -211,6 +212,15 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                             is_last_chunk
                     )
             )));
+
+            if (command_line_args.print_stream_stats()) {
+                nlohmann::json json_msg;
+                json_msg["stream_path"] = dest_ir_path;
+                json_msg["id"] = orig_file_id;
+                std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+                          << std::endl;
+            }
+
             return true;
         };
 

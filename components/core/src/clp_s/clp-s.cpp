@@ -311,6 +311,7 @@ int main(int argc, char const* argv[]) {
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.archives_dir = archives_dir;
         option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
+        option.print_ordered_stream_stats = command_line_arguments.print_ordered_stream_stats();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
                     = {command_line_arguments.get_mongodb_uri(),

@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <queue>
 #include <system_error>
+#include <json/single_include/nlohmann/json.hpp>
 
 #include <fmt/core.h>
 #include <mongocxx/client.hpp>
@@ -138,6 +139,14 @@ void JsonConstructor::construct_in_order() {
                             false == open_new_writer
                     )
             )));
+        }
+
+        if (m_option.print_ordered_stream_stats) {
+            nlohmann::json json_msg;
+            json_msg["stream_path"] = new_file_path.string();
+            json_msg["id"] = m_option.archive_id;
+            std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+                      << std::endl;
         }
 
         if (open_new_writer) {
