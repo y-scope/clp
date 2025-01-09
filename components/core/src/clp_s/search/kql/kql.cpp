@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -54,7 +55,7 @@ class ParseTreeVisitor : public KqlBaseVisitor {
 private:
     static void
     prepend_column(std::shared_ptr<ColumnDescriptor> const& desc, DescriptorList const& prefix) {
-        desc->get_descriptor_list().insert(desc->descriptor_begin(), prefix.begin(), prefix.end());
+        desc->insert(desc->get_descriptor_list().begin(), prefix);
     }
 
     void prepend_column(std::shared_ptr<Expression> const& expr, DescriptorList const& prefix) {
@@ -69,7 +70,7 @@ private:
 
 public:
     static std::string unquote_string(std::string const& text) {
-        if (text.at(0) == '"') {
+        if (false == text.empty() && '"' == text.at(0)) {
             return text.substr(1, text.length() - 2);
         } else {
             return text;
@@ -83,7 +84,11 @@ public:
     }
 
     static std::shared_ptr<Literal> unquote_literal(std::string const& text) {
-        std::string token = unquote_string(text);
+        std::string token;
+        if (false == StringUtils::unescape_kql_value(unquote_string(text), token)) {
+            SPDLOG_ERROR("Can not parse invalid literal: {}", text);
+            throw std::runtime_error{"Invalid literal."};
+        }
 
         if (auto ret = Integral::create_from_string(token)) {
             return ret;
@@ -97,7 +102,11 @@ public:
     }
 
     static std::shared_ptr<Literal> unquote_date_literal(std::string const& text) {
-        std::string token = unquote_date_string(text);
+        std::string token;
+        if (false == StringUtils::unescape_kql_value(unquote_date_string(text), token)) {
+            SPDLOG_ERROR("Can not parse invalid date literal: {}", text);
+            throw std::runtime_error{"Invalid date literal."};
+        }
 
         return DateLiteral::create_from_string(token);
     }
@@ -117,7 +126,7 @@ public:
             return nullptr;
         }
 
-        return ColumnDescriptor::create(descriptor_tokens);
+        return ColumnDescriptor::create_from_escaped_tokens(descriptor_tokens);
     }
 
     std::any visitNestedQuery(KqlParser::NestedQueryContext* ctx) override {
@@ -193,7 +202,7 @@ public:
 
     std::any visitValue_expression(KqlParser::Value_expressionContext* ctx) override {
         auto lit = unquote_literal(ctx->LITERAL()->getText());
-        auto descriptor = ColumnDescriptor::create("*");
+        auto descriptor = ColumnDescriptor::create_from_escaped_token("*");
         return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
     }
 
@@ -213,7 +222,7 @@ public:
             base = OrExpr::create();
         }
 
-        auto empty_descriptor = ColumnDescriptor::create(DescriptorList());
+        auto empty_descriptor = ColumnDescriptor::create_from_descriptors(DescriptorList());
         for (auto token : ctx->literals) {
             auto literal = unquote_literal(token->getText());
             auto expr = FilterExpr::create(

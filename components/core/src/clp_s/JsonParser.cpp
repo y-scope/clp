@@ -18,7 +18,6 @@
 #include "../clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../clp/ffi/SchemaTree.hpp"
-#include "../clp/ffi/utils.hpp"
 #include "../clp/ffi/Value.hpp"
 #include "../clp/ir/EncodedTextAst.hpp"
 #include "../clp/NetworkReader.hpp"
@@ -125,7 +124,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
     size_t object_start = m_current_schema.start_unordered_object(NodeType::Object);
     ondemand::field cur_field;
     ondemand::value cur_value;
-    std::string cur_key;
+    std::string_view cur_key;
     int32_t node_id;
     while (true) {
         while (false == object_stack.empty() && object_it_stack.top() == object_stack.top().end()) {
@@ -143,7 +142,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
         }
 
         cur_field = *object_it_stack.top();
-        cur_key = std::string_view(cur_field.unescaped_key(true));
+        cur_key = cur_field.unescaped_key(true);
         cur_value = cur_field.value();
 
         switch (cur_value.type()) {
@@ -193,9 +192,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 break;
             }
             case ondemand::json_type::string: {
-                std::string value = std::string(
-                        cur_value.raw_json_token().substr(1, cur_value.raw_json_token().size() - 2)
-                );
+                std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
@@ -271,9 +268,7 @@ void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
                 break;
             }
             case ondemand::json_type::string: {
-                std::string value = std::string(
-                        cur_value.raw_json_token().substr(1, cur_value.raw_json_token().size() - 2)
-                );
+                std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
                 } else {
@@ -308,7 +303,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 
     ondemand::field cur_field;
 
-    std::string cur_key = key;
+    std::string_view cur_key = key;
     node_id_stack.push(parent_node_id);
 
     bool can_match_timestamp = !m_timestamp_column.empty();
@@ -319,7 +314,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     do {
         if (false == object_stack.empty()) {
             cur_field = *object_it_stack.top();
-            cur_key = std::string(std::string_view(cur_field.unescaped_key(true)));
+            cur_key = cur_field.unescaped_key(true);
             line = cur_field.value();
             if (may_match_timestamp) {
                 if (object_stack.size() <= m_timestamp_column.size()
@@ -415,10 +410,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 break;
             }
             case ondemand::json_type::string: {
-                auto raw_json_token = line.raw_json_token();
-                std::string value
-                        = std::string(raw_json_token.substr(1, raw_json_token.rfind('"') - 1));
-
+                std::string_view value = line.get_string(true);
                 if (matches_timestamp) {
                     node_id = m_archive_writer->add_node(
                             node_id_stack.top(),
@@ -679,18 +671,11 @@ auto JsonParser::add_node_to_archive_and_translations(
         NodeType archive_node_type,
         int32_t parent_node_id
 ) -> int {
-    auto validated_escaped_key
-            = clp::ffi::validate_and_escape_utf8_string(ir_node_to_add.get_key_name());
-    std::string node_key;
-    if (validated_escaped_key.has_value()) {
-        node_key = validated_escaped_key.value();
-    } else {
-        SPDLOG_ERROR("Key is not UTF-8 compliant: \"{}\"", ir_node_to_add.get_key_name());
-        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-    }
-    int const curr_node_archive_id
-            = m_archive_writer->add_node(parent_node_id, archive_node_type, node_key);
-
+    int const curr_node_archive_id = m_archive_writer->add_node(
+            parent_node_id,
+            archive_node_type,
+            ir_node_to_add.get_key_name()
+    );
     m_ir_node_to_archive_node_id_mapping.emplace(
             std::make_pair(ir_node_id, archive_node_type),
             curr_node_archive_id
@@ -784,23 +769,10 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                 m_current_parsed_message.add_value(node_id, b_value);
             } break;
             case NodeType::VarString: {
-                auto const validated_escaped_string = clp::ffi::validate_and_escape_utf8_string(
-                        pair.second.value().get_immutable_view<std::string>()
-                );
-                std::string str;
-                if (validated_escaped_string.has_value()) {
-                    str = validated_escaped_string.value();
-                } else {
-                    SPDLOG_ERROR(
-                            "String is not utf8 compliant: \"{}\"",
-                            pair.second.value().get_immutable_view<std::string>()
-                    );
-                    throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-                }
-                m_current_parsed_message.add_value(node_id, str);
+                auto const var_value{pair.second.value().get_immutable_view<std::string>()};
+                m_current_parsed_message.add_value(node_id, var_value);
             } break;
             case NodeType::ClpString: {
-                std::string encoded_str;
                 std::string decoded_value;
                 if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
                     decoded_value = pair.second.value()
@@ -814,15 +786,7 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                                             .decode_and_unparse()
                                             .value();
                 }
-                auto const validated_escaped_encoded_string
-                        = clp::ffi::validate_and_escape_utf8_string(decoded_value.c_str());
-                if (validated_escaped_encoded_string.has_value()) {
-                    encoded_str = validated_escaped_encoded_string.value();
-                } else {
-                    SPDLOG_ERROR("Encoded string is not utf8 compliant: \"{}\"", decoded_value);
-                    throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-                }
-                m_current_parsed_message.add_value(node_id, encoded_str);
+                m_current_parsed_message.add_value(node_id, decoded_value);
             } break;
             case NodeType::UnstructuredArray: {
                 std::string array_str;
