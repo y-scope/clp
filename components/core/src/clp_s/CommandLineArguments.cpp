@@ -745,7 +745,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::options_description compression_options("Compression options");
-            std::string metadata_db_config_file_path;
             std::string input_path_list_file_path;
             // clang-format off
             compression_options.add_options()(
@@ -768,11 +767,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<int>(&m_encoding_type)->value_name("ENCODING_TYPE")->
                         default_value(m_encoding_type),
                     "4 (four byte encoding) or 8 (eight byte encoding)"
-            )(
-                    "db-config-file",
-                    po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")->
-                    default_value(metadata_db_config_file_path),
-                    "Global metadata DB YAML config"
             )(
                     "files-from,f",
                     po::value<std::string>(&input_path_list_file_path)
@@ -829,29 +823,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_file_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
-            }
-
-            // Parse and validate global metadata DB config
-            if (false == metadata_db_config_file_path.empty()) {
-                clp::GlobalMetadataDBConfig metadata_db_config;
-                try {
-                    metadata_db_config.parse_config_file(metadata_db_config_file_path);
-                } catch (std::exception& e) {
-                    SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());
-                    return ParsingResult::Failure;
-                }
-
-                if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
-                    != metadata_db_config.get_metadata_db_type())
-                {
-                    SPDLOG_ERROR(
-                            "Invalid metadata database type for {}; only supported type is MySQL.",
-                            m_program_name
-                    );
-                    return ParsingResult::Failure;
-                }
-
-                m_metadata_db_config = std::move(metadata_db_config);
             }
         }
     } catch (std::exception& e) {
