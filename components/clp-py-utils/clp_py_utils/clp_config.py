@@ -40,6 +40,7 @@ COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
+CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 
 
@@ -340,7 +341,7 @@ class S3Config(BaseModel):
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: pathlib.Path = pathlib.Path("var") / "data" / "archives"
+    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archive"
 
     @validator("directory")
     def validate_directory(cls, field):
@@ -377,6 +378,26 @@ class S3Storage(BaseModel):
         return d
 
 
+def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:
+    storage_type = storage_config.type
+    if StorageType.FS == storage_config.type:
+        return storage_config.directory
+    elif StorageType.S3 == storage_type:
+        return storage_config.staging_directory
+    else:
+        raise NotImplementedError(f"storage.type {storage_type} is not supported")
+
+
+def _set_directory_for_storage_config(storage_config: Union[FsStorage, S3Storage], directory) -> None:
+    storage_type = storage_config.type
+    if StorageType.FS == storage_type:
+        storage_config.directory = directory
+    elif StorageType.S3 == storage_type:
+        storage_config.staging_directory = directory
+    else:
+        raise NotImplementedError(f"storage.type {storage_type} is not supported")
+
+
 class ArchiveOutput(BaseModel):
     storage: Union[FsStorage, S3Storage] = FsStorage()
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
@@ -409,41 +430,21 @@ class ArchiveOutput(BaseModel):
         return field
 
     def set_directory(self, directory: pathlib.Path):
-        storage_config = self.storage
-        storage_type = storage_config.type
-        if StorageType.FS == storage_type:
-            storage_config.directory = directory
-        elif StorageType.S3 == storage_type:
-            storage_config.staging_directory = directory
-        else:
-            raise NotImplementedError(f"storage.type {storage_type} is not supported")
+        _set_directory_for_storage_config(self.storage, directory)
 
     def get_directory(self) -> pathlib.Path:
-        storage_config = self.storage
-        storage_type = storage_config.type
-        if StorageType.FS == storage_config.type:
-            return storage_config.directory
-        elif StorageType.S3 == storage_type:
-            return storage_config.staging_directory
-        else:
-            raise NotImplementedError(f"storage.type {storage_type} is not supported")
+        return _get_directory_from_storage_config(self.storage)
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        # Turn directory (pathlib.Path) into a primitive string
+        # Turn storage config into primitive string dict
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
 
 class StreamOutput(BaseModel):
-    directory: pathlib.Path = pathlib.Path("var") / "data" / "streams"
+    storage: Union[FsStorage, S3Storage] = FsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
-
-    @validator("directory")
-    def validate_directory(cls, field):
-        if "" == field:
-            raise ValueError("directory cannot be empty")
-        return field
 
     @validator("target_uncompressed_size")
     def validate_target_uncompressed_size(cls, field):
@@ -451,13 +452,16 @@ class StreamOutput(BaseModel):
             raise ValueError("target_uncompressed_size must be greater than 0")
         return field
 
-    def make_config_paths_absolute(self, clp_home: pathlib.Path):
-        self.directory = make_config_path_absolute(clp_home, self.directory)
+    def set_directory(self, directory: pathlib.Path):
+        _set_directory_for_storage_config(self.storage, directory)
+
+    def get_directory(self) -> pathlib.Path:
+        return _get_directory_from_storage_config(self.storage)
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        # Turn directory (pathlib.Path) into a primitive string
-        d["directory"] = str(d["directory"])
+        # Turn storage config into primitive string dict
+        d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
 
@@ -527,7 +531,7 @@ class CLPConfig(BaseModel):
         self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.storage.make_config_paths_absolute(clp_home)
-        self.stream_output.make_config_paths_absolute(clp_home)
+        self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
@@ -557,7 +561,7 @@ class CLPConfig(BaseModel):
 
     def validate_stream_output_dir(self):
         try:
-            validate_path_could_be_dir(self.stream_output.directory)
+            validate_path_could_be_dir(self.stream_output.get_directory())
         except ValueError as ex:
             raise ValueError(f"stream_output.directory is invalid: {ex}")
 
@@ -643,7 +647,7 @@ class WorkerConfig(BaseModel):
     data_directory: pathlib.Path = CLPConfig().data_directory
 
     # Only needed by query workers.
-    stream_output_dir: pathlib.Path = StreamOutput().directory
+    stream_output_dir: pathlib.Path = StreamOutput().get_directory()
     stream_collection_name: str = ResultsCache().stream_collection_name
 
     def dump_to_primitive_dict(self):
