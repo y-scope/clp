@@ -218,11 +218,8 @@ void ArchiveWriter::write_archive_header(FileWriter& archive_writer, size_t meta
     archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
-void ArchiveWriter::append_message(
-        int32_t schema_id,
-        Schema const& schema,
-        ParsedMessage& message
-) {
+void
+ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message) {
     SchemaWriter* schema_writer;
     auto it = m_id_to_schema_writer.find(schema_id);
     if (it != m_id_to_schema_writer.end()) {

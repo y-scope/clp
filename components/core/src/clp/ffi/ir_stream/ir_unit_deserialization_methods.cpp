@@ -38,8 +38,8 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  * @return The corresponding schema tree node type on success.
  * @return std::nullopt if the tag doesn't match to any defined schema tree node type.
  */
-[[nodiscard]] auto schema_tree_node_tag_to_type(encoded_tag_t tag
-) -> std::optional<SchemaTree::Node::Type>;
+[[nodiscard]] auto schema_tree_node_tag_to_type(encoded_tag_t tag)
+        -> std::optional<SchemaTree::Node::Type>;
 
 /**
  * Deserializes the parent ID of a schema tree node.
@@ -52,8 +52,8 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  *   - Forwards `deserialize_tag`'s return values.
  * @return Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
  */
-[[nodiscard]] auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
+[[nodiscard]] auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
+        -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
 
 /**
  * Deserializes the key name of a schema tree node.
@@ -63,10 +63,9 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  * @return Forwards `deserialize_tag`'s return values on failure.
  * @return Forwards `deserialize_string`'s return values on failure.
  */
-[[nodiscard]] auto deserialize_schema_tree_node_key_name(
-        ReaderInterface& reader,
-        std::string& key_name
-) -> IRErrorCode;
+[[nodiscard]] auto
+deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
+        -> IRErrorCode;
 
 /**
  * Deserializes an integer value packet.
@@ -78,8 +77,8 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  * @return IRErrorCode::IRErrorCode_Corrupted_IR if the given tag doesn't correspond to an integer
  * packet.
  */
-[[nodiscard]] auto
-deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val) -> IRErrorCode;
+[[nodiscard]] auto deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val)
+        -> IRErrorCode;
 
 /**
  * Deserializes a string packet.
@@ -91,11 +90,9 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @return IRErrorCode::IRErrorCode_Corrupted_IR if the given tag doesn't correspond to a string
  * packet.
  */
-[[nodiscard]] auto deserialize_string(
-        ReaderInterface& reader,
-        encoded_tag_t tag,
-        std::string& deserialized_str
-) -> IRErrorCode;
+[[nodiscard]] auto
+deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& deserialized_str)
+        -> IRErrorCode;
 
 /**
  * Deserializes the IDs of all keys in a log event.
@@ -142,8 +139,7 @@ deserialize_int_val(ReaderInterface& reader, encoded_tag_t tag, value_int_t& val
  * @return Forwards `deserialize_encoded_text_ast`'s return values on failure.
  */
 template <typename encoded_variable_t>
-requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
-         || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
+requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t> || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         SchemaTree::Node::id_t node_id,
@@ -202,8 +198,8 @@ auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree
     }
 }
 
-auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
+        -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
     encoded_tag_t tag{};
     if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
         return ir_error_code_to_errc(err);
@@ -398,8 +394,7 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
 }
 
 template <typename encoded_variable_t>
-requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
-         || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
+requires(std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t> || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
         SchemaTree::Node::id_t node_id,
@@ -537,8 +532,8 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
     return SchemaTree::NodeLocator{parent_id, key_name, type.value()};
 }
 
-auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset> {
+auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
+        -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset> {
     UtcOffset utc_offset{0};
     if (auto const err{deserialize_utc_offset_change(reader, utc_offset)};
         IRErrorCode::IRErrorCode_Success != err)

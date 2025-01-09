@@ -148,11 +148,8 @@ bool serialize_log_event(
     return true;
 }
 
-bool serialize_message(
-        std::string_view message,
-        std::string& logtype,
-        std::vector<int8_t>& ir_buf
-) {
+bool
+serialize_message(std::string_view message, std::string& logtype, std::vector<int8_t>& ir_buf) {
     auto encoded_var_handler = [&ir_buf](eight_byte_encoded_variable_t encoded_var) {
         ir_buf.push_back(cProtocol::Payload::VarEightByteEncoding);
         serialize_int(encoded_var, ir_buf);

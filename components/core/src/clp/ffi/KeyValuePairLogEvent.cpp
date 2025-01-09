@@ -119,8 +119,8 @@ private:
  * @param value
  * @return Whether the given schema tree node type matches the given value's type.
  */
-[[nodiscard]] auto
-node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value) -> bool;
+[[nodiscard]] auto node_type_matches_value_type(SchemaTree::Node::Type type, Value const& value)
+        -> bool;
 
 /**
  * Validates whether the given node-ID value pairs are leaf nodes in the `SchemaTree` forming a
@@ -560,18 +560,18 @@ auto KeyValuePairLogEvent::create(
     };
 }
 
-auto KeyValuePairLogEvent::get_auto_gen_keys_schema_subtree_bitmap(
-) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>> {
+auto KeyValuePairLogEvent::get_auto_gen_keys_schema_subtree_bitmap() const
+        -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>> {
     return get_schema_subtree_bitmap(m_auto_gen_node_id_value_pairs, *m_auto_gen_keys_schema_tree);
 }
 
-auto KeyValuePairLogEvent::get_user_gen_keys_schema_subtree_bitmap(
-) const -> outcome_v2::std_result<std::vector<bool>> {
+auto KeyValuePairLogEvent::get_user_gen_keys_schema_subtree_bitmap() const
+        -> outcome_v2::std_result<std::vector<bool>> {
     return get_schema_subtree_bitmap(m_user_gen_node_id_value_pairs, *m_user_gen_keys_schema_tree);
 }
 
-auto KeyValuePairLogEvent::serialize_to_json(
-) const -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
+auto KeyValuePairLogEvent::serialize_to_json() const
+        -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
     auto const auto_gen_keys_schema_subtree_bitmap_result{get_auto_gen_keys_schema_subtree_bitmap()
     };
     if (auto_gen_keys_schema_subtree_bitmap_result.has_error()) {
