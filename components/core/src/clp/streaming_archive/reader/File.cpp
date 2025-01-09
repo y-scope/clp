@@ -259,7 +259,7 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
         auto const& logtype_dictionary_entry = m_archive_logtype_dict->get_entry(logtype_id);
         auto const num_vars = logtype_dictionary_entry.get_num_variables();
 
-        auto const var_begin_ix{m_variables_ix};
+        auto const vars_begin_ix{m_variables_ix};
         auto const vars_end_ix{m_variables_ix + num_vars};
 
         // Advance indices
@@ -277,7 +277,7 @@ SubQuery const* File::find_message_matching_query(Query const& query, Message& m
             }
 
             msg.clear_vars();
-            for (auto vars_ix{var_begin_ix}; vars_ix < vars_end_ix; ++vars_ix) {
+            for (auto vars_ix{vars_begin_ix}; vars_ix < vars_end_ix; ++vars_ix) {
                 msg.add_var(m_variables[vars_ix]);
             }
             if (false == sub_query->matches_vars(msg.get_vars())) {
