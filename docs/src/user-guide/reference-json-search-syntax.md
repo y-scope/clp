@@ -205,6 +205,11 @@ Keys and values also support the following escape sequences to represent control
 * `\r`
 * `\t`
 
+:::{note}
+The escape sequences in this section are described verbatim and don't need an extra backslash to
+escape the backslash at the beginning of each sequence.
+:::
+
 ## Examples
 
 **Search for log events that contain a specific key-value pair:**
