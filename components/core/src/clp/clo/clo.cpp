@@ -3,9 +3,9 @@
 #include <memory>
 #include <string>
 
+#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
-#include <json/single_include/nlohmann/json.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"

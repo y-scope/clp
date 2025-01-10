@@ -408,8 +408,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (m_print_ordered_stream_stats && false == m_ordered_decompression) {
-                throw std::invalid_argument(
-                        "print-stream-stats must be used with ordered argument"
+                throw std::invalid_argument("print-stream-stats must be used with ordered argument"
                 );
             }
 

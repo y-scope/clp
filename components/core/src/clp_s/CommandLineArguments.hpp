@@ -67,7 +67,9 @@ public:
 
     [[nodiscard]] bool print_archive_stats() const { return m_print_archive_stats; }
 
-    [[nodiscard]] auto print_ordered_stream_stats() const -> bool { return m_print_ordered_stream_stats; }
+    [[nodiscard]] auto print_ordered_stream_stats() const -> bool {
+        return m_print_ordered_stream_stats;
+    }
 
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 

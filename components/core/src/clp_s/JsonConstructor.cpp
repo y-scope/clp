@@ -3,9 +3,9 @@
 #include <filesystem>
 #include <queue>
 #include <system_error>
-#include <json/single_include/nlohmann/json.hpp>
 
 #include <fmt/core.h>
+#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
