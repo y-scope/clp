@@ -1,12 +1,14 @@
 import datetime
+import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import Database, StorageEngine, StorageType, WorkerConfig
+from clp_py_utils.clp_config import Database, S3Config, StorageEngine, StorageType, WorkerConfig
 from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.s3_utils import s3_put
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
@@ -27,6 +29,7 @@ def make_command(
     archive_id: str,
     job_config: dict,
     results_cache_uri: str,
+    enable_s3_write: bool,
 ) -> Optional[List[str]]:
     storage_engine = worker_config.package.storage_engine
     archives_dir = worker_config.archive_output.get_directory()
@@ -51,6 +54,8 @@ def make_command(
         if extract_ir_config.target_uncompressed_size is not None:
             command.append("--target-size")
             command.append(str(extract_ir_config.target_uncompressed_size))
+        if enable_s3_write:
+            command.append("--print-stream-stats")
     elif StorageEngine.CLP_S == storage_engine:
         logger.info("Starting JSON extraction")
         extract_json_config = ExtractJsonJobConfig.parse_obj(job_config)
@@ -70,6 +75,8 @@ def make_command(
         if extract_json_config.target_chunk_size is not None:
             command.append("--target-ordered-chunk-size")
             command.append(str(extract_json_config.target_chunk_size))
+        if enable_s3_write:
+            command.append("--print-ordered-stream-stats")
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
         return None
@@ -121,12 +128,22 @@ def extract_stream(
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
 
+    # Get s3 config
+    s3_config: S3Config
+    enable_s3_write = False
+    storage_config = worker_config.stream_output.storage
+
+    if StorageType.S3 == storage_config.type:
+        s3_config = storage_config.s3_config
+        enable_s3_write = True
+
     task_command = make_command(
         clp_home=clp_home,
         worker_config=worker_config,
         archive_id=archive_id,
         job_config=job_config,
         results_cache_uri=results_cache_uri,
+        enable_s3_write=enable_s3_write,
     )
     if not task_command:
         logger.error(f"Error creating {task_name} command")
@@ -136,7 +153,7 @@ def extract_stream(
             start_time=start_time,
         )
 
-    return run_query_task(
+    task_results, task_stdout_as_str = run_query_task(
         sql_adapter=sql_adapter,
         logger=logger,
         clp_logs_dir=clp_logs_dir,
@@ -146,3 +163,31 @@ def extract_stream(
         task_id=task_id,
         start_time=start_time,
     )
+
+    if enable_s3_write and QueryTaskStatus.SUCCEEDED == task_results.status:
+        logger.info(f"Uploading streams to S3...")
+        s3_error = None
+        for line in task_stdout_as_str.splitlines():
+            stream_stats = json.loads(line)
+            stream_path = Path(stream_stats["stream_path"])
+            stream_name = stream_path.name
+
+            if s3_error is None:
+                logger.info(f"Uploading stream {stream_name} to S3...")
+                result = s3_put(s3_config, stream_path, stream_name)
+
+                if result.is_err():
+                    logger.error(f"Failed to upload stream {stream_name}: {result.err_value}")
+                    s3_error = result.err_value
+                else:
+                    logger.info(f"Finished uploading stream {stream_name} to S3.")
+
+            stream_path.unlink()
+
+        if s3_error:
+            task_results.status = QueryTaskStatus.FAILED
+            task_results.error_log_path = "S3 Failed"
+        else:
+            logger.info(f"Finished uploading streams.")
+
+    return task_results.dict()
