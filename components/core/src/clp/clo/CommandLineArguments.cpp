@@ -179,12 +179,15 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     // Define IR extraction options
     po::options_description options_ir_extraction("IR Extraction Options");
     // clang-format off
-    options_ir_extraction
-            .add_options()(
-                    "target-size",
-                    po::value<size_t>(&m_ir_target_size)->value_name("SIZE"),
-                    "Target size (B) for each IR chunk before a new chunk is created"
-            );
+    options_ir_extraction.add_options()(
+            "target-size",
+            po::value<size_t>(&m_ir_target_size)->value_name("SIZE"),
+            "Target size (B) for each IR chunk before a new chunk is created"
+    )(
+            "print-stream-stats",
+            po::bool_switch(&m_print_stream_stats),
+            "Print statistics (ndjson) about each stream as it's extracted"
+    );
     // clang-format on
 
     // Define visible options
@@ -210,9 +213,6 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     )(
             "mongodb-collection",
             po::value<string>(&m_ir_mongodb_collection)
-    )(
-            "print-stream-stats",
-            po::value<bool>(&m_print_stream_stats)
     );
     // clang-format on
     po::positional_options_description positional_options_description;
@@ -221,7 +221,6 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     positional_options_description.add("output-dir", 1);
     positional_options_description.add("mongodb-uri", 1);
     positional_options_description.add("mongodb-collection", 1);
-    positional_options_description.add("print-stream-stats", 1);
 
     // Aggregate all options
     po::options_description all_options;
