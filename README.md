@@ -44,12 +44,13 @@ features:
 
 - **Real-time Compression with CLP Logging Libraries**: CLP provides logging libraries for
   [Python][clp-loglib-py] and Java ([Log4j1][log4j1-appenders], [Log4j2][logj42-appenders] and 
-- [Logback][logback-appenders]). The logging libraries compress logs in real-time, so only compressed
-  logs are written to disk or transmitted over the network. The compressed logs use CLP's intermediate
-  representation (IR) format which achieves a higher compression ratio than general purpose compressors
-  like Zstandard. Compressing IR into archives can further double the compression ratio and enable 
-  global search, but this requires more memory usage as it needs to buffer enough logs. More details
-  on IR versus archives can be found in this [Uber Engineering Blog][uber-blog].
+  [Logback][logback-appenders]). The logging libraries compress logs in real-time, so only
+  compressed logs are written to disk or transmitted over the network. The compressed logs use 
+  CLP's intermediate representation (IR) format which achieves a higher compression ratio than
+  general purpose compressors like Zstandard. Compressing IR into archives can further double the
+  compression ratio and enable global search, but this requires more memory usage as it needs to
+  buffer enough logs. More details on IR versus archives can be found in this
+  [Uber Engineering Blog][uber-blog].
 
 - **[Log Viewer][log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
   to viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
