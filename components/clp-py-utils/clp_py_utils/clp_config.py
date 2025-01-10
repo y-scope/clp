@@ -388,7 +388,9 @@ def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storag
         raise NotImplementedError(f"storage.type {storage_type} is not supported")
 
 
-def _set_directory_for_storage_config(storage_config: Union[FsStorage, S3Storage], directory) -> None:
+def _set_directory_for_storage_config(
+    storage_config: Union[FsStorage, S3Storage], directory
+) -> None:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         storage_config.directory = directory
@@ -647,7 +649,7 @@ class WorkerConfig(BaseModel):
     data_directory: pathlib.Path = CLPConfig().data_directory
 
     # Only needed by query workers.
-    stream_output: StreamOutput= StreamOutput()
+    stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
 
     def dump_to_primitive_dict(self):
