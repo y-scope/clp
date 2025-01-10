@@ -16,7 +16,10 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
     for (uint64_t i = 0; i < range_index_size; ++i) {
         TimestampEntry entry;
         std::vector<std::string> tokens;
-        entry.try_read_from_file(decompressor);
+        if (auto rc = entry.try_read_from_file(decompressor); ErrorCodeSuccess != rc) {
+            throw OperationFailed(rc, __FILENAME__, __LINE__);
+        }
+
         if (false == StringUtils::tokenize_column_descriptor(entry.get_key_name(), tokens)) {
             throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
         }
