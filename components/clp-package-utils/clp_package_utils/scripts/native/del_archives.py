@@ -54,7 +54,7 @@ def main(argv):
         return -1
 
     database_config = clp_config.database
-    archives_dir = clp_config.archive_output.directory
+    archives_dir = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
         logger.error("`archive_output.directory` doesn't exist.")
         return -1

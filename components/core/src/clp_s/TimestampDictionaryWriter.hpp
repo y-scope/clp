@@ -1,9 +1,11 @@
 #ifndef CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 #define CLP_S_TIMESTAMPDICTIONARYWRITER_HPP
 
+#include <cstdint>
 #include <map>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
@@ -47,9 +49,9 @@ public:
      * @return the epoch time corresponding to the string timestamp
      */
     epochtime_t ingest_entry(
-            std::string const& key,
+            std::string_view key,
             int32_t node_id,
-            std::string const& timestamp,
+            std::string_view timestamp,
             uint64_t& pattern_id
     );
 
@@ -59,9 +61,9 @@ public:
      * @param node_id
      * @param timestamp
      */
-    void ingest_entry(std::string const& key, int32_t node_id, double timestamp);
+    void ingest_entry(std::string_view key, int32_t node_id, double timestamp);
 
-    void ingest_entry(std::string const& key, int32_t node_id, int64_t timestamp);
+    void ingest_entry(std::string_view key, int32_t node_id, int64_t timestamp);
 
     /**
      * TODO: guarantee epoch milliseconds. The current clp-s approach to encoding timestamps and

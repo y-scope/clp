@@ -29,6 +29,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    StorageType,
     WEBUI_COMPONENT_NAME,
 )
 from job_orchestration.scheduler.constants import QueueName
@@ -42,6 +43,7 @@ from clp_package_utils.general import (
     DockerMount,
     DockerMountType,
     generate_container_config,
+    generate_worker_config,
     get_clp_home,
     is_container_exited,
     is_container_running,
@@ -628,6 +630,7 @@ def start_compression_worker(
 ):
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
+    compression_worker_mounts = [mounts.archives_output_dir]
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -639,8 +642,7 @@ def start_compression_worker(
         clp_config.redis.compression_backend_database,
         num_cpus,
         mounts,
-        None,
-        None,
+        compression_worker_mounts,
     )
 
 
@@ -654,11 +656,9 @@ def start_query_worker(
     celery_method = "job_orchestration.executor.query"
     celery_route = f"{QueueName.QUERY}"
 
-    query_worker_mount = [mounts.stream_output_dir]
-    query_worker_env = {
-        "CLP_STREAM_OUTPUT_DIR": container_clp_config.stream_output.directory,
-        "CLP_STREAM_COLLECTION_NAME": clp_config.results_cache.stream_collection_name,
-    }
+    query_worker_mounts = [mounts.stream_output_dir]
+    if clp_config.archive_output.storage.type == StorageType.FS:
+        query_worker_mounts.append(mounts.archives_output_dir)
 
     generic_start_worker(
         QUERY_WORKER_COMPONENT_NAME,
@@ -671,8 +671,7 @@ def start_query_worker(
         clp_config.redis.query_backend_database,
         num_cpus,
         mounts,
-        query_worker_env,
-        query_worker_mount,
+        query_worker_mounts,
     )
 
 
@@ -687,8 +686,7 @@ def generic_start_worker(
     redis_database: int,
     num_cpus: int,
     mounts: CLPDockerMounts,
-    worker_specific_env: Dict[str, Any],
-    worker_specific_mount: List[Optional[DockerMount]],
+    worker_specific_mount: Optional[List[Optional[DockerMount]]],
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -696,14 +694,18 @@ def generic_start_worker(
     if container_exists(container_name):
         return
 
-    validate_worker_config(clp_config)
+    container_config_filename = f"{container_name}.yml"
+    container_config_file_path = clp_config.logs_directory / container_config_filename
+    container_worker_config = generate_worker_config(container_clp_config)
+    with open(container_config_file_path, "w") as f:
+        yaml.safe_dump(container_worker_config.dump_to_primitive_dict(), f)
 
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
 
     # Create necessary directories
-    clp_config.archive_output.directory.mkdir(parents=True, exist_ok=True)
+    clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
     clp_config.stream_output.directory.mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -726,24 +728,17 @@ def generic_start_worker(
             f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
         ),
         "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
-        "-e", f"CLP_DATA_DIR={container_clp_config.data_directory}",
-        "-e", f"CLP_ARCHIVE_OUTPUT_DIR={container_clp_config.archive_output.directory}",
+        "-e", f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
-        "-e", f"CLP_STORAGE_ENGINE={clp_config.package.storage_engine}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
-    if worker_specific_env:
-        for env_name, env_value in worker_specific_env.items():
-            container_start_cmd.append("-e")
-            container_start_cmd.append(f"{env_name}={env_value}")
-
     # fmt: on
+
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
-        mounts.archives_output_dir,
         mounts.input_logs_dir,
     ]
     if worker_specific_mount:
@@ -1127,6 +1122,12 @@ def main(argv):
             QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+        if target in (
+            ALL_TARGET_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
+        ):
+            validate_worker_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()

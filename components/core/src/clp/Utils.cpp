@@ -88,57 +88,6 @@ ErrorCode create_directory_structure(string const& path, mode_t mode) {
     return ErrorCode_Success;
 }
 
-string get_parent_directory_path(string const& path) {
-    string dirname = get_unambiguous_path(path);
-
-    size_t last_slash_pos = dirname.find_last_of('/');
-    if (0 == last_slash_pos) {
-        dirname = "/";
-    } else if (string::npos == last_slash_pos) {
-        dirname = ".";
-    } else {
-        dirname.resize(last_slash_pos);
-    }
-
-    return dirname;
-}
-
-string get_unambiguous_path(string const& path) {
-    string unambiguous_path;
-    if (path.empty()) {
-        return unambiguous_path;
-    }
-
-    // Break path into components
-    vector<string> path_components;
-    boost::split(path_components, path, boost::is_any_of("/"), boost::token_compress_on);
-
-    // Remove ambiguous components
-    list<string> unambiguous_components;
-    size_t num_components_to_ignore = 0;
-    for (size_t i = path_components.size(); i-- > 0;) {
-        if (".." == path_components[i]) {
-            ++num_components_to_ignore;
-        } else if ("." == path_components[i] || path_components[i].empty()) {
-            // Do nothing
-        } else if (num_components_to_ignore > 0) {
-            --num_components_to_ignore;
-        } else {
-            unambiguous_components.emplace_front(path_components[i]);
-        }
-    }
-
-    // Assemble unambiguous path from leading slash (if any) and the unambiguous components
-    if ('/' == path[0]) {
-        unambiguous_path += '/';
-    }
-    if (!unambiguous_components.empty()) {
-        unambiguous_path += boost::join(unambiguous_components, "/");
-    }
-
-    return unambiguous_path;
-}
-
 ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
     unique_ptr<FileReader> file_reader;
     try {

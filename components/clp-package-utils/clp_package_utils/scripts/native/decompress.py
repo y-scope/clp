@@ -167,7 +167,7 @@ def validate_and_load_config_file(
     """
     try:
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_archive_output_dir()
+        clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
         return clp_config
     except Exception:
@@ -207,7 +207,7 @@ def handle_extract_file_cmd(
     list_path = parsed_args.files_from
 
     logs_dir = clp_config.logs_directory
-    archives_dir = clp_config.archive_output.directory
+    archives_dir = clp_config.archive_output.get_directory()
 
     # Generate database config file for clp
     db_config_file_path = logs_dir / f".decompress-db-config-{uuid.uuid4()}.yml"
