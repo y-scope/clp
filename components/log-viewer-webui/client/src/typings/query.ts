@@ -5,7 +5,7 @@ enum QUERY_LOADING_STATE {
 }
 
 /**
- * Key names in enum `QUERY_LOADING_STATE`.
+ * Values in enum `QUERY_LOADING_STATE`.
  */
 const QUERY_LOADING_STATE_VALUES = Object.freeze(
     Object.values(QUERY_LOADING_STATE).filter((value) => "number" === typeof value)
