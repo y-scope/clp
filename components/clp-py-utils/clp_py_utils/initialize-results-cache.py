@@ -65,7 +65,7 @@ def check_replica_set_status(client: MongoClient, netloc: str) -> tuple[bool, bo
 
 def init_replica_set_for_oplog(client: MongoClient, netloc: str, force: bool):
     """
-    Initializes or reconfigures a single-node MongoDB replica set for enabling the oplog.
+    Initializes or reconfigures a single-node MongoDB replica set for enabling oplog.
 
     :param client:
     :param netloc: The network location of the MongoDB instance to configure
