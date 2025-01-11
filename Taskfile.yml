@@ -249,7 +249,7 @@ tasks:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - for:
           - PATH: "client"
-            OUTPUT_DIR_FLAG: "--outDir"
+            OUTPUT_DIR_FLAG: "--emptyOutDir --outDir"
           - PATH: "yscope-log-viewer"
             OUTPUT_DIR_FLAG: "--output-path"
         cmd: |-
