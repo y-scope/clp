@@ -63,8 +63,8 @@ public:
         return IRErrorCode::IRErrorCode_Success;
     }
 
-    [[nodiscard]] auto get_deserialized_log_event(
-    ) const -> std::optional<KeyValuePairLogEvent> const& {
+    [[nodiscard]] auto get_deserialized_log_event() const
+            -> std::optional<KeyValuePairLogEvent> const& {
         return m_deserialized_log_event;
     }
 

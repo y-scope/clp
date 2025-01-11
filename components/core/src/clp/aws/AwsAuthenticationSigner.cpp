@@ -43,8 +43,8 @@ namespace {
  * @param timestamp
  * @return The formatted date string.
  */
-[[nodiscard]] auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp
-) -> string;
+[[nodiscard]] auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp)
+        -> string;
 
 /**
  * Gets the string to sign required by AWS Signature Version 4 protocol.
@@ -89,8 +89,8 @@ auto is_unreserved_characters(char c) -> bool {
     return is_alphabet(c) || is_decimal_digit(c) || c == '-' || c == '_' || c == '.' || c == '~';
 }
 
-auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp
-) -> string {
+auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp)
+        -> string {
     return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
 }
 
@@ -203,10 +203,9 @@ S3Url::S3Url(string const& url) {
     m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, m_end_point);
 }
 
-auto AwsAuthenticationSigner::generate_presigned_url(
-        S3Url const& s3_url,
-        string& presigned_url
-) const -> ErrorCode {
+auto
+AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& presigned_url) const
+        -> ErrorCode {
     auto const s3_region = s3_url.get_region();
 
     auto const now = std::chrono::system_clock::now();
@@ -245,10 +244,9 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     return ErrorCode_Success;
 }
 
-auto AwsAuthenticationSigner::get_canonical_query_string(
-        string_view scope,
-        string_view timestamp
-) const -> string {
+auto
+AwsAuthenticationSigner::get_canonical_query_string(string_view scope, string_view timestamp) const
+        -> string {
     auto const uri = fmt::format("{}/{}", m_access_key_id, scope);
     return fmt::format(
             "{}={}&{}={}&{}={}&{}={}&{}={}",

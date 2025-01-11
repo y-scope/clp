@@ -50,8 +50,8 @@ namespace clp::ffi::ir_stream {
  * - std::errc::result_out_of_range if the IR stream is truncated.
  * - Forwards `clp::ffi::ir_stream::deserialize_utc_offset_change`'s return values.
  */
-[[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset>;
+[[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
+        -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset>;
 
 /**
  * Deserializes a key-value pair log event IR unit.

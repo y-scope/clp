@@ -890,10 +890,8 @@ bool Grep::get_bounds_of_next_potential_var(
     return (value_length != begin_pos);
 }
 
-void Grep::calculate_sub_queries_relevant_to_file(
-        File const& compressed_file,
-        vector<Query>& queries
-) {
+void
+Grep::calculate_sub_queries_relevant_to_file(File const& compressed_file, vector<Query>& queries) {
     for (auto& query : queries) {
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
     }

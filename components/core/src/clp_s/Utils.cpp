@@ -362,11 +362,8 @@ bool StringUtils::advance_tame_to_next_match(
     return true;
 }
 
-bool StringUtils::wildcard_match_unsafe(
-        string_view tame,
-        string_view wild,
-        bool case_sensitive_match
-) {
+bool
+StringUtils::wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) {
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);
     } else {

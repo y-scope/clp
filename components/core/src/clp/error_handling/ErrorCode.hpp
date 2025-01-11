@@ -47,10 +47,9 @@ public:
      * @param condition
      * @return Whether the error condition of the given error matches the given condition.
      */
-    [[nodiscard]] auto equivalent(
-            int error_num,
-            std::error_condition const& condition
-    ) const noexcept -> bool override {
+    [[nodiscard]] auto
+    equivalent(int error_num, std::error_condition const& condition) const noexcept
+            -> bool override {
         return equivalent(static_cast<ErrorCodeEnum>(error_num), condition);
     }
 
@@ -69,10 +68,9 @@ public:
      * @param condition
      * @return Whether the error condition of the given error matches the given condition.
      */
-    [[nodiscard]] auto equivalent(
-            ErrorCodeEnum error_enum,
-            std::error_condition const& condition
-    ) const noexcept -> bool;
+    [[nodiscard]] auto
+    equivalent(ErrorCodeEnum error_enum, std::error_condition const& condition) const noexcept
+            -> bool;
 };
 
 /**

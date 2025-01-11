@@ -125,11 +125,8 @@ LogTypeDictionaryEntry::try_read_from_file(ZstdDecompressor& decompressor, uint6
     return error_code;
 }
 
-void LogTypeDictionaryEntry::read_from_file(
-        ZstdDecompressor& decompressor,
-        uint64_t id,
-        bool lazy
-) {
+void
+LogTypeDictionaryEntry::read_from_file(ZstdDecompressor& decompressor, uint64_t id, bool lazy) {
     auto error_code = try_read_from_file(decompressor, id, lazy);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);
@@ -244,11 +241,8 @@ ErrorCode VariableDictionaryEntry::try_read_from_file(ZstdDecompressor& decompre
     return error_code;
 }
 
-void VariableDictionaryEntry::read_from_file(
-        ZstdDecompressor& decompressor,
-        uint64_t id,
-        bool lazy
-) {
+void
+VariableDictionaryEntry::read_from_file(ZstdDecompressor& decompressor, uint64_t id, bool lazy) {
     auto error_code = try_read_from_file(decompressor, id);
     if (ErrorCodeSuccess != error_code) {
         throw OperationFailed(error_code, __FILENAME__, __LINE__);

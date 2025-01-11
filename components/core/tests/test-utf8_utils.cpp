@@ -31,8 +31,8 @@ namespace {
  * @param num_continuation_bytes
  * @return The encoded UTF-8 byte sequence.
  */
-[[nodiscard]] auto
-generate_utf8_byte_sequence(uint32_t code_point, size_t num_continuation_bytes) -> std::string;
+[[nodiscard]] auto generate_utf8_byte_sequence(uint32_t code_point, size_t num_continuation_bytes)
+        -> std::string;
 
 auto get_expected_escaped_string(std::string_view raw) -> std::string {
     nlohmann::json const json_str = raw;  // Don't use '{}' initializer

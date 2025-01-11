@@ -89,8 +89,8 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  * @param archives Returned archives
  * @return true on success, false otherwise
  */
-[[nodiscard]] auto
-get_input_archives_for_path(Path const& path, std::vector<Path>& archives) -> bool;
+[[nodiscard]] auto get_input_archives_for_path(Path const& path, std::vector<Path>& archives)
+        -> bool;
 
 /**
  * Determines the archive id of an archive based on the archive path.
@@ -98,8 +98,8 @@ get_input_archives_for_path(Path const& path, std::vector<Path>& archives) -> bo
  * @param archive_id Returned archive id
  * @return true on success, false otherwise
  */
-[[nodiscard]] auto
-get_archive_id_from_path(Path const& archive_path, std::string& archive_id) -> bool;
+[[nodiscard]] auto get_archive_id_from_path(Path const& archive_path, std::string& archive_id)
+        -> bool;
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP
