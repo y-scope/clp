@@ -276,15 +276,15 @@ def create_results_cache_indices(
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
     # fmt: off
-    create_tables_cmd = [
+    init_cmd = [
         "python3",
-        str(clp_py_utils_dir / "create-results-cache-indices.py"),
+        str(clp_py_utils_dir / "initialize-results-cache.py"),
         "--uri", container_clp_config.results_cache.get_uri(),
         "--stream-collection", container_clp_config.results_cache.stream_collection_name,
     ]
     # fmt: on
 
-    cmd = container_start_cmd + create_tables_cmd
+    cmd = container_start_cmd + init_cmd
     logger.debug(" ".join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
