@@ -17,7 +17,22 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def check_replica_set_status(client, netloc):
+def check_replica_set_status(client: MongoClient, netloc: str) -> tuple[bool, bool]:
+    """
+    Checks the current replica set status of the MongoDB server and determines whether it needs to
+    be configured or reconfigured.
+
+    :param client:
+    :param netloc: The network location for which the replica set configuration is being checked.
+
+    :return: A tuple containing:
+        - is_already_initialized: Indicates whether the replica set has already been initialized.
+        - should_configure_replica_set: Indicates whether the replica set needs to be configured or
+          reconfigured.
+
+    :raises pymongo.errors.OperationFailure: If the server returns an unexpected error during the
+    replica set status check.
+    """
     is_already_initialized = False
     should_configure_replica_set = False
 
@@ -48,8 +63,16 @@ def check_replica_set_status(client, netloc):
     return is_already_initialized, should_configure_replica_set
 
 
-def configure_replica_set(client, is_already_initialized, netloc):
-    logger.debug("Initializing replica set at %s", netloc)
+def init_replica_set_for_oplog(client: MongoClient, netloc: str, force: bool):
+    """
+    Initializes or reconfigures a single-node MongoDB replica set for enabling the oplog.
+
+    :param client:
+    :param netloc: The network location of the MongoDB instance to configure
+    as a replica set member.
+    :param force: Whether this is a reconfiguration operation.
+    """
+    logger.debug("Initializing single-node replica set for oplog at %s", netloc)
 
     # `replSetInitiate` can be called without a config object. However, explicit host
     # specification is required, or the docker's ID would be used as the hostname.
@@ -59,16 +82,25 @@ def configure_replica_set(client, is_already_initialized, netloc):
         "version": 1,
     }
 
-    if is_already_initialized:
+    if force:
         # Use `force=True` so that we do not have to increment the version
         client.admin.command("replSetReconfig", config, force=True)
     else:
         client.admin.command("replSetInitiate", config)
 
-    logger.debug("Replica set initialized successfully.")
+    logger.debug("Single-node replica set initialized successfully.")
 
 
-def configure_replica_set_if_needed(client, uri):
+def init_replica_set_for_oplog_if_needed(client: MongoClient, uri: str):
+    """
+    Initializes a MongoDB single-node replica set for enabling oplog, if not already initialized.
+
+    :param client: The MongoDB client instance used to connect to the server.
+    :param uri: The MongoDB connection URI, which includes the network location (e.g.,
+    `hostname:port`) of the MongoDB instance.
+
+    :raises ValueError: If the provided URI is invalid.
+    """
     parsed_uri = urlparse(uri)
     netloc = parsed_uri.netloc
     if 0 == len(netloc):
@@ -79,7 +111,7 @@ def configure_replica_set_if_needed(client, uri):
     is_already_initialized, should_configure_replica_set = check_replica_set_status(client, netloc)
 
     if should_configure_replica_set:
-        configure_replica_set(client, is_already_initialized, netloc)
+        init_replica_set_for_oplog(client, netloc=netloc, force=is_already_initialized)
 
 
 def main(argv):
@@ -95,7 +127,7 @@ def main(argv):
 
     try:
         with MongoClient(results_cache_uri, directConnection=True) as results_cache_client:
-            configure_replica_set_if_needed(results_cache_client, results_cache_uri)
+            init_replica_set_for_oplog_if_needed(results_cache_client, results_cache_uri)
 
         with MongoClient(results_cache_uri) as results_cache_client:
             stream_collection = results_cache_client.get_default_database()[stream_collection_name]
