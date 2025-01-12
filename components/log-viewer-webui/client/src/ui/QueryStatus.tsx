@@ -35,12 +35,13 @@ const QueryStatus = () => {
         }
         isFirstRun.current = false;
 
+        // Validates and parse search parameters.
         const searchParams = new URLSearchParams(window.location.search);
-        const params = Object.fromEntries(searchParams.entries())
-
+        const paramsObj = Object.fromEntries(searchParams)
         let parseResult: Static<typeof ExtractJobSearchParams>;
         try {
-            parseResult = Value.Parse(ExtractJobSearchParams, params)
+            parseResult = Value.Parse(ExtractJobSearchParams, paramsObj)
+            console.log(parseResult)
         } catch (e: unknown) {
             let error = "URL parameters parsing failed"
             if (e instanceof AssertError) {
