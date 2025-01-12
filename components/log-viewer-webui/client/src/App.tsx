@@ -1,6 +1,6 @@
 import {CssVarsProvider} from "@mui/joy";
 
-import LOCAL_STORAGE_KEY from "./typings/LOCAL_STORAGE_KEY";
+import {LOCAL_STORAGE_KEY} from "./typings/config";
 import QueryStatus from "./ui/QueryStatus";
 
 
