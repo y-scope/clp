@@ -9,19 +9,11 @@ import {isAxiosError} from "axios";
 import {submitExtractStreamJob} from "../api/query";
 import {Nullable} from "../typings/common";
 import {
-    QUERY_JOB_TYPE,
+    EXTRACT_JOB_TYPE,
     QUERY_LOADING_STATE,
 } from "../typings/query";
 import Loading from "./Loading";
 
-
-/**
- * Mapping between job type enums and stream type
- */
-const EXTRACT_JOB_TYPE = Object.freeze({
-    ir: QUERY_JOB_TYPE.EXTRACT_IR,
-    json: QUERY_JOB_TYPE.EXTRACT_JSON,
-});
 
 /**
  * Submits queries and renders the query states.
