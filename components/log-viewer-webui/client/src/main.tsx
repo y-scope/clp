@@ -5,9 +5,13 @@ import App from "./App";
 
 import "./index.css";
 
+const rootElement = document.getElementById("root");
+if (null === rootElement) {
+    throw new Error("Root element not found. "+
+        "Please ensure an element with id 'root' exists in the DOM.");
+}
 
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-const root = createRoot(document.getElementById("root")!);
+const root = createRoot(rootElement);
 root.render(
     <StrictMode>
         <App/>
