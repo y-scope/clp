@@ -9,10 +9,12 @@ import {isAxiosError} from "axios";
 import {submitExtractStreamJob} from "../api/query";
 import {Nullable} from "../typings/common";
 import {
-    EXTRACT_JOB_TYPE,
+    ExtractJobSearchParams,
     QUERY_LOADING_STATE,
 } from "../typings/query";
 import Loading from "./Loading";
+import {AssertError, Value } from '@sinclair/typebox/value'
+import { Static } from "@sinclair/typebox";
 
 
 /**
@@ -34,32 +36,25 @@ const QueryStatus = () => {
         isFirstRun.current = false;
 
         const searchParams = new URLSearchParams(window.location.search);
-        const streamType = searchParams.get("type");
-        const streamId = searchParams.get("streamId");
-        const logEventIdx = searchParams.get("logEventIdx");
+        const params = Object.fromEntries(searchParams.entries())
 
-        if (null === streamType || null === streamId || null === logEventIdx) {
-            const error = "Queries parameters are missing from the URL parameters.";
+        let parseResult: Static<typeof ExtractJobSearchParams>;
+        try {
+            parseResult = Value.Parse(ExtractJobSearchParams, params)
+        } catch (e: unknown) {
+            let error = "URL parameters parsing failed"
+            if (e instanceof AssertError) {
+                error += `: ${e.message}`;
+            }
             console.error(error);
             setErrorMsg(error);
-
             return;
         }
-
-        if (false === streamType in EXTRACT_JOB_TYPE) {
-            const error = `Unsupported Stream type: ${streamType}`;
-            console.error(error);
-            setErrorMsg(error);
-
-            return;
-        }
-        const sanitizedLogEventIdx = Number(logEventIdx);
-        const extractJobType = EXTRACT_JOB_TYPE[streamType as keyof typeof EXTRACT_JOB_TYPE];
 
         submitExtractStreamJob(
-            extractJobType,
-            streamId,
-            sanitizedLogEventIdx,
+            parseResult.type,
+            parseResult.streamId,
+            parseResult.logEventIdx,
             () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
             }
@@ -67,7 +62,7 @@ const QueryStatus = () => {
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
 
-                const innerLogEventNum = sanitizedLogEventIdx - data.begin_msg_ix + 1;
+                const innerLogEventNum = parseResult.logEventIdx - data.begin_msg_ix + 1;
                 window.location.href = `/log-viewer/index.html?filePath=/streams/${data.path}` +
                     `#logEventNum=${innerLogEventNum}`;
             })
