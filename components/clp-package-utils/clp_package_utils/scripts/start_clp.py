@@ -276,15 +276,15 @@ def create_results_cache_indices(
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
     # fmt: off
-    create_tables_cmd = [
+    init_cmd = [
         "python3",
-        str(clp_py_utils_dir / "create-results-cache-indices.py"),
+        str(clp_py_utils_dir / "initialize-results-cache.py"),
         "--uri", container_clp_config.results_cache.get_uri(),
         "--stream-collection", container_clp_config.results_cache.stream_collection_name,
     ]
     # fmt: on
 
-    cmd = container_start_cmd + create_tables_cmd
+    cmd = container_start_cmd + init_cmd
     logger.debug(" ".join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
@@ -493,6 +493,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     cmd = [
         "docker", "run",
         "-d",
+        "--network", "host",
         "--name", container_name,
         "--log-driver", "local",
         "-u", container_user,
@@ -501,12 +502,13 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     for mount in mounts:
         cmd.append("--mount")
         cmd.append(str(mount))
-    append_docker_port_settings_for_host_ips(
-        clp_config.results_cache.host, clp_config.results_cache.port, 27017, cmd
-    )
     cmd.append("mongo:7.0.1")
     cmd.append("--config")
     cmd.append(str(pathlib.Path("/") / "etc" / "mongo" / "mongod.conf"))
+    cmd.append("--bind_ip")
+    cmd.append(clp_config.results_cache.host)
+    cmd.append("--port")
+    cmd.append(str(clp_config.results_cache.port))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
