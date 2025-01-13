@@ -141,7 +141,7 @@ def main(argv):
                 return -1
     
     elif "find" == parsed_args.subcommand:
-        if hasattr(parsed_args, 'end_ts'):
+        if hasattr(parsed_args, 'end_ts') and parsed_args.end_ts is not None:
 
             # Validate the input timestamp
             if not validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):
@@ -176,7 +176,7 @@ def main(argv):
         elif "by-filter" == parsed_args.del_subcommand:
             del_archive_cmd.extend([str(parsed_args.begin_ts). str(parsed_args.end_ts)])
     elif "find" == parsed_args.subcommand:
-        if hasattr(parsed_args, 'end_ts'):
+        if hasattr(parsed_args, 'end_ts') and parsed_args.end_ts is not None:
             del_archive_cmd.extend([str(parsed_args.begin_ts). str(parsed_args.end_ts)])
 
     # fmt: on
