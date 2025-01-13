@@ -216,7 +216,6 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
             if (command_line_args.print_stream_stats()) {
                 nlohmann::json json_msg;
                 json_msg["stream_path"] = dest_ir_path;
-                json_msg["id"] = orig_file_id;
                 std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                           << std::endl;
             }
