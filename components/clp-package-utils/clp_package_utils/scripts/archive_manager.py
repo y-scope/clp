@@ -144,7 +144,7 @@ def main(argv):
         if hasattr(parsed_args, 'end_ts'):
 
             # Validate the input timestamp
-            if not validate_timestamps(parsed_args.begins_ts, parsed_args.end_ts):
+            if not validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):
                 return -1
 
     container_name = generate_container_name("archive-manager")
