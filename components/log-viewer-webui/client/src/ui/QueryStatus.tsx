@@ -4,6 +4,11 @@ import {
     useState,
 } from "react";
 
+import {Static} from "@sinclair/typebox";
+import {
+    AssertError,
+    Value,
+} from "@sinclair/typebox/value";
 import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../api/query";
@@ -13,8 +18,6 @@ import {
     QUERY_LOADING_STATE,
 } from "../typings/query";
 import Loading from "./Loading";
-import {AssertError, Value } from '@sinclair/typebox/value'
-import { Static } from "@sinclair/typebox";
 
 
 /**
@@ -37,18 +40,20 @@ const QueryStatus = () => {
 
         // Validates and parse search parameters.
         const searchParams = new URLSearchParams(window.location.search);
-        const paramsObj = Object.fromEntries(searchParams)
+        const paramsObj = Object.fromEntries(searchParams);
         let parseResult: Static<typeof ExtractJobSearchParams>;
         try {
-            parseResult = Value.Parse(ExtractJobSearchParams, paramsObj)
-            console.log(parseResult)
+            // eslint-disable-next-line new-cap
+            parseResult = Value.Parse(ExtractJobSearchParams, paramsObj);
+            console.log(parseResult);
         } catch (e: unknown) {
-            let error = "URL parameters parsing failed"
+            let error = "URL parameters parsing failed";
             if (e instanceof AssertError) {
                 error += `: ${e.message}`;
             }
             console.error(error);
             setErrorMsg(error);
+
             return;
         }
 

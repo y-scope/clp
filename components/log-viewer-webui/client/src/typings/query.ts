@@ -1,4 +1,8 @@
-import {TEnum, Type} from "@sinclair/typebox";
+import {
+    TEnum,
+    Type,
+} from "@sinclair/typebox";
+
 
 enum QUERY_LOADING_STATE {
     SUBMITTING = 0,
@@ -37,6 +41,7 @@ const EXTRACT_JOB_TYPE = Object.freeze({
  * URL search parameters required for extract job.
  */
 const ExtractJobSearchParams = Type.Object({
+    /* eslint-disable new-cap */
     // The `.Encode()` path is to satisfy TS and will never be executed.
     type: (
         Type.Transform(
@@ -45,9 +50,10 @@ const ExtractJobSearchParams = Type.Object({
             .Decode((value: keyof typeof EXTRACT_JOB_TYPE) => EXTRACT_JOB_TYPE[value])
             .Encode(() => null as never)
     ) as unknown as TEnum<typeof EXTRACT_JOB_TYPE>,
+    /* eslint-enable new-cap */
     streamId: Type.String(),
     logEventIdx: Type.Number(),
-})
+});
 
 interface QueryLoadingStateDescription {
     label: string;
@@ -58,7 +64,7 @@ interface QueryLoadingStateDescription {
  * Descriptions for query loading states.
  */
 const QUERY_LOADING_STATE_DESCRIPTIONS
-    : Record<QUERY_LOADING_STATE, QueryLoadingStateDescription> =
+: Record<QUERY_LOADING_STATE, QueryLoadingStateDescription> =
     Object.freeze({
         [QUERY_LOADING_STATE.SUBMITTING]: {
             label: "Submitting query Job",
