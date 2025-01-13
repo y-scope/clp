@@ -40,11 +40,12 @@ const EslintConfig = [
                 "error",
                 {
                     capIsNewExceptions: [
+                        "Decode",
+                        "Encode",
                         "Type.Transform",
                         "Type.Union",
                         "Type.Literal",
-                        "Decode",
-                        "Encode",
+                        "Value.Parse",
                     ],
                 },
             ],
