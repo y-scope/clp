@@ -341,7 +341,7 @@ class S3Config(BaseModel):
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archive"
+    directory: pathlib.Path
 
     @validator("directory")
     def validate_directory(cls, field):
@@ -358,9 +358,17 @@ class FsStorage(BaseModel):
         return d
 
 
+class ArchiveFsStorage(FsStorage):
+    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archive"
+
+
+class StreamFsStorage(FsStorage):
+    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+
+
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
-    staging_directory: pathlib.Path = pathlib.Path("var") / "data" / "staged_archives"
+    staging_directory: pathlib.Path
     s3_config: S3Config
 
     @validator("staging_directory")
@@ -376,6 +384,14 @@ class S3Storage(BaseModel):
         d = self.dict()
         d["staging_directory"] = str(d["staging_directory"])
         return d
+
+
+class ArchiveS3Storage(S3Storage):
+    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staging_archives"
+
+
+class StreamS3Storage(S3Storage):
+    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staging_streams"
 
 
 def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:
@@ -401,7 +417,7 @@ def _set_directory_for_storage_config(
 
 
 class ArchiveOutput(BaseModel):
-    storage: Union[FsStorage, S3Storage] = FsStorage()
+    storage: Union[ArchiveFsStorage, ArchiveS3Storage] = ArchiveFsStorage()
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
@@ -445,7 +461,7 @@ class ArchiveOutput(BaseModel):
 
 
 class StreamOutput(BaseModel):
-    storage: Union[FsStorage, S3Storage] = FsStorage()
+    storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
 
     @validator("target_uncompressed_size")
