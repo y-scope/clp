@@ -358,14 +358,6 @@ class FsStorage(BaseModel):
         return d
 
 
-class ArchiveFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archive"
-
-
-class StreamFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
-
-
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     staging_directory: pathlib.Path
@@ -386,12 +378,20 @@ class S3Storage(BaseModel):
         return d
 
 
+class ArchiveFsStorage(FsStorage):
+    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+
+
+class StreamFsStorage(FsStorage):
+    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+
+
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staging_archives"
+    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged_archives"
 
 
 class StreamS3Storage(S3Storage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staging_streams"
+    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged_streams"
 
 
 def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:

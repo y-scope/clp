@@ -6,7 +6,7 @@ import sys
 from contextlib import closing
 from logging import Logger
 from pathlib import Path
-from typing import Any, Dict, IO, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
 from clp_py_utils.sql_adapter import SQL_Adapter

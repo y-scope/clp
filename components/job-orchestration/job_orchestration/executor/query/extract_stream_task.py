@@ -131,8 +131,8 @@ def extract_stream(
     # Get s3 config
     s3_config: S3Config
     enable_s3_write = False
-    storage_config = worker_config.stream_output.storage
 
+    storage_config = worker_config.stream_output.storage
     if StorageType.S3 == storage_config.type:
         s3_config = storage_config.s3_config
         enable_s3_write = True
@@ -170,9 +170,9 @@ def extract_stream(
         for line in task_stdout_as_str.splitlines():
             stream_stats = json.loads(line)
             stream_path = Path(stream_stats["stream_path"])
-            stream_name = stream_path.name
 
             if s3_error is None:
+                stream_name = stream_path.name
                 logger.info(f"Uploading stream {stream_name} to S3...")
                 result = s3_put(s3_config, stream_path, stream_name)
 
