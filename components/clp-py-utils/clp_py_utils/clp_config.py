@@ -391,7 +391,7 @@ class ArchiveS3Storage(S3Storage):
 
 
 class StreamS3Storage(S3Storage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged_streams"
+    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged_streams"
 
 
 def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:
