@@ -5,7 +5,7 @@
 #include <string>
 
 #include "../ffi/encoding_methods.hpp"
-#include "ffi/ir_stream/decoding_methods.hpp"
+#include "../ffi/ir_stream/decoding_methods.hpp"
 
 using clp::ffi::decode_float_var;
 using clp::ffi::decode_integer_var;

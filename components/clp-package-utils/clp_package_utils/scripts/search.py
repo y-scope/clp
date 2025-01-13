@@ -42,12 +42,12 @@ def main(argv):
     args_parser.add_argument(
         "--begin-time",
         type=int,
-        help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time range filter lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "--end-time",
         type=int,
-        help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time range filter upper-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "--ignore-case",
@@ -60,6 +60,9 @@ def main(argv):
         "--count-by-time",
         type=int,
         help="Count the number of results in each time span of the given size (ms).",
+    )
+    args_parser.add_argument(
+        "--raw", action="store_true", help="Output the search results as raw logs."
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -119,6 +122,8 @@ def main(argv):
     if parsed_args.count_by_time is not None:
         search_cmd.append("--count-by-time")
         search_cmd.append(str(parsed_args.count_by_time))
+    if parsed_args.raw:
+        search_cmd.append("--raw")
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 
