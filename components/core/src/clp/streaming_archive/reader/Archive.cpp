@@ -161,11 +161,8 @@ bool Archive::get_next_message(File& file, Message& msg) {
     return file.get_next_message(msg);
 }
 
-bool Archive::decompress_message(
-        File& file,
-        Message const& compressed_msg,
-        string& decompressed_msg
-) {
+bool
+Archive::decompress_message(File& file, Message const& compressed_msg, string& decompressed_msg) {
     if (false == decompress_message_without_ts(compressed_msg, decompressed_msg)) {
         return false;
     }
@@ -198,10 +195,8 @@ bool Archive::decompress_message(
     return true;
 }
 
-bool Archive::decompress_message_without_ts(
-        Message const& compressed_msg,
-        string& decompressed_msg
-) {
+bool
+Archive::decompress_message_without_ts(Message const& compressed_msg, string& decompressed_msg) {
     decompressed_msg.clear();
 
     // Build original message content

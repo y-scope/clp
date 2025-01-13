@@ -66,10 +66,8 @@ static void tokenize_query(
 );
 
 template <typename encoded_variable_t>
-void generate_subqueries(
-        string_view wildcard_query,
-        vector<Subquery<encoded_variable_t>>& sub_queries
-) {
+void
+generate_subqueries(string_view wildcard_query, vector<Subquery<encoded_variable_t>>& sub_queries) {
     if (wildcard_query.empty()) {
         throw QueryMethodFailed(
                 ErrorCode_BadParam,

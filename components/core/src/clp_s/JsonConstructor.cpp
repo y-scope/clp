@@ -32,22 +32,11 @@ JsonConstructor::JsonConstructor(JsonConstructorOption const& option) : m_option
                 )
         );
     }
-
-    std::filesystem::path archive_path{m_option.archives_dir};
-    archive_path /= m_option.archive_id;
-    if (false == std::filesystem::is_directory(archive_path)) {
-        throw OperationFailed(
-                ErrorCodeFailure,
-                __FILENAME__,
-                __LINE__,
-                fmt::format("'{}' is not a directory", archive_path.c_str())
-        );
-    }
 }
 
 void JsonConstructor::store() {
     m_archive_reader = std::make_unique<ArchiveReader>();
-    m_archive_reader->open(m_option.archives_dir, m_option.archive_id);
+    m_archive_reader->open(m_option.archive_path, m_option.network_auth);
     m_archive_reader->read_dictionaries_and_metadata();
 
     if (m_option.ordered && false == m_archive_reader->has_log_order()) {
@@ -85,7 +74,7 @@ void JsonConstructor::construct_in_order() {
     int64_t first_idx{};
     int64_t last_idx{};
     size_t chunk_size{};
-    auto src_path = std::filesystem::path(m_option.output_dir) / m_option.archive_id;
+    auto src_path = std::filesystem::path(m_option.output_dir) / m_archive_reader->get_archive_id();
     FileWriter writer;
     writer.open(src_path, FileWriter::OpenMode::CreateForWriting);
 
@@ -124,7 +113,7 @@ void JsonConstructor::construct_in_order() {
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cStreamId,
-                            m_option.archive_id
+                            std::string{m_archive_reader->get_archive_id()}
                     ),
                     bsoncxx::builder::basic::kvp(
                             constants::results_cache::decompression::cBeginMsgIx,

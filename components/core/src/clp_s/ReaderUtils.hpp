@@ -1,7 +1,11 @@
 #ifndef CLP_S_READERUTILS_HPP
 #define CLP_S_READERUTILS_HPP
 
+#include <string>
+
+#include "../clp/ReaderInterface.hpp"
 #include "DictionaryReader.hpp"
+#include "InputConfig.hpp"
 #include "Schema.hpp"
 #include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
@@ -67,11 +71,13 @@ public:
     );
 
     /**
-     * Gets the list of archives in the given archive directory
-     * @param archives_dir
-     * @return the list of archives
+     * Tries to open a clp::ReaderInterface using the given Path and NetworkAuthOption.
+     * @param path
+     * @param network_auth
+     * @return the opened clp::ReaderInterface or nullptr on error
      */
-    static std::vector<std::string> get_archives(std::string const& archives_dir);
+    static std::shared_ptr<clp::ReaderInterface>
+    try_create_reader(Path const& path, NetworkAuthOption const& network_auth);
 
 private:
     /**

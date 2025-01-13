@@ -1,6 +1,14 @@
 #include "ReaderUtils.hpp"
 
+#include <spdlog/spdlog.h>
+
+#include "../clp/aws/AwsAuthenticationSigner.hpp"
+#include "../clp/FileReader.hpp"
+#include "../clp/NetworkReader.hpp"
+#include "../clp/ReaderInterface.hpp"
+#include "../clp/spdlog_with_specializations.hpp"
 #include "archive_constants.hpp"
+#include "Utils.hpp"
 
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(std::string const& archives_dir) {
@@ -142,22 +150,75 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(std::string co
     return schemas_pointer;
 }
 
-std::vector<std::string> ReaderUtils::get_archives(std::string const& archives_dir) {
-    std::vector<std::string> archive_paths;
-
-    if (false == boost::filesystem::is_directory(archives_dir)) {
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+namespace {
+std::shared_ptr<clp::ReaderInterface> try_create_file_reader(std::string_view const file_path) {
+    try {
+        return std::make_shared<clp::FileReader>(std::string{file_path});
+    } catch (clp::FileReader::OperationFailed const& e) {
+        SPDLOG_ERROR("Failed to open file for reading - {} - {}", file_path, e.what());
+        return nullptr;
     }
-
-    boost::filesystem::directory_iterator iter(archives_dir);
-    boost::filesystem::directory_iterator end;
-    for (; iter != end; ++iter) {
-        if (boost::filesystem::is_directory(iter->path())) {
-            archive_paths.push_back(iter->path().string());
-        }
-    }
-
-    return archive_paths;
 }
 
+bool try_sign_url(std::string& url) {
+    auto const aws_access_key = std::getenv(cAwsAccessKeyIdEnvVar);
+    auto const aws_secret_access_key = std::getenv(cAwsSecretAccessKeyEnvVar);
+    if (nullptr == aws_access_key || nullptr == aws_secret_access_key) {
+        SPDLOG_ERROR(
+                "{} and {} environment variables not available for presigned url authentication.",
+                cAwsAccessKeyIdEnvVar,
+                cAwsSecretAccessKeyEnvVar
+        );
+        return false;
+    }
+
+    clp::aws::AwsAuthenticationSigner signer{aws_access_key, aws_secret_access_key};
+
+    try {
+        clp::aws::S3Url s3_url{url};
+        if (auto const rc = signer.generate_presigned_url(s3_url, url);
+            clp::ErrorCode::ErrorCode_Success != rc)
+        {
+            return false;
+        }
+    } catch (std::exception const& e) {
+        return false;
+    }
+    return true;
+}
+
+std::shared_ptr<clp::ReaderInterface>
+try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth) {
+    std::string request_url{url};
+    switch (auth.method) {
+        case AuthMethod::S3PresignedUrlV4:
+            if (false == try_sign_url(request_url)) {
+                return nullptr;
+            }
+            break;
+        case AuthMethod::None:
+            break;
+        default:
+            return nullptr;
+    }
+
+    try {
+        return std::make_shared<clp::NetworkReader>(request_url);
+    } catch (clp::NetworkReader::OperationFailed const& e) {
+        SPDLOG_ERROR("Failed to open url for reading - {}", e.what());
+        return nullptr;
+    }
+}
+}  // namespace
+
+std::shared_ptr<clp::ReaderInterface>
+ReaderUtils::try_create_reader(Path const& path, NetworkAuthOption const& network_auth) {
+    if (InputSource::Filesystem == path.source) {
+        return try_create_file_reader(path.path);
+    } else if (InputSource::Network == path.source) {
+        return try_create_network_reader(path.path, network_auth);
+    } else {
+        return nullptr;
+    }
+}
 }  // namespace clp_s

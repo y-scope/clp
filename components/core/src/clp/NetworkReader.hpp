@@ -132,8 +132,8 @@ public:
      * @return ErrorCode_EndOfFile if there is no more buffered data.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto
-    try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) -> ErrorCode override {
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override {
         return read_from_filled_buffers(num_bytes_to_read, num_bytes_read, buf);
     }
 
@@ -306,11 +306,9 @@ private:
      * @return ErrorCode_EndOfFile if the buffer doesn't contain any more data.
      * @return ErrorCode_Success on success.
      */
-    [[nodiscard]] auto read_from_filled_buffers(
-            size_t num_bytes_to_read,
-            size_t& num_bytes_read,
-            char* dst
-    ) -> ErrorCode;
+    [[nodiscard]] auto
+    read_from_filled_buffers(size_t num_bytes_to_read, size_t& num_bytes_read, char* dst)
+            -> ErrorCode;
 
     /**
      * Sets the download completion status with the return code from curl.

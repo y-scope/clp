@@ -85,8 +85,8 @@ public:
      * an error code indicating a failure:
      * - Forwards `get_schema_subtree_bitmap`'s return values.
      */
-    [[nodiscard]] auto get_auto_gen_keys_schema_subtree_bitmap(
-    ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
+    [[nodiscard]] auto get_auto_gen_keys_schema_subtree_bitmap() const
+            -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
 
     /**
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
@@ -95,8 +95,8 @@ public:
      * an error code indicating a failure:
      * - Forwards `get_schema_subtree_bitmap`'s return values.
      */
-    [[nodiscard]] auto get_user_gen_keys_schema_subtree_bitmap(
-    ) const -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
+    [[nodiscard]] auto get_user_gen_keys_schema_subtree_bitmap() const
+            -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
 
@@ -110,8 +110,8 @@ public:
      *   - Forwards `get_auto_gen_keys_schema_subtree_bitmap`'s return values on failure.
      *   - Forwards `serialize_node_id_value_pairs_to_json`'s return values on failure.
      */
-    [[nodiscard]] auto serialize_to_json(
-    ) const -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>>;
+    [[nodiscard]] auto serialize_to_json() const
+            -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>>;
 
 private:
     // Constructor
