@@ -169,7 +169,7 @@ tasks:
         "{{.OUTPUT_DIR}}/var/www/log_viewer_webui/server/"
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/log_viewer_webui/server"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm install
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
@@ -426,7 +426,7 @@ tasks:
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       - |-
         cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm install
       # These commands must be last
       - task: "utils:compute-checksum"
         vars:
