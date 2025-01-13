@@ -194,7 +194,9 @@ public:
         return m_logtype_dict.get_data_size() + m_var_dict.get_data_size();
     }
 
-    [[nodiscard]] auto get_use_single_file_archive() const -> bool { return m_use_single_file_archive; }
+    [[nodiscard]] auto get_use_single_file_archive() const -> bool {
+        return m_use_single_file_archive;
+    }
 
 private:
     // Types

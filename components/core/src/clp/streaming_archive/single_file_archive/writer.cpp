@@ -37,7 +37,8 @@ constexpr size_t cReadBlockSize = 4096;
  * represents the starting position of the next file in single-file archive.
  * @throws OperationFailed if error getting file size.
  */
-auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uint64_t& offset) -> void;
+auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uint64_t& offset)
+        -> void;
 
 /**
  * Generates metadata for the file section of a single-file archive. The metadata consists
@@ -122,7 +123,8 @@ auto get_segment_ids(segment_id_t next_segment_id) -> std::vector<std::string> {
     return segment_ids;
 }
 
-auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uint64_t& offset) -> void {
+auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uint64_t& offset)
+        -> void {
     try {
         auto size = std::filesystem::file_size(file_path);
         offset += size;
@@ -259,7 +261,6 @@ auto write_single_file_archive(
         std::filesystem::path const& multi_file_archive_path,
         segment_id_t next_segment_id
 ) -> void {
-
     FileWriter archive_writer;
     std::filesystem::path single_file_archive_path
             = multi_file_archive_path.string()
@@ -274,13 +275,12 @@ auto write_single_file_archive(
             FileWriter::OpenMode::CREATE_FOR_WRITING
     );
 
-    auto const segment_ids
-        = clp::streaming_archive::single_file_archive::get_segment_ids(next_segment_id);
+    auto const segment_ids = get_segment_ids(next_segment_id);
 
     auto const packed_metadata = pack_single_file_archive_metadata(
-        multi_file_archive_metadata,
-        get_file_infos(multi_file_archive_path, segment_ids),
-        segment_ids.size()
+            multi_file_archive_metadata,
+            get_file_infos(multi_file_archive_path, segment_ids),
+            segment_ids.size()
     );
 
     write_archive_header(archive_writer, packed_metadata.str().size());
