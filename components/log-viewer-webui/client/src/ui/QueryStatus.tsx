@@ -43,7 +43,6 @@ const QueryStatus = () => {
         const paramsObj = Object.fromEntries(searchParams);
         let parseResult: Static<typeof ExtractJobSearchParams>;
         try {
-            // eslint-disable-next-line new-cap
             parseResult = Value.Parse(ExtractJobSearchParams, paramsObj);
             console.log(parseResult);
         } catch (e: unknown) {

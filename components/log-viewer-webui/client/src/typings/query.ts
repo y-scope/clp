@@ -41,7 +41,6 @@ const EXTRACT_JOB_TYPE = Object.freeze({
  * URL search parameters required for extract job.
  */
 const ExtractJobSearchParams = Type.Object({
-    /* eslint-disable new-cap */
     // The `.Encode()` path is to satisfy TS and will never be executed.
     type: (
         Type.Transform(
@@ -50,7 +49,6 @@ const ExtractJobSearchParams = Type.Object({
             .Decode((value: keyof typeof EXTRACT_JOB_TYPE) => EXTRACT_JOB_TYPE[value])
             .Encode(() => null as never)
     ) as unknown as TEnum<typeof EXTRACT_JOB_TYPE>,
-    /* eslint-enable new-cap */
     streamId: Type.String(),
     logEventIdx: Type.Number(),
 });

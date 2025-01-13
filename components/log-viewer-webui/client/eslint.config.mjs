@@ -34,6 +34,22 @@ const EslintConfig = [
     ),
     ...StylisticConfigArray,
     ...ReactConfigArray,
+    {
+        rules: {
+            "new-cap": [
+                "error",
+                {
+                    capIsNewExceptions: [
+                        "Type.Transform",
+                        "Type.Union",
+                        "Type.Literal",
+                        "Decode",
+                        "Encode",
+                    ],
+                },
+            ],
+        },
+    },
 ];
 
 
