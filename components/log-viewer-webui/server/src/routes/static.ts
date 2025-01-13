@@ -1,9 +1,9 @@
-import {FastifyPluginAsync} from "fastify";
 import path from "node:path";
 import process from "node:process";
 import {fileURLToPath} from "node:url";
 
 import {fastifyStatic} from "@fastify/static";
+import {FastifyPluginAsync} from "fastify";
 
 import settings from "../../settings.json" with {type: "json"};
 

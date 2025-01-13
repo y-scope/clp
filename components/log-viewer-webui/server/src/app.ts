@@ -1,9 +1,10 @@
+import process from "node:process";
+
 import {
     fastify,
     FastifyInstance,
     FastifyServerOptions,
 } from "fastify";
-import process from "node:process";
 
 import settings from "../settings.json" with {type: "json"};
 import DbManager from "./DbManager.js";

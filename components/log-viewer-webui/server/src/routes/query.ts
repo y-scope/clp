@@ -1,8 +1,7 @@
-import {FastifyPluginAsync} from "fastify";
-import {StatusCodes} from "http-status-codes";
-
 import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
+import {FastifyPluginAsync} from "fastify";
+import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
 import {QUERY_JOB_TYPE} from "../DbManager.js";

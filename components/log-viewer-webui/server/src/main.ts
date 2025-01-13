@@ -1,14 +1,16 @@
+import process from "node:process";
+
 import {config as dotenvConfig} from "dotenv";
 import {
     FastifyLoggerOptions,
     PinoLoggerOptions,
 } from "fastify/types/logger.js";
-import process from "node:process";
 
 import app from "./app.js";
 
 
 type NodeEnv = "development" | "production" | "test";
+
 const KNOWN_NODE_ENVS = new Set<NodeEnv>([
     "development",
     "production",
@@ -65,14 +67,14 @@ const parseEnvVars = (): EnvVars => {
         ],
     });
 
-    /* eslint-disable sort-keys */
+
     const {
         NODE_ENV, CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
     } = process.env;
     const mandatoryEnvVars = {
         CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
     } as EnvVars;
-    /* eslint-enable sort-keys */
+
 
     // Check for mandatory environment variables
     for (const [key, value] of Object.entries(mandatoryEnvVars)) {

@@ -6,8 +6,8 @@
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "build:watch": "npm run build -- --watch",
-    "lint:check": "npx eslint --no-eslintrc --config package.json src",
-    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json src",
+    "lint:check": "npx eslint .",
+    "lint:fix": "npm run lint:check -- --fix",
     "prod": "NODE_ENV=production node dist/src/main.js",
     "start": "NODE_ENV=development concurrently \"npm run build:watch\" \"nodemon dist/src/main.js\"",
     "test": "NODE_ENV=test tap"
@@ -31,31 +31,9 @@
     "typescript": "^5.7.2"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.19.0",
-    "@typescript-eslint/parser": "^8.19.0",
     "concurrently": "^9.1.2",
     "eslint-config-yscope": "latest",
-    "eslint-import-resolver-typescript": "^3.7.0",
     "nodemon": "^3.1.9",
     "tap": "^21.0.1"
-  },
-  "eslintConfig": {
-    "root": true,
-    "extends": [
-      "yscope/react",
-      "yscope/typescript"
-    ],
-    "ignorePatterns": [
-      "dist/",
-      "node_modules/"
-    ],
-    "rules": {
-      "@typescript-eslint/require-await": [
-        "off"
-      ],
-      "new-cap": [
-        "off"
-      ]
-    }
   }
 }

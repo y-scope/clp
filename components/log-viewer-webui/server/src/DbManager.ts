@@ -1,3 +1,9 @@
+import fastifyMongo from "@fastify/mongodb";
+import {
+    fastifyMysql,
+    MySQLPromisePool,
+} from "@fastify/mysql";
+import {encode as msgpackEncode} from "@msgpack/msgpack";
 import {
     FastifyInstance,
     FastifyPluginAsync,
@@ -8,13 +14,6 @@ import {
     Pool as PromisePool,
     ResultSetHeader,
 } from "mysql2/promise";
-
-import fastifyMongo from "@fastify/mongodb";
-import {
-    fastifyMysql,
-    MySQLPromisePool,
-} from "@fastify/mysql";
-import {encode as msgpackEncode} from "@msgpack/msgpack";
 
 import {
     QUERY_JOB_STATUS,
@@ -28,19 +27,19 @@ import {sleep} from "./utils.js";
 
 interface DbManagerOptions {
     mysqlConfig: {
-        user: string,
-        password: string,
-        host: string,
-        port: number,
-        database: string,
-        queryJobsTableName: string,
-    },
+        user: string;
+        password: string;
+        host: string;
+        port: number;
+        database: string;
+        queryJobsTableName: string;
+    };
     mongoConfig: {
-        database: string,
-        host: string,
-        streamFilesCollectionName: string,
-        port: number,
-    }
+        database: string;
+        host: string;
+        streamFilesCollectionName: string;
+        port: number;
+    };
 }
 
 interface StreamFileMongoDocument {
@@ -79,10 +78,10 @@ class DbManager {
      * @param props.streamFilesCollection
      */
     constructor ({app, mysqlConnectionPool, queryJobsTableName, streamFilesCollection}: {
-        app: FastifyInstance,
-        mysqlConnectionPool: PromisePool,
-        queryJobsTableName: string
-        streamFilesCollection: StreamFilesCollection,
+        app: FastifyInstance;
+        mysqlConnectionPool: PromisePool;
+        queryJobsTableName: string;
+        streamFilesCollection: StreamFilesCollection;
     }) {
         this.#fastify = app;
 
@@ -128,9 +127,9 @@ class DbManager {
      * @return The MongoDB Collection objects created during initialization.
      */
     static async #initMongo (app: FastifyInstance, config: DbManagerOptions["mongoConfig"])
-    : Promise<{
-        streamFilesCollection: StreamFilesCollection,
-    }> {
+        : Promise<{
+            streamFilesCollection: StreamFilesCollection;
+        }> {
         await app.register(fastifyMongo, {
             forceClose: true,
             url: `mongodb://${config.host}:${config.port}/${config.database}`,
@@ -159,10 +158,10 @@ class DbManager {
         streamId,
         targetUncompressedSize,
     }: {
-        jobType: QUERY_JOB_TYPE,
-        logEventIdx: number,
-        streamId: string,
-        targetUncompressedSize: number,
+        jobType: QUERY_JOB_TYPE;
+        logEventIdx: number;
+        streamId: string;
+        targetUncompressedSize: number;
     }): Promise<number | null> {
         let jobConfig;
         if (QUERY_JOB_TYPE.EXTRACT_IR === jobType) {
@@ -210,7 +209,7 @@ class DbManager {
      * @return A promise that resolves to the extracted stream's metadata.
      */
     async getExtractedStreamFileMetadata (streamId: string, logEventIdx: number)
-    : Promise<StreamFileMongoDocument | null> {
+        : Promise<StreamFileMongoDocument | null> {
         return await this.#streamFilesCollection.findOne({
             stream_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},
@@ -281,9 +280,9 @@ declare module "fastify" {
 
         // The typing of `@fastify/mysql` needs to be manually specified.
         // See https://github.com/fastify/fastify-mysql#typescript
-        mysql: MySQLPromisePool
+        mysql: MySQLPromisePool;
 
-        dbManager: DbManager
+        dbManager: DbManager;
     }
 }
 
