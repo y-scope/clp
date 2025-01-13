@@ -178,7 +178,8 @@ tasks:
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-      - "../package.json"
+      - "package.json"
+      - "package-lock.json"
     dir: "{{.WEBUI_LINTER_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -191,7 +192,7 @@ tasks:
       - ":nodejs-22"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm update"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm clean-install"
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:

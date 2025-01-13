@@ -69,11 +69,8 @@ void PackedStreamReader::close() {
     m_state = PackedStreamReaderState::Uninitialized;
 }
 
-void PackedStreamReader::read_stream(
-        size_t stream_id,
-        std::shared_ptr<char[]>& buf,
-        size_t& buf_size
-) {
+void
+PackedStreamReader::read_stream(size_t stream_id, std::shared_ptr<char[]>& buf, size_t& buf_size) {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
     if (stream_id >= m_stream_metadata.size()) {
         throw OperationFailed(ErrorCodeCorrupt, __FILE__, __LINE__);

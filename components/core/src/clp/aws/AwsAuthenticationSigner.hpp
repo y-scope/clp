@@ -82,8 +82,8 @@ public:
      * @return ErrorCode_Success on success.
      * @return Same as `get_sha256_hash` and `AwsAuthenticationSigner::get_signature` on failure.
      */
-    [[nodiscard]] auto
-    generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) const -> ErrorCode;
+    [[nodiscard]] auto generate_presigned_url(S3Url const& s3_url, std::string& presigned_url) const
+            -> ErrorCode;
 
 private:
     /**
@@ -92,10 +92,9 @@ private:
      * @param timestamp
      * @return The canonical query string.
      */
-    [[nodiscard]] auto get_canonical_query_string(
-            std::string_view scope,
-            std::string_view timestamp
-    ) const -> std::string;
+    [[nodiscard]] auto
+    get_canonical_query_string(std::string_view scope, std::string_view timestamp) const
+            -> std::string;
 
     /**
      * Gets the signature signing key for the request.

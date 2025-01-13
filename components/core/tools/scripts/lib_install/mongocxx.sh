@@ -85,11 +85,12 @@ set -e
 if [ $checkinstall_installed -eq 0 ] ; then
   install_cmd_args+=(
     checkinstall
+    --default
+    --fstrans=no
+    --nodoc
     --pkgname "${package_name}"
     --pkgversion "${version}"
     --provides "${package_name}"
-    --nodoc
-    -y
     --pakdir "${deb_output_dir}"
   )
 fi

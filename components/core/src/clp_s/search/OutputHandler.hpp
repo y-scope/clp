@@ -32,7 +32,7 @@ public:
     // Constructors
     explicit OutputHandler(bool should_output_metadata, bool should_marshal_records)
             : m_should_output_metadata(should_output_metadata),
-              m_should_marshal_records(should_marshal_records) {};
+              m_should_marshal_records(should_marshal_records) {}
 
     // Destructor
     virtual ~OutputHandler() = default;

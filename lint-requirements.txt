@@ -1,5 +1,4 @@
 black>=24.4.2
-# Lock to v18.x until we can upgrade our code to meet v19's formatting standards.
-clang-format~=18.1
+clang-format>=19.1.6
 ruff>=0.4.4
 yamllint>=1.35.1

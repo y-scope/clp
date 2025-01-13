@@ -183,11 +183,8 @@ bool Archive::get_next_message(File& file, Message& msg) {
     return file.get_next_message(msg);
 }
 
-bool Archive::decompress_message(
-        File& file,
-        Message const& compressed_msg,
-        string& decompressed_msg
-) {
+bool
+Archive::decompress_message(File& file, Message const& compressed_msg, string& decompressed_msg) {
     decompressed_msg.clear();
 
     // Build original message content
