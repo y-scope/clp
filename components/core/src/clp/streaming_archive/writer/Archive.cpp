@@ -661,27 +661,16 @@ void Archive::update_metadata() {
 }
 
 void Archive::create_single_file_archive() {
-    std::filesystem::path multi_file_archive_path = m_path;
-
-    auto segment_ids
-            = clp::streaming_archive::single_file_archive::get_segment_ids(m_next_segment_id - 1);
-
     if (false == m_local_metadata.has_value()) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    auto& multi_file_archive_metadata = m_local_metadata.value();
-    auto packed_metadata
-            = clp::streaming_archive::single_file_archive::create_single_file_archive_metadata(
-                    multi_file_archive_metadata,
-                    multi_file_archive_path,
-                    segment_ids
-            );
+    auto const& multi_file_archive_metadata = m_local_metadata.value();
 
     clp::streaming_archive::single_file_archive::write_single_file_archive(
-            multi_file_archive_path,
-            packed_metadata,
-            segment_ids
+            multi_file_archive_metadata,
+            m_path,
+            m_next_segment_id
     );
 }
 

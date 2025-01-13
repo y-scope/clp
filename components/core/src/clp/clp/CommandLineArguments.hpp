@@ -46,7 +46,7 @@ public:
 
     bool show_progress() const { return m_show_progress; }
 
-    bool get_use_single_file_archive() const { return m_single_file_archive; }
+    [[nodiscard]] auto single_file_archive() const -> bool { return m_single_file_archive; }
 
     bool sort_input_files() const { return m_sort_input_files; }
 

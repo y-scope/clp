@@ -194,7 +194,7 @@ public:
         return m_logtype_dict.get_data_size() + m_var_dict.get_data_size();
     }
 
-    bool get_use_single_file_archive() const { return m_use_single_file_archive; }
+    [[nodiscard]] auto get_use_single_file_archive() const -> bool { return m_use_single_file_archive; }
 
 private:
     // Types
@@ -285,7 +285,7 @@ private:
     /**
      * Writes archive to disk in single-file format then removes existing multi-file archive.
      */
-    void create_single_file_archive();
+    auto create_single_file_archive() -> void;
 
     // Variables
     boost::uuids::uuid m_id;

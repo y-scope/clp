@@ -34,38 +34,18 @@ private:
 };
 
 /**
- * @param last_segment_id ID of last written segment in archive.
- * @return Vector of segment IDs.
- */
-auto get_segment_ids(segment_id_t last_segment_id) -> std::vector<std::string>;
-
-/**
- * Generates packed single-file archive metadata.
- *
- * @param multi_file_archive_metadata
- * @param multi_file_archive_path
- * @param segment_ids
- * @return Packed metadata.
- */
-auto create_single_file_archive_metadata(
-        ArchiveMetadata const& multi_file_archive_metadata,
-        std::filesystem::path const& multi_file_archive_path,
-        std::vector<std::string> const& segment_ids
-) -> std::stringstream;
-
-/**
  * Writes header, metadata and archive files in single-file format then
  * removes existing multi-file archive.
  *
+ * @param multi_file_archive_metadata
  * @param multi_file_archive_path
- * @param packed_metadata
- * @param segment_ids
+ * @param next_segment_id
  * @throws OperationFailed if single-file archive path already exists.
  */
 auto write_single_file_archive(
+        ArchiveMetadata const& multi_file_archive_metadata,
         std::filesystem::path const& multi_file_archive_path,
-        std::stringstream const& packed_metadata,
-        std::vector<std::string> const& segment_ids
+        segment_id_t next_segment_id
 ) -> void;
 
 }  // namespace clp::streaming_archive::single_file_archive
