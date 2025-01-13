@@ -426,7 +426,7 @@ tasks:
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       - |-
         cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm install
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # These commands must be last
       - task: "utils:compute-checksum"
         vars:
@@ -617,7 +617,7 @@ tasks:
           DATA_DIR: "{{.OUTPUT_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.G_METEOR_BUILD_DIR}}':$PATH meteor npm install --production"
+      - "PATH='{{.G_METEOR_BUILD_DIR}}':$PATH meteor npm clean-install --production"
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
