@@ -33,7 +33,7 @@ public:
     ~ArchiveReaderAdaptor();
 
     /**
-     * Load metadata for an archive including the header and metadata section. This method must be
+     * Loads metadata for an archive including the header and metadata section. This method must be
      * invoked before checking out any section of an archive, or calling `get_timestamp_dictionary`.
      * @return ErrorCodeSuccess on success
      * @return ErrorCode_errno on failure
@@ -41,7 +41,7 @@ public:
     ErrorCode load_archive_metadata();
 
     /**
-     * Checkout a reader for a given section of the archive. Reader must be checked back in with the
+     * Checks out a reader for a given section of the archive. Reader must be checked back in with the
      * `checkin_reader_for_section` method.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
@@ -51,7 +51,7 @@ public:
     std::unique_ptr<clp::ReaderInterface> checkout_reader_for_section(std::string_view section);
 
     /**
-     * Checkin a reader for a given section of the archive.
+     * Checks in a reader for a given section of the archive.
      * @param section
      * @throw OperationFailed if no reader is checked out, or if the section being checked in does
      *        not match the section currently checked out.
