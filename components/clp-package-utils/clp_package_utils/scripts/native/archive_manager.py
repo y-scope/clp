@@ -50,12 +50,12 @@ def main(argv):
 
     # Find options
     find_parser.add_argument(
-        "begin_ts",
+        "--begin_ts",
         type=int,
         help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     find_parser.add_argument(
-        "end_ts",
+        "--end_ts",
         type=int,
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
     )
@@ -63,7 +63,7 @@ def main(argv):
     # Delete options
     del_parser.add_argument(
         "--dry-run",
-        dest="drun_run",
+        dest="dry_run",
         action="store_true",
         help="Preview delete without making changes. Lists errors and files to be deleted.",
     )
@@ -119,8 +119,15 @@ def main(argv):
         return -1
 
     if "find" == parsed_args.subcommand:
-        # not done yet
-        return 0
+        if parsed_args.begin_ts is None and parsed_args.end_ts is None:
+            return _find_archives(archives_dir, database_config)
+        else:
+            return _find_archives(
+                archives_dir,
+                database_config,
+                parsed_args.begin_ts,
+                parsed_args.end_ts,
+            )
     elif "del" == parsed_args.subcommand:
         if "by-ids" == parsed_args.del_subcommand:
             return _delete_archives_by_ids(
@@ -194,7 +201,7 @@ def _delete_archives(
     archives_dir: Path,
     database_config: Database,
     query: str,
-    params: tuple,
+    params: List[str],
     criteria: str,
     dry_run: bool = False,
 ) -> int:
@@ -204,7 +211,7 @@ def _delete_archives(
     :param archives_dir:
     :param database_config:
     :param query: SQL query to select archives to delete.
-    :param params: Tuple of parameters for SQL query.
+    :param params: List of parameters for SQL query.
     :return: 0 on success, -1 otherwise.
     """
 
@@ -232,6 +239,9 @@ def _delete_archives(
                 return 0
 
             archive_ids = [result["id"] for result in results]
+
+            for archive_id in archive_ids:
+                logger.info(f"Deleted archive {archive_id} from the database.")
 
             if "ids" == criteria:
                 not_found_ids = set(params) - set(archive_ids)
@@ -306,7 +316,7 @@ def _delete_archives_by_filter(
         RETURNING id
         """
 
-    return _delete_archives(archives_dir, database_config, query, (begin_ts, end_ts), "filter", dry_run)
+    return _delete_archives(archives_dir, database_config, query, [begin_ts, end_ts], "filter", dry_run)
 
 def _delete_archives_by_ids(
     archives_dir: Path,
@@ -331,7 +341,7 @@ def _delete_archives_by_ids(
         RETURNING id
         """
 
-    return _delete_archives(archives_dir, database_config, query, tuple(archive_ids), "ids", dry_run)
+    return _delete_archives(archives_dir, database_config, query, archive_ids, "ids", dry_run)
                 
 
 

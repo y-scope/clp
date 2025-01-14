@@ -170,14 +170,15 @@ def main(argv):
     # Add subcommand-specific arguments
     if "del" == parsed_args.subcommand:
         if True == parsed_args.dry_run:
-            del_archive_cmd.extend("--dry-run")
+            del_archive_cmd.extend(["--dry-run"])
         if "by-ids" == parsed_args.del_subcommand:
+            del_archive_cmd.extend(["by-ids"])
             del_archive_cmd.extend(parsed_args.ids)
         elif "by-filter" == parsed_args.del_subcommand:
-            del_archive_cmd.extend([str(parsed_args.begin_ts). str(parsed_args.end_ts)])
+            del_archive_cmd.extend(["by-filter", str(parsed_args.begin_ts), str(parsed_args.end_ts)])
     elif "find" == parsed_args.subcommand:
-        if hasattr(parsed_args, 'end_ts') and parsed_args.end_ts is not None:
-            del_archive_cmd.extend([str(parsed_args.begin_ts). str(parsed_args.end_ts)])
+        if hasattr(parsed_args, "end-ts") and parsed_args.end_ts is not None:
+            del_archive_cmd.extend(["--begin-ts", str(parsed_args.begin_ts), "--end-ts", str(parsed_args.end_ts)])
 
     # fmt: on
 
