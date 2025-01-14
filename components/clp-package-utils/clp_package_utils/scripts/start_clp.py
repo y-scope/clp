@@ -926,6 +926,16 @@ def start_log_viewer_webui(
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
         "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
+
+    stream_storage = clp_config.stream_output.storage
+    if StorageType.S3 == stream_storage.type:
+        s3_config = stream_storage.s3_config
+        settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
+        settings_json_updates["StreamFilesS3PathPrefix"] = f"{s3_config.bucket}/{s3_config.key_prefix}"
+        if s3_config.access_key_id is not None and s3_config.secret_access_key is not None:
+            settings_json_updates["StreamS3AccessKeyId"] = s3_config.access_key_id
+            settings_json_updates["StreamS3SecretAccessKey"] = s3_config.secret_access_key
+
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(settings_json))
