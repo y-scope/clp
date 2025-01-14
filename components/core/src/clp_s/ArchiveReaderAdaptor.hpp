@@ -30,19 +30,17 @@ public:
 
     explicit ArchiveReaderAdaptor(Path const& archive_path, NetworkAuthOption const& network_auth);
 
-    ~ArchiveReaderAdaptor();
-
     /**
      * Loads metadata for an archive including the header and metadata section. This method must be
      * invoked before checking out any section of an archive, or calling `get_timestamp_dictionary`.
-     * @return ErrorCodeSuccess on success
-     * @return ErrorCode_errno on failure
+     * @return ErrorCodeSuccess on success.
+     * @return relevant ErrorCode on failure.
      */
     ErrorCode load_archive_metadata();
 
     /**
-     * Checks out a reader for a given section of the archive. Reader must be checked back in with the
-     * `checkin_reader_for_section` method.
+     * Checks out a reader for a given section of the archive. Reader must be checked back in with
+     * the `checkin_reader_for_section` method.
      * @param section
      * @return A ReaderInterface opened and pointing to the requested section.
      * @throw OperationFailed if a reader is already checked out, or checking out this section would
@@ -65,19 +63,64 @@ public:
     ArchiveHeader const& get_header() const { return m_archive_header; }
 
 private:
+    /**
+     * Tries to read an ArchiveFileInfo packet from the archive metadata.
+     * @param decompressor
+     * @param size The number of decompressed bytes making up the packet.
+     * @return ErrorCodeSuccess on success.
+     * @return relevant ErrorCode on failure.
+     */
     ErrorCode try_read_archive_file_info(ZstdDecompressor& decompressor, size_t size);
 
+    /**
+     * Tries to read an TimestampDictionary packet from the archive metadata.
+     * @param decompressor
+     * @param size The number of decompressed bytes making up the packet.
+     * @return ErrorCodeSuccess on success.
+     * @return relevant ErrorCode on failure.
+     */
     ErrorCode try_read_timestamp_dictionary(ZstdDecompressor& decompressor, size_t size);
 
+    /**
+     * Tries to read an ArchiveInfo packet from the archive metadata.
+     * @param decompressor
+     * @param size The number of decompressed bytes making up the packet.
+     * @return ErrorCodeSuccess on success.
+     * @return relevant ErrorCode on failure.
+     */
     ErrorCode try_read_archive_info(ZstdDecompressor& decompressor, size_t size);
 
+    /**
+     * Tries to create a reader for the archive header.
+     * @return A ReaderInterface opened and pointing to the archive header on success.
+     * @return nullptr on failure.
+     */
     std::shared_ptr<clp::ReaderInterface> try_create_reader_at_header();
 
+    /**
+     * Checks out a reader for a given section of the single file archive.
+     * @param section
+     * @return A ReaderInterface opened and pointing to the requested section.
+     * @throw OperationFailed if the requested section does not exist in ArchiveFileInfo, if
+     *        checking out the section would force a backward seek, or on any I/O error.
+     */
     std::unique_ptr<clp::ReaderInterface> checkout_reader_for_sfa_section(std::string_view section);
 
+    /**
+     * Tries to read the header for the archive from the given reader.
+     * @param reader
+     * @return ErrorCodeSuccess on success.
+     * @return relevant ErrorCode on failure.
+     */
     ErrorCode try_read_header(clp::ReaderInterface& reader);
 
-    ErrorCode try_read_archive_metadata(ZstdDecompressor& reader);
+    /**
+     * Tries to read the archive metadata from the given decompressor.
+     * @param decompressor
+     * @return ErrorCodeSuccess on success.
+     * @return relevant ErrorCode on failure.
+     */
+    ErrorCode try_read_archive_metadata(ZstdDecompressor& decompressor);
 
     Path m_archive_path{};
     NetworkAuthOption m_network_auth{};

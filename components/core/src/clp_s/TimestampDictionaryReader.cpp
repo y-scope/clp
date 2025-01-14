@@ -42,7 +42,7 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
     if (ErrorCodeSuccess != error) {
         return error;
     }
-    for (int i = 0; i < num_patterns; ++i) {
+    for (uint64_t i = 0; i < num_patterns; ++i) {
         uint64_t id, pattern_len;
         std::string pattern;
         error = decompressor.try_read_numeric_value<uint64_t>(id);

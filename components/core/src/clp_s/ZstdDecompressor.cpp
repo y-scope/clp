@@ -287,12 +287,13 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
 
 void ZstdDecompressor::reset_stream() {
     if (InputType::File == m_input_type) {
-        auto rc = m_file_reader->try_seek_from_begin(m_file_reader_initial_pos);
-        m_file_read_buffer_length = 0;
-        m_compressed_stream_block.size = m_file_read_buffer_length;
-        if (false == (ErrorCodeSuccess == rc || ErrorCodeEndOfFile == rc)) {
+        if (auto rc = m_file_reader->try_seek_from_begin(m_file_reader_initial_pos);
+            ErrorCodeSuccess != rc && ErrorCodeEndOfFile != rc)
+        {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
         }
+        m_file_read_buffer_length = 0;
+        m_compressed_stream_block.size = m_file_read_buffer_length;
     } else if (InputType::ClpReader == m_input_type) {
         auto rc = m_reader->try_seek_from_begin(m_file_reader_initial_pos);
         m_file_read_buffer_length = 0;

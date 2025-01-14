@@ -35,10 +35,6 @@ ArchiveReaderAdaptor::ArchiveReaderAdaptor(
     }
 }
 
-ArchiveReaderAdaptor::~ArchiveReaderAdaptor() {
-    m_reader.reset();
-}
-
 ErrorCode
 ArchiveReaderAdaptor::try_read_archive_file_info(ZstdDecompressor& decompressor, size_t size) {
     std::vector<char> buffer(size);
@@ -190,6 +186,21 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
     return ErrorCodeSuccess;
 }
 
+std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
+    if (InputSource::Filesystem == m_archive_path.source && false == m_single_file_archive) {
+        try {
+            return std::make_shared<clp::FileReader>(
+                    m_archive_path.path + constants::cArchiveHeaderFile
+            );
+        } catch (std::exception const& e) {
+            SPDLOG_ERROR("Failed to open archive header for reading - {}", e.what());
+            return nullptr;
+        }
+    } else {
+        return ReaderUtils::try_create_reader(m_archive_path, m_network_auth);
+    }
+}
+
 std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_section(
         std::string_view section
 ) {
@@ -254,20 +265,5 @@ void ArchiveReaderAdaptor::checkin_reader_for_section(std::string_view section) 
     }
 
     m_current_reader_holder.reset();
-}
-
-std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
-    if (InputSource::Filesystem == m_archive_path.source && false == m_single_file_archive) {
-        try {
-            return std::make_shared<clp::FileReader>(
-                    m_archive_path.path + constants::cArchiveHeaderFile
-            );
-        } catch (std::exception const& e) {
-            SPDLOG_ERROR("Failed to open archive header for reading - {}", e.what());
-            return nullptr;
-        }
-    } else {
-        return ReaderUtils::try_create_reader(m_archive_path, m_network_auth);
-    }
 }
 }  // namespace clp_s
