@@ -252,10 +252,10 @@ auto NetworkReader::acquire_empty_buffer() -> void {
     }
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
     while (m_filled_buffer_queue.size() == m_buffer_pool_size) {
-        m_downloader_cv.wait(buffer_resource_lock);
         if (is_abort_download_requested()) {
             return;
         }
+        m_downloader_cv.wait(buffer_resource_lock);
     }
     m_curr_downloader_buf.emplace(
             m_buffer_pool.at(m_curr_downloader_buf_idx).data(),
