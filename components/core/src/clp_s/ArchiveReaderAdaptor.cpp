@@ -119,7 +119,6 @@ ErrorCode ArchiveReaderAdaptor::load_archive_metadata() {
 }
 
 ErrorCode ArchiveReaderAdaptor::try_read_header(clp::ReaderInterface& reader) {
-    std::array<char, sizeof(ArchiveHeader)> header_buffer;
     auto const clp_rc = m_reader->try_read_exact_length(
             reinterpret_cast<char*>(&m_archive_header),
             sizeof(m_archive_header)
