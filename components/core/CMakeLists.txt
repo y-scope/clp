@@ -576,6 +576,7 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
+        tests/TestOutputCleaner.hpp
         tests/test-Array.cpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
