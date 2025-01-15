@@ -160,7 +160,7 @@ def main(argv):
     )
 
     # fmt: off
-    del_archive_cmd = [
+    archive_manager_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
@@ -170,19 +170,19 @@ def main(argv):
     # Add subcommand-specific arguments
     if "del" == parsed_args.subcommand:
         if True == parsed_args.dry_run:
-            del_archive_cmd.extend(["--dry-run"])
+            archive_manager_cmd.extend(["--dry-run"])
         if "by-ids" == parsed_args.del_subcommand:
-            del_archive_cmd.extend(["by-ids"])
-            del_archive_cmd.extend(parsed_args.ids)
+            archive_manager_cmd.extend(["by-ids"])
+            archive_manager_cmd.extend(parsed_args.ids)
         elif "by-filter" == parsed_args.del_subcommand:
-            del_archive_cmd.extend(["by-filter", str(parsed_args.begin_ts), str(parsed_args.end_ts)])
+            archive_manager_cmd.extend(["by-filter", str(parsed_args.begin_ts), str(parsed_args.end_ts)])
     elif "find" == parsed_args.subcommand:
         if hasattr(parsed_args, "end-ts") and parsed_args.end_ts is not None:
-            del_archive_cmd.extend(["--begin-ts", str(parsed_args.begin_ts), "--end-ts", str(parsed_args.end_ts)])
+            archive_manager_cmd.extend(["--begin-ts", str(parsed_args.begin_ts), "--end-ts", str(parsed_args.end_ts)])
 
     # fmt: on
 
-    cmd = container_start_cmd + del_archive_cmd
+    cmd = container_start_cmd + archive_manager_cmd
     subprocess.run(cmd, check=True)
 
     # Remove generated files
