@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 from typing import List, Tuple
+import configparser
 
 import boto3
 from botocore.config import Config
@@ -15,32 +16,37 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
+def parse_aws_credentials_file(credentials_file_path: Path, user: str = "default") -> Tuple[str, str]:
     """
-    Parses the `aws_access_key_id` and `aws_secret_access_key` from the given credentials_file_path.
+    Parses the `aws_access_key_id` and `aws_secret_access_key` of 'user' from the given
+    credentials_file_path.
     :param credentials_file_path:
+    :param user:
     :return: A tuple of (aws_access_key_id, aws_secret_access_key)
-    :raise: ValueError if the file doesn't exist, or doesn't contain the aws credentials.
+    :raise: ValueError if the file doesn't exist, or doesn't contain valid aws credentials.
     """
-
-    aws_access_key_id = None
-    aws_secret_access_key = None
 
     if not credentials_file_path.exists():
         raise ValueError(f"'{credentials_file_path}' doesn't exist.")
 
-    with open(credentials_file_path, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("aws_access_key_id"):
-                aws_access_key_id = line.split("=", 1)[1].strip()
-            elif line.startswith("aws_secret_access_key"):
-                aws_secret_access_key = line.split("=", 1)[1].strip()
+    config_reader = configparser.ConfigParser()
+    config_reader.read(credentials_file_path)
+
+    if not config_reader.has_section(user):
+        raise ValueError(f"User '{user}' doesn't exist.")
+
+    user_credentials = config_reader[user]
+    if "aws_session_token" in user_credentials:
+        raise ValueError(f"Short-term credentials with session token is not supported.")
+
+    aws_access_key_id = user_credentials.get("aws_access_key_id")
+    aws_secret_access_key = user_credentials.get("aws_secret_access_key")
 
     if aws_access_key_id is None or aws_secret_access_key is None:
         raise ValueError(
-            "The credentials file must contain aws_access_key_id and aws_secret_access_key."
+            "The credentials file must contain both aws_access_key_id and aws_secret_access_key."
         )
+
 
     return aws_access_key_id, aws_secret_access_key
 
@@ -83,6 +89,13 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
 def generate_s3_virtual_hosted_style_url(
     region_code: str, bucket_name: str, object_key: str
 ) -> str:
+    if region_code is None or "" == region_code:
+        raise ValueError("Region code is not specified")
+    if bucket_name is None or "" == bucket_name:
+        raise ValueError("Bucket name is not specified")
+    if object_key is None or "" == object_key:
+        raise ValueError("Object key is not specified")
+
     return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
 
