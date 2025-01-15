@@ -55,12 +55,6 @@ namespace {
 bool compress(CommandLineArguments const& command_line_arguments);
 
 template <typename encoded_variable_t>
-auto flush_and_clear_serializer_buffer(
-        Serializer<encoded_variable_t>& serializer,
-        std::vector<int8_t>& byte_buf
-) -> void;
-
-template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(
         std::vector<uint8_t> const& msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
@@ -164,16 +158,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
 }
 
 template <typename encoded_variable_t>
-auto flush_and_clear_serializer_buffer(
-        Serializer<encoded_variable_t>& serializer,
-        std::vector<int8_t>& byte_buf
-) -> void {
-    auto const view{serializer.get_ir_buf_view()};
-    byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
-    serializer.clear_ir_buf();
-}
-
-template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(
         std::vector<uint8_t> const& msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
@@ -202,12 +186,12 @@ auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path)
         return false;
     }
     auto& serializer{result.value()};
-    std::vector<int8_t> ir_buf;
-    flush_and_clear_serializer_buffer(serializer, ir_buf);
-
     std::ifstream in_file;
     in_file.open(path, std::ifstream::in);
-
+    if (false == in_file.is_open()) {
+        SPDLOG_ERROR("Failed to open input file: {}", path);
+        return false;
+    }
     std::filesystem::path input_path{path};
     std::string filename = input_path.filename().string();
     std::string out_path = option.irs_dir + "/" + filename + ".ir";
@@ -243,12 +227,17 @@ auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path)
                     zc.close();
                     return false;
                 }
-                flush_and_clear_serializer_buffer(serializer, ir_buf);
-                if (ir_buf.size() >= option.max_ir_buffer_size) {
-                    total_size = total_size + ir_buf.size();
-                    zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
+                auto bufferSize = serializer.get_ir_buf_view().size();
+                if (bufferSize >= option.max_ir_buffer_size) {
+                    total_size = total_size + bufferSize;
+                    zc.write(
+                            reinterpret_cast<char*>(
+                                    const_cast<int8_t*>(serializer.get_ir_buf_view().data())
+                            ),
+                            bufferSize
+                    );
                     zc.flush();
-                    ir_buf.clear();
+                    serializer.clear_ir_buf();
                 }
             } catch (nlohmann::json::parse_error const& e) {
                 SPDLOG_ERROR("JSON parsing error: {}", e.what());
@@ -264,11 +253,16 @@ auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path)
                 return false;
             }
         }
-        total_size = total_size + ir_buf.size();
+        total_size = total_size + serializer.get_ir_buf_view().size();
+        zc.write(
+                reinterpret_cast<char*>(const_cast<int8_t*>(serializer.get_ir_buf_view().data())),
+                serializer.get_ir_buf_view().size()
+        );
+        std::vector<int8_t> ir_buf;
         ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
         zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
         zc.flush();
-        ir_buf.clear();
+        serializer.clear_ir_buf();
         in_file.close();
         zc.close();
         out_file.close();

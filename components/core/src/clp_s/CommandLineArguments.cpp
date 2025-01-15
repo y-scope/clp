@@ -824,6 +824,41 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             if (m_file_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
             }
+
+            if ((4 != m_encoding_type) && (8 != m_encoding_type)) {
+                SPDLOG_ERROR(
+                        "Invalid encoding type specified; --encoding-type {}",
+                        m_encoding_type
+                );
+                return ParsingResult::Failure;
+            }
+
+            if (0 >= m_max_ir_buffer_size) {
+                SPDLOG_ERROR(
+                        "Invalid max_ir_buffer_size specified; Buffer size must be greater than "
+                        "zero; --max-ir-buffer-size {}",
+                        m_max_ir_buffer_size
+                );
+                return ParsingResult::Failure;
+            }
+
+            if (0 >= m_max_document_size) {
+                SPDLOG_ERROR(
+                        "Invalid max_document_size specified; Document size must be greater than "
+                        "zero; --max-document-size {}",
+                        m_max_document_size
+                );
+                return ParsingResult::Failure;
+            }
+
+            if ((1 > m_compression_level) || (9 < m_compression_level)) {
+                SPDLOG_ERROR(
+                        "Invalid compression level specified; Compression level must be 1-9; "
+                        "--compression-level {}",
+                        m_compression_level
+                );
+                return ParsingResult::Failure;
+            }
         }
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
