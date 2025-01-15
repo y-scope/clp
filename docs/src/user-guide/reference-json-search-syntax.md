@@ -42,7 +42,7 @@ be interpreted as _exact_ searches unless they include [wildcards](#wildcards-in
 :::{note}
 Certain characters have special meanings when used in keys or values, so to search for the
 characters literally, you must escape them. For a list of such characters, see
-[Escaping special characters](#escaping-special-characters).
+[Characters that require escaping](#characters-that-require-escaping).
 :::
 
 ### Querying nested kv-pairs
@@ -164,13 +164,14 @@ There are three supported boolean operators:
 
 You can use parentheses (`()`) to apply an operator to a group of expressions.
 
-### Escaping special characters
+### Characters that require escaping
 
 Keys containing the following literal characters must escape the characters using a `\` (backslash):
 
 * `\`
 * `"`
 * `.`
+* `*`
 
 Values containing the following literal characters must escape the characters using a `\`
 (backslash):
@@ -190,6 +191,24 @@ characters using a `\` (backslash):
 * `>`
 * `{`
 * `}`
+
+### Supported escape sequences
+
+Keys and values can represent Unicode codepoints using the `\uXXXX` escape sequence, where each `X`
+is a hexadecimal character.
+
+Keys and values also support the following escape sequences to represent control characters:
+
+* `\b`
+* `\f`
+* `\n`
+* `\r`
+* `\t`
+
+:::{note}
+The escape sequences in this section are described verbatim and don't need an extra backslash to
+escape the backslash at the beginning of each sequence.
+:::
 
 ## Examples
 
