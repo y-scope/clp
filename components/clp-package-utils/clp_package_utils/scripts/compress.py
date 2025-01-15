@@ -91,8 +91,9 @@ def _generate_compress_cmd(
         aws_access_key_id = parsed_args.aws_access_key_id
         aws_secret_access_key = parsed_args.aws_secret_access_key
         if parsed_args.aws_credentials_file:
+            default_credentials_user = "default"
             aws_access_key_id, aws_secret_access_key = parse_aws_credentials_file(
-                pathlib.Path(parsed_args.aws_credentials_file)
+                pathlib.Path(parsed_args.aws_credentials_file, default_credentials_user)
             )
         if aws_access_key_id and aws_secret_access_key:
             compress_cmd.append("--aws-access-key-id")
