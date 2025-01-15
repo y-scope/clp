@@ -128,21 +128,21 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def _generate_clp_io_config(
-    targets_to_compress: List[str], parsed_args: argparse.Namespace
+    logs_to_compress: List[str], parsed_args: argparse.Namespace
 ) -> typing.Union[S3InputConfig, FsInputConfig]:
     input_type = parsed_args.input_type
 
     if InputType.FS == input_type:
         return FsInputConfig(
-            paths_to_compress=targets_to_compress,
+            paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
         )
     elif InputType.S3 == input_type:
-        if len(targets_to_compress) != 1:
-            ValueError(f"Too many objects: {len(targets_to_compress)} > 1")
+        if len(logs_to_compress) != 1:
+            ValueError(f"Too many objects: {len(logs_to_compress)} > 1")
 
-        s3_url = targets_to_compress[0]
+        s3_url = logs_to_compress[0]
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
         return S3InputConfig(
             region_code=region_code,
@@ -156,8 +156,8 @@ def _generate_clp_io_config(
         raise ValueError(f"Unsupported input type: {input_type}")
 
 
-def _get_targets_to_compress(
-    compress_path_list_path: pathlib.Path, input_type: InputType
+def _get_logs_to_compress(
+    logs_list_path: pathlib.Path, input_type: InputType
 ) -> List[str]:
     # Define the path processing function based on the input type
     process_path_func: typing.Callable[[str], str]
@@ -179,17 +179,17 @@ def _get_targets_to_compress(
     else:
         raise ValueError(f"Unsupported input type: {input_type}")
 
-    # Read targets from the input file
-    targets_to_compress = []
-    with open(compress_path_list_path, "r") as f:
+    # Read logs from the input file
+    logs_to_compress = []
+    with open(logs_list_path, "r") as f:
         for path in f:
             stripped_path_str = path.strip()
             if "" == stripped_path_str:
                 # Skip empty paths
                 continue
-            targets_to_compress.append(process_path_func(stripped_path_str))
+            logs_to_compress.append(process_path_func(stripped_path_str))
 
-    return targets_to_compress
+    return logs_to_compress
 
 
 def _add_common_arguments(
@@ -203,8 +203,8 @@ def _add_common_arguments(
     )
     args_parser.add_argument(
         "-f",
-        "--target-list",
-        dest="target_list",
+        "--logs-list",
+        dest="logs_list",
         help="A list of logs to compress.",
         required=True,
     )
@@ -240,7 +240,6 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    input_type = parsed_args.input_type
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
@@ -254,11 +253,11 @@ def main(argv):
     comp_jobs_dir = clp_config.logs_directory / "comp-jobs"
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)
 
-    targets_to_compress = _get_targets_to_compress(
-        pathlib.Path(parsed_args.target_list).resolve(), input_type
+    logs_to_compress = _get_logs_to_compress(
+        pathlib.Path(parsed_args.logs_list).resolve(), parsed_args.input_type
     )
 
-    clp_input_config = _generate_clp_io_config(targets_to_compress, parsed_args)
+    clp_input_config = _generate_clp_io_config(logs_to_compress, parsed_args)
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
     if parsed_args.tags:
         tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]

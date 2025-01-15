@@ -89,10 +89,9 @@ def _generate_fs_targets_file(
     file_paths = paths_to_compress.file_paths
     empty_directories = paths_to_compress.empty_directories
     with open(output_file_path, "w") as file:
-        if len(file_paths) > 0:
-            for path_str in file_paths:
-                file.write(path_str)
-                file.write("\n")
+        for path_str in file_paths:
+            file.write(path_str)
+            file.write("\n")
         if empty_directories and len(empty_directories) > 0:
             # Prepare list of paths to compress for clp
             for path_str in empty_directories:
@@ -108,13 +107,12 @@ def _generate_s3_targets_file(
     # S3 object keys are stored as file_paths in `PathsToCompress`
     object_keys = paths_to_compress.file_paths
     with open(output_file_path, "w") as file:
-        if len(object_keys) > 0:
-            for object_key in object_keys:
-                s3_virtual_hosted_style_url = generate_s3_virtual_hosted_style_url(
-                    s3_input_config.region_code, s3_input_config.bucket, object_key
-                )
-                file.write(s3_virtual_hosted_style_url)
-                file.write("\n")
+        for object_key in object_keys:
+            s3_virtual_hosted_style_url = generate_s3_virtual_hosted_style_url(
+                s3_input_config.region_code, s3_input_config.bucket, object_key
+            )
+            file.write(s3_virtual_hosted_style_url)
+            file.write("\n")
 
 
 def make_clp_command_and_env(
@@ -163,7 +161,7 @@ def make_clp_s_command_and_env(
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
-    enable_s3_write: bool,
+    use_single_file_archive: bool,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
     Generates the command and environment variables for a clp_s compression job.
@@ -171,7 +169,7 @@ def make_clp_s_command_and_env(
     :param archive_output_dir:
     :param clp_config:
     :param db_config_file_path:
-    :param enable_s3_write: Whether to write output to S3 storage.
+    :param use_single_file_archive:
     :return: Tuple of (compression_command, compression_env_vars)
     """
 
@@ -187,7 +185,7 @@ def make_clp_s_command_and_env(
     # fmt: on
 
     if InputType.S3 == clp_config.input.type:
-        compression_env = {
+        compression_env_vars = {
             **os.environ,
             "AWS_ACCESS_KEY_ID": clp_config.input.aws_access_key_id,
             "AWS_SECRET_ACCESS_KEY": clp_config.input.aws_secret_access_key,
@@ -195,16 +193,16 @@ def make_clp_s_command_and_env(
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
     else:
-        compression_env = None
+        compression_env_vars = None
 
-    if enable_s3_write:
+    if use_single_file_archive:
         compression_cmd.append("--single-file-archive")
 
     if clp_config.input.timestamp_key is not None:
         compression_cmd.append("--timestamp-key")
         compression_cmd.append(clp_config.input.timestamp_key)
 
-    return compression_cmd, compression_env
+    return compression_cmd, compression_env_vars
 
 
 def run_clp(
@@ -220,7 +218,7 @@ def run_clp(
     clp_metadata_db_connection_config,
 ):
     """
-    Compresses files from an FS into archives on an FS
+    Compresses logs into archives.
 
     :param worker_config: WorkerConfig
     :param clp_config: ClpIoConfig
@@ -272,7 +270,7 @@ def run_clp(
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
-            enable_s3_write=enable_s3_write,
+            use_single_file_archive=enable_s3_write,
         )
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")

@@ -20,12 +20,12 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import get_s3_object_metadata
+from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
-from job_orchestration.scheduler.job_config import ClpIoConfig, FsInputConfig, S3InputConfig
+from job_orchestration.scheduler.job_config import ClpIoConfig, FsInputConfig, S3InputConfig, InputType
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
     CompressionTaskResult,
@@ -133,7 +133,7 @@ def _process_s3_input(
     :return: Result.OK(True) on success, or Result.Err(str) with the error message otherwise.
     """
 
-    res = get_s3_object_metadata(s3_input_config)
+    res = s3_get_object_metadata(s3_input_config)
     if res.is_err():
         logger.error(f"Failed to process S3 input: {res.err_value}")
         return res

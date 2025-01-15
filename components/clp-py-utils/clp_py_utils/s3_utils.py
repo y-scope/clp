@@ -86,7 +86,7 @@ def generate_s3_virtual_hosted_style_url(
     return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
 
 
-def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMetadata], str]:
+def s3_get_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMetadata], str]:
     """
     Gets the metadata of all objects under the <bucket>/<key_prefix> specified by s3_input_config.
     NOTE: We reuse FileMetadata to store the metadata of S3 objects where the object's key is stored
@@ -97,8 +97,6 @@ def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMe
     otherwise Result.Err(str) with the error message.
     """
 
-    file_metadata_list: List[FileMetadata] = list()
-
     s3_client = boto3.client(
         "s3",
         region_name=s3_input_config.region_code,
@@ -106,6 +104,7 @@ def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMe
         aws_secret_access_key=s3_input_config.aws_secret_access_key,
     )
 
+    file_metadata_list: List[FileMetadata] = list()
     try:
         paginator = s3_client.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=s3_input_config.bucket, Prefix=s3_input_config.key_prefix)

@@ -25,35 +25,35 @@ from clp_package_utils.general import (
 logger = logging.getLogger(__file__)
 
 
-def _generate_targets_list(
-    container_targets_list_path: pathlib.Path,
+def _generate_logs_list(
+    container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
 ) -> None:
     input_type = parsed_args.input_type
 
     if InputType.FS == input_type:
-        compression_targets_list_file = parsed_args.path_list
-        with open(container_targets_list_path, "w") as container_targets_list_file:
-            if compression_targets_list_file is not None:
-                with open(compression_targets_list_file, "r") as targets_list_file:
-                    for line in targets_list_file:
+        host_logs_list_path = parsed_args.path_list
+        with open(container_logs_list_path, "w") as container_logs_list_file:
+            if host_logs_list_path is not None:
+                with open(host_logs_list_path, "r") as host_logs_list_file:
+                    for line in host_logs_list_file:
                         resolved_path = pathlib.Path(line.rstrip()).resolve()
-                        container_targets_list_file.write(f"{resolved_path}\n")
+                        container_logs_list_file.write(f"{resolved_path}\n")
 
             for path in parsed_args.paths:
                 resolved_path = pathlib.Path(path).resolve()
-                container_targets_list_file.write(f"{resolved_path}\n")
+                container_logs_list_file.write(f"{resolved_path}\n")
 
     elif InputType.S3 == input_type:
-        with open(container_targets_list_path, "w") as container_targets_list_file:
-            container_targets_list_file.write(f"{parsed_args.url}\n")
+        with open(container_logs_list_path, "w") as container_logs_list_file:
+            container_logs_list_file.write(f"{parsed_args.url}\n")
 
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 
 
 def _generate_compress_cmd(
-    parsed_args: argparse.Namespace, config_path: pathlib.Path, target_list_path: pathlib.Path
+    parsed_args: argparse.Namespace, config_path: pathlib.Path, logs_list_path: pathlib.Path
 ) -> List[str]:
     input_type = parsed_args.input_type
 
@@ -91,8 +91,8 @@ def _generate_compress_cmd(
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 
-    compress_cmd.append("--target-list")
-    compress_cmd.append(str(target_list_path))
+    compress_cmd.append("--logs-list")
+    compress_cmd.append(str(logs_list_path))
 
     return compress_cmd
 
@@ -135,7 +135,7 @@ def _validate_s3_input_args(
     parsed_args: argparse.Namespace, args_parser: argparse.ArgumentParser, clp_config: CLPConfig
 ) -> None:
     if StorageEngine.CLP_S != clp_config.package.storage_engine:
-        raise ValueError(
+        args_parser.error(
             f"Input type {InputType.S3} is only supported for the storage engine"
             f" {StorageEngine.CLP_S}."
         )
@@ -219,24 +219,24 @@ def main(argv):
 
     necessary_mounts = [mounts.clp_home, mounts.input_logs_dir, mounts.data_dir, mounts.logs_dir]
 
-    # Write compression targets to a file
+    # Write compression logs to a file
     while True:
         # Get unused output path
-        container_target_list_filename = f"{uuid.uuid4()}.txt"
-        container_target_list_path = clp_config.logs_directory / container_target_list_filename
-        path_list_path_on_container = (
-            container_clp_config.logs_directory / container_target_list_filename
+        container_logs_list_filename = f"{uuid.uuid4()}.txt"
+        container_logs_list_path = clp_config.logs_directory / container_logs_list_filename
+        logs_list_path_on_container = (
+            container_clp_config.logs_directory / container_logs_list_filename
         )
-        if not container_target_list_path.exists():
+        if not container_logs_list_path.exists():
             break
 
-    _generate_targets_list(container_target_list_path, parsed_args)
+    _generate_logs_list(container_logs_list_path, parsed_args)
 
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container
     )
     compress_cmd = _generate_compress_cmd(
-        parsed_args, generated_config_path_on_container, path_list_path_on_container
+        parsed_args, generated_config_path_on_container, logs_list_path_on_container
     )
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)
