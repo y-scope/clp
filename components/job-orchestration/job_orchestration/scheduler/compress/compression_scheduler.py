@@ -36,7 +36,6 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionTaskResult,
 )
 from pydantic import ValidationError
-from result import Err, Ok, Result
 
 # Setup logging
 logger = get_logger("compression_scheduler")
@@ -129,30 +128,22 @@ def _process_fs_input_paths(
 def _process_s3_input(
     s3_input_config: S3InputConfig,
     paths_to_compress_buffer: PathsToCompressBuffer,
-) -> Result[bool, str]:
+) -> None:
     """
     Iterates through all objects under the <bucket>/<key_prefix> specified by s3_input_config,
     and adds their metadata to paths_to_compress_buffer.
     :param s3_input_config:
     :param paths_to_compress_buffer:
-    :return: Result.OK(True) on success, or Result.Err(str) with the error message otherwise.
+    :raise: RuntimeError if input URL doesn't resolve to any objects.
+    Same as s3_get_object_metadata if it fails.
     """
 
-    res = s3_get_object_metadata(s3_input_config)
-    if res.is_err():
-        logger.error(f"Failed to process S3 input: {res.err_value}")
-        return res
-
-    object_metadata_list = res.ok_value
+    object_metadata_list = s3_get_object_metadata(s3_input_config)
     if len(object_metadata_list) == 0:
-        error_msg = "Input URL doesn't resolve to any object"
-        logger.error(error_msg)
-        return Err(error_msg)
+        raise RuntimeError("Input URL doesn't resolve to any object")
 
     for object_metadata in object_metadata_list:
         paths_to_compress_buffer.add_file(object_metadata)
-
-    return Ok(True)
 
 
 def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
@@ -185,14 +176,16 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         if input_type == InputType.FS.value:
             _process_fs_input_paths(input_config, paths_to_compress_buffer)
         elif input_type == InputType.S3.value:
-            res = _process_s3_input(input_config, paths_to_compress_buffer)
-            if res.is_err():
+            try:
+                _process_s3_input(input_config, paths_to_compress_buffer)
+            except Exception as err:
+                logger.exception("Failed to process S3 input")
                 update_compression_job_metadata(
                     db_cursor,
                     job_id,
                     {
                         "status": CompressionJobStatus.FAILED,
-                        "status_msg": f"Scheduler Failed for S3 input: {res.err_value}",
+                        "status_msg": f"S3 Failure: {err}",
                     },
                 )
                 db_conn.commit()

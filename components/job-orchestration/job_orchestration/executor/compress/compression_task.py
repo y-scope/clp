@@ -328,16 +328,15 @@ def run_clp(
 
                 if s3_error is None:
                     logger.info(f"Uploading archive {archive_id} to S3...")
-                    result = s3_put(s3_config, archive_path, archive_id)
-
-                    if result.is_err():
-                        logger.error(f"Failed to upload archive {archive_id}: {result.err_value}")
-                        s3_error = result.err_value
+                    try:
+                        s3_put(s3_config, archive_path, archive_id)
+                        logger.info(f"Finished uploading archive {archive_id} to S3.")
+                    except Exception as err:
+                        logger.exception(f"Failed to upload archive {archive_id}")
+                        s3_error = str(err)
                         # NOTE: It's possible `proc` finishes before we call `terminate` on it, in
                         # which case the process will still return success.
                         proc.terminate()
-                    else:
-                        logger.info(f"Finished uploading archive {archive_id} to S3.")
 
                 archive_path.unlink()
 
