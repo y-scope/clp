@@ -451,15 +451,18 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
         LogTypeDictionaryEntry::add_float_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
-        auto entry = var_dict.get_entry_matching_value(var_str, ignore_case);
-        if (nullptr == entry) {
+        auto entries = var_dict.get_entry_matching_value(var_str, ignore_case);
+        if (entries.empty()) {
             // Not in dictionary
             return false;
         }
-        encoded_var = encode_var_dict_id(entry->get_id());
 
-        LogTypeDictionaryEntry::add_dict_var(logtype);
-        sub_query.add_dict_var(encoded_var, entry);
+        for (auto i = 0; i < entries.size(); i++) {
+            encoded_var = encode_var_dict_id(entries[i]->get_id());
+
+            LogTypeDictionaryEntry::add_dict_var(logtype);
+            sub_query.add_dict_var(encoded_var, entries[i]);
+        }
     }
 
     return true;

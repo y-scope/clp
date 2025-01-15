@@ -932,13 +932,13 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                     }
                 }
 
-                auto const* entry = m_var_dict->get_entry_matching_value(
+                auto entries = m_var_dict->get_entry_matching_value(
                         unescaped_query_string,
                         m_ignore_case
                 );
 
-                if (entry != nullptr) {
-                    matching_vars.insert(entry->get_id());
+                for (auto i = 0; i < entries.size(); i++) {
+                    matching_vars.insert(entries[i]->get_id());
                 }
             } else if (EncodedVariableInterpreter::
                                wildcard_search_dictionary_and_get_encoded_matches(
