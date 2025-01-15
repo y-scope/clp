@@ -82,7 +82,7 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
     )
 
 
-def _generate_fs_targets_file(
+def _generate_fs_logs_list(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
 ) -> None:
@@ -99,7 +99,7 @@ def _generate_fs_targets_file(
                 file.write("\n")
 
 
-def _generate_s3_targets_file(
+def _generate_s3_logs_list(
     output_file_path: pathlib.Path,
     paths_to_compress: PathsToCompress,
     s3_input_config: S3InputConfig,
@@ -276,20 +276,20 @@ def run_clp(
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
-    # generate list of targets to compress
+    # generate list of logs to compress
     input_type = clp_config.input.type
-    targets_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
+    logs_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
     if InputType.FS == input_type:
-        _generate_fs_targets_file(targets_list_path, paths_to_compress)
+        _generate_fs_logs_list(logs_list_path, paths_to_compress)
     elif InputType.S3 == input_type:
-        _generate_s3_targets_file(targets_list_path, paths_to_compress, clp_config.input)
+        _generate_s3_logs_list(logs_list_path, paths_to_compress, clp_config.input)
     else:
         error_msg = f"Unsupported input type: {input_type}."
         logger.error(error_msg)
         return False, {"error_message": error_msg}
 
     compression_cmd.append("--files-from")
-    compression_cmd.append(str(targets_list_path))
+    compression_cmd.append(str(logs_list_path))
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
@@ -368,8 +368,8 @@ def run_clp(
         compression_successful = True
 
         # Remove generated temporary files
-        if targets_list_path:
-            targets_list_path.unlink()
+        if logs_list_path:
+            logs_list_path.unlink()
         db_config_file_path.unlink()
     logger.debug("Compressed.")
 
