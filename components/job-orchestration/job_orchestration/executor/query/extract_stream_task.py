@@ -29,7 +29,7 @@ def make_command(
     archive_id: str,
     job_config: dict,
     results_cache_uri: str,
-    enable_s3_write: bool,
+    print_stream_stats: bool,
 ) -> Optional[List[str]]:
     storage_engine = worker_config.package.storage_engine
     archives_dir = worker_config.archive_output.get_directory()
@@ -54,7 +54,7 @@ def make_command(
         if extract_ir_config.target_uncompressed_size is not None:
             command.append("--target-size")
             command.append(str(extract_ir_config.target_uncompressed_size))
-        if enable_s3_write:
+        if print_stream_stats:
             command.append("--print-stream-stats")
     elif StorageEngine.CLP_S == storage_engine:
         logger.info("Starting JSON extraction")
@@ -75,7 +75,7 @@ def make_command(
         if extract_json_config.target_chunk_size is not None:
             command.append("--target-ordered-chunk-size")
             command.append(str(extract_json_config.target_chunk_size))
-        if enable_s3_write:
+        if print_stream_stats:
             command.append("--print-ordered-stream-stats")
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
@@ -130,12 +130,12 @@ def extract_stream(
 
     # Get s3 config
     s3_config: S3Config
-    enable_s3_write = False
+    enable_s3_upload = False
 
     storage_config = worker_config.stream_output.storage
     if StorageType.S3 == storage_config.type:
         s3_config = storage_config.s3_config
-        enable_s3_write = True
+        enable_s3_upload = True
 
     task_command = make_command(
         clp_home=clp_home,
@@ -143,7 +143,7 @@ def extract_stream(
         archive_id=archive_id,
         job_config=job_config,
         results_cache_uri=results_cache_uri,
-        enable_s3_write=enable_s3_write,
+        print_stream_stats=enable_s3_upload,
     )
     if not task_command:
         logger.error(f"Error creating {task_name} command")
@@ -164,7 +164,7 @@ def extract_stream(
         start_time=start_time,
     )
 
-    if enable_s3_write and QueryTaskStatus.SUCCEEDED == task_results.status:
+    if enable_s3_upload and QueryTaskStatus.SUCCEEDED == task_results.status:
         logger.info(f"Uploading streams to S3...")
         s3_error = None
         for line in task_stdout_as_str.splitlines():
