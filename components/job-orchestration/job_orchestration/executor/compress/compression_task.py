@@ -124,12 +124,12 @@ def make_clp_command_and_env(
     db_config_file_path: pathlib.Path,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
-    Generates the command and environment for a clp compression job
+    Generates the command and environment variables for a clp compression job.
     :param clp_home:
     :param archive_output_dir:
     :param clp_config:
     :param db_config_file_path:
-    :return: Tuple of (compression_command, compression_env)
+    :return: Tuple of (compression_command, compression_env_vars)
     """
 
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
@@ -166,13 +166,13 @@ def make_clp_s_command_and_env(
     enable_s3_write: bool,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
-    Generates the command and environment for a clp_s compression job
+    Generates the command and environment variables for a clp_s compression job.
     :param clp_home:
     :param archive_output_dir:
     :param clp_config:
     :param db_config_file_path:
     :param enable_s3_write: Whether to write output to S3 storage.
-    :return: Tuple of (compression_command, compression_env)
+    :return: Tuple of (compression_command, compression_env_vars)
     """
 
     # fmt: off

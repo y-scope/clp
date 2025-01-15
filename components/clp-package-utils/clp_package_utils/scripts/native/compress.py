@@ -140,7 +140,7 @@ def _generate_clp_io_config(
         )
     elif InputType.S3 == input_type:
         if len(targets_to_compress) != 1:
-            ValueError(f"Unexpected number of targets: {targets_to_compress}")
+            ValueError(f"Too many objects: {len(targets_to_compress)} > 1")
 
         s3_url = targets_to_compress[0]
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
@@ -179,8 +179,8 @@ def _get_targets_to_compress(
     else:
         raise ValueError(f"Unsupported input type: {input_type}")
 
-    targets_to_compress = []
     # Read targets from the input file
+    targets_to_compress = []
     with open(compress_path_list_path, "r") as f:
         for path in f:
             stripped_path_str = path.strip()
@@ -205,7 +205,7 @@ def _add_common_arguments(
         "-f",
         "--target-list",
         dest="target_list",
-        help="A file listing all targets to compress.",
+        help="A list of logs to compress.",
         required=True,
     )
     args_parser.add_argument(
@@ -223,7 +223,7 @@ def _add_common_arguments(
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
-    args_parser = argparse.ArgumentParser(description="Compresses files from filesystem/s3")
+    args_parser = argparse.ArgumentParser(description="Compresses logs")
     input_type_args_parser = args_parser.add_subparsers(dest="input_type")
 
     fs_compressor_parser = input_type_args_parser.add_parser(InputType.FS)
@@ -232,7 +232,7 @@ def main(argv):
     s3_compressor_parser = input_type_args_parser.add_parser(InputType.S3)
     _add_common_arguments(s3_compressor_parser, default_config_file_path)
     s3_compressor_parser.add_argument(
-        "--aws-access-key-id", type=str, default=None, help="AWS access key id."
+        "--aws-access-key-id", type=str, default=None, help="AWS access key ID."
     )
     s3_compressor_parser.add_argument(
         "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."

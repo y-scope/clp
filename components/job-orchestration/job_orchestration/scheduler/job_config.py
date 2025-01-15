@@ -47,7 +47,7 @@ class OutputConfig(BaseModel):
 
 
 class ClpIoConfig(BaseModel):
-    input: typing.Union[S3InputConfig, FsInputConfig]
+    input: typing.Union[FsInputConfig, S3InputConfig]
     output: OutputConfig
 
 

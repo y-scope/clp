@@ -18,7 +18,7 @@ AWS_ENDPOINT = "amazonaws.com"
 def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
     """
     Parses the `aws_access_key_id` and `aws_secret_access_key` from the given credentials_file_path.
-    :param credentials_file_path: path to the file containing aws credentials.
+    :param credentials_file_path:
     :return: A tuple of (aws_access_key_id, aws_secret_access_key)
     :raise: ValueError if the file doesn't exist, or doesn't contain the aws credentials.
     """
@@ -27,7 +27,7 @@ def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
     aws_secret_access_key = None
 
     if not credentials_file_path.exists():
-        raise ValueError(f"File {credentials_file_path} doesn't exist.")
+        raise ValueError(f"'{credentials_file_path}' doesn't exist.")
 
     with open(credentials_file_path, "r") as f:
         for line in f:
@@ -39,7 +39,7 @@ def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
 
     if aws_access_key_id is None or aws_secret_access_key is None:
         raise ValueError(
-            "The credentials file must contain both 'aws_access_key_id' and 'aws_secret_access_key'."
+            "The credentials file must contain aws_access_key_id and aws_secret_access_key."
         )
 
     return aws_access_key_id, aws_secret_access_key
@@ -47,11 +47,10 @@ def parse_aws_credentials_file(credentials_file_path: Path) -> Tuple[str, str]:
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     """
-    Parses the region_code, bucket and key_prefix from the given S3 url. The url must be either a
-    host_style_url or path_style_url.
-    :param s3_url: a host_style_url or path_style_url.
-    :return: A tuple of (region_code, bucket, key_prefix)
-    :raise: ValueError if the given s3_url is not a valid host_style_url or path_style_url.
+    Parses the region_code, bucket, and key_prefix from the given S3 URL.
+    :param s3_url: A host-style URL or path-style URL.
+    :return: A tuple of (region_code, bucket, key_prefix).
+    :raise: ValueError if `s3_url` is not a valid host-style URL or path-style URL.
     """
 
     host_style_url_regex = re.compile(
@@ -89,13 +88,13 @@ def generate_s3_virtual_hosted_style_url(
 
 def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMetadata], str]:
     """
-    Gets the metadata of objects under the <bucket>/<key_prefix> specified by s3_input_config.
-    Note: We reuse FileMetadata class to store the metadata of S3 objects. The object_key is stored
-    as path in FileMetadata.
+    Gets the metadata of all objects under the <bucket>/<key_prefix> specified by s3_input_config.
+    NOTE: We reuse FileMetadata to store the metadata of S3 objects where the object's key is stored
+    as `path` in FileMetadata.
 
-    :param s3_input_config: S3 configuration specifying the bucket, key_prefix and credentials.
-    :return: Result.OK(List[FileMetadata]) containing the object metadata on success,
-             otherwise Result.Err(str) with the error message.
+    :param s3_input_config:
+    :return: Result.OK(List[FileMetadata]) containing the object's metadata on success,
+    otherwise Result.Err(str) with the error message.
     """
 
     file_metadata_list: List[FileMetadata] = list()
@@ -110,7 +109,6 @@ def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMe
     try:
         paginator = s3_client.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=s3_input_config.bucket, Prefix=s3_input_config.key_prefix)
-
         for page in pages:
             contents = page.get("Contents", None)
             if contents is None:
@@ -119,7 +117,7 @@ def get_s3_object_metadata(s3_input_config: S3InputConfig) -> Result[List[FileMe
             for obj in contents:
                 object_key = obj["Key"]
                 if object_key.endswith("/"):
-                    # Skip any object that resolves to a directory like path
+                    # Skip any object that resolves to a directory-like path
                     continue
 
                 file_metadata_list.append(FileMetadata(Path(object_key), obj["Size"]))

@@ -136,7 +136,8 @@ def _validate_s3_input_args(
 ) -> None:
     if StorageEngine.CLP_S != clp_config.package.storage_engine:
         raise ValueError(
-            f"input type {InputType.S3} is only supported for the storage engine {StorageEngine.CLP_S}."
+            f"Input type {InputType.S3} is only supported for the storage engine"
+            f" {StorageEngine.CLP_S}."
         )
 
     # Validate aws credentials were specified using only one method
@@ -145,16 +146,18 @@ def _validate_s3_input_args(
     aws_secret_access_key = parsed_args.aws_secret_access_key
     if aws_credential_file is not None:
         if not pathlib.Path(aws_credential_file).exists():
-            raise ValueError(f"credentials file {aws_credential_file} doesn't exist.")
+            raise ValueError(f"AWS credentials file '{aws_credential_file}' doesn't exist.")
 
         if aws_access_key_id is not None or aws_secret_access_key is not None:
             args_parser.error(
-                "aws_credentials_file can not be specified together with aws_access_key_id or aws_secret_access_key."
+                "aws_credentials_file cannot be specified together with aws_access_key_id or"
+                " aws_secret_access_key."
             )
 
     elif bool(aws_access_key_id) != bool(aws_secret_access_key):
         args_parser.error(
-            "aws_access_key_id and aws_secret_access_key must be both specified or left unspecified."
+            "aws_access_key_id and aws_secret_access_key must be specified together or left"
+            " unspecified."
         )
 
 
@@ -162,7 +165,7 @@ def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-    args_parser = argparse.ArgumentParser(description="Compresses files from filesystem/s3")
+    args_parser = argparse.ArgumentParser(description="Compresses logs")
     input_type_args_parser = args_parser.add_subparsers(dest="input_type")
 
     fs_compressor_parser = input_type_args_parser.add_parser(InputType.FS)
@@ -176,7 +179,7 @@ def main(argv):
     _add_common_arguments(s3_compressor_parser, default_config_file_path)
     s3_compressor_parser.add_argument("url", metavar="URL", help="URL of object to be compressed")
     s3_compressor_parser.add_argument(
-        "--aws-access-key-id", type=str, default=None, help="AWS access key id."
+        "--aws-access-key-id", type=str, default=None, help="AWS access key ID."
     )
     s3_compressor_parser.add_argument(
         "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."
