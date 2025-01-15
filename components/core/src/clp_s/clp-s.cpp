@@ -144,7 +144,7 @@ bool search_archive(
 ) {
     auto const& query = command_line_arguments.get_query();
 
-    auto timestamp_dict = archive_reader->read_timestamp_dictionary();
+    auto timestamp_dict = archive_reader->get_timestamp_dictionary();
     AddTimestampConditions add_timestamp_conditions(
             timestamp_dict->get_authoritative_timestamp_tokenized_column(),
             command_line_arguments.get_search_begin_ts(),

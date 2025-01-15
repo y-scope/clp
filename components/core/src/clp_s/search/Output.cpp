@@ -65,6 +65,8 @@ bool Output::filter() {
     populate_internal_columns();
     populate_string_queries(top_level_expr);
 
+    m_archive_reader->open_packed_streams();
+
     std::string message;
     auto const archive_id = m_archive_reader->get_archive_id();
     for (int32_t schema_id : matched_schemas) {
