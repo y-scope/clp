@@ -88,7 +88,7 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
 def generate_s3_virtual_hosted_style_url(
     region_code: str, bucket_name: str, object_key: str
 ) -> str:
-    if not bool(region_code) :
+    if not bool(region_code):
         raise ValueError("Region code is not specified")
     if not bool(bucket_name):
         raise ValueError("Bucket name is not specified")
