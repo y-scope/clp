@@ -23,7 +23,7 @@ def parse_aws_credentials_file(
     :param credentials_file_path:
     :param user:
     :return: A tuple of (aws_access_key_id, aws_secret_access_key)
-    :raise: ValueError if the file doesn't exist, or doesn't contain valid aws credentials.
+    :raises: ValueError if the file doesn't exist, or doesn't contain valid aws credentials.
     """
 
     if not credentials_file_path.exists():
@@ -106,7 +106,9 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
 
     :param s3_input_config:
     :return: List[FileMetadata] containing the object's metadata on success,
-    :raise: same as boto3.Paginator.paginate if it fails.
+    :raises: Propagates `boto3.client`'s exceptions.
+    :raises: Propagates `boto3.client.get_paginator`'s exceptions.
+    :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
     s3_client = boto3.client(
@@ -144,9 +146,10 @@ def s3_put(
     :param src_file: Local file to upload.
     :param dest_file_name: The name for the uploaded file in the S3 bucket.
     :param total_max_attempts: Maximum number of retry attempts for the upload.
-    :raise: ValueError if the src_file doesn't exist, doesn't resolve to a file or
-    larger than the s3 put limit.
-    same as boto3.client.put_object if it fails.
+    :raises: ValueError if `src_file` doesn't exist, doesn't resolve to a file or
+    is larger than the s3_put limit.
+    :raises: Propagates `boto3.client`'s exceptions.
+    :raises: Propagates `boto3.client.put_object`'s exceptions.
     """
     if not src_file.exists():
         raise ValueError(f"{src_file} doesn't exist")

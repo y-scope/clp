@@ -134,8 +134,8 @@ def _process_s3_input(
     and adds their metadata to paths_to_compress_buffer.
     :param s3_input_config:
     :param paths_to_compress_buffer:
-    :raise: RuntimeError if input URL doesn't resolve to any objects.
-    Same as s3_get_object_metadata if it fails.
+    :raises: RuntimeError if input URL doesn't resolve to any objects.
+    :raises: Propagates `s3_get_object_metadata`'s exceptions.
     """
 
     object_metadata_list = s3_get_object_metadata(s3_input_config)
