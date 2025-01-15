@@ -39,7 +39,7 @@ def _generate_logs_list(
                 with open(host_logs_list_path, "r") as host_logs_list_file:
                     for line in host_logs_list_file:
                         stripped_path_str = line.rstrip()
-                        if "" == 0:
+                        if "" == stripped_path_str:
                             # Skip empty paths
                             continue
                         resolved_path = pathlib.Path(stripped_path_str).resolve()
