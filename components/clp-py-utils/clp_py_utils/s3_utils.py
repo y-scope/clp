@@ -88,11 +88,11 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
 def generate_s3_virtual_hosted_style_url(
     region_code: str, bucket_name: str, object_key: str
 ) -> str:
-    if region_code is None or "" == region_code:
+    if not bool(region_code) :
         raise ValueError("Region code is not specified")
-    if bucket_name is None or "" == bucket_name:
+    if not bool(bucket_name):
         raise ValueError("Bucket name is not specified")
-    if object_key is None or "" == object_key:
+    if not bool(object_key):
         raise ValueError("Object key is not specified")
 
     return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
