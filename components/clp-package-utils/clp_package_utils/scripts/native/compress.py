@@ -140,7 +140,7 @@ def _generate_clp_io_config(
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) != 1:
-            ValueError(f"Too many objects: {len(logs_to_compress)} > 1")
+            ValueError(f"Too many URLs: {len(logs_to_compress)} > 1")
 
         s3_url = logs_to_compress[0]
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
@@ -156,9 +156,7 @@ def _generate_clp_io_config(
         raise ValueError(f"Unsupported input type: {input_type}")
 
 
-def _get_logs_to_compress(
-    logs_list_path: pathlib.Path
-) -> List[str]:
+def _get_logs_to_compress(logs_list_path: pathlib.Path) -> List[str]:
     # Define the path processing function based on the input type
     process_path_func: typing.Callable[[str], str]
 
@@ -175,9 +173,7 @@ def _get_logs_to_compress(
     return logs_to_compress
 
 
-def _add_common_arguments(
-    args_parser: argparse.ArgumentParser
-) -> None:
+def _add_common_arguments(args_parser: argparse.ArgumentParser) -> None:
     args_parser.add_argument(
         "-f",
         "--logs-list",
@@ -237,9 +233,7 @@ def main(argv):
     comp_jobs_dir = clp_config.logs_directory / "comp-jobs"
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)
 
-    logs_to_compress = _get_logs_to_compress(
-        pathlib.Path(parsed_args.logs_list).resolve()
-    )
+    logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
 
     clp_input_config = _generate_clp_io_config(logs_to_compress, parsed_args)
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)

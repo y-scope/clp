@@ -25,7 +25,12 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
-from job_orchestration.scheduler.job_config import ClpIoConfig, FsInputConfig, S3InputConfig, InputType
+from job_orchestration.scheduler.job_config import (
+    ClpIoConfig,
+    FsInputConfig,
+    InputType,
+    S3InputConfig,
+)
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
     CompressionTaskResult,

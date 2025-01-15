@@ -108,9 +108,7 @@ def _generate_compress_cmd(
     return compress_cmd
 
 
-def _add_common_arguments(
-    args_parser: argparse.ArgumentParser
-) -> None:
+def _add_common_arguments(args_parser: argparse.ArgumentParser) -> None:
     args_parser.add_argument(
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
@@ -189,7 +187,7 @@ def main(argv):
 
     s3_compressor_parser = input_type_args_parser.add_parser(InputType.S3)
     _add_common_arguments(s3_compressor_parser)
-    s3_compressor_parser.add_argument("url", metavar="URL", help="URL of object to be compressed")
+    s3_compressor_parser.add_argument("url", metavar="URL", help="URL of objects to be compressed")
     s3_compressor_parser.add_argument(
         "--aws-access-key-id", type=str, default=None, help="AWS access key ID."
     )

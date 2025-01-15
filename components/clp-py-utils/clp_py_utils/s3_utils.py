@@ -1,7 +1,7 @@
+import configparser
 import re
 from pathlib import Path
 from typing import List, Tuple
-import configparser
 
 import boto3
 from botocore.config import Config
@@ -16,7 +16,9 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def parse_aws_credentials_file(credentials_file_path: Path, user: str = "default") -> Tuple[str, str]:
+def parse_aws_credentials_file(
+    credentials_file_path: Path, user: str = "default"
+) -> Tuple[str, str]:
     """
     Parses the `aws_access_key_id` and `aws_secret_access_key` of 'user' from the given
     credentials_file_path.
@@ -46,7 +48,6 @@ def parse_aws_credentials_file(credentials_file_path: Path, user: str = "default
         raise ValueError(
             "The credentials file must contain both aws_access_key_id and aws_secret_access_key."
         )
-
 
     return aws_access_key_id, aws_secret_access_key
 
