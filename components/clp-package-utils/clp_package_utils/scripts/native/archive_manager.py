@@ -248,7 +248,12 @@ def _delete_archives(
             if "ids" == criteria:
                 not_found_ids = set(params) - set(archive_ids)
                 if not_found_ids:
-                   logger.warning(f"Failed to find archives with the following IDs: {', '.join(not_found_ids)}")
+                    logger.warning(
+                        f"""
+                        Failed to find archives with the following IDs: 
+                        {', '.join(not_found_ids)}
+                        """
+                    )
 
             db_cursor.execute(
                 f"""
@@ -344,7 +349,6 @@ def _delete_archives_by_ids(
         """
 
     return _delete_archives(archives_dir, database_config, query, archive_ids, "ids", dry_run)
-                
 
 
 if "__main__" == __name__:
