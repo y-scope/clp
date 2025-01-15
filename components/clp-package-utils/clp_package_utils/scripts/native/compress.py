@@ -176,14 +176,8 @@ def _get_logs_to_compress(
 
 
 def _add_common_arguments(
-    args_parser: argparse.ArgumentParser, default_config_file_path: pathlib.Path
+    args_parser: argparse.ArgumentParser
 ) -> None:
-    args_parser.add_argument(
-        "--config",
-        "-c",
-        default=str(default_config_file_path),
-        help="CLP package configuration file.",
-    )
     args_parser.add_argument(
         "-f",
         "--logs-list",
@@ -207,13 +201,20 @@ def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
     args_parser = argparse.ArgumentParser(description="Compresses logs")
+    # package-level config option
+    args_parser.add_argument(
+        "--config",
+        "-c",
+        default=str(default_config_file_path),
+        help="CLP package configuration file.",
+    )
     input_type_args_parser = args_parser.add_subparsers(dest="input_type")
 
     fs_compressor_parser = input_type_args_parser.add_parser(InputType.FS)
-    _add_common_arguments(fs_compressor_parser, default_config_file_path)
+    _add_common_arguments(fs_compressor_parser)
 
     s3_compressor_parser = input_type_args_parser.add_parser(InputType.S3)
-    _add_common_arguments(s3_compressor_parser, default_config_file_path)
+    _add_common_arguments(s3_compressor_parser)
     s3_compressor_parser.add_argument(
         "--aws-access-key-id", type=str, default=None, help="AWS access key ID."
     )

@@ -72,8 +72,8 @@ def _generate_compress_cmd(
     compress_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
+        "--config", str(config_path),
         input_type,
-        "--config", str(config_path)
     ]
     # fmt: on
     if parsed_args.timestamp_key is not None:
@@ -109,14 +109,8 @@ def _generate_compress_cmd(
 
 
 def _add_common_arguments(
-    args_parser: argparse.ArgumentParser, default_config_file_path: pathlib.Path
+    args_parser: argparse.ArgumentParser
 ) -> None:
-    args_parser.add_argument(
-        "--config",
-        "-c",
-        default=str(default_config_file_path),
-        help="CLP package configuration file.",
-    )
     args_parser.add_argument(
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
@@ -177,17 +171,24 @@ def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Compresses logs")
+    # package-level config option
+    args_parser.add_argument(
+        "--config",
+        "-c",
+        default=str(default_config_file_path),
+        help="CLP package configuration file.",
+    )
     input_type_args_parser = args_parser.add_subparsers(dest="input_type")
 
     fs_compressor_parser = input_type_args_parser.add_parser(InputType.FS)
-    _add_common_arguments(fs_compressor_parser, default_config_file_path)
+    _add_common_arguments(fs_compressor_parser)
     fs_compressor_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     fs_compressor_parser.add_argument(
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
 
     s3_compressor_parser = input_type_args_parser.add_parser(InputType.S3)
-    _add_common_arguments(s3_compressor_parser, default_config_file_path)
+    _add_common_arguments(s3_compressor_parser)
     s3_compressor_parser.add_argument("url", metavar="URL", help="URL of object to be compressed")
     s3_compressor_parser.add_argument(
         "--aws-access-key-id", type=str, default=None, help="AWS access key ID."
