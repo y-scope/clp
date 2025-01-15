@@ -157,27 +157,10 @@ def _generate_clp_io_config(
 
 
 def _get_logs_to_compress(
-    logs_list_path: pathlib.Path, input_type: InputType
+    logs_list_path: pathlib.Path
 ) -> List[str]:
     # Define the path processing function based on the input type
     process_path_func: typing.Callable[[str], str]
-
-    def _process_fs_path(path_str: str) -> str:
-        stripped_path = pathlib.Path(path_str)
-        container_file_path = CONTAINER_INPUT_LOGS_ROOT_DIR / pathlib.Path(
-            stripped_path
-        ).relative_to(stripped_path.anchor)
-        return str(container_file_path.resolve())
-
-    def _process_s3_path(path_str: str) -> str:
-        return path_str
-
-    if input_type == InputType.FS:
-        process_path_func = _process_fs_path
-    elif input_type == InputType.S3:
-        process_path_func = _process_s3_path
-    else:
-        raise ValueError(f"Unsupported input type: {input_type}")
 
     # Read logs from the input file
     logs_to_compress = []
@@ -187,7 +170,7 @@ def _get_logs_to_compress(
             if "" == stripped_path_str:
                 # Skip empty paths
                 continue
-            logs_to_compress.append(process_path_func(stripped_path_str))
+            logs_to_compress.append(stripped_path_str)
 
     return logs_to_compress
 
@@ -254,7 +237,7 @@ def main(argv):
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)
 
     logs_to_compress = _get_logs_to_compress(
-        pathlib.Path(parsed_args.logs_list).resolve(), parsed_args.input_type
+        pathlib.Path(parsed_args.logs_list).resolve()
     )
 
     clp_input_config = _generate_clp_io_config(logs_to_compress, parsed_args)

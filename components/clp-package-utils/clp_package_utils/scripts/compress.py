@@ -12,6 +12,7 @@ from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -37,12 +38,22 @@ def _generate_logs_list(
             if host_logs_list_path is not None:
                 with open(host_logs_list_path, "r") as host_logs_list_file:
                     for line in host_logs_list_file:
-                        resolved_path = pathlib.Path(line.rstrip()).resolve()
-                        container_logs_list_file.write(f"{resolved_path}\n")
+                        stripped_path_str = line.rstrip()
+                        if "" == 0:
+                            # Skip empty paths
+                            continue
+                        resolved_path = pathlib.Path(stripped_path_str).resolve()
+                        mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / pathlib.Path(
+                            resolved_path
+                        ).relative_to(resolved_path.anchor)
+                        container_logs_list_file.write(f"{mounted_path}\n")
 
             for path in parsed_args.paths:
                 resolved_path = pathlib.Path(path).resolve()
-                container_logs_list_file.write(f"{resolved_path}\n")
+                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / pathlib.Path(
+                    resolved_path
+                ).relative_to(resolved_path.anchor)
+                container_logs_list_file.write(f"{mounted_path}\n")
 
     elif InputType.S3 == input_type:
         with open(container_logs_list_path, "w") as container_logs_list_file:
