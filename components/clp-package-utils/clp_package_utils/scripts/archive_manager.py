@@ -19,6 +19,7 @@ from clp_package_utils.general import (
 
 logger = logging.getLogger(__file__)
 
+
 def validate_timestamps(begin_ts, end_ts):
     if begin_ts > end_ts:
         logger.error("begin-ts must be <= end-ts")
@@ -28,14 +29,13 @@ def validate_timestamps(begin_ts, end_ts):
         return False
     return True
 
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser = argparse.ArgumentParser(
-        description="View or delete archives."
-    )
+    args_parser = argparse.ArgumentParser(description="View or delete archives.")
     args_parser.add_argument(
         "--config",
         "-c",
@@ -97,7 +97,7 @@ def main(argv):
     # Delete by ID arguments
     del_id_parser.add_argument(
         "ids",
-        nargs='+',
+        nargs="+",
         help="List of archive IDs to delete",
     )
 
@@ -143,7 +143,7 @@ def main(argv):
                 return -1
 
     elif "find" == parsed_args.subcommand:
-        if hasattr(parsed_args, 'end_ts') and parsed_args.end_ts is not None:
+        if hasattr(parsed_args, "end_ts") and parsed_args.end_ts is not None:
 
             # Validate the input timestamp
             if not validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):

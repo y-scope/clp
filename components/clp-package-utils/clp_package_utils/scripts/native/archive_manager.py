@@ -23,9 +23,7 @@ def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser = argparse.ArgumentParser(
-        description="View or delete archives."
-    )
+    args_parser = argparse.ArgumentParser(description="View or delete archives.")
     args_parser.add_argument(
         "--config",
         "-c",
@@ -87,7 +85,7 @@ def main(argv):
     # Delete by ID arguments
     del_id_parser.add_argument(
         "ids",
-        nargs='+',
+        nargs="+",
         help="List of archive IDs to delete",
     )
 
@@ -147,6 +145,7 @@ def main(argv):
                 parsed_args.dry_run,
             )
 
+
 def _find_archives(
     archives_dir: Path,
     database_config: Database,
@@ -198,6 +197,7 @@ def _find_archives(
     logger.info(f"Finished finding archives from the database.")
 
     return 0
+
 
 def _delete_archives(
     archives_dir: Path,
@@ -296,6 +296,7 @@ def _delete_archives(
 
     return 0
 
+
 def _delete_archives_by_filter(
     archives_dir: Path,
     database_config: Database,
@@ -323,7 +324,10 @@ def _delete_archives_by_filter(
         RETURNING id
         """
 
-    return _delete_archives(archives_dir, database_config, query, [begin_ts, end_ts], "filter", dry_run)
+    return _delete_archives(
+        archives_dir, database_config, query, [begin_ts, end_ts], "filter", dry_run
+    )
+
 
 def _delete_archives_by_ids(
     archives_dir: Path,
