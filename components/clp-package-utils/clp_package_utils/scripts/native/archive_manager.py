@@ -159,7 +159,7 @@ def _find_archives(
     `archive.end_timestamp <= end_ts`.
     :param archives_dir:
     :param database_config:
-    :param begin_ts: 
+    :param begin_ts:
     :param end_ts:
     """
     archive_ids: List[str]
@@ -171,7 +171,7 @@ def _find_archives(
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
-            
+
             params = ()
             query = f"SELECT id FROM `{table_prefix}archives`"
             if begin_ts is not None and end_ts is not None:
@@ -186,7 +186,7 @@ def _find_archives(
             if 0 == len(archive_ids):
                 logger.info("No archives found within specified time range.")
                 return 0
-            
+
             logger.info(f"Found {len(archive_ids)} archives within specified time range.")
             for archive_id in archive_ids:
                 logger.info(archive_id)
@@ -226,7 +226,7 @@ def _delete_archives(
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
-            
+
             if dry_run:
                 logger.info("Running in dry-run mode. No changes will be made to the database.")
 
@@ -250,7 +250,7 @@ def _delete_archives(
                 if not_found_ids:
                     logger.warning(
                         f"""
-                        Failed to find archives with the following IDs: 
+                        Failed to find archives with the following IDs:
                         {', '.join(not_found_ids)}
                         """
                     )
@@ -275,7 +275,7 @@ def _delete_archives(
                 logger.info("Dry-run finished.")
                 db_conn.rollback()
                 return 0
-            
+
             db_conn.commit()
     except Exception:
         logger.exception("Failed to delete archives from the database. Aborting deletion.")

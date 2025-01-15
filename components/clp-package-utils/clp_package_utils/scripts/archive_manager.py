@@ -141,7 +141,7 @@ def main(argv):
             # Validate the input timestamp
             if not validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):
                 return -1
-    
+
     elif "find" == parsed_args.subcommand:
         if hasattr(parsed_args, 'end_ts') and parsed_args.end_ts is not None:
 
