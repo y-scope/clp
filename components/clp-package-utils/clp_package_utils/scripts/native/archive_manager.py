@@ -50,12 +50,14 @@ def main(argv):
 
     # Find options
     find_parser.add_argument(
-        "--begin_ts",
+        "--begin-ts",
+        dest="begin_ts",
         type=int,
         help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     find_parser.add_argument(
-        "--end_ts",
+        "--end-ts",
+        dest="end_ts",
         type=int,
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
     )

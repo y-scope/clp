@@ -24,7 +24,7 @@ def validate_timestamps(begin_ts, end_ts):
         logger.error("begin-ts must be <= end-ts")
         return False
     if end_ts < 0 or begin_ts < 0:
-        logger.error("begin_ts and end_ts must be non-negative.")
+        logger.error("begin-ts and end-ts must be non-negative.")
         return False
     return True
 
@@ -60,12 +60,14 @@ def main(argv):
     # Find options
     find_parser.add_argument(
         "--begin-ts",
+        dest="begin_ts",
         type=int,
         default=0,
         help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     find_parser.add_argument(
         "--end-ts",
+        dest="end_ts",
         type=int,
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
     )
@@ -177,12 +179,13 @@ def main(argv):
         elif "by-filter" == parsed_args.del_subcommand:
             archive_manager_cmd.extend(["by-filter", str(parsed_args.begin_ts), str(parsed_args.end_ts)])
     elif "find" == parsed_args.subcommand:
-        if hasattr(parsed_args, "end-ts") and parsed_args.end_ts is not None:
+        if hasattr(parsed_args, "end_ts") and parsed_args.end_ts is not None:
             archive_manager_cmd.extend(["--begin-ts", str(parsed_args.begin_ts), "--end-ts", str(parsed_args.end_ts)])
 
     # fmt: on
 
     cmd = container_start_cmd + archive_manager_cmd
+
     subprocess.run(cmd, check=True)
 
     # Remove generated files
