@@ -79,11 +79,6 @@ auto extract() -> std::filesystem::path {
     constructor_option.ordered = cDefaultOrdered;
     constructor_option.target_ordered_chunk_size = cDefaultTargetOrderedChunkSize;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
-        if (false == entry.is_directory()) {
-            // Skip non-directories
-            continue;
-        }
-
         constructor_option.archive_path = clp_s::Path{
                 .source{clp_s::InputSource::Filesystem},
                 .path{entry.path().string()}
