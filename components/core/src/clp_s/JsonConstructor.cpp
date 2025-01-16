@@ -130,9 +130,9 @@ void JsonConstructor::construct_in_order() {
             )));
         }
 
-        if (m_option.print_ordered_stream_stats) {
+        if (m_option.print_ordered_chunk_stats) {
             nlohmann::json json_msg;
-            json_msg["stream_path"] = new_file_path.string();
+            json_msg["path"] = new_file_path.string();
             std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                       << std::endl;
         }

@@ -55,7 +55,7 @@ def make_command(
             command.append("--target-size")
             command.append(str(extract_ir_config.target_uncompressed_size))
         if print_stream_stats:
-            command.append("--print-stream-stats")
+            command.append("--print-ir-stats")
     elif StorageEngine.CLP_S == storage_engine:
         logger.info("Starting JSON extraction")
         extract_json_config = ExtractJsonJobConfig.parse_obj(job_config)
@@ -76,7 +76,7 @@ def make_command(
             command.append("--target-ordered-chunk-size")
             command.append(str(extract_json_config.target_chunk_size))
         if print_stream_stats:
-            command.append("--print-ordered-stream-stats")
+            command.append("--print-ordered-chunk-stats")
     else:
         logger.error(f"Unsupported storage engine {storage_engine}")
         return None
@@ -169,7 +169,7 @@ def extract_stream(
         s3_error = None
         for line in task_stdout_as_str.splitlines():
             stream_stats = json.loads(line)
-            stream_path = Path(stream_stats["stream_path"])
+            stream_path = Path(stream_stats["path"])
 
             if s3_error is None:
                 stream_name = stream_path.name

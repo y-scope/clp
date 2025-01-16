@@ -306,7 +306,7 @@ int main(int argc, char const* argv[]) {
         option.output_dir = command_line_arguments.get_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
-        option.print_ordered_stream_stats = command_line_arguments.print_ordered_stream_stats();
+        option.print_ordered_chunk_stats = command_line_arguments.print_ordered_chunk_stats();
         option.network_auth = command_line_arguments.get_network_auth();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db
