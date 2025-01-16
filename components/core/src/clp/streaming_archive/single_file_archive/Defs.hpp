@@ -5,9 +5,9 @@
 #include <string>
 
 #include "../../Defs.h"
+#include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
 #include "msgpack.hpp"
-#include "streaming_archive/ArchiveMetadata.hpp"
 
 namespace clp::streaming_archive::single_file_archive {
 
