@@ -36,7 +36,6 @@ def main(argv):
     args_parser.add_argument(
         "--config",
         "-c",
-        required=True,
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
@@ -88,7 +87,7 @@ def main(argv):
     )
     del_filter_parser = del_subparsers.add_parser(
         BY_FILTER_COMMAND,
-        help="delte archives within time frame.",
+        help="delete archives within time frame.",
     )
 
     # Delete by ID arguments
@@ -197,7 +196,7 @@ def _find_archives(
                 logger.info(archive_id)
 
     except Exception:
-        logger.exception("Failed to find archives from the database. Aborting deletion.")
+        logger.exception("Failed to find archives from the database.")
         return -1
 
     logger.info(f"Finished finding archives from the database.")
@@ -214,12 +213,13 @@ def _delete_archives(
     dry_run: bool = False,
 ) -> int:
     """
-    Deletes all archives where `begin_ts <= archive.begin_timestamp` and
-    `archive.end_timestamp <= end_ts` from both the metadata database and disk.
+    Deletes archives from both metadata database and disk based on provided SQL query.
     :param archives_dir:
     :param database_config:
     :param query: SQL query to select archives to delete.
     :param params: List of parameters for SQL query.
+    :param criteria: Type of deletion criteria. Either "filter" or "ids".
+    :param dry_run: If True, no changes will be made to the database or disk.
     :return: 0 on success, -1 otherwise.
     """
 
@@ -247,9 +247,6 @@ def _delete_archives(
                 return 0
 
             archive_ids = [result["id"] for result in results]
-
-            for archive_id in archive_ids:
-                logger.info(f"Deleted archive {archive_id} from the database.")
 
             if "ids" == criteria:
                 not_found_ids = set(params) - set(archive_ids)
@@ -283,6 +280,9 @@ def _delete_archives(
                 return 0
 
             db_conn.commit()
+            for archive_id in archive_ids:
+                logger.info(f"Deleted archive {archive_id} from the database.")
+
     except Exception:
         logger.exception("Failed to delete archives from the database. Aborting deletion.")
         return -1

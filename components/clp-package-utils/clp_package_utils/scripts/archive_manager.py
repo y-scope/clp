@@ -180,7 +180,7 @@ def main(argv):
     # fmt : on
     # Add subcommand-specific arguments
     if DEL_COMMAND == parsed_args.subcommand:
-        if True == parsed_args.dry_run:
+        if parsed_args.dry_run:
             archive_manager_cmd.append(DRY_RUN_ARG)
         if BY_IDS_COMMAND == parsed_args.del_subcommand:
             archive_manager_cmd.append(BY_IDS_COMMAND)
