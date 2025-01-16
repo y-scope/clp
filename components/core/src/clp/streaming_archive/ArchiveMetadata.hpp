@@ -8,6 +8,7 @@
 #include "../FileReader.hpp"
 #include "../FileWriter.hpp"
 #include "Constants.hpp"
+#include "msgpack.hpp"
 
 namespace clp::streaming_archive {
 
@@ -103,6 +104,20 @@ public:
     void expand_time_range(epochtime_t begin_timestamp, epochtime_t end_timestamp);
 
     void write_to_file(FileWriter& file_writer) const;
+
+    // MsgPack serialization used for single-file archive format. Variables are renamed when
+    // serialized to match single-file archive specification.
+    MSGPACK_DEFINE_MAP(
+            MSGPACK_NVP("archive_format_version", m_archive_format_version),
+            MSGPACK_NVP("variable_encoding_methods_version", m_variable_encoding_methods_version),
+            MSGPACK_NVP("variables_schema_version", m_variables_schema_version),
+            MSGPACK_NVP("compression_type", m_compression_type),
+            MSGPACK_NVP("creator_id", m_creator_id),
+            MSGPACK_NVP("begin_timestamp", m_begin_timestamp),
+            MSGPACK_NVP("end_timestamp", m_end_timestamp),
+            MSGPACK_NVP("uncompressed_size", m_uncompressed_size),
+            MSGPACK_NVP("compressed_size", m_compressed_size)
+    );
 
 private:
     // Variables

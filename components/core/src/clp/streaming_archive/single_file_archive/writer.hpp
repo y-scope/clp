@@ -38,7 +38,7 @@ private:
  *
  * @param multi_file_archive_metadata
  * @param multi_file_archive_path
- * @param next_segment_id
+ * @param next_segment_id ID of the next segment to be created in the archive.
  * @throws OperationFailed if single-file archive path already exists.
  */
 auto write_single_file_archive(

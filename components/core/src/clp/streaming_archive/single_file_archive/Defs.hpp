@@ -7,6 +7,7 @@
 #include "../../Defs.h"
 #include "../Constants.hpp"
 #include "msgpack.hpp"
+#include "streaming_archive/ArchiveMetadata.hpp"
 
 namespace clp::streaming_archive::single_file_archive {
 
@@ -45,37 +46,15 @@ struct __attribute__((packed)) SingleFileArchiveHeader {
 };
 
 struct FileInfo {
-    std::string n;
-    uint64_t o;
-    MSGPACK_DEFINE_MAP(n, o);
-};
-
-struct MultiFileArchiveMetadata {
-    archive_format_version_t archive_format_version;
-    std::string variable_encoding_methods_version;
-    std::string variables_schema_version;
-    std::string compression_type;
-    std::string creator_id;
-    epochtime_t begin_timestamp;
-    epochtime_t end_timestamp;
-    uint64_t uncompressed_size;
-    uint64_t compressed_size;
-    MSGPACK_DEFINE_MAP(
-            archive_format_version,
-            variable_encoding_methods_version,
-            variables_schema_version,
-            compression_type,
-            creator_id,
-            begin_timestamp,
-            end_timestamp,
-            uncompressed_size,
-            compressed_size
-    );
+    std::string name;
+    uint64_t offset;
+    // Variables are renamed when serialized to match single-file archive specification.
+    MSGPACK_DEFINE_MAP(MSGPACK_NVP("n", name), MSGPACK_NVP("o", offset));
 };
 
 struct SingleFileArchiveMetadata {
     std::vector<FileInfo> archive_files;
-    MultiFileArchiveMetadata archive_metadata;
+    ArchiveMetadata archive_metadata;
     uint64_t num_segments;
     MSGPACK_DEFINE_MAP(archive_files, archive_metadata, num_segments);
 };
