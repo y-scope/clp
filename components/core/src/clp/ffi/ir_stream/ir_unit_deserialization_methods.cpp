@@ -328,7 +328,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
 
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
         if (false == is_auto_generated) {
-            // User-generated node ID has been deserialized, pushes the node and terminates
+            // User-generated node ID has been deserialized, so push the node and terminate
             // auto-generated node-ID-value pair deserialization.
             user_gen_schema.push_back(node_id);
             break;

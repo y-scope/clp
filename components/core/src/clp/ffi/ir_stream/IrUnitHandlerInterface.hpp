@@ -43,7 +43,7 @@ concept IrUnitHandlerInterface = requires(
 
     /**
      * Handles a schema tree node insertion IR unit.
-     * @param is_auto_generated Whether the node is from auto-gen keys schema tree
+     * @param is_auto_generated Whether the node is from the auto-gen keys schema tree.
      * @param schema_tree_node_locator The locator of the node to insert.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
