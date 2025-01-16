@@ -351,7 +351,7 @@ private:
     GlobalMetadataDB* m_global_metadata_db;
 
     bool m_print_archive_stats_progress;
-    bool m_use_single_file_archive;
+    bool m_use_single_file_archive{false};
 };
 }  // namespace clp::streaming_archive::writer
 
