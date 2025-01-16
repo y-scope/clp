@@ -144,7 +144,7 @@ bool search_archive(
 ) {
     auto const& query = command_line_arguments.get_query();
 
-    auto timestamp_dict = archive_reader->read_timestamp_dictionary();
+    auto timestamp_dict = archive_reader->get_timestamp_dictionary();
     AddTimestampConditions add_timestamp_conditions(
             timestamp_dict->get_authoritative_timestamp_tokenized_column(),
             command_line_arguments.get_search_begin_ts(),
@@ -306,7 +306,7 @@ int main(int argc, char const* argv[]) {
         option.output_dir = command_line_arguments.get_output_dir();
         option.ordered = command_line_arguments.get_ordered_decompression();
         option.target_ordered_chunk_size = command_line_arguments.get_target_ordered_chunk_size();
-        option.print_ordered_stream_stats = command_line_arguments.print_ordered_stream_stats();
+        option.print_ordered_chunk_stats = command_line_arguments.print_ordered_chunk_stats();
         option.network_auth = command_line_arguments.get_network_auth();
         if (false == command_line_arguments.get_mongodb_uri().empty()) {
             option.metadata_db

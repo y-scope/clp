@@ -8,6 +8,7 @@ set -u
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+  ca-certificates \
   checkinstall \
   curl \
   libmariadb-dev \

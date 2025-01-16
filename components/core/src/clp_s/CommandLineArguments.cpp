@@ -413,9 +413,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Chunk size (B) for each output file when decompressing records in log order."
                     " When set to 0, no chunking is performed."
             )(
-                    "print-ordered-stream-stats",
-                    po::bool_switch(&m_print_ordered_stream_stats),
-                    "Print statistics (json) about the stream after it's extracted."
+                    "print-ordered-chunk-stats",
+                    po::bool_switch(&m_print_ordered_chunk_stats),
+                    "Print statistics (ndjson) about each chunk file after it's extracted."
             )(
                     "archive-id",
                     po::value<std::string>(&archive_id)->value_name("ID"),
@@ -496,9 +496,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
-            if (m_print_ordered_stream_stats && false == m_ordered_decompression) {
+            if (m_print_ordered_chunk_stats && false == m_ordered_decompression) {
                 throw std::invalid_argument(
-                        "print-ordered-stream-stats must be used with ordered argument"
+                        "print-ordered-chunk-stats must be used with ordered argument"
                 );
             }
 

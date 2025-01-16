@@ -44,6 +44,7 @@ void JsonConstructor::store() {
                     "log order. Falling back to out of order decompression.");
     }
 
+    m_archive_reader->open_packed_streams();
     if (false == m_option.ordered || false == m_archive_reader->has_log_order()) {
         FileWriter writer;
         writer.open(
@@ -130,9 +131,9 @@ void JsonConstructor::construct_in_order() {
             )));
         }
 
-        if (m_option.print_ordered_stream_stats) {
+        if (m_option.print_ordered_chunk_stats) {
             nlohmann::json json_msg;
-            json_msg["stream_path"] = new_file_path.string();
+            json_msg["path"] = new_file_path.string();
             std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                       << std::endl;
         }

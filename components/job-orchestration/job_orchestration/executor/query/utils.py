@@ -81,8 +81,8 @@ def run_query_task(
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     logger.info(f"Waiting for {task_name} to finish")
-    # `communicate` is equivalent to `wait` in this case, but avoids deadlocks if we switch to
-    # piping stdout/stderr in the future.
+    # `communicate` is equivalent to `wait` in this case, but avoids deadlocks when piping to
+    # stdout/stderr.
     stdout_data, _ = task_proc.communicate()
     return_code = task_proc.returncode
     if 0 != return_code:
@@ -110,7 +110,7 @@ def run_query_task(
     if QueryTaskStatus.FAILED == task_status:
         task_result.error_log_path = str(clo_log_path)
 
-    return task_result, stdout_data.decode("ascii")
+    return task_result, stdout_data.decode("utf-8")
 
 
 def update_query_task_metadata(

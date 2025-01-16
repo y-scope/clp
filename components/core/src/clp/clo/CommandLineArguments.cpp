@@ -181,12 +181,14 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     // clang-format off
     options_ir_extraction.add_options()(
             "target-size",
-            po::value<size_t>(&m_ir_target_size)->value_name("SIZE"),
+            po::value<size_t>(&m_ir_target_size)
+                    ->value_name("SIZE")
+                    ->default_value(m_ir_target_size),
             "Target size (B) for each IR chunk before a new chunk is created"
     )(
-            "print-stream-stats",
-            po::bool_switch(&m_print_stream_stats),
-            "Print statistics (ndjson) about each stream as it's extracted"
+            "print-ir-stats",
+            po::bool_switch(&m_print_ir_stats),
+            "Print statistics (ndjson) about each IR file as it's extracted"
     );
     // clang-format on
 

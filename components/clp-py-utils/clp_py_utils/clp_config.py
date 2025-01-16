@@ -455,7 +455,6 @@ class ArchiveOutput(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        # Turn storage config into primitive string dict
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
@@ -478,7 +477,6 @@ class StreamOutput(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        # Turn storage config into primitive string dict
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
