@@ -98,11 +98,10 @@ void validate_results(
             auto json = nlohmann::json::parse(result.message);
             results_set.insert(json[cTestIdxKey].template get<int64_t>());
         } catch (std::exception const& e) {
-            results_are_valid_json = false;
-            break;
+            FAIL(fmt::format("Invalid JSON in result: {}", result.message));
+            return;
         }
     }
-    REQUIRE(true == results_are_valid_json);
     std::set<int64_t> expected_results_set{expected_results.begin(), expected_results.end()};
     REQUIRE(results_set == expected_results_set);
 }
