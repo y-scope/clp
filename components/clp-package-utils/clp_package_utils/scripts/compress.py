@@ -43,16 +43,16 @@ def _generate_logs_list(
                             # Skip empty paths
                             continue
                         resolved_path = pathlib.Path(stripped_path_str).resolve()
-                        mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / pathlib.Path(
-                            resolved_path
-                        ).relative_to(resolved_path.anchor)
+                        mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                            resolved_path.anchor
+                        )
                         container_logs_list_file.write(f"{mounted_path}\n")
 
             for path in parsed_args.paths:
                 resolved_path = pathlib.Path(path).resolve()
-                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / pathlib.Path(
-                    resolved_path
-                ).relative_to(resolved_path.anchor)
+                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                    resolved_path.anchor
+                )
                 container_logs_list_file.write(f"{mounted_path}\n")
 
     elif InputType.S3 == input_type:
@@ -93,7 +93,7 @@ def _generate_compress_cmd(
         if parsed_args.aws_credentials_file:
             default_credentials_user = "default"
             aws_access_key_id, aws_secret_access_key = parse_aws_credentials_file(
-                pathlib.Path(parsed_args.aws_credentials_file, default_credentials_user)
+                pathlib.Path(parsed_args.aws_credentials_file), default_credentials_user
             )
         if aws_access_key_id and aws_secret_access_key:
             compress_cmd.append("--aws-access-key-id")
@@ -170,7 +170,8 @@ def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     args_parser = argparse.ArgumentParser(description="Compresses logs")
-    # package-level config option
+
+    # Package-level config option
     args_parser.add_argument(
         "--config",
         "-c",

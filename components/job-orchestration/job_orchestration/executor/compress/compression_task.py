@@ -276,7 +276,7 @@ def run_clp(
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
 
-    # generate list of logs to compress
+    # Generate list of logs to compress
     input_type = clp_config.input.type
     logs_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
     if InputType.FS == input_type:

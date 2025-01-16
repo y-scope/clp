@@ -18,7 +18,7 @@ def parse_aws_credentials_file(
     credentials_file_path: Path, user: str = "default"
 ) -> Tuple[str, str]:
     """
-    Parses the `aws_access_key_id` and `aws_secret_access_key` of 'user' from the given
+    Parses the `aws_access_key_id` and `aws_secret_access_key` of `user` from the given
     credentials_file_path.
     :param credentials_file_path:
     :param user:
@@ -37,7 +37,7 @@ def parse_aws_credentials_file(
 
     user_credentials = config_reader[user]
     if "aws_session_token" in user_credentials:
-        raise ValueError(f"Short-term credentials with session token is not supported.")
+        raise ValueError(f"Session tokens (short-term credentials) are not supported.")
 
     aws_access_key_id = user_credentials.get("aws_access_key_id")
     aws_secret_access_key = user_credentials.get("aws_secret_access_key")
@@ -146,8 +146,8 @@ def s3_put(
     :param src_file: Local file to upload.
     :param dest_file_name: The name for the uploaded file in the S3 bucket.
     :param total_max_attempts: Maximum number of retry attempts for the upload.
-    :raises: ValueError if `src_file` doesn't exist, doesn't resolve to a file or
-    is larger than the s3_put limit.
+    :raises: ValueError if `src_file` doesn't exist, doesn't resolve to a file or is larger than the
+    S3 PutObject limit.
     :raises: Propagates `boto3.client`'s exceptions.
     :raises: Propagates `boto3.client.put_object`'s exceptions.
     """
