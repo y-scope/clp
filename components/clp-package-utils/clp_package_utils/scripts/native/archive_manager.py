@@ -15,6 +15,15 @@ from clp_package_utils.general import (
     load_config_file,
 )
 
+# Command/Argument Constants
+FIND_COMMAND = "find"
+DEL_COMMAND = "del"
+BY_IDS_COMMAND = "by-ids"
+BY_FILTER_COMMAND = "by-filter"
+BEGIN_TS_ARG = "--begin-ts"
+END_TS_ARG = "--end-ts"
+DRY_RUN_ARG = "--dry-run"
+
 logger = logging.getLogger(__file__)
 
 
@@ -38,23 +47,23 @@ def main(argv):
         required=True,
     )
     find_parser = subparsers.add_parser(
-        "find",
+        FIND_COMMAND,
         help="List IDs of archives.",
     )
     del_parser = subparsers.add_parser(
-        "del",
+        DEL_COMMAND,
         help="Delete archives.",
     )
 
     # Find options
     find_parser.add_argument(
-        "--begin-ts",
+        BEGIN_TS_ARG,
         dest="begin_ts",
         type=int,
         help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     find_parser.add_argument(
-        "--end-ts",
+        END_TS_ARG,
         dest="end_ts",
         type=int,
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
@@ -62,7 +71,7 @@ def main(argv):
 
     # Delete options
     del_parser.add_argument(
-        "--dry-run",
+        DRY_RUN_ARG,
         dest="dry_run",
         action="store_true",
         help="Preview delete without making changes. Lists errors and files to be deleted.",
@@ -74,11 +83,11 @@ def main(argv):
         required=True,
     )
     del_id_parser = del_subparsers.add_parser(
-        "by-ids",
+        BY_IDS_COMMAND,
         help="Delete archives by ID.",
     )
     del_filter_parser = del_subparsers.add_parser(
-        "by-filter",
+        BY_FILTER_COMMAND,
         help="delte archives within time frame.",
     )
 
@@ -118,25 +127,22 @@ def main(argv):
         logger.error("`archive_output.directory` doesn't exist.")
         return -1
 
-    if "find" == parsed_args.subcommand:
-        if parsed_args.begin_ts is None and parsed_args.end_ts is None:
-            return _find_archives(archives_dir, database_config)
-        else:
-            return _find_archives(
+    if FIND_COMMAND == parsed_args.subcommand:
+        return _find_archives(
                 archives_dir,
                 database_config,
                 parsed_args.begin_ts,
                 parsed_args.end_ts,
             )
-    elif "del" == parsed_args.subcommand:
-        if "by-ids" == parsed_args.del_subcommand:
+    elif DEL_COMMAND == parsed_args.subcommand:
+        if BY_IDS_COMMAND == parsed_args.del_subcommand:
             return _delete_archives_by_ids(
                 archives_dir,
                 database_config,
                 parsed_args.ids,
                 parsed_args.dry_run,
             )
-        elif "by-filter" == parsed_args.del_subcommand:
+        elif BY_FILTER_COMMAND == parsed_args.del_subcommand:
             return _delete_archives_by_filter(
                 archives_dir,
                 database_config,
@@ -149,7 +155,7 @@ def main(argv):
 def _find_archives(
     archives_dir: Path,
     database_config: Database,
-    begin_ts: int = None,
+    begin_ts: int,
     end_ts: int = None,
 ) -> int:
     """
@@ -171,10 +177,10 @@ def _find_archives(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
 
-            params = ()
-            query = f"SELECT id FROM `{table_prefix}archives`"
-            if begin_ts is not None and end_ts is not None:
-                query += " WHERE begin_timestamp >= %s AND end_timestamp <= %s"
+            params = (begin_ts,)
+            query = f"SELECT id FROM `{table_prefix}archives` WHERE begin_timestamp >= %s"
+            if end_ts is not None:
+                query += " AND end_timestamp <= %s"
                 params = (begin_ts, end_ts)
 
             db_cursor.execute(query, params)
@@ -255,20 +261,20 @@ def _delete_archives(
                         """
                     )
 
+            id_string = ", ".join(f"'{archive_id}'" for archive_id in archive_ids)
+
             db_cursor.execute(
                 f"""
                 DELETE FROM `{table_prefix}files`
-                WHERE archive_id in ({', '.join(['%s'] * len(archive_ids))})
-                """,
-                archive_ids,
+                WHERE archive_id in ({id_string})
+                """
             )
 
             db_cursor.execute(
                 f"""
                 DELETE FROM `{table_prefix}archive_tags`
-                WHERE archive_id in ({', '.join(['%s'] * len(archive_ids))})
-                """,
-                archive_ids,
+                WHERE archive_id in ({id_string})
+                """
             )
 
             if dry_run:

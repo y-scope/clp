@@ -17,10 +17,19 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
 )
 
+# Command/Argument Constants
+FIND_COMMAND = "find"
+DEL_COMMAND = "del"
+BY_IDS_COMMAND = "by-ids"
+BY_FILTER_COMMAND = "by-filter"
+BEGIN_TS_ARG = "--begin-ts"
+END_TS_ARG = "--end-ts"
+DRY_RUN_ARG = "--dry-run"
+
 logger = logging.getLogger(__file__)
 
 
-def validate_timestamps(begin_ts, end_ts):
+def _validate_timestamps(begin_ts, end_ts):
     if begin_ts > end_ts:
         logger.error("begin-ts must be <= end-ts")
         return False
@@ -49,24 +58,24 @@ def main(argv):
         required=True,
     )
     find_parser = subparsers.add_parser(
-        "find",
+        FIND_COMMAND,
         help="List IDs of archives.",
     )
     del_parser = subparsers.add_parser(
-        "del",
+        DEL_COMMAND,
         help="Delete archives.",
     )
 
     # Find options
     find_parser.add_argument(
-        "--begin-ts",
+        BEGIN_TS_ARG,
         dest="begin_ts",
         type=int,
         default=0,
         help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     find_parser.add_argument(
-        "--end-ts",
+        END_TS_ARG,
         dest="end_ts",
         type=int,
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
@@ -74,7 +83,7 @@ def main(argv):
 
     # Delete options
     del_parser.add_argument(
-        "--dry-run",
+        DRY_RUN_ARG,
         dest="dry_run",
         action="store_true",
         help="Preview delete without making changes. Lists errors and files to be deleted.",
@@ -86,11 +95,11 @@ def main(argv):
         required=True,
     )
     del_id_parser = del_subparsers.add_parser(
-        "by-ids",
+        BY_IDS_COMMAND,
         help="Delete archives by ID.",
     )
     del_filter_parser = del_subparsers.add_parser(
-        "by-filter",
+        BY_FILTER_COMMAND,
         help="Delete archives within time frame.",
     )
 
@@ -103,13 +112,13 @@ def main(argv):
 
     # Delete by filter arguments
     del_filter_parser.add_argument(
-        "--begin-ts",
+        BEGIN_TS_ARG,
         type=int,
         default=0,
         help="Time-range lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     del_filter_parser.add_argument(
-        "--end-ts",
+        END_TS_ARG,
         type=int,
         required=True,
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
@@ -135,18 +144,18 @@ def main(argv):
         return -1
 
     # Validate input depending on subcommands
-    if "del" == parsed_args.subcommand:
-        if "by-filter" == parsed_args.del_subcommand:
+    if DEL_COMMAND == parsed_args.subcommand:
+        if BY_FILTER_COMMAND == parsed_args.del_subcommand:
 
             # Validate the input timestamp
-            if not validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):
+            if not _validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):
                 return -1
 
-    elif "find" == parsed_args.subcommand:
-        if hasattr(parsed_args, "end_ts") and parsed_args.end_ts is not None:
+    elif FIND_COMMAND == parsed_args.subcommand:
+        if parsed_args.end_ts is not None:
 
             # Validate the input timestamp
-            if not validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):
+            if not _validate_timestamps(parsed_args.begin_ts, parsed_args.end_ts):
                 return -1
 
     container_name = generate_container_name("archive-manager")
@@ -168,21 +177,20 @@ def main(argv):
         "--config", str(generated_config_path_on_container),
         str(parsed_args.subcommand),
     ]
-
+    # fmt : on
     # Add subcommand-specific arguments
-    if "del" == parsed_args.subcommand:
+    if DEL_COMMAND == parsed_args.subcommand:
         if True == parsed_args.dry_run:
-            archive_manager_cmd.extend(["--dry-run"])
-        if "by-ids" == parsed_args.del_subcommand:
-            archive_manager_cmd.extend(["by-ids"])
+            archive_manager_cmd.append(DRY_RUN_ARG)
+        if BY_IDS_COMMAND == parsed_args.del_subcommand:
+            archive_manager_cmd.append(BY_IDS_COMMAND)
             archive_manager_cmd.extend(parsed_args.ids)
-        elif "by-filter" == parsed_args.del_subcommand:
-            archive_manager_cmd.extend(["by-filter", str(parsed_args.begin_ts), str(parsed_args.end_ts)])
-    elif "find" == parsed_args.subcommand:
-        if hasattr(parsed_args, "end_ts") and parsed_args.end_ts is not None:
-            archive_manager_cmd.extend(["--begin-ts", str(parsed_args.begin_ts), "--end-ts", str(parsed_args.end_ts)])
-
-    # fmt: on
+        elif BY_FILTER_COMMAND == parsed_args.del_subcommand:
+            archive_manager_cmd.extend([BY_FILTER_COMMAND, str(parsed_args.begin_ts), str(parsed_args.end_ts)])
+    elif FIND_COMMAND == parsed_args.subcommand:
+        archive_manager_cmd.extend([BEGIN_TS_ARG, str(parsed_args.begin_ts)])
+        if parsed_args.end_ts is not None:
+            archive_manager_cmd.extend([END_TS_ARG, str(parsed_args.end_ts)])
 
     cmd = container_start_cmd + archive_manager_cmd
 
