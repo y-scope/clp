@@ -129,11 +129,11 @@ def main(argv):
 
     if FIND_COMMAND == parsed_args.subcommand:
         return _find_archives(
-                archives_dir,
-                database_config,
-                parsed_args.begin_ts,
-                parsed_args.end_ts,
-            )
+            archives_dir,
+            database_config,
+            parsed_args.begin_ts,
+            parsed_args.end_ts,
+        )
     elif DEL_COMMAND == parsed_args.subcommand:
         if BY_IDS_COMMAND == parsed_args.del_subcommand:
             return _delete_archives_by_ids(
