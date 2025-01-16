@@ -297,7 +297,7 @@ private:
 };
 
 /**
- * Output handler that records all results in an in-memory vector.
+ * Output handler that records all results in a provided vector.
  */
 class VectorOutputHandler : public OutputHandler {
 public:
@@ -322,7 +322,9 @@ public:
     };
 
     // Constructors
-    VectorOutputHandler() : OutputHandler{true, true} {}
+    VectorOutputHandler(std::vector<QueryResult>& output)
+            : OutputHandler{true, true},
+              m_output(output) {}
 
     // Methods inherited from OutputHandler
     void write(
@@ -334,12 +336,12 @@ public:
         m_output.emplace_back(message, timestamp, archive_id, log_event_idx);
     }
 
-    void write(std::string_view message) override { m_output.emplace_back(message, {}, {}, {}); }
-
-    auto get_output() -> std::vector<QueryResult> const& { return m_output; }
+    void write(std::string_view message) override {
+        m_output.emplace_back(message, epochtime_t{}, std::string_view{}, int64_t{});
+    }
 
 private:
-    std::vector<QueryResult> m_output{};
+    std::vector<QueryResult>& m_output;
 };
 }  // namespace clp_s::search
 
