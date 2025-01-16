@@ -17,7 +17,7 @@ public:
 
     // Delete copy & move constructors and assignment operators
     LogSuppressor(LogSuppressor const& other) = delete;
-    LogSuppressor(LogSuppressor&& other)  = delete;
+    LogSuppressor(LogSuppressor&& other) = delete;
     auto operator=(LogSuppressor const& other) -> LogSuppressor& = delete;
     auto operator=(LogSuppressor&& other) -> LogSuppressor& = delete;
 
