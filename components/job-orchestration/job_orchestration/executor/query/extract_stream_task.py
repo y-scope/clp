@@ -128,10 +128,9 @@ def extract_stream(
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
 
-    # Get s3 config
+    # Get S3 config
     s3_config: S3Config
     enable_s3_upload = False
-
     storage_config = worker_config.stream_output.storage
     if StorageType.S3 == storage_config.type:
         s3_config = storage_config.s3_config
@@ -166,27 +165,40 @@ def extract_stream(
 
     if enable_s3_upload and QueryTaskStatus.SUCCEEDED == task_results.status:
         logger.info(f"Uploading streams to S3...")
-        s3_error = None
-        for line in task_stdout_as_str.splitlines():
-            stream_stats = json.loads(line)
-            stream_path = Path(stream_stats["path"])
 
-            if s3_error is None:
+        upload_error = False
+        for line in task_stdout_as_str.splitlines():
+            try:
+                stream_stats = json.loads(line)
+            except json.decoder.JSONDecodeError:
+                logger.exception(f"`{line}` cannot be decoded as JSON")
+                upload_error = True
+                continue
+
+            stream_path_str = stream_stats.get("path")
+            if stream_path_str is None:
+                logger.error(f"`path` is not a valid key in `{line}`")
+                upload_error = True
+                continue
+
+            stream_path = Path(stream_path_str)
+
+            if not upload_error:
                 stream_name = stream_path.name
                 logger.info(f"Uploading stream {stream_name} to S3...")
                 result = s3_put(s3_config, stream_path, stream_name)
 
                 if result.is_err():
                     logger.error(f"Failed to upload stream {stream_name}: {result.err_value}")
-                    s3_error = result.err_value
+                    upload_error = True
                 else:
                     logger.info(f"Finished uploading stream {stream_name} to S3.")
 
             stream_path.unlink()
 
-        if s3_error:
+        if upload_error:
             task_results.status = QueryTaskStatus.FAILED
-            task_results.error_log_path = "S3 Failed"
+            task_results.error_log_path = str(os.getenv("WORKER_LOG_PATH"))
         else:
             logger.info(f"Finished uploading streams.")
 
