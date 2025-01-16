@@ -824,14 +824,15 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
         } else if ((char)Command::JsonToIr == command_input) {
             po::options_description compression_positional_options;
+            std::vector<std::string> input_paths;
             // clang-format off
              compression_positional_options.add_options()(
-                     "ir-dir",
+                     "irs-dir",
                      po::value<std::string>(&m_archives_dir)->value_name("DIR"),
                      "output directory"
              )(
                      "input-paths",
-                     po::value<std::vector<std::string>>(&m_file_paths)->value_name("PATHS"),
+                     po::value<std::vector<std::string>>(&input_paths)->value_name("PATHS"),
                      "input paths"
              );
             // clang-format on
@@ -869,7 +870,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::positional_options_description positional_options;
-            positional_options.add("ir-dir", 1);
+            positional_options.add("irs-dir", 1);
             positional_options.add("input-paths", -1);
 
             po::options_description all_compression_options;
@@ -907,13 +908,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (false == input_path_list_file_path.empty()) {
-                if (false == read_paths_from_file(input_path_list_file_path, m_file_paths)) {
+                if (false == read_paths_from_file(input_path_list_file_path, input_paths)) {
                     SPDLOG_ERROR("Failed to read paths from {}", input_path_list_file_path);
                     return ParsingResult::Failure;
                 }
             }
 
-            if (m_file_paths.empty()) {
+            for (auto const& path : input_paths) {
+                if (false == get_input_files_for_raw_path(path, m_input_paths)) {
+                    throw std::invalid_argument(fmt::format("Invalid input path \"{}\".", path));
+                }
+            }
+
+            if (m_input_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
             }
 

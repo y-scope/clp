@@ -284,21 +284,16 @@ auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool {
         return false;
     }
     clp_s::JsonToIrParserOption option{};
-    option.file_paths = command_line_arguments.get_file_paths();
+    option.input_paths = command_line_arguments.get_input_paths();
     option.irs_dir = irs_dir.string();
     option.max_document_size = command_line_arguments.get_max_document_size();
     option.max_ir_buffer_size = command_line_arguments.get_max_ir_buffer_size();
     option.compression_level = command_line_arguments.get_compression_level();
     option.encoding = command_line_arguments.get_encoding_type();
 
-    if (false == clp_s::FileUtils::validate_path(option.file_paths)) {
-        SPDLOG_ERROR("Invalid file path(s) provided");
-        return false;
-    }
-
     std::vector<std::string> all_file_paths;
-    for (auto& file_path : option.file_paths) {
-        clp_s::FileUtils::find_all_files(file_path, all_file_paths);
+    for (auto const& path : option.input_paths) {
+        all_file_paths.push_back(path.path);
     }
 
     for (auto& path : all_file_paths) {

@@ -56,7 +56,7 @@ struct JsonParserOption {
 };
 
 struct JsonToIrParserOption {
-    std::vector<std::string> file_paths;
+    std::vector<Path> input_paths;
     std::string irs_dir;
     size_t max_document_size;
     size_t max_ir_buffer_size;
