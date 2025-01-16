@@ -43,10 +43,9 @@ auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uin
  * @return Vector containing a `FileInfo` struct for every file in the multi-file archive.
  * @throws Propagates `update_offset`'s exceptions.
  */
-[[nodiscard]] auto get_file_infos(
-        std::filesystem::path const& multi_file_archive_path,
-        segment_id_t next_segment_id
-) -> std::vector<FileInfo>;
+[[nodiscard]] auto
+get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_t next_segment_id)
+        -> std::vector<FileInfo>;
 
 /**
  * Combines file section metadata, multi-file archive metadata, and the number of segments into
@@ -118,10 +117,9 @@ auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uin
     }
 }
 
-auto get_file_infos(
-        std::filesystem::path const& multi_file_archive_path,
-        segment_id_t next_segment_id
-) -> std::vector<FileInfo> {
+auto
+get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_t next_segment_id)
+        -> std::vector<FileInfo> {
     std::vector<FileInfo> files;
     uint64_t offset = 0;
 
