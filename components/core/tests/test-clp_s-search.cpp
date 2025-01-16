@@ -167,7 +167,19 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
 }  // namespace
 
 TEST_CASE("clp-s-search", "[clp-s][search]") {
-    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{{"test", {0}}};
+    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
+            {R"aa(NOT a: b)aa", {0}},
+            {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
+            {R"aa(msg: "Msg 2: 'Abc123'")aa", {2}},
+            {R"aa(msg: "Msg 3: \nAbc123")aa", {3}},
+            // CLP incorrectly generates no subqueries in Grep::process_raw_query for the following
+            // query, so we skip it for now.
+            //{R"aa(msg: "Msg 4: \\Abc123")aa", {4}}
+            {R"aa(msg: "Msg 5: \rAbc123")aa", {5}},
+            {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
+            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
+            {R"aa(arr.b > 1000)aa", {7, 8}}
+    };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
