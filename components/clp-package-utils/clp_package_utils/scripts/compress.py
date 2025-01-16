@@ -150,7 +150,7 @@ def _validate_s3_input_args(
     aws_secret_access_key = parsed_args.aws_secret_access_key
     if aws_credential_file is not None:
         if not pathlib.Path(aws_credential_file).exists():
-            raise ValueError(f"AWS credentials file '{aws_credential_file}' doesn't exist.")
+            args_parser.error(f"AWS credentials file '{aws_credential_file}' doesn't exist.")
 
         if aws_access_key_id is not None or aws_secret_access_key is not None:
             args_parser.error(
