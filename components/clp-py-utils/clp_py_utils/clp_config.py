@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Union, Tuple
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, validator
@@ -310,13 +310,29 @@ class Queue(BaseModel):
     password: Optional[str]
 
 
+class S3Credentials(BaseModel):
+    access_key_id: str
+    secret_access_key: str
+
+    @validator("access_key_id")
+    def validate_access_key_id(cls, field):
+        if field == "":
+            raise ValueError("access_key_id cannot be empty")
+        return field
+
+    @validator("secret_access_key")
+    def validate_secret_access_key(cls, field):
+        if field == "":
+            raise ValueError("secret_access_key cannot be empty")
+        return field
+
+
 class S3Config(BaseModel):
     region_code: str
     bucket: str
     key_prefix: str
 
-    access_key_id: Optional[str] = None
-    secret_access_key: Optional[str] = None
+    credentials: Optional[S3Credentials]
 
     @validator("region_code")
     def validate_region_code(cls, field):
@@ -337,6 +353,11 @@ class S3Config(BaseModel):
         if not field.endswith("/"):
             raise ValueError('key_prefix must end with "/"')
         return field
+
+    def get_credentials(self) -> Tuple[Optional[str], Optional[str]]:
+        if self.credentials is None:
+            return None, None
+        return self.credentials.access_key_id, self.credentials.secret_access_key
 
 
 class FsStorage(BaseModel):
