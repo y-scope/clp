@@ -44,6 +44,7 @@ void JsonConstructor::store() {
                     "log order. Falling back to out of order decompression.");
     }
 
+    m_archive_reader->open_packed_streams();
     if (false == m_option.ordered || false == m_archive_reader->has_log_order()) {
         FileWriter writer;
         writer.open(

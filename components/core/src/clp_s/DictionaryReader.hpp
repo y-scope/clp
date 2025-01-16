@@ -7,6 +7,7 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 
+#include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryEntry.hpp"
 #include "Utils.hpp"
 
@@ -23,7 +24,7 @@ public:
     };
 
     // Constructors
-    DictionaryReader() : m_is_open(false) {}
+    DictionaryReader(ArchiveReaderAdaptor& adaptor) : m_is_open(false), m_adaptor(adaptor) {}
 
     // Methods
     /**
@@ -38,9 +39,9 @@ public:
     void close();
 
     /**
-     * Reads any new entries from disk
+     * Reads all entries from disk
      */
-    void read_new_entries(bool lazy = false);
+    void read_entries(bool lazy = false);
 
     /**
      * @return All dictionary entries
@@ -82,14 +83,14 @@ public:
 
 protected:
     bool m_is_open;
-    FileReader m_dictionary_file_reader;
+    ArchiveReaderAdaptor& m_adaptor;
+    std::string m_dictionary_path;
     ZstdDecompressor m_dictionary_decompressor;
     std::vector<EntryType> m_entries;
 };
 
-class VariableDictionaryReader : public DictionaryReader<uint64_t, VariableDictionaryEntry> {};
-
-class LogTypeDictionaryReader : public DictionaryReader<uint64_t, LogTypeDictionaryEntry> {};
+using VariableDictionaryReader = DictionaryReader<uint64_t, VariableDictionaryEntry>;
+using LogTypeDictionaryReader = DictionaryReader<uint64_t, LogTypeDictionaryEntry>;
 
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::open(std::string const& dictionary_path) {
@@ -97,14 +98,7 @@ void DictionaryReader<DictionaryIdType, EntryType>::open(std::string const& dict
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
 
-    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-
-    m_dictionary_file_reader.open(dictionary_path);
-    // Skip header
-    m_dictionary_file_reader.seek_from_begin(sizeof(uint64_t));
-    // Open decompressor
-    m_dictionary_decompressor.open(m_dictionary_file_reader, cDecompressorFileReadBufferCapacity);
-
+    m_dictionary_path = dictionary_path;
     m_is_open = true;
 }
 
@@ -113,40 +107,31 @@ void DictionaryReader<DictionaryIdType, EntryType>::close() {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
-
-    m_dictionary_decompressor.close();
-    m_dictionary_file_reader.close();
-
     m_is_open = false;
 }
 
 template <typename DictionaryIdType, typename EntryType>
-void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries(bool lazy) {
+void DictionaryReader<DictionaryIdType, EntryType>::read_entries(bool lazy) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
 
-    auto dictionary_file_reader_pos = m_dictionary_file_reader.get_pos();
-    m_dictionary_file_reader.seek_from_begin(0);
+    constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    auto dictionary_reader = m_adaptor.checkout_reader_for_section(m_dictionary_path);
+
     uint64_t num_dictionary_entries;
-    m_dictionary_file_reader.read_numeric_value(num_dictionary_entries, false);
-    m_dictionary_file_reader.seek_from_begin(dictionary_file_reader_pos);
+    dictionary_reader->read_numeric_value(num_dictionary_entries, false);
+    m_dictionary_decompressor.open(*dictionary_reader, cDecompressorFileReadBufferCapacity);
 
-    // Validate dictionary header
-    if (num_dictionary_entries < m_entries.size()) {
-        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
+    // Read dictionary entries
+    m_entries.resize(num_dictionary_entries);
+    for (size_t i = 0; i < num_dictionary_entries; ++i) {
+        auto& entry = m_entries[i];
+        entry.read_from_file(m_dictionary_decompressor, i, lazy);
     }
 
-    // Read new dictionary entries
-    if (num_dictionary_entries > m_entries.size()) {
-        auto prev_num_dictionary_entries = m_entries.size();
-        m_entries.resize(num_dictionary_entries);
-
-        for (size_t i = prev_num_dictionary_entries; i < num_dictionary_entries; ++i) {
-            auto& entry = m_entries[i];
-            entry.read_from_file(m_dictionary_decompressor, i, lazy);
-        }
-    }
+    m_dictionary_decompressor.close();
+    m_adaptor.checkin_reader_for_section(m_dictionary_path);
 }
 
 template <typename DictionaryIdType, typename EntryType>

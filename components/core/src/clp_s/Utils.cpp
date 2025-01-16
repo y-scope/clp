@@ -1,5 +1,7 @@
 #include "Utils.hpp"
 
+#include <charconv>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <set>
@@ -77,7 +79,7 @@ bool is_multi_file_archive(std::string_view const path) {
             return false;
         }
         auto formatted_name = fmt::format("/{}", file_name);
-        if (constants::cArchiveTimestampDictFile == formatted_name
+        if (constants::cArchiveHeaderFile == formatted_name
             || constants::cArchiveSchemaTreeFile == formatted_name
             || constants::cArchiveSchemaMapFile == formatted_name
             || constants::cArchiveVarDictFile == formatted_name
@@ -88,10 +90,11 @@ bool is_multi_file_archive(std::string_view const path) {
         {
             continue;
         } else {
-            try {
-                auto segment_file_number = std::stoi(file_name);
-                continue;
-            } catch (std::exception const& e) {
+            uint64_t segment_file_number{};
+            auto const* begin = file_name.data();
+            auto const* end = file_name.data() + file_name.size();
+            auto [last, rc] = std::from_chars(begin, end, segment_file_number);
+            if (std::errc{} != rc || last != end) {
                 return false;
             }
         }
