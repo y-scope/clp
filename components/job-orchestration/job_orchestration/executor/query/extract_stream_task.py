@@ -186,13 +186,13 @@ def extract_stream(
             if not upload_error:
                 stream_name = stream_path.name
                 logger.info(f"Uploading stream {stream_name} to S3...")
-                result = s3_put(s3_config, stream_path, stream_name)
 
-                if result.is_err():
-                    logger.error(f"Failed to upload stream {stream_name}: {result.err_value}")
-                    upload_error = True
-                else:
+                try:
+                    s3_put(s3_config, stream_path, stream_name)
                     logger.info(f"Finished uploading stream {stream_name} to S3.")
+                except Exception as err:
+                    logger.error(f"Failed to upload stream {stream_name}: {err}")
+                    upload_error = True
 
             stream_path.unlink()
 
