@@ -205,8 +205,8 @@ IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& ut
  * @return IRProtocolErrorCode::Invalid if the protocol version does not follow the SemVer
  * specification.
  */
-[[nodiscard]] auto validate_protocol_version(std::string_view protocol_version
-) -> IRProtocolErrorCode;
+[[nodiscard]] auto validate_protocol_version(std::string_view protocol_version)
+        -> IRProtocolErrorCode;
 
 namespace eight_byte_encoding {
 /**

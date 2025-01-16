@@ -133,8 +133,8 @@ private:
  * @return The corresponding schema-tree node type.
  * @return std::nullopt if the value doesn't match any of the supported schema-tree node types.
  */
-[[nodiscard]] auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
-) -> optional<SchemaTree::Node::Type>;
+[[nodiscard]] auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
+        -> optional<SchemaTree::Node::Type>;
 
 /**
  * Serializes an empty object.
@@ -191,11 +191,9 @@ serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>& out
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_value_array(
-        msgpack::object const& val,
-        string& logtype_buf,
-        vector<int8_t>& output_buf
-) -> bool;
+[[nodiscard]] auto
+serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<int8_t>& output_buf)
+        -> bool;
 
 /**
  * Serializes the given MessagePack value into `output_buf`.
@@ -248,8 +246,8 @@ template <
         EmptyMapSerializationMethod empty_map_serialization_method
 ) -> bool;
 
-auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val
-) -> optional<SchemaTree::Node::Type> {
+auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
+        -> optional<SchemaTree::Node::Type> {
     optional<SchemaTree::Node::Type> ret_val;
     switch (val.type) {
         case msgpack::type::POSITIVE_INTEGER:
@@ -323,11 +321,9 @@ auto serialize_value_string(string_view val, string& logtype_buf, vector<int8_t>
 }
 
 template <typename encoded_variable_t>
-auto serialize_value_array(
-        msgpack::object const& val,
-        string& logtype_buf,
-        vector<int8_t>& output_buf
-) -> bool {
+auto
+serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<int8_t>& output_buf)
+        -> bool {
     if (false == is_msgpack_array_serializable(val)) {
         return false;
     }
@@ -526,8 +522,8 @@ template <
 }  // namespace
 
 template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::create(
-) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
+auto Serializer<encoded_variable_t>::create()
+        -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
     static_assert(
             (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
              || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -787,15 +783,15 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
-template auto Serializer<eight_byte_encoded_variable_t>::create(
-) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
-template auto Serializer<four_byte_encoded_variable_t>::create(
-) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
+template auto Serializer<eight_byte_encoded_variable_t>::create()
+        -> OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
+template auto Serializer<four_byte_encoded_variable_t>::create()
+        -> OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
 
-template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
-) -> void;
-template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset
-) -> void;
+template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset)
+        -> void;
+template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset)
+        -> void;
 
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
         msgpack::object_map const& auto_gen_kv_pairs_map,

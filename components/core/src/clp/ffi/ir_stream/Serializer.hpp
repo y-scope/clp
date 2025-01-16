@@ -42,8 +42,8 @@ public:
      * @return A result containing the serializer or an error code indicating the failure:
      * - std::errc::protocol_error on failure to serialize the preamble.
      */
-    [[nodiscard]] static auto create(
-    ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
+    [[nodiscard]] static auto create()
+            -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
 
     // Disable copy constructor/assignment operator
     Serializer(Serializer const&) = delete;

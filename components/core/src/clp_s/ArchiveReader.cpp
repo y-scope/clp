@@ -4,41 +4,45 @@
 #include <string_view>
 
 #include "archive_constants.hpp"
+#include "ArchiveReaderAdaptor.hpp"
+#include "InputConfig.hpp"
 #include "ReaderUtils.hpp"
 
 using std::string_view;
 
 namespace clp_s {
-void ArchiveReader::open(string_view archives_dir, string_view archive_id) {
+void ArchiveReader::open(Path const& archive_path, NetworkAuthOption const& network_auth) {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
     m_is_open = true;
-    m_archive_id = archive_id;
-    std::filesystem::path archive_path{archives_dir};
-    archive_path /= m_archive_id;
-    auto const archive_path_str = archive_path.string();
 
-    m_var_dict = ReaderUtils::get_variable_dictionary_reader(archive_path_str);
-    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(archive_path_str);
-    m_array_dict = ReaderUtils::get_array_dictionary_reader(archive_path_str);
-    m_timestamp_dict = ReaderUtils::get_timestamp_dictionary_reader(archive_path_str);
+    if (false == get_archive_id_from_path(archive_path, m_archive_id)) {
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
 
-    m_schema_tree = ReaderUtils::read_schema_tree(archive_path_str);
-    m_schema_map = ReaderUtils::read_schemas(archive_path_str);
+    m_archive_reader_adaptor = std::make_shared<ArchiveReaderAdaptor>(archive_path, network_auth);
+
+    if (auto const rc = m_archive_reader_adaptor->load_archive_metadata(); ErrorCodeSuccess != rc) {
+        throw OperationFailed(rc, __FILENAME__, __LINE__);
+    }
+
+    m_schema_tree = ReaderUtils::read_schema_tree(*m_archive_reader_adaptor);
+    m_schema_map = ReaderUtils::read_schemas(*m_archive_reader_adaptor);
 
     m_log_event_idx_column_id = m_schema_tree->get_metadata_field_id(constants::cLogEventIdxName);
 
-    m_table_metadata_file_reader.open(archive_path_str + constants::cArchiveTableMetadataFile);
-    m_stream_reader.open_packed_streams(archive_path_str + constants::cArchiveTablesFile);
+    m_var_dict = ReaderUtils::get_variable_dictionary_reader(*m_archive_reader_adaptor);
+    m_log_dict = ReaderUtils::get_log_type_dictionary_reader(*m_archive_reader_adaptor);
+    m_array_dict = ReaderUtils::get_array_dictionary_reader(*m_archive_reader_adaptor);
 }
 
 void ArchiveReader::read_metadata() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
-    m_table_metadata_decompressor.open(
-            m_table_metadata_file_reader,
-            cDecompressorFileReadBufferCapacity
+    auto table_metadata_reader = m_archive_reader_adaptor->checkout_reader_for_section(
+            constants::cArchiveTableMetadataFile
     );
+    m_table_metadata_decompressor.open(*table_metadata_reader, cDecompressorFileReadBufferCapacity);
 
     m_stream_reader.read_metadata(m_table_metadata_decompressor);
 
@@ -121,14 +125,19 @@ void ArchiveReader::read_metadata() {
               - prev_metadata.stream_offset;
     m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
     m_table_metadata_decompressor.close();
+
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
 }
 
 void ArchiveReader::read_dictionaries_and_metadata() {
-    m_var_dict->read_new_entries();
-    m_log_dict->read_new_entries();
-    m_array_dict->read_new_entries();
-    m_timestamp_dict->read_new_entries();
     read_metadata();
+    m_var_dict->read_entries();
+    m_log_dict->read_entries();
+    m_array_dict->read_entries();
+}
+
+void ArchiveReader::open_packed_streams() {
+    m_stream_reader.open_packed_streams(m_archive_reader_adaptor);
 }
 
 SchemaReader& ArchiveReader::read_schema_table(
@@ -195,11 +204,12 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_array_dict, true);
             break;
         case NodeType::DateString:
-            column_reader = new DateStringColumnReader(column_id, m_timestamp_dict);
+            column_reader = new DateStringColumnReader(column_id, get_timestamp_dictionary());
             break;
         // No need to push columns without associated object readers into the SchemaReader.
-        case NodeType::Object:
+        case NodeType::Metadata:
         case NodeType::NullValue:
+        case NodeType::Object:
         case NodeType::StructuredArray:
         case NodeType::Unknown:
             break;
@@ -277,7 +287,8 @@ void ArchiveReader::initialize_schema_reader(
             m_id_to_schema_metadata[schema_id].num_messages,
             should_marshal_records
     );
-    auto timestamp_column_ids = m_timestamp_dict->get_authoritative_timestamp_column_ids();
+    auto timestamp_column_ids
+            = get_timestamp_dictionary()->get_authoritative_timestamp_column_ids();
     for (size_t i = 0; i < schema.size(); ++i) {
         int32_t column_id = schema[i];
         if (Schema::schema_entry_is_unordered_object(column_id)) {
@@ -344,10 +355,9 @@ void ArchiveReader::close() {
     m_var_dict->close();
     m_log_dict->close();
     m_array_dict->close();
-    m_timestamp_dict->close();
 
     m_stream_reader.close();
-    m_table_metadata_file_reader.close();
+    m_archive_reader_adaptor.reset();
 
     m_id_to_schema_metadata.clear();
     m_schema_ids.clear();

@@ -265,12 +265,9 @@ auto BufferedFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& n
     return ErrorCode_Success;
 }
 
-auto BufferedFileReader::try_read_to_delimiter(
-        char delim,
-        bool keep_delimiter,
-        bool append,
-        string& str
-) -> ErrorCode {
+auto
+BufferedFileReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, string& str)
+        -> ErrorCode {
     if (-1 == m_fd) {
         return ErrorCode_NotInit;
     }
