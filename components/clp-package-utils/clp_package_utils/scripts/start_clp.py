@@ -935,12 +935,16 @@ def start_log_viewer_webui(
         s3_config = stream_storage.s3_config
 
         settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
-        settings_json_updates["StreamFilesS3PathPrefix"] = f"{s3_config.bucket}/{s3_config.key_prefix}"
+        settings_json_updates["StreamFilesS3PathPrefix"] = (
+            f"{s3_config.bucket}/{s3_config.key_prefix}"
+        )
         access_key_id, secret_access_key = s3_config.get_credentials()
         if access_key_id is not None and secret_access_key is not None:
             stream_storage_env_vars = [
-                "-e", f"AWS_ACCESS_KEY_ID={access_key_id}",
-                "-e", f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+                "-e",
+                f"AWS_ACCESS_KEY_ID={access_key_id}",
+                "-e",
+                f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
             ]
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
