@@ -19,7 +19,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    enum class OutputType: uint8_t {
+    enum class OutputType : uint8_t {
         Database
     };
 

@@ -5,7 +5,6 @@
 #include <boost/program_options.hpp>
 #include <spdlog/spdlog.h>
 
-
 namespace po = boost::program_options;
 
 namespace clp_s::metadata_uploader {
