@@ -111,6 +111,7 @@ public:
     }
 
     [[nodiscard]] static auto handle_schema_tree_node_insertion(
+            [[maybe_unused]] bool is_auto_generated,
             [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator
     ) -> IRErrorCode {
         return IRErrorCode::IRErrorCode_Success;
@@ -193,15 +194,22 @@ auto flush_and_clear_serializer_buffer(
 /**
  * Unpacks and serializes the given msgpack bytes using kv serializer.
  * @tparam encoded_variable_t
- * @param msgpack_bytes
+ * @param auto_gen_msgpack_bytes
+ * @param user_gen_msgpack_bytes
  * @param serializer
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
 [[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& msgpack_bytes,
+        vector<uint8_t> const& auto_gen_msgpack_bytes,
+        vector<uint8_t> const& user_gen_msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
 ) -> bool;
+
+/**
+ * @return A msgpack object handle that holds an empty msgpack map.
+ */
+[[nodiscard]] auto create_msgpack_empty_map_obj_handle() -> msgpack::object_handle;
 
 /**
  * Counts the number of leaves in a JSON tree. A node is considered as a leaf if it's a primitive
@@ -338,18 +346,40 @@ auto flush_and_clear_serializer_buffer(
 
 template <typename encoded_variable_t>
 auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& msgpack_bytes,
+        vector<uint8_t> const& auto_gen_msgpack_bytes,
+        vector<uint8_t> const& user_gen_msgpack_bytes,
         Serializer<encoded_variable_t>& serializer
 ) -> bool {
-    auto const msgpack_obj_handle{msgpack::unpack(
-            clp::size_checked_pointer_cast<char const>(msgpack_bytes.data()),
-            msgpack_bytes.size()
+    auto const auto_gen_msgpack_byte_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(auto_gen_msgpack_bytes.data()),
+            auto_gen_msgpack_bytes.size()
     )};
-    auto const msgpack_obj{msgpack_obj_handle.get()};
-    if (msgpack::type::MAP != msgpack_obj.type) {
+    auto const auto_gen_msgpack_obj{auto_gen_msgpack_byte_handle.get()};
+    if (msgpack::type::MAP != auto_gen_msgpack_obj.type) {
         return false;
     }
-    return serializer.serialize_msgpack_map(msgpack_obj.via.map);
+
+    auto const user_gen_msgpack_byte_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(user_gen_msgpack_bytes.data()),
+            user_gen_msgpack_bytes.size()
+    )};
+    auto const user_gen_msgpack_obj{user_gen_msgpack_byte_handle.get()};
+    if (msgpack::type::MAP != user_gen_msgpack_obj.type) {
+        return false;
+    }
+
+    return serializer.serialize_msgpack_map(
+            auto_gen_msgpack_obj.via.map,
+            user_gen_msgpack_obj.via.map
+    );
+}
+
+auto create_msgpack_empty_map_obj_handle() -> msgpack::object_handle {
+    auto const msgpack_empty_map_buf{nlohmann::json::to_msgpack(nlohmann::json::parse("{}"))};
+    return msgpack::unpack(
+            size_checked_pointer_cast<char const>(msgpack_empty_map_buf.data()),
+            msgpack_empty_map_buf.size()
+    );
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
@@ -388,7 +418,15 @@ auto unpack_and_assert_serialization_failure(
     auto const msgpack_obj_handle{msgpack::unpack(msgpack_bytes.data(), msgpack_bytes.size())};
     auto const msgpack_obj{msgpack_obj_handle.get()};
     REQUIRE((msgpack::type::MAP == msgpack_obj.type));
-    if (serializer.serialize_msgpack_map(msgpack_obj.via.map)) {
+
+    auto const msgpack_empty_map_obj_handle{create_msgpack_empty_map_obj_handle()};
+    auto const msgpack_empty_map_obj{msgpack_empty_map_obj_handle.get()};
+
+    if (serializer.serialize_msgpack_map(msgpack_obj.via.map, msgpack_empty_map_obj.via.map)) {
+        // Serialization should fail
+        return false;
+    }
+    if (serializer.serialize_msgpack_map(msgpack_empty_map_obj.via.map, msgpack_obj.via.map)) {
         // Serialization should fail
         return false;
     }
@@ -1177,13 +1215,13 @@ TEMPLATE_TEST_CASE(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEMPLATE_TEST_CASE(
-        "ffi_ir_stream_Serializer_serialize_msgpack",
-        "[clp][ffi][ir_stream][Serializer]",
+        "ffi_ir_stream_kv_pair_log_events_serde",
+        "[clp][ffi][ir_stream]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t
 ) {
     vector<int8_t> ir_buf;
-    vector<nlohmann::json> serialized_json_objects;
+    vector<std::pair<nlohmann::json, nlohmann::json>> expected_auto_gen_and_user_gen_object_pairs;
 
     auto result{Serializer<TestType>::create()};
     REQUIRE((false == result.has_error()));
@@ -1192,8 +1230,7 @@ TEMPLATE_TEST_CASE(
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
     auto const empty_obj = nlohmann::json::parse("{}");
-    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(empty_obj), serializer));
-    serialized_json_objects.emplace_back(empty_obj);
+    expected_auto_gen_and_user_gen_object_pairs.emplace_back(empty_obj, empty_obj);
 
     // Test encoding basic object
     constexpr string_view cShortString{"short_string"};
@@ -1218,9 +1255,7 @@ TEMPLATE_TEST_CASE(
                {"null", nullptr},
                {"empty_object", empty_obj},
                {"empty_array", empty_array}};
-
-    REQUIRE(unpack_and_serialize_msgpack_bytes(nlohmann::json::to_msgpack(basic_obj), serializer));
-    serialized_json_objects.emplace_back(basic_obj);
+    expected_auto_gen_and_user_gen_object_pairs.emplace_back(basic_obj, basic_obj);
 
     auto basic_array = empty_array;
     basic_array.emplace_back(1);
@@ -1235,6 +1270,7 @@ TEMPLATE_TEST_CASE(
         REQUIRE(
                 (false
                  == unpack_and_serialize_msgpack_bytes(
+                         nlohmann::json::to_msgpack(empty_obj),
                          nlohmann::json::to_msgpack(element),
                          serializer
                  ))
@@ -1247,16 +1283,23 @@ TEMPLATE_TEST_CASE(
     auto recursive_array = basic_array;
     constexpr size_t cRecursiveDepth{6};
     for (size_t i{0}; i < cRecursiveDepth; ++i) {
+        auto const original_obj = recursive_obj;
         recursive_array.emplace_back(recursive_obj);
-        recursive_obj.emplace("obj_" + std::to_string(i), recursive_obj);
+        recursive_obj.emplace("obj_" + std::to_string(i), original_obj);
         recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
-        REQUIRE(unpack_and_serialize_msgpack_bytes(
-                nlohmann::json::to_msgpack(recursive_obj),
-                serializer
-        ));
-        serialized_json_objects.emplace_back(recursive_obj);
+        expected_auto_gen_and_user_gen_object_pairs.emplace_back(original_obj, recursive_obj);
+        expected_auto_gen_and_user_gen_object_pairs.emplace_back(empty_obj, recursive_obj);
     }
 
+    for (auto const& [auto_gen_json_obj, user_gen_json_obj] :
+         expected_auto_gen_and_user_gen_object_pairs)
+    {
+        REQUIRE(unpack_and_serialize_msgpack_bytes(
+                nlohmann::json::to_msgpack(auto_gen_json_obj),
+                nlohmann::json::to_msgpack(user_gen_json_obj),
+                serializer
+        ));
+    }
     flush_and_clear_serializer_buffer(serializer, ir_buf);
     ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
 
@@ -1279,22 +1322,34 @@ TEMPLATE_TEST_CASE(
     REQUIRE(deserializer.is_stream_completed());
     // Check the number of log events deserialized matches the number of log events serialized
     auto const& deserialized_log_events{ir_unit_handler.get_deserialized_log_events()};
-    REQUIRE((serialized_json_objects.size() == deserialized_log_events.size()));
+    REQUIRE((expected_auto_gen_and_user_gen_object_pairs.size() == deserialized_log_events.size()));
 
-    auto const num_log_events{serialized_json_objects.size()};
+    auto const num_log_events{expected_auto_gen_and_user_gen_object_pairs.size()};
     for (size_t idx{0}; idx < num_log_events; ++idx) {
-        auto const& expect{serialized_json_objects.at(idx)};
+        auto const& [expected_auto_gen_json_obj, expected_user_gen_json_obj]{
+                expected_auto_gen_and_user_gen_object_pairs.at(idx)
+        };
         auto const& deserialized_log_event{deserialized_log_events.at(idx)};
 
-        auto const num_leaves_in_json_obj{count_num_leaves(expect)};
-        auto const num_kv_pairs{deserialized_log_event.get_user_gen_node_id_value_pairs().size()};
-        REQUIRE((num_leaves_in_json_obj == num_kv_pairs));
+        auto const num_leaves_in_auto_gen_json_obj{count_num_leaves(expected_auto_gen_json_obj)};
+        auto const num_auto_gen_kv_pairs{
+                deserialized_log_event.get_auto_gen_node_id_value_pairs().size()
+        };
+        REQUIRE((num_leaves_in_auto_gen_json_obj == num_auto_gen_kv_pairs));
+
+        auto const num_leaves_in_user_gen_json_obj{count_num_leaves(expected_user_gen_json_obj)};
+        auto const num_user_gen_kv_pairs{
+                deserialized_log_event.get_user_gen_node_id_value_pairs().size()
+        };
+        REQUIRE((num_leaves_in_user_gen_json_obj == num_user_gen_kv_pairs));
 
         auto const serialized_json_result{deserialized_log_event.serialize_to_json()};
         REQUIRE_FALSE(serialized_json_result.has_error());
-        auto const& [auto_generated, user_generated]{serialized_json_result.value()};
-        REQUIRE(auto_generated.empty());
-        REQUIRE((expect == user_generated));
+        auto const& [actual_auto_gen_json_obj, actual_user_gen_json_obj]{
+                serialized_json_result.value()
+        };
+        REQUIRE((expected_auto_gen_json_obj == actual_auto_gen_json_obj));
+        REQUIRE((expected_user_gen_json_obj == actual_user_gen_json_obj));
     }
 
     auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};

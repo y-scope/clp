@@ -53,6 +53,7 @@ public:
     }
 
     [[nodiscard]] auto handle_schema_tree_node_insertion(
+            [[maybe_unused]] bool is_auto_generated,
             [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator
     ) -> IRErrorCode {
         return IRErrorCode::IRErrorCode_Success;
