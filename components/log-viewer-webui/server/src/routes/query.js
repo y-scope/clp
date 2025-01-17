@@ -5,6 +5,14 @@ import {EXTRACT_JOB_TYPES} from "../DbManager.js";
 import S3Manager from "../S3Manager.js";
 
 
+const S3_MANAGER = (
+    null === settings.StreamFilesS3PathPrefix ||
+    0 === settings.StreamFilesS3Region.length
+) ?
+    null :
+    new S3Manager(settings.StreamFilesS3Region);
+
+
 /**
  * Creates query routes.
  *
@@ -13,17 +21,6 @@ import S3Manager from "../S3Manager.js";
  * @return {Promise<void>}
  */
 const routes = async (fastify, options) => {
-    const s3Manager = (
-        null === settings.StreamFilesS3PathPrefix ||
-        0 === settings.StreamFilesS3Region.length
-    ) ?
-        null :
-        new S3Manager(
-            settings.StreamFilesS3Region,
-            settings.StreamS3AccessKeyId,
-            settings.StreamS3SecretAccessKey
-        );
-
     fastify.post("/query/extract-stream", async (req, resp) => {
         const {extractJobType, logEventIdx, streamId} = req.body;
         if (false === EXTRACT_JOB_TYPES.includes(extractJobType)) {
@@ -68,10 +65,10 @@ const routes = async (fastify, options) => {
             }
         }
 
-        if (null === s3Manager) {
+        if (null === S3_MANAGER) {
             streamMetadata.path = `/streams/${streamMetadata.path}`;
         } else {
-            streamMetadata.path = await s3Manager.getPreSignedUrl(
+            streamMetadata.path = await S3_MANAGER.getPreSignedUrl(
                 `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
             );
         }

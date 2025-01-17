@@ -12,23 +12,15 @@ class S3Manager {
     #s3Client;
 
     /**
-     * TODO: need to handle when access_key = None.
+     * Creates S3 Manager.
      *
      * @param {string} region
-     * @param {string} accessKeyId
-     * @param {string} secretAccessKey
      */
     constructor (
         region,
-        accessKeyId,
-        secretAccessKey
     ) {
         this.#s3Client = new S3Client({
             region: region,
-            credentials: {
-                accessKeyId: accessKeyId,
-                secretAccessKey: secretAccessKey,
-            },
         });
     }
 

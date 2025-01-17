@@ -930,13 +930,18 @@ def start_log_viewer_webui(
     }
 
     stream_storage = clp_config.stream_output.storage
+    stream_storage_env_vars = None
     if StorageType.S3 == stream_storage.type:
         s3_config = stream_storage.s3_config
+
         settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
         settings_json_updates["StreamFilesS3PathPrefix"] = f"{s3_config.bucket}/{s3_config.key_prefix}"
-        if s3_config.access_key_id is not None and s3_config.secret_access_key is not None:
-            settings_json_updates["StreamS3AccessKeyId"] = s3_config.access_key_id
-            settings_json_updates["StreamS3SecretAccessKey"] = s3_config.secret_access_key
+        access_key_id, secret_access_key = s3_config.get_credentials()
+        if access_key_id is not None and secret_access_key is not None:
+            stream_storage_env_vars = [
+                "-e", f"AWS_ACCESS_KEY_ID={access_key_id}",
+                "-e", f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+            ]
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
@@ -959,6 +964,10 @@ def start_log_viewer_webui(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
+
+    if stream_storage_env_vars is not None:
+        container_cmd.extend(stream_storage_env_vars)
+
     necessary_mounts = [
         mounts.clp_home,
         mounts.stream_output_dir,
