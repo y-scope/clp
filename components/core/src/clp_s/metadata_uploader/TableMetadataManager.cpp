@@ -66,7 +66,7 @@ std::vector<std::pair<std::string, clp_s::NodeType>> TableMetadataManager::trave
     std::string path_buffer;
     // Stack of pairs of node_id and path_length
     std::stack<std::pair<int32_t, uint64_t>> s;
-    for (auto &node : schema_tree->get_nodes()) {
+    for (auto& node : schema_tree->get_nodes()) {
         if (node.get_parent_id() == -1 && clp_s::NodeType::Metadata != node.get_type()) {
             s.push({node.get_id(), 0});
             break;

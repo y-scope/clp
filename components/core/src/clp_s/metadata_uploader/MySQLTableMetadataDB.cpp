@@ -65,8 +65,7 @@ void MySQLTableMetadataDB::init(std::string const& table_name) {
     m_is_init = true;
 }
 
-void MySQLTableMetadataDB::add_field(std::string const& field_name,
-                                     NodeType field_type) {
+void MySQLTableMetadataDB::add_field(std::string const& field_name, NodeType field_type) {
     if (false == m_is_init) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
