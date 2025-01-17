@@ -40,13 +40,17 @@ class S3Manager {
             Key: s3uri.pathname.substring(1),
         });
 
-        return await getSignedUrl(
-            this.#s3Client,
-            command,
-            {
-                expiresIn: PRE_SIGNED_URL_EXPIRY_TIME_SECONDS,
-            }
-        );
+        try {
+            return await getSignedUrl(
+                this.#s3Client,
+                command,
+                {
+                    expiresIn: PRE_SIGNED_URL_EXPIRY_TIME_SECONDS,
+                }
+            );
+        } catch (error) {
+            throw new Error(`Failed to generate pre-signed URL: ${error.message}`);
+        }
     }
 }
 
