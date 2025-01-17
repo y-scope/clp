@@ -298,7 +298,12 @@ int main(int argc, char const* argv[]) {
     }
 
     if (CommandLineArguments::Command::Compress == command_line_arguments.get_command()) {
-        if (false == compress(command_line_arguments)) {
+        try {
+            if (false == compress(command_line_arguments)) {
+                return 1;
+            }
+        } catch (std::exception const& e) {
+            SPDLOG_ERROR("Encountered error during compression - {}", e.what());
             return 1;
         }
     } else if (CommandLineArguments::Command::Extract == command_line_arguments.get_command()) {
