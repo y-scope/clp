@@ -1215,7 +1215,7 @@ TEMPLATE_TEST_CASE(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEMPLATE_TEST_CASE(
-        "ffi_ir_stream_kv_pair_log_events_serder",
+        "ffi_ir_stream_kv_pair_log_events_serde",
         "[clp][ffi][ir_stream]",
         four_byte_encoded_variable_t,
         eight_byte_encoded_variable_t

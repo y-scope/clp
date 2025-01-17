@@ -305,7 +305,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
     KeyValuePairLogEvent::NodeIdValuePairs auto_gen_node_id_value_pairs;
     Schema user_gen_schema;
 
-    // Deserialize auto generated node id value pairs
+    // Deserialize pairs of auto-generated node IDs and values
     while (true) {
         if (false == is_encoded_key_id_tag(tag)) {
             break;
@@ -327,7 +327,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
 
         auto const [is_auto_generated, node_id]{schema_tree_node_id_result.value()};
         if (false == is_auto_generated) {
-            // User-generated node ID has been deserialized, so push the node and terminate
+            // User-generated node ID has been deserialized, so save the node ID and terminate
             // auto-generated node-ID-value pair deserialization.
             user_gen_schema.push_back(node_id);
             break;
@@ -349,6 +349,7 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         }
     }
 
+    // Deserialize any remaining user-generated node IDs
     while (true) {
         if (false == is_encoded_key_id_tag(tag)) {
             break;
