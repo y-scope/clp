@@ -490,16 +490,23 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (0 != m_target_ordered_chunk_size && false == m_ordered_decompression) {
-                throw std::invalid_argument(
-                        "target-ordered-chunk-size must be used with ordered argument"
-                );
-            }
+            if (m_ordered_decompression) {
+                if (0 != m_target_ordered_chunk_size) {
+                    throw std::invalid_argument(
+                            "target-ordered-chunk-size must be used with ordered argument"
+                    );
+                }
 
-            if (m_print_ordered_chunk_stats && false == m_ordered_decompression) {
-                throw std::invalid_argument(
-                        "print-ordered-chunk-stats must be used with ordered argument"
-                );
+                if (m_print_ordered_chunk_stats) {
+                    throw std::invalid_argument(
+                            "print-ordered-chunk-stats must be used with ordered argument"
+                    );
+                }
+
+                if (false == m_mongodb_uri.empty()) {
+                    throw std::invalid_argument("Recording decompression metadata only supported"
+                                                " for ordered decompression");
+                }
             }
 
             // We use xor to check that these arguments are either both specified or both
@@ -510,11 +517,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
-            if (false == m_mongodb_uri.empty() && false == m_ordered_decompression) {
-                throw std::invalid_argument(
-                        "Recording decompression metadata only supported for ordered decompression"
-                );
-            }
         } else if ((char)Command::Search == command_input) {
             std::string archives_dir;
             std::string query;
