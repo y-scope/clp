@@ -6,14 +6,12 @@ import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 
 
 /**
- * Class for validating s3 inputs.
+ * Class to manage Simple Storage Service (S3) objects.
  */
 class S3Manager {
     #s3Client;
 
     /**
-     * Creates S3 Manager.
-     *
      * @param {string} region
      */
     constructor (
