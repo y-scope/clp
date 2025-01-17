@@ -4,6 +4,10 @@ import {
 } from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 
+/**
+ * Expiry time in seconds for pre-signed URLs.
+ */
+const PRE_SIGNED_URL_EXPIRY_TIME_SECONDS = 3600;
 
 /**
  * Class to manage Simple Storage Service (S3) objects.
@@ -35,7 +39,13 @@ class S3Manager {
             Key: s3uri.pathname.substring(1),
         });
 
-        return await getSignedUrl(this.#s3Client, command, {expiresIn: 3600});
+        return await getSignedUrl(
+            this.#s3Client,
+            command,
+            {
+                expiresIn: PRE_SIGNED_URL_EXPIRY_TIME_SECONDS
+            }
+        );
     }
 }
 
