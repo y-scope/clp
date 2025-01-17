@@ -941,12 +941,14 @@ def start_log_viewer_webui(
         )
         access_key_id, secret_access_key = s3_config.get_credentials()
         if access_key_id is not None and secret_access_key is not None:
-            container_cmd_extra_opts.extend([
-                "-e",
-                f"AWS_ACCESS_KEY_ID={access_key_id}",
-                "-e",
-                f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
-            ])
+            container_cmd_extra_opts.extend(
+                [
+                    "-e",
+                    f"AWS_ACCESS_KEY_ID={access_key_id}",
+                    "-e",
+                    f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+                ]
+            )
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
