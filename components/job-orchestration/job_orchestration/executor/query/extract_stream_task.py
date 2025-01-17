@@ -201,7 +201,7 @@ def extract_stream(
 
         if upload_error:
             task_results.status = QueryTaskStatus.FAILED
-            task_results.error_log_path = str(os.getenv("WORKER_LOG_PATH"))
+            task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
         else:
             logger.info(f"Finished uploading streams.")
 
