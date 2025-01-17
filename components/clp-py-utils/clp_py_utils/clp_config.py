@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Union, Tuple
+from typing import Literal, Optional, Tuple, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, validator
