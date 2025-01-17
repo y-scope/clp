@@ -929,8 +929,9 @@ def start_log_viewer_webui(
         "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
 
+    container_cmd_extra_opts = []
+
     stream_storage = clp_config.stream_output.storage
-    stream_storage_env_vars = None
     if StorageType.S3 == stream_storage.type:
         s3_config = stream_storage.s3_config
 
@@ -940,12 +941,12 @@ def start_log_viewer_webui(
         )
         access_key_id, secret_access_key = s3_config.get_credentials()
         if access_key_id is not None and secret_access_key is not None:
-            stream_storage_env_vars = [
+            container_cmd_extra_opts.extend([
                 "-e",
                 f"AWS_ACCESS_KEY_ID={access_key_id}",
                 "-e",
                 f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
-            ]
+            ])
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
@@ -968,9 +969,7 @@ def start_log_viewer_webui(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-
-    if stream_storage_env_vars is not None:
-        container_cmd.extend(stream_storage_env_vars)
+    container_cmd.extend(container_cmd_extra_opts)
 
     necessary_mounts = [
         mounts.clp_home,
