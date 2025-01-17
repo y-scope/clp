@@ -1,13 +1,13 @@
 import argparse
+import configparser
 import logging
 import pathlib
 import subprocess
 import sys
 import uuid
-from typing import List
+from typing import List, Tuple
 
 from clp_py_utils.clp_config import CLPConfig, StorageEngine
-from clp_py_utils.s3_utils import parse_aws_credentials_file
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
@@ -24,6 +24,40 @@ from clp_package_utils.general import (
 )
 
 logger = logging.getLogger(__file__)
+
+
+def _parse_aws_credentials_file(credentials_file_path: pathlib.Path, user: str) -> Tuple[str, str]:
+    """
+    Parses the `aws_access_key_id` and `aws_secret_access_key` of `user` from the given
+    credentials_file_path.
+    :param credentials_file_path:
+    :param user:
+    :return: A tuple of (aws_access_key_id, aws_secret_access_key)
+    :raises: ValueError if the file doesn't exist, or doesn't contain valid aws credentials.
+    """
+
+    if not credentials_file_path.exists():
+        raise ValueError(f"'{credentials_file_path}' doesn't exist.")
+
+    config_reader = configparser.ConfigParser()
+    config_reader.read(credentials_file_path)
+
+    if not config_reader.has_section(user):
+        raise ValueError(f"User '{user}' doesn't exist.")
+
+    user_credentials = config_reader[user]
+    if "aws_session_token" in user_credentials:
+        raise ValueError(f"Session tokens (short-term credentials) are not supported.")
+
+    aws_access_key_id = user_credentials.get("aws_access_key_id")
+    aws_secret_access_key = user_credentials.get("aws_secret_access_key")
+
+    if aws_access_key_id is None or aws_secret_access_key is None:
+        raise ValueError(
+            "The credentials file must contain both aws_access_key_id and aws_secret_access_key."
+        )
+
+    return aws_access_key_id, aws_secret_access_key
 
 
 def _generate_logs_list(
@@ -92,7 +126,7 @@ def _generate_compress_cmd(
         aws_secret_access_key = parsed_args.aws_secret_access_key
         if parsed_args.aws_credentials_file:
             default_credentials_user = "default"
-            aws_access_key_id, aws_secret_access_key = parse_aws_credentials_file(
+            aws_access_key_id, aws_secret_access_key = _parse_aws_credentials_file(
                 pathlib.Path(parsed_args.aws_credentials_file), default_credentials_user
             )
         if aws_access_key_id and aws_secret_access_key:

@@ -152,7 +152,7 @@ def extract_stream(
             start_time=start_time,
         )
 
-    task_results, task_stdout_as_str = run_query_task(
+    task_results, task_stdout_str = run_query_task(
         sql_adapter=sql_adapter,
         logger=logger,
         clp_logs_dir=clp_logs_dir,
@@ -167,7 +167,7 @@ def extract_stream(
         logger.info(f"Uploading streams to S3...")
 
         upload_error = False
-        for line in task_stdout_as_str.splitlines():
+        for line in task_stdout_str.splitlines():
             try:
                 stream_stats = json.loads(line)
             except json.decoder.JSONDecodeError:
@@ -183,6 +183,9 @@ def extract_stream(
 
             stream_path = Path(stream_path_str)
 
+            # If we've had a single upload error, we don't want to try uploading any other streams
+            # since that may unnecessarily slow down the task and generate a lot of extraneous
+            # output.
             if not upload_error:
                 stream_name = stream_path.name
                 logger.info(f"Uploading stream {stream_name} to S3...")
@@ -198,7 +201,7 @@ def extract_stream(
 
         if upload_error:
             task_results.status = QueryTaskStatus.FAILED
-            task_results.error_log_path = str(os.getenv("WORKER_LOG_PATH"))
+            task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
         else:
             logger.info(f"Finished uploading streams.")
 

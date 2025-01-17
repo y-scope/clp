@@ -188,7 +188,7 @@ auto CommandLineArguments::parse_ir_extraction_arguments(
     )(
             "print-ir-stats",
             po::bool_switch(&m_print_ir_stats),
-            "Print statistics (ndjson) about each IR file as it's extracted"
+            "Print statistics (ndjson) about each IR file after it's extracted"
     );
     // clang-format on
 

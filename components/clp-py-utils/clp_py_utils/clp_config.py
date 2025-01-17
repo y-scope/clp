@@ -408,16 +408,16 @@ class StreamFsStorage(FsStorage):
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged_archives"
+    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
 class StreamS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged_streams"
+    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
 def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:
     storage_type = storage_config.type
-    if StorageType.FS == storage_config.type:
+    if StorageType.FS == storage_type:
         return storage_config.directory
     elif StorageType.S3 == storage_type:
         return storage_config.staging_directory
@@ -600,7 +600,7 @@ class CLPConfig(BaseModel):
         try:
             validate_path_could_be_dir(self.stream_output.get_directory())
         except ValueError as ex:
-            raise ValueError(f"stream_output.directory is invalid: {ex}")
+            raise ValueError(f"stream_output.storage's directory is invalid: {ex}")
 
     def validate_data_dir(self):
         try:
