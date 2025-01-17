@@ -106,7 +106,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  * - The possible error codes:
  *   - Forwards `deserialize_tag`'s return values.
  *   - Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
- *   - std::err::protocol_error if the IR stream contains auto-generated key IDs after at least one
+ *   - std::err::protocol_error if the IR stream contains auto-generated key IDs *after* a
  *     user-generated key ID has been deserialized.
  */
 [[nodiscard]] auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
