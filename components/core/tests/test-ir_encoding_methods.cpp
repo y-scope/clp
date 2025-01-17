@@ -1221,7 +1221,7 @@ TEMPLATE_TEST_CASE(
         eight_byte_encoded_variable_t
 ) {
     vector<int8_t> ir_buf;
-    vector<std::pair<nlohmann::json, nlohmann::json>> expected_serialized_json_object_pairs;
+    vector<std::pair<nlohmann::json, nlohmann::json>> expected_auto_gen_and_user_gen_object_pairs;
 
     auto result{Serializer<TestType>::create()};
     REQUIRE((false == result.has_error()));
@@ -1230,7 +1230,7 @@ TEMPLATE_TEST_CASE(
     flush_and_clear_serializer_buffer(serializer, ir_buf);
 
     auto const empty_obj = nlohmann::json::parse("{}");
-    expected_serialized_json_object_pairs.emplace_back(empty_obj, empty_obj);
+    expected_auto_gen_and_user_gen_object_pairs.emplace_back(empty_obj, empty_obj);
 
     // Test encoding basic object
     constexpr string_view cShortString{"short_string"};
@@ -1255,7 +1255,7 @@ TEMPLATE_TEST_CASE(
                {"null", nullptr},
                {"empty_object", empty_obj},
                {"empty_array", empty_array}};
-    expected_serialized_json_object_pairs.emplace_back(basic_obj, basic_obj);
+    expected_auto_gen_and_user_gen_object_pairs.emplace_back(basic_obj, basic_obj);
 
     auto basic_array = empty_array;
     basic_array.emplace_back(1);
@@ -1287,11 +1287,12 @@ TEMPLATE_TEST_CASE(
         recursive_array.emplace_back(recursive_obj);
         recursive_obj.emplace("obj_" + std::to_string(i), original_obj);
         recursive_obj.emplace("array_" + std::to_string(i), recursive_array);
-        expected_serialized_json_object_pairs.emplace_back(original_obj, recursive_obj);
-        expected_serialized_json_object_pairs.emplace_back(empty_obj, recursive_obj);
+        expected_auto_gen_and_user_gen_object_pairs.emplace_back(original_obj, recursive_obj);
+        expected_auto_gen_and_user_gen_object_pairs.emplace_back(empty_obj, recursive_obj);
     }
 
-    for (auto const& [auto_gen_json_obj, user_gen_json_obj] : expected_serialized_json_object_pairs)
+    for (auto const& [auto_gen_json_obj, user_gen_json_obj] :
+         expected_auto_gen_and_user_gen_object_pairs)
     {
         REQUIRE(unpack_and_serialize_msgpack_bytes(
                 nlohmann::json::to_msgpack(auto_gen_json_obj),
@@ -1321,12 +1322,12 @@ TEMPLATE_TEST_CASE(
     REQUIRE(deserializer.is_stream_completed());
     // Check the number of log events deserialized matches the number of log events serialized
     auto const& deserialized_log_events{ir_unit_handler.get_deserialized_log_events()};
-    REQUIRE((expected_serialized_json_object_pairs.size() == deserialized_log_events.size()));
+    REQUIRE((expected_auto_gen_and_user_gen_object_pairs.size() == deserialized_log_events.size()));
 
-    auto const num_log_events{expected_serialized_json_object_pairs.size()};
+    auto const num_log_events{expected_auto_gen_and_user_gen_object_pairs.size()};
     for (size_t idx{0}; idx < num_log_events; ++idx) {
         auto const& [expected_auto_gen_json_obj, expected_user_gen_json_obj]{
-                expected_serialized_json_object_pairs.at(idx)
+                expected_auto_gen_and_user_gen_object_pairs.at(idx)
         };
         auto const& deserialized_log_event{deserialized_log_events.at(idx)};
 
