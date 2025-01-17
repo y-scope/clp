@@ -490,7 +490,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (m_ordered_decompression) {
+            if (false == m_ordered_decompression) {
                 if (0 != m_target_ordered_chunk_size) {
                     throw std::invalid_argument(
                             "target-ordered-chunk-size must be used with ordered argument"
