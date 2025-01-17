@@ -6,7 +6,7 @@ import sys
 from contextlib import closing
 from logging import Logger
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -43,6 +43,7 @@ def run_query_task(
     logger: Logger,
     clp_logs_dir: Path,
     task_command: List[str],
+    env_vars: Optional[Dict[str, str]],
     task_name: str,
     job_id: str,
     task_id: int,
@@ -63,6 +64,7 @@ def run_query_task(
         close_fds=True,
         stdout=clo_log_file,
         stderr=clo_log_file,
+        env=env_vars,
     )
 
     def sigterm_handler(_signo, _stack_frame):

@@ -7,7 +7,7 @@ import sys
 import uuid
 
 import yaml
-from clp_py_utils.clp_config import StorageType
+from clp_py_utils.clp_config import StorageEngine, StorageType
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -79,8 +79,11 @@ def main(argv):
         return -1
 
     storage_type = clp_config.archive_output.storage.type
-    if StorageType.FS != storage_type:
-        logger.error(f"Search is not supported for archive storage type: {storage_type}.")
+    storage_engine = clp_config.package.storage_engine
+    if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
+        logger.error(
+            f"Search is not supported for archive storage type: {storage_type} while using the {storage_engine} storage engine."
+        )
         return -1
 
     container_name = generate_container_name(str(JobType.SEARCH))
