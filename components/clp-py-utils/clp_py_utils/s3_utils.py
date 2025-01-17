@@ -124,12 +124,13 @@ def s3_put(
         )
 
     config = Config(retries=dict(total_max_attempts=total_max_attempts, mode="adaptive"))
+    aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
 
     my_s3_client = boto3.client(
         "s3",
         region_name=s3_config.region_code,
-        aws_access_key_id=s3_config.access_key_id,
-        aws_secret_access_key=s3_config.secret_access_key,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
         config=config,
     )
 

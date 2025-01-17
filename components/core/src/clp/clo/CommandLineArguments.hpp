@@ -48,6 +48,8 @@ public:
     [[nodiscard]] auto get_archive_path() const -> std::string_view { return m_archive_path; }
 
     // IR extraction arguments
+    [[nodiscard]] auto print_ir_stats() const -> bool { return m_print_ir_stats; }
+
     [[nodiscard]] auto get_file_split_id() const -> std::string const& { return m_file_split_id; }
 
     [[nodiscard]] size_t get_ir_target_size() const { return m_ir_target_size; }
@@ -180,6 +182,7 @@ private:
     std::string m_archive_path;
 
     // Variables for IR extraction
+    bool m_print_ir_stats{false};
     std::string m_file_split_id;
     size_t m_ir_target_size{128ULL * 1024 * 1024};
     std::string m_ir_output_dir;
