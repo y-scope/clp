@@ -86,7 +86,7 @@ def make_core_clp_s_command_and_env_vars(
     return command, env_vars
 
 
-def make_command(
+def make_command_and_env_vars(
     clp_home: Path,
     worker_config: WorkerConfig,
     archive_id: str,
@@ -194,7 +194,7 @@ def search(
     clp_home = Path(os.getenv("CLP_HOME"))
     search_config = SearchJobConfig.parse_obj(job_config)
 
-    task_command, env_vars = make_command(
+    task_command, core_clp_env_vars = make_command_and_env_vars(
         clp_home=clp_home,
         worker_config=worker_config,
         archive_id=archive_id,
@@ -215,7 +215,7 @@ def search(
         logger=logger,
         clp_logs_dir=clp_logs_dir,
         task_command=task_command,
-        env_vars=env_vars,
+        env_vars=core_clp_env_vars,
         task_name=task_name,
         job_id=job_id,
         task_id=task_id,
