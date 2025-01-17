@@ -21,7 +21,7 @@ from job_orchestration.scheduler.job_config import SearchJobConfig
 logger = get_task_logger(__name__)
 
 
-def make_core_clp_command_and_env_vars(
+def _make_core_clp_command_and_env_vars(
     clp_home: Path,
     worker_config: WorkerConfig,
     archive_id: str,
@@ -41,7 +41,7 @@ def make_core_clp_command_and_env_vars(
     return command, None
 
 
-def make_core_clp_s_command_and_env_vars(
+def _make_core_clp_s_command_and_env_vars(
     clp_home: Path,
     worker_config: WorkerConfig,
     archive_id: str,
@@ -86,7 +86,7 @@ def make_core_clp_s_command_and_env_vars(
     return command, env_vars
 
 
-def make_command_and_env_vars(
+def _make_command_and_env_vars(
     clp_home: Path,
     worker_config: WorkerConfig,
     archive_id: str,
@@ -97,11 +97,11 @@ def make_command_and_env_vars(
     storage_engine = worker_config.package.storage_engine
 
     if StorageEngine.CLP == storage_engine:
-        command, env_vars = make_core_clp_command_and_env_vars(
+        command, env_vars = _make_core_clp_command_and_env_vars(
             clp_home, worker_config, archive_id, search_config
         )
     elif StorageEngine.CLP_S == storage_engine:
-        command, env_vars = make_core_clp_s_command_and_env_vars(
+        command, env_vars = _make_core_clp_s_command_and_env_vars(
             clp_home, worker_config, archive_id, search_config
         )
     else:
@@ -194,7 +194,7 @@ def search(
     clp_home = Path(os.getenv("CLP_HOME"))
     search_config = SearchJobConfig.parse_obj(job_config)
 
-    task_command, core_clp_env_vars = make_command_and_env_vars(
+    task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
         worker_config=worker_config,
         archive_id=archive_id,
