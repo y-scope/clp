@@ -183,6 +183,9 @@ def extract_stream(
 
             stream_path = Path(stream_path_str)
 
+            # If we've had a single upload error, we don't want to try uploading any other streams
+            # since that may unnecessarily slow down the task and generate a lot of extraneous
+            # output.
             if not upload_error:
                 stream_name = stream_path.name
                 logger.info(f"Uploading stream {stream_name} to S3...")
