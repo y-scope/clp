@@ -20,7 +20,7 @@ logger.addHandler(logging_console_handler)
 def check_replica_set_status(client: MongoClient, netloc: str) -> tuple[bool, bool]:
     """
     Checks the current replica set status of the MongoDB server and determines whether it needs to
-    be configured or reconfigured.
+    be configured (or reconfigured).
 
     :param client:
     :param netloc: The network location for which the replica set configuration is being checked.
