@@ -27,8 +27,8 @@ def check_replica_set_status(client: MongoClient, netloc: str) -> tuple[bool, bo
 
     :return: A tuple containing:
         - is_already_initialized: Indicates whether the replica set has already been initialized.
-        - should_configure_replica_set: Indicates whether the replica set needs to be configured or
-          reconfigured.
+        - should_configure_replica_set: Indicates whether the replica set needs to be configured (or
+          reconfigured).
 
     :raises pymongo.errors.OperationFailure: If the server returns an unexpected error during the
     replica set status check.
@@ -70,7 +70,7 @@ def init_replica_set_for_oplog(client: MongoClient, netloc: str, force: bool):
     :param client:
     :param netloc: The network location of the MongoDB instance to configure
     as a replica set member.
-    :param force: Whether this is a reconfiguration operation.
+    :param force: Forces reconfiguration.
     """
     logger.debug("Initializing single-node replica set for oplog at %s", netloc)
 
