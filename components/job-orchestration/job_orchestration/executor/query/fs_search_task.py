@@ -26,10 +26,12 @@ def _make_core_clp_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
-    if StorageType.S3 == worker_config.archive_output.storage.type:
+) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+    storage_type = worker_config.archive_output.storage.type
+    if StorageType.S3 == storage_type:
         logger.error(
-            f"Search is not supported for the S3 storage type while using the CLP storage engine."
+            f"Search is not supported for storage type '{storage_type}' while using the"
+            f" '{worker_config.package.storage_engine}' storage engine."
         )
         return None, None
 
@@ -46,7 +48,7 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
+) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
     archives_dir = worker_config.archive_output.get_directory()
     command = [
         str(clp_home / "bin" / "clp-s"),
@@ -60,7 +62,7 @@ def _make_core_clp_s_command_and_env_vars(
                 s3_config.region_code, s3_config.bucket, f"{s3_config.key_prefix}{archive_id}"
             )
         except ValueError as ex:
-            logger.error(f"Encountered error while generating s3 url: {ex}")
+            logger.error(f"Encountered error while generating S3 url: {ex}")
             return None, None
         # fmt: off
         command.extend((
@@ -70,14 +72,14 @@ def _make_core_clp_s_command_and_env_vars(
         ))
         # fmt: on
         aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
+        if aws_access_key_id is None or aws_secret_access_key is None:
+            logger.error("Missing credentials for accessing archives on S3")
+            return None, None
         env_vars = {
             **os.environ,
             "AWS_ACCESS_KEY_ID": s3_config.credentials.access_key_id,
             "AWS_SECRET_ACCESS_KEY": s3_config.credentials.secret_access_key,
         }
-        if aws_access_key_id is None or aws_secret_access_key is None:
-            logger.error("Missing credentials for accessing archives on S3")
-            return None, None
     else:
         # fmt: off
         command.extend((
@@ -112,7 +114,7 @@ def _make_command_and_env_vars(
         logger.error(f"Unsupported storage engine {storage_engine}")
         return None, None
 
-    if None == command:
+    if command is None:
         return None, None
 
     command.append(search_config.query_string)

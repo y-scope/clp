@@ -82,7 +82,8 @@ def main(argv):
     storage_engine = clp_config.package.storage_engine
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
-            f"Search is not supported for archive storage type: `{storage_type}` with storage engine: `{storage_engine}`."
+            f"Search is not supported for archive storage type `{storage_type}` with storage engine"
+            f" `{storage_engine}`."
         )
         return -1
 
