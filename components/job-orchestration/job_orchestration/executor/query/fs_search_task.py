@@ -69,11 +69,15 @@ def _make_core_clp_s_command_and_env_vars(
             "s3"
         ))
         # fmt: on
+        aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
         env_vars = {
             **os.environ,
-            "AWS_ACCESS_KEY_ID": s3_config.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": s3_config.secret_access_key,
+            "AWS_ACCESS_KEY_ID": s3_config.credentials.access_key_id,
+            "AWS_SECRET_ACCESS_KEY": s3_config.credentials.secret_access_key,
         }
+        if aws_access_key_id is None or aws_secret_access_key is None:
+            logger.error("Missing credentials for accessing archives on S3")
+            return None, None
     else:
         # fmt: off
         command.extend((
