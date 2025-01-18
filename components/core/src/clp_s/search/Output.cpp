@@ -937,8 +937,8 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                         m_ignore_case
                 );
 
-                for (auto i = 0; i < entries.size(); i++) {
-                    matching_vars.insert(entries[i]->get_id());
+                for (auto entry : entries) {
+                    matching_vars.insert(entry->get_id());
                 }
             } else if (EncodedVariableInterpreter::
                                wildcard_search_dictionary_and_get_encoded_matches(
