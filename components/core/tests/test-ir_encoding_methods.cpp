@@ -1223,7 +1223,9 @@ TEMPLATE_TEST_CASE(
     vector<int8_t> ir_buf;
     vector<std::pair<nlohmann::json, nlohmann::json>> expected_auto_gen_and_user_gen_object_pairs;
 
-    auto result{Serializer<TestType>::create()};
+    nlohmann::json const user_defined_metadata
+            = {{"map", {{"int", 0}, {"str", "STRING"}}}, {"array", {0, 0.0, true, "String"}}};
+    auto result{Serializer<TestType>::create(user_defined_metadata)};
     REQUIRE((false == result.has_error()));
 
     auto& serializer{result.value()};
@@ -1308,6 +1310,14 @@ TEMPLATE_TEST_CASE(
     auto deserializer_result{Deserializer<IrUnitHandler>::create(reader, IrUnitHandler{})};
     REQUIRE_FALSE(deserializer_result.has_error());
     auto& deserializer = deserializer_result.value();
+
+    auto const& deserialized_metadata = deserializer.get_metadata();
+    string const user_defined_metadata_key{
+            clp::ffi::ir_stream::cProtocol::Metadata::UserDefinedMetadataKey
+    };
+    REQUIRE(deserialized_metadata.contains(user_defined_metadata_key));
+    REQUIRE((deserialized_metadata.at(user_defined_metadata_key) == user_defined_metadata));
+
     while (true) {
         auto const result{deserializer.deserialize_next_ir_unit(reader)};
         REQUIRE_FALSE(result.has_error());

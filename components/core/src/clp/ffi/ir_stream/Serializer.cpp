@@ -1,7 +1,6 @@
 #include "Serializer.hpp"
 
 #include <concepts>
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -9,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
@@ -522,8 +522,9 @@ template <
 }  // namespace
 
 template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::create()
-        -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
+auto Serializer<encoded_variable_t>::create(
+        std::optional<nlohmann::json> optional_user_defined_metadata
+) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
     static_assert(
             (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
              || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
@@ -548,6 +549,13 @@ auto Serializer<encoded_variable_t>::create()
             cProtocol::Metadata::VariableEncodingMethodsIdKey,
             cVariableEncodingMethodsVersion
     );
+    if (optional_user_defined_metadata.has_value()) {
+        metadata.emplace(
+                string{cProtocol::Metadata::UserDefinedMetadataKey},
+                std::move(optional_user_defined_metadata.value())
+        );
+    }
+
     if (false == serialize_metadata(metadata, ir_buf)) {
         return std::errc::protocol_error;
     }
@@ -783,10 +791,12 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
-template auto Serializer<eight_byte_encoded_variable_t>::create()
-        -> OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
-template auto Serializer<four_byte_encoded_variable_t>::create()
-        -> OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
+template auto Serializer<eight_byte_encoded_variable_t>::create(
+        std::optional<nlohmann::json> optional_user_defined_metadata
+) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
+template auto Serializer<four_byte_encoded_variable_t>::create(
+        std::optional<nlohmann::json> optional_user_defined_metadata
+) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset)
         -> void;
