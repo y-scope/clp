@@ -23,7 +23,7 @@ def check_replica_set_status(client: MongoClient, netloc: str) -> tuple[bool, bo
     be configured (or reconfigured).
 
     :param client:
-    :param netloc: The network location for which the replica set configuration is being checked.
+    :param netloc: The network location of the replica set configuration.
 
     :return: A tuple containing:
         - is_already_initialized: Indicates whether the replica set has already been initialized.
