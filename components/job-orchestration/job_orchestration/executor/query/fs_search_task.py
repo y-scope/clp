@@ -210,7 +210,7 @@ def search(
             start_time=start_time,
         )
 
-    return run_query_task(
+    task_results, _ = run_query_task(
         sql_adapter=sql_adapter,
         logger=logger,
         clp_logs_dir=clp_logs_dir,
@@ -221,3 +221,5 @@ def search(
         task_id=task_id,
         start_time=start_time,
     )
+
+    return task_results.dict()

@@ -1,5 +1,6 @@
 #include "Serializer.hpp"
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -35,6 +36,56 @@ using clp::ir::four_byte_encoded_variable_t;
 
 namespace clp::ffi::ir_stream {
 namespace {
+/**
+ * Concept that defines the method to serialize a schema tree node identified by the given locator.
+ * @param serialization_method
+ * @param locator
+ * @return Whether serialization succeeded.
+ */
+template <typename SerializationMethod>
+concept SchemaTreeNodeSerializationMethodReq = requires(
+        SerializationMethod serialization_method,
+        SchemaTree::NodeLocator const& locator
+) {
+    {
+        serialization_method(locator)
+    } -> std::same_as<bool>;
+};
+
+/**
+ * Concept that defines the method to serialize a node-ID-value pair.
+ * @param serialization_method
+ * @param node_id
+ * @param val
+ * @param schema_tree_node_type The type of the schema tree node that corresponds to `val`.
+ * @return Whether serialization succeeded.
+ */
+template <typename SerializationMethod>
+concept NodeIdValuePairSerializationMethodReq = requires(
+        SerializationMethod serialization_method,
+        SchemaTree::Node::id_t id,
+        msgpack::object const& val,
+        SchemaTree::Node::Type schema_tree_node_type
+) {
+    {
+        serialization_method(id, val, schema_tree_node_type)
+    } -> std::same_as<bool>;
+};
+
+/**
+ * Concept that defines the method to serialize a node-ID-value pair whose value is an empty map.
+ * @param serialization_method
+ * @param node_id
+ * @return Whether serialization succeeded.
+ */
+template <typename SerializationMethod>
+concept EmptyMapSerializationMethodReq
+        = requires(SerializationMethod serialization_method, SchemaTree::Node::id_t node_id) {
+              {
+                  serialization_method(node_id)
+              } -> std::same_as<bool>;
+          };
+
 /**
  * Class for iterating the kv-pairs of a MessagePack map.
  */
@@ -145,6 +196,23 @@ serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<in
         -> bool;
 
 /**
+ * Serializes the given MessagePack value into `output_buf`.
+ * @tparam encoded_variable_t
+ * @param val
+ * @param schema_tree_node_type
+ * @param logtype_buf
+ * @param output_buf
+ * @return Whether serialization succeeded.
+ */
+template <typename encoded_variable_t>
+[[nodiscard]] auto serialize_value(
+        msgpack::object const& val,
+        SchemaTree::Node::Type schema_tree_node_type,
+        string& logtype_buf,
+        vector<int8_t>& output_buf
+) -> bool;
+
+/**
  * Checks whether the given msgpack array can be serialized into the key-value pair IR format.
  * @param array
  * @return true if the array is serializable.
@@ -153,6 +221,30 @@ serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<in
  * - Any value inside the array has type `MAP` and the map has non-string keys.
  */
 [[nodiscard]] auto is_msgpack_array_serializable(msgpack::object const& array) -> bool;
+
+/**
+ * Serializes the given msgpack map using a depth-first search (DFS).
+ * @tparam SchemaTreeNodeSerializationMethod
+ * @tparam NodeIdValuePairSerializationMethod
+ * @tparam EmptyMapSerializationMethod
+ * @param msgpack_map
+ * @param schema_tree
+ * @param schema_tree_node_serialization_method
+ * @param node_id_value_pair_serialization_method
+ * @param empty_map_serialization_method
+ * @return Whether serialization succeeded.
+ */
+template <
+        SchemaTreeNodeSerializationMethodReq SchemaTreeNodeSerializationMethod,
+        NodeIdValuePairSerializationMethodReq NodeIdValuePairSerializationMethod,
+        EmptyMapSerializationMethodReq EmptyMapSerializationMethod>
+[[nodiscard]] auto serialize_msgpack_map_using_dfs(
+        msgpack::object_map const& msgpack_map,
+        SchemaTree& schema_tree,
+        SchemaTreeNodeSerializationMethod schema_tree_node_serialization_method,
+        NodeIdValuePairSerializationMethod node_id_value_pair_serialization_method,
+        EmptyMapSerializationMethod empty_map_serialization_method
+) -> bool;
 
 auto get_schema_tree_node_type_from_msgpack_val(msgpack::object const& val)
         -> optional<SchemaTree::Node::Type> {
@@ -241,6 +333,63 @@ serialize_value_array(msgpack::object const& val, string& logtype_buf, vector<in
     return serialize_clp_string<encoded_variable_t>(oss.str(), logtype_buf, output_buf);
 }
 
+template <typename encoded_variable_t>
+auto serialize_value(
+        msgpack::object const& val,
+        SchemaTree::Node::Type schema_tree_node_type,
+        string& logtype_buf,
+        vector<int8_t>& output_buf
+) -> bool {
+    switch (schema_tree_node_type) {
+        case SchemaTree::Node::Type::Int:
+            if (msgpack::type::POSITIVE_INTEGER == val.type
+                && static_cast<uint64_t>(INT64_MAX) < val.as<uint64_t>())
+            {
+                return false;
+            }
+            serialize_value_int(val.as<int64_t>(), output_buf);
+            break;
+
+        case SchemaTree::Node::Type::Float:
+            serialize_value_float(val.as<double>(), output_buf);
+            break;
+
+        case SchemaTree::Node::Type::Bool:
+            serialize_value_bool(val.as<bool>(), output_buf);
+            break;
+
+        case SchemaTree::Node::Type::Str:
+            if (false
+                == serialize_value_string<encoded_variable_t>(
+                        val.as<string_view>(),
+                        logtype_buf,
+                        output_buf
+                ))
+            {
+                return false;
+            }
+            break;
+
+        case SchemaTree::Node::Type::Obj:
+            if (msgpack::type::NIL != val.type) {
+                return false;
+            }
+            serialize_value_null(output_buf);
+            break;
+
+        case SchemaTree::Node::Type::UnstructuredArray:
+            if (false == serialize_value_array<encoded_variable_t>(val, logtype_buf, output_buf)) {
+                return false;
+            }
+            break;
+
+        default:
+            // Unknown schema tree node type
+            return false;
+    }
+    return true;
+}
+
 auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
     vector<msgpack::object const*> validation_stack{&array};
     while (false == validation_stack.empty()) {
@@ -277,6 +426,94 @@ auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
                 default:
                     break;
             }
+        }
+    }
+
+    return true;
+}
+
+template <
+        SchemaTreeNodeSerializationMethodReq SchemaTreeNodeSerializationMethod,
+        NodeIdValuePairSerializationMethodReq NodeIdValuePairSerializationMethod,
+        EmptyMapSerializationMethodReq EmptyMapSerializationMethod>
+[[nodiscard]] auto serialize_msgpack_map_using_dfs(
+        msgpack::object_map const& msgpack_map,
+        SchemaTree& schema_tree,
+        SchemaTreeNodeSerializationMethod schema_tree_node_serialization_method,
+        NodeIdValuePairSerializationMethod node_id_value_pair_serialization_method,
+        EmptyMapSerializationMethod empty_map_serialization_method
+) -> bool {
+    vector<MsgpackMapIterator> dfs_stack;
+    dfs_stack.emplace_back(
+            SchemaTree::cRootId,
+            span<MsgpackMapIterator::Child>{msgpack_map.ptr, msgpack_map.size}
+    );
+    while (false == dfs_stack.empty()) {
+        auto& curr{dfs_stack.back()};
+        if (false == curr.has_next_child()) {
+            // Visited all children, so pop node
+            dfs_stack.pop_back();
+            continue;
+        }
+
+        // Convert the current value's type to its corresponding schema-tree node type
+        auto const& [key, val]{curr.get_next_child()};
+        if (msgpack::type::STR != key.type) {
+            // A map containing non-string keys is not serializable
+            return false;
+        }
+
+        auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
+        if (false == opt_schema_tree_node_type.has_value()) {
+            return false;
+        }
+        auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
+
+        SchemaTree::NodeLocator const locator{
+                curr.get_schema_tree_node_id(),
+                key.as<string_view>(),
+                schema_tree_node_type
+        };
+
+        // Get the schema-tree node that corresponds with the current kv-pair, or add it if it
+        // doesn't exist.
+        auto opt_schema_tree_node_id{schema_tree.try_get_node_id(locator)};
+        if (false == opt_schema_tree_node_id.has_value()) {
+            opt_schema_tree_node_id.emplace(schema_tree.insert_node(locator));
+            if (false == schema_tree_node_serialization_method(locator)) {
+                return false;
+            }
+        }
+        auto const schema_tree_node_id{opt_schema_tree_node_id.value()};
+
+        if (msgpack::type::MAP == val.type) {
+            // Serialize map
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+            auto const& inner_map{val.via.map};
+            auto const inner_map_size(inner_map.size);
+            if (0 != inner_map_size) {
+                // Add map for DFS iteration
+                dfs_stack.emplace_back(
+                        schema_tree_node_id,
+                        span<MsgpackMapIterator::Child>{inner_map.ptr, inner_map_size}
+                );
+            } else {
+                if (false == empty_map_serialization_method(schema_tree_node_id)) {
+                    return false;
+                }
+            }
+            continue;
+        }
+
+        // Serialize primitive
+        if (false
+            == node_id_value_pair_serialization_method(
+                    schema_tree_node_id,
+                    val,
+                    schema_tree_node_type
+            ))
+        {
+            return false;
         }
     }
 
@@ -327,32 +564,180 @@ auto Serializer<encoded_variable_t>::change_utc_offset(UtcOffset utc_offset) -> 
 }
 
 template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::serialize_msgpack_map(msgpack::object_map const& msgpack_map)
-        -> bool {
-    if (0 == msgpack_map.size) {
-        serialize_value_empty_object(m_ir_buf);
-        return true;
-    }
+auto Serializer<encoded_variable_t>::serialize_msgpack_map(
+        msgpack::object_map const& auto_gen_kv_pairs_map,
+        msgpack::object_map const& user_gen_kv_pairs_map
+) -> bool {
+    m_auto_gen_keys_schema_tree.take_snapshot();
+    m_user_gen_keys_schema_tree.take_snapshot();
+    TransactionManager revert_manager{
+            []() noexcept -> void {},
+            [&]() noexcept -> void {
+                m_user_gen_keys_schema_tree.revert();
+                m_auto_gen_keys_schema_tree.revert();
+            }
+    };
 
     m_schema_tree_node_buf.clear();
-    m_key_group_buf.clear();
-    m_value_group_buf.clear();
+    m_sequential_serialization_buf.clear();
+    m_user_gen_val_group_buf.clear();
 
-    if (false == serialize_msgpack_map_using_dfs(msgpack_map)) {
+    // Serialize auto-generated kv pairs
+    auto auto_gen_schema_tree_node_serialization_method
+            = [this](SchemaTree::NodeLocator const& locator) -> bool {
+        return this->serialize_schema_tree_node<true>(locator);
+    };
+
+    auto auto_gen_node_id_value_pairs_serialization_method
+            = [&](SchemaTree::Node::id_t node_id,
+                  msgpack::object const& val,
+                  SchemaTree::Node::Type schema_tree_node_type) -> bool {
+        if (false
+            == encode_and_serialize_schema_tree_node_id<
+                    true,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
+                    node_id,
+                    m_sequential_serialization_buf
+            ))
+        {
+            return false;
+        }
+        if (false
+            == serialize_value<encoded_variable_t>(
+                    val,
+                    schema_tree_node_type,
+                    m_logtype_buf,
+                    m_sequential_serialization_buf
+            ))
+        {
+            return false;
+        }
+        return true;
+    };
+
+    auto auto_gen_empty_map_serialization_method = [&](SchemaTree::Node::id_t node_id) -> bool {
+        if (false
+            == encode_and_serialize_schema_tree_node_id<
+                    true,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
+                    node_id,
+                    m_sequential_serialization_buf
+            ))
+        {
+            return false;
+        }
+        serialize_value_empty_object(m_sequential_serialization_buf);
+        return true;
+    };
+
+    if (0 != auto_gen_kv_pairs_map.size
+        && false
+                   == serialize_msgpack_map_using_dfs(
+                           auto_gen_kv_pairs_map,
+                           m_auto_gen_keys_schema_tree,
+                           auto_gen_schema_tree_node_serialization_method,
+                           auto_gen_node_id_value_pairs_serialization_method,
+                           auto_gen_empty_map_serialization_method
+                   ))
+    {
         return false;
     }
 
+    // Serialize user-generated kv pairs
+    auto user_gen_schema_tree_node_serialization_method
+            = [this](SchemaTree::NodeLocator const& locator) -> bool {
+        return this->serialize_schema_tree_node<false>(locator);
+    };
+
+    auto user_gen_node_id_value_pairs_serialization_method
+            = [&](SchemaTree::Node::id_t node_id,
+                  msgpack::object const& val,
+                  SchemaTree::Node::Type schema_tree_node_type) -> bool {
+        if (false
+            == encode_and_serialize_schema_tree_node_id<
+                    false,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
+                    node_id,
+                    m_sequential_serialization_buf
+            ))
+        {
+            return false;
+        }
+        if (false
+            == serialize_value<encoded_variable_t>(
+                    val,
+                    schema_tree_node_type,
+                    m_logtype_buf,
+                    m_user_gen_val_group_buf
+            ))
+        {
+            return false;
+        }
+        return true;
+    };
+
+    auto user_gen_empty_map_serialization_method = [&](SchemaTree::Node::id_t node_id) -> bool {
+        if (false
+            == encode_and_serialize_schema_tree_node_id<
+                    false,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
+                    node_id,
+                    m_sequential_serialization_buf
+            ))
+        {
+            return false;
+        }
+        serialize_value_empty_object(m_user_gen_val_group_buf);
+        return true;
+    };
+
+    if (0 == user_gen_kv_pairs_map.size) {
+        serialize_value_empty_object(m_sequential_serialization_buf);
+    } else {
+        if (false
+            == serialize_msgpack_map_using_dfs(
+                    user_gen_kv_pairs_map,
+                    m_user_gen_keys_schema_tree,
+                    user_gen_schema_tree_node_serialization_method,
+                    user_gen_node_id_value_pairs_serialization_method,
+                    user_gen_empty_map_serialization_method
+            ))
+        {
+            return false;
+        }
+    }
+
+    // Copy serialized results into `m_ir_buf`
     m_ir_buf.insert(
             m_ir_buf.cend(),
             m_schema_tree_node_buf.cbegin(),
             m_schema_tree_node_buf.cend()
     );
-    m_ir_buf.insert(m_ir_buf.cend(), m_key_group_buf.cbegin(), m_key_group_buf.cend());
-    m_ir_buf.insert(m_ir_buf.cend(), m_value_group_buf.cbegin(), m_value_group_buf.cend());
+    m_ir_buf.insert(
+            m_ir_buf.cend(),
+            m_sequential_serialization_buf.cbegin(),
+            m_sequential_serialization_buf.cend()
+    );
+    m_ir_buf.insert(
+            m_ir_buf.cend(),
+            m_user_gen_val_group_buf.cbegin(),
+            m_user_gen_val_group_buf.cend()
+    );
+
+    revert_manager.mark_success();
     return true;
 }
 
 template <typename encoded_variable_t>
+template <bool is_auto_generated_node>
 auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
         SchemaTree::NodeLocator const& locator
 ) -> bool {
@@ -382,7 +767,7 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 
     if (false
         == encode_and_serialize_schema_tree_node_id<
-                false,
+                is_auto_generated_node,
                 cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
                 cProtocol::Payload::EncodedSchemaTreeNodeParentIdShort,
                 cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt>(
@@ -394,158 +779,6 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
     }
 
     return serialize_string(locator.get_key_name(), m_schema_tree_node_buf);
-}
-
-template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id) -> bool {
-    return encode_and_serialize_schema_tree_node_id<
-            false,
-            cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
-            cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-            cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(id, m_key_group_buf);
-}
-
-template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::serialize_val(
-        msgpack::object const& val,
-        SchemaTree::Node::Type schema_tree_node_type
-) -> bool {
-    switch (schema_tree_node_type) {
-        case SchemaTree::Node::Type::Int:
-            if (msgpack::type::POSITIVE_INTEGER == val.type
-                && static_cast<uint64_t>(INT64_MAX) < val.as<uint64_t>())
-            {
-                return false;
-            }
-            serialize_value_int(val.as<int64_t>(), m_value_group_buf);
-            break;
-
-        case SchemaTree::Node::Type::Float:
-            serialize_value_float(val.as<double>(), m_value_group_buf);
-            break;
-
-        case SchemaTree::Node::Type::Bool:
-            serialize_value_bool(val.as<bool>(), m_value_group_buf);
-            break;
-
-        case SchemaTree::Node::Type::Str:
-            if (false
-                == serialize_value_string<encoded_variable_t>(
-                        val.as<string_view>(),
-                        m_logtype_buf,
-                        m_value_group_buf
-                ))
-            {
-                return false;
-            }
-            break;
-
-        case SchemaTree::Node::Type::Obj:
-            if (msgpack::type::NIL != val.type) {
-                return false;
-            }
-            serialize_value_null(m_value_group_buf);
-            break;
-
-        case SchemaTree::Node::Type::UnstructuredArray:
-            if (false
-                == serialize_value_array<encoded_variable_t>(val, m_logtype_buf, m_value_group_buf))
-            {
-                return false;
-            }
-            break;
-
-        default:
-            // Unknown schema tree node type
-            return false;
-    }
-    return true;
-}
-
-template <typename encoded_variable_t>
-auto Serializer<encoded_variable_t>::serialize_msgpack_map_using_dfs(
-        msgpack::object_map const& msgpack_map
-) -> bool {
-    m_schema_tree.take_snapshot();
-    TransactionManager revert_manager{
-            []() noexcept -> void {},
-            [&]() noexcept -> void { m_schema_tree.revert(); }
-    };
-
-    vector<MsgpackMapIterator> dfs_stack;
-    dfs_stack.emplace_back(
-            SchemaTree::cRootId,
-            span<MsgpackMapIterator::Child>{msgpack_map.ptr, msgpack_map.size}
-    );
-    while (false == dfs_stack.empty()) {
-        auto& curr{dfs_stack.back()};
-        if (false == curr.has_next_child()) {
-            // Visited all children, so pop node
-            dfs_stack.pop_back();
-            continue;
-        }
-
-        // Convert the current value's type to its corresponding schema-tree node type
-        auto const& [key, val]{curr.get_next_child()};
-        if (msgpack::type::STR != key.type) {
-            // A map containing non-string keys is not serializable
-            return false;
-        }
-
-        auto const opt_schema_tree_node_type{get_schema_tree_node_type_from_msgpack_val(val)};
-        if (false == opt_schema_tree_node_type.has_value()) {
-            return false;
-        }
-        auto const schema_tree_node_type{opt_schema_tree_node_type.value()};
-
-        SchemaTree::NodeLocator const locator{
-                curr.get_schema_tree_node_id(),
-                key.as<string_view>(),
-                schema_tree_node_type
-        };
-
-        // Get the schema-tree node that corresponds with the current kv-pair, or add it if it
-        // doesn't exist.
-        auto opt_schema_tree_node_id{m_schema_tree.try_get_node_id(locator)};
-        if (false == opt_schema_tree_node_id.has_value()) {
-            opt_schema_tree_node_id.emplace(m_schema_tree.insert_node(locator));
-            if (false == serialize_schema_tree_node(locator)) {
-                return false;
-            }
-        }
-        auto const schema_tree_node_id{opt_schema_tree_node_id.value()};
-
-        if (msgpack::type::MAP == val.type) {
-            // Serialize map
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
-            auto const& inner_map{val.via.map};
-            auto const inner_map_size(inner_map.size);
-            if (0 != inner_map_size) {
-                // Add map for DFS iteration
-                dfs_stack.emplace_back(
-                        schema_tree_node_id,
-                        span<MsgpackMapIterator::Child>{inner_map.ptr, inner_map_size}
-                );
-            } else {
-                // Value is an empty map, so we can serialize it immediately
-                if (false == serialize_key(schema_tree_node_id)) {
-                    return false;
-                }
-                serialize_value_empty_object(m_value_group_buf);
-            }
-            continue;
-        }
-
-        // Serialize primitive
-        if (false
-            == (serialize_key(schema_tree_node_id) && serialize_val(val, schema_tree_node_type)))
-        {
-            return false;
-        }
-    }
-
-    revert_manager.mark_success();
-    return true;
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
@@ -561,37 +794,24 @@ template auto Serializer<four_byte_encoded_variable_t>::change_utc_offset(UtcOff
         -> void;
 
 template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map(
-        msgpack::object_map const& msgpack_map
+        msgpack::object_map const& auto_gen_kv_pairs_map,
+        msgpack::object_map const& user_gen_kv_pairs_map
 ) -> bool;
 template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map(
-        msgpack::object_map const& msgpack_map
+        msgpack::object_map const& auto_gen_kv_pairs_map,
+        msgpack::object_map const& user_gen_kv_pairs_map
 ) -> bool;
 
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node(
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node<true>(
         SchemaTree::NodeLocator const& locator
 ) -> bool;
-template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node(
+template auto Serializer<eight_byte_encoded_variable_t>::serialize_schema_tree_node<false>(
         SchemaTree::NodeLocator const& locator
 ) -> bool;
-
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id)
-        -> bool;
-template auto Serializer<four_byte_encoded_variable_t>::serialize_key(SchemaTree::Node::id_t id)
-        -> bool;
-
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_val(
-        msgpack::object const& val,
-        SchemaTree::Node::Type schema_tree_node_type
+template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node<true>(
+        SchemaTree::NodeLocator const& locator
 ) -> bool;
-template auto Serializer<four_byte_encoded_variable_t>::serialize_val(
-        msgpack::object const& val,
-        SchemaTree::Node::Type schema_tree_node_type
-) -> bool;
-
-template auto Serializer<eight_byte_encoded_variable_t>::serialize_msgpack_map_using_dfs(
-        msgpack::object_map const& msgpack_map
-) -> bool;
-template auto Serializer<four_byte_encoded_variable_t>::serialize_msgpack_map_using_dfs(
-        msgpack::object_map const& msgpack_map
+template auto Serializer<four_byte_encoded_variable_t>::serialize_schema_tree_node<false>(
+        SchemaTree::NodeLocator const& locator
 ) -> bool;
 }  // namespace clp::ffi::ir_stream

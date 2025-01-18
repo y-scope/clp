@@ -5,6 +5,7 @@
 #include <system_error>
 
 #include <fmt/core.h>
+#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
@@ -128,6 +129,13 @@ void JsonConstructor::construct_in_order() {
                             false == open_new_writer
                     )
             )));
+        }
+
+        if (m_option.print_ordered_chunk_stats) {
+            nlohmann::json json_msg;
+            json_msg["path"] = new_file_path.string();
+            std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+                      << std::endl;
         }
 
         if (open_new_writer) {

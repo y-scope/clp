@@ -20,7 +20,6 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
 )
@@ -254,17 +253,17 @@ def generate_container_config(
             container_clp_config.archive_output.get_directory(),
         )
 
-    container_clp_config.stream_output.directory = pathlib.Path("/") / "mnt" / "stream-output"
+    container_clp_config.stream_output.set_directory(pathlib.Path("/") / "mnt" / "stream-output")
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.stream_output.directory,
-        container_clp_config.stream_output.directory,
+        clp_config.stream_output.get_directory(),
+        container_clp_config.stream_output.get_directory(),
     ):
         docker_mounts.stream_output_dir = DockerMount(
             DockerMountType.BIND,
-            clp_config.stream_output.directory,
-            container_clp_config.stream_output.directory,
+            clp_config.stream_output.get_directory(),
+            container_clp_config.stream_output.get_directory(),
         )
 
     return container_clp_config, docker_mounts
@@ -276,7 +275,7 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config.archive_output = clp_config.archive_output.copy(deep=True)
     worker_config.data_directory = clp_config.data_directory
 
-    worker_config.stream_output_dir = clp_config.stream_output.directory
+    worker_config.stream_output = clp_config.stream_output
     worker_config.stream_collection_name = clp_config.results_cache.stream_collection_name
 
     return worker_config

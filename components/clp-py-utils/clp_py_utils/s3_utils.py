@@ -1,4 +1,3 @@
-import configparser
 import re
 from pathlib import Path
 from typing import List, Tuple
@@ -12,42 +11,6 @@ from clp_py_utils.compression import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
-
-
-def parse_aws_credentials_file(
-    credentials_file_path: Path, user: str = "default"
-) -> Tuple[str, str]:
-    """
-    Parses the `aws_access_key_id` and `aws_secret_access_key` of `user` from the given
-    credentials_file_path.
-    :param credentials_file_path:
-    :param user:
-    :return: A tuple of (aws_access_key_id, aws_secret_access_key)
-    :raises: ValueError if the file doesn't exist, or doesn't contain valid aws credentials.
-    """
-
-    if not credentials_file_path.exists():
-        raise ValueError(f"'{credentials_file_path}' doesn't exist.")
-
-    config_reader = configparser.ConfigParser()
-    config_reader.read(credentials_file_path)
-
-    if not config_reader.has_section(user):
-        raise ValueError(f"User '{user}' doesn't exist.")
-
-    user_credentials = config_reader[user]
-    if "aws_session_token" in user_credentials:
-        raise ValueError(f"Session tokens (short-term credentials) are not supported.")
-
-    aws_access_key_id = user_credentials.get("aws_access_key_id")
-    aws_secret_access_key = user_credentials.get("aws_secret_access_key")
-
-    if aws_access_key_id is None or aws_secret_access_key is None:
-        raise ValueError(
-            "The credentials file must contain both aws_access_key_id and aws_secret_access_key."
-        )
-
-    return aws_access_key_id, aws_secret_access_key
 
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
@@ -161,12 +124,13 @@ def s3_put(
         )
 
     config = Config(retries=dict(total_max_attempts=total_max_attempts, mode="adaptive"))
+    aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
 
     my_s3_client = boto3.client(
         "s3",
         region_name=s3_config.region_code,
-        aws_access_key_id=s3_config.access_key_id,
-        aws_secret_access_key=s3_config.secret_access_key,
+        aws_access_key_id=aws_access_key_id,
+        aws_secret_access_key=aws_secret_access_key,
         config=config,
     )
 
