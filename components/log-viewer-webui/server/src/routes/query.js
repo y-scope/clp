@@ -4,10 +4,9 @@ import settings from "../../settings.json" with {type: "json"};
 import {EXTRACT_JOB_TYPES} from "../DbManager.js";
 import S3Manager from "../S3Manager.js";
 
-
 const S3_MANAGER = (
     null === settings.StreamFilesS3PathPrefix ||
-    0 === settings.StreamFilesS3Region.length
+    null === settings.StreamFilesS3Region
 ) ?
     null :
     new S3Manager(settings.StreamFilesS3Region);
