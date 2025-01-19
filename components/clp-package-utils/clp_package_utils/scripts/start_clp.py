@@ -939,6 +939,7 @@ def start_log_viewer_webui(
         settings_json_updates["StreamFilesS3PathPrefix"] = (
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
+
         access_key_id, secret_access_key = s3_config.get_credentials()
         if access_key_id is not None and secret_access_key is not None:
             container_cmd_extra_opts.extend(

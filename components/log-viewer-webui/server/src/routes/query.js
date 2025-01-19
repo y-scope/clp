@@ -14,7 +14,7 @@ const S3_MANAGER = (
 
 
 /**
- * Submits a stream extraction job and returns the metadata of the extracted stream
+ * Submits a stream extraction job and returns the metadata of the extracted stream.
  *
  * @param {object} props
  * @param {import("fastify").FastifyInstance | {dbManager: DbManager}} props.fastify
@@ -37,18 +37,16 @@ const extractStreamAndGetMetadata = async ({
         streamId: streamId,
         targetUncompressedSize: settings.StreamTargetUncompressedSize,
     });
-
     if (null === extractResult) {
         resp.code(StatusCodes.BAD_REQUEST);
-        throw new Error("Unable to extract stream with " +
-            `streamId=${streamId} at logEventIdx=${logEventIdx}`);
+        throw new Error(`Unable to extract stream with streamId=${streamId} at ` +
+            `logEventIdx=${logEventIdx}`);
     }
 
     const streamMetadata = fastify.dbManager.getExtractedStreamFileMetadata(
         streamId,
         logEventIdx
     );
-
     if (null === streamMetadata) {
         resp.code(StatusCodes.BAD_REQUEST);
         throw new Error("Unable to find the metadata of extracted stream with " +
