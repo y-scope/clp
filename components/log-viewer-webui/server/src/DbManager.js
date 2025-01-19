@@ -112,10 +112,11 @@ class DbManager {
     /**
      * Submits a stream extraction job to the scheduler and waits for it to finish.
      *
-     * @param {number} jobType
-     * @param {number} logEventIdx
-     * @param {string} streamId
-     * @param {number} targetUncompressedSize
+     * @param {object} props
+     * @param {number} props.jobType
+     * @param {number} props.logEventIdx
+     * @param {string} props.streamId
+     * @param {number} props.targetUncompressedSize
      * @return {Promise<number|null>} The ID of the job or null if an error occurred.
      */
     async submitAndWaitForExtractStreamJob ({
