@@ -110,13 +110,21 @@ public:
 
     [[nodiscard]] auto get_ir_unit_handler() -> IrUnitHandler& { return m_ir_unit_handler; }
 
+    /**
+     * @return The metadata associated with the deserialized stream.
+     */
+    [[nodiscard]] auto get_metadata() const -> nlohmann::json const& { return m_metadata; }
+
 private:
     // Constructor
-    Deserializer(IrUnitHandler ir_unit_handler) : m_ir_unit_handler{std::move(ir_unit_handler)} {}
+    Deserializer(IrUnitHandler ir_unit_handler, nlohmann::json metadata)
+            : m_ir_unit_handler{std::move(ir_unit_handler)},
+              m_metadata(std::move(metadata)) {}
 
     // Variables
     std::shared_ptr<SchemaTree> m_auto_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
     std::shared_ptr<SchemaTree> m_user_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
+    nlohmann::json m_metadata;
     UtcOffset m_utc_offset{0};
     IrUnitHandler m_ir_unit_handler;
     bool m_is_complete{false};
@@ -160,7 +168,7 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
         return std::errc::protocol_not_supported;
     }
 
-    return Deserializer{std::move(ir_unit_handler)};
+    return Deserializer{std::move(ir_unit_handler), std::move(metadata_json)};
 }
 
 template <IrUnitHandlerInterface IrUnitHandler>
