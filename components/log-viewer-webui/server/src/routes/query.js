@@ -37,6 +37,7 @@ const extractStreamAndGetMetadata = async ({
         streamId: streamId,
         targetUncompressedSize: settings.StreamTargetUncompressedSize,
     });
+
     if (null === extractResult) {
         resp.code(StatusCodes.BAD_REQUEST);
         throw new Error(`Unable to extract stream with streamId=${streamId} at ` +
@@ -47,6 +48,7 @@ const extractStreamAndGetMetadata = async ({
         streamId,
         logEventIdx
     );
+
     if (null === streamMetadata) {
         resp.code(StatusCodes.BAD_REQUEST);
         throw new Error("Unable to find the metadata of extracted stream with " +
@@ -87,8 +89,8 @@ const routes = async (fastify, options) => {
                 fastify: fastify,
                 jobType: extractJobType,
                 logEventIdx: sanitizedLogEventIdx,
-                streamId: streamId,
                 resp: resp,
+                streamId: streamId,
             });
         }
 

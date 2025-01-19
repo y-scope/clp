@@ -955,7 +955,6 @@ def start_log_viewer_webui(
     with open(settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(settings_json))
 
-    # Start container
     # fmt: off
     container_cmd = [
         "docker", "run",

@@ -30,15 +30,15 @@ class S3Manager {
     /**
      * Generates a pre-signed URL for accessing an S3 object.
      *
-     * @param {string} s3uriString The S3 object URI string.
+     * @param {string} s3UriString The S3 object URI string.
      * @return {Promise<string>} The pre-signed URL string.
      * @throws {Error} If a pre-signed URL couldn't be generated.
      */
-    async getPreSignedUrl (s3uriString) {
-        const s3uri = new URL(s3uriString);
+    async getPreSignedUrl (s3UriString) {
+        const s3Uri = new URL(s3UriString);
         const command = new GetObjectCommand({
-            Bucket: s3uri.hostname,
-            Key: s3uri.pathname.substring(1),
+            Bucket: s3Uri.hostname,
+            Key: s3Uri.pathname.substring(1),
         });
 
         try {
