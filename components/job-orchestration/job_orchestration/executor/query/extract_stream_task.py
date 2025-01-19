@@ -157,6 +157,7 @@ def extract_stream(
         logger=logger,
         clp_logs_dir=clp_logs_dir,
         task_command=task_command,
+        env_vars=None,
         task_name=task_name,
         job_id=job_id,
         task_id=task_id,
