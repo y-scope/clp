@@ -23,6 +23,8 @@ const S3_MANAGER = (
  * @param {string} props.streamId
  * @param {import("fastify").FastifyReply} props.resp
  * @return {Promise<object>} A promise that resolves to the extracted stream's metadata.
+ * @throws {Error} if the stream couldn't be extracted or its metadata doesn't exist in the
+ * database.
  */
 const extractStreamAndGetMetadata = async ({
     fastify,
