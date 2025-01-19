@@ -77,12 +77,15 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
                     while (node->get_id() != m_tree->get_object_subtree_node_id()) {
-                        // may have to explicitly mark non-regex
-                        descriptors.emplace_back(node->get_key_name());
+                        descriptors.emplace_back(
+                                DescriptorToken::create_descriptor_from_literal_token(
+                                        node->get_key_name()
+                                )
+                        );
                         node = &m_tree->get_node(node->get_parent_id());
                     }
                     std::reverse(descriptors.begin(), descriptors.end());
-                    auto resolved_column = ColumnDescriptor::create(descriptors);
+                    auto resolved_column = ColumnDescriptor::create_from_descriptors(descriptors);
                     resolved_column->set_matching_type(literal_type);
                     *it = resolved_column;
                     cur->copy_append(possibilities.get());

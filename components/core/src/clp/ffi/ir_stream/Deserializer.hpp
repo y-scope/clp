@@ -95,8 +95,8 @@ public:
      * - Forwards `handle_end_of_stream`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
      */
-    [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader
-    ) -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType>;
+    [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader)
+            -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType>;
 
     /**
      * @return Whether the stream has completed. A stream is considered completed if an
@@ -165,8 +165,8 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
 
 template <IrUnitHandlerInterface IrUnitHandler>
 requires(std::move_constructible<IrUnitHandler>)
-auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
+auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& reader)
+        -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
     if (is_stream_completed()) {
         return std::errc::operation_not_permitted;
     }
@@ -211,18 +211,25 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
                 return result.error();
             }
 
-            auto const node_locator{result.value()};
-            if (m_user_gen_keys_schema_tree->has_node(node_locator)) {
+            auto const& [is_auto_generated, node_locator]{result.value()};
+            auto& schema_tree_to_insert{
+                    is_auto_generated ? m_auto_gen_keys_schema_tree : m_user_gen_keys_schema_tree
+            };
+
+            if (schema_tree_to_insert->has_node(node_locator)) {
                 return std::errc::protocol_error;
             }
 
-            if (auto const err{m_ir_unit_handler.handle_schema_tree_node_insertion(node_locator)};
+            if (auto const err{m_ir_unit_handler.handle_schema_tree_node_insertion(
+                        is_auto_generated,
+                        node_locator
+                )};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return ir_error_code_to_errc(err);
             }
 
-            std::ignore = m_user_gen_keys_schema_tree->insert_node(node_locator);
+            std::ignore = schema_tree_to_insert->insert_node(node_locator);
             break;
         }
 

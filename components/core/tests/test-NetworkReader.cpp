@@ -47,8 +47,8 @@ auto get_content(clp::ReaderInterface& reader, size_t read_buf_size = cDefaultRe
  * @param reader
  * @return Whether the the assertion succeeded.
  */
-[[nodiscard]] auto
-assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader) -> bool;
+[[nodiscard]] auto assert_curl_error_code(CURLcode expected, clp::NetworkReader const& reader)
+        -> bool;
 
 auto get_test_input_local_path() -> std::string {
     std::filesystem::path const current_file_path{__FILE__};

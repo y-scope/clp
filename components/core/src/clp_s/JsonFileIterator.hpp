@@ -3,13 +3,13 @@
 
 #include <simdjson.h>
 
-#include "FileReader.hpp"
+#include "../clp/ReaderInterface.hpp"
 
 namespace clp_s {
 class JsonFileIterator {
 public:
     /**
-     * An iterator over a file containing json objects. JSON is parsed
+     * An iterator over an input stream containing json objects. JSON is parsed
      * using simdjson::parse_many. This allows simdjson to efficiently find
      * delimeters between JSON objects, and if enabled parse JSON ahead of time
      * in another thread while the JSON is being iterated over.
@@ -17,12 +17,12 @@ public:
      * The buffer grows automatically if there are JSON objects larger than the buffer size.
      * The buffer is padded to be SIMDJSON_PADDING bytes larger than the specified size.
 
-     * @param file_name the file containing JSON
+     * @param reader the input stream containing JSON
      * @param max_document_size the maximum allowed size of a single document
      * @param buf_size the initial buffer size
      */
     explicit JsonFileIterator(
-            std::string const& file_name,
+            clp::ReaderInterface& reader,
             size_t max_document_size,
             size_t buf_size = 1024 * 1024 /*1MB default*/
     );
@@ -34,12 +34,6 @@ public:
      * @return true if the iterator is valid, false otherwise
      */
     [[nodiscard]] bool get_json(simdjson::ondemand::document_stream::iterator& it);
-
-    /**
-     * Checks if the file is open
-     * @return true if the file opened successfully
-     */
-    [[nodiscard]] bool is_open() const { return m_reader.is_open(); }
 
     /**
      * @return number of truncated bytes after json documents
@@ -86,7 +80,7 @@ private:
     size_t m_buf_occupied{0};
     size_t m_max_document_size{0};
     char* m_buf{nullptr};
-    FileReader m_reader;
+    clp::ReaderInterface& m_reader;
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
     bool m_eof{false};

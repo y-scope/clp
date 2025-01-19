@@ -32,13 +32,14 @@ public:
         return IRErrorCode::IRErrorCode_Success;
     }
 
-    [[nodiscard]] auto
-    handle_utc_offset_change(UtcOffset utc_offset_old, UtcOffset utc_offset_new) -> IRErrorCode {
+    [[nodiscard]] auto handle_utc_offset_change(UtcOffset utc_offset_old, UtcOffset utc_offset_new)
+            -> IRErrorCode {
         m_utc_offset_delta = utc_offset_new - utc_offset_old;
         return IRErrorCode::IRErrorCode_Success;
     }
 
     [[nodiscard]] auto handle_schema_tree_node_insertion(
+            [[maybe_unused]] bool is_auto_generated,
             SchemaTree::NodeLocator schema_tree_node_locator
     ) -> IRErrorCode {
         m_schema_tree_node_locator.emplace(schema_tree_node_locator);
@@ -55,8 +56,8 @@ public:
 
     [[nodiscard]] auto is_complete() const -> bool { return m_is_complete; }
 
-    [[nodiscard]] auto get_schema_tree_node_locator(
-    ) const -> std::optional<SchemaTree::NodeLocator> const& {
+    [[nodiscard]] auto get_schema_tree_node_locator() const
+            -> std::optional<SchemaTree::NodeLocator> const& {
         return m_schema_tree_node_locator;
     }
 
@@ -82,11 +83,11 @@ class TriviallyInheritedIrUnitHandler : public TrivialIrUnitHandler {};
  * `clp::ffi::ir_stream::IrUnitHandlerInterface` and ensure they don't return errors.
  * @param handler
  */
-auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
-) -> void;
+auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler)
+        -> void;
 
-auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler
-) -> void {
+auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler)
+        -> void {
     auto test_log_event_result{KeyValuePairLogEvent::create(
             std::make_shared<SchemaTree>(),
             std::make_shared<SchemaTree>(),
@@ -109,6 +110,7 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
     REQUIRE(
             (IRErrorCode::IRErrorCode_Success
              == handler.handle_schema_tree_node_insertion(
+                     true,
                      {SchemaTree::cRootId, cTestSchemaTreeNodeKeyName, SchemaTree::Node::Type::Obj}
              ))
     );

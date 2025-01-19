@@ -1,10 +1,10 @@
 {
   "scripts": {
     "lint:check": "npx eslint --no-eslintrc --config package.json ../client ../imports ../server ../tests ../launcher.js",
-    "lint:fix": "npx eslint --fix --no-eslintrc --config package.json ../client ../imports ../server ../tests ../launcher.js"
+    "lint:fix": "npm run lint:check -- --fix"
   },
   "devDependencies": {
-    "eslint-config-yscope": "latest"
+    "eslint-config-yscope": "0.0.32"
   },
   "eslintConfig": {
     "extends": [

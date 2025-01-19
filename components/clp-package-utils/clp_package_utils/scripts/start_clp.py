@@ -704,9 +704,10 @@ def generic_start_worker(
 
     # Create necessary directories
     clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-    clp_config.stream_output.directory.mkdir(parents=True, exist_ok=True)
+    clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    container_worker_log_path = container_logs_dir / "worker.log"
     # fmt: off
     container_start_cmd = [
         "docker", "run",
@@ -729,6 +730,7 @@ def generic_start_worker(
         "-e", f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
+        "-e", f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
@@ -760,7 +762,7 @@ def generic_start_worker(
         "--loglevel",
         "WARNING",
         "-f",
-        str(container_logs_dir / "worker.log"),
+        str(container_worker_log_path),
         "-Q",
         celery_route,
         "-n",
@@ -922,7 +924,7 @@ def start_log_viewer_webui(
         "MongoDbName": clp_config.results_cache.db_name,
         "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
-        "StreamFilesDir": str(container_clp_config.stream_output.directory),
+        "StreamFilesDir": str(container_clp_config.stream_output.get_directory()),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
         "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
