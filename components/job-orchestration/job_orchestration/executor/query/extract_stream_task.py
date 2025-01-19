@@ -31,7 +31,7 @@ def _make_clp_command_and_env_vars(
     results_cache_uri: str,
     print_stream_stats: bool,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
-    storage_type = worker_config.package.storage_type
+    storage_type = worker_config.archive_output.storage.type
     archives_dir = worker_config.archive_output.get_directory()
     stream_output_dir = worker_config.stream_output.get_directory()
     stream_collection_name = worker_config.stream_collection_name
@@ -73,8 +73,7 @@ def _make_clp_s_command_and_env_vars(
     results_cache_uri: str,
     print_stream_stats: bool,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
-    storage_type = worker_config.package.storage_type
-    # archives_dir = worker_config.archive_output.get_directory()
+    storage_type = worker_config.archive_output.storage.type
     stream_output_dir = worker_config.stream_output.get_directory()
     stream_collection_name = worker_config.stream_collection_name
 
@@ -200,14 +199,6 @@ def extract_stream(
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))
     worker_config = load_worker_config(clp_config_path, logger)
     if worker_config is None:
-        return report_task_failure(
-            sql_adapter=sql_adapter,
-            task_id=task_id,
-            start_time=start_time,
-        )
-
-    if worker_config.archive_output.storage.type == StorageType.S3:
-        logger.error(f"Stream extraction is not supported for the S3 storage type")
         return report_task_failure(
             sql_adapter=sql_adapter,
             task_id=task_id,

@@ -166,9 +166,11 @@ def handle_extract_stream_cmd(
         return -1
 
     storage_type = clp_config.archive_output.storage.type
-    if StorageType.FS != storage_type:
+    storage_engine = clp_config.package.storage_engine
+    if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
-            f"Stream extraction is not supported for archive storage type: {storage_type}."
+            f"Stream extraction is not supported for archive storage type `{storage_type}` with"
+            f" storage engine `{storage_engine}`."
         )
         return -1
 
