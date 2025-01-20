@@ -1,9 +1,10 @@
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import boto3
 from botocore.config import Config
+from botocore.credentials import ReadOnlyCredentials
 from job_orchestration.scheduler.job_config import S3InputConfig
 
 from clp_py_utils.clp_config import S3Config
@@ -59,6 +60,15 @@ def generate_s3_virtual_hosted_style_url(
         raise ValueError("Object key is not specified")
 
     return f"https://{bucket_name}.s3.{region_code}.{AWS_ENDPOINT}/{object_key}"
+
+
+def s3_get_frozen_credentials() -> Optional[ReadOnlyCredentials]:
+    session = boto3.Session()
+    credentials = session.get_credentials()
+    if credentials is None:
+        return None
+    frozen_credentials = credentials.get_frozen_credentials()
+    return frozen_credentials
 
 
 def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]:

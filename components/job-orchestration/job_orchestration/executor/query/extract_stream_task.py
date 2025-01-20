@@ -8,14 +8,18 @@ from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import Database, S3Config, StorageEngine, StorageType, WorkerConfig
 from clp_py_utils.clp_logging import set_logging_level
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, s3_put
+from clp_py_utils.s3_utils import (
+    generate_s3_virtual_hosted_style_url,
+    get_frozen_credentials,
+    s3_put,
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
     report_task_failure,
     run_query_task,
 )
-from job_orchestration.executor.utils import load_worker_config
+from job_orchestration.executor.utils import load_session_credentials, load_worker_config
 from job_orchestration.scheduler.job_config import ExtractIrJobConfig, ExtractJsonJobConfig
 from job_orchestration.scheduler.scheduler_data import QueryTaskStatus
 
@@ -103,8 +107,10 @@ def _make_clp_s_command_and_env_vars(
         # fmt: on
         aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
         if aws_access_key_id is None or aws_secret_access_key is None:
-            logger.error("Missing credentials for accessing archives on S3")
-            return None, None
+            aws_access_key_id, aws_access_key_id = load_session_credentials(logger)
+            if aws_access_key_id is None or aws_secret_access_key is None:
+                return None, None
+
         env_vars = {
             **os.environ,
             "AWS_ACCESS_KEY_ID": aws_access_key_id,

@@ -23,6 +23,7 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, s3_put
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
+from job_orchestration.executor.utils import load_session_credentials
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
@@ -162,7 +163,7 @@ def make_clp_s_command_and_env(
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
     use_single_file_archive: bool,
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
+) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
     """
     Generates the command and environment variables for a clp_s compression job.
     :param clp_home:
@@ -185,10 +186,17 @@ def make_clp_s_command_and_env(
     # fmt: on
 
     if InputType.S3 == clp_config.input.type:
+        aws_access_key_id = clp_config.input.aws_access_key_id
+        aws_secret_access_key = clp_config.input.aws_secret_access_key
+        if aws_access_key_id is None or aws_secret_access_key is None:
+            aws_access_key_id, aws_access_key_id = load_session_credentials(logger)
+            if aws_access_key_id is None or aws_secret_access_key is None:
+                return None, None
+
         compression_env_vars = {
             **os.environ,
-            "AWS_ACCESS_KEY_ID": clp_config.input.aws_access_key_id,
-            "AWS_SECRET_ACCESS_KEY": clp_config.input.aws_secret_access_key,
+            "AWS_ACCESS_KEY_ID": aws_access_key_id,
+            "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
         }
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
@@ -275,6 +283,11 @@ def run_clp(
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
+
+    if compression_cmd is None:
+        error_msg = "Error creating compression command"
+        logger.error(error_msg)
+        return False, {"error_message": error_msg}
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
