@@ -107,8 +107,8 @@ def _make_clp_s_command_and_env_vars(
             return None, None
         env_vars = {
             **os.environ,
-            "AWS_ACCESS_KEY_ID": s3_config.credentials.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": s3_config.credentials.secret_access_key,
+            "AWS_ACCESS_KEY_ID": aws_access_key_id,
+            "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
         }
     else:
         # fmt: off
