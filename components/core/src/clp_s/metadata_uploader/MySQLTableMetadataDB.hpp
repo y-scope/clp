@@ -15,6 +15,8 @@ namespace clp_s::metadata_uploader {
  */
 class MySQLTableMetadataDB {
 public:
+    static constexpr char cTableMetadataPrefix[] = "table_metadata_";
+
     // Types
     class OperationFailed : public TraceableException {
     public:
@@ -44,7 +46,7 @@ public:
               m_username(username),
               m_password(password),
               m_database_name(database_name),
-              m_table_prefix(table_prefix) {}
+              m_table_prefix(table_prefix + cTableMetadataPrefix) {}
 
     // Methods
     /**
@@ -64,10 +66,10 @@ public:
     void close();
 
     /**
-    * Adds a field to the table
-    * @param field_name
-    * @param field_type
-    */
+     * Adds a field to the table
+     * @param field_name
+     * @param field_type
+     */
     void add_field(std::string const& field_name, NodeType field_type);
 
 private:

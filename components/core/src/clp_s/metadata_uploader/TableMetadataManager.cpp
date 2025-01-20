@@ -2,6 +2,8 @@
 
 #include <filesystem>
 
+#include "../archive_constants.hpp"
+
 namespace clp_s::metadata_uploader {
 TableMetadataManager::TableMetadataManager(
         std::optional<clp::GlobalMetadataDBConfig> const& db_config
@@ -67,7 +69,9 @@ std::vector<std::pair<std::string, clp_s::NodeType>> TableMetadataManager::trave
     // Stack of pairs of node_id and path_length
     std::stack<std::pair<int32_t, uint64_t>> s;
     for (auto& node : schema_tree->get_nodes()) {
-        if (constants::cRootNodeId == node.get_parent_id() && clp_s::NodeType::Metadata != node.get_type()) {
+        if (constants::cRootNodeId == node.get_parent_id()
+            && clp_s::NodeType::Metadata != node.get_type())
+        {
             s.push({node.get_id(), 0});
             break;
         }

@@ -31,6 +31,7 @@ set(
         ../../clp/ReaderInterface.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
+        ../archive_constants.hpp
         ../ArchiveReader.cpp
         ../ArchiveReader.hpp
         ../ArchiveReaderAdaptor.cpp
