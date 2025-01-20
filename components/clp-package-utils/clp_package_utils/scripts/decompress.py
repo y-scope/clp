@@ -89,6 +89,9 @@ def handle_extract_file_cmd(
             f" storage engine `{storage_engine}`."
         )
         return -1
+    if StorageEngine.CLP_S == storage_engine:
+        logger.error(f"File extraction is not supported for storage engine `{storage_engine}`.")
+        return -1
 
     container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
