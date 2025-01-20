@@ -14,6 +14,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.731.1",
+    "@aws-sdk/s3-request-presigner": "^3.731.1",
     "@fastify/mongodb": "^8.0.0",
     "@fastify/mysql": "^4.3.0",
     "@fastify/static": "^7.0.4",
