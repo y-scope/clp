@@ -1,4 +1,4 @@
-# Guides
+# Overview
 
 The guides below describe how to use CLP in a variety of use cases.
 
@@ -12,14 +12,3 @@ Using object storage
 Using CLP to ingest logs from object storage and store archives on object storage.
 :::
 ::::
-
-:::{toctree}
-:hidden:
-:caption: Core
-:glob:
-
-core-overview
-core-container
-core-clp-s
-core-unstructured/index
-:::
