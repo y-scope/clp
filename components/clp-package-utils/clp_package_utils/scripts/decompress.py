@@ -83,14 +83,11 @@ def handle_extract_file_cmd(
 
     storage_type = clp_config.archive_output.storage.type
     storage_engine = clp_config.package.storage_engine
-    if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
+    if StorageType.FS != storage_type or StorageEngine.CLP != storage_engine:
         logger.error(
             f"File extraction is not supported for archive storage type `{storage_type}` with"
             f" storage engine `{storage_engine}`."
         )
-        return -1
-    if StorageEngine.CLP_S == storage_engine:
-        logger.error(f"File extraction is not supported for storage engine `{storage_engine}`.")
         return -1
 
     container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
