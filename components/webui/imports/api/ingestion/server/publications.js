@@ -103,17 +103,15 @@ const refreshCompressionJobs = async () => {
             job._id
         ));
 
-    //  Save timestamp before querying the combressionDBManager
-    const newDate = new Date().toISOString()
+    const previousUpdateDate = lastUpdateDate;
+    lastUpdateDate = new Date().toISOString()
         .slice(0, CONST_FOR_DATE_FORMAT)
         .replace("T", " ");
 
     const jobs = await compressionDbManager.getCompressionJobs(
-        lastUpdateDate,
+        previousUpdateDate,
         pendingJobIds
     );
-
-    lastUpdateDate = newDate;
 
     const operations = jobs.map((doc) => ({
         updateOne: {
