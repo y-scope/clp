@@ -332,7 +332,7 @@ class S3Config(BaseModel):
     bucket: str
     key_prefix: str
 
-    credentials: Optional[S3Credentials]
+    credentials: S3Credentials
 
     @validator("region_code")
     def validate_region_code(cls, field):
