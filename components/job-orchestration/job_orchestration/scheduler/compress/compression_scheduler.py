@@ -216,7 +216,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 {
                     "status": CompressionJobStatus.FAILED,
                     "status_msg": "invalid input path",
-                    "update_time": update_time
+                    "update_time": update_time,
                 },
             )
             db_conn.commit()
@@ -231,7 +231,7 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 "num_tasks": paths_to_compress_buffer.num_tasks,
                 "status": CompressionJobStatus.RUNNING,
                 "start_time": start_time,
-                "update_time": start_time
+                "update_time": start_time,
             },
         )
         db_conn.commit()
@@ -336,7 +336,7 @@ def poll_running_jobs(db_conn, db_cursor):
                 dict(
                     status=CompressionJobStatus.SUCCEEDED,
                     duration=duration,
-                    update_time=update_time
+                    update_time=update_time,
                 ),
             )
         else:
@@ -347,7 +347,7 @@ def poll_running_jobs(db_conn, db_cursor):
                 dict(
                     status=CompressionJobStatus.FAILED,
                     status_msg=error_message,
-                    update_time=update_time
+                    update_time=update_time,
                 ),
             )
         db_conn.commit()
