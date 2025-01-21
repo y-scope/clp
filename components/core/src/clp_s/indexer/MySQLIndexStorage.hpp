@@ -1,5 +1,5 @@
-#ifndef CLP_S_METADATA_UPLOADER_MYSQLTABLEMETADATADB_HPP
-#define CLP_S_METADATA_UPLOADER_MYSQLTABLEMETADATADB_HPP
+#ifndef CLP_S_INDEXER_MYSQLTABLEMETADATADB_HPP
+#define CLP_S_INDEXER_MYSQLTABLEMETADATADB_HPP
 
 #include "../../clp/MySQLDB.hpp"
 #include "../../clp/MySQLPreparedStatement.hpp"
@@ -9,13 +9,13 @@
 using clp::MySQLDB;
 using clp::MySQLPreparedStatement;
 
-namespace clp_s::metadata_uploader {
+namespace clp_s::indexer {
 /**
- * Class representing a MySQL table metadata database
+ * Class representing a MySQL storage for column metadata (column names and types)
  */
-class MySQLTableMetadataDB {
+class MySQLIndexStorage {
 public:
-    static constexpr char cTableMetadataPrefix[] = "table_metadata_";
+    static constexpr char cColumnMetadataPrefix[] = "column_metadata_";
 
     // Types
     class OperationFailed : public TraceableException {
@@ -25,13 +25,13 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override {
-            return "MySQLTableMetadataDB operation failed";
+        [[nodiscard]] char const* what() const noexcept override {
+            return "MySQLIndexStorage operation failed";
         }
     };
 
     // Constructors
-    MySQLTableMetadataDB(
+    MySQLIndexStorage(
             std::string const& host,
             int port,
             std::string const& username,
@@ -46,7 +46,7 @@ public:
               m_username(username),
               m_password(password),
               m_database_name(database_name),
-              m_table_prefix(table_prefix + cTableMetadataPrefix) {}
+              m_table_prefix(table_prefix + cColumnMetadataPrefix) {}
 
     // Methods
     /**
@@ -66,7 +66,7 @@ public:
     void close();
 
     /**
-     * Adds a field to the table
+     * Adds a field (column) to the table
      * @param field_name
      * @param field_type
      */
@@ -76,7 +76,7 @@ private:
     // Variables
     bool m_is_open{};
     bool m_is_init{};
-    std::string m_host{};
+    std::string m_host;
     int m_port{};
     std::string m_username;
     std::string m_password;
@@ -87,6 +87,6 @@ private:
 
     std::unique_ptr<MySQLPreparedStatement> m_insert_field_statement;
 };
-}  // namespace clp_s::metadata_uploader
+}  // namespace clp_s::indexer
 
-#endif  // CLP_S_METADATA_UPLOADER_MYSQLTABLEMETADATADB_HPP
+#endif  // CLP_S_INDEXER_MYSQLTABLEMETADATADB_HPP

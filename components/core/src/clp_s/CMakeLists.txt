@@ -1,5 +1,5 @@
 add_subdirectory(search/kql)
-add_subdirectory(metadata_uploader)
+add_subdirectory(indexer)
 
 set(
         CLP_SOURCES

@@ -1,5 +1,5 @@
 set(
-        METADATA_UPLOADER_SOURCES
+        INDEXER_SOURCES
         ../../clp/aws/AwsAuthenticationSigner.cpp
         ../../clp/aws/AwsAuthenticationSigner.hpp
         ../../clp/BoundedReader.cpp
@@ -71,17 +71,17 @@ set(
         ../ZstdDecompressor.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        metadata_uploader.cpp
-        MySQLTableMetadataDB.cpp
-        MySQLTableMetadataDB.hpp
-        TableMetadataManager.cpp
-        TableMetadataManager.hpp
+        indexer.cpp
+        IndexManager.cpp
+        IndexManager.hpp
+        MySQLIndexStorage.cpp
+        MySQLIndexStorage.hpp
 )
 
-add_executable(metadata-uploader ${METADATA_UPLOADER_SOURCES})
-target_compile_features(metadata-uploader PRIVATE cxx_std_20)
-target_include_directories(metadata-uploader PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(metadata-uploader
+add_executable(indexer ${INDEXER_SOURCES})
+target_compile_features(indexer PRIVATE cxx_std_20)
+target_include_directories(indexer PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_link_libraries(indexer
         PRIVATE
         absl::flat_hash_map
         Boost::iostreams Boost::program_options Boost::url
@@ -96,7 +96,7 @@ target_link_libraries(metadata-uploader
 )
 # Put the built executable at the root of the build directory
 set_target_properties(
-        metadata-uploader
+        indexer
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
 )

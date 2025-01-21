@@ -1,4 +1,4 @@
-#include "MySQLTableMetadataDB.hpp"
+#include "MySQLIndexStorage.hpp"
 
 #include <fmt/core.h>
 #include <spdlog/spdlog.h>
@@ -12,8 +12,8 @@ enum class TableMetadataFieldIndexes : uint16_t {
     Length,
 };
 
-namespace clp_s::metadata_uploader {
-void MySQLTableMetadataDB::open() {
+namespace clp_s::indexer {
+void MySQLIndexStorage::open() {
     if (m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
@@ -22,7 +22,7 @@ void MySQLTableMetadataDB::open() {
     m_is_open = true;
 }
 
-void MySQLTableMetadataDB::init(std::string const& table_name) {
+void MySQLIndexStorage::init(std::string const& table_name) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
@@ -65,7 +65,7 @@ void MySQLTableMetadataDB::init(std::string const& table_name) {
     m_is_init = true;
 }
 
-void MySQLTableMetadataDB::add_field(std::string const& field_name, NodeType field_type) {
+void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_type) {
     if (false == m_is_init) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
@@ -88,10 +88,10 @@ void MySQLTableMetadataDB::add_field(std::string const& field_name, NodeType fie
     }
 }
 
-void MySQLTableMetadataDB::close() {
+void MySQLIndexStorage::close() {
     m_insert_field_statement.reset();
     m_db.close();
     m_is_open = false;
     m_is_init = false;
 }
-}  // namespace clp_s::metadata_uploader
+}  // namespace clp_s::indexer

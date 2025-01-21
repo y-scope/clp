@@ -1,16 +1,14 @@
+#include <exception>
 #include <filesystem>
 
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "../FileReader.hpp"
 #include "../ReaderUtils.hpp"
-#include "../ZstdDecompressor.hpp"
 #include "CommandLineArguments.hpp"
-#include "MySQLTableMetadataDB.hpp"
-#include "TableMetadataManager.hpp"
+#include "IndexManager.hpp"
 
-using clp_s::metadata_uploader::CommandLineArguments;
+using clp_s::indexer::CommandLineArguments;
 
 int main(int argc, char const* argv[]) {
     try {
@@ -33,11 +31,14 @@ int main(int argc, char const* argv[]) {
             break;
     }
 
-    clp_s::metadata_uploader::TableMetadataManager table_metadata_manager(
-            command_line_arguments.get_db_config()
-    );
-    table_metadata_manager.update_metadata(
-            command_line_arguments.get_archive_dir(),
-            command_line_arguments.get_archive_id()
-    );
+    try {
+        clp_s::indexer::IndexManager index_manager(command_line_arguments.get_db_config());
+        index_manager.update_metadata(
+                command_line_arguments.get_archive_dir(),
+                command_line_arguments.get_archive_id()
+        );
+    } catch (std::exception& e) {
+        SPDLOG_ERROR("Failed to update metadata: {}", e.what());
+        return 1;
+    }
 }

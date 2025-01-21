@@ -1,12 +1,12 @@
-#ifndef CLP_S_METADATA_UPLOADER_COMMANDLINEARGUMENTS_HPP
-#define CLP_S_METADATA_UPLOADER_COMMANDLINEARGUMENTS_HPP
+#ifndef CLP_S_INDEXER_COMMANDLINEARGUMENTS_HPP
+#define CLP_S_INDEXER_COMMANDLINEARGUMENTS_HPP
 
 #include <string>
 #include <optional>
 
 #include "../../clp/GlobalMetadataDBConfig.hpp"
 
-namespace clp_s::metadata_uploader {
+namespace clp_s::indexer {
 /**
  * Class to parse command line arguments
  */
@@ -46,6 +46,6 @@ private:
 
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
 };
-}  // namespace clp_s::metadata_uploader
+}  // namespace clp_s::indexer
 
-#endif  // CLP_S_METADATA_UPLOADER_COMMANDLINEARGUMENTS_HPP
+#endif  // CLP_S_INDEXER_COMMANDLINEARGUMENTS_HPP

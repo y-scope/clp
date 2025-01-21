@@ -1,15 +1,16 @@
-#include "TableMetadataManager.hpp"
+#include "IndexManager.hpp"
 
 #include <filesystem>
+#include <stack>
 
 #include "../archive_constants.hpp"
 
-namespace clp_s::metadata_uploader {
-TableMetadataManager::TableMetadataManager(
+namespace clp_s::indexer {
+IndexManager::IndexManager(
         std::optional<clp::GlobalMetadataDBConfig> const& db_config
 ) {
     if (db_config.has_value()) {
-        m_table_metadata_db = std::make_unique<MySQLTableMetadataDB>(
+        m_table_metadata_db = std::make_unique<MySQLIndexStorage>(
                 db_config->get_metadata_db_host(),
                 db_config->get_metadata_db_port(),
                 db_config->get_metadata_db_username(),
@@ -24,13 +25,13 @@ TableMetadataManager::TableMetadataManager(
     }
 }
 
-TableMetadataManager::~TableMetadataManager() {
+IndexManager::~IndexManager() {
     if (m_output_type == OutputType::Database) {
         m_table_metadata_db->close();
     }
 }
 
-void TableMetadataManager::update_metadata(
+void IndexManager::update_metadata(
         std::string const& archive_dir,
         std::string const& archive_id
 ) {
@@ -57,7 +58,7 @@ void TableMetadataManager::update_metadata(
     }
 }
 
-std::vector<std::pair<std::string, clp_s::NodeType>> TableMetadataManager::traverse_schema_tree(
+std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_schema_tree(
         std::shared_ptr<SchemaTree> const& schema_tree
 ) {
     std::vector<std::pair<std::string, clp_s::NodeType>> fields;
@@ -102,4 +103,4 @@ std::vector<std::pair<std::string, clp_s::NodeType>> TableMetadataManager::trave
 
     return fields;
 }
-}  // namespace clp_s::metadata_uploader
+}  // namespace clp_s::indexer

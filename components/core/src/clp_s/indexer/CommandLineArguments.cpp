@@ -7,7 +7,7 @@
 
 namespace po = boost::program_options;
 
-namespace clp_s::metadata_uploader {
+namespace clp_s::indexer {
 CommandLineArguments::ParsingResult
 CommandLineArguments::parse_arguments(int argc, char const** argv) {
     // Print out basic usage if user doesn't specify any options
@@ -119,4 +119,4 @@ void CommandLineArguments::print_basic_usage() const {
     std::cerr << "Usage: " << get_program_name() << " [OPTIONS] ARCHIVE_DIR ARCHIVE_ID"
               << std::endl;
 }
-}  // namespace clp_s::metadata_uploader
+}  // namespace clp_s::indexer
