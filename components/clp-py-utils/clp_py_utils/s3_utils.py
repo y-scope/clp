@@ -77,8 +77,8 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     s3_client = boto3.client(
         "s3",
         region_name=s3_input_config.region_code,
-        aws_access_key_id=s3_input_config.aws_access_key_id,
-        aws_secret_access_key=s3_input_config.aws_secret_access_key,
+        aws_access_key_id=s3_input_config.credentials.access_key_id,
+        aws_secret_access_key=s3_input_config.credentials.secret_access_key,
     )
 
     file_metadata_list: List[FileMetadata] = list()

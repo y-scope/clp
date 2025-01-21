@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing
 from enum import auto
 
+from clp_py_utils.clp_config import S3Credentials
 from pydantic import BaseModel, validator
 from strenum import LowercaseStrEnum
 
@@ -34,8 +35,7 @@ class S3InputConfig(BaseModel):
     bucket: str
     key_prefix: str
 
-    aws_access_key_id: typing.Optional[str] = None
-    aws_secret_access_key: typing.Optional[str] = None
+    credentials: S3Credentials
 
 
 class OutputConfig(BaseModel):
