@@ -52,7 +52,7 @@ void Projection::resolve_column(
      * what we need.
      */
 
-    auto cur_node_id = tree->get_root_node_id();
+    auto cur_node_id = tree->get_object_subtree_node_id();
     auto it = column->descriptor_begin();
     while (it != column->descriptor_end()) {
         bool matched_any{false};

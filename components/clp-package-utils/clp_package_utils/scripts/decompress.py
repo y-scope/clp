@@ -5,7 +5,7 @@ import subprocess
 import sys
 from typing import Optional
 
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import CLPConfig, StorageEngine, StorageType
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -25,15 +25,7 @@ from clp_package_utils.general import (
     validate_path_could_be_dir,
 )
 
-# Setup logging
-# Create logger
-logger = logging.getLogger("clp")
-logger.setLevel(logging.DEBUG)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
+logger = logging.getLogger(__file__)
 
 
 def validate_and_load_config(
@@ -89,7 +81,16 @@ def handle_extract_file_cmd(
     if clp_config is None:
         return -1
 
-    container_name = generate_container_name(JobType.FILE_EXTRACTION)
+    storage_type = clp_config.archive_output.storage.type
+    storage_engine = clp_config.package.storage_engine
+    if StorageType.FS != storage_type or StorageEngine.CLP != storage_engine:
+        logger.error(
+            f"File extraction is not supported for archive storage type `{storage_type}` with"
+            f" storage engine `{storage_engine}`."
+        )
+        return -1
+
+    container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, container_name
@@ -164,7 +165,16 @@ def handle_extract_stream_cmd(
     if clp_config is None:
         return -1
 
-    container_name = generate_container_name(JobType.IR_EXTRACTION)
+    storage_type = clp_config.archive_output.storage.type
+    storage_engine = clp_config.package.storage_engine
+    if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
+        logger.error(
+            f"Stream extraction is not supported for archive storage type `{storage_type}` with"
+            f" storage engine `{storage_engine}`."
+        )
+        return -1
+
+    container_name = generate_container_name(str(JobType.IR_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, container_name
@@ -258,7 +268,9 @@ def main(argv):
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
     json_extraction_parser.add_argument(
-        "--target-chunk-size", type=int, help="Target chunk size", default=100000
+        "--target-chunk-size",
+        type=int,
+        help="Target chunk size (B).",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])

@@ -29,8 +29,8 @@ namespace clp::ffi::ir_stream {
  * @param output_buf
  * @return Whether serialization succeeded.
  */
-[[nodiscard]] auto
-serialize_metadata(nlohmann::json& metadata, std::vector<int8_t>& output_buf) -> bool;
+[[nodiscard]] auto serialize_metadata(nlohmann::json& metadata, std::vector<int8_t>& output_buf)
+        -> bool;
 
 /**
  * Serializes the given integer into the IR stream.
@@ -60,11 +60,9 @@ template <IntegerType integer_t>
  * @return Whether serialization succeeded.
  */
 template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_clp_string(
-        std::string_view str,
-        std::string& logtype,
-        std::vector<int8_t>& output_buf
-) -> bool;
+[[nodiscard]] auto
+serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& output_buf)
+        -> bool;
 
 /**
  * Serializes a string.
@@ -173,11 +171,9 @@ auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
 }
 
 template <typename encoded_variable_t>
-[[nodiscard]] auto serialize_clp_string(
-        std::string_view str,
-        std::string& logtype,
-        std::vector<int8_t>& output_buf
-) -> bool {
+[[nodiscard]] auto
+serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& output_buf)
+        -> bool {
     static_assert(
             (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
              || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)

@@ -255,13 +255,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             ->default_value(m_ir_target_size),
                     "Target size (B) for each IR chunk before a new chunk is created"
             );
-            options_ir.add_options()(
-                    "temp-output-dir",
-                    po::value<string>(&m_ir_temp_output_dir)
-                            ->value_name("DIR")
-                            ->default_value(m_ir_temp_output_dir),
-                    "Temporary output directory for IR chunks while they're being written"
-            );
 
             po::options_description all_ir_options;
             all_ir_options.add(ir_positional_options);
@@ -310,10 +303,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             if (m_orig_file_id.empty()) {
                 throw invalid_argument("ORIG_FILE_ID cannot be empty.");
-            }
-
-            if (m_ir_temp_output_dir.empty()) {
-                m_ir_temp_output_dir = m_output_dir;
             }
         } else if (Command::Compress == m_command) {
             // Define compression hidden positional options

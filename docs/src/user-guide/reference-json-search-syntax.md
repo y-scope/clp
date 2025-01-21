@@ -33,13 +33,16 @@ To search for a key or value with multiple words, you must quote the key/value w
 "multi-word key": "multi-word value"
 ```
 
-Queries for keys or values with the following literal characters must escape the characters using a
-`\` (backslash): `\`, `(`, `)`, `:`, `<`, `>`, `"`, `*`, `{`, `}`.
-
 :::{caution}
 Currently, a query that contains spaces is interpreted as a substring search, i.e., it will match
 log events that contain the value as a *substring*. In a future version of CLP, these queries will
 be interpreted as _exact_ searches unless they include [wildcards](#wildcards-in-values).
+:::
+
+:::{note}
+Certain characters have special meanings when used in keys or values, so to search for the
+characters literally, you must escape them. For a list of such characters, see
+[Characters that require escaping](#characters-that-require-escaping).
 :::
 
 ### Querying nested kv-pairs
@@ -160,6 +163,52 @@ There are three supported boolean operators:
 * `NOT` - the expression after the operator must _not_ be true.
 
 You can use parentheses (`()`) to apply an operator to a group of expressions.
+
+### Characters that require escaping
+
+Keys containing the following literal characters must escape the characters using a `\` (backslash):
+
+* `\`
+* `"`
+* `.`
+* `*`
+
+Values containing the following literal characters must escape the characters using a `\`
+(backslash):
+
+* `\`
+* `"`
+* `?`
+* `*`
+
+_Unquoted_ keys or values containing the following literal characters must also escape the
+characters using a `\` (backslash):
+
+* `(`
+* `)`
+* `:`
+* `<`
+* `>`
+* `{`
+* `}`
+
+### Supported escape sequences
+
+Keys and values can represent Unicode codepoints using the `\uXXXX` escape sequence, where each `X`
+is a hexadecimal character.
+
+Keys and values also support the following escape sequences to represent control characters:
+
+* `\b`
+* `\f`
+* `\n`
+* `\r`
+* `\t`
+
+:::{note}
+The escape sequences in this section are described verbatim and don't need an extra backslash to
+escape the backslash at the beginning of each sequence.
+:::
 
 ## Examples
 

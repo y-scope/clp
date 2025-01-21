@@ -17,8 +17,8 @@ namespace clp::regex_utils {
  * @param regex_str The regex string to be translated.
  * @return The translated wildcard string.
  */
-[[nodiscard]] auto regex_to_wildcard(std::string_view regex_str
-) -> OUTCOME_V2_NAMESPACE::std_result<std::string>;
+[[nodiscard]] auto regex_to_wildcard(std::string_view regex_str)
+        -> OUTCOME_V2_NAMESPACE::std_result<std::string>;
 
 /**
  * Translate a given regex string to wildcard with a custom configuration.
@@ -26,10 +26,9 @@ namespace clp::regex_utils {
  * @param regex_str The regex string to be translated.
  * @return The translated wildcard string.
  */
-[[nodiscard]] auto regex_to_wildcard(
-        std::string_view regex_str,
-        RegexToWildcardTranslatorConfig const& config
-) -> OUTCOME_V2_NAMESPACE::std_result<std::string>;
+[[nodiscard]] auto
+regex_to_wildcard(std::string_view regex_str, RegexToWildcardTranslatorConfig const& config)
+        -> OUTCOME_V2_NAMESPACE::std_result<std::string>;
 
 }  // namespace clp::regex_utils
 

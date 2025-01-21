@@ -8,12 +8,15 @@ set -u
 
 dnf install -y \
     cmake \
+    diffutils \
     gcc-c++ \
     git \
     java-11-openjdk \
+    jq \
     libarchive-devel \
     libcurl-devel \
     libzstd-devel \
     make \
     mariadb-connector-c-devel \
-    openssl-devel
+    openssl-devel \
+    xz-devel

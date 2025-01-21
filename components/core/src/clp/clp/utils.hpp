@@ -7,11 +7,11 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include "../ErrorCode.hpp"
 #include "../GlobalMetadataDB.hpp"
 #include "../GlobalMetadataDBConfig.hpp"
-#include "ErrorCode.hpp"
+#include "../TraceableException.hpp"
 #include "FileToCompress.hpp"
-#include "TraceableException.hpp"
 
 namespace clp::clp {
 // Types

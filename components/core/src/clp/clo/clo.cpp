@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
@@ -171,7 +172,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
                                      size_t end_message_ix,
-                                     bool is_last_ir_chunk) {
+                                     bool is_last_chunk) {
             auto dest_ir_file_name = orig_file_id;
             dest_ir_file_name += "_" + std::to_string(begin_message_ix);
             dest_ir_file_name += "_" + std::to_string(end_message_ix);
@@ -195,12 +196,8 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                             dest_ir_file_name
                     ),
                     bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::OrigFileId,
+                            clp::clo::cResultsCacheKeys::IrOutput::StreamId,
                             orig_file_id
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::FileSplitId,
-                            file_split_id
                     ),
                     bsoncxx::builder::basic::kvp(
                             clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,
@@ -211,10 +208,18 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                             static_cast<int64_t>(end_message_ix)
                     ),
                     bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::IsLastIrChunk,
-                            is_last_ir_chunk
+                            clp::clo::cResultsCacheKeys::IrOutput::IsLastChunk,
+                            is_last_chunk
                     )
             )));
+
+            if (command_line_args.print_ir_stats()) {
+                nlohmann::json json_msg;
+                json_msg["path"] = dest_ir_path;
+                std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+                          << std::endl;
+            }
+
             return true;
         };
 
@@ -224,7 +229,7 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                     archive_reader,
                     *file_metadata_ix_ptr,
                     command_line_args.get_ir_target_size(),
-                    command_line_args.get_ir_temp_output_dir(),
+                    command_line_args.get_ir_output_dir(),
                     ir_output_handler
             ))
         {

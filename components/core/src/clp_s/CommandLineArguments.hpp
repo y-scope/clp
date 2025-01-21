@@ -12,6 +12,7 @@
 #include "../clp/GlobalMetadataDBConfig.hpp"
 #include "../reducer/types.hpp"
 #include "Defs.hpp"
+#include "InputConfig.hpp"
 
 namespace clp_s {
 class CommandLineArguments {
@@ -36,6 +37,11 @@ public:
         Stdout,
     };
 
+    enum class FileType : uint8_t {
+        Json = 0,
+        KeyValueIr
+    };
+
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 
@@ -46,7 +52,9 @@ public:
 
     Command get_command() const { return m_command; }
 
-    std::vector<std::string> const& get_file_paths() const { return m_file_paths; }
+    std::vector<Path> const& get_input_paths() const { return m_input_paths; }
+
+    NetworkAuthOption const& get_network_auth() const { return m_network_auth; }
 
     std::string const& get_archives_dir() const { return m_archives_dir; }
 
@@ -61,6 +69,10 @@ public:
     size_t get_max_document_size() const { return m_max_document_size; }
 
     [[nodiscard]] bool print_archive_stats() const { return m_print_archive_stats; }
+
+    [[nodiscard]] auto print_ordered_chunk_stats() const -> bool {
+        return m_print_ordered_chunk_stats;
+    }
 
     std::string const& get_mongodb_uri() const { return m_mongodb_uri; }
 
@@ -82,8 +94,6 @@ public:
 
     bool get_ignore_case() const { return m_ignore_case; }
 
-    std::string const& get_archive_id() const { return m_archive_id; }
-
     std::optional<clp::GlobalMetadataDBConfig> const& get_metadata_db_config() const {
         return m_metadata_db_config;
     }
@@ -102,15 +112,21 @@ public:
 
     OutputHandlerType get_output_handler_type() const { return m_output_handler_type; }
 
+    bool get_single_file_archive() const { return m_single_file_archive; }
+
     bool get_structurize_arrays() const { return m_structurize_arrays; }
 
     bool get_ordered_decompression() const { return m_ordered_decompression; }
 
-    size_t get_ordered_chunk_size() const { return m_ordered_chunk_size; }
+    size_t get_target_ordered_chunk_size() const { return m_target_ordered_chunk_size; }
 
     size_t get_minimum_table_size() const { return m_minimum_table_size; }
 
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
+
+    bool get_record_log_order() const { return false == m_disable_log_order; }
+
+    [[nodiscard]] auto get_file_type() const -> FileType { return m_file_type; }
 
 private:
     // Methods
@@ -166,7 +182,8 @@ private:
     Command m_command;
 
     // Compression and decompression variables
-    std::vector<std::string> m_file_paths;
+    std::vector<Path> m_input_paths;
+    NetworkAuthOption m_network_auth{};
     std::string m_archives_dir;
     std::string m_output_dir;
     std::string m_timestamp_key;
@@ -174,10 +191,14 @@ private:
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     bool m_print_archive_stats{false};
     size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
+    bool m_single_file_archive{false};
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
-    size_t m_ordered_chunk_size{0};
+    size_t m_target_ordered_chunk_size{};
+    bool m_print_ordered_chunk_stats{false};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
+    bool m_disable_log_order{false};
+    FileType m_file_type{FileType::Json};
 
     // Metadata db variables
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
@@ -198,9 +219,6 @@ private:
     std::optional<epochtime_t> m_search_end_ts;
     bool m_ignore_case{false};
     std::vector<std::string> m_projection_columns;
-
-    // Decompression and search variables
-    std::string m_archive_id;
 
     // Search aggregation variables
     std::string m_reducer_host;

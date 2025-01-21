@@ -76,13 +76,16 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                     auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
-                    while (node->get_id() != m_tree->get_root_node_id()) {
-                        // may have to explicitly mark non-regex
-                        descriptors.emplace_back(node->get_key_name());
+                    while (node->get_id() != m_tree->get_object_subtree_node_id()) {
+                        descriptors.emplace_back(
+                                DescriptorToken::create_descriptor_from_literal_token(
+                                        node->get_key_name()
+                                )
+                        );
                         node = &m_tree->get_node(node->get_parent_id());
                     }
                     std::reverse(descriptors.begin(), descriptors.end());
-                    auto resolved_column = ColumnDescriptor::create(descriptors);
+                    auto resolved_column = ColumnDescriptor::create_from_descriptors(descriptors);
                     resolved_column->set_matching_type(literal_type);
                     *it = resolved_column;
                     cur->copy_append(possibilities.get());
@@ -111,9 +114,9 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
         return matched;
     }
 
-    // TODO: once we start supporting multi-rooted MPTs this (and anything that uses
-    // get_root_node_id, or assumes root node id is 0) will have to change
-    auto const& root = m_tree->get_node(m_tree->get_root_node_id());
+    // TODO: Once we start supporting mixing different types of logs we will have to match against
+    // more than just the object subtree.
+    auto const& root = m_tree->get_node(m_tree->get_object_subtree_node_id());
     for (int32_t child_node_id : root.get_children_ids()) {
         matched |= populate_column_mapping(column, child_node_id);
     }

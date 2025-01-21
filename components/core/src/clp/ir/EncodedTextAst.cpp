@@ -5,7 +5,7 @@
 #include <string>
 
 #include "../ffi/encoding_methods.hpp"
-#include "ffi/ir_stream/decoding_methods.hpp"
+#include "../ffi/ir_stream/decoding_methods.hpp"
 
 using clp::ffi::decode_float_var;
 using clp::ffi::decode_integer_var;
@@ -50,8 +50,8 @@ auto EncodedTextAst<encoded_variable_t>::decode_and_unparse() const -> optional<
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
-template auto EncodedTextAst<eight_byte_encoded_variable_t>::decode_and_unparse(
-) const -> optional<string>;
-template auto EncodedTextAst<four_byte_encoded_variable_t>::decode_and_unparse(
-) const -> optional<string>;
+template auto EncodedTextAst<eight_byte_encoded_variable_t>::decode_and_unparse() const
+        -> optional<string>;
+template auto EncodedTextAst<four_byte_encoded_variable_t>::decode_and_unparse() const
+        -> optional<string>;
 }  // namespace clp::ir

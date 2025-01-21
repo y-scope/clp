@@ -35,10 +35,8 @@ bool VariableDictionaryWriter::add_entry(std::string const& value, uint64_t& id)
     return new_entry;
 }
 
-bool LogTypeDictionaryWriter::add_entry(
-        LogTypeDictionaryEntry& logtype_entry,
-        uint64_t& logtype_id
-) {
+bool
+LogTypeDictionaryWriter::add_entry(LogTypeDictionaryEntry& logtype_entry, uint64_t& logtype_id) {
     bool is_new_entry = false;
 
     std::string const& value = logtype_entry.get_value();

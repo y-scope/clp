@@ -11,8 +11,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
-set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)
-if ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
+set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS lzma passthrough zstd)
+if ("${GENERAL_COMPRESSOR}" STREQUAL "lzma")
+    add_definitions(-DUSE_LZMA_COMPRESSION=1)
+    message(STATUS "Using Lempel–Ziv–Markov chain Algorithm compression")
+elseif ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
     add_definitions(-DUSE_PASSTHROUGH_COMPRESSION=1)
     message(STATUS "Using passthrough compression")
 elseif ("${GENERAL_COMPRESSOR}" STREQUAL "zstd")
@@ -98,7 +101,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system regex)
+find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
 if(Boost_FOUND)
     message(STATUS "Found Boost ${Boost_VERSION}")
 else()
@@ -224,6 +227,21 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
 endif()
 
+# Find and setup LZMA Library
+# TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
+if(CLP_USE_STATIC_LIBS)
+    set(LIBLZMA_USE_STATIC_LIBS ON)
+endif()
+find_package(LibLZMA REQUIRED)
+if(LIBLZMA_FOUND)
+    message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
+    message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
+    message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
+endif()
+include_directories(${LIBLZMA_INCLUDE_DIRS})
+
 # sqlite dependencies
 set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
@@ -241,6 +259,46 @@ add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
 set(SOURCE_FILES_clp_s_unitTest
+    src/clp_s/ArchiveReader.cpp
+    src/clp_s/ArchiveReader.hpp
+    src/clp_s/ArchiveReaderAdaptor.cpp
+    src/clp_s/ArchiveReaderAdaptor.hpp
+    src/clp_s/ArchiveWriter.cpp
+    src/clp_s/ArchiveWriter.hpp
+    src/clp_s/ColumnReader.cpp
+    src/clp_s/ColumnReader.hpp
+    src/clp_s/ColumnWriter.cpp
+    src/clp_s/ColumnWriter.hpp
+    src/clp_s/DictionaryEntry.cpp
+    src/clp_s/DictionaryEntry.hpp
+    src/clp_s/DictionaryWriter.cpp
+    src/clp_s/DictionaryWriter.hpp
+    src/clp_s/FileReader.cpp
+    src/clp_s/FileReader.hpp
+    src/clp_s/FileWriter.cpp
+    src/clp_s/FileWriter.hpp
+    src/clp_s/InputConfig.cpp
+    src/clp_s/InputConfig.hpp
+    src/clp_s/JsonConstructor.cpp
+    src/clp_s/JsonConstructor.hpp
+    src/clp_s/JsonFileIterator.cpp
+    src/clp_s/JsonFileIterator.hpp
+    src/clp_s/JsonParser.cpp
+    src/clp_s/JsonParser.hpp
+    src/clp_s/PackedStreamReader.cpp
+    src/clp_s/PackedStreamReader.hpp
+    src/clp_s/ReaderUtils.cpp
+    src/clp_s/ReaderUtils.hpp
+    src/clp_s/Schema.cpp
+    src/clp_s/Schema.hpp
+    src/clp_s/SchemaMap.cpp
+    src/clp_s/SchemaMap.hpp
+    src/clp_s/SchemaReader.cpp
+    src/clp_s/SchemaReader.hpp
+    src/clp_s/SchemaTree.cpp
+    src/clp_s/SchemaTree.hpp
+    src/clp_s/SchemaWriter.cpp
+    src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AndExpr.cpp
     src/clp_s/search/AndExpr.hpp
     src/clp_s/search/BooleanLiteral.cpp
@@ -273,11 +331,24 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/StringLiteral.hpp
     src/clp_s/search/Transformation.hpp
     src/clp_s/search/Value.hpp
-    src/clp_s/SchemaTree.hpp
+    src/clp_s/TimestampDictionaryReader.cpp
+    src/clp_s/TimestampDictionaryReader.hpp
+    src/clp_s/TimestampDictionaryWriter.cpp
+    src/clp_s/TimestampDictionaryWriter.hpp
+    src/clp_s/TimestampEntry.cpp
+    src/clp_s/TimestampEntry.hpp
     src/clp_s/TimestampPattern.cpp
     src/clp_s/TimestampPattern.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
+    src/clp_s/VariableDecoder.cpp
+    src/clp_s/VariableDecoder.hpp
+    src/clp_s/VariableEncoder.cpp
+    src/clp_s/VariableEncoder.hpp
+    src/clp_s/ZstdCompressor.cpp
+    src/clp_s/ZstdCompressor.hpp
+    src/clp_s/ZstdDecompressor.cpp
+    src/clp_s/ZstdDecompressor.hpp
 )
 
 set(SOURCE_FILES_unitTest
@@ -285,6 +356,8 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
+        src/clp/BoundedReader.cpp
+        src/clp/BoundedReader.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -319,6 +392,7 @@ set(SOURCE_FILES_unitTest
         src/clp/DictionaryEntry.hpp
         src/clp/DictionaryReader.hpp
         src/clp/DictionaryWriter.hpp
+        src/clp/error_handling/ErrorCode.hpp
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
         src/clp/ErrorCode.hpp
@@ -332,6 +406,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
+        src/clp/ffi/ir_stream/IrErrorCode.cpp
+        src/clp/ffi/ir_stream/IrErrorCode.hpp
         src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
@@ -462,6 +538,9 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/Compressor.hpp
         src/clp/streaming_compression/Constants.hpp
         src/clp/streaming_compression/Decompressor.hpp
+        src/clp/streaming_compression/lzma/Compressor.cpp
+        src/clp/streaming_compression/lzma/Compressor.hpp
+        src/clp/streaming_compression/lzma/Constants.hpp
         src/clp/streaming_compression/passthrough/Compressor.cpp
         src/clp/streaming_compression/passthrough/Compressor.hpp
         src/clp/streaming_compression/passthrough/Decompressor.cpp
@@ -498,9 +577,12 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
         tests/test-Array.cpp
+        tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
+        tests/test-clp_s-end_to_end.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
+        tests/test-error_handling.cpp
         tests/test-ffi_IrUnitHandlerInterface.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
@@ -536,13 +618,15 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
+        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
         ${CURL_LIBRARIES}
         fmt::fmt
         kql
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
+        ${MONGOCXX_TARGET}
+        simdjson
         spdlog::spdlog
         sql
         OpenSSL::Crypto
@@ -551,6 +635,7 @@ target_link_libraries(unitTest
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
         )
 target_compile_features(unitTest

@@ -32,15 +32,7 @@ from clp_package_utils.scripts.native.utils import (
     wait_for_query_job,
 )
 
-# Setup logging
-# Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
 
 
 def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
@@ -175,7 +167,7 @@ def validate_and_load_config_file(
     """
     try:
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_archive_output_dir()
+        clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
         return clp_config
     except Exception:
@@ -215,7 +207,7 @@ def handle_extract_file_cmd(
     list_path = parsed_args.files_from
 
     logs_dir = clp_config.logs_directory
-    archives_dir = clp_config.archive_output.directory
+    archives_dir = clp_config.archive_output.get_directory()
 
     # Generate database config file for clp
     db_config_file_path = logs_dir / f".decompress-db-config-{uuid.uuid4()}.yml"
@@ -299,7 +291,7 @@ def main(argv):
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
     json_extraction_parser.add_argument(
-        "--target-chunk-size", type=int, help="Target chunk size.", required=True
+        "--target-chunk-size", type=int, help="Target chunk size (B)."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])

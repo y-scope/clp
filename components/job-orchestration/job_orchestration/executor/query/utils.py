@@ -6,7 +6,7 @@ import sys
 from contextlib import closing
 from logging import Logger
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -19,14 +19,11 @@ def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Pat
     return worker_logs_dir / f"{task_id}-clo.log"
 
 
-def report_command_creation_failure(
+def report_task_failure(
     sql_adapter: SQL_Adapter,
-    logger: Logger,
-    task_name: str,
     task_id: int,
     start_time: datetime.datetime,
 ):
-    logger.error(f"Error creating {task_name} command")
     task_status = QueryTaskStatus.FAILED
     update_query_task_metadata(
         sql_adapter,
@@ -46,11 +43,12 @@ def run_query_task(
     logger: Logger,
     clp_logs_dir: Path,
     task_command: List[str],
+    env_vars: Optional[Dict[str, str]],
     task_name: str,
     job_id: str,
     task_id: int,
     start_time: datetime.datetime,
-):
+) -> Tuple[QueryTaskResult, str]:
     clo_log_path = get_task_log_file_path(clp_logs_dir, job_id, task_id)
     clo_log_file = open(clo_log_path, "w")
 
@@ -64,8 +62,9 @@ def run_query_task(
         task_command,
         preexec_fn=os.setpgrp,
         close_fds=True,
-        stdout=clo_log_file,
+        stdout=subprocess.PIPE,
         stderr=clo_log_file,
+        env=env_vars,
     )
 
     def sigterm_handler(_signo, _stack_frame):
@@ -84,9 +83,9 @@ def run_query_task(
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     logger.info(f"Waiting for {task_name} to finish")
-    # `communicate` is equivalent to `wait` in this case, but avoids deadlocks if we switch to
-    # piping stdout/stderr in the future.
-    task_proc.communicate()
+    # `communicate` is equivalent to `wait` in this case, but avoids deadlocks when piping to
+    # stdout/stderr.
+    stdout_data, _ = task_proc.communicate()
     return_code = task_proc.returncode
     if 0 != return_code:
         task_status = QueryTaskStatus.FAILED
@@ -113,7 +112,7 @@ def run_query_task(
     if QueryTaskStatus.FAILED == task_status:
         task_result.error_log_path = str(clo_log_path)
 
-    return task_result.dict()
+    return task_result, stdout_data.decode("utf-8")
 
 
 def update_query_task_metadata(
