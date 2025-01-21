@@ -129,7 +129,7 @@ def _generate_compress_cmd(
             aws_access_key_id, aws_secret_access_key = _parse_aws_credentials_file(
                 pathlib.Path(parsed_args.aws_credentials_file), default_credentials_user
             )
-        if aws_access_key_id and aws_secret_access_key:
+        if bool(aws_access_key_id) and bool(aws_secret_access_key):
             compress_cmd.append("--aws-access-key-id")
             compress_cmd.append(aws_access_key_id)
             compress_cmd.append("--aws-secret-access-key")
@@ -192,11 +192,11 @@ def _validate_s3_input_args(
                 " aws_secret_access_key."
             )
 
-    elif bool(aws_access_key_id) != bool(aws_secret_access_key):
-        args_parser.error(
-            "aws_access_key_id and aws_secret_access_key must be specified together or left"
-            " unspecified."
-        )
+    else:
+        if not bool(aws_access_key_id):
+            args_parser.error("aws_access_key_id not specified or empty")
+        if not bool(aws_secret_access_key):
+            args_parser.error("aws_secret_access_key not specified or empty")
 
 
 def main(argv):

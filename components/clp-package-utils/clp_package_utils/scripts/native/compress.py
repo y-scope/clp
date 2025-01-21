@@ -10,7 +10,7 @@ from typing import List
 
 import brotli
 import msgpack
-from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME
+from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME, S3Credentials
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -148,8 +148,10 @@ def _generate_clp_io_config(
             region_code=region_code,
             bucket=bucket_name,
             key_prefix=key_prefix,
-            aws_access_key_id=parsed_args.aws_access_key_id,
-            aws_secret_access_key=parsed_args.aws_secret_access_key,
+            credentials=S3Credentials(
+                access_key_id=parsed_args.aws_access_key_id,
+                secret_access_key=parsed_args.aws_secret_access_key,
+            ),
             timestamp_key=parsed_args.timestamp_key,
         )
     else:
