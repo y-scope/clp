@@ -23,11 +23,6 @@ public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
-
-        // Methods
-        [[nodiscard]] char const* what() const noexcept override {
-            return "MySQLIndexStorage operation failed";
-        }
     };
 
     // Constructors

@@ -111,7 +111,7 @@ std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_sche
     std::string path_buffer;
     // Stack of pairs of node_id and path_length
     std::stack<std::pair<int32_t, uint64_t>> s;
-    for (const auto& node : schema_tree->get_nodes()) {
+    for (auto const& node : schema_tree->get_nodes()) {
         if (constants::cRootNodeId == node.get_parent_id()
             && clp_s::NodeType::Metadata != node.get_type())
         {
@@ -125,7 +125,7 @@ std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_sche
         s.pop();
 
         auto const& node = schema_tree->get_node(node_id);
-        const auto& children_ids = node.get_children_ids();
+        auto const& children_ids = node.get_children_ids();
         auto node_type = node.get_type();
         path_buffer.resize(path_length);
         if (false == path_buffer.empty()) {
