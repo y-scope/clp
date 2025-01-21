@@ -1,5 +1,5 @@
-#ifndef CLP_S_INDEXER_TABLEMETADATAMANAGER_HPP
-#define CLP_S_INDEXER_TABLEMETADATAMANAGER_HPP
+#ifndef CLP_S_INDEXER_INDEXMANAGER_HPP
+#define CLP_S_INDEXER_INDEXMANAGER_HPP
 
 #include "../../clp/GlobalMetadataDBConfig.hpp"
 #include "../ArchiveReader.hpp"
@@ -48,6 +48,13 @@ public:
 
 private:
     /**
+     * Escapes a key name
+     * @param key_name
+     * @return the escaped key name
+     */
+    static std::string escape_key_name(std::string_view const key_name);
+
+    /**
      * Traverses the schema tree and returns a list of path names and their types
      * @param schema_tree
      * @return a list of path names and their types
@@ -60,4 +67,4 @@ private:
     OutputType m_output_type{OutputType::Database};
 };
 }  // namespace clp_s::indexer
-#endif  // CLP_S_INDEXER_TABLEMETADATAMANAGER_HPP
+#endif  // CLP_S_INDEXER_INDEXMANAGER_HPP

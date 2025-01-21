@@ -53,6 +53,53 @@ void IndexManager::update_metadata(std::string const& archive_dir, std::string c
     }
 }
 
+std::string IndexManager::escape_key_name(std::string_view const key_name) {
+    std::string escaped_key_name;
+    escaped_key_name.reserve(key_name.size());
+    for (auto c : key_name) {
+        switch (c) {
+            case '\"':
+                escaped_key_name += "\\\"";
+                break;
+            case '\\':
+                escaped_key_name += "\\\\";
+                break;
+            case '\n':
+                escaped_key_name += "\\n";
+                break;
+            case '\t':
+                escaped_key_name += "\\t";
+                break;
+            case '\r':
+                escaped_key_name += "\\r";
+                break;
+            case '\b':
+                escaped_key_name += "\\b";
+                break;
+            case '\f':
+                escaped_key_name += "\\f";
+                break;
+            case '.':
+                escaped_key_name += "\\.";
+                break;
+            default:
+                if (std::isprint(c)) {
+                    escaped_key_name += c;
+                } else {
+                    char buffer[7];
+                    std::snprintf(
+                            buffer,
+                            sizeof(buffer),
+                            "\\u00%02x",
+                            static_cast<unsigned char>(c)
+                    );
+                    escaped_key_name += buffer;
+                }
+        }
+    }
+    return escaped_key_name;
+}
+
 std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_schema_tree(
         std::shared_ptr<SchemaTree> const& schema_tree
 ) {
@@ -73,18 +120,18 @@ std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_sche
         }
     }
 
-    while (!s.empty()) {
+    while (false == s.empty()) {
         auto [node_id, path_length] = s.top();
         s.pop();
 
-        auto& node = schema_tree->get_node(node_id);
+        auto const& node = schema_tree->get_node(node_id);
         auto& children_ids = node.get_children_ids();
         auto node_type = node.get_type();
         path_buffer.resize(path_length);
         if (false == path_buffer.empty()) {
             path_buffer += ".";
         }
-        path_buffer += node.get_key_name();
+        path_buffer += escape_key_name(node.get_key_name());
         if (children_ids.empty() && clp_s::NodeType::Object != node_type
             && clp_s::NodeType::Unknown != node_type)
         {

@@ -41,4 +41,5 @@ int main(int argc, char const* argv[]) {
         SPDLOG_ERROR("Failed to update metadata: {}", e.what());
         return 1;
     }
+    return 0;
 }

@@ -1,5 +1,5 @@
-#ifndef CLP_S_INDEXER_MYSQLTABLEMETADATADB_HPP
-#define CLP_S_INDEXER_MYSQLTABLEMETADATADB_HPP
+#ifndef CLP_S_INDEXER_MYSQLINDEXSTORAGE_HPP
+#define CLP_S_INDEXER_MYSQLINDEXSTORAGE_HPP
 
 #include "../../clp/MySQLDB.hpp"
 #include "../../clp/MySQLPreparedStatement.hpp"
@@ -89,4 +89,4 @@ private:
 };
 }  // namespace clp_s::indexer
 
-#endif  // CLP_S_INDEXER_MYSQLTABLEMETADATADB_HPP
+#endif  // CLP_S_INDEXER_MYSQLINDEXSTORAGE_HPP
