@@ -162,7 +162,7 @@ def make_clp_s_command_and_env(
     clp_config: ClpIoConfig,
     db_config_file_path: pathlib.Path,
     use_single_file_archive: bool,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
     Generates the command and environment variables for a clp_s compression job.
     :param clp_home:
@@ -275,11 +275,6 @@ def run_clp(
     else:
         logger.error(f"Unsupported storage engine {clp_storage_engine}")
         return False, {"error_message": f"Unsupported storage engine {clp_storage_engine}"}
-
-    if compression_cmd is None:
-        error_msg = "Error creating compression command"
-        logger.error(error_msg)
-        return False, {"error_message": error_msg}
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
