@@ -1,5 +1,5 @@
-#ifndef TEST_TESTOUTPUTCLEANER_HPP
-#define TEST_TESTOUTPUTCLEANER_HPP
+#ifndef TESTS_TESTOUTPUTCLEANER_HPP
+#define TESTS_TESTOUTPUTCLEANER_HPP
 
 #include <filesystem>
 #include <string>
@@ -33,4 +33,4 @@ private:
     std::vector<std::string> m_paths;
 };
 
-#endif  // TEST_TESTOUTPUTCLEANER_HPP
+#endif  // TESTS_TESTOUTPUTCLEANER_HPP
