@@ -111,11 +111,11 @@ std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_sche
     std::string path_buffer;
     // Stack of pairs of node_id and path_length
     std::stack<std::pair<int32_t, uint64_t>> s;
-    for (auto& node : schema_tree->get_nodes()) {
+    for (const auto& node : schema_tree->get_nodes()) {
         if (constants::cRootNodeId == node.get_parent_id()
             && clp_s::NodeType::Metadata != node.get_type())
         {
-            s.push({node.get_id(), 0});
+            s.emplace(node.get_id(), 0);
             break;
         }
     }
@@ -125,7 +125,7 @@ std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_sche
         s.pop();
 
         auto const& node = schema_tree->get_node(node_id);
-        auto& children_ids = node.get_children_ids();
+        const auto& children_ids = node.get_children_ids();
         auto node_type = node.get_type();
         path_buffer.resize(path_length);
         if (false == path_buffer.empty()) {
@@ -135,11 +135,11 @@ std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_sche
         if (children_ids.empty() && clp_s::NodeType::Object != node_type
             && clp_s::NodeType::Unknown != node_type)
         {
-            fields.push_back({path_buffer, node_type});
+            fields.emplace_back(path_buffer, node_type);
         }
 
         for (auto child_id : children_ids) {
-            s.push({child_id, path_buffer.size()});
+            s.emplace(child_id, path_buffer.size());
         }
     }
 
