@@ -35,8 +35,8 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
         SPDLOG_ERROR(
                 "Failed to create archive directory \"{}\" - ({}) {}",
                 m_archive_path,
-                ec.message(),
-                ec.value()
+                ec.value(),
+                ec.message()
         );
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
