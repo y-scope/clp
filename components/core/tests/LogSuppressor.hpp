@@ -1,5 +1,5 @@
-#ifndef TEST_LOGSUPPRESSOR_HPP
-#define TEST_LOGSUPPRESSOR_HPP
+#ifndef TESTS_LOGSUPPRESSOR_HPP
+#define TESTS_LOGSUPPRESSOR_HPP
 
 #include <spdlog/spdlog.h>
 
@@ -25,4 +25,5 @@ private:
     spdlog::level::level_enum m_previous_logging_level;
 };
 
-#endif  // TEST_LOGSUPPRESSOR_HPP
+#endif  // TESTS_LOGSUPPRESSOR_HPP
+

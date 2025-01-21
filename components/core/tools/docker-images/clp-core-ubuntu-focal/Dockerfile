@@ -4,6 +4,7 @@ FROM ubuntu:focal AS BASE
 # TODO: Investigate why libssl-dev is a hidden dependency of clp-s
 RUN apt-get update \
     && apt-get install -y \
+    libcurl4 \
     libmariadb-dev \
     libssl-dev
 

@@ -17,6 +17,7 @@ template <typename Handler>
 concept IrUnitHandlerInterface = requires(
         Handler handler,
         KeyValuePairLogEvent&& log_event,
+        bool is_auto_generated,
         UtcOffset utc_offset_old,
         UtcOffset utc_offset_new,
         SchemaTree::NodeLocator schema_tree_node_locator
@@ -42,11 +43,12 @@ concept IrUnitHandlerInterface = requires(
 
     /**
      * Handles a schema tree node insertion IR unit.
+     * @param is_auto_generated Whether the node is from the auto-gen keys schema tree.
      * @param schema_tree_node_locator The locator of the node to insert.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
-        handler.handle_schema_tree_node_insertion(schema_tree_node_locator)
+        handler.handle_schema_tree_node_insertion(is_auto_generated, schema_tree_node_locator)
     } -> std::same_as<IRErrorCode>;
 
     /**

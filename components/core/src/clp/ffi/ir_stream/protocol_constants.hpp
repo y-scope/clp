@@ -32,6 +32,8 @@ constexpr char ReferenceTimestampKey[] = "REFERENCE_TIMESTAMP";
 
 constexpr char VariablesSchemaIdKey[] = "VARIABLES_SCHEMA_ID";
 constexpr char VariableEncodingMethodsIdKey[] = "VARIABLE_ENCODING_METHODS_ID";
+
+constexpr std::string_view UserDefinedMetadataKey{"USER_DEFINED_METADATA"};
 }  // namespace Metadata
 
 namespace Payload {

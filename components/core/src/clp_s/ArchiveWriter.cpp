@@ -32,7 +32,13 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 
     m_archive_path = archive_path.string();
     if (false == std::filesystem::create_directory(m_archive_path, ec)) {
-        throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
+        SPDLOG_ERROR(
+                "Failed to create archive directory \"{}\" - ({}) {}",
+                m_archive_path,
+                ec.value(),
+                ec.message()
+        );
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 
     std::string var_dict_path = m_archive_path + constants::cArchiveVarDictFile;
