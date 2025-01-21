@@ -64,7 +64,7 @@ public:
      * Gets the entry exactly matching the given search string
      * @param search_string
      * @param ignore_case
-     * @return a (possibly empty) list of entries
+     * @return a (possibly empty) set of entries
      */
     std::unordered_set<EntryType const*>
     get_entry_matching_value(std::string const& search_string, bool ignore_case) const;
