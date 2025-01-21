@@ -192,14 +192,11 @@ def _validate_s3_input_args(
                 " aws_secret_access_key."
             )
 
-    elif aws_access_key_id is None and aws_secret_access_key is None:
-        args_parser.error("AWS credentials are not supplied.")
-
-    elif bool(aws_access_key_id) != bool(aws_secret_access_key):
-        args_parser.error(
-            "aws_access_key_id and aws_secret_access_key must be specified together or left"
-            " unspecified."
-        )
+    else:
+        if not bool(aws_access_key_id):
+            args_parser.error("aws_access_key_id not specified or empty")
+        if not bool(aws_secret_access_key):
+            args_parser.error("aws_secret_access_key not specified or empty")
 
 
 def main(argv):

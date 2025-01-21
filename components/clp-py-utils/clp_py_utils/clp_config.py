@@ -354,9 +354,9 @@ class S3Config(BaseModel):
             raise ValueError('key_prefix must end with "/"')
         return field
 
-    def get_credentials(self) -> Tuple[Optional[str], Optional[str]]:
-        if self.credentials is None:
-            return None, None
+    # TODO: When we support empty credentials, this method should be used to return a tuple that's
+    # either (None, None) if empty, or the credentials otherwise.
+    def get_credentials(self) -> Tuple[str, str]:
         return self.credentials.access_key_id, self.credentials.secret_access_key
 
 

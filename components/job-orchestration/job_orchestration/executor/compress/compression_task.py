@@ -185,12 +185,6 @@ def make_clp_s_command_and_env(
     # fmt: on
 
     if InputType.S3 == clp_config.input.type:
-        aws_access_key_id = clp_config.input.aws_access_key_id
-        aws_secret_access_key = clp_config.input.aws_secret_access_key
-        if aws_access_key_id is None or aws_secret_access_key is None:
-            logger.error("AWS credentials not supplied.")
-            return None, None
-
         compression_env_vars = {
             **os.environ,
             "AWS_ACCESS_KEY_ID": clp_config.input.aws_access_key_id,

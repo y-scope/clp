@@ -34,8 +34,8 @@ class S3InputConfig(BaseModel):
     bucket: str
     key_prefix: str
 
-    aws_access_key_id: typing.Optional[str] = None
-    aws_secret_access_key: typing.Optional[str] = None
+    aws_access_key_id: str
+    aws_secret_access_key: str
 
 
 class OutputConfig(BaseModel):
