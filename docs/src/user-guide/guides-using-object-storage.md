@@ -106,6 +106,41 @@ limitation will be addressed in a future release.
 
 ## Storing archives on object storage
 
+To store compressed archives on S3, you'll need to:
+
+1. Set up an AWS IAM user that allows CLP to write to the bucket where archives should be stored.
+2. Configure the S3 information in `clp-config.yml`.
+
+### Setting up an AWS IAM user
+1. Create a user by following [this guide][aws-create-iam-user].
+    * If you already created a user in the previous section, you can reuse it and proceed to step 2.
+    * You can also create a new user different from the previous section to follow the [principle of least privilege][least-privilege-principle].
+2. Attach the following policy to the user by following [this guide][add-iam-policy].
+
+    ```json
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject"
+                ],
+                "Resource": [
+                    "arn:aws:s3:::<bucket_name>/<key-prefix>/*"
+                ]
+            }
+        ]
+    }
+    ```
+
+    Replace the fields in angle brackets (`<>`) with the appropriate values:
+    * `<bucket-name>` should be the name of the S3 bucket to store compressed archives.
+    * `<key-prefix>` should be the path prefix where you want the compressed archives to be stored under.
+
+### Configuring `clp-config.yml`
+
 To configure CLP to store archives on S3, update the `archive_output.storage` key in
 `<package>/etc/clp-config.yml`:
 
@@ -140,6 +175,44 @@ archive_output:
 
 ## Viewing compressed logs from object storage
 
+To view compressed logs  S3, you'll need to:
+1. Set up cross-origin resource sharing (CORS) for the bucket to store stream files.
+2. Set up an AWS IAM user that allows CLP to store stream files to the bucket.
+3. Configure the S3 information in `clp-config.yml`.
+
+### Setting up cross-origin resource sharing
+
+CLP's log viewer webui requires the S3 bucket to support CORS for log viewing.
+
+1. Set up the cross-origin resource sharing by following [this guide][aws-cors-guide].
+    * Use the following CORS configuration
+
+    ```json
+    [
+      {
+          "AllowedHeaders": [
+              "*"
+          ],
+          "AllowedMethods": [
+              "GET"
+          ],
+          "AllowedOrigins": [
+              "http://localhost:3000"
+          ],
+          "ExposeHeaders": [
+              "Access-Control-Allow-Origin"
+          ]
+      }
+    ]
+    ```
+    :::{note}
+    By default, CLP hosts the log-viewer webui on http://localhost:3000. If you want to host the log-viewer webui with different URLs, you need to update the AllowedOrigins list to include those URLs.
+
+### Setting up an AWS IAM user
+
+
+### Configuring `clp-config.yml`
+
 To configure CLP to be able to view compressed log files from S3, you'll need to configure a bucket
 where CLP can store intermediate files that the log viewer can open. To do so, update the
 `stream_output.storage` key in `<package>/etc/clp-config.yml`:
@@ -172,6 +245,7 @@ This limitation will be addressed in a future release.
 :::
 
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
+[aws-cors-guide]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html
 [aws-create-iam-user]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [least-privilege-principle]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
