@@ -187,8 +187,8 @@ def make_clp_s_command_and_env(
     if InputType.S3 == clp_config.input.type:
         compression_env_vars = {
             **os.environ,
-            "AWS_ACCESS_KEY_ID": clp_config.input.aws_access_key_id,
-            "AWS_SECRET_ACCESS_KEY": clp_config.input.aws_secret_access_key,
+            "AWS_ACCESS_KEY_ID": clp_config.input.credentials.access_key_id,
+            "AWS_SECRET_ACCESS_KEY": clp_config.input.credentials.secret_access_key,
         }
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
