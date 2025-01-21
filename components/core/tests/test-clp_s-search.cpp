@@ -104,6 +104,7 @@ void validate_results(
     }
     std::set<int64_t> expected_results_set{expected_results.begin(), expected_results.end()};
     REQUIRE(results_set == expected_results_set);
+    REQUIRE(results.size() == expected_results.size());
 }
 
 void
