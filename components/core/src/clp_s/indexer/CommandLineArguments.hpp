@@ -1,8 +1,8 @@
 #ifndef CLP_S_INDEXER_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_INDEXER_COMMANDLINEARGUMENTS_HPP
 
-#include <string>
 #include <optional>
+#include <string>
 
 #include "../../clp/GlobalMetadataDBConfig.hpp"
 

@@ -6,9 +6,7 @@
 #include "../archive_constants.hpp"
 
 namespace clp_s::indexer {
-IndexManager::IndexManager(
-        std::optional<clp::GlobalMetadataDBConfig> const& db_config
-) {
+IndexManager::IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& db_config) {
     if (db_config.has_value()) {
         m_table_metadata_db = std::make_unique<MySQLIndexStorage>(
                 db_config->get_metadata_db_host(),
@@ -31,10 +29,7 @@ IndexManager::~IndexManager() {
     }
 }
 
-void IndexManager::update_metadata(
-        std::string const& archive_dir,
-        std::string const& archive_id
-) {
+void IndexManager::update_metadata(std::string const& archive_dir, std::string const& archive_id) {
     m_table_metadata_db->init(archive_dir);
 
     auto archive_path = std::filesystem::path(archive_dir) / archive_id;
