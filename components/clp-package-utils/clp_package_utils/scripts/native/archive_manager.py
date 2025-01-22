@@ -248,14 +248,15 @@ def _delete_archives(
             if BY_FILTER_COMMAND == command:
                 criteria = "begin_timestamp >= %s AND end_timestamp <= %s"
             elif BY_IDS_COMMAND == command:
-                criteria = "id in (%s)" % ','.join(['%s'] * len(params))
+                criteria = "id in (%s)" % ",".join(["%s"] * len(params))
 
-            db_cursor.execute(f"""
+            db_cursor.execute(
+                f"""
                 DELETE FROM `{table_prefix}archives`
                 WHERE {criteria}
                 RETURNING id
                 """,
-                params
+                params,
             )
             results = db_cursor.fetchall()
 

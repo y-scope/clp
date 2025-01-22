@@ -19,13 +19,13 @@ from clp_package_utils.general import (
 
 # Command/Argument Constants
 from clp_package_utils.scripts.native.archive_manager import (
-    FIND_COMMAND,
-    DEL_COMMAND,
-    BY_IDS_COMMAND,
-    BY_FILTER_COMMAND,
     BEGIN_TS_ARG,
-    END_TS_ARG,
+    BY_FILTER_COMMAND,
+    BY_IDS_COMMAND,
+    DEL_COMMAND,
     DRY_RUN_ARG,
+    END_TS_ARG,
+    FIND_COMMAND,
 )
 
 logger = logging.getLogger(__file__)
@@ -112,7 +112,7 @@ def main(argv):
         nargs="+",
         help="List of archive IDs to delete",
     )
-    
+
     # Delete by filter subcommand
     del_filter_parser = del_subparsers.add_parser(
         BY_FILTER_COMMAND,
