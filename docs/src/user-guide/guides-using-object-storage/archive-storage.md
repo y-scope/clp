@@ -64,3 +64,6 @@ Replace the fields in angle brackets (`<>`) with the appropriate values:
   * `<key-prefix>` is the "directory" where all archives will be stored within the bucket and
     must end with `/`.
   * `credentials` contains the CLP IAM user's credentials.
+
+[add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
+[aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability

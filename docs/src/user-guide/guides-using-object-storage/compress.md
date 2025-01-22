@@ -76,3 +76,5 @@ If you wish to compress a single log file, specify the entire path to the log fi
 log file's path is a prefix of another log file's path, then both log files will be compressed. This
 limitation will be addressed in a future release.
 :::
+
+[add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console

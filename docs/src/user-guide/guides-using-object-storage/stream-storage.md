@@ -91,3 +91,6 @@ can open, while clp-json converts them into JSONL streams. These streams only ne
 as long as the streams are being viewed, but CLP currently doesn't explicitly delete the streams.
 This limitation will be addressed in a future release.
 :::
+
+[aws-cors-guide]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html
+[add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
