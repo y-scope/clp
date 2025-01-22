@@ -32,7 +32,9 @@ def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser = argparse.ArgumentParser(description="View or delete archives.")
+    args_parser = argparse.ArgumentParser(
+        description="View list of archive IDs or delete compressed archives."
+    )
     args_parser.add_argument(
         "--config",
         "-c",
@@ -51,10 +53,10 @@ def main(argv):
     )
     del_parser = subparsers.add_parser(
         DEL_COMMAND,
-        help="Delete archives.",
+        help="Delete archives from the database and file system.",
     )
 
-    # Find options
+    # Options for find subcommand
     find_parser.add_argument(
         BEGIN_TS_ARG,
         dest="begin_ts",
@@ -68,7 +70,7 @@ def main(argv):
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
     )
 
-    # Delete options
+    # Options for delete subcommand
     del_parser.add_argument(
         DRY_RUN_ARG,
         dest="dry_run",
@@ -76,18 +78,16 @@ def main(argv):
         help="Preview delete without making changes. Lists errors and files to be deleted.",
     )
 
-    # Delete subcommands
+    # Subcommands for delete subcommands
     del_subparsers = del_parser.add_subparsers(
         dest="del_subcommand",
         required=True,
     )
+
+    # Delete by ID subcomand
     del_id_parser = del_subparsers.add_parser(
         BY_IDS_COMMAND,
         help="Delete archives by ID.",
-    )
-    del_filter_parser = del_subparsers.add_parser(
-        BY_FILTER_COMMAND,
-        help="delete archives within time frame.",
     )
 
     # Delete by ID arguments
@@ -95,6 +95,12 @@ def main(argv):
         "ids",
         nargs="+",
         help="List of archive IDs to delete",
+    )
+
+    # Delete by filter subcommand
+    del_filter_parser = del_subparsers.add_parser(
+        BY_FILTER_COMMAND,
+        help="delete archives within time frame.",
     )
 
     # Delete by filter arguments
@@ -135,18 +141,19 @@ def main(argv):
         )
     elif DEL_COMMAND == parsed_args.subcommand:
         if BY_IDS_COMMAND == parsed_args.del_subcommand:
-            return _delete_archives_by_ids(
+            return _delete_archives(
                 archives_dir,
                 database_config,
                 parsed_args.ids,
+                BY_IDS_COMMAND,
                 parsed_args.dry_run,
             )
         elif BY_FILTER_COMMAND == parsed_args.del_subcommand:
-            return _delete_archives_by_filter(
+            return _delete_archives(
                 archives_dir,
                 database_config,
-                parsed_args.begin_ts,
-                parsed_args.end_ts,
+                [parsed_args.begin_ts, parsed_args.end_ts],
+                BY_FILTER_COMMAND,
                 parsed_args.dry_run,
             )
 
@@ -175,23 +182,21 @@ def _find_archives(
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
-
             params = (begin_ts,)
             query = f"SELECT id FROM `{table_prefix}archives` WHERE begin_timestamp >= %s"
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
-                params = (begin_ts, end_ts)
+                params = params + (end_ts,)
 
             db_cursor.execute(query, params)
             results = db_cursor.fetchall()
 
             archive_ids = [result["id"] for result in results]
-
             if 0 == len(archive_ids):
                 logger.info("No archives found within specified time range.")
                 return 0
 
-            logger.info(f"Found {len(archive_ids)} archives within specified time range.")
+            logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
             for archive_id in archive_ids:
                 logger.info(archive_id)
 
@@ -201,15 +206,19 @@ def _find_archives(
 
     logger.info(f"Finished finding archives from the database.")
 
+    for archive_id in archive_ids:
+        archive_path = archives_dir / archive_id
+        if not archive_path.is_dir():
+            logger.warning(f"Archive {archive_id} in database not found on disk.")
+
     return 0
 
 
 def _delete_archives(
     archives_dir: Path,
     database_config: Database,
-    query: str,
     params: List[str],
-    criteria: str,
+    command: str,
     dry_run: bool = False,
 ) -> int:
     """
@@ -218,7 +227,7 @@ def _delete_archives(
     :param database_config:
     :param query: SQL query to select archives to delete.
     :param params: List of parameters for SQL query.
-    :param criteria: Type of deletion criteria. Either "filter" or "ids".
+    :param command: Delete subcommand. Either "filter" or "ids".
     :param dry_run: If True, no changes will be made to the database or disk.
     :return: 0 on success, -1 otherwise.
     """
@@ -232,47 +241,59 @@ def _delete_archives(
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
-
             if dry_run:
-                logger.info("Running in dry-run mode. No changes will be made to the database.")
+                logger.info("Running in dry-run mode.")
 
-            db_cursor.execute(query, params)
+            criteria: str
+            if BY_FILTER_COMMAND == command:
+                criteria = "begin_timestamp >= %s AND end_timestamp <= %s"
+            elif BY_IDS_COMMAND == command:
+                criteria = "id in (%s)" % ','.join(['%s'] * len(params))
+
+            db_cursor.execute(f"""
+                DELETE FROM `{table_prefix}archives`
+                WHERE {criteria}
+                RETURNING id
+                """,
+                params
+            )
             results = db_cursor.fetchall()
 
             if 0 == len(results):
-                if "filter" == criteria:
+                if BY_FILTER_COMMAND == command:
                     logger.info("No archives found within specified time frame.")
-                elif "ids" == criteria:
+                elif BY_IDS_COMMAND == command:
                     logger.info("No archives found with matching IDs.")
                 return 0
 
             archive_ids = [result["id"] for result in results]
-
-            if "ids" == criteria:
+            if "ids" == command:
                 not_found_ids = set(params) - set(archive_ids)
                 if not_found_ids:
                     logger.warning(
                         f"""
-                        Failed to find archives with the following IDs:
+                        Archives with the following IDs don't exist:
                         {', '.join(not_found_ids)}
                         """
                     )
 
-            id_string = ", ".join(f"'{archive_id}'" for archive_id in archive_ids)
+            ids_string = ", ".join(f"'{archive_id}'" for archive_id in archive_ids)
 
             db_cursor.execute(
                 f"""
                 DELETE FROM `{table_prefix}files`
-                WHERE archive_id in ({id_string})
+                WHERE archive_id in ({ids_string})
                 """
             )
 
             db_cursor.execute(
                 f"""
                 DELETE FROM `{table_prefix}archive_tags`
-                WHERE archive_id in ({id_string})
+                WHERE archive_id in ({ids_string})
                 """
             )
+            for archive_id in archive_ids:
+                logger.info(f"Deleted archive {archive_id} from the database.")
 
             if dry_run:
                 logger.info("Dry-run finished.")
@@ -280,8 +301,6 @@ def _delete_archives(
                 return 0
 
             db_conn.commit()
-            for archive_id in archive_ids:
-                logger.info(f"Deleted archive {archive_id} from the database.")
 
     except Exception:
         logger.exception("Failed to delete archives from the database. Aborting deletion.")
@@ -301,64 +320,6 @@ def _delete_archives(
     logger.info(f"Finished deleting archives from disk.")
 
     return 0
-
-
-def _delete_archives_by_filter(
-    archives_dir: Path,
-    database_config: Database,
-    begin_ts: int,
-    end_ts: int,
-    dry_run: bool = False,
-) -> int:
-    """
-    Deletes all archives where `begin_ts <= archive.begin_timestamp` and
-    `archive.end_timestamp <= end_ts` from both the metadata database and disk.
-    :param archives_dir:
-    :param database_config:
-    :param begin_ts:
-    :param end_ts:
-    :param dry_run:
-    :return: 0 on success, -1 otherwise.
-    """
-
-    clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
-    table_prefix = clp_db_connection_params["table_prefix"]
-
-    query = f"""
-        DELETE FROM `{table_prefix}archives`
-        WHERE begin_timestamp >= %s AND end_timestamp <= %s
-        RETURNING id
-        """
-
-    return _delete_archives(
-        archives_dir, database_config, query, [begin_ts, end_ts], "filter", dry_run
-    )
-
-
-def _delete_archives_by_ids(
-    archives_dir: Path,
-    database_config: Database,
-    archive_ids: List[str],
-    dry_run: bool = False,
-) -> int:
-    """
-    Deletes all archives with the specified IDs from both the metadata database and disk.
-    :param archives_dir:
-    :param database_config:
-    :param archive_ids:
-    :param dry_run:
-    :return: 0 on success, -1 otherwise.
-    """
-    clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
-    table_prefix = clp_db_connection_params["table_prefix"]
-
-    query = f"""
-        DELETE FROM `{table_prefix}archives`
-        WHERE id in ({', '.join(['%s'] * len(archive_ids))})
-        RETURNING id
-        """
-
-    return _delete_archives(archives_dir, database_config, query, archive_ids, "ids", dry_run)
 
 
 if "__main__" == __name__:
