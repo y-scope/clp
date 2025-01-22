@@ -268,7 +268,7 @@ def _delete_archives(
                 return 0
 
             archive_ids = [result["id"] for result in results]
-            if "ids" == command:
+            if BY_IDS_COMMAND == command:
                 not_found_ids = set(params) - set(archive_ids)
                 if not_found_ids:
                     logger.warning(
