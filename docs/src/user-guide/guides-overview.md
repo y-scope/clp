@@ -6,7 +6,7 @@ The guides below describe how to use CLP in a variety of use cases.
 :gutter: 2
 
 :::{grid-item-card}
-:link: guides-using-object-storage
+:link: guides-using-object-storage/index
 Using object storage
 ^^^
 Using CLP to ingest logs from object storage and store archives on object storage.

@@ -1,0 +1,78 @@
+# Compressing logs
+
+To compress logs from S3, you'll need to:
+
+1. Enable the CLP IAM user to access the S3 path containing your logs.
+2. Use the `s3` subcommand of `sbin/compress.sh` to compress your logs.
+
+## IAM user configuration
+
+Attach the following policy to the CLP IAM user by following [this guide][add-iam-policy].
+
+```json
+{
+   "Version": "2012-10-17",
+   "Statement": [
+       {
+           "Effect": "Allow",
+           "Action": "s3:GetObject",
+           "Resource": [
+               "arn:aws:s3:::<bucket-name>/<key-prefix>/*"
+           ]
+       },
+       {
+           "Effect": "Allow",
+           "Action": [
+               "s3:ListBucket"
+           ],
+           "Resource": [
+               "arn:aws:s3:::<bucket-name>"
+           ],
+           "Condition": {
+               "StringLike": {
+                   "s3:prefix": "<key-prefix>/*"
+               }
+           }
+       }
+   ]
+}
+```
+
+Replace the fields in angle brackets (`<>`) with the appropriate values:
+
+* `<bucket-name>` should be the name of the S3 bucket containing your logs.
+* `<key-prefix>` should be the prefix of all logs you wish to compress.
+
+## Using `sbin/compress.sh s3`
+
+You can use the `s3` subcommand as follows:
+
+```bash
+sbin/compress.sh s3 --aws-credentials-file <credentials-file> s3://<bucket-name>/<key-prefix>
+```
+
+* `<credentials-file>` is the path to an AWS credentials file like the following:
+
+    ```ini
+    [default]
+    aws_access_key_id = <aws-access-key-id>
+    aws_secret_access_key = <aws-secret-access-key>
+    ```
+
+    * CLP expects the credentials to be in the `default` section.
+    * `<aws-access-key-id>` and `<aws-secret-access-key>` are the access key ID and secret access
+      key of the CLP IAM user.
+    * If you don't want to use a credentials file, you can specify the credentials on the command
+      line using the `--aws-access-key-id` and `--aws-secret-access-key` flags.
+
+* `<bucket-name>` is the name of the S3 bucket containing your logs.
+* `<key-prefix>` is the prefix of all logs you wish to compress.
+
+:::{note}
+The `s3` subcommand only supports a single URL but will compress any logs that have the given
+prefix.
+
+If you wish to compress a single log file, specify the entire path to the log file. However, if that
+log file's path is a prefix of another log file's path, then both log files will be compressed. This
+limitation will be addressed in a future release.
+:::

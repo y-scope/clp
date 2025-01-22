@@ -60,7 +60,7 @@ quick-start-search/index
 :glob:
 
 guides-overview
-guides-using-object-storage
+guides-using-object-storage/index
 :::
 
 :::{toctree}
