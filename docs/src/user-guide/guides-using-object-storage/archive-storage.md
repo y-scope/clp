@@ -55,6 +55,8 @@ archive_output:
 
 Replace the fields in angle brackets (`<>`) with the appropriate values:
 
+* `staging_directory` is the local filesystem directory where archives will be temporarily stored
+  before being uploaded to S3.
 * `s3_config` configures both the S3 bucket where archives should be stored and the credentials
   for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
