@@ -6,7 +6,9 @@ CLP can:
 * [store archives on object storage](#storing-archives-on-object-storage); and
 * [view the compressed logs from object storage](#viewing-compressed-logs-from-object-storage).
 
-This guide explains how to configure CLP for all three use cases.
+This guide explains how to configure CLP for all three use cases. Note that you can choose to use
+object storage for any combination of the three use cases (e.g., compress logs from S3 and view the
+compressed logs from S3, but store archives on the local filesystem).
 
 :::{note}
 Currently, only the [clp-json][release-choices] release supports object storage. Support for
@@ -18,59 +20,89 @@ Currently, CLP only supports using S3 as object storage. Support for other objec
 will be added in a future release.
 :::
 
+## Prerequisites
+
+1. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
+    * An S3 URL is a combination of a bucket name and a key prefix as shown below:
+      
+      :::{mermaid}
+      %%{
+        init: {
+          "theme": "base",
+          "themeVariables": {
+            "primaryColor": "#0066cc",
+            "primaryTextColor": "#fff",
+            "primaryBorderColor": "transparent",
+            "lineColor": "#9580ff",
+            "secondaryColor": "#9580ff",
+            "tertiaryColor": "#fff"
+          }
+        }
+      }%%
+      graph TD
+        A["s3://my-bucket-name/my-logs-dir/"] --"Bucket name"--> B[my-bucket-name]
+        A --"Key prefix"--> C[path/to/my/file.txt]
+      :::
+
+2. An S3 bucket and key prefix where you wish to store compressed archives.
+3. An S3 bucket and key prefix where you wish to store intermediate files for viewing compressed
+   logs.
+4. An AWS IAM user with the necessary permissions to access the S3 prefixes mentioned above.
+    * To create a user, follow [this guide][aws-create-iam-user].
+    * You may use a different IAM user for each use case to follow the
+      [principle of least privilege][least-privilege-principle], or you can use the same user for
+      all three.
+    * For brevity, we'll refer to this user as the "CLP IAM user" in the rest of this guide.
+
+:::{note}
+CLP currently requires IAM user (long-term) credentials to access the relevant S3 buckets. Support
+for other authentication methods (e.g., temporary credentials) will be added in a future release.
+:::
+
 ## Compressing logs from object storage
 
 To compress logs from S3, you'll need to:
 
-1. Set up an AWS IAM user that CLP can use to access the bucket containing your logs.
+1. Enable the CLP IAM user to access the S3 path containing your logs.
 2. Use the `s3` subcommand of `sbin/compress.sh` to compress your logs.
 
-### Setting up an AWS IAM user
+### IAM user configuration
 
-To set up a user:
+Attach the following policy to the CLP IAM user by following [this guide][add-iam-policy].
 
-1. Create a user by following [this guide][aws-create-iam-user].
-    * If you already have a user to use for ingesting logs, you can skip this step.
-2. Attach the following policy to the user by following [this guide][add-iam-policy].
-
-    ```json
-    {
-       "Version": "2012-10-17",
-       "Statement": [
-           {
-               "Effect": "Allow",
-               "Action": "s3:GetObject",
-               "Resource": [
-                   "arn:aws:s3:::<bucket-name>/<key-prefix>/*"
-               ]
-           },
-           {
-               "Effect": "Allow",
-               "Action": [
-                   "s3:ListBucket"
-               ],
-               "Resource": [
-                   "arn:aws:s3:::<bucket-name>"
-               ],
-               "Condition": {
-                   "StringLike": {
-                       "s3:prefix": "<key-prefix>/*"
-                   }
+```json
+{
+   "Version": "2012-10-17",
+   "Statement": [
+       {
+           "Effect": "Allow",
+           "Action": "s3:GetObject",
+           "Resource": [
+               "arn:aws:s3:::<bucket-name>/<key-prefix>/*"
+           ]
+       },
+       {
+           "Effect": "Allow",
+           "Action": [
+               "s3:ListBucket"
+           ],
+           "Resource": [
+               "arn:aws:s3:::<bucket-name>"
+           ],
+           "Condition": {
+               "StringLike": {
+                   "s3:prefix": "<key-prefix>/*"
                }
            }
-       ]
-    }
-    ```
-   
-    Replace the fields in angle brackets (`<>`) with the appropriate values:
-    * `<bucket-name>` should be the name of the S3 bucket containing your logs.
-    * `<key-prefix>` should be the prefix of all logs you wish to compress.
+       }
+   ]
+}
+```
 
-    :::{warning}
-    To follow the [principle of least privilege][least-privilege-principle], ensure the user doesn't
-    have other unnecessary permission policies attached. If the user does have other policies,
-    consider creating a new user with only the permission policy above.
-    :::
+Replace the fields in angle brackets (`<>`) with the appropriate values:
+
+* `<bucket-name>` should be the name of the S3 bucket containing your logs.
+* `<key-prefix>` should be the prefix of all logs you wish to compress.
 
 ### Using `sbin/compress.sh s3`
 
@@ -90,13 +122,15 @@ sbin/compress.sh s3 --aws-credentials-file <credentials-file> s3://<bucket-name>
 
     * CLP expects the credentials to be in the `default` section.
     * `<aws-access-key-id>` and `<aws-secret-access-key>` are the access key ID and secret access
-      key of the IAM user you set up in the previous section.
+      key of the CLP IAM user.
+    * If you don't want to use a credentials file, you can specify the credentials on the command
+      line using the `--aws-access-key-id` and `--aws-secret-access-key` flags.
 
 * `<bucket-name>` is the name of the S3 bucket containing your logs.
-* `<key-prefix>` is the path prefix of all logs you wish to compress.
+* `<key-prefix>` is the prefix of all logs you wish to compress.
 
 :::{note}
-The `s3` subcommand only supports a single URL but will compress any logs that have the given key
+The `s3` subcommand only supports a single URL but will compress any logs that have the given
 prefix.
 
 If you wish to compress a single log file, specify the entire path to the log file. However, if that
@@ -108,38 +142,37 @@ limitation will be addressed in a future release.
 
 To store compressed archives on S3, you'll need to:
 
-1. Set up an AWS IAM user that allows CLP to write to the bucket where archives should be stored.
-2. Configure the S3 information in `clp-config.yml`.
+1. Enable the CLP IAM user to access the S3 path where archives should be stored.
+2. Configure CLP to store archives under the relevant S3 path.
 
-### Setting up an AWS IAM user
-1. Create a user by following [this guide][aws-create-iam-user].
-    * If you already created a user in the previous section, you can reuse it and proceed to step 2.
-    * You can also create a new user different from the previous section to follow the [principle of least privilege][least-privilege-principle].
-2. Attach the following policy to the user by following [this guide][add-iam-policy].
+### IAM user configuration
 
-    ```json
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "s3:GetObject",
-                    "s3:PutObject"
-                ],
-                "Resource": [
-                    "arn:aws:s3:::<bucket_name>/<key-prefix>/*"
-                ]
-            }
-        ]
-    }
-    ```
+Attach the following policy to the CLP IAM user by following [this guide][add-iam-policy].
 
-    Replace the fields in angle brackets (`<>`) with the appropriate values:
-    * `<bucket-name>` should be the name of the S3 bucket to store compressed archives.
-    * `<key-prefix>` should be the path prefix where you want the compressed archives to be stored under.
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+   {
+    "Effect": "Allow",
+    "Action": [
+      "s3:GetObject",
+      "s3:PutObject"
+    ],
+    "Resource": [
+      "arn:aws:s3:::<bucket-name>/<key-prefix>/*"
+    ]
+   }
+  ]
+}
+```
 
-### Configuring `clp-config.yml`
+Replace the fields in angle brackets (`<>`) with the appropriate values:
+
+* `<bucket-name>` should be the name of the S3 bucket to store compressed archives.
+* `<key-prefix>` should be the prefix where you want the compressed archives to be stored under.
+
+### Configuring CLP's archive storage location
 
 To configure CLP to store archives on S3, update the `archive_output.storage` key in
 `<package>/etc/clp-config.yml`:
@@ -160,62 +193,83 @@ archive_output:
   # archive_output's other config keys
 ```
 
+Replace the fields in angle brackets (`<>`) with the appropriate values:
+
 * `s3_config` configures both the S3 bucket where archives should be stored and the credentials
   for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all archives will be stored within the bucket and
     must end with `/`.
-  * `credentials` contains the S3 credentials necessary for accessing the bucket.
-
-    :::{note}
-    These credentials can be for a different IAM user than the one set up in the previous section,
-    as long as they can access the bucket.
-    :::
+  * `credentials` contains the CLP IAM user's credentials.
 
 ## Viewing compressed logs from object storage
 
-To view compressed logs  S3, you'll need to:
-1. Set up cross-origin resource sharing (CORS) for the bucket to store stream files.
-2. Set up an AWS IAM user that allows CLP to store stream files to the bucket.
-3. Configure the S3 information in `clp-config.yml`.
+To view compressed logs from S3, you'll need to:
 
-### Setting up cross-origin resource sharing
+1. Enable the CLP IAM user to access the S3 path where stream files (logs in a format viewable by
+   the log viewer) should be stored.
+2. Set up a cross-origin resource sharing (CORS) policy for the S3 path in (1).
+3. Configure CLP to store stream files under the S3 path in (1).
 
-CLP's log viewer webui requires the S3 bucket to support CORS for log viewing.
+### IAM user configuration
 
-1. Set up the cross-origin resource sharing by following [this guide][aws-cors-guide].
-    * Use the following CORS configuration
+Attach the following policy to the CLP IAM user by following [this guide][add-iam-policy].
 
-    ```json
-    [
-      {
-          "AllowedHeaders": [
-              "*"
-          ],
-          "AllowedMethods": [
-              "GET"
-          ],
-          "AllowedOrigins": [
-              "http://localhost:3000"
-          ],
-          "ExposeHeaders": [
-              "Access-Control-Allow-Origin"
-          ]
-      }
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::<bucket-name>/<key-prefix>/*"
+      ]
+    }
+  ]
+}
+```
+
+### Cross-origin resource sharing (CORS) configuration
+
+For CLP's log viewer to be able to view the compressed logs from S3 over the internet, the S3 bucket
+must have a CORS policy configured.
+
+Add the CORS configuration below to your bucket by following [this guide][aws-cors-guide]:
+
+```json
+[
+  {
+    "AllowedHeaders": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "GET"
+    ],
+    "AllowedOrigins": [
+      "*"
+    ],
+    "ExposeHeaders": [
+      "Access-Control-Allow-Origin"
     ]
-    ```
-    :::{note}
-    By default, CLP hosts the log-viewer webui on http://localhost:3000. If you want to host the log-viewer webui with different URLs, you need to update the AllowedOrigins list to include those URLs.
+  }
+]
+```
 
-### Setting up an AWS IAM user
+:::{tip}
+The CORS policy above allows requests from any host (origin). If you already know what hosts will
+access CLP's web interface, you can enhance security by changing `AllowedOrigins` from `*` to the
+specific list of hosts that will access the web interface.
+:::
 
+### Configuring CLP's stream storage location
 
-### Configuring `clp-config.yml`
-
-To configure CLP to be able to view compressed log files from S3, you'll need to configure a bucket
-where CLP can store intermediate files that the log viewer can open. To do so, update the
-`stream_output.storage` key in `<package>/etc/clp-config.yml`:
+To configure CLP to store stream files on S3, update the `stream_output.storage` key in
+`<package>/etc/clp-config.yml`:
 
 ```yaml
 stream_output:
@@ -234,8 +288,7 @@ stream_output:
 ```
 
 The configuration keys above function identically to those in `archive_output.storage`, except they
-should be configured to use a different S3 path (i.e., a different key-prefix in the same bucket or
-a different bucket entirely).
+should be configured to use a different S3 path.
 
 :::{note}
 To view compressed log files, clp-text currently converts them into IR streams that the log viewer
@@ -247,6 +300,7 @@ This limitation will be addressed in a future release.
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
 [aws-cors-guide]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html
 [aws-create-iam-user]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
+[aws-key-prefixes]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [least-privilege-principle]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [release-choices]: quick-start-cluster-setup/index.md#choosing-a-release
