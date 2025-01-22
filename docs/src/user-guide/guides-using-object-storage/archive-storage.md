@@ -62,7 +62,7 @@ Replace the fields in angle brackets (`<>`) with the appropriate values:
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all archives will be stored within the bucket and
-    must end with `/`.
+    must end with trailing forward slash (e.g., `archives/`).
   * `credentials` contains the CLP IAM user's credentials.
 
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console

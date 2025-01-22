@@ -1,6 +1,6 @@
 # Overview
 
-The guides below describe how to use CLP in a variety of use cases.
+The guides below describe how to use CLP in different use cases.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
