@@ -68,21 +68,21 @@ The following subsections below explain how to set up each use case:
 
 :::{grid-item-card}
 :link: compress
-Compression
+Compressing logs
 ^^^
 Compressing logs from object storage
 :::
 
 :::{grid-item-card}
 :link: archive-storage
-Archive storage
+Storing archives
 ^^^
 Storing archives on object storage
 :::
 
 :::{grid-item-card}
 :link: stream-storage
-Stream storage
+Viewing compressed logs
 ^^^
 Viewing compressed logs from object storage
 :::
