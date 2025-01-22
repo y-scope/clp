@@ -39,7 +39,7 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
 
 ## Cross-origin resource sharing (CORS) configuration
 
-For CLP's log viewer to be able to open the cached stream files from S3 over the internet, the S3
+For CLP's log viewer to be able to access the cached stream files from S3 over the internet, the S3
 bucket must have a CORS policy configured.
 
 Add the CORS configuration below to your bucket by following [this guide][aws-cors-guide]:
