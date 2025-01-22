@@ -1,11 +1,19 @@
-# Viewing compressed logs
+# Caching stream files
 
-To view compressed logs from S3, you'll need to:
+The [log viewer][yscope-log-viewer] currently supports viewing [IR][uber-clp-blog-1] and JSONL
+stream files but not CLP archives; thus, to view the compressed logs from a CLP archive, CLP first
+converts the compressed logs into stream files. These streams can be cached on the filesystem, or on
+object storage as explained below.
 
-1. Enable the CLP IAM user to access the S3 path where stream files (logs in a format viewable by
-   the log viewer) should be stored.
+:::{note}
+A future version of the log viewer will support viewing CLP archives directly.
+:::
+
+To cache the stream files on S3, you'll need to:
+
+1. Enable the CLP IAM user to access the S3 path where stream files should be stored.
 2. Set up a cross-origin resource sharing (CORS) policy for the S3 path in (1).
-3. Configure CLP to store stream files under the S3 path in (1).
+3. Configure CLP to cache stream files under the S3 path from step (1).
 
 ## IAM user configuration
 
@@ -31,8 +39,8 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
 
 ## Cross-origin resource sharing (CORS) configuration
 
-For CLP's log viewer to be able to view the compressed logs from S3 over the internet, the S3 bucket
-must have a CORS policy configured.
+For CLP's log viewer to be able to open the cached stream files from S3 over the internet, the S3
+bucket must have a CORS policy configured.
 
 Add the CORS configuration below to your bucket by following [this guide][aws-cors-guide]:
 
@@ -57,13 +65,13 @@ Add the CORS configuration below to your bucket by following [this guide][aws-co
 
 :::{tip}
 The CORS policy above allows requests from any host (origin). If you already know what hosts will
-access CLP's web interface, you can enhance security by changing `AllowedOrigins` from `*` to the
-specific list of hosts that will access the web interface.
+access CLP's web interface, you can enhance security by changing `AllowedOrigins` from `["*"]` to
+the specific list of hosts that will access the web interface.
 :::
 
 ## Configuring CLP's stream storage location
 
-To configure CLP to store stream files on S3, update the `stream_output.storage` key in
+To configure CLP to cache stream files on S3, update the `stream_output.storage` key in
 `<package>/etc/clp-config.yml`:
 
 ```yaml
@@ -86,11 +94,11 @@ The configuration keys above function identically to those in `archive_output.st
 should be configured to use a different S3 path.
 
 :::{note}
-To view compressed log files, clp-text currently converts them into IR streams that the log viewer
-can open, while clp-json converts them into JSONL streams. These streams only need to be stored for
-as long as the streams are being viewed, but CLP currently doesn't explicitly delete the streams.
-This limitation will be addressed in a future release.
+CLP currently doesn't explicitly delete the cached streams. This limitation will be addressed in a
+future release.
 :::
 
 [aws-cors-guide]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
+[uber-clp-blog-1]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
+[yscope-log-viewer]: https://github.com/y-scope/yscope-log-viewer

@@ -4,11 +4,11 @@ CLP can:
 
 * compress logs from object storage (e.g., S3);
 * store archives on object storage; and
-* view the compressed logs from object storage.
+* cache stream files (used for viewing compressed logs) on object storage.
 
 This guide explains how to configure CLP for all three use cases. Note that you can choose to use
-object storage for any combination of the three use cases (e.g., compress logs from S3 and view the
-compressed logs from S3, but store archives on the local filesystem).
+object storage for any combination of the three use cases (e.g., compress logs from S3 and cache the
+stream files on S3, but store archives on the local filesystem).
 
 :::{note}
 Currently, only the [clp-json][release-choices] release supports object storage. Support for
@@ -24,8 +24,7 @@ will be added in a future release.
 
 1. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
 2. An S3 bucket and key prefix where you wish to store compressed archives.
-3. An S3 bucket and key prefix where you wish to store intermediate files for viewing compressed
-   logs.
+3. An S3 bucket and key prefix where you wish to cache stream files.
 4. An AWS IAM user with the necessary permissions to access the S3 prefixes mentioned above.
     * To create a user, follow [this guide][aws-create-iam-user].
     * You may use a different IAM user for each use case to follow the
@@ -64,9 +63,9 @@ Storing archives on object storage
 
 :::{grid-item-card}
 :link: stream-storage
-Viewing compressed logs
+Caching stream files
 ^^^
-Viewing compressed logs from object storage
+Caching stream files on object storage
 :::
 ::::
 
