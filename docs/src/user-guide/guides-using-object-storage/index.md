@@ -23,27 +23,6 @@ will be added in a future release.
 ## Prerequisites
 
 1. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
-    * An S3 URL is a combination of a bucket name and a key prefix as shown below:
-      
-      :::{mermaid}
-      %%{
-        init: {
-          "theme": "base",
-          "themeVariables": {
-            "primaryColor": "#0066cc",
-            "primaryTextColor": "#fff",
-            "primaryBorderColor": "transparent",
-            "lineColor": "#9580ff",
-            "secondaryColor": "#9580ff",
-            "tertiaryColor": "#fff"
-          }
-        }
-      }%%
-      graph TD
-        A["s3://my-bucket-name/my-logs-dir/"] --"Bucket name"--> B[my-bucket-name]
-        A --"Key prefix"--> C[path/to/my/file.txt]
-      :::
-
 2. An S3 bucket and key prefix where you wish to store compressed archives.
 3. An S3 bucket and key prefix where you wish to store intermediate files for viewing compressed
    logs.
@@ -53,11 +32,14 @@ will be added in a future release.
       [principle of least privilege][least-privilege-principle], or you can use the same user for
       all three.
     * For brevity, we'll refer to this user as the "CLP IAM user" in the rest of this guide.
+5. IAM user (long-term) credentials for the IAM user(s) created in step (4) above.
+    * To create these credentials, follow [this guide][aws-create-access-keys].
 
-:::{note}
-CLP currently requires IAM user (long-term) credentials to access the relevant S3 buckets. Support
-for other authentication methods (e.g., temporary credentials) will be added in a future release.
-:::
+    :::{note}
+    CLP currently requires IAM user (long-term) credentials to access the relevant S3 buckets.
+    Support for other authentication methods (e.g., temporary credentials) will be added in a future
+    release.
+    :::
 
 ## Use cases
 
@@ -96,6 +78,7 @@ archive-storage
 stream-storage
 :::
 
+[aws-create-access-keys]: https://docs.aws.amazon.com/keyspaces/latest/devguide/create.keypair.html
 [aws-create-iam-user]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
 [aws-key-prefixes]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html
 [least-privilege-principle]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
