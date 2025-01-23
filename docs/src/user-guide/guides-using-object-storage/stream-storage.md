@@ -37,6 +37,12 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
 }
 ```
 
+Replace the fields in angle brackets (`<>`) with the appropriate values:
+
+* `<bucket-name>` should be the name of the S3 bucket where cached streams should be stored.
+* `<key-prefix>` should be the prefix (used like a directory path) where cached streams should be
+  stored.
+
 ## Cross-origin resource sharing (CORS) configuration
 
 For CLP's log viewer to be able to access the cached stream files from S3 over the internet, the S3

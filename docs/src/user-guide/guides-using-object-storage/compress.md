@@ -17,7 +17,7 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
            "Effect": "Allow",
            "Action": "s3:GetObject",
            "Resource": [
-               "arn:aws:s3:::<bucket-name>/<key-prefix>/*"
+               "arn:aws:s3:::<bucket-name>/<key-prefix>*"
            ]
        },
        {
@@ -30,7 +30,7 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
            ],
            "Condition": {
                "StringLike": {
-                   "s3:prefix": "<key-prefix>/*"
+                   "s3:prefix": "<key-prefix>*"
                }
            }
        }
@@ -48,7 +48,9 @@ Replace the fields in angle brackets (`<>`) with the appropriate values:
 You can use the `s3` subcommand as follows:
 
 ```bash
-sbin/compress.sh s3 --aws-credentials-file <credentials-file> s3://<bucket-name>/<key-prefix>
+sbin/compress.sh s3 \
+  --aws-credentials-file <credentials-file> \
+  https://<bucket-name>.s3.<region-code>.amazonaws.com/<key-prefix>
 ```
 
 * `<credentials-file>` is the path to an AWS credentials file like the following:
@@ -67,6 +69,7 @@ sbin/compress.sh s3 --aws-credentials-file <credentials-file> s3://<bucket-name>
     expose your credentials to other users running on the system).
 
 * `<bucket-name>` is the name of the S3 bucket containing your logs.
+* `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
 * `<key-prefix>` is the prefix of all logs you wish to compress.
 
 :::{note}
@@ -80,3 +83,4 @@ both logs to be compressed). This limitation will be addressed in a future relea
 :::
 
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
+[aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability

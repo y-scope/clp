@@ -29,8 +29,9 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
 
 Replace the fields in angle brackets (`<>`) with the appropriate values:
 
-* `<bucket-name>` should be the name of the S3 bucket to store compressed archives.
-* `<key-prefix>` should be the prefix where you want the compressed archives to be stored under.
+* `<bucket-name>` should be the name of the S3 bucket where compressed archives should be stored.
+* `<key-prefix>` should be the prefix (used like a directory path) where compressed archives should
+  be stored.
 
 ## Configuring CLP's archive storage location
 
