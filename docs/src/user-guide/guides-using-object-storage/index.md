@@ -6,9 +6,9 @@ CLP can:
 * store archives on object storage; and
 * cache stream files (used for viewing compressed logs) on object storage.
 
-This guide explains how to configure CLP for all three use cases. Note that you can choose to use
-object storage for any combination of the three use cases (e.g., compress logs from S3 and cache the
-stream files on S3, but store archives on the local filesystem).
+This guide explains how to configure and use CLP for all three use cases. Note that you can choose
+to use object storage for any combination of the three use cases (e.g., compress logs from S3 and
+cache the stream files on S3, but store archives on the local filesystem).
 
 :::{note}
 Currently, only the [clp-json][release-choices] release supports object storage. Support for
@@ -43,41 +43,49 @@ will be added in a future release.
     release.
     :::
 
-## Use cases
+## Configuration
 
-The following subsections below explain how to set up each use case:
+The subsections below explain how to configure your object storage bucket and CLP for each use case:
 
 ::::{grid} 1 1 1 1
 :gutter: 2
 
 :::{grid-item-card}
-:link: compress
-Compressing logs
+:link: object-storage-config
+Configuring object storage
 ^^^
-Compressing logs from object storage
+Configuring your object storage bucket for each use case.
 :::
 
 :::{grid-item-card}
-:link: archive-storage
-Storing archives
+:link: clp-config
+Configuring CLP
 ^^^
-Storing archives on object storage
+Configuring CLP to use object storage for each use case.
 :::
+::::
+
+## Using CLP with object storage
+
+The subsection below explains how to use CLP with object storage for each use case:
+
+::::{grid} 1 1 1 1
+:gutter: 2
 
 :::{grid-item-card}
-:link: stream-storage
-Caching stream files
+:link: clp-usage
+Using CLP with object storage
 ^^^
-Caching stream files on object storage
+Using CLP to compress, search, and view log files from object storage.
 :::
 ::::
 
 :::{toctree}
 :hidden:
 
-compress
-archive-storage
-stream-storage
+object-storage-config
+clp-config
+clp-usage
 :::
 
 [aws-create-access-keys]: https://docs.aws.amazon.com/keyspaces/latest/devguide/create.keypair.html

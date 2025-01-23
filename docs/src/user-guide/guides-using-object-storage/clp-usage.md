@@ -1,59 +1,12 @@
-# Compressing logs
+# Using CLP with object storage
 
-To compress logs from S3, you'll need to:
+To compress logs from S3, follow the steps in the section below. For all other operations, you
+should be able to use CLP as described in the [quick start](../quick-start-overview.md) guide.
 
-1. Enable the CLP IAM user to access the S3 path containing your logs.
-2. Use the `s3` subcommand of `sbin/compress.sh` to compress your logs.
+## Compressing logs from S3
 
-## IAM user configuration
-
-Attach the following policy to the CLP IAM user by following [this guide][add-iam-policy].
-
-```json
-{
-   "Version": "2012-10-17",
-   "Statement": [
-       {
-           "Effect": "Allow",
-           "Action": "s3:GetObject",
-           "Resource": [
-               "arn:aws:s3:::<bucket-name>/<all-logs-prefix>*"
-           ]
-       },
-       {
-           "Effect": "Allow",
-           "Action": [
-               "s3:ListBucket"
-           ],
-           "Resource": [
-               "arn:aws:s3:::<bucket-name>"
-           ],
-           "Condition": {
-               "StringLike": {
-                   "s3:prefix": "<all-logs-prefix>*"
-               }
-           }
-       }
-   ]
-}
-```
-
-Replace the fields in angle brackets (`<>`) with the appropriate values:
-
-* `<bucket-name>` should be the name of the S3 bucket containing your logs.
-* `<all-logs-prefix>` should be the prefix of all logs you wish to compress.
-  
-  :::{note}
-  If you want to enforce that only logs under a directory-like prefix, e.g., `logs/`, can be
-  compressed, you can append a trailing slash (`/`) after the `<all-logs-prefix>` value. This will
-  prevent CLP from compressing logs with prefixes like `logs-private`. However, note that to
-  compress all logs under the `logs/` prefix, you will need to include the trailing slash when
-  invoking `sbin/compress.sh` below.
-  :::
-
-## Using `sbin/compress.sh s3`
-
-You can use the `s3` subcommand as follows:
+To compress logs from S3, use the `s3` subcommand as follows, replacing the fields in angle brackets
+(`<>`) with the appropriate values:
 
 ```bash
 sbin/compress.sh \
@@ -82,7 +35,7 @@ sbin/compress.sh \
 * `<bucket-name>` is the name of the S3 bucket containing your logs.
 * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
 * `<prefix>` is the prefix of all logs you wish to compress and must begin with the
-  `<all-logs-prefix>` value from the IAM policy above.
+  `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
 
 :::{note}
 The `s3` subcommand only supports a single URL but will compress any logs that have the given
@@ -96,3 +49,4 @@ both logs to be compressed). This limitation will be addressed in a future relea
 
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
+[compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
