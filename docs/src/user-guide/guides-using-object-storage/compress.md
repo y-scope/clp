@@ -56,7 +56,8 @@ Replace the fields in angle brackets (`<>`) with the appropriate values:
 You can use the `s3` subcommand as follows:
 
 ```bash
-sbin/compress.sh s3 \
+sbin/compress.sh \
+  s3 \
   --aws-credentials-file <credentials-file> \
   --timestamp-key <timestamp-key> \
   https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>
