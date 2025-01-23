@@ -6,6 +6,7 @@ import DbManager from "./DbManager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
+import S3Manager from "./S3Manager.js";
 
 
 /**
@@ -41,6 +42,8 @@ const app = async ({
                 port: settings.MongoDbPort,
             },
         });
+        console.log(settings.StreamFilesS3Region)
+        await server.register(S3Manager, settings.StreamFilesS3Region);
     }
 
     await server.register(staticRoutes);

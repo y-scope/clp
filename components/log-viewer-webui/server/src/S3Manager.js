@@ -1,3 +1,5 @@
+import fastifyPlugin from "fastify-plugin";
+
 import {
     GetObjectCommand,
     S3Client,
@@ -16,15 +18,27 @@ const PRE_SIGNED_URL_EXPIRY_TIME_SECONDS = 3600;
 class S3Manager {
     #s3Client;
 
+    #enabled;
+
     /**
-     * @param {string} region
+     * @param {string|null} region
      */
-    constructor (
-        region,
-    ) {
-        this.#s3Client = new S3Client({
-            region: region,
-        });
+    constructor (region) {
+        console.log(`Region's length is ${region.length}`)
+        console.log(`Region is ${region}`)
+        console.log(region)
+        this.#enabled = null !== region;
+        console.log(`Enabled is ${this.#enabled}`)
+        if (true === this.#enabled) {
+            console.log(`Initializing S3 client`)
+            this.#s3Client = new S3Client({
+                region: region,
+            });
+        }
+    }
+
+    isEnabled () {
+        return this.#enabled;
     }
 
     /**
@@ -55,4 +69,8 @@ class S3Manager {
     }
 }
 
-export default S3Manager;
+export default fastifyPlugin(async (app, region) => {
+    console.log(`Region in Plugin init is ${region}`)
+    console.log(region)
+    await app.decorate("s3Manager", new S3Manager(region));
+});
