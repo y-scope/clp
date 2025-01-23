@@ -64,9 +64,9 @@ public:
      * Gets the entry exactly matching the given search string
      * @param search_string
      * @param ignore_case
-     * @return a (possibly empty) set of entries
+     * @return a (possibly empty) vector of entries
      */
-    std::unordered_set<EntryType const*>
+    std::vector<EntryType const*>
     get_entry_matching_value(std::string const& search_string, bool ignore_case) const;
 
     /**
@@ -156,16 +156,16 @@ std::string const& DictionaryReader<DictionaryIdType, EntryType>::get_value(Dict
 }
 
 template <typename DictionaryIdType, typename EntryType>
-std::unordered_set<EntryType const*>
+std::vector<EntryType const*>
 DictionaryReader<DictionaryIdType, EntryType>::get_entry_matching_value(
         std::string const& search_string,
         bool ignore_case
 ) const {
-    std::unordered_set<EntryType const*> entries;
+    std::vector<EntryType const*> entries;
     if (false == ignore_case) {
         for (auto const& entry : m_entries) {
             if (entry.get_value() == search_string) {
-                entries.insert(&entry);
+                entries.push_back(&entry);
                 return entries; /* early exit for case sensitive branch */
             }
         }
@@ -173,7 +173,7 @@ DictionaryReader<DictionaryIdType, EntryType>::get_entry_matching_value(
         auto const& search_string_uppercase = boost::algorithm::to_upper_copy(search_string);
         for (auto const& entry : m_entries) {
             if (boost::algorithm::to_upper_copy(entry.get_value()) == search_string_uppercase) {
-                entries.insert(&entry);
+                entries.push_back(&entry);
             }
         }
     }

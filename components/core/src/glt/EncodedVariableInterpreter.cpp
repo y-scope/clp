@@ -451,18 +451,15 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
         LogTypeDictionaryEntry::add_float_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
-        auto entries = var_dict.get_entry_matching_value(var_str, ignore_case);
-        std::unordered_set<encoded_variable_t> encoded_vars;
-        if (entries.empty()) {
+        auto entry = var_dict.get_entry_matching_value(var_str, ignore_case);
+        if (nullptr == entry) {
             // Not in dictionary
             return false;
         }
+        encoded_var = encode_var_dict_id(entry->get_id());
 
-        for (auto entry : entries) {
-            encoded_vars.insert(encode_var_dict_id(entry->get_id()));
-        }
         LogTypeDictionaryEntry::add_dict_var(logtype);
-        sub_query.add_imprecise_dict_var(encoded_vars, entries);
+        sub_query.add_dict_var(encoded_var, entry);
     }
 
     return true;
