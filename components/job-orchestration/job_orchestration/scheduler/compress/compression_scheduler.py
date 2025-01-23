@@ -77,7 +77,7 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
     field_set_expressions = [f"{k} = %s" for k in kv.keys()]
     query = f"""
         UPDATE {COMPRESSION_JOBS_TABLE_NAME}
-        SET {", ".join(field_set_expressions)}
+        SET {", ".join(field_set_expressions)}, update_time = NOW(3)
         WHERE id = %s
     """
     values = list(kv.values()) + [job_id]
@@ -209,14 +209,12 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
 
         if len(tasks) == 0:
             logger.warning(f"No tasks were created for job {job_id}")
-            update_time = datetime.datetime.now()
             update_compression_job_metadata(
                 db_cursor,
                 job_id,
                 {
                     "status": CompressionJobStatus.FAILED,
                     "status_msg": "invalid input path",
-                    "update_time": update_time,
                 },
             )
             db_conn.commit()
@@ -231,7 +229,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
                 "num_tasks": paths_to_compress_buffer.num_tasks,
                 "status": CompressionJobStatus.RUNNING,
                 "start_time": start_time,
-                "update_time": start_time,
             },
         )
         db_conn.commit()
@@ -327,7 +324,6 @@ def poll_running_jobs(db_conn, db_cursor):
             logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
 
-        update_time = datetime.datetime.now()
         if job_success:
             logger.info(f"Job {job_id} succeeded.")
             update_compression_job_metadata(
@@ -336,7 +332,6 @@ def poll_running_jobs(db_conn, db_cursor):
                 dict(
                     status=CompressionJobStatus.SUCCEEDED,
                     duration=duration,
-                    update_time=update_time,
                 ),
             )
         else:
@@ -347,7 +342,6 @@ def poll_running_jobs(db_conn, db_cursor):
                 dict(
                     status=CompressionJobStatus.FAILED,
                     status_msg=error_message,
-                    update_time=update_time,
                 ),
             )
         db_conn.commit()

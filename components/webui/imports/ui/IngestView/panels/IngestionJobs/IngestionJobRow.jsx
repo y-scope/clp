@@ -106,13 +106,6 @@ const IngestionJobRow = ({job}) => {
                     isAlwaysVisible={isPlaceholderVisible}
                     text={compressedSizeText}/>
             </td>
-            <td className={"text-end"}>
-                <PlaceholderText
-                    isAlwaysVisible={isPlaceholderVisible}
-                    text={(null === job.update_time) ?
-                        "null" :
-                        new Date(job.update_time).toLocaleString()}/>
-            </td>
         </tr>
     );
 };

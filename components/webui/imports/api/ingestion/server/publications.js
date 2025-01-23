@@ -8,10 +8,6 @@ import {
     STATS_COLLECTION_ID,
     StatsCollection,
 } from "../collections";
-import {
-    COMPRESSION_JOB_WAITING_STATES,
-    COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
-} from "../constants";
 import CompressionDbManager from "./CompressionDbManager";
 import StatsDbManager from "./StatsDbManager";
 
@@ -19,8 +15,6 @@ import StatsDbManager from "./StatsDbManager";
 const COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS = 1000;
 
 const STATS_REFRESH_INTERVAL_MILLIS = 5000;
-
-const CONST_FOR_DATE_FORMAT = 19;
 
 /**
  * @type {CompressionDbManager|null}
@@ -43,11 +37,9 @@ let compressionJobsRefreshTimeout = null;
 let statsRefreshInterval = null;
 
 /**
- * @type {string}
+ * @type {number|null}
  */
-let lastUpdateDate = new Date().toISOString()
-    .slice(0, CONST_FOR_DATE_FORMAT)
-    .replace("T", " ");
+let lastUpdateTimestampSeconds = 0;
 
 /**
  * Updates the compression statistics in the StatsCollection.
@@ -93,25 +85,16 @@ const refreshCompressionJobs = async () => {
         return;
     }
 
-    const pendingJobIds = await CompressionJobsCollection.find({
-        [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS]: {
-            $in: COMPRESSION_JOB_WAITING_STATES,
-        },
-    })
-        .fetch()
-        .map((job) => (
-            job._id
-        ));
-
-    const previousUpdateDate = lastUpdateDate;
-    lastUpdateDate = new Date().toISOString()
-        .slice(0, CONST_FOR_DATE_FORMAT)
-        .replace("T", " ");
-
     const jobs = await compressionDbManager.getCompressionJobs(
-        previousUpdateDate,
-        pendingJobIds
+        lastUpdateTimestampSeconds
     );
+
+    if (0 !== jobs.length) {
+        // `refreshCompressionJobs()` shall not be run concurrently
+        // and therefore incurs no racecondition.
+        // eslint-disable-next-line require-atomic-updates
+        lastUpdateTimestampSeconds = jobs[0].retrieval_time;
+    }
 
     const operations = jobs.map((doc) => ({
         updateOne: {
