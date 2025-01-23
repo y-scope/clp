@@ -63,7 +63,6 @@ sbin/compress.sh s3 \
 ```
 
 * `<credentials-file>` is the path to an AWS credentials file like the following:
-* `<timestamp-key>` is the field path of the kv-pair that contains the timestamp in each log event.
 
   ```ini
   [default]
@@ -78,6 +77,7 @@ sbin/compress.sh s3 \
     line using the `--aws-access-key-id` and `--aws-secret-access-key` flags (note that this may
     expose your credentials to other users running on the system).
 
+* `<timestamp-key>` is the field path of the kv-pair that contains the timestamp in each log event.
 * `<bucket-name>` is the name of the S3 bucket containing your logs.
 * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
 * `<prefix>` is the prefix of all logs you wish to compress and must begin with the
