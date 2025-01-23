@@ -42,8 +42,7 @@ const app = async ({
                 port: settings.MongoDbPort,
             },
         });
-        console.log(settings.StreamFilesS3Region)
-        await server.register(S3Manager, settings.StreamFilesS3Region);
+        await server.register(S3Manager, {region: settings.StreamFilesS3Region});
     }
 
     await server.register(staticRoutes);

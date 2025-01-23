@@ -16,21 +16,15 @@ const PRE_SIGNED_URL_EXPIRY_TIME_SECONDS = 3600;
  * Class to manage Simple Storage Service (S3) objects.
  */
 class S3Manager {
-    #s3Client;
-
-    #enabled;
+    #s3Client = null;
 
     /**
-     * @param {string|null} region
+     * @param {object} props
+     * @param {string | null} props.region
      */
-    constructor (region) {
-        console.log(`Region's length is ${region.length}`)
-        console.log(`Region is ${region}`)
-        console.log(region)
-        this.#enabled = null !== region;
-        console.log(`Enabled is ${this.#enabled}`)
-        if (true === this.#enabled) {
-            console.log(`Initializing S3 client`)
+    constructor (props) {
+        const region = props.region;
+        if (region !== null) {
             this.#s3Client = new S3Client({
                 region: region,
             });
@@ -38,7 +32,7 @@ class S3Manager {
     }
 
     isEnabled () {
-        return this.#enabled;
+        return null !== this.#s3Client;
     }
 
     /**
@@ -49,6 +43,9 @@ class S3Manager {
      * @throws {Error} If a pre-signed URL couldn't be generated.
      */
     async getPreSignedUrl (s3UriString) {
+        if (false === this.isEnabled()) {
+            throw new Error(`pre-signed URL cannot be generated when S3Manager is not enabled`);
+        }
         const s3Uri = new URL(s3UriString);
         const command = new GetObjectCommand({
             Bucket: s3Uri.hostname,
@@ -69,8 +66,6 @@ class S3Manager {
     }
 }
 
-export default fastifyPlugin(async (app, region) => {
-    console.log(`Region in Plugin init is ${region}`)
-    console.log(region)
-    await app.decorate("s3Manager", new S3Manager(region));
+export default fastifyPlugin(async (app, options) => {
+    await app.decorate("s3Manager", new S3Manager(options));
 });
