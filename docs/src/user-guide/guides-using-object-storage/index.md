@@ -22,10 +22,12 @@ will be added in a future release.
 
 ## Prerequisites
 
-1. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
-2. An S3 bucket and key prefix where you wish to store compressed archives.
-3. An S3 bucket and key prefix where you wish to cache stream files.
-4. An AWS IAM user with the necessary permissions to access the S3 prefixes mentioned above.
+1. This guide assumes you're able to configure, start, stop, and use a CLP cluster as described in
+   the [quick-start guide](../quick-start-overview.md).
+2. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
+3. An S3 bucket and key prefix where you wish to store compressed archives.
+4. An S3 bucket and key prefix where you wish to cache stream files.
+5. An AWS IAM user with the necessary permissions to access the S3 prefixes mentioned above.
     * To create a user, follow [this guide][aws-create-iam-user].
       * You don't need to assign any groups or policies to the user at this stage since we will
         attach policies in later steps, depending on which object storage use cases you require.
@@ -33,7 +35,7 @@ will be added in a future release.
       [principle of least privilege][least-privilege-principle], or you can use the same user for
       all three.
     * For brevity, we'll refer to this user as the "CLP IAM user" in the rest of this guide.
-5. IAM user (long-term) credentials for the IAM user(s) created in step (4) above.
+6. IAM user (long-term) credentials for the IAM user(s) created in step (4) above.
     * To create these credentials, follow [this guide][aws-create-access-keys].
       * Choose the "Other" use case to generate long-term credentials.
 
