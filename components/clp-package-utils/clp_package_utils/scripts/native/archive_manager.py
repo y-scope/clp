@@ -213,7 +213,7 @@ def _find_archives(
     end_ts: int = None,
 ) -> int:
     """
-    Lists all archive IDs, if begin_its and end_its are provided,
+    Lists all archive IDs, if begin_ts and end_ts are provided,
     only lists archives where `begin_ts <= archive.begin_timestamp` and
     `archive.end_timestamp <= end_ts`.
     :param archives_dir:
