@@ -74,10 +74,10 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f"{k} = %s" for k in kv.keys()]
+    field_set_expressions = [f"{k} = %s" for k in kv.keys()] + ["update_time = CURRENT_TIMESTAMP()"]
     query = f"""
         UPDATE {COMPRESSION_JOBS_TABLE_NAME}
-        SET {", ".join(field_set_expressions)}, update_time = NOW(3)
+        SET {", ".join(field_set_expressions)}
         WHERE id = %s
     """
     values = list(kv.values()) + [job_id]

@@ -37,7 +37,7 @@ let compressionJobsRefreshTimeout = null;
 let statsRefreshInterval = null;
 
 /**
- * @type {number|null}
+ * @type {number}
  */
 let lastUpdateTimestampSeconds = 0;
 
@@ -91,7 +91,7 @@ const refreshCompressionJobs = async () => {
 
     if (0 !== jobs.length) {
         // `refreshCompressionJobs()` shall not be run concurrently
-        // and therefore incurs no racecondition.
+        // and therefore incurs no race condition.
         // eslint-disable-next-line require-atomic-updates
         lastUpdateTimestampSeconds = jobs[0].retrieval_time;
     }

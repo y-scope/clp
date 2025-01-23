@@ -22,13 +22,14 @@ class CompressionDbManager {
     /**
      * Retrieves compression jobs that are updated on or after a specific time.
      *
-     * @param {number} lastUpdateTimestamp in seconds
+     * @param {number} lastUpdateTimestampSeconds
      * @return {Promise<object[]>} Job objects with fields with the names in
      * `COMPRESSION_JOBS_TABLE_COLUMN_NAMES`
      */
-    async getCompressionJobs (lastUpdateTimestamp) {
+    async getCompressionJobs (lastUpdateTimestampSeconds) {
         const queryString = `
             SELECT
+                UNIX_TIMESTAMP() as retrieval_time,
                 id as _id,
                 ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS},
                 ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS_MSG},
@@ -36,10 +37,10 @@ class CompressionDbManager {
                 ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME},
                 ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.DURATION},
                 ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE},
-                ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE},
-                UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) as retrieval_time
+                ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE}
             FROM ${this.#compressionJobsTableName}
-            WHERE update_time >= FROM_UNIXTIME(${lastUpdateTimestamp})
+            WHERE ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME} >= 
+                FROM_UNIXTIME(${lastUpdateTimestampSeconds}) -1
             ORDER BY _id DESC;\n`;
 
         const [results] = await this.#sqlDbConnPool.query(queryString);
