@@ -17,7 +17,7 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
            "Effect": "Allow",
            "Action": "s3:GetObject",
            "Resource": [
-               "arn:aws:s3:::<bucket-name>/<key-prefix>*"
+               "arn:aws:s3:::<bucket-name>/<all-logs-prefix>*"
            ]
        },
        {
@@ -30,7 +30,7 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
            ],
            "Condition": {
                "StringLike": {
-                   "s3:prefix": "<key-prefix>*"
+                   "s3:prefix": "<all-logs-prefix>*"
                }
            }
        }
@@ -41,11 +41,11 @@ Attach the following policy to the CLP IAM user by following [this guide][add-ia
 Replace the fields in angle brackets (`<>`) with the appropriate values:
 
 * `<bucket-name>` should be the name of the S3 bucket containing your logs.
-* `<key-prefix>` should be the prefix of all logs you wish to compress.
+* `<all-logs-prefix>` should be the prefix of all logs you wish to compress.
   
   :::{note}
   If you want to enforce that only logs under a directory-like prefix, e.g., `logs/`, can be
-  compressed, you can append a trailing slash (`/`) after the `<key-prefix>` value. This will
+  compressed, you can append a trailing slash (`/`) after the `<all-logs-prefix>` value. This will
   prevent CLP from compressing logs with prefixes like `logs-private`. However, note that to
   compress all logs under the `logs/` prefix, you will need to include the trailing slash when
   invoking `sbin/compress.sh` below.
@@ -59,7 +59,7 @@ You can use the `s3` subcommand as follows:
 sbin/compress.sh s3 \
   --aws-credentials-file <credentials-file> \
   --timestamp-key <timestamp-key> \
-  https://<bucket-name>.s3.<region-code>.amazonaws.com/<key-prefix>
+  https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>
 ```
 
 * `<credentials-file>` is the path to an AWS credentials file like the following:
@@ -80,8 +80,8 @@ sbin/compress.sh s3 \
 
 * `<bucket-name>` is the name of the S3 bucket containing your logs.
 * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
-* `<key-prefix>` is the prefix of all logs you wish to compress and must include the `<key-prefix>`
-  value from the IAM policy above.
+* `<prefix>` is the prefix of all logs you wish to compress and must begin with the
+  `<all-logs-prefix>` value from the IAM policy above.
 
 :::{note}
 The `s3` subcommand only supports a single URL but will compress any logs that have the given
