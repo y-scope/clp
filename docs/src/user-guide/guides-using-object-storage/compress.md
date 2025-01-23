@@ -50,10 +50,12 @@ You can use the `s3` subcommand as follows:
 ```bash
 sbin/compress.sh s3 \
   --aws-credentials-file <credentials-file> \
+  --timestamp-key <timestamp-key> \
   https://<bucket-name>.s3.<region-code>.amazonaws.com/<key-prefix>
 ```
 
 * `<credentials-file>` is the path to an AWS credentials file like the following:
+* `<timestamp-key>` is the field path of the kv-pair that contains the timestamp in each log event.
 
   ```ini
   [default]
