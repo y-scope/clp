@@ -32,14 +32,14 @@ logger = logging.getLogger(__file__)
 
 
 def _validate_timestamps(begin_ts, end_ts):
-    if begin_ts is not None and begin_ts < 0:
+    if begin_ts < 0:
         logger.error("begin-ts must be non-negative.")
         return False
     if end_ts is not None and end_ts < 0:
         logger.error("end-ts must be non-negative.")
         return False
-    if begin_ts is not None and end_ts is not None and begin_ts > end_ts:
-        logger.error("begin-ts must be <= end-ts")
+    if end_ts is not None and begin_ts > end_ts:
+        logger.error("begin-ts must be <= end-ts.")
         return False
     return True
 
@@ -49,7 +49,9 @@ def main(argv):
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser = argparse.ArgumentParser(description="View or delete archives.")
+    args_parser = argparse.ArgumentParser(
+        description="View list of archive IDs or delete compressed archives."
+    )
     args_parser.add_argument(
         "--config",
         "-c",
@@ -68,7 +70,7 @@ def main(argv):
     )
     del_parser = subparsers.add_parser(
         DEL_COMMAND,
-        help="Delete archives.",
+        help="Delete archives from the database and file system.",
     )
 
     # Options for find subcommand
@@ -135,8 +137,8 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    begin_timestamp = None
-    end_timestamp = None
+    begin_timestamp: int
+    end_timestamp: int
     subcommand = parsed_args.subcommand
 
     # Validate and load config file
@@ -169,11 +171,9 @@ def main(argv):
         begin_timestamp = parsed_args.begin_ts
         end_timestamp = parsed_args.end_ts
 
-        if begin_timestamp is not None or end_timestamp is not None:
-
-            # Validate the input timestamp
-            if not _validate_timestamps(begin_timestamp, end_timestamp):
-                return -1
+        # Validate the input timestamp
+        if not _validate_timestamps(begin_timestamp, end_timestamp):
+            return -1
 
     container_name = generate_container_name("archive-manager")
 

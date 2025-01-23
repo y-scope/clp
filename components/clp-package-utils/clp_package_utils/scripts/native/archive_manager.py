@@ -2,6 +2,7 @@ import argparse
 import logging
 import shutil
 import sys
+from abc import ABC, abstractmethod
 from contextlib import closing
 from pathlib import Path
 from typing import List
@@ -25,6 +26,52 @@ END_TS_ARG = "--end-ts"
 DRY_RUN_ARG = "--dry-run"
 
 logger = logging.getLogger(__file__)
+
+
+class DeleteHandler(ABC):
+    def __init__(self, params: List[str]):
+        self._params = params
+
+    def get_params(self) -> List[str]:
+        return self._params
+
+    @abstractmethod
+    def get_criteria(self) -> str: ...
+
+    @abstractmethod
+    def get_not_found_message(self) -> str: ...
+
+    @abstractmethod
+    def validate_results(self, archive_ids: List[str]) -> None: ...
+
+
+class FilterDeleteHandler(DeleteHandler):
+    def get_criteria(self) -> str:
+        return "begin_timestamp >= %s AND end_timestamp <= %s"
+
+    def get_not_found_message(self) -> str:
+        return "No archives found within the specified time range."
+
+    def validate_results(self, archive_ids: List[str]) -> None:
+        pass
+
+
+class IdDeleteHandler(DeleteHandler):
+    def get_criteria(self) -> str:
+        return f"id in ({','.join(['%s'] * len(self._params))})"
+
+    def get_not_found_message(self) -> str:
+        return "No archives found with matching IDs."
+
+    def validate_results(self, archive_ids: List[str]) -> None:
+        not_found_ids = set(self._params) - set(archive_ids)
+        if not_found_ids:
+            logger.warning(
+                f"""
+                Archives with the following IDs don't exist:
+                {', '.join(not_found_ids)}
+                """
+            )
 
 
 def main(argv):
@@ -100,7 +147,7 @@ def main(argv):
     # Delete by filter subcommand
     del_filter_parser = del_subparsers.add_parser(
         BY_FILTER_COMMAND,
-        help="delete archives within time frame.",
+        help="Deletes archives that fall within the specified time range.",
     )
 
     # Delete by filter arguments
@@ -140,20 +187,21 @@ def main(argv):
             parsed_args.end_ts,
         )
     elif DEL_COMMAND == parsed_args.subcommand:
+        delete_handler: DeleteHandler
         if BY_IDS_COMMAND == parsed_args.del_subcommand:
+            delete_handler = IdDeleteHandler(parsed_args.ids)
             return _delete_archives(
                 archives_dir,
                 database_config,
-                parsed_args.ids,
-                BY_IDS_COMMAND,
+                delete_handler,
                 parsed_args.dry_run,
             )
         elif BY_FILTER_COMMAND == parsed_args.del_subcommand:
+            delete_handler = FilterDeleteHandler([parsed_args.begin_ts, parsed_args.end_ts])
             return _delete_archives(
                 archives_dir,
                 database_config,
-                [parsed_args.begin_ts, parsed_args.end_ts],
-                BY_FILTER_COMMAND,
+                delete_handler,
                 parsed_args.dry_run,
             )
 
@@ -199,35 +247,29 @@ def _find_archives(
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
             for archive_id in archive_ids:
                 logger.info(archive_id)
+                archive_path = archives_dir / archive_id
+                if not archive_path.is_dir():
+                    logger.warning(f"Archive {archive_id} in database not found on disk.")
 
     except Exception:
         logger.exception("Failed to find archives from the database.")
         return -1
 
     logger.info(f"Finished finding archives from the database.")
-
-    for archive_id in archive_ids:
-        archive_path = archives_dir / archive_id
-        if not archive_path.is_dir():
-            logger.warning(f"Archive {archive_id} in database not found on disk.")
-
     return 0
 
 
 def _delete_archives(
     archives_dir: Path,
     database_config: Database,
-    params: List[str],
-    command: str,
+    delete_handler: DeleteHandler,
     dry_run: bool = False,
 ) -> int:
     """
     Deletes archives from both metadata database and disk based on provided SQL query.
     :param archives_dir:
     :param database_config:
-    :param query: SQL query to select archives to delete.
-    :param params: List of parameters for SQL query.
-    :param command: Delete subcommand. Either "filter" or "ids".
+    :param delete_handler: Object to handle differences between by-filter and by-ids delete types.
     :param dry_run: If True, no changes will be made to the database or disk.
     :return: 0 on success, -1 otherwise.
     """
@@ -244,11 +286,8 @@ def _delete_archives(
             if dry_run:
                 logger.info("Running in dry-run mode.")
 
-            criteria: str
-            if BY_FILTER_COMMAND == command:
-                criteria = "begin_timestamp >= %s AND end_timestamp <= %s"
-            elif BY_IDS_COMMAND == command:
-                criteria = "id in (%s)" % ",".join(["%s"] * len(params))
+            criteria = delete_handler.get_criteria()
+            params = delete_handler.get_params()
 
             db_cursor.execute(
                 f"""
@@ -261,22 +300,11 @@ def _delete_archives(
             results = db_cursor.fetchall()
 
             if 0 == len(results):
-                if BY_FILTER_COMMAND == command:
-                    logger.info("No archives found within specified time frame.")
-                elif BY_IDS_COMMAND == command:
-                    logger.info("No archives found with matching IDs.")
+                logger.info(delete_handler.get_not_found_message)
                 return 0
 
             archive_ids = [result["id"] for result in results]
-            if BY_IDS_COMMAND == command:
-                not_found_ids = set(params) - set(archive_ids)
-                if not_found_ids:
-                    logger.warning(
-                        f"""
-                        Archives with the following IDs don't exist:
-                        {', '.join(not_found_ids)}
-                        """
-                    )
+            delete_handler.validate_results(archive_ids)
 
             ids_string = ", ".join(f"'{archive_id}'" for archive_id in archive_ids)
 
