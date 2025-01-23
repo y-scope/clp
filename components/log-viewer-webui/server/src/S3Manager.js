@@ -22,9 +22,8 @@ class S3Manager {
      * @param {object} props
      * @param {string | null} props.region
      */
-    constructor (props) {
-        const region = props.region;
-        if (region !== null) {
+    constructor ({region}) {
+        if (null !== region) {
             this.#s3Client = new S3Client({
                 region: region,
             });
@@ -44,7 +43,7 @@ class S3Manager {
      */
     async getPreSignedUrl (s3UriString) {
         if (false === this.isEnabled()) {
-            throw new Error(`pre-signed URL cannot be generated when S3Manager is not enabled`);
+            throw new Error("pre-signed URL cannot be generated when S3Manager is not enabled");
         }
         const s3Uri = new URL(s3UriString);
         const command = new GetObjectCommand({
