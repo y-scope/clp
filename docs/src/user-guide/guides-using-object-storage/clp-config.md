@@ -35,7 +35,7 @@ archive_output:
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all archives will be stored within the bucket and
-    must end with trailing forward slash (e.g., `archives/`).
+    must end with a trailing forward slash (e.g., `archives/`).
   * `credentials` contains the CLP IAM user's credentials.
 
 ## Configuration for stream storage
@@ -67,7 +67,7 @@ stream_output:
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all streams will be stored within the bucket and
-    must end with trailing forward slash (e.g., `streams/`).
+    must end with a trailing forward slash (e.g., `streams/`).
   * `credentials` contains the CLP IAM user's credentials.
 
 :::{note}
