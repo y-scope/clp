@@ -5,7 +5,7 @@ storage bucket(s) for each use case you require.
 
 ## Configuration for compression
 
-[Attach the policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
+[Attach the inline policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
 replacing the fields in angle brackets (`<>`) with the appropriate values:
 
 ```json
@@ -48,7 +48,7 @@ replacing the fields in angle brackets (`<>`) with the appropriate values:
 
 ## Configuration for archive storage
 
-[Attach the policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
+[Attach the inline policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
 replacing the fields in angle brackets (`<>`) with the appropriate values:
 
 ```json
@@ -89,7 +89,7 @@ resource sharing (CORS) policy for the S3 bucket.
 
 ### IAM user configuration
 
-[Attach the policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
+[Attach the inline policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
 replacing the fields in angle brackets (`<>`) with the appropriate values:
 
 ```json
