@@ -28,7 +28,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             "db-config-file",
             po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")
                 ->default_value(metadata_db_config_file_path),
-            "Table metadata DB YAML config"
+            "Path to the YAML DB config file for metadata storage"
     );
     // clang-format on
 
@@ -37,16 +37,22 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     visible_options.add(general_options);
     visible_options.add(output_options);
 
-    // Define hidden positional options (not shown in Boost's program options help message)
+    std::string archive_path;
     po::options_description positional_options;
     // clang-format off
-    positional_options.add_options()
-            ("archive-dir", po::value<std::string>(&m_archive_dir))
-            ("archive-id", po::value<std::string>(&m_archive_id));
+    positional_options.add_options()(
+            "table-name",
+            po::value<std::string>(&m_table_name),
+            "Name of the table where fields from the archive will be indexed and stored"
+    )(
+            "archive-path",
+            po::value<std::string>(&archive_path),
+            "Path to an archive"
+    );
     // clang-format on
     po::positional_options_description positional_options_description;
-    positional_options_description.add("archive-dir", 1);
-    positional_options_description.add("archive-id", 1);
+    positional_options_description.add("table-name", 1);
+    positional_options_description.add("archive-path", 1);
 
     // Aggregate all options
     po::options_description all_options;
@@ -79,12 +85,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
         }
 
         // Validate required parameters
-        if (m_archive_dir.empty()) {
-            throw std::invalid_argument("ARCHIVE_DIR not specified or empty.");
+        if (m_table_name.empty()) {
+            throw std::invalid_argument("Table name not specified or empty.");
         }
-        if (m_archive_id.empty()) {
-            throw std::invalid_argument("ARCHIVE_ID not specified or empty.");
+        if (archive_path.empty()) {
+            throw std::invalid_argument("Archive path not specified or empty.");
         }
+        m_archive_path = get_path_object_for_raw_path(archive_path);
         if (false == metadata_db_config_file_path.empty()) {
             clp::GlobalMetadataDBConfig metadata_db_config;
             try {
@@ -116,7 +123,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    std::cerr << "Usage: " << get_program_name() << " [OPTIONS] ARCHIVE_DIR ARCHIVE_ID"
+    std::cerr << "Usage: " << get_program_name() << " [OPTIONS] TABLE_NAME ARCHIVE_PATH"
               << std::endl;
 }
 }  // namespace clp_s::indexer

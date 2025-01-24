@@ -8,7 +8,7 @@
 namespace clp_s::indexer {
 IndexManager::IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& db_config) {
     if (db_config.has_value()) {
-        m_table_metadata_db = std::make_unique<MySQLIndexStorage>(
+        m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
                 db_config->get_metadata_db_host(),
                 db_config->get_metadata_db_port(),
                 db_config->get_metadata_db_username(),
@@ -16,7 +16,10 @@ IndexManager::IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& db_
                 db_config->get_metadata_db_name(),
                 db_config->get_metadata_table_prefix()
         );
-        m_table_metadata_db->open();
+        m_mysql_index_storage->open();
+        m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
+            m_mysql_index_storage->add_field(field_name, field_type);
+        };
         m_output_type = OutputType::Database;
     } else {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -25,32 +28,17 @@ IndexManager::IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& db_
 
 IndexManager::~IndexManager() {
     if (m_output_type == OutputType::Database) {
-        m_table_metadata_db->close();
+        m_mysql_index_storage->close();
     }
 }
 
-void IndexManager::update_metadata(std::string const& archive_dir, std::string const& archive_id) {
-    m_table_metadata_db->init(archive_dir);
-
-    auto archive_path = std::filesystem::path(archive_dir) / archive_id;
-    std::error_code ec;
-    if (false == std::filesystem::exists(archive_path, ec) || ec) {
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
-    }
+void IndexManager::update_metadata(std::string const& table_name, Path const& archive_path) {
+    m_mysql_index_storage->init(table_name);
 
     ArchiveReader archive_reader;
-    archive_reader.open(
-            clp_s::Path{.source = clp_s::InputSource::Filesystem, .path = archive_path.string()},
-            NetworkAuthOption{}
-    );
+    archive_reader.open(archive_path, NetworkAuthOption{});
 
-    auto schema_tree = archive_reader.get_schema_tree();
-    auto field_pairs = traverse_schema_tree(schema_tree);
-    if (OutputType::Database == m_output_type) {
-        for (auto& [name, type] : field_pairs) {
-            m_table_metadata_db->add_field(name, type);
-        }
-    }
+    traverse_schema_tree_and_update_metadata(archive_reader.get_schema_tree());
 }
 
 std::string IndexManager::escape_key_name(std::string_view const key_name) {
@@ -100,49 +88,42 @@ std::string IndexManager::escape_key_name(std::string_view const key_name) {
     return escaped_key_name;
 }
 
-std::vector<std::pair<std::string, clp_s::NodeType>> IndexManager::traverse_schema_tree(
+void IndexManager::traverse_schema_tree_and_update_metadata(
         std::shared_ptr<SchemaTree> const& schema_tree
 ) {
-    std::vector<std::pair<std::string, clp_s::NodeType>> fields;
     if (nullptr == schema_tree) {
-        return fields;
+        return;
     }
 
     std::string path_buffer;
     // Stack of pairs of node_id and path_length
     std::stack<std::pair<int32_t, uint64_t>> s;
-    for (auto const& node : schema_tree->get_nodes()) {
-        if (constants::cRootNodeId == node.get_parent_id()
-            && clp_s::NodeType::Metadata != node.get_type())
-        {
-            s.emplace(node.get_id(), 0);
-            break;
-        }
-    }
+    s.emplace(schema_tree->get_object_subtree_node_id(), 0);
 
     while (false == s.empty()) {
         auto [node_id, path_length] = s.top();
         s.pop();
 
         auto const& node = schema_tree->get_node(node_id);
-        auto const& children_ids = node.get_children_ids();
         auto node_type = node.get_type();
+        // TODO: Add support for structured arrays
+        if (NodeType::StructuredArray == node_type) {
+            continue;
+        }
+        auto const& children_ids = node.get_children_ids();
         path_buffer.resize(path_length);
         if (false == path_buffer.empty()) {
             path_buffer += ".";
         }
         path_buffer += escape_key_name(node.get_key_name());
-        if (children_ids.empty() && clp_s::NodeType::Object != node_type
-            && clp_s::NodeType::Unknown != node_type)
+        if (children_ids.empty() && NodeType::Object != node_type && NodeType::Unknown != node_type)
         {
-            fields.emplace_back(path_buffer, node_type);
+            m_field_update_callback(path_buffer, node_type);
         }
 
         for (auto child_id : children_ids) {
             s.emplace(child_id, path_buffer.size());
         }
     }
-
-    return fields;
 }
 }  // namespace clp_s::indexer
