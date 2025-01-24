@@ -1,5 +1,5 @@
-add_subdirectory(search/kql)
 add_subdirectory(indexer)
+add_subdirectory(search/kql)
 
 set(
         CLP_SOURCES
