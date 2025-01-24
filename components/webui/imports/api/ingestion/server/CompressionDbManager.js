@@ -41,7 +41,7 @@ class CompressionDbManager {
             FROM ${this.#compressionJobsTableName}
             WHERE ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME} >= 
                 FROM_UNIXTIME(${lastUpdateTimestampSeconds}) - 1
-            ORDER BY _id DESC;\n`;
+            ORDER BY _id DESC;`;
 
         const [results] = await this.#sqlDbConnPool.query(queryString);
 
