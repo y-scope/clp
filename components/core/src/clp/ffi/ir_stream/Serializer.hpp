@@ -44,7 +44,7 @@ public:
      * @param optional_user_defined_metadata Stream-level user-defined metadata, given as a JSON
      * object.
      * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::protocol_error if failed to serialize the preamble.
+     * - std::errc::protocol_error if the stream's metadata couldn't be serialized.
      * - std::errc::protocol_not_supported if the given user-defined metadata is not a JSON object.
      */
     [[nodiscard]] static auto create(
