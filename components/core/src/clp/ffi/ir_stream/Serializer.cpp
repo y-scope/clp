@@ -550,6 +550,9 @@ auto Serializer<encoded_variable_t>::create(
             cVariableEncodingMethodsVersion
     );
     if (optional_user_defined_metadata.has_value()) {
+        if (false == optional_user_defined_metadata.value().is_object()) {
+            return std::errc::protocol_not_supported;
+        }
         metadata.emplace(
                 string{cProtocol::Metadata::UserDefinedMetadataKey},
                 std::move(optional_user_defined_metadata.value())
