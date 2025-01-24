@@ -31,9 +31,7 @@ will be added in a future release.
     * To create a user, follow [this guide][aws-create-iam-user].
       * You don't need to assign any groups or policies to the user at this stage since we will
         attach policies in later steps, depending on which object storage use cases you require.
-    * You may use a different IAM user for each use case to follow the
-      [principle of least privilege][least-privilege-principle], or you can use the same user for
-      all three.
+    * You may use a single IAM user for all use cases, or a separate one for each.
     * For brevity, we'll refer to this user as the "CLP IAM user" in the rest of this guide.
 6. IAM user (long-term) credentials for the IAM user(s) created in step (4) above.
     * To create these credentials, follow [this guide][aws-create-access-keys].
@@ -93,5 +91,4 @@ clp-usage
 [aws-create-access-keys]: https://docs.aws.amazon.com/keyspaces/latest/devguide/create.keypair.html
 [aws-create-iam-user]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
 [aws-key-prefixes]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html
-[least-privilege-principle]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [release-choices]: ../quick-start-cluster-setup/index.md#choosing-a-release
