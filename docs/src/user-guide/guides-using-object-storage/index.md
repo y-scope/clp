@@ -27,7 +27,8 @@ will be added in a future release.
 2. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
 3. An S3 bucket and key prefix where you wish to store compressed archives.
 4. An S3 bucket and key prefix where you wish to cache stream files.
-5. An AWS IAM user with the necessary permissions to access the S3 prefixes mentioned above.
+5. An AWS IAM user with the necessary permissions to access the S3 bucket(s) and prefixes mentioned
+   above.
     * To create a user, follow [this guide][aws-create-iam-user].
       * You don't need to assign any groups or policies to the user at this stage since we will
         attach policies in later steps, depending on which object storage use cases you require.
