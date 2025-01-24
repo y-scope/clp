@@ -20,7 +20,7 @@ from clp_package_utils.general import (
 FIND_COMMAND = "find"
 DEL_COMMAND = "del"
 BY_IDS_COMMAND = "by-ids"
-BY_FILTER_COMMAND = "by-filter"
+DEL_BY_FILTER_SUBCOMMAND = "by-filter"
 BEGIN_TS_ARG = "--begin-ts"
 END_TS_ARG = "--end-ts"
 DRY_RUN_ARG = "--dry-run"
@@ -29,8 +29,8 @@ logger = logging.getLogger(__file__)
 
 
 class DeleteHandler(ABC):
-    def __init__(self, params: List[str]):
-        self._params = params
+    def __init__(self, query_params: List[str]):
+        self._params = query_params
 
     def get_params(self) -> List[str]:
         return self._params
@@ -58,7 +58,8 @@ class FilterDeleteHandler(DeleteHandler):
 
 class IdDeleteHandler(DeleteHandler):
     def get_criteria(self) -> str:
-        return f"id in ({','.join(['%s'] * len(self._params))})"
+        placeholders = ",".join(["%s"] * len(self._params))
+        return f"id in ({placeholders})"
 
     def get_not_found_message(self) -> str:
         return "No archives found with matching IDs."
@@ -146,7 +147,7 @@ def main(argv):
 
     # Delete by filter subcommand
     del_filter_parser = del_subparsers.add_parser(
-        BY_FILTER_COMMAND,
+        DEL_BY_FILTER_SUBCOMMAND,
         help="Deletes archives that fall within the specified time range.",
     )
 
@@ -196,7 +197,7 @@ def main(argv):
                 delete_handler,
                 parsed_args.dry_run,
             )
-        elif BY_FILTER_COMMAND == parsed_args.del_subcommand:
+        elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
             delete_handler = FilterDeleteHandler([parsed_args.begin_ts, parsed_args.end_ts])
             return _delete_archives(
                 archives_dir,
@@ -204,6 +205,11 @@ def main(argv):
                 delete_handler,
                 parsed_args.dry_run,
             )
+        else:
+            logger.error(f"Unsupported subcommand: `{parsed_args.del_subcommand}`.")
+            return -1
+    else:
+        logger.error(f"Unsupported subcommand: `{parsed_args.subcommand}`.")
 
 
 def _find_archives(
@@ -230,13 +236,13 @@ def _find_archives(
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
-            params = (begin_ts,)
+            query_params = (begin_ts,)
             query = f"SELECT id FROM `{table_prefix}archives` WHERE begin_timestamp >= %s"
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
-                params = params + (end_ts,)
+                query_params = query_params + (end_ts,)
 
-            db_cursor.execute(query, params)
+            db_cursor.execute(query, query_params)
             results = db_cursor.fetchall()
 
             archive_ids = [result["id"] for result in results]
@@ -286,16 +292,16 @@ def _delete_archives(
             if dry_run:
                 logger.info("Running in dry-run mode.")
 
-            criteria = delete_handler.get_criteria()
-            params = delete_handler.get_params()
+            query_criteria = delete_handler.get_criteria()
+            query_params = delete_handler.get_params()
 
             db_cursor.execute(
                 f"""
                 DELETE FROM `{table_prefix}archives`
-                WHERE {criteria}
+                WHERE {query_criteria}
                 RETURNING id
                 """,
-                params,
+                query_params,
             )
             results = db_cursor.fetchall()
 
@@ -306,19 +312,19 @@ def _delete_archives(
             archive_ids = [result["id"] for result in results]
             delete_handler.validate_results(archive_ids)
 
-            ids_string = ", ".join(f"'{archive_id}'" for archive_id in archive_ids)
+            ids_list_string = ",".join(["%s"] * len(archive_ids))
 
             db_cursor.execute(
                 f"""
                 DELETE FROM `{table_prefix}files`
-                WHERE archive_id in ({ids_string})
+                WHERE archive_id in ({ids_list_string})
                 """
             )
 
             db_cursor.execute(
                 f"""
                 DELETE FROM `{table_prefix}archive_tags`
-                WHERE archive_id in ({ids_string})
+                WHERE archive_id in ({ids_list_string})
                 """
             )
             for archive_id in archive_ids:

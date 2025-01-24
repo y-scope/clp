@@ -20,8 +20,8 @@ from clp_package_utils.general import (
 # Command/Argument Constants
 from clp_package_utils.scripts.native.archive_manager import (
     BEGIN_TS_ARG,
-    BY_FILTER_COMMAND,
     BY_IDS_COMMAND,
+    DEL_BY_FILTER_SUBCOMMAND,
     DEL_COMMAND,
     DRY_RUN_ARG,
     END_TS_ARG,
@@ -50,7 +50,7 @@ def main(argv):
 
     # Top-level parser and options
     args_parser = argparse.ArgumentParser(
-        description="View list of archive IDs or delete compressed archives."
+        description="Views the list of archive IDs or deletes compressed archives."
     )
     args_parser.add_argument(
         "--config",
@@ -66,11 +66,11 @@ def main(argv):
     )
     find_parser = subparsers.add_parser(
         FIND_COMMAND,
-        help="List IDs of archives.",
+        help="Lists IDs of compressed archives.",
     )
     del_parser = subparsers.add_parser(
         DEL_COMMAND,
-        help="Delete archives from the database and file system.",
+        help="Deletes compressed archives from the database and file system.",
     )
 
     # Options for find subcommand
@@ -105,7 +105,7 @@ def main(argv):
     # Delete by ID subcommand
     del_id_parser = del_subparsers.add_parser(
         BY_IDS_COMMAND,
-        help="Delete archives by ID.",
+        help="Deletes archives by ID.",
     )
 
     # Delete by ID arguments
@@ -117,8 +117,8 @@ def main(argv):
 
     # Delete by filter subcommand
     del_filter_parser = del_subparsers.add_parser(
-        BY_FILTER_COMMAND,
-        help="Delete archives that fall within the specified time range.",
+        DEL_BY_FILTER_SUBCOMMAND,
+        help="Deletes compressed archives that fall within the specified time range.",
     )
 
     # Delete by filter arguments
@@ -159,15 +159,9 @@ def main(argv):
         return -1
 
     # Validate input depending on subcommands
-    if DEL_COMMAND == subcommand and BY_FILTER_COMMAND == parsed_args.del_subcommand:
-        begin_timestamp = parsed_args.begin_ts
-        end_timestamp = parsed_args.end_ts
-
-        # Validate the input timestamp
-        if not _validate_timestamps(begin_timestamp, end_timestamp):
-            return -1
-
-    elif FIND_COMMAND == subcommand:
+    if (DEL_COMMAND == subcommand and DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand) or (
+        FIND_COMMAND == subcommand
+    ):
         begin_timestamp = parsed_args.begin_ts
         end_timestamp = parsed_args.end_ts
 
@@ -202,16 +196,21 @@ def main(argv):
         if BY_IDS_COMMAND == parsed_args.del_subcommand:
             archive_manager_cmd.append(BY_IDS_COMMAND)
             archive_manager_cmd.extend(parsed_args.ids)
-        elif BY_FILTER_COMMAND == parsed_args.del_subcommand:
+        elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
             archive_manager_cmd.extend([
-                BY_FILTER_COMMAND,
+                DEL_BY_FILTER_SUBCOMMAND,
                 str(begin_timestamp),
                 str(end_timestamp)
             ])
+        else:
+            logger.error(f"Unsupported subcommand: `{parsed_args.del_subcommand}`.")
     elif FIND_COMMAND == subcommand:
         archive_manager_cmd.extend([BEGIN_TS_ARG, str(begin_timestamp)])
         if end_timestamp is not None:
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
+    else:
+        logger.error(f"Unsupported subcommand: `{subcommand}`.")
+    
 
     cmd = container_start_cmd + archive_manager_cmd
 
