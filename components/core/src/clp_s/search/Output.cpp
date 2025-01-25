@@ -932,12 +932,12 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
                     }
                 }
 
-                auto entries = m_var_dict->get_entry_matching_value(
+                auto const entries = m_var_dict->get_entry_matching_value(
                         unescaped_query_string,
                         m_ignore_case
                 );
 
-                for (auto entry : entries) {
+                for (auto const& entry : entries) {
                     matching_vars.insert(entry->get_id());
                 }
             } else if (EncodedVariableInterpreter::

@@ -34,8 +34,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
         LogTypeDictionaryEntry::add_double_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
-        auto entries = var_dict.get_entry_matching_value(var_str, ignore_case);
-
+        auto const entries = var_dict.get_entry_matching_value(var_str, ignore_case);
         if (entries.empty()) {
             // Not in dictionary
             return false;
@@ -44,8 +43,8 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
         LogTypeDictionaryEntry::add_non_double_var(logtype);
 
         if (entries.size() == 1) {
-            VariableDictionaryEntry const* entry = entries[0];
-            auto encoded_var = VariableEncoder::encode_var_dict_id(entry->get_id());
+            auto const* entry = entries.at(0);
+            encoded_var = VariableEncoder::encode_var_dict_id(entry->get_id());
             sub_query.add_dict_var(encoded_var, entry);
             return true;
         }
@@ -55,7 +54,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
                 entries.begin(),
                 entries.end()
         );
-        for (auto entry : entries) {
+        for (auto const entry : entries) {
             encoded_vars.insert(VariableEncoder::encode_var_dict_id(entry->get_id()));
         }
         sub_query.add_imprecise_dict_var(encoded_vars, entries_set);

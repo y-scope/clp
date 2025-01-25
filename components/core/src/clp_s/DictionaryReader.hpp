@@ -166,7 +166,8 @@ DictionaryReader<DictionaryIdType, EntryType>::get_entry_matching_value(
         for (auto const& entry : m_entries) {
             if (entry.get_value() == search_string) {
                 entries.push_back(&entry);
-                return entries; /* early exit for case sensitive branch */
+                // early exit for case sensitive branch
+                return entries;
             }
         }
     } else {

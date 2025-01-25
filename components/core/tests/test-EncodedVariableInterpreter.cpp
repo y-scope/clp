@@ -381,13 +381,17 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         char const cVarSegmentIndexPath[] = "var.segindex";
         vector<string> var_strs = {"python2.7.3", "Python2.7.3", "PyThOn2.7.3", "PYTHON2.7.3"};
         clp::VariableDictionaryWriter var_dict_writer;
+
         var_dict_writer.open(cVarDictPath, cVarSegmentIndexPath, cVariableDictionaryIdMax);
+
         vector<encoded_variable_t> encoded_vars;
         vector<clp::variable_dictionary_id_t> var_ids;
         clp::LogTypeDictionaryEntry logtype_dict_entry;
-        for (auto var_str : var_strs) {
+		string const msg_template = "here is a string with a dictionary var: ";
+
+        for (auto const& var_str : var_strs) {
             EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                    var_str,
+                    msg_template + var_str,
                     logtype_dict_entry,
                     var_dict_writer,
                     encoded_vars,
@@ -400,9 +404,9 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         var_dict_reader.open(cVarDictPath, cVarSegmentIndexPath);
         var_dict_reader.read_new_entries();
 
-        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs[0], true).size()
+        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), true).size()
                 == var_strs.size());
-        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs[0], false).size() == 1);
+        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), false).size() == 1);
 
         var_dict_reader.close();
 
