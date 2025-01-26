@@ -44,10 +44,10 @@ public:
      * @return A result containing the deserializer or an error code indicating the failure:
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if:
-     *   - The IR stream contains an unsupported metadata format
-     *   - The IR stream's version is unsupported
-     *   - The IR stream's user-defined metadata is not a JSON object
+     * - std::errc::protocol_not_supported if either:
+     *   - the IR stream contains an unsupported metadata format;
+     *   - the IR stream's version is unsupported;
+     *   - or the IR stream's user-defined metadata is not a JSON object.
      */
     [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
             -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>;
