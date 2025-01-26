@@ -44,8 +44,10 @@ public:
      * @return A result containing the deserializer or an error code indicating the failure:
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
-     *   or uses an unsupported version
+     * - std::errc::protocol_not_supported if:
+     *   - The IR stream contains an unsupported metadata format
+     *   - The IR stream's version is unsupported
+     *   - The IR stream's user-defined metadata is not a JSON object
      */
     [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
             -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>;
@@ -164,6 +166,12 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
     auto const version = version_iter->get_ref<nlohmann::json::string_t&>();
     if (ffi::ir_stream::IRProtocolErrorCode::Supported
         != ffi::ir_stream::validate_protocol_version(version))
+    {
+        return std::errc::protocol_not_supported;
+    }
+
+    if (metadata_json.contains(cProtocol::Metadata::UserDefinedMetadataKey)
+        && false == metadata_json.at(cProtocol::Metadata::UserDefinedMetadataKey).is_object())
     {
         return std::errc::protocol_not_supported;
     }
