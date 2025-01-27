@@ -189,6 +189,7 @@ def main(argv):
         str(subcommand),
     ]
     # fmt : on
+    
     # Add subcommand-specific arguments
     if DEL_COMMAND == subcommand:
         if parsed_args.dry_run:
