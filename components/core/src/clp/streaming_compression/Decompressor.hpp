@@ -41,7 +41,7 @@ public:
      */
     virtual void open(char const* compressed_data_buffer, size_t compressed_data_buffer_size) = 0;
     /**
-     * Initializes the decompressor to decompress from an open reader
+     * Initializes the decompressor to decompress from a reader interface
      * @param reader
      * @param read_buffer_capacity The maximum amount of data to read from a reader at a time
      */

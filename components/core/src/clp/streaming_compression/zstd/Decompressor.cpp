@@ -167,7 +167,7 @@ void Decompressor::open(ReaderInterface& reader, size_t read_buffer_capacity) {
     m_input_type = InputType::ReaderInterface;
 
     m_reader = &reader;
-    if (auto rc = m_reader->try_get_pos(m_reader_initial_pos);
+    if (auto const rc = m_reader->try_get_pos(m_reader_initial_pos);
         false == (ErrorCode_Success == rc || ErrorCode_EndOfFile == rc))
     {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
@@ -237,7 +237,7 @@ ErrorCode Decompressor::get_decompressed_stream_region(
 
 void Decompressor::reset_stream() {
     if (InputType::ReaderInterface == m_input_type) {
-        if (auto rc = m_reader->try_seek_from_begin(m_reader_initial_pos);
+        if (auto const rc = m_reader->try_seek_from_begin(m_reader_initial_pos);
             false == (ErrorCode_Success == rc || ErrorCode_EndOfFile == rc))
         {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
