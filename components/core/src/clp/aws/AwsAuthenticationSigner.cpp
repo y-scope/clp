@@ -248,16 +248,8 @@ auto
 AwsAuthenticationSigner::get_canonical_query_string(string_view scope, string_view timestamp) const
         -> string {
     auto const uri = fmt::format("{}/{}", m_access_key_id, scope);
-    std::string session_token_parameter;
-    if (m_session_token.has_value()) {
-        session_token_parameter = fmt::format(
-                "&{}={}",
-                cXAmzSecurityToken,
-                encode_uri(m_session_token.value(), false)
-        );
-    }
-    return fmt::format(
-            "{}={}&{}={}&{}={}&{}={}{}&{}={}",
+    auto canonical_query_string = fmt::format(
+            "{}={}&{}={}&{}={}&{}={}",
             cXAmzAlgorithm,
             cAws4HmacSha256,
             cXAmzCredential,
@@ -265,11 +257,17 @@ AwsAuthenticationSigner::get_canonical_query_string(string_view scope, string_vi
             cXAmzDate,
             timestamp,
             cXAmzExpires,
-            cDefaultExpireTime.count(),
-            session_token_parameter,
-            cXAmzSignedHeaders,
-            cDefaultSignedHeaders
+            cDefaultExpireTime.count()
     );
+    if (m_session_token.has_value()) {
+        canonical_query_string.append(fmt::format(
+                "&{}={}",
+                cXAmzSecurityToken,
+                encode_uri(m_session_token.value(), false)
+        ));
+    }
+    canonical_query_string.append(fmt::format("&{}={}", cXAmzSignedHeaders, cDefaultSignedHeaders));
+    return canonical_query_string;
 }
 
 auto AwsAuthenticationSigner::get_signing_key(
