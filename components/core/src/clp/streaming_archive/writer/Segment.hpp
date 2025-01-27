@@ -6,6 +6,7 @@
 
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"
+#include "../../FileWriter.hpp"
 #include "../../streaming_compression/passthrough/Compressor.hpp"
 #include "../../streaming_compression/zstd/Compressor.hpp"
 #include "../../TraceableException.hpp"
