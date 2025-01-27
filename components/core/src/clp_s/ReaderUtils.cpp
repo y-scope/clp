@@ -3,12 +3,10 @@
 #include <exception>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
 #include <spdlog/spdlog.h>
 
 #include "../clp/aws/AwsAuthenticationSigner.hpp"
-#include "../clp/CurlDownloadHandler.hpp"
 #include "../clp/FileReader.hpp"
 #include "../clp/NetworkReader.hpp"
 #include "../clp/ReaderInterface.hpp"

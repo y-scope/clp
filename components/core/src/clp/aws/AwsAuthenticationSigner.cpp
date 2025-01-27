@@ -252,7 +252,7 @@ AwsAuthenticationSigner::get_canonical_query_string(string_view scope, string_vi
     if (m_session_token.has_value()) {
         session_token_parameter = fmt::format(
                 "&{}={}",
-                cAmzSecurityToken,
+                cXAmzSecurityToken,
                 encode_uri(m_session_token.value(), false)
         );
     }
