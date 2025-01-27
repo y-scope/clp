@@ -1,3 +1,4 @@
+add_subdirectory(indexer)
 add_subdirectory(search/kql)
 add_subdirectory(search/sql)
 
