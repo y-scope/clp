@@ -120,22 +120,22 @@ private:
     void reset_stream();
 
     // Variables
-    InputType m_input_type;
+    InputType m_input_type{InputType::NotInitialized};
 
     // Compressed stream variables
-    ZSTD_DStream* m_decompression_stream;
+    ZSTD_DStream* m_decompression_stream{nullptr};
 
     std::unique_ptr<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
-    ReaderInterface* m_reader;
-    size_t m_reader_initial_pos;
+    ReaderInterface* m_reader{nullptr};
+    size_t m_reader_initial_pos{0ULL};
     std::unique_ptr<char[]> m_read_buffer;
-    size_t m_read_buffer_length;
-    size_t m_read_buffer_capacity;
+    size_t m_read_buffer_length{0ULL};
+    size_t m_read_buffer_capacity{0ULL};
 
-    ZSTD_inBuffer m_compressed_stream_block;
+    ZSTD_inBuffer m_compressed_stream_block{};
 
-    size_t m_decompressed_stream_pos;
-    size_t m_unused_decompressed_stream_block_size;
+    size_t m_decompressed_stream_pos{0ULL};
+    size_t m_unused_decompressed_stream_block_size{0ULL};
     std::unique_ptr<char[]> m_unused_decompressed_stream_block_buffer;
 };
 }  // namespace clp::streaming_compression::zstd

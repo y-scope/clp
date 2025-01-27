@@ -7,16 +7,7 @@
 #include "../../spdlog_with_specializations.hpp"
 
 namespace clp::streaming_compression::zstd {
-Decompressor::Decompressor()
-        : ::clp::streaming_compression::Decompressor{CompressorType::ZSTD},
-          m_input_type{InputType::NotInitialized},
-          m_decompression_stream{nullptr},
-          m_reader{nullptr},
-          m_reader_initial_pos{0},
-          m_read_buffer_length{0},
-          m_read_buffer_capacity{0},
-          m_decompressed_stream_pos{0},
-          m_unused_decompressed_stream_block_size{0} {
+Decompressor::Decompressor() : ::clp::streaming_compression::Decompressor{CompressorType::ZSTD} {
     m_decompression_stream = ZSTD_createDStream();
     if (nullptr == m_decompression_stream) {
         SPDLOG_ERROR("streaming_compression::zstd::Decompressor: ZSTD_createDStream() error");
