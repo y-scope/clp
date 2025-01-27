@@ -65,39 +65,39 @@ get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_
 /**
  * Writes single-file archive header.
  *
- * @param archive_writer
+ * @param single_file_archive_writer
  * @param packed_metadata_size
  */
-auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_size) -> void;
+auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size) -> void;
 
 /**
  * Writes single-file archive metadata.
  *
- * @param archive_writer
+ * @param single_file_archive_writer
  * @param packed_metadata Packed metadata.
  */
-auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const& packed_metadata)
+auto write_archive_metadata(FileWriter& single_file_archive_writer, std::stringstream const& packed_metadata)
         -> void;
 
 /**
  * Reads the content of a file and writes it to the single-file archive.
  * @param file_path
- * @param archive_writer
+ * @param single_file_archive_writer
  * @throws OperationFailed if reading the file fails.
  */
-auto write_archive_file(std::string const& file_path, FileWriter& archive_writer) -> void;
+auto write_archive_file(std::string const& file_path, FileWriter& single_file_archive_writer) -> void;
 
 /**
- * Iterates over files in the multi-file archive copying their contents to the single-file archive.
- * Skips metadata file since already written in `write_archive_metadata`.
+ * Iterates over files in the multi-file archive and copies their contents to the single-file archive.
+ * Skips metadata file, which should be handled by `write_archive_metadata` method.
  *
- * @param archive_writer
+ * @param single_file_archive_writer
  * @param multi_file_archive_path
  * @param next_segment_id
  * @throws Propagates `update_offset`'s exceptions.
  */
 auto write_archive_files(
-        FileWriter& archive_writer,
+        FileWriter& single_file_archive_writer,
         std::filesystem::path const& multi_file_archive_path,
         segment_id_t next_segment_id
 ) -> void;
@@ -170,29 +170,23 @@ auto pack_single_file_archive_metadata(
     return buf;
 }
 
-auto write_archive_header(FileWriter& archive_writer, size_t packed_metadata_size) -> void {
+auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size) -> void {
     SingleFileArchiveHeader header{
-            .magic{},
+            .magic = cUnstructuredSfaMagicNumber,
             .version = cArchiveVersion,
             .metadata_size = packed_metadata_size,
             .unused{}
     };
 
-    static_assert(cUnstructuredSfaMagicNumber.size() == header.magic.size());
-    std::memcpy(
-            &header.magic,
-            cUnstructuredSfaMagicNumber.data(),
-            cUnstructuredSfaMagicNumber.size()
-    );
-    archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
+    single_file_archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
-auto write_archive_metadata(FileWriter& archive_writer, std::stringstream const& packed_metadata)
+auto write_archive_metadata(FileWriter& single_file_archive_writer, std::stringstream const& packed_metadata)
         -> void {
-    archive_writer.write(packed_metadata.str().data(), packed_metadata.str().size());
+    single_file_archive_writer.write(packed_metadata.str().data(), packed_metadata.str().size());
 }
 
-auto write_archive_file(std::filesystem::path const& file_path, FileWriter& archive_writer)
+auto write_archive_file(std::filesystem::path const& file_path, FileWriter& single_file_archive_writer)
         -> void {
     FileReader reader(file_path.string());
     std::array<char, cReadBlockSize> read_buffer{};
@@ -206,25 +200,25 @@ auto write_archive_file(std::filesystem::path const& file_path, FileWriter& arch
         if (ErrorCode_Success != error_code) {
             throw OperationFailed(error_code, __FILENAME__, __LINE__);
         }
-        archive_writer.write(read_buffer.data(), num_bytes_read);
+        single_file_archive_writer.write(read_buffer.data(), num_bytes_read);
     }
 }
 
 auto write_archive_files(
-        FileWriter& archive_writer,
+        FileWriter& single_file_archive_writer,
         std::filesystem::path const& multi_file_archive_path,
         segment_id_t next_segment_id
 ) -> void {
     for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
         std::filesystem::path static_archive_file_path
                 = multi_file_archive_path / static_archive_file_name;
-        write_archive_file(static_archive_file_path, archive_writer);
+        write_archive_file(static_archive_file_path, single_file_archive_writer);
     }
 
     std::filesystem::path segment_dir_path = multi_file_archive_path / cSegmentsDirname;
     for (size_t i = 0; i < next_segment_id; ++i) {
         std::filesystem::path segment_path = segment_dir_path / std::to_string(i);
-        write_archive_file(segment_path, archive_writer);
+        write_archive_file(segment_path, single_file_archive_writer);
     }
 }
 }  // namespace
@@ -234,7 +228,7 @@ auto write_single_file_archive(
         std::filesystem::path const& multi_file_archive_path,
         segment_id_t next_segment_id
 ) -> void {
-    FileWriter archive_writer;
+    FileWriter single_file_archive_writer;
     std::filesystem::path single_file_archive_path
             = multi_file_archive_path.string()
               + std::string(single_file_archive::cUnstructuredSfaExtension);
@@ -243,7 +237,7 @@ auto write_single_file_archive(
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    archive_writer.open(
+    single_file_archive_writer.open(
             single_file_archive_path.string(),
             FileWriter::OpenMode::CREATE_FOR_WRITING
     );
@@ -254,11 +248,11 @@ auto write_single_file_archive(
             next_segment_id
     );
 
-    write_archive_header(archive_writer, packed_metadata.str().size());
-    write_archive_metadata(archive_writer, packed_metadata);
-    write_archive_files(archive_writer, multi_file_archive_path, next_segment_id);
+    write_archive_header(single_file_archive_writer, packed_metadata.str().size());
+    write_archive_metadata(single_file_archive_writer, packed_metadata);
+    write_archive_files(single_file_archive_writer, multi_file_archive_path, next_segment_id);
 
-    archive_writer.close();
+    single_file_archive_writer.close();
     try {
         std::filesystem::remove_all(multi_file_archive_path);
     } catch (std::filesystem::filesystem_error& e) {
