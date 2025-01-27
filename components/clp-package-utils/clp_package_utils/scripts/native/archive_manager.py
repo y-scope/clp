@@ -12,25 +12,26 @@ from clp_py_utils.sql_adapter import SQL_Adapter
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CLPConfig,
     get_clp_home,
     load_config_file,
 )
 
 # Command/Argument Constants
-FIND_COMMAND = "find"
-DEL_COMMAND = "del"
-DEL_BY_IDS_SUBCOMMAND = "by-ids"
-DEL_BY_FILTER_SUBCOMMAND = "by-filter"
-BEGIN_TS_ARG = "--begin-ts"
-END_TS_ARG = "--end-ts"
-DRY_RUN_ARG = "--dry-run"
+FIND_COMMAND: str = "find"
+DEL_COMMAND: str = "del"
+DEL_BY_IDS_SUBCOMMAND: str = "by-ids"
+DEL_BY_FILTER_SUBCOMMAND: str = "by-filter"
+BEGIN_TS_ARG: str = "--begin-ts"
+END_TS_ARG: str = "--end-ts"
+DRY_RUN_ARG: str = "--dry-run"
 
-logger = logging.getLogger(__file__)
+logger: logging.Logger = logging.getLogger(__file__)
 
 
 class DeleteHandler(ABC):
     def __init__(self, query_params: List[str]):
-        self._params = query_params
+        self._params: List[str] = query_params
 
     def get_params(self) -> List[str]:
         return self._params
@@ -58,14 +59,14 @@ class FilterDeleteHandler(DeleteHandler):
 
 class IdDeleteHandler(DeleteHandler):
     def get_criteria(self) -> str:
-        placeholders = ",".join(["%s"] * len(self._params))
+        placeholders: str = ",".join(["%s"] * len(self._params))
         return f"id in ({placeholders})"
 
     def get_not_found_message(self) -> str:
         return "No archives found with matching IDs."
 
     def validate_results(self, archive_ids: List[str]) -> None:
-        not_found_ids = set(self._params) - set(archive_ids)
+        not_found_ids: set[str] = set(self._params) - set(archive_ids)
         if not_found_ids:
             logger.warning(
                 f"""
@@ -76,11 +77,11 @@ class IdDeleteHandler(DeleteHandler):
 
 
 def main(argv):
-    clp_home = get_clp_home()
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+    clp_home: Path = get_clp_home()
+    default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser = argparse.ArgumentParser(
+    args_parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="View list of archive IDs or delete compressed archives."
     )
     args_parser.add_argument(
@@ -91,15 +92,15 @@ def main(argv):
     )
 
     # Top-level commands
-    subparsers = args_parser.add_subparsers(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser] = args_parser.add_subparsers(
         dest="subcommand",
         required=True,
     )
-    find_parser = subparsers.add_parser(
+    find_parser: argparse.ArgumentParser = subparsers.add_parser(
         FIND_COMMAND,
         help="List IDs of archives.",
     )
-    del_parser = subparsers.add_parser(
+    del_parser: argparse.ArgumentParser = subparsers.add_parser(
         DEL_COMMAND,
         help="Delete archives from the database and file system.",
     )
@@ -127,13 +128,13 @@ def main(argv):
     )
 
     # Subcommands for delete subcommands
-    del_subparsers = del_parser.add_subparsers(
+    del_subparsers: argparse._SubParsersAction[argparse.ArgumentParser] = del_parser.add_subparsers(
         dest="del_subcommand",
         required=True,
     )
 
     # Delete by ID subcomand
-    del_id_parser = del_subparsers.add_parser(
+    del_id_parser: argparse.ArgumentParser = del_subparsers.add_parser(
         DEL_BY_IDS_SUBCOMMAND,
         help="Delete archives by ID.",
     )
@@ -146,7 +147,7 @@ def main(argv):
     )
 
     # Delete by filter subcommand
-    del_filter_parser = del_subparsers.add_parser(
+    del_filter_parser: argparse.ArgumentParser = del_subparsers.add_parser(
         DEL_BY_FILTER_SUBCOMMAND,
         help="Deletes archives that fall within the specified time range.",
     )
@@ -163,19 +164,21 @@ def main(argv):
         help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
     )
 
-    parsed_args = args_parser.parse_args(argv[1:])
+    parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
-    config_file_path = Path(parsed_args.config)
+    config_file_path: Path = Path(parsed_args.config)
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config: CLPConfig = load_config_file(
+            config_file_path, default_config_file_path, clp_home
+        )
         clp_config.validate_logs_dir()
     except:
         logger.exception("Failed to load config.")
         return -1
 
-    database_config = clp_config.database
-    archives_dir = clp_config.archive_output.get_directory()
+    database_config: Database = clp_config.database
+    archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
         logger.error("`archive_output.directory` doesn't exist.")
         return -1
@@ -190,7 +193,7 @@ def main(argv):
     elif DEL_COMMAND == parsed_args.subcommand:
         delete_handler: DeleteHandler
         if DEL_BY_IDS_SUBCOMMAND == parsed_args.del_subcommand:
-            delete_handler = IdDeleteHandler(parsed_args.ids)
+            delete_handler: IdDeleteHandler = IdDeleteHandler(parsed_args.ids)
             return _delete_archives(
                 archives_dir,
                 database_config,
@@ -198,7 +201,9 @@ def main(argv):
                 parsed_args.dry_run,
             )
         elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
-            delete_handler = FilterDeleteHandler([parsed_args.begin_ts, parsed_args.end_ts])
+            delete_handler: FilterDeleteHandler = FilterDeleteHandler(
+                [parsed_args.begin_ts, parsed_args.end_ts]
+            )
             return _delete_archives(
                 archives_dir,
                 database_config,
@@ -230,22 +235,24 @@ def _find_archives(
     archive_ids: List[str]
     logger.info("Starting to find archives from the database.")
     try:
-        sql_adapter = SQL_Adapter(database_config)
-        clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
+        sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
+        clp_db_connection_params: dict[str, any] = (
+            database_config.get_clp_connection_params_and_type(True)
+        )
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
-            query_params = (begin_ts,)
-            query = f"SELECT id FROM `{table_prefix}archives` WHERE begin_timestamp >= %s"
+            query_params: tuple[int] = (begin_ts,)
+            query: str = f"SELECT id FROM `{table_prefix}archives` WHERE begin_timestamp >= %s"
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
-                query_params = query_params + (end_ts,)
+                query_params: tuple[int] = query_params + (end_ts,)
 
             db_cursor.execute(query, query_params)
             results = db_cursor.fetchall()
 
-            archive_ids = [result["id"] for result in results]
+            archive_ids: list[str] = [result["id"] for result in results]
             if 0 == len(archive_ids):
                 logger.info("No archives found within specified time range.")
                 return 0
@@ -253,7 +260,7 @@ def _find_archives(
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
             for archive_id in archive_ids:
                 logger.info(archive_id)
-                archive_path = archives_dir / archive_id
+                archive_path: Path = archives_dir / archive_id
                 if not archive_path.is_dir():
                     logger.warning(f"Archive {archive_id} in database not found on disk.")
 
@@ -283,8 +290,10 @@ def _delete_archives(
     archive_ids: List[str]
     logger.info("Starting to delete archives from the database.")
     try:
-        sql_adapter = SQL_Adapter(database_config)
-        clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
+        sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
+        clp_db_connection_params: dict[str, any] = (
+            database_config.get_clp_connection_params_and_type(True)
+        )
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
@@ -292,8 +301,8 @@ def _delete_archives(
             if dry_run:
                 logger.info("Running in dry-run mode.")
 
-            query_criteria = delete_handler.get_criteria()
-            query_params = delete_handler.get_params()
+            query_criteria: str = delete_handler.get_criteria()
+            query_params: str = delete_handler.get_params()
 
             db_cursor.execute(
                 f"""
@@ -309,10 +318,10 @@ def _delete_archives(
                 logger.info(delete_handler.get_not_found_message)
                 return 0
 
-            archive_ids = [result["id"] for result in results]
+            archive_ids: list[str] = [result["id"] for result in results]
             delete_handler.validate_results(archive_ids)
 
-            ids_list_string = ",".join(["%s"] * len(archive_ids))
+            ids_list_string: str = ",".join(["%s"] * len(archive_ids))
 
             db_cursor.execute(
                 f"""
@@ -344,7 +353,7 @@ def _delete_archives(
     logger.info(f"Finished deleting archives from the database.")
 
     for archive_id in archive_ids:
-        archive_path = archives_dir / archive_id
+        archive_path: Path = archives_dir / archive_id
         if not archive_path.is_dir():
             logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
             continue
