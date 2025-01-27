@@ -177,7 +177,7 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    database_config: Database = clp_config.database  # Unsure about type
+    database_config: Database = clp_config.database
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
         logger.error("`archive_output.directory` doesn't exist.")
@@ -193,9 +193,7 @@ def main(argv):
     elif DEL_COMMAND == parsed_args.subcommand:
         delete_handler: DeleteHandler
         if DEL_BY_IDS_SUBCOMMAND == parsed_args.del_subcommand:
-            delete_handler: IdDeleteHandler = IdDeleteHandler(
-                parsed_args.ids
-            )  # Not sure this is needed
+            delete_handler: IdDeleteHandler = IdDeleteHandler(parsed_args.ids)
             return _delete_archives(
                 archives_dir,
                 database_config,
@@ -205,7 +203,7 @@ def main(argv):
         elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
             delete_handler: FilterDeleteHandler = FilterDeleteHandler(
                 [parsed_args.begin_ts, parsed_args.end_ts]
-            )  # Also not sure is needed
+            )
             return _delete_archives(
                 archives_dir,
                 database_config,
@@ -240,7 +238,7 @@ def _find_archives(
         sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
         clp_db_connection_params: dict[str, any] = (
             database_config.get_clp_connection_params_and_type(True)
-        )  # Unsure about type
+        )
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
@@ -295,7 +293,7 @@ def _delete_archives(
         sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
         clp_db_connection_params: dict[str, any] = (
             database_config.get_clp_connection_params_and_type(True)
-        )  # Unsure about type
+        )
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
