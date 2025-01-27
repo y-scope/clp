@@ -157,7 +157,7 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    storage_type: StorageType = clp_config.archive_output.storage.type # Unsure about
+    storage_type: StorageType = clp_config.archive_output.storage.type  # Unsure about type
     if StorageType.FS != storage_type:
         logger.error(f"Archive deletion is not supported for storage type: {storage_type}.")
         return -1
