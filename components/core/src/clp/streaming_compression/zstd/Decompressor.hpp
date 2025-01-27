@@ -6,7 +6,7 @@
 
 #include <zstd.h>
 
-#include "../../FileReader.hpp"
+#include "../../ReaderInterface.hpp"
 #include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
@@ -73,7 +73,7 @@ public:
 
     // Methods implementing the Decompressor interface
     void open(char const* compressed_data_buf, size_t compressed_data_buf_size) override;
-    void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
+    void open(ReaderInterface& reader, size_t read_buffer_capacity) override;
     void close() override;
     /**
      * Decompresses and copies the range of uncompressed data described by
@@ -109,7 +109,7 @@ private:
         NotInitialized,
         CompressedDataBuf,
         MemoryMappedCompressedFile,
-        File
+        ReaderInterface
     };
 
     // Methods
@@ -126,11 +126,11 @@ private:
     ZSTD_DStream* m_decompression_stream;
 
     std::unique_ptr<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
-    FileReader* m_file_reader;
-    size_t m_file_reader_initial_pos;
-    std::unique_ptr<char[]> m_file_read_buffer;
-    size_t m_file_read_buffer_length;
-    size_t m_file_read_buffer_capacity;
+    ReaderInterface* m_reader;
+    size_t m_reader_initial_pos;
+    std::unique_ptr<char[]> m_read_buffer;
+    size_t m_read_buffer_length;
+    size_t m_read_buffer_capacity;
 
     ZSTD_inBuffer m_compressed_stream_block;
 

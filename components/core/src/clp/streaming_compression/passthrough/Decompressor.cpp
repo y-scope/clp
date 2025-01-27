@@ -23,8 +23,8 @@ ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
             );
             memcpy(buf, &m_compressed_data_buf[m_decompressed_stream_pos], num_bytes_read);
             break;
-        case InputType::File: {
-            auto error_code = m_file_reader->try_read(buf, num_bytes_to_read, num_bytes_read);
+        case InputType::ReaderInterface: {
+            auto error_code = m_reader->try_read(buf, num_bytes_to_read, num_bytes_read);
             if (ErrorCode_Success != error_code) {
                 return error_code;
             }
@@ -49,8 +49,8 @@ ErrorCode Decompressor::try_seek_from_begin(size_t pos) {
                 return ErrorCode_Truncated;
             }
             break;
-        case InputType::File: {
-            auto error_code = m_file_reader->try_seek_from_begin(pos);
+        case InputType::ReaderInterface: {
+            auto error_code = m_reader->try_seek_from_begin(pos);
             if (ErrorCode_Success != error_code) {
                 return error_code;
             }
@@ -85,14 +85,14 @@ void Decompressor::open(char const* compressed_data_buf, size_t compressed_data_
     m_input_type = InputType::CompressedDataBuf;
 }
 
-void Decompressor::open(FileReader& file_reader, size_t file_read_buffer_capacity) {
+void Decompressor::open(ReaderInterface& reader, size_t read_buffer_capacity) {
     if (InputType::NotInitialized != m_input_type) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
-    m_file_reader = &file_reader;
+    m_reader = &reader;
     m_decompressed_stream_pos = 0;
-    m_input_type = InputType::File;
+    m_input_type = InputType::ReaderInterface;
 }
 
 void Decompressor::close() {
@@ -101,8 +101,8 @@ void Decompressor::close() {
             m_compressed_data_buf = nullptr;
             m_compressed_data_buf_len = 0;
             break;
-        case InputType::File:
-            m_file_reader = nullptr;
+        case InputType::ReaderInterface:
+            m_reader = nullptr;
             break;
         case InputType::NotInitialized:
             // Do nothing
