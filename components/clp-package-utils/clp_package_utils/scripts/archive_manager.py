@@ -20,8 +20,8 @@ from clp_package_utils.general import (
 # Command/Argument Constants
 from clp_package_utils.scripts.native.archive_manager import (
     BEGIN_TS_ARG,
-    BY_IDS_COMMAND,
     DEL_BY_FILTER_SUBCOMMAND,
+    DEL_BY_IDS_SUBCOMMAND,
     DEL_COMMAND,
     DRY_RUN_ARG,
     END_TS_ARG,
@@ -104,7 +104,7 @@ def main(argv):
 
     # Delete by ID subcommand
     del_id_parser = del_subparsers.add_parser(
-        BY_IDS_COMMAND,
+        DEL_BY_IDS_SUBCOMMAND,
         help="Deletes archives by ID.",
     )
 
@@ -193,8 +193,8 @@ def main(argv):
     if DEL_COMMAND == subcommand:
         if parsed_args.dry_run:
             archive_manager_cmd.append(DRY_RUN_ARG)
-        if BY_IDS_COMMAND == parsed_args.del_subcommand:
-            archive_manager_cmd.append(BY_IDS_COMMAND)
+        if DEL_BY_IDS_SUBCOMMAND == parsed_args.del_subcommand:
+            archive_manager_cmd.append(DEL_BY_IDS_SUBCOMMAND)
             archive_manager_cmd.extend(parsed_args.ids)
         elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
             archive_manager_cmd.extend([
@@ -210,7 +210,6 @@ def main(argv):
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
     else:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
-    
 
     cmd = container_start_cmd + archive_manager_cmd
 

@@ -19,7 +19,7 @@ from clp_package_utils.general import (
 # Command/Argument Constants
 FIND_COMMAND = "find"
 DEL_COMMAND = "del"
-BY_IDS_COMMAND = "by-ids"
+DEL_BY_IDS_SUBCOMMAND = "by-ids"
 DEL_BY_FILTER_SUBCOMMAND = "by-filter"
 BEGIN_TS_ARG = "--begin-ts"
 END_TS_ARG = "--end-ts"
@@ -134,7 +134,7 @@ def main(argv):
 
     # Delete by ID subcomand
     del_id_parser = del_subparsers.add_parser(
-        BY_IDS_COMMAND,
+        DEL_BY_IDS_SUBCOMMAND,
         help="Delete archives by ID.",
     )
 
@@ -189,7 +189,7 @@ def main(argv):
         )
     elif DEL_COMMAND == parsed_args.subcommand:
         delete_handler: DeleteHandler
-        if BY_IDS_COMMAND == parsed_args.del_subcommand:
+        if DEL_BY_IDS_SUBCOMMAND == parsed_args.del_subcommand:
             delete_handler = IdDeleteHandler(parsed_args.ids)
             return _delete_archives(
                 archives_dir,
