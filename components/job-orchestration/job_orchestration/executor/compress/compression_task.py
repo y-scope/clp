@@ -327,13 +327,16 @@ def run_clp(
             if StorageEngine.CLP_S == clp_storage_engine:
                 metadata_uploader_cmd = [
                     str(clp_home / "bin" / "indexer"),
-                    "c", str(archive_output_dir),
-                    "--db-config-file", str(db_config_file_path),
-                    "default", # hardcode the table name for now
-                    archive_path
+                    "c",
+                    str(archive_output_dir),
+                    "--db-config-file",
+                    str(db_config_file_path),
+                    "default",  # hardcode the table name for now
+                    archive_path,
                 ]
-                proc = subprocess.Popen(metadata_uploader_cmd, stdout=subprocess.DEVNULL,
-                                        stderr=stderr_log_file)
+                proc = subprocess.Popen(
+                    metadata_uploader_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file
+                )
                 proc.wait()
             if enable_s3_write:
                 if s3_error is None:
