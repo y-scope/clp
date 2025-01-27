@@ -36,6 +36,8 @@ public:
         return m_metadata_db_config;
     }
 
+    bool should_create_table() const { return m_should_create_table; }
+
 private:
     // Methods
     void print_basic_usage() const;
@@ -46,6 +48,7 @@ private:
     Path m_archive_path;
 
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
+    bool m_should_create_table{false};
 };
 }  // namespace clp_s::indexer
 

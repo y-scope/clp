@@ -50,10 +50,11 @@ public:
     void open();
 
     /**
-     * Creates the table if it does not exist and prepares the insert statement
+     * Creates the table if it is required and prepares the insert statement
      * @param table_name
+     * @param should_create_table
      */
-    void init(std::string const& table_name);
+    void init(std::string const& table_name, bool should_create_table);
 
     /**
      * Closes the database connection

@@ -6,7 +6,10 @@
 #include "../archive_constants.hpp"
 
 namespace clp_s::indexer {
-IndexManager::IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& db_config) {
+IndexManager::IndexManager(
+        std::optional<clp::GlobalMetadataDBConfig> const& db_config,
+        bool should_create_table
+) {
     if (db_config.has_value()) {
         m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
                 db_config->get_metadata_db_host(),
@@ -20,6 +23,7 @@ IndexManager::IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& db_
         m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
             m_mysql_index_storage->add_field(field_name, field_type);
         };
+        m_should_create_table = should_create_table;
         m_output_type = OutputType::Database;
     } else {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
@@ -33,7 +37,7 @@ IndexManager::~IndexManager() {
 }
 
 void IndexManager::update_metadata(std::string const& table_name, Path const& archive_path) {
-    m_mysql_index_storage->init(table_name);
+    m_mysql_index_storage->init(table_name, m_should_create_table);
 
     ArchiveReader archive_reader;
     archive_reader.open(archive_path, NetworkAuthOption{});

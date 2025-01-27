@@ -29,6 +29,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")
                 ->default_value(metadata_db_config_file_path),
             "Path to the YAML DB config file for metadata storage"
+    )(
+            "create-table",
+            po::bool_switch(&m_should_create_table),
+            "Create the table if it doesn't exist"
     );
     // clang-format on
 

@@ -37,7 +37,10 @@ public:
     };
 
     // Constructors
-    IndexManager(std::optional<clp::GlobalMetadataDBConfig> const& db_config = std::nullopt);
+    IndexManager(
+            std::optional<clp::GlobalMetadataDBConfig> const& db_config = std::nullopt,
+            bool should_create_table = false
+    );
 
     // Destructor
     ~IndexManager();
@@ -64,9 +67,10 @@ private:
      */
     void traverse_schema_tree_and_update_metadata(std::shared_ptr<SchemaTree> const& schema_tree);
 
-    std::function<void(std::string&, NodeType)> m_field_update_callback;
-    std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
     OutputType m_output_type{OutputType::Database};
+    std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
+    bool m_should_create_table{false};
+    std::function<void(std::string&, NodeType)> m_field_update_callback;
 };
 }  // namespace clp_s::indexer
 #endif  // CLP_S_INDEXER_INDEXMANAGER_HPP

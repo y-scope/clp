@@ -22,20 +22,22 @@ void MySQLIndexStorage::open() {
     m_is_open = true;
 }
 
-void MySQLIndexStorage::init(std::string const& table_name) {
+void MySQLIndexStorage::init(std::string const& table_name, bool should_create_table) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
 
-    m_db.execute_query(fmt::format(
-            "CREATE TABLE IF NOT EXISTS {}{} ("
-            "name VARCHAR(512) NOT NULL, "
-            "type BIGINT NOT NULL,"
-            "PRIMARY KEY (name, type)"
-            ")",
-            m_table_prefix,
-            table_name
-    ));
+    if (should_create_table) {
+        m_db.execute_query(fmt::format(
+                "CREATE TABLE IF NOT EXISTS {}{} ("
+                "name VARCHAR(512) NOT NULL, "
+                "type BIGINT NOT NULL,"
+                "PRIMARY KEY (name, type)"
+                ")",
+                m_table_prefix,
+                table_name
+        ));
+    }
 
     m_insert_field_statement.reset();
 
