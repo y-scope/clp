@@ -15,7 +15,8 @@
 
 namespace clp::streaming_compression::lzma {
 /**
- * Implements a LZMA compressor that compresses byte input data to a clp::WriterInterface.
+ * Implements a LZMA compressor that compresses byte input data to a `clp::WriterInterface`
+ * instance.
  */
 class Compressor : public ::clp::streaming_compression::Compressor {
 public:
@@ -58,7 +59,8 @@ public:
     auto write(char const* data, size_t data_length) -> void override;
 
     /**
-     * Writes any internally buffered data to the clp::WriterInterface and ends the current frame
+     * Writes any internally buffered data to the underlying `clp::WriterInterface` instance and
+     * ends the current frame.
      *
      * Forces all the encoded data buffered by LZMA to be available at output
      */
@@ -79,7 +81,7 @@ public:
     auto close() -> void override;
 
     /**
-     * Open the compression stream for encoding to the writer.
+     * Opens the compression stream for encoding to the writer.
      *
      * @param writer
      */
@@ -211,7 +213,8 @@ private:
     auto flush_lzma(lzma_action flush_action) -> void;
 
     /**
-     * Flushes the current compressed data in the output block buffer to the clp::WriterInterface.
+     * Flushes the current compressed data in the output block buffer to the underlying
+     * `clp::WriterInterface` instance.
      *
      * Also resets the output block buffer to receive new data.
      */
