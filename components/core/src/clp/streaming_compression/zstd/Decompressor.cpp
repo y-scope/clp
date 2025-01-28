@@ -3,21 +3,20 @@
 #include <algorithm>
 
 #include "../../Defs.h"
+#include "../../ErrorCode.hpp"
 #include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../spdlog_with_specializations.hpp"
+#include "../../TraceableException.hpp"
 
 namespace clp::streaming_compression::zstd {
-Decompressor::Decompressor() : ::clp::streaming_compression::Decompressor{CompressorType::ZSTD} {
-    m_decompression_stream = ZSTD_createDStream();
+Decompressor::Decompressor()
+        : ::clp::streaming_compression::Decompressor{CompressorType::ZSTD},
+          m_decompression_stream{ZSTD_createDStream()},
+          m_unused_decompressed_stream_block_buffer{ZSTD_DStreamOutSize()} {
     if (nullptr == m_decompression_stream) {
         SPDLOG_ERROR("streaming_compression::zstd::Decompressor: ZSTD_createDStream() error");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-
-    // Create block to hold unused decompressed data
-    m_unused_decompressed_stream_block_size = ZSTD_DStreamOutSize();
-    m_unused_decompressed_stream_block_buffer
-            = std::make_unique<char[]>(m_unused_decompressed_stream_block_size);
 }
 
 Decompressor::~Decompressor() {
@@ -50,9 +49,13 @@ ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
                     }
                     break;
                 case InputType::ReaderInterface: {
+                    if (false == m_read_buffer.has_value()) {
+                        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+                    }
+                    auto& read_buffer{m_read_buffer.value()};
                     auto error_code = m_reader->try_read(
-                            reinterpret_cast<char*>(m_read_buffer.get()),
-                            m_read_buffer_capacity,
+                            read_buffer.data(),
+                            read_buffer.size(),
                             m_read_buffer_length
                     );
                     if (ErrorCode_Success != error_code) {
@@ -116,11 +119,11 @@ ErrorCode Decompressor::try_seek_from_begin(size_t pos) {
     ErrorCode error;
     while (m_decompressed_stream_pos < pos) {
         size_t num_bytes_to_decompress = std::min(
-                m_unused_decompressed_stream_block_size,
+                m_unused_decompressed_stream_block_buffer.size(),
                 pos - m_decompressed_stream_pos
         );
         error = try_read_exact_length(
-                m_unused_decompressed_stream_block_buffer.get(),
+                m_unused_decompressed_stream_block_buffer.data(),
                 num_bytes_to_decompress
         );
         if (ErrorCode_Success != error) {
@@ -164,11 +167,10 @@ void Decompressor::open(ReaderInterface& reader, size_t read_buffer_capacity) {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
 
-    m_read_buffer_capacity = read_buffer_capacity;
-    m_read_buffer = std::make_unique<char[]>(m_read_buffer_capacity);
+    m_read_buffer.emplace(read_buffer_capacity);
     m_read_buffer_length = 0;
 
-    m_compressed_stream_block = {m_read_buffer.get(), m_read_buffer_length, 0};
+    m_compressed_stream_block = {m_read_buffer->data(), m_read_buffer_length, 0};
 
     reset_stream();
 }
@@ -180,7 +182,6 @@ void Decompressor::close() {
             break;
         case InputType::ReaderInterface:
             m_read_buffer.reset();
-            m_read_buffer_capacity = 0;
             m_read_buffer_length = 0;
             m_reader = nullptr;
             break;

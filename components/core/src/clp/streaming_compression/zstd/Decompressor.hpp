@@ -2,10 +2,12 @@
 #define CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <zstd.h>
 
+#include "../../Array.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../TraceableException.hpp"
@@ -128,15 +130,15 @@ private:
     std::unique_ptr<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
     ReaderInterface* m_reader{nullptr};
     size_t m_reader_initial_pos{0ULL};
-    std::unique_ptr<char[]> m_read_buffer;
+
+    std::optional<Array<char>> m_read_buffer;
     size_t m_read_buffer_length{0ULL};
-    size_t m_read_buffer_capacity{0ULL};
 
     ZSTD_inBuffer m_compressed_stream_block{};
 
     size_t m_decompressed_stream_pos{0ULL};
-    size_t m_unused_decompressed_stream_block_size{0ULL};
-    std::unique_ptr<char[]> m_unused_decompressed_stream_block_buffer;
+
+    Array<char> m_unused_decompressed_stream_block_buffer;
 };
 }  // namespace clp::streaming_compression::zstd
 #endif  // CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
