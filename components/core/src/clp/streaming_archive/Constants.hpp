@@ -8,9 +8,8 @@ constexpr uint8_t cArchiveFormatVersionMajor{0};
 constexpr uint8_t cArchiveFormatVersionMinor{1};
 constexpr uint16_t cArchiveFormatVersionPatch{1};
 constexpr archive_format_version_t cArchiveFormatVersion{
-        cArchiveFormatVersionMajor << 24 |
-        cArchiveFormatVersionMinor << 16 |
-        cArchiveFormatVersionPatch
+        cArchiveFormatVersionMajor << 24 | cArchiveFormatVersionMinor << 16
+        | cArchiveFormatVersionPatch
 };
 constexpr char cSegmentsDirname[] = "s";
 constexpr char cSegmentListFilename[] = "segment_list.txt";
