@@ -3,7 +3,6 @@
 
 #include <string>
 
-#include "../FileReader.hpp"
 #include "../ReaderInterface.hpp"
 #include "../TraceableException.hpp"
 #include "Constants.hpp"
@@ -42,11 +41,11 @@ public:
      */
     virtual void open(char const* compressed_data_buffer, size_t compressed_data_buffer_size) = 0;
     /**
-     * Initializes the decompressor to decompress from an open file
-     * @param file_reader
-     * @param file_read_buffer_capacity The maximum amount of data to read from a file at a time
+     * Initializes the decompressor to decompress from a reader interface
+     * @param reader
+     * @param read_buffer_capacity The maximum amount of data to read from a reader at a time
      */
-    virtual void open(FileReader& file_reader, size_t file_read_buffer_capacity) = 0;
+    virtual void open(ReaderInterface& reader, size_t read_buffer_capacity) = 0;
     /**
      * Closes decompression stream
      */

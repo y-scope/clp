@@ -1,7 +1,7 @@
 #ifndef CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 
-#include "../../FileReader.hpp"
+#include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 
@@ -69,7 +69,7 @@ public:
 
     // Methods implementing the Decompressor interface
     void open(char const* compressed_data_buf, size_t compressed_data_buf_size) override;
-    void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
+    void open(ReaderInterface& reader, size_t read_buffer_capacity) override;
     void close() override;
     /**
      * Decompresses and copies the range of uncompressed data described by
@@ -90,13 +90,13 @@ private:
     enum class InputType {
         NotInitialized,
         CompressedDataBuf,
-        File
+        ReaderInterface
     };
 
     // Variables
     InputType m_input_type;
 
-    FileReader* m_file_reader;
+    ReaderInterface* m_reader;
     char const* m_compressed_data_buf;
     size_t m_compressed_data_buf_len;
 

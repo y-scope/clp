@@ -7,16 +7,7 @@
 #include "../../spdlog_with_specializations.hpp"
 
 namespace clp::streaming_compression::zstd {
-Decompressor::Decompressor()
-        : ::clp::streaming_compression::Decompressor(CompressorType::ZSTD),
-          m_input_type(InputType::NotInitialized),
-          m_decompression_stream(nullptr),
-          m_file_reader(nullptr),
-          m_file_reader_initial_pos(0),
-          m_file_read_buffer_length(0),
-          m_file_read_buffer_capacity(0),
-          m_decompressed_stream_pos(0),
-          m_unused_decompressed_stream_block_size(0) {
+Decompressor::Decompressor() : ::clp::streaming_compression::Decompressor{CompressorType::ZSTD} {
     m_decompression_stream = ZSTD_createDStream();
     if (nullptr == m_decompression_stream) {
         SPDLOG_ERROR("streaming_compression::zstd::Decompressor: ZSTD_createDStream() error");
@@ -58,11 +49,11 @@ ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
                         return ErrorCode_Success;
                     }
                     break;
-                case InputType::File: {
-                    auto error_code = m_file_reader->try_read(
-                            reinterpret_cast<char*>(m_file_read_buffer.get()),
-                            m_file_read_buffer_capacity,
-                            m_file_read_buffer_length
+                case InputType::ReaderInterface: {
+                    auto error_code = m_reader->try_read(
+                            reinterpret_cast<char*>(m_read_buffer.get()),
+                            m_read_buffer_capacity,
+                            m_read_buffer_length
                     );
                     if (ErrorCode_Success != error_code) {
                         if (ErrorCode_EndOfFile == error_code) {
@@ -78,7 +69,7 @@ ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
                     }
 
                     m_compressed_stream_block.pos = 0;
-                    m_compressed_stream_block.size = m_file_read_buffer_length;
+                    m_compressed_stream_block.size = m_read_buffer_length;
                     break;
                 }
                 default:
@@ -160,20 +151,24 @@ void Decompressor::open(char const* compressed_data_buf, size_t compressed_data_
     reset_stream();
 }
 
-void Decompressor::open(FileReader& file_reader, size_t file_read_buffer_capacity) {
+void Decompressor::open(ReaderInterface& reader, size_t read_buffer_capacity) {
     if (InputType::NotInitialized != m_input_type) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
-    m_input_type = InputType::File;
+    m_input_type = InputType::ReaderInterface;
 
-    m_file_reader = &file_reader;
-    m_file_reader_initial_pos = m_file_reader->get_pos();
+    m_reader = &reader;
+    if (auto const rc = m_reader->try_get_pos(m_reader_initial_pos);
+        false == (ErrorCode_Success == rc || ErrorCode_EndOfFile == rc))
+    {
+        throw OperationFailed(rc, __FILENAME__, __LINE__);
+    }
 
-    m_file_read_buffer_capacity = file_read_buffer_capacity;
-    m_file_read_buffer = std::make_unique<char[]>(m_file_read_buffer_capacity);
-    m_file_read_buffer_length = 0;
+    m_read_buffer_capacity = read_buffer_capacity;
+    m_read_buffer = std::make_unique<char[]>(m_read_buffer_capacity);
+    m_read_buffer_length = 0;
 
-    m_compressed_stream_block = {m_file_read_buffer.get(), m_file_read_buffer_length, 0};
+    m_compressed_stream_block = {m_read_buffer.get(), m_read_buffer_length, 0};
 
     reset_stream();
 }
@@ -183,11 +178,11 @@ void Decompressor::close() {
         case InputType::MemoryMappedCompressedFile:
             m_memory_mapped_file.reset();
             break;
-        case InputType::File:
-            m_file_read_buffer.reset();
-            m_file_read_buffer_capacity = 0;
-            m_file_read_buffer_length = 0;
-            m_file_reader = nullptr;
+        case InputType::ReaderInterface:
+            m_read_buffer.reset();
+            m_read_buffer_capacity = 0;
+            m_read_buffer_length = 0;
+            m_reader = nullptr;
             break;
         case InputType::CompressedDataBuf:
         case InputType::NotInitialized:
@@ -232,10 +227,14 @@ ErrorCode Decompressor::get_decompressed_stream_region(
 }
 
 void Decompressor::reset_stream() {
-    if (InputType::File == m_input_type) {
-        m_file_reader->seek_from_begin(m_file_reader_initial_pos);
-        m_file_read_buffer_length = 0;
-        m_compressed_stream_block.size = m_file_read_buffer_length;
+    if (InputType::ReaderInterface == m_input_type) {
+        if (auto const rc = m_reader->try_seek_from_begin(m_reader_initial_pos);
+            false == (ErrorCode_Success == rc || ErrorCode_EndOfFile == rc))
+        {
+            throw OperationFailed(rc, __FILENAME__, __LINE__);
+        }
+        m_read_buffer_length = 0;
+        m_compressed_stream_block.size = m_read_buffer_length;
     }
 
     ZSTD_initDStream(m_decompression_stream);
