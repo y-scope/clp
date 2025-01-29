@@ -30,10 +30,10 @@ logger: logging.Logger = logging.getLogger(__file__)
 
 
 class DeleteHandler(ABC):
-    def __init__(self, query_params: List[str]):
-        self._params: List[str] = query_params
+    def __init__(self, query_params: typing.List[str]):
+        self._params: typing.List[str] = query_params
 
-    def get_params(self) -> List[str]:
+    def get_params(self) -> typing.List[str]:
         return self._params
 
     @abstractmethod
@@ -43,7 +43,7 @@ class DeleteHandler(ABC):
     def get_not_found_message(self) -> str: ...
 
     @abstractmethod
-    def validate_results(self, archive_ids: List[str]) -> None: ...
+    def validate_results(self, archive_ids: typing.List[str]) -> None: ...
 
 
 class FilterDeleteHandler(DeleteHandler):
@@ -53,7 +53,7 @@ class FilterDeleteHandler(DeleteHandler):
     def get_not_found_message(self) -> str:
         return "No archives found within the specified time range."
 
-    def validate_results(self, archive_ids: List[str]) -> None:
+    def validate_results(self, archive_ids: typing.List[str]) -> None:
         pass
 
 
@@ -65,7 +65,7 @@ class IdDeleteHandler(DeleteHandler):
     def get_not_found_message(self) -> str:
         return "No archives found with matching IDs."
 
-    def validate_results(self, archive_ids: List[str]) -> None:
+    def validate_results(self, archive_ids: typing.List[str]) -> None:
         not_found_ids: set[str] = set(self._params) - set(archive_ids)
         if not_found_ids:
             logger.warning(
@@ -232,7 +232,7 @@ def _find_archives(
     :param begin_ts:
     :param end_ts:
     """
-    archive_ids: List[str]
+    archive_ids: typing.List[str]
     logger.info("Starting to find archives from the database.")
     try:
         sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
@@ -287,7 +287,7 @@ def _delete_archives(
     :return: 0 on success, -1 otherwise.
     """
 
-    archive_ids: List[str]
+    archive_ids: typing.List[str]
     logger.info("Starting to delete archives from the database.")
     try:
         sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
