@@ -38,7 +38,7 @@ void Archive::open(string const& path) {
     archive_format_version_t format_version{};
     try {
         FileReader file_reader{metadata_file_path};
-        ArchiveMetadata const metadata{file_reader};
+        auto const metadata = ArchiveMetadata::create_from_file_reader(file_reader);
         format_version = metadata.get_archive_format_version();
     } catch (TraceableException& traceable_exception) {
         auto error_code = traceable_exception.get_error_code();
