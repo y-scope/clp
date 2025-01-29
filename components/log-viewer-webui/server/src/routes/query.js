@@ -91,7 +91,7 @@ const routes = async (fastify, options) => {
             });
         }
 
-        if (fastify.s3Manager.isEnabled()) {
+        if (fastify.hasDecorator('s3Manager')) {
             streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
                 `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
             );
