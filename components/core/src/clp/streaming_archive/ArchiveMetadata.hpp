@@ -48,15 +48,17 @@ public:
 
     // Methods
     /**
-    * Reads serialized MessagePack data from `file_reader`, then unpacks it into an `ArchiveMetadata` instance.
-    *
-    * @param file_reader Reader for the file containing archive metadata.
-    * @return The created instance.
-    * @throw `ArchiveMetadata::OperationFailed` if stat or read for metadata file fails.
-    * @throw `msgpack::unpack_error` if data cannot be deserialized into MessagePack format.
-    * @throw `msgpack::type_error` if deserialized MessagePack data can't be converted to `ArchiveMetadata`.
-    */
-    [[nodiscard]] static auto create_from_file_reader(FileReader& file_reader)-> ArchiveMetadata;
+     * Reads serialized MessagePack data from `file_reader`, then unpacks it into an
+     * `ArchiveMetadata` instance.
+     *
+     * @param file_reader Reader for the file containing archive metadata.
+     * @return The created instance.
+     * @throw `ArchiveMetadata::OperationFailed` if stat or read for metadata file fails.
+     * @throw `msgpack::unpack_error` if data cannot be deserialized into MessagePack format.
+     * @throw `msgpack::type_error` if deserialized MessagePack data can't be converted to
+     * `ArchiveMetadata`.
+     */
+    [[nodiscard]] static auto create_from_file_reader(FileReader& file_reader) -> ArchiveMetadata;
 
     [[nodiscard]] auto get_archive_format_version() const { return m_archive_format_version; }
 

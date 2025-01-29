@@ -1,5 +1,7 @@
 #include "ArchiveMetadata.hpp"
+
 #include <sys/stat.h>
+
 #include <fmt/core.h>
 
 namespace clp::streaming_archive {
@@ -56,7 +58,7 @@ void ArchiveMetadata::expand_time_range(epochtime_t begin_timestamp, epochtime_t
 void ArchiveMetadata::write_to_file(FileWriter& file_writer) const {
     std::ostringstream buf;
     msgpack::pack(buf, *this);
-    const auto& string_buf = buf.str();
+    auto const& string_buf = buf.str();
     file_writer.write(string_buf.data(), string_buf.size());
 }
 }  // namespace clp::streaming_archive
