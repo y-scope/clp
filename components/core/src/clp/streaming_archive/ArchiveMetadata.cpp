@@ -27,7 +27,7 @@ ArchiveMetadata::ArchiveMetadata(
 }
 
 auto ArchiveMetadata::create_from_file_reader(FileReader& file_reader) -> ArchiveMetadata {
-    struct stat file_stat = {};
+    struct stat file_stat{};
     auto clp_rc = file_reader.try_fstat(file_stat);
     if (clp::ErrorCode::ErrorCode_Success != clp_rc) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);

@@ -48,14 +48,14 @@ public:
 
     // Methods
     /**
-     * Reads serialized MessagePack data from `file_reader`, then unpacks it into an
+     * Reads serialized MessagePack data from open file, unpacks it into an
      * `ArchiveMetadata` instance.
      *
      * @param file_reader Reader for the file containing archive metadata.
      * @return The created instance.
-     * @throw `ArchiveMetadata::OperationFailed` if stat or read for metadata file fails.
-     * @throw `msgpack::unpack_error` if data cannot be deserialized into MessagePack format.
-     * @throw `msgpack::type_error` if deserialized MessagePack data can't be converted to
+     * @throw `ArchiveMetadata::OperationFailed` if stat or read operation on metadata file fails.
+     * @throw `msgpack::unpack_error` if data cannot be unpacked into MessagePack object.
+     * @throw `msgpack::type_error` if MessagePack object can't be converted to
      * `ArchiveMetadata`.
      */
     [[nodiscard]] static auto create_from_file_reader(FileReader& file_reader) -> ArchiveMetadata;
@@ -112,7 +112,7 @@ public:
     void expand_time_range(epochtime_t begin_timestamp, epochtime_t end_timestamp);
 
     /**
-     * Serializes `ArchiveMetadata` instance to MessagePack and writes to `file_writer`.
+     * Packs `ArchiveMetadata` to MessagePack and writes to open file.
      *
      * @param file_writer Writer for archive metadata file.
      * @throw FileWriter::OperationFailed if failed to write.
