@@ -315,7 +315,7 @@ def _delete_archives(
             results = db_cursor.fetchall()
 
             if 0 == len(results):
-                logger.info(delete_handler.get_not_found_message)
+                logger.info(delete_handler.get_not_found_message())
                 return 0
 
             archive_ids: typing.List[str] = [result["id"] for result in results]
