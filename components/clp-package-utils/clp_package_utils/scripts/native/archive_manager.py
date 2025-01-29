@@ -2,10 +2,10 @@ import argparse
 import logging
 import shutil
 import sys
+import typing
 from abc import ABC, abstractmethod
 from contextlib import closing
 from pathlib import Path
-from typing import List
 
 from clp_py_utils.clp_config import Database
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -252,7 +252,7 @@ def _find_archives(
             db_cursor.execute(query, query_params)
             results = db_cursor.fetchall()
 
-            archive_ids: list[str] = [result["id"] for result in results]
+            archive_ids: typing.List[str] = [result["id"] for result in results]
             if 0 == len(archive_ids):
                 logger.info("No archives found within specified time range.")
                 return 0
@@ -318,7 +318,7 @@ def _delete_archives(
                 logger.info(delete_handler.get_not_found_message)
                 return 0
 
-            archive_ids: list[str] = [result["id"] for result in results]
+            archive_ids: typing.List[str] = [result["id"] for result in results]
             delete_handler.validate_results(archive_ids)
 
             ids_list_string: str = ",".join(["%s"] * len(archive_ids))

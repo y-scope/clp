@@ -2,6 +2,7 @@ import argparse
 import logging
 import subprocess
 import sys
+import typing
 from pathlib import Path
 
 from clp_py_utils.clp_config import StorageType
@@ -180,17 +181,17 @@ def main(argv):
         container_clp_config, clp_config, container_name
     )
 
-    necessary_mounts: list[CLPDockerMounts] = [
+    necessary_mounts: typing.List[CLPDockerMounts] = [
         mounts.clp_home,
         mounts.logs_dir,
         mounts.archives_output_dir,
     ]
-    container_start_cmd: list[str] = generate_container_start_cmd(
+    container_start_cmd: typing.List[str] = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container
     )
 
     # fmt: off
-    archive_manager_cmd: list[str] = [
+    archive_manager_cmd: typing.List[str] = [
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
@@ -220,7 +221,7 @@ def main(argv):
     else:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
 
-    cmd: list[str] = container_start_cmd + archive_manager_cmd
+    cmd: typing.List[str] = container_start_cmd + archive_manager_cmd
 
     subprocess.run(cmd, check=True)
 
