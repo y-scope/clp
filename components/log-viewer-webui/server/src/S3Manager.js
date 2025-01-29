@@ -58,8 +58,8 @@ class S3Manager {
 export default fastifyPlugin(async (app, options) => {
     const {region} = options;
     if (null === region) {
-        return
+        return;
     }
-    console.log(`s3Manager initialized with region ${region}`)
+    console.log(`s3Manager initialized with region ${region}`);
     await app.decorate("s3Manager", new S3Manager(region));
 });
