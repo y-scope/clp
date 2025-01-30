@@ -493,28 +493,24 @@ void GlobalSQLiteMetadataDB::copy_metadata_for_files_from_archive_metadata_db(
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-auto const file_it = archive_metadata_db.get_file_iterator(
-                cEpochTimeMin,
-                cEpochTimeMax,
-                "",
-                "",
-                false,
-                cInvalidSegmentId,
-                false
+    auto const file_it = archive_metadata_db.get_file_iterator(
+            cEpochTimeMin,
+            cEpochTimeMax,
+            "",
+            "",
+            false,
+            cInvalidSegmentId,
+            false
     );
 
     m_upsert_files_transaction_begin_statement->step();
-    while(file_it->has_next()) {
+    while (file_it->has_next()) {
         file_it->next();
 
         std::string id;
         file_it->get_id(id);
-        m_upsert_file_statement->bind_text(
-                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
-                id,
-                false
-        );
-
+        m_upsert_file_statement
+                ->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1, id, false);
 
         std::string orig_file_id;
         file_it->get_orig_file_id(orig_file_id);
@@ -526,11 +522,8 @@ auto const file_it = archive_metadata_db.get_file_iterator(
 
         std::string path;
         file_it->get_path(path);
-        m_upsert_file_statement->bind_text(
-                enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1,
-                path,
-                false
-        );
+        m_upsert_file_statement
+                ->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1, path, false);
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp) + 1,
                 file_it->get_begin_ts()

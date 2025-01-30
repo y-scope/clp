@@ -279,7 +279,6 @@ private:
      */
     void update_metadata();
 
-
     std::unique_ptr<MetadataDB::FileIterator> get_file_iterator() {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,

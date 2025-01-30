@@ -239,7 +239,10 @@ void Archive::close() {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
-    m_global_metadata_db->copy_metadata_for_files_from_archive_metadata_db(m_id_as_string, m_metadata_db);
+    m_global_metadata_db->copy_metadata_for_files_from_archive_metadata_db(
+            m_id_as_string,
+            m_metadata_db
+    );
     m_global_metadata_db->close();
     m_global_metadata_db = nullptr;
 
@@ -560,7 +563,6 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
 
     m_metadata_db.update_files(files);
 
-
     for (auto file : files) {
         file->mark_metadata_as_clean();
     }
@@ -635,7 +637,6 @@ void Archive::update_metadata() {
     // Rewrite (overwrite) the metadata file
     m_metadata_file_writer.seek_from_begin(0);
     m_local_metadata->write_to_file(m_metadata_file_writer);
-
 
     if (m_print_archive_stats_progress) {
         nlohmann::json json_msg;

@@ -220,7 +220,6 @@ void GlobalMySQLMetadataDB::add_archive(
     }
 }
 
-
 void GlobalMySQLMetadataDB::copy_metadata_for_files_from_archive_metadata_db(
         std::string const& archive_id,
         streaming_archive::MetadataDB& archive_metadata_db
@@ -235,17 +234,17 @@ void GlobalMySQLMetadataDB::copy_metadata_for_files_from_archive_metadata_db(
     }
 
     auto const file_it = archive_metadata_db.get_file_iterator(
-                cEpochTimeMin,
-                cEpochTimeMax,
-                "",
-                "",
-                false,
-                cInvalidSegmentId,
-                false
+            cEpochTimeMin,
+            cEpochTimeMax,
+            "",
+            "",
+            false,
+            cInvalidSegmentId,
+            false
     );
 
     auto& statement_bindings = m_upsert_file_statement->get_statement_bindings();
-    while(file_it->has_next()) {
+    while (file_it->has_next()) {
         file_it->next();
         std::string id;
         file_it->get_id(id);
