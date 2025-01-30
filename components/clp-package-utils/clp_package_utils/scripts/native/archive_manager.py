@@ -323,7 +323,7 @@ def _delete_archives(
             archive_ids: typing.List[str] = [result["id"] for result in results]
             delete_handler.validate_results(archive_ids)
 
-            ids_list_string: str = ",".join(["%s"] * len(archive_ids))
+            ids_list_string: str = ", ".join(["'%s'"] * len(archive_ids))
 
             db_cursor.execute(
                 f"""
