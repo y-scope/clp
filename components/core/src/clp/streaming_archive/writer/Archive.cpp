@@ -563,6 +563,7 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
 
     m_metadata_db.update_files(files);
 
+    // Mark files' metadata as clean
     for (auto file : files) {
         file->mark_metadata_as_clean();
     }
@@ -580,7 +581,6 @@ void Archive::close_segment_and_persist_file_metadata(
 
     segment.close();
 
-    // Want to keep this
     m_local_metadata->increment_static_compressed_size(segment.get_compressed_size());
 
 #if FLUSH_TO_DISK_ENABLED
@@ -600,7 +600,6 @@ void Archive::close_segment_and_persist_file_metadata(
     }
 
     persist_file_metadata(files);
-    m_files.emplace_back(files);
     update_metadata();
 
     for (auto file : files) {
