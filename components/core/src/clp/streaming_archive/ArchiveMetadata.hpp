@@ -2,6 +2,7 @@
 #define CLP_STREAMING_ARCHIVE_ARCHIVEMETADATA_HPP
 
 #include <cstdint>
+#include <string_view>
 
 #include "../Defs.h"
 #include "../ffi/encoding_methods.hpp"
@@ -33,7 +34,10 @@ public:
     };
 
     // Constructors
+    // The class must be constructible to convert from msgpack::object.
+    // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_adaptor
     ArchiveMetadata() = default;
+
     /**
      * Constructs a metadata object with the given parameters
      * @param archive_format_version
@@ -55,8 +59,7 @@ public:
      * @return The created instance.
      * @throw `ArchiveMetadata::OperationFailed` if stat or read operation on metadata file fails.
      * @throw `msgpack::unpack_error` if data cannot be unpacked into MessagePack object.
-     * @throw `msgpack::type_error` if MessagePack object can't be converted to
-     * `ArchiveMetadata`.
+     * @throw `msgpack::type_error` if MessagePack object can't be converted to `ArchiveMetadata`.
      */
     [[nodiscard]] static auto create_from_file_reader(FileReader& file_reader) -> ArchiveMetadata;
 
@@ -92,15 +95,15 @@ public:
 
     [[nodiscard]] auto get_end_timestamp() const { return m_end_timestamp; }
 
-    [[nodiscard]] auto get_variable_encoding_methods_version() const -> std::string const& {
+    [[nodiscard]] auto get_variable_encoding_methods_version() const -> std::string_view const& {
         return m_variable_encoding_methods_version;
     }
 
-    [[nodiscard]] auto get_variables_schema_version() const -> std::string const& {
+    [[nodiscard]] auto get_variables_schema_version() const -> std::string_view const& {
         return m_variables_schema_version;
     }
 
-    [[nodiscard]] auto get_compression_type() const -> std::string const& {
+    [[nodiscard]] auto get_compression_type() const -> std::string_view const& {
         return m_compression_type;
     }
 
@@ -112,7 +115,7 @@ public:
     void expand_time_range(epochtime_t begin_timestamp, epochtime_t end_timestamp);
 
     /**
-     * Packs `ArchiveMetadata` to MessagePack and writes to open file.
+     * Packs `ArchiveMetadata` to MessagePack and writes to the open file.
      *
      * @param file_writer Writer for archive metadata file.
      * @throw FileWriter::OperationFailed if failed to write.
@@ -125,6 +128,7 @@ public:
             MSGPACK_NVP("variables_schema_version", m_variables_schema_version),
             MSGPACK_NVP("compression_type", m_compression_type),
             MSGPACK_NVP("creator_id", m_creator_id),
+            MSGPACK_NVP("creation_idx", m_creation_idx),
             MSGPACK_NVP("begin_timestamp", m_begin_timestamp),
             MSGPACK_NVP("end_timestamp", m_end_timestamp),
             MSGPACK_NVP("uncompressed_size", m_uncompressed_size),
@@ -145,9 +149,9 @@ private:
     // The size of the archive
     uint64_t m_compressed_size{0};
     uint64_t m_dynamic_compressed_size{0};
-    std::string m_variable_encoding_methods_version{ffi::cVariableEncodingMethodsVersion};
-    std::string m_variables_schema_version{ffi::cVariablesSchemaVersion};
-    std::string m_compression_type{cCompressionTypeZstd};
+    std::string_view m_variable_encoding_methods_version{ffi::cVariableEncodingMethodsVersion};
+    std::string_view m_variables_schema_version{ffi::cVariablesSchemaVersion};
+    std::string_view m_compression_type{cCompressionTypeZstd};
 };
 }  // namespace clp::streaming_archive
 

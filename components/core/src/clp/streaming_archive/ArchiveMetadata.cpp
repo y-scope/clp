@@ -4,6 +4,8 @@
 
 #include <fmt/core.h>
 
+#include "../Array.hpp"
+
 namespace clp::streaming_archive {
 ArchiveMetadata::ArchiveMetadata(
         archive_format_version_t archive_format_version,
@@ -28,15 +30,17 @@ ArchiveMetadata::ArchiveMetadata(
 
 auto ArchiveMetadata::create_from_file_reader(FileReader& file_reader) -> ArchiveMetadata {
     struct stat file_stat{};
-    auto clp_rc = file_reader.try_fstat(file_stat);
-    if (clp::ErrorCode::ErrorCode_Success != clp_rc) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    if (auto const clp_rc = file_reader.try_fstat(file_stat);
+        clp::ErrorCode::ErrorCode_Success != clp_rc)
+    {
+        throw OperationFailed(clp_rc, __FILENAME__, __LINE__);
     }
 
-    std::vector<char> buf(file_stat.st_size);
-    clp_rc = file_reader.try_read_exact_length(buf.data(), buf.size());
-    if (clp::ErrorCode::ErrorCode_Success != clp_rc) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    clp::Array<char> buf(file_stat.st_size);
+    if (auto const clp_rc = file_reader.try_read_exact_length(buf.data(), buf.size());
+        clp::ErrorCode::ErrorCode_Success != clp_rc)
+    {
+        throw OperationFailed(clp_rc, __FILENAME__, __LINE__);
     }
 
     ArchiveMetadata metadata;
