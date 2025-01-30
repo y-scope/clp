@@ -215,6 +215,7 @@ def main(argv: typing.List[str]) -> int:
             ])
         else:
             logger.error(f"Unsupported subcommand: `{parsed_args.del_subcommand}`.")
+            return -1
     elif FIND_COMMAND == subcommand:
         assert begin_timestamp is not None, "begin_timestamp is None."
         archive_manager_cmd.extend([BEGIN_TS_ARG, str(begin_timestamp)])
