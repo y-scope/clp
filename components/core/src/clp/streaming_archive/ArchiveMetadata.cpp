@@ -5,6 +5,7 @@
 #include <fmt/core.h>
 
 #include "../Array.hpp"
+#include "FileReader.hpp"
 
 namespace clp::streaming_archive {
 ArchiveMetadata::ArchiveMetadata(
@@ -28,7 +29,8 @@ ArchiveMetadata::ArchiveMetadata(
                          + sizeof(m_end_timestamp) + sizeof(m_compressed_size);
 }
 
-auto ArchiveMetadata::create_from_file_reader(FileReader& file_reader) -> ArchiveMetadata {
+auto ArchiveMetadata::create_from_file(std::string_view path) -> ArchiveMetadata {
+    auto file_reader = FileReader(std::string(path));
     struct stat file_stat{};
     if (auto const clp_rc = file_reader.try_fstat(file_stat);
         clp::ErrorCode::ErrorCode_Success != clp_rc)
