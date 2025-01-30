@@ -903,7 +903,7 @@ auto JsonParser::parse_from_ir() -> bool {
             } else {
                 SPDLOG_ERROR(
                         "Encountered unkown IR unit type ({}) during deserialization.",
-                        kv_log_event_result.value()
+                        static_cast<uint8_t>(kv_log_event_result.value())
                 );
                 m_archive_writer->close();
                 decompressor.close();
