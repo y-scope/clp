@@ -76,7 +76,7 @@ class IdDeleteHandler(DeleteHandler):
             )
 
 
-def main(argv):
+def main(argv: typing.List[str]) -> int:
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -116,7 +116,7 @@ def main(argv):
         END_TS_ARG,
         dest="end_ts",
         type=int,
-        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
+        help="Time-range upper-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
 
     # Options for delete subcommand
@@ -161,7 +161,7 @@ def main(argv):
     del_filter_parser.add_argument(
         "end_ts",
         type=int,
-        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
+        help="Time-range upper-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
@@ -215,22 +215,23 @@ def main(argv):
             return -1
     else:
         logger.error(f"Unsupported subcommand: `{parsed_args.subcommand}`.")
+        return -1
 
 
 def _find_archives(
     archives_dir: Path,
     database_config: Database,
     begin_ts: int,
-    end_ts: int = None,
+    end_ts: int = typing.Optional[int],
 ) -> int:
     """
-    Lists all archive IDs, if begin_ts and end_ts are provided,
-    only lists archives where `begin_ts <= archive.begin_timestamp` and
-    `archive.end_timestamp <= end_ts`.
+    Lists all archive IDs, if begin_ts and end_ts are provided, only lists archives where
+    `begin_ts <= archive.begin_timestamp` and `archive.end_timestamp <= end_ts`.
     :param archives_dir:
     :param database_config:
     :param begin_ts:
     :param end_ts:
+    :return: 0 on success, 1 on failure.
     """
     archive_ids: typing.List[str]
     logger.info("Starting to find archives from the database.")
@@ -239,15 +240,15 @@ def _find_archives(
         clp_db_connection_params: dict[str, any] = (
             database_config.get_clp_connection_params_and_type(True)
         )
-        table_prefix = clp_db_connection_params["table_prefix"]
+        table_prefix: str = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
-            query_params: tuple[int] = (begin_ts,)
+            query_params: typing.List[int] = [begin_ts]
             query: str = f"SELECT id FROM `{table_prefix}archives` WHERE begin_timestamp >= %s"
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
-                query_params: tuple[int] = query_params + (end_ts,)
+                query_params.append(end_ts)
 
             db_cursor.execute(query, query_params)
             results = db_cursor.fetchall()
@@ -280,6 +281,7 @@ def _delete_archives(
 ) -> int:
     """
     Deletes archives from both metadata database and disk based on provided SQL query.
+
     :param archives_dir:
     :param database_config:
     :param delete_handler: Object to handle differences between by-filter and by-ids delete types.
@@ -302,7 +304,7 @@ def _delete_archives(
                 logger.info("Running in dry-run mode.")
 
             query_criteria: str = delete_handler.get_criteria()
-            query_params: str = delete_handler.get_params()
+            query_params: typing.List[str] = delete_handler.get_params()
 
             db_cursor.execute(
                 f"""

@@ -34,7 +34,7 @@ from clp_package_utils.scripts.native.archive_manager import (
 logger: logging.Logger = logging.getLogger(__file__)
 
 
-def _validate_timestamps(begin_ts: int, end_ts: int):
+def _validate_timestamps(begin_ts: int, end_ts: typing.Optional[int]) -> bool:
     if begin_ts < 0:
         logger.error("begin-ts must be non-negative.")
         return False
@@ -47,7 +47,7 @@ def _validate_timestamps(begin_ts: int, end_ts: int):
     return True
 
 
-def main(argv):
+def main(argv: typing.List[str]) -> int:
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -88,7 +88,7 @@ def main(argv):
         END_TS_ARG,
         dest="end_ts",
         type=int,
-        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
+        help="Time-range upper-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
 
     # Options for delete subcommand
@@ -135,13 +135,13 @@ def main(argv):
         END_TS_ARG,
         type=int,
         required=True,
-        help="Time-range upper-bound (include) as milliseconds from the UNIX epoch.",
+        help="Time-range upper-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
 
-    begin_timestamp: int
-    end_timestamp: int
+    begin_timestamp: typing.Optional[int]
+    end_timestamp: typing.Optional[int]
     subcommand: str = parsed_args.subcommand
 
     # Validate and load config file
@@ -167,10 +167,11 @@ def main(argv):
     if (DEL_COMMAND == subcommand and DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand) or (
         FIND_COMMAND == subcommand
     ):
-        begin_timestamp: int = parsed_args.begin_ts
-        end_timestamp: int = parsed_args.end_ts
+        begin_timestamp = parsed_args.begin_ts
+        end_timestamp = parsed_args.end_ts
 
         # Validate the input timestamp
+        assert begin_timestamp is not None, "begin_timestamp is None."
         if not _validate_timestamps(begin_timestamp, end_timestamp):
             return -1
 
@@ -215,6 +216,7 @@ def main(argv):
         else:
             logger.error(f"Unsupported subcommand: `{parsed_args.del_subcommand}`.")
     elif FIND_COMMAND == subcommand:
+        assert begin_timestamp is not None, "begin_timestamp is None."
         archive_manager_cmd.extend([BEGIN_TS_ARG, str(begin_timestamp)])
         if end_timestamp is not None:
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
