@@ -1,13 +1,14 @@
-#ifndef STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
-#define STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
+#ifndef CLP_STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
+#define CLP_STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
 
 // C++ standard libraries
 #include <memory>
 #include <string>
 
 // ZLIB library
-#include <lzma.h>
 #include <zlib.h>
+
+#include <lzma.h>
 // Boost libraries
 #include <boost/iostreams/device/mapped_file.hpp>
 
@@ -16,8 +17,8 @@
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 
-namespace streaming_compression::lzma {
-class Decompressor : public ::streaming_compression::Decompressor {
+namespace clp::streaming_compression::lzma {
+class Decompressor : public ::clp::streaming_compression::Decompressor {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -117,7 +118,7 @@ public:
      * @param file_reader
      * @param file_read_buffer_capacity The maximum amount of data to read from a file at a time
      */
-    void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
+    void open(ReaderInterface& file_reader, size_t file_read_buffer_capacity) override;
 
 private:
     // Enum class
@@ -145,7 +146,7 @@ private:
     lzma_stream* m_decompression_stream{nullptr};
 
     boost::iostreams::mapped_file_source m_memory_mapped_compressed_file;
-    FileReader* m_file_reader;
+    ReaderInterface* m_file_reader;
     size_t m_file_reader_initial_pos;
     std::unique_ptr<char[]> m_file_read_buffer;
     size_t m_file_read_buffer_length;
@@ -158,5 +159,5 @@ private:
     char const* m_compressed_stream_block;
     size_t m_compressed_stream_block_size;
 };
-}  // namespace streaming_compression::lzma
-#endif  // STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
+}  // namespace clp::streaming_compression::lzma
+#endif  // CLP_STREAMING_COMPRESSION_LZMA_DECOMPRESSOR_HPP
