@@ -32,7 +32,7 @@ public:
     Compressor() = default;
 
     // Destructor
-    virtual ~Compressor() = default;
+    ~Compressor() override = default;
 
     // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
