@@ -387,7 +387,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         vector<encoded_variable_t> encoded_vars;
         vector<clp::variable_dictionary_id_t> var_ids;
         clp::LogTypeDictionaryEntry logtype_dict_entry;
-		string const msg_template = "here is a string with a dictionary var: ";
+        string const msg_template = "here is a string with a dictionary var: ";
 
         for (auto const& var_str : var_strs) {
             EncodedVariableInterpreter::encode_and_add_to_dictionary(
