@@ -157,10 +157,6 @@ void Archive::open(UserConfig const& user_config) {
 
     m_global_metadata_db = user_config.global_metadata_db;
 
-    m_global_metadata_db->open();
-    m_global_metadata_db->add_archive(m_id_as_string, *m_local_metadata);
-    m_global_metadata_db->close();
-
     m_file = nullptr;
 
     // Open log-type dictionary
@@ -238,6 +234,13 @@ void Archive::close() {
 
     m_metadata_file_writer.close();
 
+    m_global_metadata_db->open();
+    if (false == m_local_metadata.has_value()) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
+    m_global_metadata_db->copy_metadata_for_files_from_archive_metadata_db(m_id_as_string, m_metadata_db);
+    m_global_metadata_db->close();
     m_global_metadata_db = nullptr;
 
     m_metadata_db.close();
@@ -557,9 +560,7 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
 
     m_metadata_db.update_files(files);
 
-    m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
 
-    // Mark files' metadata as clean
     for (auto file : files) {
         file->mark_metadata_as_clean();
     }
@@ -577,6 +578,7 @@ void Archive::close_segment_and_persist_file_metadata(
 
     segment.close();
 
+    // Want to keep this
     m_local_metadata->increment_static_compressed_size(segment.get_compressed_size());
 
 #if FLUSH_TO_DISK_ENABLED
@@ -595,10 +597,9 @@ void Archive::close_segment_and_persist_file_metadata(
         file->mark_as_in_committed_segment();
     }
 
-    m_global_metadata_db->open();
     persist_file_metadata(files);
+    m_files.emplace_back(files);
     update_metadata();
-    m_global_metadata_db->close();
 
     for (auto file : files) {
         delete file;
@@ -635,7 +636,6 @@ void Archive::update_metadata() {
     m_metadata_file_writer.seek_from_begin(0);
     m_local_metadata->write_to_file(m_metadata_file_writer);
 
-    m_global_metadata_db->update_archive_metadata(m_id_as_string, *m_local_metadata);
 
     if (m_print_archive_stats_progress) {
         nlohmann::json json_msg;

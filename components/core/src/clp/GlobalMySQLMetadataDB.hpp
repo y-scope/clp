@@ -78,13 +78,9 @@ public:
 
     void
     add_archive(std::string const& id, streaming_archive::ArchiveMetadata const& metadata) override;
-    void update_archive_metadata(
+    void copy_metadata_for_files_from_archive_metadata_db(
             std::string const& archive_id,
-            streaming_archive::ArchiveMetadata const& metadata
-    ) override;
-    void update_metadata_for_files(
-            std::string const& archive_id,
-            std::vector<streaming_archive::writer::File*> const& files
+            streaming_archive::MetadataDB& archive_metadata_db
     ) override;
 
     GlobalMetadataDB::ArchiveIterator* get_archive_iterator() override;

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "streaming_archive/ArchiveMetadata.hpp"
+#include "streaming_archive/MetadataDB.hpp"
 #include "streaming_archive/writer/File.hpp"
 
 namespace clp {
@@ -50,22 +51,14 @@ public:
     add_archive(std::string const& id, streaming_archive::ArchiveMetadata const& metadata)
             = 0;
     /**
-     * Updates the size of the archive identified by the given ID in the global metadata database
+     * Copies the metadata for all files in the given archive-level metadata database to the
+     * global metadata database.
      * @param archive_id
-     * @param metadata
+     * @param archive_metadata_db
      */
-    virtual void update_archive_metadata(
+    virtual void copy_metadata_for_files_from_archive_metadata_db(
             std::string const& archive_id,
-            streaming_archive::ArchiveMetadata const& metadata
-    ) = 0;
-    /**
-     * Updates the metadata of the given files in the global metadata database
-     * @param archive_id
-     * @param files
-     */
-    virtual void update_metadata_for_files(
-            std::string const& archive_id,
-            std::vector<streaming_archive::writer::File*> const& files
+            streaming_archive::MetadataDB& archive_metadata_db
     ) = 0;
 
     /**

@@ -279,6 +279,19 @@ private:
      */
     void update_metadata();
 
+
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator() {
+        return m_metadata_db.get_file_iterator(
+                cEpochTimeMin,
+                cEpochTimeMax,
+                "",
+                "",
+                false,
+                cInvalidSegmentId,
+                false
+        );
+    }
+
     // Variables
     boost::uuids::uuid m_id;
     std::string m_id_as_string;
@@ -315,6 +328,9 @@ private:
     segment_id_t m_next_segment_id;
     std::vector<File*> m_files_with_timestamps_in_segment;
     std::vector<File*> m_files_without_timestamps_in_segment;
+
+    // Holds all files in the archive.
+    std::vector<File*> m_files;
 
     size_t m_target_segment_uncompressed_size;
     Segment m_segment_for_files_with_timestamps;
