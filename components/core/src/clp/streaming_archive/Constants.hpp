@@ -15,10 +15,10 @@ constexpr char cMetadataDBFileName[] = "metadata.db";
 constexpr char cSchemaFileName[] = "schema.txt";
 
 namespace version {
-// Version(s) for the disk format of the archive. The public branch has only one version; however,
-// private branches have two. The private branch has its own independent disk format version, and a
-// second version to specify which public release can read its private disk format. The following
-// provides instructions to set the versions correctly.
+// Version(s) for the disk format of the archive. The public branch uses a single version.
+// Private branches have two versions: an independent disk format version, and a second version to
+// specify which public release can read its private disk format. Below are examples to help set
+// the versions correctly.
 //
 // Public branch with version a.b.c
 //
