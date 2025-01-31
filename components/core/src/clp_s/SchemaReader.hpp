@@ -33,6 +33,18 @@ public:
     ) = 0;
 
     /**
+     * Initializes the filter with a column map
+     * @param reader
+     * @param schema_id
+     * @param column_map
+     */
+    virtual void init(
+            SchemaReader* reader,
+            int32_t schema_id,
+            std::unordered_map<int32_t, BaseColumnReader*> const& column_map
+    ) {}
+
+    /**
      * Filters the message
      * @param cur_message
      * @return true if the message is accepted
@@ -179,6 +191,12 @@ public:
      * @param filter
      */
     void initialize_filter(FilterClass* filter);
+
+    /**
+     * Initializes the filter with a column map
+     * @param filter
+     */
+    void initialize_filter_with_column_map(FilterClass* filter);
 
     /**
      * Marks a column as timestamp
