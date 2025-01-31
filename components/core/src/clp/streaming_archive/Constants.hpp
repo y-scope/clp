@@ -31,7 +31,7 @@ namespace version {
 // | --------------- | ---------------- |
 // | a.b.c           | x.y.z            |
 //
-// Private branch with version x.y.z incompatible with any public version.
+// Private branch with version x.y.z incompatible with any public version
 //
 // | Public  version | Private  version |
 // | --------------- | ---------------- |

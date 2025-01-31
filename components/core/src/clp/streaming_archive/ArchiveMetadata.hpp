@@ -90,7 +90,7 @@ public:
 
 private:
     // Variables
-    archive_format_version_t m_archive_format_version{cArchiveFormatVersion};
+    archive_format_version_t m_archive_format_version{version::cPublicVersion};
     std::string m_creator_id;
     uint16_t m_creator_id_len{0};
     uint64_t m_creation_idx{0};
