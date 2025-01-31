@@ -14,38 +14,14 @@ constexpr char cMetadataFileName[] = "metadata";
 constexpr char cMetadataDBFileName[] = "metadata.db";
 constexpr char cSchemaFileName[] = "schema.txt";
 
-namespace version {
-// Version(s) for the disk format of the archive. The public branch uses a single version.
-// Private branches have two versions: an independent disk format version, and a second version to
-// specify which public release can read its private disk format. Below are examples to help set
-// the versions correctly.
-//
-// Public branch with version a.b.c
-//
-// | Public  version | Private  version |
-// | --------------- | ---------------- |
-// | a.b.c           | 0.0.0            |
-//
-// Private branch with version x.y.z compatible with public version a.b.c
-//
-// | Public  version | Private  version |
-// | --------------- | ---------------- |
-// | a.b.c           | x.y.z            |
-//
-// Private branch with version x.y.z incompatible with any public version
-//
-// | Public  version | Private  version |
-// | --------------- | ---------------- |
-// | 0.0.0           | x.y.z            |
-//
-constexpr uint8_t cPublicVersionMajor{0};
-constexpr uint8_t cPublicVersionMinor{1};
-constexpr uint16_t cPublicVersionPatch{0};
-constexpr archive_format_version_t cPublicVersion{
-        cPublicVersionMajor << 24 | cPublicVersionMinor << 16 | cPublicVersionPatch
+namespace cArchiveFormatVersion {
+constexpr uint8_t cDefaultVersionMajor{0};
+constexpr uint8_t cDefaultVersionMinor{1};
+constexpr uint16_t cDefaultVersionPatch{0};
+constexpr archive_format_version_t cDefaultVersion{
+        cDefaultVersionMajor << 24 | cDefaultVersionMinor << 16 | cDefaultVersionPatch
 };
-constexpr archive_format_version_t cNullVersion{0};
-constexpr archive_format_version_t cPrivateVersion{cNullVersion};
+constexpr archive_format_version_t cCustomVersion{0};
 }  // namespace version
 
 namespace cMetadataDB {

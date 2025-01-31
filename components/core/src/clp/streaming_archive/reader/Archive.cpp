@@ -65,7 +65,7 @@ void Archive::open(string const& path) {
     }
 
     // Check archive matches format version
-    if (version::cPublicVersion != format_version) {
+    if (cArchiveFormatVersion::cDefaultVersion != format_version) {
         SPDLOG_ERROR("streaming_archive::reader::Archive: Archive uses an unsupported format.");
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
