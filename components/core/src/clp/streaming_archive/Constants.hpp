@@ -45,7 +45,7 @@ constexpr archive_format_version_t cPublicVersion{
 };
 constexpr archive_format_version_t cNullVersion{0};
 constexpr archive_format_version_t cPrivateVersion{cNullVersion};
-}
+}  // namespace version
 
 namespace cMetadataDB {
 constexpr char ArchivesTableName[] = "archives";
