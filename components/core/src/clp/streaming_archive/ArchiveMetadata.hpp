@@ -2,13 +2,19 @@
 #define CLP_STREAMING_ARCHIVE_ARCHIVEMETADATA_HPP
 
 #include <cstdint>
+#include <string_view>
 
 #include "../Defs.h"
+#include "../ffi/encoding_methods.hpp"
 #include "../FileReader.hpp"
 #include "../FileWriter.hpp"
 #include "Constants.hpp"
+#include "msgpack.hpp"
 
 namespace clp::streaming_archive {
+
+static constexpr std::string_view cCompressionTypeZstd = "ZSTD";
+
 /**
  * A class to encapsulate metadata directly relating to an archive.
  */
@@ -28,6 +34,11 @@ public:
     };
 
     // Constructors
+    // The class must be default constructible to convert from msgpack::object in
+    // `create_from_file` method.
+    // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_adaptor
+    ArchiveMetadata() = default;
+
     /**
      * Constructs a metadata object with the given parameters
      * @param archive_format_version
@@ -40,13 +51,19 @@ public:
             uint64_t creation_idx
     );
 
-    /**
-     * Constructs a metadata object and initializes it from the given file reader
-     * @param file_reader
-     */
-    explicit ArchiveMetadata(FileReader& file_reader);
-
     // Methods
+    /**
+     * Reads serialized MessagePack data from open file, unpacks it into an
+     * `ArchiveMetadata` instance.
+     *
+     * @param path Path to archive metadata file.
+     * @return The created instance.
+     * @throw `ArchiveMetadata::OperationFailed` if stat or read operation on metadata file fails.
+     * @throw `msgpack::unpack_error` if data cannot be unpacked into MessagePack object.
+     * @throw `msgpack::type_error` if MessagePack object can't be converted to `ArchiveMetadata`.
+     */
+    [[nodiscard]] static auto create_from_file(std::string_view path) -> ArchiveMetadata;
+
     [[nodiscard]] auto get_archive_format_version() const { return m_archive_format_version; }
 
     [[nodiscard]] auto get_creator_id() const -> std::string const& { return m_creator_id; }
@@ -79,6 +96,18 @@ public:
 
     [[nodiscard]] auto get_end_timestamp() const { return m_end_timestamp; }
 
+    [[nodiscard]] auto get_variable_encoding_methods_version() const -> std::string_view const& {
+        return m_variable_encoding_methods_version;
+    }
+
+    [[nodiscard]] auto get_variables_schema_version() const -> std::string_view const& {
+        return m_variables_schema_version;
+    }
+
+    [[nodiscard]] auto get_compression_type() const -> std::string_view const& {
+        return m_compression_type;
+    }
+
     /**
      * Expands the archive's time range based to encompass the given time range
      * @param begin_timestamp
@@ -86,7 +115,26 @@ public:
      */
     void expand_time_range(epochtime_t begin_timestamp, epochtime_t end_timestamp);
 
+    /**
+     * Packs `ArchiveMetadata` to MessagePack and writes to the open file.
+     *
+     * @param file_writer Writer for archive metadata file.
+     * @throw FileWriter::OperationFailed if failed to write.
+     */
     void write_to_file(FileWriter& file_writer) const;
+
+    MSGPACK_DEFINE_MAP(
+            MSGPACK_NVP("archive_format_version", m_archive_format_version),
+            MSGPACK_NVP("variable_encoding_methods_version", m_variable_encoding_methods_version),
+            MSGPACK_NVP("variables_schema_version", m_variables_schema_version),
+            MSGPACK_NVP("compression_type", m_compression_type),
+            MSGPACK_NVP("creator_id", m_creator_id),
+            MSGPACK_NVP("creation_idx", m_creation_idx),
+            MSGPACK_NVP("begin_timestamp", m_begin_timestamp),
+            MSGPACK_NVP("end_timestamp", m_end_timestamp),
+            MSGPACK_NVP("uncompressed_size", m_uncompressed_size),
+            MSGPACK_NVP("compressed_size", m_compressed_size)
+    );
 
 private:
     // Variables
@@ -102,6 +150,9 @@ private:
     // The size of the archive
     uint64_t m_compressed_size{0};
     uint64_t m_dynamic_compressed_size{0};
+    std::string_view m_variable_encoding_methods_version{ffi::cVariableEncodingMethodsVersion};
+    std::string_view m_variables_schema_version{ffi::cVariablesSchemaVersion};
+    std::string_view m_compression_type{cCompressionTypeZstd};
 };
 }  // namespace clp::streaming_archive
 
