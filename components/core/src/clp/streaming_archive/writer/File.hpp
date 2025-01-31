@@ -1,6 +1,7 @@
 #ifndef CLP_STREAMING_ARCHIVE_WRITER_FILE_HPP
 #define CLP_STREAMING_ARCHIVE_WRITER_FILE_HPP
 
+#include <cstdint>
 #include <unordered_set>
 #include <vector>
 
@@ -60,6 +61,45 @@ public:
               m_segmentation_state(SegmentationState_NotInSegment),
               m_is_metadata_clean(false),
               m_is_written_out(false),
+              m_is_open(false) {}
+
+
+        // Constructor for files already written to archive-level metadataDB.
+        File(boost::uuids::uuid const& id,
+         boost::uuids::uuid const& orig_file_id,
+         std::string const& orig_log_path,
+         epochtime_t begin_ts,
+         epochtime_t end_ts,
+         size_t num_uncompressed_bytes,
+         size_t begin_message_ix,
+         size_t num_messages,
+         size_t num_variables,
+         segment_id_t segment_id,
+         size_t segment_timestamps_pos,
+         size_t segment_logtypes_pos,
+         size_t segment_variables_pos,
+         bool is_split,
+         size_t split_ix)
+            : m_id(id),
+              m_orig_file_id(orig_file_id),
+              m_orig_log_path(orig_log_path),
+              m_begin_ts(begin_ts),
+              m_end_ts(end_ts),
+              // Group ID is not stored in the metadataDB, so default to `SIZE_MAX`.
+              m_group_id(SIZE_MAX),
+              m_num_uncompressed_bytes(num_uncompressed_bytes),
+              m_begin_message_ix(begin_message_ix),
+              m_num_messages(num_messages),
+              m_num_variables(num_variables),
+              m_segment_id(segment_id),
+              m_segment_timestamps_pos(segment_timestamps_pos),
+              m_segment_logtypes_pos(segment_logtypes_pos),
+              m_segment_variables_pos(segment_variables_pos),
+              m_is_split(is_split),
+              m_split_ix(split_ix),
+              m_segmentation_state(SegmentationState_InSegment),
+              m_is_metadata_clean(true),
+              m_is_written_out(true),
               m_is_open(false) {}
 
     // Destructor
