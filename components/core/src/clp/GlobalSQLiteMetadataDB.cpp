@@ -485,7 +485,7 @@ void GlobalSQLiteMetadataDB::add_archive(
     m_insert_archive_statement->reset();
 }
 
-void GlobalSQLiteMetadataDB::copy_metadata_for_files_from_archive_metadata_db(
+void GlobalSQLiteMetadataDB::add_metadata_for_files_from_archive_metadata_db(
         string const& archive_id,
         streaming_archive::MetadataDB& archive_metadata_db
 ) {

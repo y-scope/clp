@@ -220,7 +220,7 @@ void GlobalMySQLMetadataDB::add_archive(
     }
 }
 
-void GlobalMySQLMetadataDB::copy_metadata_for_files_from_archive_metadata_db(
+void GlobalMySQLMetadataDB::add_metadata_for_files_from_archive_metadata_db(
         std::string const& archive_id,
         streaming_archive::MetadataDB& archive_metadata_db
 ) {

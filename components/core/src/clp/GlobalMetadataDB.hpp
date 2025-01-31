@@ -51,12 +51,12 @@ public:
     add_archive(std::string const& id, streaming_archive::ArchiveMetadata const& metadata)
             = 0;
     /**
-     * Copies the metadata for all files in the given archive-level metadata database to the
+     * Adds the metadata for all files in the given archive-level metadata database to the
      * global metadata database.
      * @param archive_id
      * @param archive_metadata_db
      */
-    virtual void copy_metadata_for_files_from_archive_metadata_db(
+    virtual void add_metadata_for_files_from_archive_metadata_db(
             std::string const& archive_id,
             streaming_archive::MetadataDB& archive_metadata_db
     ) = 0;
