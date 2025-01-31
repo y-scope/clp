@@ -239,6 +239,21 @@ void Archive::close() {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
+
+    auto const file_it = archive_metadata_db.get_file_iterator(
+        cEpochTimeMin,
+        cEpochTimeMax,
+        "",
+        "",
+        false,
+        cInvalidSegmentId,
+        false
+    );
+
+        while (file_it->has_next()) {
+        file_it->next();
+
+
     m_global_metadata_db->add_metadata_for_files_from_archive_metadata_db(
             m_id_as_string,
             m_metadata_db
