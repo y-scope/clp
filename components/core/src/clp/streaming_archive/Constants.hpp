@@ -22,7 +22,7 @@ constexpr archive_format_version_t cDefaultVersion{
         cDefaultVersionMajor << 24 | cDefaultVersionMinor << 16 | cDefaultVersionPatch
 };
 constexpr archive_format_version_t cCustomVersion{0};
-}  // namespace version
+}  // namespace cArchiveFormatVersion
 
 namespace cMetadataDB {
 constexpr char ArchivesTableName[] = "archives";
