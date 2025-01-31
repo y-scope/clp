@@ -4,13 +4,6 @@
 #include "../Defs.h"
 
 namespace clp::streaming_archive {
-constexpr uint8_t cArchiveFormatVersionMajor{0};
-constexpr uint8_t cArchiveFormatVersionMinor{1};
-constexpr uint16_t cArchiveFormatVersionPatch{2};
-constexpr archive_format_version_t cArchiveFormatVersion{
-        cArchiveFormatVersionMajor << 24 | cArchiveFormatVersionMinor << 16
-        | cArchiveFormatVersionPatch
-};
 constexpr char cSegmentsDirname[] = "s";
 constexpr char cSegmentListFilename[] = "segment_list.txt";
 constexpr char cLogTypeDictFilename[] = "logtype.dict";
@@ -20,6 +13,39 @@ constexpr char cVarSegmentIndexFilename[] = "var.segindex";
 constexpr char cMetadataFileName[] = "metadata";
 constexpr char cMetadataDBFileName[] = "metadata.db";
 constexpr char cSchemaFileName[] = "schema.txt";
+
+namespace version {
+// Version(s) for the disk format of the archive. The public branch has only one version; however, private branches have two.
+// The private branch has its own independent disk format version, and a second version to specify which public release can
+// read its private disk format. The following provides instructions to set the versions correctly.
+//
+// Public branch with version a.b.c
+//
+// | Public  version | Private  version |
+// | --------------- | ---------------- |
+// | a.b.c           | 0.0.0            |
+//
+// Private branch with version x.y.z compatible with public version a.b.c
+//
+// | Public  version | Private  version |
+// | --------------- | ---------------- |
+// | a.b.c           | x.y.z            |
+//
+// Private branch with version x.y.z incompatible with any public version.
+//
+// | Public  version | Private  version |
+// | --------------- | ---------------- |
+// | 0.0.0           | x.y.z            |
+//
+constexpr uint8_t cPublicVersionMajor{0};
+constexpr uint8_t cPublicVersionMinor{1};
+constexpr uint16_t cPublicVersionPatch{0};
+constexpr archive_format_version_t cPublicVersion{
+        cPublicVersionMajor << 24 | cPublicVersionMinor << 16| cPublicVersionPatch
+};
+constexpr archive_format_version_t cNullVersion{0};
+constexpr archive_format_version_t cPrivateVersion{cNullVersion};
+}
 
 namespace cMetadataDB {
 constexpr char ArchivesTableName[] = "archives";
