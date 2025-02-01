@@ -26,7 +26,7 @@ public:
     };
 
     // Constructor
-    Decompressor() : clp::streaming_compression::Decompressor(CompressorType::LZMA) {}
+    Decompressor() : clp::streaming_compression::Decompressor{CompressorType::LZMA} {}
 
     // Destructor
     ~Decompressor() override = default;
@@ -36,7 +36,7 @@ public:
     auto operator=(Decompressor const&) -> Decompressor& = delete;
 
     // Delete move constructor and assignment operator
-    // TODO: change to default when the base decompressor class has been updated
+    // TODO: change to default when the base decompressor class has been updated.
     Decompressor(Decompressor&&) noexcept = delete;
     auto operator=(Decompressor&&) noexcept -> Decompressor& = delete;
 
@@ -44,8 +44,8 @@ public:
     /**
      * Tries to read up to a given number of bytes from the decompressor.
      * @param buf
-     * @param num_bytes_to_read The number of bytes to try reading
-     * @param num_bytes_read The actual number of bytes read
+     * @param num_bytes_to_read The number of bytes to try reading.
+     * @param num_bytes_read The actual number of bytes read.
      * @return ErrorCode_Unsupported
      */
     [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
@@ -60,30 +60,30 @@ public:
 
     /**
      * Tries to get the current position of the read head.
-     * @param pos Position of the read head in the file
+     * @param pos Position of the read head in the file.
      * @return ErrorCode_Unsupported
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
 
     // Methods implementing the Decompressor interface
     /***
-     * Initialize streaming decompressor to decompress from the specified compressed data buffer
+     * Initialize streaming decompressor to decompress from the specified compressed data buffer.
      * @param compressed_data_buf
      * @param compressed_data_buf_size
-     * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported
+     * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
     auto open(char const* compressed_data_buf, size_t compressed_data_buf_size) -> void override;
 
     /**
-     * Initializes the decompressor to decompress from an open file
+     * Initializes the decompressor to decompress from an open file.
      * @param file_reader
-     * @param file_read_buffer_capacity The maximum amount of data to read from a file at a time
-     * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported
+     * @param file_read_buffer_capacity The maximum amount of data to read from a file at a time.
+     * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
     auto open(ReaderInterface& file_reader, size_t file_read_buffer_capacity) -> void override;
 
     /*
-     * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported
+     * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
     auto close() -> void override;
 
