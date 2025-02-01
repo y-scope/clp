@@ -24,15 +24,15 @@ auto Decompressor::try_get_pos([[maybe_unused]] size_t& pos) -> ErrorCode {
 }
 
 auto Decompressor::open(
-        [[maybe_unused]] char const* compressed_data_buf,
-        [[maybe_unused]] size_t compressed_data_buf_size
+        [[maybe_unused]] char const* compressed_data_buffer,
+        [[maybe_unused]] size_t compressed_data_buffer_size
 ) -> void {
     throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
 }
 
 auto Decompressor::open(
-        [[maybe_unused]] ReaderInterface& file_reader,
-        [[maybe_unused]] size_t file_read_buffer_capacity
+        [[maybe_unused]] ReaderInterface& reader,
+        [[maybe_unused]] size_t read_buffer_capacity
 ) -> void {
     throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
 }
