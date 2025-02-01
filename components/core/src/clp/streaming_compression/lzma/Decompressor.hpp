@@ -45,7 +45,7 @@ public:
      * Tries to read up to a given number of bytes from the decompressor.
      * @param buf
      * @param num_bytes_to_read The number of bytes to try reading.
-     * @param num_bytes_read The actual number of bytes read.
+     * @param num_bytes_read Returns the actual number of bytes read.
      * @return ErrorCode_Unsupported
      */
     [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
@@ -60,7 +60,7 @@ public:
 
     /**
      * Tries to get the current position of the read head.
-     * @param pos Position of the read head in the file.
+     * @param pos Returns the position of the read head in the file.
      * @return ErrorCode_Unsupported
      */
     [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
