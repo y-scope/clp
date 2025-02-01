@@ -7,7 +7,7 @@
 #include "../../TraceableException.hpp"
 
 namespace clp::streaming_compression::lzma {
-[[nodiscard]] auto Decompressor::try_read(
+auto Decompressor::try_read(
         [[maybe_unused]] char* buf,
         [[maybe_unused]] size_t num_bytes_to_read,
         [[maybe_unused]] size_t& num_bytes_read
@@ -15,11 +15,11 @@ namespace clp::streaming_compression::lzma {
     return ErrorCode_Unsupported;
 }
 
-[[nodiscard]] auto Decompressor::try_seek_from_begin([[maybe_unused]] size_t pos) -> ErrorCode {
+auto Decompressor::try_seek_from_begin([[maybe_unused]] size_t pos) -> ErrorCode {
     return ErrorCode_Unsupported;
 }
 
-[[nodiscard]] auto Decompressor::try_get_pos([[maybe_unused]] size_t& pos) -> ErrorCode {
+auto Decompressor::try_get_pos([[maybe_unused]] size_t& pos) -> ErrorCode {
     return ErrorCode_Unsupported;
 }
 
@@ -41,7 +41,7 @@ auto Decompressor::close() -> void {
     throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
 }
 
-[[nodiscard]] auto Decompressor::get_decompressed_stream_region(
+auto Decompressor::get_decompressed_stream_region(
         [[maybe_unused]] size_t decompressed_stream_pos,
         [[maybe_unused]] char* extraction_buf,
         [[maybe_unused]] size_t extraction_len

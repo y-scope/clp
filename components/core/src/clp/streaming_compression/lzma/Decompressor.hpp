@@ -36,7 +36,7 @@ public:
     auto operator=(Decompressor const&) -> Decompressor& = delete;
 
     // Delete move constructor and assignment operator
-    // TODO: change to default when the base decompressor class has been updated.
+    // TODO: Change to default when the base decompressor class has been updated.
     Decompressor(Decompressor&&) noexcept = delete;
     auto operator=(Decompressor&&) noexcept -> Decompressor& = delete;
 
