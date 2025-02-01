@@ -68,28 +68,29 @@ public:
     // Methods implementing the Decompressor interface
     /***
      * Initialize streaming decompressor to decompress from the specified compressed data buffer.
-     * @param compressed_data_buf
-     * @param compressed_data_buf_size
+     * @param compressed_data_buffer
+     * @param compressed_data_buffer_size
      * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
-    auto open(char const* compressed_data_buf, size_t compressed_data_buf_size) -> void override;
+    auto open(char const* compressed_data_buffer, size_t compressed_data_buffer_size)
+            -> void override;
 
     /**
-     * Initializes the decompressor to decompress from an open file.
-     * @param file_reader
-     * @param file_read_buffer_capacity The maximum amount of data to read from a file at a time.
+     * Initializes the decompressor to decompress from a reader interface.
+     * @param reader
+     * @param read_buffer_capacity The maximum amount of data to read from a reader at a time.
      * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
-    auto open(ReaderInterface& file_reader, size_t file_read_buffer_capacity) -> void override;
+    auto open(ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
 
-    /*
+    /**
      * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
     auto close() -> void override;
 
     /**
-     * Decompresses and copies the range of uncompressed data described by decompressed_stream_pos
-     * and extraction_len into extraction_buf.
+     * Decompresses and copies the range of uncompressed data described by `decompressed_stream_pos`
+     * and `extraction_len` into `extraction_buf`.
      * @param decompressed_stream_pos
      * @param extraction_buf
      * @param extraction_len
