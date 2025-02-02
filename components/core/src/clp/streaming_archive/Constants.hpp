@@ -15,14 +15,12 @@ constexpr char cMetadataDBFileName[] = "metadata.db";
 constexpr char cSchemaFileName[] = "schema.txt";
 
 namespace cArchiveFormatVersion {
-constexpr uint8_t cDefaultVersionMajor{0};
-constexpr uint8_t cDefaultVersionMinor{1};
-constexpr uint16_t cDefaultVersionPatch{0};
-constexpr archive_format_version_t cDefaultVersion{
-        cDefaultVersionMajor << 24 | cDefaultVersionMinor << 16 | cDefaultVersionPatch
+constexpr uint8_t VersionMajor{0};
+constexpr uint8_t VersionMinor{1};
+constexpr uint16_t VersionPatch{0};
+constexpr archive_format_version_t Version{
+        VersionMajor << 24 | VersionMinor << 16 | VersionPatch
 };
-constexpr archive_format_version_t cCustomVersion{0};
-}  // namespace cArchiveFormatVersion
 
 namespace cMetadataDB {
 constexpr char ArchivesTableName[] = "archives";
