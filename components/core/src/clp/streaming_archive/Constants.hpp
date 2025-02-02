@@ -18,9 +18,7 @@ namespace cArchiveFormatVersion {
 constexpr uint8_t VersionMajor{0};
 constexpr uint8_t VersionMinor{1};
 constexpr uint16_t VersionPatch{0};
-constexpr archive_format_version_t Version{
-        VersionMajor << 24 | VersionMinor << 16 | VersionPatch
-};
+constexpr archive_format_version_t Version{VersionMajor << 24 | VersionMinor << 16 | VersionPatch};
 
 namespace cMetadataDB {
 constexpr char ArchivesTableName[] = "archives";
