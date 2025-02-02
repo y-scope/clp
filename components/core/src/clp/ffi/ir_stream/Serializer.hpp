@@ -2,10 +2,12 @@
 #define CLP_FFI_IR_STREAM_SERIALIZER_HPP
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
 
+#include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
 #include <outcome/single-header/outcome.hpp>
 
@@ -39,11 +41,13 @@ public:
     // Factory functions
     /**
      * Creates an IR serializer and serializes the stream's preamble.
+     * @param optional_user_defined_metadata Stream-level user-defined metadata.
      * @return A result containing the serializer or an error code indicating the failure:
      * - std::errc::protocol_error on failure to serialize the preamble.
      */
-    [[nodiscard]] static auto create()
-            -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
+    [[nodiscard]] static auto create(
+            std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt
+    ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
 
     // Disable copy constructor/assignment operator
     Serializer(Serializer const&) = delete;

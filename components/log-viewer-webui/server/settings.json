@@ -9,7 +9,9 @@
     "MongoDbStreamFilesCollectionName": "stream-files",
 
     "ClientDir": "../client/dist",
+    "LogViewerDir": "../yscope-log-viewer/dist",
     "StreamFilesDir": "../../../build/clp-package/var/data/streams",
     "StreamTargetUncompressedSize": 134217728,
-    "LogViewerDir": "../yscope-log-viewer/dist"
+    "StreamFilesS3Region": null,
+    "StreamFilesS3PathPrefix": null
 }
