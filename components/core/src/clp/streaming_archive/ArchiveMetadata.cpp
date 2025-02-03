@@ -30,7 +30,7 @@ ArchiveMetadata::ArchiveMetadata(
 }
 
 auto ArchiveMetadata::create_from_file(std::string_view path) -> ArchiveMetadata {
-     FileReader file_reader{std::string(path)};
+    FileReader file_reader{std::string(path)};
     struct stat file_stat{};
     if (auto const clp_rc = file_reader.try_fstat(file_stat);
         clp::ErrorCode::ErrorCode_Success != clp_rc)
@@ -46,8 +46,8 @@ auto ArchiveMetadata::create_from_file(std::string_view path) -> ArchiveMetadata
     }
 
     ArchiveMetadata metadata;
-    msgpack::object_handle oh = msgpack::unpack(buf.data(), buf.size());
-    msgpack::object obj = oh.get();
+    msgpack::object_handle const obj_handle = msgpack::unpack(buf.data(), buf.size());
+    msgpack::object const obj = obj_handle.get();
     obj.convert(metadata);
     return metadata;
 }

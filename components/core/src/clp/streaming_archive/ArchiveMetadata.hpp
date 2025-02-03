@@ -4,14 +4,13 @@
 #include <cstdint>
 #include <string_view>
 
-#include "../Defs.h"
-#include "../ffi/encoding_methods.hpp"
-#include "../FileWriter.hpp"
-#include "Constants.hpp"
 #include <msgpack.hpp>
 
+#include "../Defs.h"
+#include "../FileWriter.hpp"
+#include "Constants.hpp"
+
 namespace clp::streaming_archive {
-constexpr std::string_view cCompressionTypeZstd{"ZSTD"};
 
 /**
  * A class to encapsulate metadata directly relating to an archive.
@@ -93,18 +92,6 @@ public:
 
     [[nodiscard]] auto get_end_timestamp() const { return m_end_timestamp; }
 
-    [[nodiscard]] auto get_variable_encoding_methods_version() const -> std::string_view const& {
-        return m_variable_encoding_methods_version;
-    }
-
-    [[nodiscard]] auto get_variables_schema_version() const -> std::string_view const& {
-        return m_variables_schema_version;
-    }
-
-    [[nodiscard]] auto get_compression_type() const -> std::string_view const& {
-        return m_compression_type;
-    }
-
     /**
      * Expands the archive's time range based to encompass the given time range
      * @param begin_timestamp
@@ -116,15 +103,11 @@ public:
      * Packs this instance into a MessagePack object and writes it to the open file.
      *
      * @param file_writer
-     * @throw FileWriter::OperationFailed if failed to write.
      */
     void write_to_file(FileWriter& file_writer) const;
 
     MSGPACK_DEFINE_MAP(
             MSGPACK_NVP("archive_format_version", m_archive_format_version),
-            MSGPACK_NVP("variable_encoding_methods_version", m_variable_encoding_methods_version),
-            MSGPACK_NVP("variables_schema_version", m_variables_schema_version),
-            MSGPACK_NVP("compression_type", m_compression_type),
             MSGPACK_NVP("creator_id", m_creator_id),
             MSGPACK_NVP("creation_idx", m_creation_idx),
             MSGPACK_NVP("begin_timestamp", m_begin_timestamp),
@@ -147,9 +130,6 @@ private:
     // The size of the archive
     uint64_t m_compressed_size{0};
     uint64_t m_dynamic_compressed_size{0};
-    std::string_view m_variable_encoding_methods_version{ffi::cVariableEncodingMethodsVersion};
-    std::string_view m_variables_schema_version{ffi::cVariablesSchemaVersion};
-    std::string_view m_compression_type{cCompressionTypeZstd};
 };
 }  // namespace clp::streaming_archive
 
