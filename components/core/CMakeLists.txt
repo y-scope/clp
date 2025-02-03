@@ -638,7 +638,7 @@ target_link_libraries(unitTest
         clp::string_utils
         yaml-cpp::yaml-cpp
         ${LIBLZMA_LIBRARIES}
-        ystdlib::array
+        ystdlib::container
         ZStd::ZStd
         )
 target_compile_features(unitTest

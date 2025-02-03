@@ -139,7 +139,7 @@ target_link_libraries(clg
         ${STD_FS_LIBS}
         clp::string_utils
         yaml-cpp::yaml-cpp
-        ystdlib::array
+        ystdlib::container
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory
