@@ -6,14 +6,12 @@
 
 #include "../Defs.h"
 #include "../ffi/encoding_methods.hpp"
-#include "../FileReader.hpp"
 #include "../FileWriter.hpp"
 #include "Constants.hpp"
-#include "msgpack.hpp"
+#include <msgpack.hpp>
 
 namespace clp::streaming_archive {
-
-static constexpr std::string_view cCompressionTypeZstd = "ZSTD";
+constexpr std::string_view cCompressionTypeZstd{"ZSTD"};
 
 /**
  * A class to encapsulate metadata directly relating to an archive.
@@ -34,8 +32,7 @@ public:
     };
 
     // Constructors
-    // The class must be default constructible to convert from msgpack::object in
-    // `create_from_file` method.
+    // We need a default constructor to convert from a msgpack::object in `create_from_file`. See
     // https://github.com/msgpack/msgpack-c/wiki/v2_0_cpp_adaptor
     ArchiveMetadata() = default;
 
@@ -53,10 +50,10 @@ public:
 
     // Methods
     /**
-     * Reads serialized MessagePack data from open file, unpacks it into an
-     * `ArchiveMetadata` instance.
+     * Reads serialized MessagePack data from a file and unpacks it into an `ArchiveMetadata`
+     * instance.
      *
-     * @param path Path to archive metadata file.
+     * @param path
      * @return The created instance.
      * @throw `ArchiveMetadata::OperationFailed` if stat or read operation on metadata file fails.
      * @throw `msgpack::unpack_error` if data cannot be unpacked into MessagePack object.
@@ -116,9 +113,9 @@ public:
     void expand_time_range(epochtime_t begin_timestamp, epochtime_t end_timestamp);
 
     /**
-     * Packs `ArchiveMetadata` to MessagePack and writes to the open file.
+     * Packs this instance into a MessagePack object and writes it to the open file.
      *
-     * @param file_writer Writer for archive metadata file.
+     * @param file_writer
      * @throw FileWriter::OperationFailed if failed to write.
      */
     void write_to_file(FileWriter& file_writer) const;
