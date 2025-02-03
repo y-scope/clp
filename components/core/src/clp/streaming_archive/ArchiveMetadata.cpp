@@ -29,8 +29,8 @@ ArchiveMetadata::ArchiveMetadata(
                          + sizeof(m_end_timestamp) + sizeof(m_compressed_size);
 }
 
-auto ArchiveMetadata::create_from_file(std::string_view path) -> ArchiveMetadata {
-    FileReader file_reader{std::string(path)};
+auto ArchiveMetadata::create_from_file(std::string_view file_path) -> ArchiveMetadata {
+    FileReader file_reader{std::string(file_path)};
     struct stat file_stat{};
     if (auto const clp_rc = file_reader.try_fstat(file_stat);
         clp::ErrorCode::ErrorCode_Success != clp_rc)

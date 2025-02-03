@@ -52,13 +52,13 @@ public:
      * Reads serialized MessagePack data from a file and unpacks it into an `ArchiveMetadata`
      * instance.
      *
-     * @param path
+     * @param file_path
      * @return The created instance.
      * @throw `ArchiveMetadata::OperationFailed` if stat or read operation on metadata file fails.
      * @throw `msgpack::unpack_error` if data cannot be unpacked into MessagePack object.
      * @throw `msgpack::type_error` if MessagePack object can't be converted to `ArchiveMetadata`.
      */
-    [[nodiscard]] static auto create_from_file(std::string_view path) -> ArchiveMetadata;
+    [[nodiscard]] static auto create_from_file(std::string_view file_path) -> ArchiveMetadata;
 
     [[nodiscard]] auto get_archive_format_version() const { return m_archive_format_version; }
 
