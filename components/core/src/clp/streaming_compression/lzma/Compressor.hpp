@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <ystdlib/array/Array.hpp>
+#include <ystdlib/container/Array.hpp>
 
 #include <lzma.h>
 
@@ -224,7 +224,7 @@ private:
     WriterInterface* m_compressed_stream_writer{nullptr};
 
     // Compressed stream variables
-    ystdlib::Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
+    ystdlib::container::Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
     LzmaStream m_lzma_stream;
     size_t m_uncompressed_stream_pos{0};
 };

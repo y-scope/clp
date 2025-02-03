@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <ystdlib/array/Array.hpp>
+#include <ystdlib/container/Array.hpp>
 
 #include <boost/filesystem/operations.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
@@ -29,7 +29,7 @@ using clp::streaming_compression::Compressor;
 using clp::streaming_compression::Decompressor;
 using std::string;
 using std::string_view;
-using ystdlib::Array;
+using ystdlib::container::Array;
 
 namespace {
 constexpr string_view cCompressedFilePath{"test_streaming_compressed_file.bin"};

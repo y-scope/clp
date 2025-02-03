@@ -8,7 +8,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
-#include <ystdlib/array/Array.hpp>
+#include <ystdlib/container/Array.hpp>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <curl/curl.h>
@@ -69,7 +69,7 @@ auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
 
 auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vector<char> {
     std::vector<char> buf;
-    ystdlib::Array<char> read_buf{read_buf_size};
+    ystdlib::container::Array<char> read_buf{read_buf_size};
     for (bool has_more_content{true}; has_more_content;) {
         size_t num_bytes_read{};
         has_more_content = reader.read(read_buf.data(), read_buf_size, num_bytes_read);

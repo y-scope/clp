@@ -2,7 +2,7 @@
 #define CLP_STREAMING_COMPRESSION_ZSTD_COMPRESSOR_HPP
 
 #include <cstddef>
-#include <ystdlib/array/Array.hpp>
+#include <ystdlib/container/Array.hpp>
 
 #include <zstd.h>
 
@@ -98,7 +98,7 @@ private:
     ZSTD_CStream* m_compression_stream{ZSTD_createCStream()};
     bool m_compression_stream_contains_data{false};
 
-    ystdlib::Array<char> m_compressed_stream_block_buffer{ZSTD_CStreamOutSize()};
+    ystdlib::container::Array<char> m_compressed_stream_block_buffer{ZSTD_CStreamOutSize()};
     ZSTD_outBuffer m_compressed_stream_block;
 
     size_t m_uncompressed_stream_pos{0};
