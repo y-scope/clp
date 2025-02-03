@@ -7,8 +7,8 @@
 
 #include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
+#include "../../WriterInterface.hpp"
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 
@@ -72,18 +72,18 @@ public:
 
     /**
      * Initializes the compression stream with the default compression level
-     * @param file_writer
+     * @param writer
      */
-    auto open(FileWriter& file_writer) -> void override {
-        this->open(file_writer, cDefaultCompressionLevel);
+    auto open(WriterInterface& writer) -> void override {
+        this->open(writer, cDefaultCompressionLevel);
     }
 
     /**
      * Initializes the compression stream with the given compression level
-     * @param file_writer
+     * @param writer
      * @param compression_level
      */
-    auto open(FileWriter& file_writer, int compression_level) -> void;
+    auto open(WriterInterface& writer, int compression_level) -> void;
 
     /**
      * Flushes the stream without ending the current frame
@@ -92,7 +92,7 @@ public:
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer{nullptr};
+    WriterInterface* m_compressed_stream_writer{nullptr};
 
     // Compressed stream variables
     ZSTD_CStream* m_compression_stream{ZSTD_createCStream()};

@@ -3,7 +3,8 @@
 #include <cstring>
 
 namespace clp::streaming_compression::passthrough {
-ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) {
+auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+        -> ErrorCode {
     if (InputType::NotInitialized == m_input_type) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -23,8 +24,8 @@ ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
             );
             memcpy(buf, &m_compressed_data_buf[m_decompressed_stream_pos], num_bytes_read);
             break;
-        case InputType::File: {
-            auto error_code = m_file_reader->try_read(buf, num_bytes_to_read, num_bytes_read);
+        case InputType::ReaderInterface: {
+            auto error_code = m_reader->try_read(buf, num_bytes_to_read, num_bytes_read);
             if (ErrorCode_Success != error_code) {
                 return error_code;
             }
@@ -38,7 +39,7 @@ ErrorCode Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
     return ErrorCode_Success;
 }
 
-ErrorCode Decompressor::try_seek_from_begin(size_t pos) {
+auto Decompressor::try_seek_from_begin(size_t pos) -> ErrorCode {
     if (InputType::NotInitialized == m_input_type) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -49,8 +50,8 @@ ErrorCode Decompressor::try_seek_from_begin(size_t pos) {
                 return ErrorCode_Truncated;
             }
             break;
-        case InputType::File: {
-            auto error_code = m_file_reader->try_seek_from_begin(pos);
+        case InputType::ReaderInterface: {
+            auto error_code = m_reader->try_seek_from_begin(pos);
             if (ErrorCode_Success != error_code) {
                 return error_code;
             }
@@ -64,7 +65,7 @@ ErrorCode Decompressor::try_seek_from_begin(size_t pos) {
     return ErrorCode_Success;
 }
 
-ErrorCode Decompressor::try_get_pos(size_t& pos) {
+auto Decompressor::try_get_pos(size_t& pos) -> ErrorCode {
     if (InputType::NotInitialized == m_input_type) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -74,7 +75,7 @@ ErrorCode Decompressor::try_get_pos(size_t& pos) {
     return ErrorCode_Success;
 }
 
-void Decompressor::open(char const* compressed_data_buf, size_t compressed_data_buf_size) {
+auto Decompressor::open(char const* compressed_data_buf, size_t compressed_data_buf_size) -> void {
     if (InputType::NotInitialized != m_input_type) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
@@ -85,24 +86,25 @@ void Decompressor::open(char const* compressed_data_buf, size_t compressed_data_
     m_input_type = InputType::CompressedDataBuf;
 }
 
-void Decompressor::open(FileReader& file_reader, size_t file_read_buffer_capacity) {
+auto Decompressor::open(ReaderInterface& reader, [[maybe_unused]] size_t read_buffer_capacity)
+        -> void {
     if (InputType::NotInitialized != m_input_type) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
-    m_file_reader = &file_reader;
+    m_reader = &reader;
     m_decompressed_stream_pos = 0;
-    m_input_type = InputType::File;
+    m_input_type = InputType::ReaderInterface;
 }
 
-void Decompressor::close() {
+auto Decompressor::close() -> void {
     switch (m_input_type) {
         case InputType::CompressedDataBuf:
             m_compressed_data_buf = nullptr;
             m_compressed_data_buf_len = 0;
             break;
-        case InputType::File:
-            m_file_reader = nullptr;
+        case InputType::ReaderInterface:
+            m_reader = nullptr;
             break;
         case InputType::NotInitialized:
             // Do nothing
@@ -113,11 +115,11 @@ void Decompressor::close() {
     m_input_type = InputType::NotInitialized;
 }
 
-ErrorCode Decompressor::get_decompressed_stream_region(
+auto Decompressor::get_decompressed_stream_region(
         size_t decompressed_stream_pos,
         char* extraction_buf,
         size_t extraction_len
-) {
+) -> ErrorCode {
     auto error_code = try_seek_from_begin(decompressed_stream_pos);
     if (ErrorCode_Success != error_code) {
         return error_code;
