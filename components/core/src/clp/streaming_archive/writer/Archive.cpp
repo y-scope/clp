@@ -570,7 +570,6 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
     // Mark files' metadata as clean
     for (auto file : files) {
         file->mark_metadata_as_clean();
-        m_clean_files.emplace_back(file)
     }
 }
 

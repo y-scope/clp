@@ -270,18 +270,6 @@ private:
     );
 
     /**
-     * Closes a given segment, persists the metadata of the files in the segment, and cleans up
-     * any data remaining outside the segment
-     * @param segment
-     * @param files
-     * @param segment_logtype_ids
-     * @param segment_var_ids
-     * @throw Same as streaming_archive::writer::Segment::close
-     * @throw Same as streaming_archive::writer::Archive::persist_file_metadata
-     */
-    [[nodiscard]] auto get_persisted_file_metadata() -> std::vector<File>;
-
-    /**
      * @return The size (in bytes) of compressed data whose size may change before the archive
      * is closed
      */
