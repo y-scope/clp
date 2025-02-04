@@ -19,7 +19,7 @@ int main(int argc, char const* argv[]) {
         return 1;
     }
 
-    CommandLineArguments command_line_arguments("metadata-uploader");
+    CommandLineArguments command_line_arguments("index");
     auto parsing_result = command_line_arguments.parse_arguments(argc, argv);
     switch (parsing_result) {
         case CommandLineArguments::ParsingResult::Failure:
