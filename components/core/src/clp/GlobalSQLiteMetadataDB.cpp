@@ -485,64 +485,85 @@ void GlobalSQLiteMetadataDB::add_archive(
     m_insert_archive_statement->reset();
 }
 
-void GlobalSQLiteMetadataDB::add_metadata_for_files_from_archive_metadata_db(
+void GlobalSQLiteMetadataDB::update_archive_metadata(
         string const& archive_id,
-        streaming_archive::MetadataDB& archive_metadata_db
+        streaming_archive::ArchiveMetadata const& metadata
 ) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
-    auto const file_it = archive_metadata_db.get_file_iterator(
-            cEpochTimeMin,
-            cEpochTimeMax,
-            "",
-            "",
-            false,
-            cInvalidSegmentId,
+    m_update_archive_size_statement->bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::BeginTimestamp) + 1,
+            (int64_t)metadata.get_begin_timestamp()
+    );
+    m_update_archive_size_statement->bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::EndTimestamp) + 1,
+            (int64_t)metadata.get_end_timestamp()
+    );
+    m_update_archive_size_statement->bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize) + 1,
+            (int64_t)metadata.get_uncompressed_size_bytes()
+    );
+    m_update_archive_size_statement->bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size) + 1,
+            (int64_t)metadata.get_compressed_size_bytes()
+    );
+    m_update_archive_size_statement->bind_text(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length) + 1,
+            archive_id,
             false
     );
+    m_update_archive_size_statement->step();
+    m_update_archive_size_statement->reset();
+}
+
+void GlobalSQLiteMetadataDB::update_metadata_for_files(
+        string const& archive_id,
+        vector<streaming_archive::writer::File*> const& files
+) {
+    if (false == m_is_open) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
 
     m_upsert_files_transaction_begin_statement->step();
-    while (file_it->has_next()) {
-        file_it->next();
-
-        std::string id;
-        file_it->get_id(id);
-        m_upsert_file_statement
-                ->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1, id, false);
-
-        std::string orig_file_id;
-        file_it->get_orig_file_id(orig_file_id);
+    for (auto file : files) {
+        auto const id_as_string = file->get_id_as_string();
+        auto const orig_file_id_as_string = file->get_orig_file_id_as_string();
         m_upsert_file_statement->bind_text(
-                enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId) + 1,
-                orig_file_id,
+                enum_to_underlying_type(FilesTableFieldIndexes::Id) + 1,
+                id_as_string,
                 false
         );
-
-        std::string path;
-        file_it->get_path(path);
-        m_upsert_file_statement
-                ->bind_text(enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1, path, false);
+        m_upsert_file_statement->bind_text(
+                enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId) + 1,
+                orig_file_id_as_string,
+                false
+        );
+        m_upsert_file_statement->bind_text(
+                enum_to_underlying_type(FilesTableFieldIndexes::Path) + 1,
+                file->get_orig_path(),
+                false
+        );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp) + 1,
-                file_it->get_begin_ts()
+                file->get_begin_ts()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp) + 1,
-                file_it->get_end_ts()
+                file->get_end_ts()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes) + 1,
-                (int64_t)file_it->get_num_uncompressed_bytes()
+                (int64_t)file->get_num_uncompressed_bytes()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx) + 1,
-                (int64_t)file_it->get_begin_message_ix()
+                (int64_t)file->get_begin_message_ix()
         );
         m_upsert_file_statement->bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages) + 1,
-                (int64_t)file_it->get_num_messages()
+                (int64_t)file->get_num_messages()
         );
         m_upsert_file_statement->bind_text(
                 enum_to_underlying_type(FilesTableFieldIndexes::ArchiveId) + 1,

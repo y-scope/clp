@@ -239,26 +239,15 @@ void Archive::close() {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
-
-    auto const file_it = archive_metadata_db.get_file_iterator(
-        cEpochTimeMin,
-        cEpochTimeMax,
-        "",
-        "",
-        false,
-        cInvalidSegmentId,
-        false
-    );
-
-        while (file_it->has_next()) {
-        file_it->next();
-
-
-    m_global_metadata_db->add_metadata_for_files_from_archive_metadata_db(
+    m_global_metadata_db->update_metadata_for_files(
             m_id_as_string,
-            m_metadata_db
+            m_clean_files
     );
+    for (auto file : m_clean_files) {
+        delete file;
+    }
     m_global_metadata_db->close();
+
     m_global_metadata_db = nullptr;
 
     m_metadata_db.close();
@@ -581,6 +570,7 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
     // Mark files' metadata as clean
     for (auto file : files) {
         file->mark_metadata_as_clean();
+        m_clean_files.emplace_back(file)
     }
 }
 
@@ -618,7 +608,7 @@ void Archive::close_segment_and_persist_file_metadata(
     update_metadata();
 
     for (auto file : files) {
-        delete file;
+        m_clean_files.emplace_back(std::move(file));
     }
     files.clear();
 }

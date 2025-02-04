@@ -328,6 +328,8 @@ private:
     std::vector<File*> m_files_with_timestamps_in_segment;
     std::vector<File*> m_files_without_timestamps_in_segment;
 
+    std::vector<File*> m_clean_files;
+
     size_t m_target_segment_uncompressed_size;
     Segment m_segment_for_files_with_timestamps;
     ArrayBackedPosIntSet<logtype_dictionary_id_t>

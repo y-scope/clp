@@ -220,9 +220,48 @@ void GlobalMySQLMetadataDB::add_archive(
     }
 }
 
-void GlobalMySQLMetadataDB::add_metadata_for_files_from_archive_metadata_db(
+void GlobalMySQLMetadataDB::update_archive_metadata(
         std::string const& archive_id,
-        streaming_archive::MetadataDB& archive_metadata_db
+        streaming_archive::ArchiveMetadata const& metadata
+) {
+    if (false == m_is_open) {
+        throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
+    }
+
+    auto& statement_bindings = m_update_archive_size_statement->get_statement_bindings();
+    auto begin_timestamp = metadata.get_begin_timestamp();
+    statement_bindings.bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::BeginTimestamp),
+            begin_timestamp
+    );
+    auto end_timestamp = metadata.get_end_timestamp();
+    statement_bindings.bind_int64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::EndTimestamp),
+            end_timestamp
+    );
+    auto uncompressed_size = metadata.get_uncompressed_size_bytes();
+    statement_bindings.bind_uint64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::UncompressedSize),
+            uncompressed_size
+    );
+    auto compressed_size = metadata.get_compressed_size_bytes();
+    statement_bindings.bind_uint64(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Size),
+            compressed_size
+    );
+    statement_bindings.bind_varchar(
+            enum_to_underlying_type(UpdateArchiveSizeStmtFieldIndexes::Length),
+            archive_id.c_str(),
+            archive_id.length()
+    );
+    if (false == m_update_archive_size_statement->execute()) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+}
+
+void GlobalMySQLMetadataDB::update_metadata_for_files(
+        std::string const& archive_id,
+        std::vector<streaming_archive::writer::File*> const& files
 ) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
@@ -232,69 +271,54 @@ void GlobalMySQLMetadataDB::add_metadata_for_files_from_archive_metadata_db(
     if (false == m_db.execute_query("BEGIN")) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-
-    auto const file_it = archive_metadata_db.get_file_iterator(
-            cEpochTimeMin,
-            cEpochTimeMax,
-            "",
-            "",
-            false,
-            cInvalidSegmentId,
-            false
-    );
-
     auto& statement_bindings = m_upsert_file_statement->get_statement_bindings();
-    while (file_it->has_next()) {
-        file_it->next();
-        std::string id;
-        file_it->get_id(id);
+    for (auto file : files) {
+        auto const id_as_string = file->get_id_as_string();
         statement_bindings.bind_varchar(
                 enum_to_underlying_type(FilesTableFieldIndexes::Id),
-                id.c_str(),
-                id.length()
+                id_as_string.c_str(),
+                id_as_string.length()
         );
 
-        std::string orig_file_id;
-        file_it->get_orig_file_id(orig_file_id);
+        auto const orig_file_id_as_string = file->get_orig_file_id_as_string();
         statement_bindings.bind_varchar(
                 enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId),
-                orig_file_id.c_str(),
-                orig_file_id.length()
+                orig_file_id_as_string.c_str(),
+                orig_file_id_as_string.length()
         );
 
-        std::string path;
-        file_it->get_path(path);
+        auto const& orig_path = file->get_orig_path();
         statement_bindings.bind_varchar(
                 enum_to_underlying_type(FilesTableFieldIndexes::Path),
-                path.c_str(),
-                path.length()
+                orig_path.c_str(),
+                orig_path.length()
         );
 
-        auto begin_ts = file_it->get_begin_ts();
+        auto begin_ts = file->get_begin_ts();
         statement_bindings.bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp),
                 begin_ts
         );
 
-        auto end_ts = file_it->get_end_ts();
+        auto end_ts = file->get_end_ts();
         statement_bindings.bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp),
                 end_ts
         );
 
-        auto num_uncompressed_bytes = file_it->get_num_uncompressed_bytes();
+        auto num_uncompressed_bytes = file->get_num_uncompressed_bytes();
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes),
                 num_uncompressed_bytes
         );
 
-        auto begin_message_ix = file_it->get_begin_message_ix();
+        auto begin_message_ix = file->get_begin_message_ix();
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx),
                 begin_message_ix
         );
 
-        auto num_messages = file_it->get_num_messages();
+        auto num_messages = file->get_num_messages();
         statement_bindings.bind_uint64(
                 enum_to_underlying_type(FilesTableFieldIndexes::NumMessages),
                 num_messages
@@ -310,13 +334,13 @@ void GlobalMySQLMetadataDB::add_metadata_for_files_from_archive_metadata_db(
         size_t offset = enum_to_underlying_type(FilesTableFieldIndexes::Length) - 1;
         statement_bindings.bind_varchar(
                 enum_to_underlying_type(FilesTableFieldIndexes::OrigFileId) + offset,
-                orig_file_id.c_str(),
-                orig_file_id.length()
+                orig_file_id_as_string.c_str(),
+                orig_file_id_as_string.length()
         );
         statement_bindings.bind_varchar(
                 enum_to_underlying_type(FilesTableFieldIndexes::Path) + offset,
-                path.c_str(),
-                path.length()
+                orig_path.c_str(),
+                orig_path.length()
         );
         statement_bindings.bind_int64(
                 enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp) + offset,
