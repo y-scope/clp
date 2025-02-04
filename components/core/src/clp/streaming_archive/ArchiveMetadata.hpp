@@ -11,7 +11,6 @@
 #include "Constants.hpp"
 
 namespace clp::streaming_archive {
-
 /**
  * A class to encapsulate metadata directly relating to an archive.
  */
@@ -54,9 +53,10 @@ public:
      *
      * @param file_path
      * @return The created instance.
-     * @throw `ArchiveMetadata::OperationFailed` if stat or read operation on metadata file fails.
-     * @throw `msgpack::unpack_error` if data cannot be unpacked into MessagePack object.
-     * @throw `msgpack::type_error` if MessagePack object can't be converted to `ArchiveMetadata`.
+     * @throw `ArchiveMetadata::OperationFailed` if `stat` fails or the file couldn't be read.
+     * @throw `msgpack::unpack_error` if the data cannot be unpacked into a MessagePack object.
+     * @throw `msgpack::type_error` if the MessagePack object can't be converted to an
+     * `ArchiveMetadata` instance.
      */
     [[nodiscard]] static auto create_from_file(std::string_view file_path) -> ArchiveMetadata;
 

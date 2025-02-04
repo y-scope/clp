@@ -5,7 +5,7 @@
 #include <fmt/core.h>
 
 #include "../Array.hpp"
-#include "FileReader.hpp"
+#include "../FileReader.hpp"
 
 namespace clp::streaming_archive {
 ArchiveMetadata::ArchiveMetadata(
