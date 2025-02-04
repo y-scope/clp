@@ -644,7 +644,7 @@ auto Archive::update_global_metadata() -> void {
     }
     m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
     m_global_metadata_db->update_metadata_for_files(m_id_as_string, m_files_written);
-    for (auto *file : m_files_written) {
+    for (auto* file : m_files_written) {
         delete file;
     }
     m_global_metadata_db->close();
