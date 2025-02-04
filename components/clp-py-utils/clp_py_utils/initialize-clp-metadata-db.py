@@ -97,13 +97,12 @@ def main(argv):
 
             metadata_db_cursor.execute(
                 f"""
-            CREATE TABLE IF NOT EXISTS `{table_prefix}column_metadata_default` (
-                `name` VARCHAR(512) NOT NULL,
-                `type` BIGINT NOT NULL,
-                PRIMARY KEY (`name`, `type`)
-                PRIMARY KEY (`file_id`,`tag_id`)
-            )
-            """
+                CREATE TABLE IF NOT EXISTS `{table_prefix}column_metadata_default` (
+                    `name` VARCHAR(512) NOT NULL,
+                    `type` BIGINT NOT NULL,
+                    PRIMARY KEY (`name`, `type`)
+                )
+                """
             )
 
             metadata_db.commit()
