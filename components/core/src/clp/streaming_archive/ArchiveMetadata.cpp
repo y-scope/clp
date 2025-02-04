@@ -15,19 +15,7 @@ ArchiveMetadata::ArchiveMetadata(
 )
         : m_archive_format_version(archive_format_version),
           m_creator_id(std::move(creator_id)),
-          m_creation_idx(creation_idx) {
-    if (m_creator_id.length() > UINT16_MAX) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-    m_creator_id_len = m_creator_id.length();
-
-    // NOTE: We set this to the size of this metadata on disk; when adding new members that will be
-    // written to disk, you must update this
-    m_compressed_size += sizeof(m_archive_format_version) + sizeof(m_creator_id_len)
-                         + m_creator_id.length() + sizeof(m_creation_idx)
-                         + sizeof(m_uncompressed_size) + sizeof(m_begin_timestamp)
-                         + sizeof(m_end_timestamp) + sizeof(m_compressed_size);
-}
+          m_creation_idx(creation_idx) {}
 
 auto ArchiveMetadata::create_from_file(std::string_view file_path) -> ArchiveMetadata {
     FileReader file_reader{std::string(file_path)};
@@ -61,10 +49,15 @@ void ArchiveMetadata::expand_time_range(epochtime_t begin_timestamp, epochtime_t
     }
 }
 
-void ArchiveMetadata::write_to_file(FileWriter& file_writer) const {
+void ArchiveMetadata::write_to_file(FileWriter& file_writer) {
     std::ostringstream buf;
     msgpack::pack(buf, *this);
     auto const& string_buf = buf.str();
-    file_writer.write(string_buf.data(), string_buf.size());
+
+    size_t previous_metadata_size = m_metadata_size;
+    m_metadata_size = string_buf.size();
+    file_writer.write(string_buf.data(), m_metadata_size);
+
+    m_compressed_size = m_compressed_size - previous_metadata_size + m_metadata_size;
 }
 }  // namespace clp::streaming_archive

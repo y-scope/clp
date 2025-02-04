@@ -104,7 +104,7 @@ public:
      *
      * @param file_writer
      */
-    void write_to_file(FileWriter& file_writer) const;
+    void write_to_file(FileWriter& file_writer);
 
     MSGPACK_DEFINE_MAP(
             MSGPACK_NVP("archive_format_version", m_archive_format_version),
@@ -120,7 +120,6 @@ private:
     // Variables
     archive_format_version_t m_archive_format_version{cArchiveFormatVersion::Version};
     std::string m_creator_id;
-    uint16_t m_creator_id_len{0};
     uint64_t m_creation_idx{0};
     epochtime_t m_begin_timestamp{cEpochTimeMax};
     epochtime_t m_end_timestamp{cEpochTimeMin};
@@ -129,6 +128,7 @@ private:
     uint64_t m_dynamic_uncompressed_size{0};
     // The size of the archive
     uint64_t m_compressed_size{0};
+    uint64_t m_metadata_size{0};
     uint64_t m_dynamic_compressed_size{0};
 };
 }  // namespace clp::streaming_archive
