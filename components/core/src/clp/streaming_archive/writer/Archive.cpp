@@ -234,19 +234,7 @@ void Archive::close() {
 
     m_metadata_file_writer.close();
 
-    m_global_metadata_db->open();
-    if (false == m_local_metadata.has_value()) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
-    m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
-    m_global_metadata_db->update_metadata_for_files(
-            m_id_as_string,
-            m_clean_files
-    );
-    for (auto file : m_clean_files) {
-        delete file;
-    }
-    m_global_metadata_db->close();
+    update_global_metadata();
 
     m_global_metadata_db = nullptr;
 
@@ -607,7 +595,7 @@ void Archive::close_segment_and_persist_file_metadata(
     update_metadata();
 
     for (auto file : files) {
-        m_clean_files.emplace_back(std::move(file));
+        m_files_written.emplace_back(file);
     }
     files.clear();
 }
@@ -649,6 +637,22 @@ void Archive::update_metadata() {
         std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                   << std::endl;
     }
+}
+
+auto Archive::update_global_metadata() -> void {
+    m_global_metadata_db->open();
+    if (false == m_local_metadata.has_value()) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
+    }
+    m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
+    m_global_metadata_db->update_metadata_for_files(
+            m_id_as_string,
+            m_files_written
+    );
+    for (auto file : m_files_written) {
+        delete file;
+    }
+    m_global_metadata_db->close();
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
