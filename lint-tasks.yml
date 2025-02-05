@@ -220,7 +220,7 @@ tasks:
         vars:
           LABEL: "lint"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "lint-requirements.txt"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/lint-requirements.txt"
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:

@@ -556,7 +556,7 @@ tasks:
         vars:
           LABEL: "package"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "requirements.txt"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/requirements.txt"
       # This command must be last
       - task: "utils:compute-checksum"
         vars:

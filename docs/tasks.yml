@@ -64,7 +64,7 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_DOCS_VENV_DIR}}"
-      REQUIREMENTS_FILE: "docs/requirements.txt"
+      REQUIREMENTS_FILE: "{{.ROOT_DIR}}/docs/requirements.txt"
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
