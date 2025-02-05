@@ -104,7 +104,7 @@ public:
      *
      * @param file_writer
      */
-    void write_to_file(FileWriter& file_writer);
+    void write_to_file(FileWriter& file_writer) const;
 
     MSGPACK_DEFINE_MAP(
             MSGPACK_NVP("archive_format_version", m_archive_format_version),
@@ -128,7 +128,6 @@ private:
     uint64_t m_dynamic_uncompressed_size{0};
     // The size of the archive
     uint64_t m_compressed_size{0};
-    uint64_t m_metadata_size{0};
     uint64_t m_dynamic_compressed_size{0};
 };
 }  // namespace clp::streaming_archive

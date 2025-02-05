@@ -49,15 +49,10 @@ void ArchiveMetadata::expand_time_range(epochtime_t begin_timestamp, epochtime_t
     }
 }
 
-void ArchiveMetadata::write_to_file(FileWriter& file_writer) {
+void ArchiveMetadata::write_to_file(FileWriter& file_writer) const {
     std::ostringstream buf;
     msgpack::pack(buf, *this);
     auto const& string_buf = buf.str();
-
-    size_t previous_metadata_size = m_metadata_size;
-    m_metadata_size = string_buf.size();
-    file_writer.write(string_buf.data(), m_metadata_size);
-
-    m_compressed_size = m_compressed_size - previous_metadata_size + m_metadata_size;
+    file_writer.write(string_buf.data(), string_buf.size());
 }
 }  // namespace clp::streaming_archive
