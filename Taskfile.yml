@@ -4,7 +4,7 @@ includes:
   deps: "deps-tasks.yml"
   docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
-  utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
+  utils: "tools/yscope-dev-utils/taskfiles/utils.yaml"
 
 vars:
   # Source paths
@@ -27,7 +27,7 @@ vars:
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
-  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/taskfiles/utils.yml"
+  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/taskfiles/utils.yaml"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
