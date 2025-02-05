@@ -327,8 +327,6 @@ def run_clp(
             if StorageEngine.CLP_S == clp_storage_engine:
                 metadata_uploader_cmd = [
                     str(clp_home / "bin" / "indexer"),
-                    "c",
-                    str(archive_output_dir),
                     "--db-config-file",
                     str(db_config_file_path),
                     "default",  # hardcode the table name for now
