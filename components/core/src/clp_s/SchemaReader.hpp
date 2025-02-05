@@ -194,7 +194,7 @@ public:
     void initialize_filter(FilterClass* filter);
 
     /**
-     * Initializes the filter with a column map
+     * Initializes the filter with a column map.
      * Note: the column map only contains the ordered columns in a schema.
      * @param filter
      */
