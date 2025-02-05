@@ -33,7 +33,8 @@ public:
     ) = 0;
 
     /**
-     * Initializes the filter with a column map
+     * Initializes the filter with a column map.
+     * Note: the column map only contains the ordered columns in a schema.
      * @param reader
      * @param schema_id
      * @param column_map
@@ -194,6 +195,7 @@ public:
 
     /**
      * Initializes the filter with a column map
+     * Note: the column map only contains the ordered columns in a schema.
      * @param filter
      */
     void initialize_filter_with_column_map(FilterClass* filter);
