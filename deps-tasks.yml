@@ -389,7 +389,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -400,8 +400,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   yaml-cpp:
     internal: true
