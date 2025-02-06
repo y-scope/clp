@@ -647,7 +647,10 @@ auto Archive::update_global_metadata() -> void {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
     m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
-    m_global_metadata_db->update_metadata_for_files(m_id_as_string, m_file_metadata_for_global_update);
+    m_global_metadata_db->update_metadata_for_files(
+            m_id_as_string,
+            m_file_metadata_for_global_update
+    );
     m_global_metadata_db->close();
 }
 
