@@ -593,6 +593,9 @@ void Archive::close_segment_and_persist_file_metadata(
 
     for (auto file : files) {
         file->mark_as_in_committed_segment();
+        // Files in this collection only hold metadata. Emplaced files have called method
+        // `File::append_to_segment()` which deallocates memory for timestamp,
+        // logtype, and variable fields.
         m_file_metadata_for_global_update.emplace_back(file);
     }
 
