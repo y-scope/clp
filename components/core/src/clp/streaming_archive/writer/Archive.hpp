@@ -321,9 +321,10 @@ private:
     std::vector<File*> m_files_with_timestamps_in_segment;
     std::vector<File*> m_files_without_timestamps_in_segment;
 
-    // Data for all files in this collection has been deallocated, and should only
-    // contain metadata.
-    std::vector<File*> m_files_written;
+    // Files in this collection only hold metadata. Files are added to this collection after
+    // `File::append_to_segment()` is called, which deallocates memory for timestamp,
+    // logtype, and variable fields.
+    std::vector<File*> m_file_metadata_for_global_update;
 
     size_t m_target_segment_uncompressed_size;
     Segment m_segment_for_files_with_timestamps;
