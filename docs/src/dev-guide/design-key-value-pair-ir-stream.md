@@ -1,12 +1,23 @@
 # Key-Value Pair IR Stream
 
-Key-Value Pair IR Stream is a new intermediate representation format for CLP-S that supports both 
-semi-structured logs and unstructured logs.Here we will walk through the technical details of this 
-key step forward for CLP-S. At a high level, we use a streaming packet format to represent the 
-semi-structured data. We call each packet an IR unit. These units come in three main types schema 
-tree growth IR units, key IR units, and value IR units. In this blog post, we talk through this 
-streaming format and compare it to CLP’s IRv1. If you are unfamialr with CLP's IRv1 format please 
-checkout [this](#background-in-irv1) section below.
+## Introduction
+
+As outlined in [Uber's blog post][uber-blog] from 2022, the CLP IR stream format is a lightweight
+serialization format designed for log streaming compression. However, due to its design constraints,
+this IR stream format is primarily suited for simple, unstructured logs, such as raw text logs,
+which typically consist of only a timestamp field and a log message field. Consequently,
+structured logs, such as JSON logs, cannot be efficiently serialized using this format.
+
+Building upon the principles of the existing IR stream format and drawing inspiration from
+[clp-s][clp-s-osdi] (which extends CLP to support structured logs), we have developed a new
+IR format: the CLP key-value pair IR stream format. This new format enhances the original design by
+efficiently supporting key-value pair serialization, thereby addressing the limitations of the
+previous IR format.
+
+This new IR format has been successfully deployed in production environments to serialize real-world
+log events for cost reduction. These log events originate from diverse sources, including:
+- JSON logs generated on cloud servers.
+- Android logs collected from commercial electric vehicles.
 
 ## CLP-S && a Motivating example
 CLP-S is an extension of the CLP's design principle but applied to semi-structured logs such as 
@@ -459,5 +470,5 @@ You can read this log post for more details of how CLP's two phase compression w
 | MetadataJsonEncoding            | 0x01     |
 | EndOfStream                     | 0x00     |
 
-
-
+[uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/
+[clp-s-osdi]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/
