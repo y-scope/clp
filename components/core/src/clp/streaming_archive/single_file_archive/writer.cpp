@@ -71,15 +71,6 @@ get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_
 auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size) -> void;
 
 /**
- * Writes single-file archive metadata.
- *
- * @param single_file_archive_writer
- * @param packed_metadata Packed metadata.
- */
-auto write_archive_metadata(FileWriter& single_file_archive_writer, std::stringstream const& packed_metadata)
-        -> void;
-
-/**
  * Reads the content of a file and writes it to the single-file archive.
  * @param file_path
  * @param single_file_archive_writer
@@ -139,17 +130,6 @@ get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_
     // Add sentinel indicating total size of all files.
     files.emplace_back(FileInfo{"", offset});
 
-    // Decompression of large single-file archives will consume excessive memory since
-    // single-file archives are not split.
-    if (offset > cFileSizeWarningThreshold) {
-        SPDLOG_WARN(
-                "Single file archive size exceeded {}. "
-                "The single-file archive format is not intended for large archives, "
-                " consider using multi-file archive format instead.",
-                cFileSizeWarningThreshold
-        );
-    }
-
     return files;
 }
 
@@ -173,17 +153,12 @@ auto pack_single_file_archive_metadata(
 auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size) -> void {
     SingleFileArchiveHeader header{
             .magic = cUnstructuredSfaMagicNumber,
-            .version = cArchiveVersion,
+            .version = cVersion,
             .metadata_size = packed_metadata_size,
             .unused{}
     };
 
     single_file_archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
-}
-
-auto write_archive_metadata(FileWriter& single_file_archive_writer, std::stringstream const& packed_metadata)
-        -> void {
-    single_file_archive_writer.write(packed_metadata.str().data(), packed_metadata.str().size());
 }
 
 auto write_archive_file(std::filesystem::path const& file_path, FileWriter& single_file_archive_writer)
@@ -249,7 +224,6 @@ auto write_single_file_archive(
     );
 
     write_archive_header(single_file_archive_writer, packed_metadata.str().size());
-    write_archive_metadata(single_file_archive_writer, packed_metadata);
     write_archive_files(single_file_archive_writer, multi_file_archive_path, next_segment_id);
 
     single_file_archive_writer.close();

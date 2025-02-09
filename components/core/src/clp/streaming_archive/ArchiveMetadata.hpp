@@ -11,7 +11,6 @@
 #include "Constants.hpp"
 
 namespace clp::streaming_archive {
-
 /**
  * A class to encapsulate metadata directly relating to an archive.
  */
