@@ -31,17 +31,6 @@ keys and values. Each schema tree node has a unique ID and a defined type, repre
 container. Rather than storing full schema structures, schemas are encoded as sets of leaf node IDs.
 The format serializes kv-pairs as schema-tree-node-ID-value tuples, improving storage efficiency.
 
-The IR stream uses a merged schema tree to track all encountered schemas. Each schema tree node is
-typed to optimize value representation and retrieval:
-- **Object**: Represents an arbitrary object.
-  - As a non-leaf node, it denotes a hierarchical key-value level.
-  - As a leaf node, it may represent `null` or an empty key-value set (e.g., `{}`).
-- **Unstructured Array**: Represents an array stored as a JSON string. (Leaf node only)
-- **String**: Represents a UTF-8 encoded byte sequence. (Leaf node only)
-- **Int**: Represents a 64-bit signed integer. (Leaf node only)
-- **Float**: Represents a double-precision floating-point number. (Leaf node only)
-- **Boolean**: Represents a boolean value. (Leaf node only)
-
 ### Auto-generated kv-pairs vs. User-generated kv-pairs
 
 CLP key-value pair IR format categorizes the kv-pairs of a log event into two categories:
@@ -194,11 +183,93 @@ The following terms define key concepts in the context of IR streams:
     - Example: An IR unit may be serialized as a sequence of packets, where each packet contains
       part of the IR unit, as defined by the protocol.
 
+### Schema Tree
+
+As mentioned in [Design Overview](#design-overview), schema tree efficiently models hierarchical
+relationships between keys and values. Each IR stream maintains two merged schema tree to track all
+encountered schemas in auto-generated kv-pairs and user-generated kv-pairs, respectively. The schema
+tree has the following assumptions:
+
+As described in the [Design Overview](#design-overview), the schema tree efficiently models
+hierarchical relationships between keys and values. Each IR stream maintains two merged schema trees
+to track encountered schemas in auto-generated and user-generated key-value pairs, respectively.
+
+The schema tree follows these structural assumptions:
+- Logical storage in a vector.
+  - Index 0 is reserved for the root node. A root node always exists.
+  - Nodes are stored in a vector, with node IDs corresponding to their index.
+  - New nodes are appended to the end of the vector.
+- Type system: Each schema tree node is typed to optimize value representation and retrieval.
+    - **Object**: Represents an arbitrary object.
+        - As a non-leaf node, it denotes a hierarchical key-value level.
+        - As a leaf node, it may represent `null` or an empty key-value set (e.g., `{}`).
+    - **Unstructured Array**: Represents an array stored as a JSON string. (Leaf node only)
+    - **String**: Represents a UTF-8 encoded byte sequence. (Leaf node only)
+    - **Int**: Represents a 64-bit signed integer. (Leaf node only)
+    - **Float**: Represents a double-precision floating-point number. (Leaf node only)
+    - **Boolean**: Represents a boolean value. (Leaf node only)
+- Key representation: Each schema tree node represents a key, which must be a string.
+- Schema tree node locator: Each schema tree node can be uniquely identified by a tuple of:
+  - Node type.
+  - Parent node ID.
+  - Key string.
+
+### Stream-level Metadata
+
+Each IR stream contains a stream-level metadata section at the beginning of the stream. The metadata
+is represented by key-value pairs.
+
+The mandatory fields:
+- `"VERSION"`: The stream version, represented as a string.
+- `"VARIABLES_SCHEMA_ID"`: The variable schema ID, represented as a string.
+- `"VARIABLE_ENCODING_METHODS_ID"`: The variable encoding ID, represented as a string.
+
+Optional fields:
+- `"USER_DEFINED_METADATA"`: Custom metadata provided by the user, represented as key-value pairs.
+
 ### IR Packets
 
-In this section, we will enumerate all valid IR packets and their formats. Each IR packet is assigned with one or
-several header bytes that can be uniquely identified. Each header byte will be given a unique string ID. To find the
-numerical value of these header bytes, check [Appendix: IR Packet Header Bytes](#appendix-ir-packet-header-bytes).
+In this section, we will enumerate all valid IR packets and their formats. Each IR packet is
+assigned with one or several header bytes that can be uniquely identified. Each header byte will be
+given a unique string ID. To find the numerical value of these header bytes, check
+[Appendix: IR Packet Header Bytes](#appendix-ir-packet-header-bytes).
+
+#### Metadata Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 5
+    A["Header Byte"]:1
+    B["Length"]:2
+    B["Payload: Metadata Byte Sequence"]:2
+:::
+
+A Metadata Packet consists of a header byte, an encoded length, and the payload bytes:
+
+- Header Bytes: Specifies the length encoding type.
+    - `MetadataLengthUByte`: The length is a 1-byte unsigned integer.
+    - `MetadataLengthUShort`: The length is a 2-byte unsigned integer.
+- Length: The unsigned integer representing the byte sequence's length, encoded in big-endian format
+  as specified by the header.
+- Payload: The actual metadata byte sequence.
+
+#### JSON Metadata Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 3
+    A["Header Byte"]:1
+    B["JSON Metadata"]:2
+:::
+
+A JSON Metadata Packet consists of a header byte and the JSON metadata.
+
+- Header Byte: Specifies the metadata encoding type, set to `MetadataJsonEncoding`.
+- JSON Metadata: The metadata serialized as a JSON string. Must be a
+  [Metadata Packet](#metadata-packet).
+
 
 #### Integer Value Packet
 
@@ -235,9 +306,272 @@ A Float Value Packet consists of a header byte and an encoded floating-point pay
   - `FloatValue_8byte`: The payload is a double-precision (64-bit) floating-point number.
 - Payload: The floating-point value, encoded in big-endian format as specified by the header.
 
+#### True Value Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 1
+    A["Header Byte"]:1
+:::
+
+A True Value Packet only contains a header byte:
+
+- Header Byte: Represents the boolean value `True`, set to `BoolValue_true`.
+
+#### False Value Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 1
+    A["Header Byte"]:1
+:::
+
+A False Value Packet only contains a header byte:
+
+- Header Byte: Represents the boolean value `False`, set to `BoolValue_false`.
+
+#### String Value Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 5
+    A["Header Byte"]:1
+    B["Length"]:2
+    C["Payload: String"]:2
+:::
+
+A String Value Packet consists of a header byte, an encoded length, and the payload bytes:
+
+- Header Bytes: Specifies the length encoding type.
+    - `StringLen_1byte`: The length is a 1-byte unsigned integer.
+    - `StringLen_2byte`: The length is a 2-byte unsigned integer.
+    - `StringLen_4byte`: The length is a 4-byte unsigned integer.
+- Length: The unsigned integer representing the string’s length, encoded in big-endian format as
+  specified by the header.
+- Payload: The actual string, serialized as a sequence of bytes.
+
+#### Four-byte Encoded Variable Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+columns 3
+    A["Header Byte"]:1
+    B["Payload: Encoded Variable"]:2
+:::
+
+A Four-byte Encoded Variable Packet consists of a header byte and an encoded payload:
+
+- Header Byte: Specifies the encoding type, set to `VarFourByteEncoding`
+- Payload: A four-byte sequence encoded in big-endian format.
+
+#### Eight-byte Encoded Variable Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+columns 3
+    A["Header Byte"]:1
+    B["Payload: Encoded Variable"]:2
+:::
+
+An Eight-byte Encoded Variable Packet consists of a header byte and an encoded payload:
+
+- Header Byte: Specifies the encoding type, set to `VarEightByteEncoding`
+- Payload: An eight-byte sequence encoded in big-endian format.
+
+#### Dictionary Variable Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 5
+    A["Header Byte"]:1
+    B["Length"]:2
+    C["Payload: String"]:2
+:::
+
+A Dictionary Variable Packet consists of a header byte, an encoded length, and the payload bytes:
+
+- Header Bytes: Specifies the length encoding type.
+    - `VarStrLenUByte`: The length is a 1-byte unsigned integer.
+    - `VarStrLenUShort`: The length is a 2-byte unsigned integer.
+    - `VarStrLenInt`: The length is a 4-byte unsigned integer.
+- Length: The unsigned integer representing the dictionary variable's length, encoded in big-endian
+  format as specified by the header.
+- Payload: The actual dictionary variable, serialized as a sequence of bytes.
+
+#### Logtype Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 5
+    A["Header Byte"]:1
+    B["Length"]:2
+    C["Payload: String"]:2
+:::
+
+A Logtype Packet consists of a header byte, an encoded length, and the payload bytes:
+
+- Header Bytes: Specifies the length encoding type.
+    - `LogtypeStrLenUByte`: The length is a 1-byte unsigned integer.
+    - `LogtypeStrLenUShort`: The length is a 2-byte unsigned integer.
+    - `LogtypeStrLenInt`: The length is a 4-byte unsigned integer.
+- Length: The unsigned integer representing the logtype's length, encoded in big-endian format as
+  specified by the header.
+- Payload: The actual logtype, serialized as a sequence of bytes.
+
+#### Four-byte Encoded Text AST Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 7
+    A["Header Byte"]:1
+    B["Variables"]:4
+    C["Logtype"]:2
+:::
+
+A Four-byte Encoded Text AST Packet consists of a header byte, an array of variable packets, and
+a log type packet:
+
+- Header Byte: Specifies the encoding type, set to `StringValue_CLP_4byte`.
+- Variables: An array of encoded variables, serialized as variable packets. Each variable packet
+  must be one of the following packet type:
+  - [Four-byte Encoded Variable Packet](#four-byte-encoded-variable-packet)
+  - [Dictionary Variable Packet](#dictionary-variable-packet)
+- Logtype: The logtype. Must be a [Logtype Packet](#logtype-packet).
+
+#### Eight-byte Encoded Text AST Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+columns 7
+    A["Header Byte"]:1
+    B["Variables"]:4
+    C["Logtype"]:2
+:::
+
+An Eight-byte Encoded Text AST Packet consists of a header byte, an array of variable packets, and
+a log type packet:
+
+- Header Byte: Specifies the encoding type, set to `StringValue_CLP_8byte`.
+- Variable Packets: An array of encoded variables, serialized as variable packets. Each variable
+  packet must be one of the following packet type:
+    - [Eight-byte Encoded Variable Packet](#eight-byte-encoded-variable-packet)
+    - [Dictionary Variable Packet](#dictionary-variable-packet)
+- Logtype Packet: The logtype. Must be a [Logtype Packet](#logtype-packet).
+
+#### Null Value Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 1
+    A["Header Byte"]:1
+:::
+
+A Null Value Packet only contains a header byte:
+
+- Header Byte: Represents the null value `null`, set to `ObjValue_Null`.
+
+#### Empty Value Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 1
+    A["Header Byte"]:1
+:::
+
+An Empty Value Packet only contains a header byte:
+
+- Header Byte: Represents the empty value `{}`, set to `ObjValue_Empty`.
+
+#### Encode Schema Tree Node ID Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 3
+    A["Header Byte"]:1
+    B["Payload: Encoded Schema Tree Node ID"]:2
+:::
+
+An Encoded Schema Tree Node ID Packet consists of a header byte and an encoded schema tree node ID
+payload:
+
+- Header Byte: Specifies the schema tree node ID encoding type.
+    - `KeyID_1byte`: Payload is a 1-byte one's complement integer.
+    - `KeyID_2byte`: Payload is a 2-byte one's complement integer.
+    - `KeyID_4byte`: Payload is a 4-byte one's complement integer.
+- Payload: The schema tree node ID, encoded in big-endian format as specified by the header.
+  - If the encoded ID is positive, it represents a node ID from the user-generated schema tree.
+  - If the encoded ID is negative, its absolute value represents a node ID from the auto-generated
+    schema tree.
+
+#### Encoded Schema Tree Node Parent ID Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 3
+    A["Header Byte"]:1
+    B["Payload: Encoded Schema Tree Parent Node ID"]:2
+:::
+
+An Encoded Schema Tree Node Parent ID Packet consists of a header byte and an encoded schema tree
+node parent ID payload:
+
+- Header Byte: Specifies the schema tree node parent ID encoding type.
+    - `ParentID_1byte`: Payload is a 1-byte one's complement integer.
+    - `ParentID_2byte`: Payload is a 2-byte one's complement integer.
+    - `ParentID_4byte`: Payload is a 4-byte one's complement integer.
+- Payload: The schema tree node parent ID, encoded in big-endian format as specified by the header.
+    - If the encoded ID is positive, it represents a node ID from the user-generated schema tree.
+    - If the encoded ID is negative, its absolute value represents a node ID from the auto-generated
+      schema tree.
+
+#### Schema Tree Node Locator Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 5
+    A["Header Byte"]:1
+    B["Schema Tree Node Parent ID"]:2
+    C["Key"]:2
+:::
+
+- Header Byte: Specifies the schema tree node's type. Must be one of the following:
+  - `SchemaTreeNodeInteger`: Integer type.
+  - `SchemaTreeNodeFloat`: Float type.
+  - `SchemaTreeNodeBoolean`: Boolean type.
+  - `SchemaTreeNodeString`: String type.
+  - `SchemaTreeNodeUnstructuredArray`: Unstructured-array type.
+  - `SchemaTreeNodeObject`: Object type.
+- Schema Tree Node Parent ID: The parent node ID in the schema tree, serialized as an
+  [Encoded Schema Tree Node Parent ID Packet](#encoded-schema-tree-node-parent-id-packet).
+- Key: The key of the node, serialized as a [String Value Packet](#string-value-packet)
+
+#### End-of-stream Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 1
+    A["Header Byte"]:1
+:::
+
+- Header Byte: Represents the end of an IR stream, set to `EndOfStream`.
+
 ### IR Units
 TODO
-
 
 ---
 
@@ -544,7 +878,7 @@ You can read this log post for more details of how CLP's two phase compression w
 ## Appendix: IR Packet Header Bytes
 
 | **Name**                        | **Byte** |
-| ------------------------------- | -------- |
+|---------------------------------| -------- |
 | SchemaTreeNodeInteger           | 0x71     |
 | SchemaTreeNodeFloat             | 0x72     |
 | SchemaTreeNodeBoolean           | 0x73     |
@@ -553,8 +887,10 @@ You can read this log post for more details of how CLP's two phase compression w
 | SchemaTreeNodeObject            | 0x76     |
 | ParentID_1byte                  | 0x60     |
 | ParentID_2byte                  | 0x61     |
+| ParentID_4byte                  | 0x62     |
 | KeyID_1byte                     | 0x65     |
 | KeyID_2byte                     | 0x66     |
+| KeyID_4byte                     | 0x67     |
 | StringLen_1byte                 | 0x41     |
 | StringLen_2byte                 | 0x42     |
 | StringLen_4byte                 | 0x43     |
@@ -584,6 +920,8 @@ You can read this log post for more details of how CLP's two phase compression w
 | TimestampDeltaInt               | 0x33     |
 | TimestampDeltaLong              | 0x34     |
 | MetadataJsonEncoding            | 0x01     |
+| MetadataLengthUByte             | 0x11     |
+| MetadataLengthUShort            | 0x12     |
 | EndOfStream                     | 0x00     |
 
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/
