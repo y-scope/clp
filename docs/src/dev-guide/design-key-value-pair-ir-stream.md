@@ -107,33 +107,33 @@ The following is a merged schema tree that can represent both sets of kv-pairs:
 :::{mermaid}
 %%{init: {'theme':'neutral'}}%%
 graph LR;
-0["#0:'Root'(Object)"]
-1["#1:'log_id'(Integer)"]
-2["#2:'version_num'(Float)"]
-3["#3:'has_error'(Boolean)"]
-4["#4:'error_type'(String)"]
-5["#5:'msg'(String)"]
-6["#6:'data'(Object)"]
-7["#7:'input_array'(Unstructured Array)"]
-8["#8:'machine_info'(Object)"]
-9["#9:'machine_num'(Integer)"]
-10["#10:'additional_info'(Object)"]
-11["#11:'msg'(String)"]
-12["#12:'data'(String)"]
-13["#13:'result'(Unstructured Array)"]
-0 --> 1
-0 --> 2
-0 --> 3
-0 --> 4
-0 --> 5
-0 --> 6
-0 --> 7
-0 --> 8
-0 --> 10
-0 --> 11
-0 --> 12
-8 --> 9
-10 --> 13
+    0["#0:'Root'(Object)"]
+    1["#1:'log_id'(Integer)"]
+    2["#2:'version_num'(Float)"]
+    3["#3:'has_error'(Boolean)"]
+    4["#4:'error_type'(String)"]
+    5["#5:'msg'(String)"]
+    6["#6:'data'(Object)"]
+    7["#7:'input_array'(Unstructured Array)"]
+    8["#8:'machine_info'(Object)"]
+    9["#9:'machine_num'(Integer)"]
+    10["#10:'additional_info'(Object)"]
+    11["#11:'msg'(String)"]
+    12["#12:'data'(String)"]
+    13["#13:'result'(Unstructured Array)"]
+    0 --> 1
+    0 --> 2
+    0 --> 3
+    0 --> 4
+    0 --> 5
+    0 --> 6
+    0 --> 7
+    0 --> 8
+    0 --> 10
+    0 --> 11
+    0 --> 12
+    8 --> 9
+    10 --> 13
 :::
 
 Using this schema tree, the kv-pairs are encoded as node-ID sets, representing the structure
@@ -194,11 +194,50 @@ The following terms define key concepts in the context of IR streams:
     - Example: An IR unit may be serialized as a sequence of packets, where each packet contains
       part of the IR unit, as defined by the protocol.
 
+### IR Packets
+
+In this section, we will enumerate all valid IR packets and their formats. Each IR packet is assigned with one or
+several header bytes that can be uniquely identified. Each header byte will be given a unique string ID. To find the
+numerical value of these header bytes, check [Appendix: IR Packet Header Bytes](#appendix-ir-packet-header-bytes).
+
+#### Integer Value Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 3
+    A["Header Byte"]:1
+    B["Payload: Encoded Integer"]:2
+:::
+
+An Integer Value Packet consists of a header byte and an encoded integer payload:
+
+- Header Byte: Specifies the integer encoding type.
+  - `IntValue_1byte`: Payload is a signed 1-byte integer.
+  - `IntValue_2byte`: Payload is a signed 2-byte integer.
+  - `IntValue_4byte`: Payload is a signed 4-byte integer.
+  - `IntValue_8byte`: Payload is a signed 8-byte integer.
+- Payload: The integer value, encoded in big-endian format as specified by the header.
+
+#### Float Value Packet
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 3
+    A["Header Byte"]:1
+    B["Payload: Encoded Float"]:2
+:::
+
+A Float Value Packet consists of a header byte and an encoded floating-point payload:
+
+- Header Byte: Indicates the floating-point encoding type.
+  - `FloatValue_8byte`: The payload is a double-precision (64-bit) floating-point number.
+- Payload: The floating-point value, encoded in big-endian format as specified by the header.
+
 ### IR Units
 TODO
 
-### IR Packets
-TODO
 
 ---
 
@@ -303,7 +342,7 @@ block-beta
 
 Every IR unit in the stream will consist of two parts (Figure 9). The first being a header byte 
 which will specify what kind of IR unit it is. You can see a list of all the possible header bytes 
-in the [Appendix](#appendix). The second being the corresponding data. This data format will change
+in the [Appendix](#appendix-ir-packet-header-bytes). The second being the corresponding data. This data format will change
  depending on the header byte and in some cases will be excluded as all necessary information is 
  specified by the header byte alone. Below we will look at the different kinds of IR units and show
   how to represent the two example log events from Figure 1 using a stream of these IR units. 
@@ -502,7 +541,7 @@ You can read this log post for more details of how CLP's two phase compression w
 [post](https://www.uber.com/en-CA/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/)
 . 
 
-## Appendix
+## Appendix: IR Packet Header Bytes
 
 | **Name**                        | **Byte** |
 | ------------------------------- | -------- |
