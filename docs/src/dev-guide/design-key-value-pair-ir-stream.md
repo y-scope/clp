@@ -156,7 +156,9 @@ compactly:
 
 ## Format Specification
 
-The following terms are defined in the context of IR streams:
+### Overview
+
+The following terms define key concepts in the context of IR streams:
 
 - **Log event**: A collection of auto-generated and user-generated key-value pairs recorded by an
   application.
