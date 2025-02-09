@@ -13,9 +13,7 @@
 #include <json/single_include/nlohmann/json.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParser.hpp>
-#include <spdlog.h>
 
-#include "../../Defs.h"
 #include "../../EncodedVariableInterpreter.hpp"
 #include "../../ir/types.hpp"
 #include "../../spdlog_with_specializations.hpp"
@@ -335,9 +333,7 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
             m_old_ts_pattern = timestamp_pattern;
         }
     }
-    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts
-        && false == m_use_single_file_archive)
-    {
+    if (get_data_size_of_dictionaries() >= m_target_data_size_of_dicts) {
         split_file_and_archive(
                 m_archive_user_config,
                 m_path_for_compression,

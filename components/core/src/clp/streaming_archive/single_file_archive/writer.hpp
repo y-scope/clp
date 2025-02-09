@@ -33,7 +33,7 @@ private:
 };
 
 /**
- * Writes a single-file archive then removes deletes the multi-file archive.
+ * Writes a single-file archive then deletes the multi-file archive.
  *
  * @param multi_file_archive_path
  * @param next_segment_id ID of the next segment to be created in the archive.
