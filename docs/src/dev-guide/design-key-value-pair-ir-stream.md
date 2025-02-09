@@ -234,6 +234,28 @@ assigned with one or several header bytes that can be uniquely identified. Each 
 given a unique string ID. To find the numerical value of these header bytes, check
 [Appendix: IR Packet Header Bytes](#appendix-ir-packet-header-bytes).
 
+Supported Packets:
+- [Metadata Packet](#metadata-packet)
+- [JSON Metadata Packet](#json-metadata-packet)
+- [Integer Value Packet](#integer-value-packet)
+- [Float Value Packet](#float-value-packet)
+- [True Value Packet](#true-value-packet)
+- [False Value Packet](#false-value-packet)
+- [String Value Packet](#string-value-packet)
+- [Four-byte Encoded Variable Packet](#four-byte-encoded-variable-packet)
+- [Eight-byte Encoded Variable Packet](#eight-byte-encoded-variable-packet)
+- [Dictionary Variable Packet](#dictionary-variable-packet)
+- [LogtypePacket](#logtype-packet)
+- [Four-byte Encoded Text AST Packet](#four-byte-encoded-text-ast-packet)
+- [Eight-byte Encoded Text AST Packet](#eight-byte-encoded-text-ast-packet)
+- [Eight-byte Encoded Text AST Packet](#eight-byte-encoded-text-ast-packet)
+- [Null Value Packet](#null-value-packet)
+- [Empty Value Packet](#empty-value-packet)
+- [Encoded Schema Tree Node ID Packet](#encoded-schema-tree-node-id-packet)
+- [Encoded Schema Tree Node Parent ID Packet](#encoded-schema-tree-node-parent-id-packet)
+- [Schema Tree Node Locator Packet](#schema-tree-node-locator-packet)
+- [End-of-stream Packet](#end-of-stream-packet)
+
 #### Metadata Packet
 
 :::{mermaid}
@@ -493,7 +515,7 @@ An Empty Value Packet only contains a header byte:
 
 - Header Byte: Represents the empty value `{}`, set to `ObjValue_Empty`.
 
-#### Encode Schema Tree Node ID Packet
+#### Encoded Schema Tree Node ID Packet
 
 :::{mermaid}
 %%{init: {'theme':'neutral'}}%%
@@ -571,7 +593,72 @@ block-beta
 - Header Byte: Represents the end of an IR stream, set to `EndOfStream`.
 
 ### IR Units
-TODO
+
+In this section, we will enumerate all valid IR unites and their formats. Each unit consists of one
+or more packets as defined in [IR Packets](#ir-packets).
+
+Supported Units:
+- [Schema Tree Node Insertion Unit](#schema-tree-node-insertion-unit)
+- [Log Event Unit](#log-event-unit)
+- [End-of-stream Unit](#end-of-stream-unit)
+
+#### Schema Tree Node Insertion Unit
+
+#### Log Event Unit
+
+#### End-of-stream Unit
+
+## Appendix: IR Packet Header Bytes
+
+| **Name**                        | **Byte** |
+|---------------------------------| -------- |
+| SchemaTreeNodeInteger           | 0x71     |
+| SchemaTreeNodeFloat             | 0x72     |
+| SchemaTreeNodeBoolean           | 0x73     |
+| SchemaTreeNodeString            | 0x74     |
+| SchemaTreeNodeUnstructuredArray | 0x75     |
+| SchemaTreeNodeObject            | 0x76     |
+| ParentID_1byte                  | 0x60     |
+| ParentID_2byte                  | 0x61     |
+| ParentID_4byte                  | 0x62     |
+| KeyID_1byte                     | 0x65     |
+| KeyID_2byte                     | 0x66     |
+| KeyID_4byte                     | 0x67     |
+| StringLen_1byte                 | 0x41     |
+| StringLen_2byte                 | 0x42     |
+| StringLen_4byte                 | 0x43     |
+| IntValue_1byte                  | 0x51     |
+| IntValue_2byte                  | 0x52     |
+| IntValue_4byte                  | 0x53     |
+| IntValue_8byte                  | 0x54     |
+| IntValue_8byte_unsigned         | 0x55     |
+| FloatValue_8byte                | 0x56     |
+| BoolValue_true                  | 0x57     |
+| BoolValue_false                 | 0x58     |
+| StringValue_CLP_4byte           | 0x59     |
+| StringValue_CLP_8byte           | 0x5a     |
+| ObjValue_Empty                  | 0x5e     |
+| ObjValue_Null                   | 0x5f     |
+| VarFourByteEncoding             | 0x18     |
+| VarEightByteEncoding            | 0x19     |
+| VarStrLenUByte                  | 0x11     |
+| VarStrLenUShort                 | 0x12     |
+| VarStrLenInt                    | 0x13     |
+| LogtypeStrLenUByte              | 0x21     |
+| LogtypeStrLenUShort             | 0x22     |
+| LogtypeStrLenInt                | 0x23     |
+| TimestampVar                    | 0x30     |
+| TimestampDeltaByte              | 0x31     |
+| TimestampDeltaShort             | 0x32     |
+| TimestampDeltaInt               | 0x33     |
+| TimestampDeltaLong              | 0x34     |
+| MetadataJsonEncoding            | 0x01     |
+| MetadataLengthUByte             | 0x11     |
+| MetadataLengthUShort            | 0x12     |
+| EndOfStream                     | 0x00     |
+
+[uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/
+[clp-s-osdi]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/
 
 ---
 
@@ -874,55 +961,3 @@ introducing dictionaries for the static text (i.e. schema) and the variable valu
 You can read this log post for more details of how CLP's two phase compression works; 
 [post](https://www.uber.com/en-CA/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/)
 . 
-
-## Appendix: IR Packet Header Bytes
-
-| **Name**                        | **Byte** |
-|---------------------------------| -------- |
-| SchemaTreeNodeInteger           | 0x71     |
-| SchemaTreeNodeFloat             | 0x72     |
-| SchemaTreeNodeBoolean           | 0x73     |
-| SchemaTreeNodeString            | 0x74     |
-| SchemaTreeNodeUnstructuredArray | 0x75     |
-| SchemaTreeNodeObject            | 0x76     |
-| ParentID_1byte                  | 0x60     |
-| ParentID_2byte                  | 0x61     |
-| ParentID_4byte                  | 0x62     |
-| KeyID_1byte                     | 0x65     |
-| KeyID_2byte                     | 0x66     |
-| KeyID_4byte                     | 0x67     |
-| StringLen_1byte                 | 0x41     |
-| StringLen_2byte                 | 0x42     |
-| StringLen_4byte                 | 0x43     |
-| IntValue_1byte                  | 0x51     |
-| IntValue_2byte                  | 0x52     |
-| IntValue_4byte                  | 0x53     |
-| IntValue_8byte                  | 0x54     |
-| IntValue_8byte_unsigned         | 0x55     |
-| FloatValue_8byte                | 0x56     |
-| BoolValue_true                  | 0x57     |
-| BoolValue_false                 | 0x58     |
-| StringValue_CLP_4byte           | 0x59     |
-| StringValue_CLP_8byte           | 0x5a     |
-| ObjValue_Empty                  | 0x5e     |
-| ObjValue_Null                   | 0x5f     |
-| VarFourByteEncoding             | 0x18     |
-| VarEightByteEncoding            | 0x19     |
-| VarStrLenUByte                  | 0x11     |
-| VarStrLenUShort                 | 0x12     |
-| VarStrLenInt                    | 0x13     |
-| LogtypeStrLenUByte              | 0x21     |
-| LogtypeStrLenUShort             | 0x22     |
-| LogtypeStrLenInt                | 0x23     |
-| TimestampVar                    | 0x30     |
-| TimestampDeltaByte              | 0x31     |
-| TimestampDeltaShort             | 0x32     |
-| TimestampDeltaInt               | 0x33     |
-| TimestampDeltaLong              | 0x34     |
-| MetadataJsonEncoding            | 0x01     |
-| MetadataLengthUByte             | 0x11     |
-| MetadataLengthUShort            | 0x12     |
-| EndOfStream                     | 0x00     |
-
-[uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/
-[clp-s-osdi]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp/
