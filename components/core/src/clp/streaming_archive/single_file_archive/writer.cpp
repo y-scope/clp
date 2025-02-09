@@ -72,6 +72,15 @@ auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_
         -> void;
 
 /**
+ * Writes single-file archive metadata.
+ *
+ * @param single_file_archive_writer
+ * @param packed_metadata Packed metadata.
+ */
+auto write_archive_metadata(FileWriter& single_file_archive_writer, std::stringstream const& packed_metadata)
+        -> void;
+
+/**
  * Reads the content of a file and writes it to the single-file archive.
  * @param file_path
  * @param single_file_archive_writer
@@ -164,6 +173,11 @@ auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_
     single_file_archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
+auto write_archive_metadata(FileWriter& single_file_archive_writer, std::stringstream const& packed_metadata)
+        -> void {
+    single_file_archive_writer.write(packed_metadata.str().data(), packed_metadata.str().size());
+}
+
 auto
 write_archive_file(std::filesystem::path const& file_path, FileWriter& single_file_archive_writer)
         -> void {
@@ -228,11 +242,13 @@ auto write_single_file_archive(
     );
 
     write_archive_header(single_file_archive_writer, packed_metadata.str().size());
+    write_archive_metadata(single_file_archive_writer, packed_metadata);
     write_archive_files(single_file_archive_writer, multi_file_archive_path, next_segment_id);
 
     single_file_archive_writer.close();
     try {
         std::filesystem::remove_all(multi_file_archive_path);
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     } catch (std::filesystem::filesystem_error& e) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }

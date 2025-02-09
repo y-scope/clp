@@ -54,9 +54,8 @@ struct FileInfo {
 
 struct SingleFileArchiveMetadata {
     std::vector<FileInfo> archive_files;
-    ArchiveMetadata archive_metadata;
     uint64_t num_segments;
-    MSGPACK_DEFINE_MAP(archive_files, archive_metadata, num_segments);
+    MSGPACK_DEFINE_MAP(archive_files, num_segments);
 };
 }  // namespace clp::streaming_archive::single_file_archive
 
