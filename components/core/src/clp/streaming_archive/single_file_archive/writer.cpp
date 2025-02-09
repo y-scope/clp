@@ -232,7 +232,6 @@ auto write_single_file_archive(
     );
 
     auto const packed_metadata = pack_single_file_archive_metadata(
-            multi_file_archive_metadata,
             multi_file_archive_path,
             next_segment_id
     );
