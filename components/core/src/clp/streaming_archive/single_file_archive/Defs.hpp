@@ -4,10 +4,10 @@
 #include <cstdint>
 #include <string>
 
-#include "../../Defs.h"
+#include <msgpack.hpp>
+
 #include "../ArchiveMetadata.hpp"
 #include "../Constants.hpp"
-#include "msgpack.hpp"
 
 namespace clp::streaming_archive::single_file_archive {
 
@@ -15,9 +15,11 @@ using single_file_archive_format_version_t = uint32_t;
 
 // Single file archive version.
 constexpr uint8_t cVersionMajor{0};
-constexpr uint8_t cVersionMinor{1};
-constexpr uint16_t cVersionPatch{1};
-constexpr single_file_archive_format_version_t cVersion{cVersionMajor << 24 | cVersionMinor << 16 | cVersionPatch};
+constexpr uint8_t cVersionMinor{2};
+constexpr uint16_t cVersionPatch{0};
+constexpr single_file_archive_format_version_t cVersion{
+        cVersionMajor << 24 | cVersionMinor << 16 | cVersionPatch
+};
 
 static constexpr size_t cNumMagicNumberChars{4};
 static constexpr std::array<uint8_t, cNumMagicNumberChars>

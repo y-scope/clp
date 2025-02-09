@@ -33,8 +33,8 @@ private:
 };
 
 /**
- * Writes header, metadata and archive files in single-file format then
- * removes existing multi-file archive.
+ * Writes the header and archive files into a single-file format then
+ * removes deletes the multi-file archive.
  *
  * @param multi_file_archive_metadata
  * @param multi_file_archive_path

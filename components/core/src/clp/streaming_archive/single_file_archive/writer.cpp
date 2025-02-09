@@ -49,7 +49,7 @@ get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_
 
 /**
  * Combines file section metadata, multi-file archive metadata, and the number of segments into
- * single-file archive metadata. Once combined, serializes the metadata into MsgPack format.
+ * single-file archive metadata, then serializes the metadata into MsgPack format.
  *
  * @param multi_file_archive_metadata
  * @param multi_file_archive_path
@@ -68,7 +68,8 @@ get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_
  * @param single_file_archive_writer
  * @param packed_metadata_size
  */
-auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size) -> void;
+auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size)
+        -> void;
 
 /**
  * Reads the content of a file and writes it to the single-file archive.
@@ -76,11 +77,12 @@ auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_
  * @param single_file_archive_writer
  * @throws OperationFailed if reading the file fails.
  */
-auto write_archive_file(std::string const& file_path, FileWriter& single_file_archive_writer) -> void;
+auto write_archive_file(std::string const& file_path, FileWriter& single_file_archive_writer)
+        -> void;
 
 /**
- * Iterates over files in the multi-file archive and copies their contents to the single-file archive.
- * Skips metadata file, which should be handled by `write_archive_metadata` method.
+ * Iterates over files in the multi-file archive and copies their contents to the single-file
+ * archive. Skips metadata file, which should be handled by `write_archive_metadata` method.
  *
  * @param single_file_archive_writer
  * @param multi_file_archive_path
@@ -150,7 +152,8 @@ auto pack_single_file_archive_metadata(
     return buf;
 }
 
-auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size) -> void {
+auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_metadata_size)
+        -> void {
     SingleFileArchiveHeader header{
             .magic = cUnstructuredSfaMagicNumber,
             .version = cVersion,
@@ -161,7 +164,8 @@ auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_
     single_file_archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
-auto write_archive_file(std::filesystem::path const& file_path, FileWriter& single_file_archive_writer)
+auto
+write_archive_file(std::filesystem::path const& file_path, FileWriter& single_file_archive_writer)
         -> void {
     FileReader reader(file_path.string());
     std::array<char, cReadBlockSize> read_buffer{};
