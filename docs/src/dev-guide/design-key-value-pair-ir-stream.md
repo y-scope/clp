@@ -604,9 +604,40 @@ Supported Units:
 
 #### Schema Tree Node Insertion Unit
 
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 2
+    B["Schema Tree Node Locator Packet"]:2
+:::
+
+A Schema Tree Node Insertion Unit signifies the addition of a new schema tree node to a schema tree.
+It consists of a single packet, which must be a
+[Schema Tree Node Locator Packet](#schema-tree-node-locator-packet).
+
+This IR unit contains the necessary information to:
+- Locate a node in a schema tree.
+- Determine whether the node should be inserted into the auto-generated or user-generated schema
+  tree.
+
 #### Log Event Unit
 
 #### End-of-stream Unit
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 2
+    B["End-of-stream Packet"]:2
+:::
+
+An End-of-stream Unit signifies the end of an IR stream. It consists of a single packet, which must
+be an [End-of-stream Packet](#end-of-stream-packet).
+
+##### Complete IR Stream
+
+An IR stream must end with this IR unit to be considered complete. If an IR stream does not
+terminate with this unit, it is considered incomplete.
 
 ## Appendix: IR Packet Header Bytes
 
