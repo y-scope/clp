@@ -48,16 +48,14 @@ get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_
         -> std::vector<FileInfo>;
 
 /**
- * Combines file section metadata, multi-file archive metadata, and the number of segments into
- * single-file archive metadata, then serializes the metadata into MsgPack format.
+ * Combines file section metadata and the number of segments into single-file archive metadata,
+ * then serializes the metadata into MsgPack format.
  *
- * @param multi_file_archive_metadata
  * @param multi_file_archive_path
  * @param next_segment_id
  * @return Packed metadata.
  */
 [[nodiscard]] auto pack_single_file_archive_metadata(
-        ArchiveMetadata const& multi_file_archive_metadata,
         std::filesystem::path const& multi_file_archive_path,
         segment_id_t next_segment_id
 ) -> std::stringstream;
@@ -145,13 +143,11 @@ get_file_infos(std::filesystem::path const& multi_file_archive_path, segment_id_
 }
 
 auto pack_single_file_archive_metadata(
-        ArchiveMetadata const& multi_file_archive_metadata,
         std::filesystem::path const& multi_file_archive_path,
         segment_id_t next_segment_id
 ) -> std::stringstream {
     SingleFileArchiveMetadata single_file_archive{
             .archive_files = get_file_infos(multi_file_archive_path, next_segment_id),
-            .archive_metadata = multi_file_archive_metadata,
             .num_segments = next_segment_id,
     };
 

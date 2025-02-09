@@ -284,11 +284,6 @@ private:
      */
     void update_metadata();
 
-    /**
-     * Writes archive to disk in single-file format then removes existing multi-file archive.
-     */
-    auto create_single_file_archive() -> void;
-
     // Variables
     boost::uuids::uuid m_id;
     std::string m_id_as_string;

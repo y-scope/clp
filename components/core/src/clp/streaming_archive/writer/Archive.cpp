@@ -247,7 +247,9 @@ void Archive::close() {
     m_metadata_db.close();
 
     if (m_use_single_file_archive) {
-        create_single_file_archive();
+        single_file_archive::write_single_file_archive(
+            m_path,
+        m_next_segment_id  );
     }
 
     m_creator_id_as_string.clear();
@@ -655,20 +657,6 @@ void Archive::update_metadata() {
         std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
                   << std::endl;
     }
-}
-
-void Archive::create_single_file_archive() {
-    if (false == m_local_metadata.has_value()) {
-        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
-    }
-
-    auto const& multi_file_archive_metadata = m_local_metadata.value();
-
-    clp::streaming_archive::single_file_archive::write_single_file_archive(
-            multi_file_archive_metadata,
-            m_path,
-            m_next_segment_id
-    );
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
