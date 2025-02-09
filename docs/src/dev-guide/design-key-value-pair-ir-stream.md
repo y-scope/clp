@@ -154,6 +154,52 @@ compactly:
 </tr>
 </table>
 
+## Format Specification
+
+The following terms are defined in the context of IR streams:
+
+- **Log event**: A collection of auto-generated and user-generated key-value pairs recorded by an
+  application.
+- **Encoded text AST**: A logtype paired with a list of encoded variables, representing a structured
+  abstraction of a text string.
+- **IR encoding**: The process of transforming a log event into an IR log event to achieve specific
+  goals, such as improving compressibility or preparing data for ingestion into a CLP/CLP-S archive.
+  - Example: Parsing a string into an encoded text AST.
+- **IR log event**: A log event after IR encoding.
+- **IR decoding**: The reverse process of IR encoding, restoring the original log event.
+- **Packet**: A byte stream (which may be part of a larger byte stream) that contains a header and
+  an optional payload for storing application data.
+- **IR stream serialization**: The process of converting a sequence of IR log events into a byte
+  stream following the IR stream protocol.
+  - Serialization of an IR unit involves the following steps:
+    - **Deconstruction (optional)**: Breaking an IR unit into components that can be individually
+      serialized.
+    - **Encoding (optional)**: Transforming an IR unit to achieve compression or structural
+      efficiency.
+      - May require maintaining some global states.
+    - **Encapsulation**: Packaging serialized components into packets before writing them to a byte
+      stream.
+- **Deserialization**: The reverse process of serialization, reconstructing the original IR unit.
+  - Deserialization includes:
+    - **Unwrapping**: Extracting an IR unit component from a packet.
+    - **Decoding**: Reversing any encoding performed during serialization.
+    - **Reconstruction**: Assembling components to recover the original IR unit.
+- **IR stream serializer**: A class to perform serialization.
+- **IR stream deserializer**: A class to perform deserialization.
+- **An IR unit**: The smallest meaningful unit of an IR byte stream that a user-level program may
+  process.
+  - An IR unit may or may not include a packet header.
+    - Example: An IR unit may be serialized as a sequence of packets, where each packet contains
+      part of the IR unit, as defined by the protocol.
+
+### IR Units
+TODO
+
+### IR Packets
+TODO
+
+---
+
 ## Key-Value Pair IR Stream and Streamable IR Units
 Our goal for Key-Value Pair IR Stream (KV Pair IR) is to break CLP-S into phases like we did for 
 CLP so that we can still achieve a substantial amount of initial compression, but leave the heavy 
