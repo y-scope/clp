@@ -6,7 +6,6 @@
 #include <cstddef>
 
 #include "../ErrorCode.hpp"
-#include "../FileWriter.hpp"
 #include "../TraceableException.hpp"
 #include "../WriterInterface.hpp"
 
@@ -33,7 +32,7 @@ public:
     Compressor() = default;
 
     // Destructor
-    virtual ~Compressor() = default;
+    ~Compressor() override = default;
 
     // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
@@ -70,9 +69,9 @@ public:
 
     /**
      * Initializes the compression stream
-     * @param file_writer
+     * @param writer
      */
-    virtual auto open(FileWriter& file_writer) -> void = 0;
+    virtual auto open(WriterInterface& writer) -> void = 0;
 };
 }  // namespace clp::streaming_compression
 

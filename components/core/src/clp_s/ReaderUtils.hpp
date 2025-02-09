@@ -1,7 +1,12 @@
 #ifndef CLP_S_READERUTILS_HPP
 #define CLP_S_READERUTILS_HPP
 
+#include <string>
+
+#include "../clp/ReaderInterface.hpp"
+#include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
+#include "InputConfig.hpp"
 #include "Schema.hpp"
 #include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
@@ -22,56 +27,54 @@ public:
     static constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;  // 64 KB
 
     /**
-     * Reads the schema tree from the given archive directory
-     * @param archives_dir
+     * Reads the schema tree from an archive
+     * @param adaptor
      * @return The schema tree
      */
-    static std::shared_ptr<SchemaTree> read_schema_tree(std::string const& archives_dir);
+    static std::shared_ptr<SchemaTree> read_schema_tree(ArchiveReaderAdaptor& adaptor);
 
     /**
-     * Reads the schema map from the given archive directory
-     * @param archive_dir
+     * Reads the schema map from an archive
+     * @param adaptor
      * @return the schema map
      */
-    static std::shared_ptr<SchemaMap> read_schemas(std::string const& archives_dir);
+    static std::shared_ptr<SchemaMap> read_schemas(ArchiveReaderAdaptor& archives_dir);
 
     /**
-     * Opens and gets the variable dictionary reader for the given archive path
-     * @param archive_path
+     * Gets the variable dictionary reader for an archive
+     * @param adaptor
      * @return the variable dictionary reader
      */
     static std::shared_ptr<VariableDictionaryReader> get_variable_dictionary_reader(
-            std::string const& archive_path
+            ArchiveReaderAdaptor& adaptor
     );
 
     /**
-     * Opens and gets the log type dictionary reader for the given archive path
-     * @param archive_path
+     * Gets the log type dictionary reader for an archive
+     * @param adaptor
      * @return the log type dictionary reader
      */
     static std::shared_ptr<LogTypeDictionaryReader> get_log_type_dictionary_reader(
-            std::string const& archive_path
+            ArchiveReaderAdaptor& adaptor
     );
 
     /**
-     * Opens and gets the array dictionary reader for the given archive path
-     * @param archive_path
+     * Gets the array dictionary reader for an archive
+     * @param adaptor
      * @return the array dictionary reader
      */
     static std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary_reader(
-            std::string const& archive_path
-    );
-
-    static std::shared_ptr<TimestampDictionaryReader> get_timestamp_dictionary_reader(
-            std::string const& archive_path
+            ArchiveReaderAdaptor& adaptor
     );
 
     /**
-     * Gets the list of archives in the given archive directory
-     * @param archives_dir
-     * @return the list of archives
+     * Tries to open a clp::ReaderInterface using the given Path and NetworkAuthOption.
+     * @param path
+     * @param network_auth
+     * @return the opened clp::ReaderInterface or nullptr on error
      */
-    static std::vector<std::string> get_archives(std::string const& archives_dir);
+    static std::shared_ptr<clp::ReaderInterface>
+    try_create_reader(Path const& path, NetworkAuthOption const& network_auth);
 
 private:
     /**

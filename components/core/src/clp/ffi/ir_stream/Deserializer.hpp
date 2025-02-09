@@ -44,8 +44,10 @@ public:
      * @return A result containing the deserializer or an error code indicating the failure:
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
-     *   or uses an unsupported version
+     * - std::errc::protocol_not_supported if either:
+     *   - the IR stream contains an unsupported metadata format;
+     *   - the IR stream's version is unsupported;
+     *   - or the IR stream's user-defined metadata is not a JSON object.
      */
     [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
             -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>;
@@ -95,8 +97,8 @@ public:
      * - Forwards `handle_end_of_stream`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
      */
-    [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader
-    ) -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType>;
+    [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader)
+            -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType>;
 
     /**
      * @return Whether the stream has completed. A stream is considered completed if an
@@ -110,13 +112,21 @@ public:
 
     [[nodiscard]] auto get_ir_unit_handler() -> IrUnitHandler& { return m_ir_unit_handler; }
 
+    /**
+     * @return The metadata associated with the deserialized stream.
+     */
+    [[nodiscard]] auto get_metadata() const -> nlohmann::json const& { return m_metadata; }
+
 private:
     // Constructor
-    Deserializer(IrUnitHandler ir_unit_handler) : m_ir_unit_handler{std::move(ir_unit_handler)} {}
+    Deserializer(IrUnitHandler ir_unit_handler, nlohmann::json metadata)
+            : m_ir_unit_handler{std::move(ir_unit_handler)},
+              m_metadata(std::move(metadata)) {}
 
     // Variables
     std::shared_ptr<SchemaTree> m_auto_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
     std::shared_ptr<SchemaTree> m_user_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
+    nlohmann::json m_metadata;
     UtcOffset m_utc_offset{0};
     IrUnitHandler m_ir_unit_handler;
     bool m_is_complete{false};
@@ -160,13 +170,19 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
         return std::errc::protocol_not_supported;
     }
 
-    return Deserializer{std::move(ir_unit_handler)};
+    if (metadata_json.contains(cProtocol::Metadata::UserDefinedMetadataKey)
+        && false == metadata_json.at(cProtocol::Metadata::UserDefinedMetadataKey).is_object())
+    {
+        return std::errc::protocol_not_supported;
+    }
+
+    return Deserializer{std::move(ir_unit_handler), std::move(metadata_json)};
 }
 
 template <IrUnitHandlerInterface IrUnitHandler>
 requires(std::move_constructible<IrUnitHandler>)
-auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
+auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& reader)
+        -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
     if (is_stream_completed()) {
         return std::errc::operation_not_permitted;
     }
@@ -211,18 +227,25 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
                 return result.error();
             }
 
-            auto const node_locator{result.value()};
-            if (m_user_gen_keys_schema_tree->has_node(node_locator)) {
+            auto const& [is_auto_generated, node_locator]{result.value()};
+            auto& schema_tree_to_insert{
+                    is_auto_generated ? m_auto_gen_keys_schema_tree : m_user_gen_keys_schema_tree
+            };
+
+            if (schema_tree_to_insert->has_node(node_locator)) {
                 return std::errc::protocol_error;
             }
 
-            if (auto const err{m_ir_unit_handler.handle_schema_tree_node_insertion(node_locator)};
+            if (auto const err{m_ir_unit_handler.handle_schema_tree_node_insertion(
+                        is_auto_generated,
+                        node_locator
+                )};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return ir_error_code_to_errc(err);
             }
 
-            std::ignore = m_user_gen_keys_schema_tree->insert_node(node_locator);
+            std::ignore = schema_tree_to_insert->insert_node(node_locator);
             break;
         }
 

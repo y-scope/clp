@@ -73,7 +73,7 @@ void Archive::open(UserConfig const& user_config) {
     }
     auto const& archive_path_string = archive_path.string();
     m_local_metadata = std::make_optional<ArchiveMetadata>(
-            cArchiveFormatVersion,
+            cArchiveFormatVersion::Version,
             m_creator_id_as_string,
             m_creation_num
     );
@@ -297,11 +297,8 @@ void Archive::change_ts_pattern(TimestampPattern const* pattern) {
     m_file->change_ts_pattern(pattern);
 }
 
-void Archive::write_msg(
-        epochtime_t timestamp,
-        string const& message,
-        size_t num_uncompressed_bytes
-) {
+void
+Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_uncompressed_bytes) {
     // Encode message and add components to dictionaries
     vector<encoded_variable_t> encoded_vars;
     vector<variable_dictionary_id_t> var_ids;

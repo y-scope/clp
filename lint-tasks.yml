@@ -178,7 +178,8 @@ tasks:
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"
-      - "../package.json"
+      - "package.json"
+      - "package-lock.json"
     dir: "{{.WEBUI_LINTER_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -187,16 +188,16 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
       - ":nodejs-22"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm update"
+      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm clean-install"
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   venv:
     internal: true
@@ -213,15 +214,15 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - task: ":utils:create-venv"
         vars:
           LABEL: "lint"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "lint-requirements.txt"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/lint-requirements.txt"
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]

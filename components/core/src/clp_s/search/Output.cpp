@@ -65,6 +65,8 @@ bool Output::filter() {
     populate_internal_columns();
     populate_string_queries(top_level_expr);
 
+    m_archive_reader->open_packed_streams();
+
     std::string message;
     auto const archive_id = m_archive_reader->get_archive_id();
     for (int32_t schema_id : matched_schemas) {
@@ -666,9 +668,7 @@ bool Output::evaluate_array_filter_object(
     }
 
     for (auto field : object) {
-        // Note: field.key() yields the escaped JSON key, so the descriptor tokens passed to search
-        // must likewise be escaped.
-        if (field.key() != unresolved_tokens[cur_idx].get_token()) {
+        if (field.unescaped_key(true).value() != unresolved_tokens[cur_idx].get_token()) {
             continue;
         }
 

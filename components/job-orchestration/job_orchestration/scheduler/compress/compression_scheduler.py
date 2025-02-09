@@ -20,11 +20,17 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compress.fs_compression_task import compress
+from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
-from job_orchestration.scheduler.job_config import ClpIoConfig
+from job_orchestration.scheduler.job_config import (
+    ClpIoConfig,
+    FsInputConfig,
+    InputType,
+    S3InputConfig,
+)
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
     CompressionTaskResult,
@@ -68,7 +74,7 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f"{k} = %s" for k in kv.keys()]
+    field_set_expressions = [f"{k} = %s" for k in kv.keys()] + ["update_time = CURRENT_TIMESTAMP()"]
     query = f"""
         UPDATE {COMPRESSION_JOBS_TABLE_NAME}
         SET {", ".join(field_set_expressions)}
@@ -76,6 +82,68 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
     """
     values = list(kv.values()) + [job_id]
     db_cursor.execute(query, values)
+
+
+def _process_fs_input_paths(
+    fs_input_conf: FsInputConfig, paths_to_compress_buffer: PathsToCompressBuffer
+) -> None:
+    """
+    Iterates through all files in fs_input_conf and adds their metadata to
+    `paths_to_compress_buffer`.
+    NOTE: This method skips files that don't exist.
+    :param fs_input_conf:
+    :param paths_to_compress_buffer:
+    """
+
+    for path_idx, path in enumerate(fs_input_conf.paths_to_compress, start=1):
+        path = Path(path)
+
+        try:
+            file, empty_directory = validate_path_and_get_info(CONTAINER_INPUT_LOGS_ROOT_DIR, path)
+        except ValueError as ex:
+            logger.error(str(ex))
+            continue
+
+        if file:
+            paths_to_compress_buffer.add_file(file)
+        elif empty_directory:
+            paths_to_compress_buffer.add_empty_directory(empty_directory)
+
+        if path.is_dir():
+            for internal_path in path.rglob("*"):
+                try:
+                    file, empty_directory = validate_path_and_get_info(
+                        CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
+                    )
+                except ValueError as ex:
+                    logger.error(str(ex))
+                    continue
+
+                if file:
+                    paths_to_compress_buffer.add_file(file)
+                elif empty_directory:
+                    paths_to_compress_buffer.add_empty_directory(empty_directory)
+
+
+def _process_s3_input(
+    s3_input_config: S3InputConfig,
+    paths_to_compress_buffer: PathsToCompressBuffer,
+) -> None:
+    """
+    Iterates through all objects under the <bucket>/<key_prefix> specified by s3_input_config,
+    and adds their metadata to paths_to_compress_buffer.
+    :param s3_input_config:
+    :param paths_to_compress_buffer:
+    :raises: RuntimeError if input URL doesn't resolve to any objects.
+    :raises: Propagates `s3_get_object_metadata`'s exceptions.
+    """
+
+    object_metadata_list = s3_get_object_metadata(s3_input_config)
+    if len(object_metadata_list) == 0:
+        raise RuntimeError("Input URL doesn't resolve to any object")
+
+    for object_metadata in object_metadata_list:
+        paths_to_compress_buffer.add_file(object_metadata)
 
 
 def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
@@ -103,39 +171,37 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
 
-        for path_idx, path in enumerate(clp_io_config.input.paths_to_compress, start=1):
-            path = Path(path)
-
+        input_config = clp_io_config.input
+        input_type = input_config.type
+        if input_type == InputType.FS.value:
+            _process_fs_input_paths(input_config, paths_to_compress_buffer)
+        elif input_type == InputType.S3.value:
             try:
-                file, empty_directory = validate_path_and_get_info(
-                    CONTAINER_INPUT_LOGS_ROOT_DIR, path
+                _process_s3_input(input_config, paths_to_compress_buffer)
+            except Exception as err:
+                logger.exception("Failed to process S3 input")
+                update_compression_job_metadata(
+                    db_cursor,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": f"S3 Failure: {err}",
+                    },
                 )
-            except ValueError as ex:
-                logger.error(str(ex))
-                continue
-
-            if file:
-                paths_to_compress_buffer.add_file(file)
-            elif empty_directory:
-                paths_to_compress_buffer.add_empty_directory(empty_directory)
-
-            if path.is_dir():
-                for internal_path in path.rglob("*"):
-                    try:
-                        file, empty_directory = validate_path_and_get_info(
-                            CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
-                        )
-                    except ValueError as ex:
-                        logger.error(str(ex))
-                        continue
-
-                    if file:
-                        paths_to_compress_buffer.add_file(file)
-                    elif empty_directory:
-                        paths_to_compress_buffer.add_empty_directory(empty_directory)
-
-            if path_idx % 10000 == 0:
                 db_conn.commit()
+                continue
+        else:
+            logger.error(f"Unsupported input type {input_type}")
+            update_compression_job_metadata(
+                db_cursor,
+                job_id,
+                {
+                    "status": CompressionJobStatus.FAILED,
+                    "status_msg": f"Unsupported input type: {input_type}",
+                },
+            )
+            db_conn.commit()
+            continue
 
         paths_to_compress_buffer.flush()
         tasks = paths_to_compress_buffer.get_tasks()

@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include <outcome/single-header/outcome.hpp>
 
@@ -28,20 +29,21 @@ namespace clp::ffi::ir_stream {
  * @param tag
  * @param key_name Returns the key name of the deserialized new node. This should be the underlying
  * storage of the returned schema tree node locator.
- * @return A result containing the locator of the inserted schema tree node or an error code
- * indicating the failure:
- * - std::errc::result_out_of_range if the IR stream is truncated.
- * - std::errc::protocol_error if the deserialized node type isn't supported.
- * - std::errc::protocol_not_supported if the IR stream contains auto-generated keys (TODO: Remove
- *   this once auto-generated keys are fully supported).
- * - Forwards `deserialize_schema_tree_node_key_name`'s return values.
- * - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
+ * @return A result containing a pair or an error code indicating the failure:
+ * - The pair:
+ *   - Whether the node is for auto-generated keys schema tree.
+ *   - The locator of the inserted schema tree node.
+ * - The possible error codes:
+ *   - std::errc::result_out_of_range if the IR stream is truncated.
+ *   - std::errc::protocol_error if the deserialized node type isn't supported.
+ *   - Forwards `deserialize_schema_tree_node_key_name`'s return values.
+ *   - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
  */
 [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::string& key_name
-) -> OUTCOME_V2_NAMESPACE::std_result<SchemaTree::NodeLocator>;
+) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::NodeLocator>>;
 
 /**
  * Deserializes a UTC offset change IR unit.
@@ -50,8 +52,8 @@ namespace clp::ffi::ir_stream {
  * - std::errc::result_out_of_range if the IR stream is truncated.
  * - Forwards `clp::ffi::ir_stream::deserialize_utc_offset_change`'s return values.
  */
-[[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset>;
+[[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
+        -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset>;
 
 /**
  * Deserializes a key-value pair log event IR unit.
@@ -67,7 +69,7 @@ namespace clp::ffi::ir_stream {
  * - std::errc::protocol_error if the IR stream is corrupted.
  * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
  *   or uses an unsupported version.
- * - Forwards `deserialize_schema`'s return values.
+ * - Forwards `deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema`'s return values.
  * - Forwards `KeyValuePairLogEvent::create`'s return values if the intermediate deserialized result
  *   cannot construct a valid key-value pair log event.
  */

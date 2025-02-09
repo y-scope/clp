@@ -43,13 +43,14 @@ features:
   (intermediate representation) produced by CLP's logging libraries.
 
 - **Real-time Compression with CLP Logging Libraries**: CLP provides logging libraries for
-  [Python][clp-loglib-py] and Java ([Log4j][log4j1-appenders] and [Logback][logback-appenders]). The
-  logging libraries compress logs in real-time, so only compressed logs are written to disk or
-  transmitted over the network. The compressed logs use CLP's intermediate representation (IR)
-  format which achieves a higher compression ratio than general purpose compressors like Zstandard.
-  Compressing IR into archives can further double the compression ratio and enable global search,
-  but this requires more memory usage as it needs to buffer enough logs. More details on IR versus
-  archives can be found in this [Uber Engineering Blog][uber-blog].
+  [Python][clp-loglib-py] and Java ([Log4j1][log4j1-appenders], [Log4j2][log4j2-appenders] and 
+  [Logback][logback-appenders]). The logging libraries compress logs in real-time, so only
+  compressed logs are written to disk or transmitted over the network. The compressed logs use CLP's
+  intermediate representation (IR) format which achieves a higher compression ratio than general
+  purpose compressors like Zstandard. Compressing IR into archives can further double the
+  compression ratio and enable global search, but this requires more memory usage as it needs to
+  buffer enough logs. More details on IR versus archives can be found in this
+  [Uber Engineering Blog][uber-blog].
 
 - **[Log Viewer][log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
   to viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
@@ -104,6 +105,7 @@ If you would like a feature or want to report a bug, please file an issue and we
 [log-surgeon]: https://github.com/y-scope/log-surgeon
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
+[log4j2-appenders]: https://github.com/y-scope/log4j2-appenders
 [logback-appenders]: https://github.com/y-scope/logback-appenders
 [re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp

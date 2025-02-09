@@ -1,8 +1,11 @@
 #include "CommandLineArguments.hpp"
 
+#include <filesystem>
 #include <iostream>
+#include <string_view>
 
 #include <boost/program_options.hpp>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/cli_utils.hpp"
@@ -14,6 +17,10 @@ namespace po = boost::program_options;
 
 namespace clp_s {
 namespace {
+// Authorization method constants
+constexpr std::string_view cNoAuth{"none"};
+constexpr std::string_view cS3Auth{"s3"};
+
 /**
  * Read a list of newline-delimited paths from a file and put them into a vector passed by reference
  * TODO: deduplicate this code with the version in clp
@@ -54,6 +61,55 @@ bool read_paths_from_file(
         return false;
     }
     return true;
+}
+
+/**
+ * Validates and populates network authorization options.
+ * @param auth_method
+ * @param network_auth
+ * @throws std::invalid_argument if the authorization option is invalid
+ */
+void validate_network_auth(std::string_view auth_method, NetworkAuthOption& auth) {
+    if (cS3Auth == auth_method) {
+        auth.method = AuthMethod::S3PresignedUrlV4;
+    } else if (cNoAuth != auth_method) {
+        throw std::invalid_argument(fmt::format("Invalid authentication type \"{}\"", auth_method));
+    }
+}
+
+/**
+ * Validates and populates archive paths.
+ * @param archive_path
+ * @param archive_id
+ * @param archive_paths
+ * @throws std::invalid_argument on any error
+ */
+void validate_archive_paths(
+        std::string_view archive_path,
+        std::string_view archive_id,
+        std::vector<Path>& archive_paths
+) {
+    if (archive_path.empty()) {
+        throw std::invalid_argument("No archive path specified");
+    }
+
+    if (false == archive_id.empty()) {
+        auto archive_fs_path = std::filesystem::path(archive_path) / archive_id;
+        std::error_code ec;
+        if (false == std::filesystem::exists(archive_fs_path, ec) || ec) {
+            throw std::invalid_argument("Requested archive does not exist");
+        }
+        archive_paths.emplace_back(clp_s::Path{
+                .source = clp_s::InputSource::Filesystem,
+                .path = archive_fs_path.string()
+        });
+    } else if (false == get_input_archives_for_raw_path(archive_path, archive_paths)) {
+        throw std::invalid_argument("Invalid archive path");
+    }
+
+    if (archive_paths.empty()) {
+        throw std::invalid_argument("No archive paths specified");
+    }
 }
 }  // namespace
 
@@ -133,6 +189,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
         if (Command::Compress == m_command) {
             po::options_description compression_positional_options;
+            std::vector<std::string> input_paths;
             // clang-format off
              compression_positional_options.add_options()(
                      "archives-dir",
@@ -140,7 +197,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                      "output directory"
              )(
                      "input-paths",
-                     po::value<std::vector<std::string>>(&m_file_paths)->value_name("PATHS"),
+                     po::value<std::vector<std::string>>(&input_paths)->value_name("PATHS"),
                      "input paths"
              );
             // clang-format on
@@ -151,6 +208,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             constexpr std::string_view cJsonFileType{"json"};
             constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
             std::string file_type{cJsonFileType};
+            std::string auth{cNoAuth};
             // clang-format off
             compression_options.add_options()(
                     "compression-level",
@@ -209,6 +267,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "file-type",
                     po::value<std::string>(&file_type)->value_name("FILE_TYPE")->default_value(file_type),
                     "The type of file being compressed (json or kv-ir)"
+            )(
+                    "auth",
+                    po::value<std::string>(&auth)
+                        ->value_name("AUTH_METHOD")
+                        ->default_value(auth),
+                    "Type of authentication required for network requests (s3 | none). Authentication"
+                    " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
+                    " variables, and optionally the AWS_SESSION_TOKEN environment variable."
             );
             // clang-format on
 
@@ -252,13 +318,19 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             if (false == input_path_list_file_path.empty()) {
-                if (false == read_paths_from_file(input_path_list_file_path, m_file_paths)) {
+                if (false == read_paths_from_file(input_path_list_file_path, input_paths)) {
                     SPDLOG_ERROR("Failed to read paths from {}", input_path_list_file_path);
                     return ParsingResult::Failure;
                 }
             }
 
-            if (m_file_paths.empty()) {
+            for (auto const& path : input_paths) {
+                if (false == get_input_files_for_raw_path(path, m_input_paths)) {
+                    throw std::invalid_argument(fmt::format("Invalid input path \"{}\".", path));
+                }
+            }
+
+            if (m_input_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
             }
 
@@ -286,6 +358,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
             }
 
+            validate_network_auth(auth, m_network_auth);
+
             // Parse and validate global metadata DB config
             if (false == metadata_db_config_file_path.empty()) {
                 clp::GlobalMetadataDBConfig metadata_db_config;
@@ -310,11 +384,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
+            std::string archive_path;
             // clang-format off
             extraction_options.add_options()(
-                    "archives-dir",
-                    po::value<std::string>(&m_archives_dir),
-                    "The directory containing the archives"
+                    "archive-path",
+                    po::value<std::string>(&archive_path),
+                    "Path to a directory containing archives, or the path to a single archive"
             )(
                     "output-dir",
                     po::value<std::string>(&m_output_dir),
@@ -322,15 +397,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
-            po::options_description input_options("Input Options");
-            input_options.add_options()(
-                    "archive-id",
-                    po::value<std::string>(&m_archive_id)->value_name("ID"),
-                    "ID of the archive to decompress"
-            );
-            extraction_options.add(input_options);
-
             po::options_description decompression_options("Decompression Options");
+            std::string auth{cNoAuth};
+            std::string archive_id;
             // clang-format off
             decompression_options.add_options()(
                     "ordered",
@@ -343,6 +412,23 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             ->value_name("SIZE"),
                     "Chunk size (B) for each output file when decompressing records in log order."
                     " When set to 0, no chunking is performed."
+            )(
+                    "print-ordered-chunk-stats",
+                    po::bool_switch(&m_print_ordered_chunk_stats),
+                    "Print statistics (ndjson) about each chunk file after it's extracted."
+            )(
+                    "archive-id",
+                    po::value<std::string>(&archive_id)->value_name("ID"),
+                    "Limit decompression to the archive with the given ID in a subdirectory of"
+                    " archive-path"
+            )(
+                    "auth",
+                    po::value<std::string>(&auth)
+                        ->value_name("AUTH_METHOD")
+                        ->default_value(auth),
+                    "Type of authentication required for network requests (s3 | none). Authentication"
+                    " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
+                    " variables, and optionally the AWS_SESSION_TOKEN environment variable."
             );
             // clang-format on
             extraction_options.add(decompression_options);
@@ -362,7 +448,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             extraction_options.add(output_metadata_options);
 
             po::positional_options_description positional_options;
-            positional_options.add("archives-dir", 1);
+            positional_options.add("archive-path", 1);
             positional_options.add("output-dir", 1);
 
             std::vector<std::string> unrecognized_options
@@ -390,25 +476,37 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 po::options_description visible_options;
                 visible_options.add(general_options);
-                visible_options.add(input_options);
                 visible_options.add(decompression_options);
                 visible_options.add(output_metadata_options);
                 std::cerr << visible_options << std::endl;
                 return ParsingResult::InfoCommand;
             }
 
-            if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archives directory specified");
-            }
+            validate_archive_paths(archive_path, archive_id, m_input_paths);
+
+            validate_network_auth(auth, m_network_auth);
 
             if (m_output_dir.empty()) {
                 throw std::invalid_argument("No output directory specified");
             }
 
-            if (0 != m_target_ordered_chunk_size && false == m_ordered_decompression) {
-                throw std::invalid_argument(
-                        "target-ordered-chunk-size must be used with ordered argument"
-                );
+            if (false == m_ordered_decompression) {
+                if (0 != m_target_ordered_chunk_size) {
+                    throw std::invalid_argument(
+                            "target-ordered-chunk-size must be used with ordered argument"
+                    );
+                }
+
+                if (m_print_ordered_chunk_stats) {
+                    throw std::invalid_argument(
+                            "print-ordered-chunk-stats must be used with ordered argument"
+                    );
+                }
+
+                if (false == m_mongodb_uri.empty()) {
+                    throw std::invalid_argument("Recording decompression metadata only supported"
+                                                " for ordered decompression");
+                }
             }
 
             // We use xor to check that these arguments are either both specified or both
@@ -419,22 +517,18 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 );
             }
 
-            if (false == m_mongodb_uri.empty() && false == m_ordered_decompression) {
-                throw std::invalid_argument(
-                        "Recording decompression metadata only supported for ordered decompression"
-                );
-            }
         } else if ((char)Command::Search == command_input) {
             std::string archives_dir;
             std::string query;
 
             po::options_description search_options;
             std::string output_handler_name;
+            std::string archive_path;
             // clang-format off
             search_options.add_options()(
-                    "archives-dir",
-                    po::value<std::string>(&m_archives_dir),
-                    "The directory containing the archives"
+                    "archive-path",
+                    po::value<std::string>(&archive_path),
+                    "Path to a directory containing archives, or the path to a single archive"
             )(
                     "query,q",
                     po::value<std::string>(&m_query),
@@ -448,12 +542,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
             po::positional_options_description positional_options;
-            positional_options.add("archives-dir", 1);
+            positional_options.add("archive-path", 1);
             positional_options.add("query", 1);
             positional_options.add("output-handler", 1);
             positional_options.add("output-handler-args", -1);
 
             po::options_description match_options("Match Controls");
+            std::string auth{cNoAuth};
+            std::string archive_id;
             // clang-format off
             match_options.add_options()(
                 "tge",
@@ -469,8 +565,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "Ignore case distinctions between values in the query and the compressed data"
             )(
                 "archive-id",
-                po::value<std::string>(&m_archive_id)->value_name("ID"),
-                "Limit search to the archive with the given ID"
+                po::value<std::string>(&archive_id)->value_name("ID"),
+                "Limit search to the archive with the given ID in a subdirectory of archive-path"
             )(
                 "projection",
                 po::value<std::vector<std::string>>(&m_projection_columns)
@@ -479,6 +575,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 "Project only the given set of columns for matching results. This option must be"
                 " specified after all positional options. Values that are objects or structured"
                 " arrays are currently unsupported."
+            )(
+                "auth",
+                po::value<std::string>(&auth)
+                    ->value_name("AUTH_METHOD")
+                    ->default_value(auth),
+                "Type of authentication required for network requests (s3 | none). Authentication"
+                " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
+                " variables, and optionally the AWS_SESSION_TOKEN environment variable."
             );
             // clang-format on
             search_options.add(match_options);
@@ -630,9 +734,9 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 return ParsingResult::InfoCommand;
             }
 
-            if (m_archives_dir.empty()) {
-                throw std::invalid_argument("No archives directory specified");
-            }
+            validate_archive_paths(archive_path, archive_id, m_input_paths);
+
+            validate_network_auth(auth, m_network_auth);
 
             if (m_query.empty()) {
                 throw std::invalid_argument("No query specified");

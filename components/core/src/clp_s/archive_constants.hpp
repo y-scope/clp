@@ -7,18 +7,20 @@ namespace clp_s::constants {
 // Single file archive
 constexpr char cTmpPostfix[] = ".tmp";
 
+// Header and metadata section
+constexpr char cArchiveHeaderFile[] = "/header";
+
 // Schema files
 constexpr char cArchiveSchemaMapFile[] = "/schema_ids";
 constexpr char cArchiveSchemaTreeFile[] = "/schema_tree";
 
 // Encoded record table files
 constexpr char cArchiveTableMetadataFile[] = "/table_metadata";
-constexpr char cArchiveTablesFile[] = "/tables";
+constexpr char cArchiveTablesFile[] = "/0";
 
 // Dictionary files
 constexpr char cArchiveArrayDictFile[] = "/array.dict";
 constexpr char cArchiveLogDictFile[] = "/log.dict";
-constexpr char cArchiveTimestampDictFile[] = "/timestamp.dict";
 constexpr char cArchiveVarDictFile[] = "/var.dict";
 
 // Schema tree constants

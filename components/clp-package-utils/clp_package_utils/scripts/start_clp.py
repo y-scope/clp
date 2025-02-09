@@ -276,15 +276,15 @@ def create_results_cache_indices(
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
     # fmt: off
-    create_tables_cmd = [
+    init_cmd = [
         "python3",
-        str(clp_py_utils_dir / "create-results-cache-indices.py"),
+        str(clp_py_utils_dir / "initialize-results-cache.py"),
         "--uri", container_clp_config.results_cache.get_uri(),
         "--stream-collection", container_clp_config.results_cache.stream_collection_name,
     ]
     # fmt: on
 
-    cmd = container_start_cmd + create_tables_cmd
+    cmd = container_start_cmd + init_cmd
     logger.debug(" ".join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
@@ -493,6 +493,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     cmd = [
         "docker", "run",
         "-d",
+        "--network", "host",
         "--name", container_name,
         "--log-driver", "local",
         "-u", container_user,
@@ -501,12 +502,13 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
     for mount in mounts:
         cmd.append("--mount")
         cmd.append(str(mount))
-    append_docker_port_settings_for_host_ips(
-        clp_config.results_cache.host, clp_config.results_cache.port, 27017, cmd
-    )
     cmd.append("mongo:7.0.1")
     cmd.append("--config")
     cmd.append(str(pathlib.Path("/") / "etc" / "mongo" / "mongod.conf"))
+    cmd.append("--bind_ip")
+    cmd.append(clp_config.results_cache.host)
+    cmd.append("--port")
+    cmd.append(str(clp_config.results_cache.port))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
@@ -704,9 +706,10 @@ def generic_start_worker(
 
     # Create necessary directories
     clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-    clp_config.stream_output.directory.mkdir(parents=True, exist_ok=True)
+    clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
 
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    container_worker_log_path = container_logs_dir / "worker.log"
     # fmt: off
     container_start_cmd = [
         "docker", "run",
@@ -729,6 +732,7 @@ def generic_start_worker(
         "-e", f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
         "-e", f"CLP_LOGS_DIR={container_logs_dir}",
         "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
+        "-e", f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
@@ -760,7 +764,7 @@ def generic_start_worker(
         "--loglevel",
         "WARNING",
         "-f",
-        str(container_logs_dir / "worker.log"),
+        str(container_worker_log_path),
         "-Q",
         celery_route,
         "-n",
@@ -922,15 +926,36 @@ def start_log_viewer_webui(
         "MongoDbName": clp_config.results_cache.db_name,
         "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
         "ClientDir": str(container_log_viewer_webui_dir / "client"),
-        "StreamFilesDir": str(container_clp_config.stream_output.directory),
+        "StreamFilesDir": str(container_clp_config.stream_output.get_directory()),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
         "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
+
+    container_cmd_extra_opts = []
+
+    stream_storage = clp_config.stream_output.storage
+    if StorageType.S3 == stream_storage.type:
+        s3_config = stream_storage.s3_config
+
+        settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
+        settings_json_updates["StreamFilesS3PathPrefix"] = (
+            f"{s3_config.bucket}/{s3_config.key_prefix}"
+        )
+
+        access_key_id, secret_access_key = s3_config.get_credentials()
+        container_cmd_extra_opts.extend(
+            (
+                "-e",
+                f"AWS_ACCESS_KEY_ID={access_key_id}",
+                "-e",
+                f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+            )
+        )
+
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(settings_json))
 
-    # Start container
     # fmt: off
     container_cmd = [
         "docker", "run",
@@ -947,6 +972,8 @@ def start_log_viewer_webui(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
+    container_cmd.extend(container_cmd_extra_opts)
+
     necessary_mounts = [
         mounts.clp_home,
         mounts.stream_output_dir,

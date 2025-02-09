@@ -14,6 +14,7 @@ lib_install_scripts_dir=$script_dir/..
 
 "$lib_install_scripts_dir"/fmtlib.sh 8.0.1
 "$lib_install_scripts_dir"/libarchive.sh 3.5.1
+"$lib_install_scripts_dir"/liblzma.sh 5.4.6
 "$lib_install_scripts_dir"/lz4.sh 1.8.2
 "$lib_install_scripts_dir"/mongocxx.sh 3.10.2
 "$lib_install_scripts_dir"/msgpack.sh 7.0.0

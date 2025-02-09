@@ -11,8 +11,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
-set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)
-if ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
+set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS lzma passthrough zstd)
+if ("${GENERAL_COMPRESSOR}" STREQUAL "lzma")
+    add_definitions(-DUSE_LZMA_COMPRESSION=1)
+    message(STATUS "Using Lempel–Ziv–Markov chain Algorithm compression")
+elseif ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
     add_definitions(-DUSE_PASSTHROUGH_COMPRESSION=1)
     message(STATUS "Using passthrough compression")
 elseif ("${GENERAL_COMPRESSOR}" STREQUAL "zstd")
@@ -224,6 +227,21 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
 endif()
 
+# Find and setup LZMA Library
+# TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
+if(CLP_USE_STATIC_LIBS)
+    set(LIBLZMA_USE_STATIC_LIBS ON)
+endif()
+find_package(LibLZMA REQUIRED)
+if(LIBLZMA_FOUND)
+    message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
+    message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
+    message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
+endif()
+include_directories(${LIBLZMA_INCLUDE_DIRS})
+
 # sqlite dependencies
 set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
@@ -243,6 +261,8 @@ add_subdirectory(src/reducer)
 set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/ArchiveReader.cpp
     src/clp_s/ArchiveReader.hpp
+    src/clp_s/ArchiveReaderAdaptor.cpp
+    src/clp_s/ArchiveReaderAdaptor.hpp
     src/clp_s/ArchiveWriter.cpp
     src/clp_s/ArchiveWriter.hpp
     src/clp_s/ColumnReader.cpp
@@ -257,6 +277,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
     src/clp_s/FileWriter.hpp
+    src/clp_s/InputConfig.cpp
+    src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
     src/clp_s/JsonConstructor.hpp
     src/clp_s/JsonFileIterator.cpp
@@ -277,18 +299,30 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/SchemaTree.hpp
     src/clp_s/SchemaWriter.cpp
     src/clp_s/SchemaWriter.hpp
+    src/clp_s/search/AddTimestampConditions.cpp
+    src/clp_s/search/AddTimestampConditions.hpp
     src/clp_s/search/AndExpr.cpp
     src/clp_s/search/AndExpr.hpp
     src/clp_s/search/BooleanLiteral.cpp
     src/clp_s/search/BooleanLiteral.hpp
+    src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp
+    src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp
+    src/clp_s/search/clp_search/Grep.cpp
+    src/clp_s/search/clp_search/Grep.hpp
     src/clp_s/search/clp_search/Query.cpp
     src/clp_s/search/clp_search/Query.hpp
     src/clp_s/search/ColumnDescriptor.cpp
     src/clp_s/search/ColumnDescriptor.hpp
+    src/clp_s/search/ConstantProp.cpp
+    src/clp_s/search/ConstantProp.hpp
+    src/clp_s/search/ConvertToExists.cpp
+    src/clp_s/search/ConvertToExists.hpp
     src/clp_s/search/DateLiteral.cpp
     src/clp_s/search/DateLiteral.hpp
     src/clp_s/search/EmptyExpr.cpp
     src/clp_s/search/EmptyExpr.hpp
+    src/clp_s/search/EvaluateTimestampIndex.cpp
+    src/clp_s/search/EvaluateTimestampIndex.hpp
     src/clp_s/search/Expression.cpp
     src/clp_s/search/Expression.hpp
     src/clp_s/search/FilterExpr.cpp
@@ -297,12 +331,22 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/Integral.cpp
     src/clp_s/search/Integral.hpp
     src/clp_s/search/Literal.hpp
+    src/clp_s/search/NarrowTypes.cpp
+    src/clp_s/search/NarrowTypes.hpp
     src/clp_s/search/NullLiteral.cpp
     src/clp_s/search/NullLiteral.hpp
     src/clp_s/search/OrExpr.cpp
     src/clp_s/search/OrExpr.hpp
     src/clp_s/search/OrOfAndForm.cpp
     src/clp_s/search/OrOfAndForm.hpp
+    src/clp_s/search/Output.cpp
+    src/clp_s/search/Output.hpp
+    src/clp_s/search/OutputHandler.cpp
+    src/clp_s/search/OutputHandler.hpp
+    src/clp_s/search/Projection.cpp
+    src/clp_s/search/Projection.hpp
+    src/clp_s/search/SchemaMatch.cpp
+    src/clp_s/search/SchemaMatch.hpp
     src/clp_s/search/SearchUtils.cpp
     src/clp_s/search/SearchUtils.hpp
     src/clp_s/search/StringLiteral.cpp
@@ -327,7 +371,29 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/ZstdCompressor.hpp
     src/clp_s/ZstdDecompressor.cpp
     src/clp_s/ZstdDecompressor.hpp
-)
+    )
+
+set(SOURCE_FILES_reducer_unitTest
+    src/reducer/BufferedSocketWriter.cpp
+    src/reducer/BufferedSocketWriter.hpp
+    src/reducer/ConstRecordIterator.hpp
+    src/reducer/CountOperator.cpp
+    src/reducer/CountOperator.hpp
+    src/reducer/DeserializedRecordGroup.cpp
+    src/reducer/DeserializedRecordGroup.hpp
+    src/reducer/GroupTags.hpp
+    src/reducer/network_utils.cpp
+    src/reducer/network_utils.hpp
+    src/reducer/Operator.cpp
+    src/reducer/Operator.hpp
+    src/reducer/Pipeline.cpp
+    src/reducer/Pipeline.hpp
+    src/reducer/Record.hpp
+    src/reducer/RecordGroup.hpp
+    src/reducer/RecordGroupIterator.hpp
+    src/reducer/RecordTypedKeyIterator.hpp
+    src/reducer/types.hpp
+    )
 
 set(SOURCE_FILES_unitTest
         src/clp/Array.hpp
@@ -469,6 +535,8 @@ set(SOURCE_FILES_unitTest
         src/clp/MySQLParamBindings.hpp
         src/clp/MySQLPreparedStatement.cpp
         src/clp/MySQLPreparedStatement.hpp
+        src/clp/networking/socket_utils.cpp
+        src/clp/networking/socket_utils.hpp
         src/clp/NetworkReader.cpp
         src/clp/NetworkReader.hpp
         src/clp/PageAllocatedVector.hpp
@@ -519,6 +587,11 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/Compressor.hpp
         src/clp/streaming_compression/Constants.hpp
         src/clp/streaming_compression/Decompressor.hpp
+        src/clp/streaming_compression/lzma/Compressor.cpp
+        src/clp/streaming_compression/lzma/Compressor.hpp
+        src/clp/streaming_compression/lzma/Decompressor.cpp
+        src/clp/streaming_compression/lzma/Decompressor.hpp
+        src/clp/streaming_compression/lzma/Constants.hpp
         src/clp/streaming_compression/passthrough/Compressor.cpp
         src/clp/streaming_compression/passthrough/Compressor.hpp
         src/clp/streaming_compression/passthrough/Decompressor.cpp
@@ -554,10 +627,12 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
+        tests/TestOutputCleaner.hpp
         tests/test-Array.cpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
         tests/test-error_handling.cpp
@@ -583,11 +658,16 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
+        tests/test-sql.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
-add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
+add_executable(unitTest
+        ${SOURCE_FILES_unitTest}
+        ${SOURCE_FILES_clp_s_unitTest}
+        ${SOURCE_FILES_reducer_unitTest}
+        )
 target_include_directories(unitTest
         PRIVATE
         ${CMAKE_SOURCE_DIR}/submodules
@@ -595,7 +675,7 @@ target_include_directories(unitTest
 target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
+        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
         ${CURL_LIBRARIES}
         fmt::fmt
         kql
@@ -605,12 +685,14 @@ target_link_libraries(unitTest
         ${MONGOCXX_TARGET}
         simdjson
         spdlog::spdlog
+        sql
         OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
         )
 target_compile_features(unitTest

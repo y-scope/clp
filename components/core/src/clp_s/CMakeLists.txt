@@ -1,7 +1,20 @@
+add_subdirectory(indexer)
 add_subdirectory(search/kql)
+add_subdirectory(search/sql)
 
 set(
         CLP_SOURCES
+        ../clp/aws/AwsAuthenticationSigner.cpp
+        ../clp/aws/AwsAuthenticationSigner.hpp
+        ../clp/BoundedReader.cpp
+        ../clp/BoundedReader.hpp
+        ../clp/CurlDownloadHandler.cpp
+        ../clp/CurlDownloadHandler.hpp
+        ../clp/CurlEasyHandle.hpp
+        ../clp/CurlGlobalInstance.cpp
+        ../clp/CurlGlobalInstance.hpp
+        ../clp/CurlOperationFailed.hpp
+        ../clp/CurlStringList.hpp
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
         ../clp/database_utils.cpp
@@ -23,16 +36,18 @@ set(
         ../clp/ffi/KeyValuePairLogEvent.hpp
         ../clp/ffi/SchemaTree.cpp
         ../clp/ffi/SchemaTree.hpp
-        ../clp/ffi/utils.cpp
-        ../clp/ffi/utils.hpp
         ../clp/ffi/Value.hpp
         ../clp/FileDescriptor.cpp
         ../clp/FileDescriptor.hpp
+        ../clp/FileReader.cpp
+        ../clp/FileReader.hpp
         ../clp/GlobalMetadataDB.hpp
         ../clp/GlobalMetadataDBConfig.cpp
         ../clp/GlobalMetadataDBConfig.hpp
         ../clp/GlobalMySQLMetadataDB.cpp
         ../clp/GlobalMySQLMetadataDB.hpp
+        ../clp/hash_utils.cpp
+        ../clp/hash_utils.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/parsing.cpp
@@ -43,18 +58,24 @@ set(
         ../clp/MySQLParamBindings.hpp
         ../clp/MySQLPreparedStatement.cpp
         ../clp/MySQLPreparedStatement.hpp
+        ../clp/NetworkReader.cpp
+        ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
         ../clp/networking/socket_utils.hpp
         ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.hpp
         ../clp/ReadOnlyMemoryMappedFile.cpp
         ../clp/ReadOnlyMemoryMappedFile.hpp
+        ../clp/spdlog_with_specializations.hpp
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
+        ../clp/Thread.cpp
+        ../clp/Thread.hpp
         ../clp/TraceableException.hpp
         ../clp/time_types.hpp
+        ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
         ../clp/WriterInterface.cpp
@@ -67,6 +88,8 @@ set(
         archive_constants.hpp
         ArchiveReader.cpp
         ArchiveReader.hpp
+        ArchiveReaderAdaptor.cpp
+        ArchiveReaderAdaptor.hpp
         ArchiveWriter.cpp
         ArchiveWriter.hpp
         BufferViewReader.hpp
@@ -89,6 +112,8 @@ set(
         FileReader.hpp
         FileWriter.cpp
         FileWriter.hpp
+        InputConfig.cpp
+        InputConfig.hpp
         JsonConstructor.cpp
         JsonConstructor.hpp
         JsonFileIterator.cpp
@@ -226,12 +251,14 @@ target_link_libraries(
         clp-s
         PRIVATE
         absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options
+        Boost::iostreams Boost::program_options Boost::regex Boost::url
+        ${CURL_LIBRARIES}
         clp::string_utils
         kql
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
         msgpack-cxx
+        OpenSSL::Crypto
         simdjson
         spdlog::spdlog
         yaml-cpp::yaml-cpp
