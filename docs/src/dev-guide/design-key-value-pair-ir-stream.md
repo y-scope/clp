@@ -16,7 +16,7 @@ previous IR format.
 
 This new IR format has been successfully deployed in production environments to serialize real-world
 log events for cost reduction. These log events originate from diverse sources, including:
-- Application and services logs in datacenters
+- Application and services logs in datacenters.
 - User, application, and FSD (full self-driving) operational logs on electrical vehicles on the
   road.
 
