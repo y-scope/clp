@@ -25,6 +25,7 @@ static constexpr size_t cNumMagicNumberChars{4};
 static constexpr std::array<uint8_t, cNumMagicNumberChars>
         cUnstructuredSfaMagicNumber{'Y', 'C', 'L', 'P'};
 static constexpr std::string_view cUnstructuredSfaExtension{".clp"};
+static constexpr std::string_view cFileInfoSentinelName{""};
 
 static constexpr size_t cNumStaticFiles{6};
 constexpr std::array<char const*, cNumStaticFiles> cStaticArchiveFileNames{

@@ -245,7 +245,10 @@ void Archive::close() {
     m_metadata_db.close();
 
     if (m_use_single_file_archive) {
-        single_file_archive::write_single_file_archive(m_path, m_next_segment_id);
+        single_file_archive::write_single_file_archive(
+                m_path,
+                static_cast<size_t>(m_next_segment_id)
+        );
     }
 
     m_creator_id_as_string.clear();

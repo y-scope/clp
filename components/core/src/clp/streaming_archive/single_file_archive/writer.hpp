@@ -36,13 +36,12 @@ private:
  * Writes a single-file archive then deletes the multi-file archive.
  *
  * @param multi_file_archive_path
- * @param next_segment_id ID of the next segment to be created in the archive.
+ * @param num_segments
  * @throws OperationFailed if single-file archive path already exists.
  */
-auto write_single_file_archive(
-        std::filesystem::path const& multi_file_archive_path,
-        segment_id_t next_segment_id
-) -> void;
+auto
+write_single_file_archive(std::filesystem::path const& multi_file_archive_path, size_t num_segments)
+        -> void;
 
 }  // namespace clp::streaming_archive::single_file_archive
 
