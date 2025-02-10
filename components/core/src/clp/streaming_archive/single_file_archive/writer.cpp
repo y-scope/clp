@@ -198,7 +198,7 @@ write_archive_file(std::filesystem::path const& file_path, FileWriter& single_fi
 auto write_archive_files(
         FileWriter& single_file_archive_writer,
         std::filesystem::path const& multi_file_archive_path,
-        segment_id_t num_segments
+        size_t num_segments
 ) -> void {
     for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
         auto const static_archive_file_path{multi_file_archive_path / static_archive_file_name};
