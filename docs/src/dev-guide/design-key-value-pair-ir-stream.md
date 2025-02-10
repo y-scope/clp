@@ -205,7 +205,7 @@ The schema tree follows these structural assumptions:
         - As a leaf node, it may represent `null` or an empty key-value set (e.g., `{}`).
     - **Unstructured Array**: Represents an array stored as a JSON string. (Leaf node only)
     - **String**: Represents a UTF-8 encoded byte sequence. (Leaf node only)
-    - **Int**: Represents a 64-bit signed integer. (Leaf node only)
+    - **Integer**: Represents a 64-bit signed integer. (Leaf node only)
     - **Float**: Represents a double-precision floating-point number. (Leaf node only)
     - **Boolean**: Represents a boolean value. (Leaf node only)
 - Key representation: Each schema tree node represents a key, which must be a string.
@@ -621,6 +621,94 @@ This IR unit contains the necessary information to:
   tree.
 
 #### Log Event Unit
+
+A Log Event Unit represents a complete log event, including both auto-generated and user-generated
+kv-pairs. These kv-pairs are serialized as schema-tree-node-ID-value pairs.
+
+##### Scheme-tree-node-id-value Pairs
+
+A schema-tree-node-ID-value pair consists of:
+- An [Encoded Schema Tree Node ID Packet](#encoded-schema-tree-node-id-packet).
+- A value packet corresponding to the schema tree node type.
+
+Each schema tree node type supports the following accepted value packets:
+- **Object**:
+  - [Empty Value Packet](#empty-value-packet)
+  - [Null Value Packet](#null-value-packet)
+- **Unstructured Array**:
+  - [Four-byte Encoded Text AST Packet](#four-byte-encoded-text-ast-packet)
+  - [Eight-byte Encoded Text AST Packet](#eight-byte-encoded-text-ast-packet)
+- **String**:
+  - [String Value Packet](#string-value-packet)
+  - [Four-byte Encoded Text AST Packet](#four-byte-encoded-text-ast-packet)
+  - [Eight-byte Encoded Text AST Packet](#eight-byte-encoded-text-ast-packet)
+- **Integer**:
+  - [Integer Value Packet](#integer-value-packet)
+- **Float**:
+  - [Float Value Packet](#float-value-packet)
+- **Boolean**:
+  - [True Value Packet](#true-value-packet)
+  - [False Value Packet](#false-value-packet)
+
+##### Efficient Serialization of Schema-Tree-Node-ID-Value Pairs
+
+To optimize compression, the auto-generated and user-generated schema-tree-node-ID-value pairs are
+structured differently during serialization.
+
+###### Auto-generated Schema-tree-node-id-value Pairs
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+    block-beta
+    columns 5
+    A["Encoded Node ID #0"]:1
+    B["Encoded Value #0"]:1
+    C["..."]:1
+    D["Encoded Node ID #n"]:1
+    E["Encoded Value #n"]:1
+:::
+
+Auto-generated schema-tree-node-ID-value pairs are serialized as an array of
+`{Encoded Node ID, Encoded Value}` pairs:
+- `Encoded Node ID` must belong to the auto-generated schema tree.
+- `Encoded Value` must be valid for their respective types.
+- If no auto-generated kv-pairs exist, this array is empty.
+
+###### User-generated Schema-tree-node-id-value Pairs
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+columns 6
+    A["Encoded Node ID #0"]:1
+    B["..."]:1
+    C["Encoded Node ID #n"]:1
+    D["Encoded Value #0"]:1
+    E["..."]:1
+    F["Encoded Value #n"]:1
+:::
+
+User-generated schema-tree-node-ID-value pairs separate node IDs and values, ensuring the schema
+remains a contiguous list of encoded node IDs, which enhances compression efficiency.
+- `Encoded Node ID` must belong to the user-generated schema tree.
+- `Encoded Value` must be valid for their respective types.
+- The number of `Encoded Node ID` must match the number of `Encoded Value`.
+- If no user-generated kv-pairs exist, the layout must contain a single
+  [Empty Value Packet](#empty-value-packet).
+
+##### Log Event Unit Overall Format Layout
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 2
+    A["Auto-generated Schema-tree-node-id-value Pairs"]:1
+    B["User-generated Schema-tree-node-id-value Pairs"]:1
+:::
+
+A Log Event Unit is serialized in the following order:
+1. Auto-generated schema-tree-node-ID-value pairs.
+2. User-generated schema-tree-node-ID-value pairs.
 
 #### End-of-stream Unit
 
