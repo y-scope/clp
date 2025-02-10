@@ -727,6 +727,44 @@ be an [End-of-stream Packet](#end-of-stream-packet).
 An IR stream must end with this IR unit to be considered complete. If an IR stream does not
 terminate with this unit, it is considered incomplete.
 
+### IR Stream
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+block-beta
+    columns 4
+    A["Magic Number"]:1
+    B["Metadata"]:1
+    C["Schemas & Log Events"]:1
+    D["End"]:1
+:::
+
+#### Magic Number
+
+The magic number is a byte sequence to identify a CLP Key-value Pair IR Stream.
+- `{0xFD, 0x2F, 0xB5, 0x29}`: Indicating that encoded text ASTs are in four-byte encoding.
+- `{0xFD, 0x2F, 0xB5, 0x30}`: Indicating that encoded text ASTs are in eight-byte encoding.
+
+#### Metadata
+
+[Stream-level Metadata](#stream-level-metadata) serialized as a
+[JSON Metadata Packet](#json-metadata-packet).
+
+#### Schemas & Log Events
+
+A variable-length sequence of:
+- [Schema Tree Node Insertion Unit](#schema-tree-node-insertion-unit)
+- [Log Event Unit](#log-event-unit)
+
+Rules:
+- The schema tree starts with only the root node.
+- Every schema node referenced in a Log Event Unit must be defined first in a preceding Schema Tree
+  Node Insertion Unit within the stream.
+
+#### End
+
+A single [End-of-stream Unit](#end-of-stream-unit) marks the termination of the IR stream.
+
 ## Appendix: IR Packet Header Bytes
 
 | **Name**                        | **Byte** |
