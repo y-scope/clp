@@ -25,23 +25,13 @@ namespace {
 constexpr size_t cReadBlockSize = 4096;
 
 /**
- * Gets the size of a file specified by `file_path` and adds it to file section `offset`.
- * @param file_path
- * @param[out] offset File section offset for the single-file archive. The returned offset
- * represents the starting position of the next file in single-file archive.
- * @throws OperationFailed if error getting file size.
- */
-auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uint64_t& offset)
-        -> void;
-
-/**
  * Generates metadata for the file section of a single-file archive. The metadata consists
  * of a list of file names and their corresponding starting offsets.
  *
  * @param multi_file_archive_path
  * @param num_segments
  * @return Vector containing a `FileInfo` struct for every file in the multi-file archive.
- * @throws Propagates `get_file_size_and_update_offset`'s exceptions.
+ * @throws `std::filesystem::filesystem_error` if `stat` on archive file fails.
  */
 [[nodiscard]] auto
 get_archive_file_infos(std::filesystem::path const& multi_file_archive_path, size_t num_segments)
@@ -104,20 +94,6 @@ auto write_archive_files(
         size_t num_segments
 ) -> void;
 
-auto get_file_size_and_update_offset(std::filesystem::path const& file_path, uint64_t& offset)
-        -> void {
-    try {
-        offset += std::filesystem::file_size(file_path);
-    } catch (std::filesystem::filesystem_error const& e) {
-        throw OperationFailed(
-                ErrorCode_Failure,
-                __FILENAME__,
-                __LINE__,
-                fmt::format("Failed to get file size: {}", e.what())
-        );
-    }
-}
-
 auto
 get_archive_file_infos(std::filesystem::path const& multi_file_archive_path, size_t num_segments)
         -> std::vector<FileInfo> {
@@ -126,7 +102,7 @@ get_archive_file_infos(std::filesystem::path const& multi_file_archive_path, siz
 
     for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
         files.emplace_back(FileInfo{std::string(static_archive_file_name), offset});
-        get_file_size_and_update_offset(multi_file_archive_path / static_archive_file_name, offset);
+        offset += std::filesystem::file_size(multi_file_archive_path / static_archive_file_name);
     }
 
     std::filesystem::path segment_dir_path = multi_file_archive_path / cSegmentsDirname;
@@ -134,7 +110,7 @@ get_archive_file_infos(std::filesystem::path const& multi_file_archive_path, siz
     for (size_t i = 0; i < num_segments; ++i) {
         auto const segment_id = std::to_string(i);
         files.emplace_back(FileInfo{segment_id, offset});
-        get_file_size_and_update_offset(segment_dir_path / segment_id, offset);
+        offset += std::filesystem::file_size(segment_dir_path / segment_id);
     }
 
     // Add sentinel indicating total size of all files.
