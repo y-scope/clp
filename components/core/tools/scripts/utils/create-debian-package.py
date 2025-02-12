@@ -71,8 +71,14 @@ def create_debian_package(args):
     # Copy CLP core binaries from the build directory to the package's binary directory
     print("\n=========================================================================\n")
     build_dir = pathlib.Path(args.build_dir)
+    if not build_dir.is_dir():
+        raise ValueError(f"Build directory does not exist: {build_dir}")
+    
     binaries = ["clg", "clo", "clp", "clp-s", "glt", "indexer", "make-dictionaries-readable"]
     for binary in binaries:
+        binary_path = build_dir / binary
+        if not binary_path.is_file():
+            raise ValueError(f"Required binary not found: {binary_path}")
         print(f"Copying clp-core binary `{binary}` to {bin_dir.relative_to(package_dir)}")
         shutil.copy(build_dir / binary, bin_dir)
 
