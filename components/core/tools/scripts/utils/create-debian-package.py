@@ -73,7 +73,7 @@ def create_debian_package(args):
     build_dir = pathlib.Path(args.build_dir)
     if not build_dir.is_dir():
         raise ValueError(f"Build directory does not exist: {build_dir}")
-    
+
     binaries = ["clg", "clo", "clp", "clp-s", "glt", "indexer", "make-dictionaries-readable"]
     for binary in binaries:
         binary_path = build_dir / binary
@@ -94,7 +94,7 @@ def create_debian_package(args):
             ["dpkg-deb", "--build", str(package_dir), str(deb_file)],
             check=True,
             capture_output=True,
-            text=True
+            text=True,
         )
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Failed to build Debian package: {e.stderr}") from e
