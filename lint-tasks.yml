@@ -87,7 +87,7 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: "--check"
+          BLACK_FLAGS: "--check --diff"
           RUFF_FLAGS: ""
 
   py-fix:
