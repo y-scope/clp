@@ -89,8 +89,15 @@ def create_debian_package(args):
     # Build the package
     print("\n=========================================================================\n")
     deb_file = pathlib.Path(args.output_dir) / f"{package_name}_{full_version}_{architecture}.deb"
-    subprocess.check_call(["dpkg-deb", "--build", str(package_dir), str(deb_file)])
-
+    try:
+        subprocess.run(
+            ["dpkg-deb", "--build", str(package_dir), str(deb_file)],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to build Debian package: {e.stderr}") from e
     # Print success message
     print(f"\nPackage created: {deb_file}")
     print(f"\nInstall with: sudo dpkg -i {deb_file}")
