@@ -18,7 +18,10 @@ def get_architecture() -> str:
     """
     try:
         result = subprocess.run(
-            ["dpkg", "--print-architecture"], capture_output=True, text=True, check=True
+            ["dpkg", "--print-architecture"],
+            capture_output=True,
+            text=True,
+            check=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
@@ -30,8 +33,7 @@ def create_debian_package(args):
     Create a Debian package for CLP core.
 
     Args:
-        args: Command-line arguments containing build directory, version, revision,
-              and output directory.
+        args: Command-line arguments containing build directory, version, revision, and output directory.
     """
 
     # Package configuration
@@ -92,16 +94,10 @@ def create_debian_package(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a minimal CLP core Debian package")
-    parser.add_argument(
-        "-b", "--build-dir", required=True, help="The CLP core CMake build directory"
-    )
-    parser.add_argument(
-        "-v", "--version", required=True, help="The Debian package upstream version"
-    )
+    parser.add_argument("-b", "--build-dir", required=True, help="The CLP core CMake build directory")
+    parser.add_argument("-v", "--version", required=True, help="The Debian package upstream version")
     parser.add_argument("-r", "--revision", default="1", help="The Debian package revision")
-    parser.add_argument(
-        "-o", "--output-dir", default=os.getcwd(), help="The debian package output dir"
-    )
+    parser.add_argument("-o", "--output-dir", default=os.getcwd(), help="The debian package output dir")
 
     args = parser.parse_args()
 
