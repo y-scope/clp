@@ -158,6 +158,11 @@ public:
     void load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t uncompressed_size);
 
     /**
+     * @return the number of messages in the schema
+     */
+    uint64_t get_num_messages() const { return m_num_messages; }
+
+    /**
      * Gets next message
      * @param message
      * @return true if there is a next message
