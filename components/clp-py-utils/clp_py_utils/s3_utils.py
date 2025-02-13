@@ -91,7 +91,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
             region_name=s3_input_config.region_code,
         )
 
-    my_s3_client = aws_session.client(
+    s3_client = aws_session.client(
         "s3",
     )
 
