@@ -332,8 +332,8 @@ class S3Config(BaseModel):
     bucket: str
     key_prefix: str
 
-    profile: Optional[str]
-    credentials: Optional[S3Credentials]
+    profile: Optional[str] = None
+    credentials: Optional[S3Credentials] = None
 
     @validator("region_code")
     def validate_region_code(cls, field):

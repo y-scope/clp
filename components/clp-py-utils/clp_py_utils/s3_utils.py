@@ -74,11 +74,25 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
-    s3_client = boto3.client(
+    aws_profile = s3_input_config.profile
+    aws_access_key_id = s3_input_config.credentials.access_key_id
+    aws_secret_access_key = s3_input_config.credentials.secret_access_key
+
+    if aws_profile is None and (aws_access_key_id is None or aws_secret_access_key is None):
+        raise ValueError("AWS credentials are not provided")
+
+    aws_session = None
+    if aws_profile is not None:
+        aws_session = boto3.Session(profile_name=aws_profile)
+    else:
+        aws_session = boto3.Session(
+            aws_access_key_id=aws_access_key_id, 
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=s3_input_config.region_code,
+        )
+
+    my_s3_client = aws_session.client(
         "s3",
-        region_name=s3_input_config.region_code,
-        aws_access_key_id=s3_input_config.credentials.access_key_id,
-        aws_secret_access_key=s3_input_config.credentials.secret_access_key,
     )
 
     file_metadata_list: List[FileMetadata] = list()
@@ -124,13 +138,25 @@ def s3_put(
         )
 
     config = Config(retries=dict(total_max_attempts=total_max_attempts, mode="adaptive"))
+
+    aws_profile = s3_config.get_profile()
     aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
 
-    my_s3_client = boto3.client(
+    if aws_profile is None and (aws_access_key_id is None or aws_secret_access_key is None):
+        raise ValueError("AWS credentials are not provided")
+
+    aws_session = None
+    if aws_profile is not None:
+        aws_session = boto3.Session(profile_name=aws_profile)
+    else:
+        aws_session = boto3.Session(
+            aws_access_key_id=aws_access_key_id, 
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=s3_config.region_code,
+        )
+
+    my_s3_client = aws_session.client(
         "s3",
-        region_name=s3_config.region_code,
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
         config=config,
     )
 
