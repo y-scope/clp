@@ -279,6 +279,11 @@ private:
      */
     void update_metadata();
 
+    /**
+     * Updates metadata in the global metadata database.
+     */
+    auto update_global_metadata() -> void;
+
     // Variables
     boost::uuids::uuid m_id;
     std::string m_id_as_string;
@@ -315,6 +320,8 @@ private:
     segment_id_t m_next_segment_id;
     std::vector<File*> m_files_with_timestamps_in_segment;
     std::vector<File*> m_files_without_timestamps_in_segment;
+
+    std::vector<File*> m_file_metadata_for_global_update;
 
     size_t m_target_segment_uncompressed_size;
     Segment m_segment_for_files_with_timestamps;
