@@ -3,45 +3,184 @@
 Key-Value Pair IR Stream is a new intermediate representation format for CLP-S that supports both 
 semi-structured logs and unstructured logs. Here we will walk through the technical details of this
 key step forward for CLP-S. At a high level, we use a streaming format to represent the 
-semi-structured data. We call each section for the stream an IR unit. These units come in four 
-types; a metadata unit, schema tree growth units, log event units, and an end of stream unit. Here 
-we will talk through this streaming format, how this intermediary representations works with CLP-S 
-archive format, and compare it to CLP’s IRv1. If you are unfamialr with CLP's IRv1 format please 
-checkout [this](#background-in-irv1) section below.
+semi-structured data. The stream consists of some initial metadata, followed by series data segments
+that we call IR units. These units come in three types: schema tree node insertion units, log event 
+units, and an end-of-stream unit. Here we will talk through this streaming format, how it was 
+developed, and how this intermediary representations works with the CLP-S archive format.
 
 ## Introduction
 
-As outlined in [Uber's blog post][uber-blog] from 2022, the CLP IR stream format is a lightweight
-serialization format designed for log streaming compression. However, due to its design constraints,
-this IR stream format is primarily suited for simple, unstructured logs, such as raw text logs,
-which typically consist of only a timestamp field and a log message field. Consequently,
+As outlined in [Uber's blog post][uber-blog] from 2022, the 
+[CLP IR stream format](#background-in-clp-intermediary-representation-clp-ir-format) is a 
+lightweight serialization format designed for log streaming compression. However, due to its design 
+constraints, this IR stream format is primarily suited for simple, unstructured logs, such as raw 
+text logs, which typically consist of only a timestamp field and a log message field. Consequently, 
 structured logs, such as JSON logs, cannot be efficiently serialized using this format.
 
-[CLP-S][clp-s-osdi] is an extension of the CLP's design principle but applied to semi-structured logs such as 
-JSON. It uses the key value structure of JSON entries so that a schema is a unique set of keys and 
-the values associated with those keys are the variables. Each schema can be represented by a tree. 
+[CLP-S][clp-s-osdi] is an extension of the CLP's design principle but applied to semi-structured logs such as JSON. It uses the key-value structure of JSON entries so that a schema is a unique set of keys and the values associated with those keys are the variables. Take the two log events below in Figure 1, as an example. As an example, in the log event #1, "log_id" would be a key and the corresponding value would be 2648.
+
+<table style="border-collapse: collapse; width: 100%;">
+<tr>
+    <th style="border: 1px solid black;">Log Event #1</th>  
+    <th style="border: 1px solid black;">Log Event #2</th>  
+</tr>
+<tr>
+    <td style="border: 1px solid black; vertical-align: top;">
+        <pre>
+{
+  "log_id": 2648,
+  "version_num": 1.01,
+  "has_error": true,
+  "error_type": "usage",
+  "msg": "UID=0, CPU usage: 99.99%",
+  "data": null,
+  "input": [10, 20, 30],
+  "machine_info": {
+    "machine_num": 123
+  },
+  "other_info": {}
+  "timestamp": "Feb 13 2025 00:52:20 GMT-0500"
+}
+        </pre>
+    </td>
+    <td style="border: 1px solid black; vertical-align: top;">
+        <pre>
+{
+  "log_id": 2649,
+  "version_num": 1.01,
+  "has_error": false,
+  "error_type": "N/A",
+  "msg": "success",
+  "data": {},
+  "input": [10, 20, 30],
+  "machine_info": {
+    "machine_num": 123
+  },
+  "other_info": {
+    "result": [11, 21, 31]
+  }
+  "timestamp": "Feb 13 2025 00:58:43 GMT-0500"
+}
+        </pre>
+    </td>
+</tr>
+</table>
+<p style="text-align:center;"><strong>Figure 1</strong>: Example Log Events</p>
+
+Each schema can be represented by a tree. 
 When a unique key name and primitive type pair is encountered, we add a new leaf node to the tree. 
-The internal nodes of the tree are any surrounding objects. We merge these individual trees 
-together to form a merged parse tree which we’ll refer to as the schema tree. If two keys in 
-different schemas share a key name, but not a type, we add that new node to the tree. Since a set of key and type pairs make a schema, more than one log event can share the same schema and just have seperate values correpsonding to the keys. We collect the unique schemas forming a schema map. Like in CLP these
- values can be further deduplicated using dictionaries. You can see an overall CLP-S workflow in 
- Figure 1 and you can read further details here; 
- [OSDI24 - wang et. al](https://www.usenix.org/conference/osdi24/presentation/wang-rui). 
+The internal nodes of the tree are any surrounding objects. If two keys share the same name, but differ in type, we add that new node to the tree. Consider Log Event #1 from Figure 1. For the first element in log event 1, the schema tree would need to contain a leaf node with the name “log_id” and the type integer. Following that process for the entire log event you would construct the schema tree in Figure 2. 
+
+//TODO: Do we need to explain the CLP-S node types? We could put a list in an Appendix or another page and point to it?
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+graph LR;
+    0["#0:'Root'(Object)"]
+    1["#1:'log_id'(Integer)"]
+    2["#2:'version_num'(Float)"]
+    3["#3:'has_error'(Boolean)"]
+    4["#4:'error_type'(VarString)"]
+    5["#5:'msg'(ClpString)"]
+    6["#6:'data'(Null)"]
+    7["#7:'input'(UnstructuredArray)"]
+    8["#8:'machine_info'(Object)"]
+    9["#9:'machine_num'(Integer)"]
+    10["#10:'other_info'(Object)"]
+    11["#11:'timestamp'(VarString)"]
+    0 --> 1
+    0 --> 2
+    0 --> 3
+    0 --> 4
+    0 --> 5
+    0 --> 6
+    0 --> 7
+    0 --> 8
+    0 --> 10
+    0 --> 11
+    8 --> 9
+:::
+<p style="text-align:center;"><strong>Figure 2</strong>: CLP-S Schema Tree for Log Event #1</p>
+
+These individual schema trees for each log event can be merged together to form a merged schema 
+tree. In Figure 3, you can see the full CLP-S schema tree for the 2 log events. Notice how there are 2 nodes with the names “msg” and “data” (nodes 5 and 6 vs nodes 12 and 13), but the types are different. 
+
+:::{mermaid}
+%%{init: {'theme':'neutral'}}%%
+graph LR;
+    0["#0:'Root'(Object)"]
+    1["#1:'log_id'(Integer)"]
+    2["#2:'version_num'(Float)"]
+    3["#3:'has_error'(Boolean)"]
+    4["#4:'error_type'(VarString)"]
+    5["#5:'msg'(ClpString)"]
+    6["#6:'data'(Null)"]
+    7["#7:'input'(UnstructuredArray)"]
+    8["#8:'machine_info'(Object)"]
+    9["#9:'machine_num'(Integer)"]
+    10["#10:'other_info'(Object)"]
+    11["#11:'timestamp'(VarString)"]
+    12["#12:'msg'(VarString)"]
+    13["#13:'data'(Obj)"]
+    14["#14:'result'(UnstructuredArray)"]
+    0 --> 1
+    0 --> 2
+    0 --> 3
+    0 --> 4
+    0 --> 5
+    0 --> 6
+    0 --> 7
+    0 --> 8
+    0 --> 10
+    0 --> 11
+    0 --> 12
+    0 --> 13
+    8 --> 9
+    10 --> 14
+:::
+<p style="text-align:center;"><strong>Figure 3</strong>: CLP-S Schema Tree</p>
+
+With this merged schema tree, each log event can be encoded as a schema, which is a series of leaf node IDs, and a set of values for each of those leaf nodes. You can see the schemas for the two log events in Figure 4. Notice for example that node 8 is not listed because it is not a leaf node in either schema and node 10 is not listed in schema 1 because it is not a leaf node there. 
+
+<table style="border-collapse: collapse; text-align: center; width: 50%;">
+<tr>
+<td><strong>Schema ID</strong></td> <td><strong>Nodes in Schema</strong></td>
+</tr>
+<tr>
+<td>0</td>
+<td>
+[1, 2, 3, 4, <span style="color:red">5</span>, <span style="color:red">6</span>, 7, 9, 
+<span style="color:red">10</span>, 11]
+</td>
+</tr>
+<tr>
+<td>1</td>
+<td>[1, 2, 3, 4, 7, 9, 11, <span style="color:red">12, 13, 14</span>]</td>
+</tr>
+</table>
+<p style="text-align:center;"><strong>Figure 4</strong>: CLP-S Schema Map (Nodes unique to a log event are highlighted)</p>
+
+Since a schema is just a set of key and type pairs, with additional log events, each of the schemas 
+may correspond to more than one log event. We collect all the unique schemas forming a schema map 
+(Figure 4), that can be referenced rather that duplicating the schema for each log event that uses 
+it. Like in CLP these values can are further deduplicated using dictionaries. Each log event can 
+then be encoded as a schema from the schema map, and a series of values. You can see an overall 
+CLP-S workflow in Figure 5 and you can read further details here; 
+[OSDI24 - wang et. al][clp-s-osdi]. 
 
 ![image info](./images/design-IRV2_uSlope_paper_visualization.png)
-<p style="text-align:center;"><strong>Figure 1</strong>: Figure 7 from μSlope: High Compression and
+<p style="text-align:center;"><strong>Figure 5</strong>: Figure 7 from μSlope: High Compression and
  Fast Search on Semi-Structured Logs by Wang et al.</p>
-
-To see how a a schema tree and schema map are formed from a few example log messages you can look here.(TODO: Link to Example Log Events, CLP-S Schema Tree)
 
 Building upon the principles of the existing IR stream format and drawing inspiration from CLP-S, 
 we have developed a new IR format: we call Key-Value Pair IR Stream format. This new format 
 enhances the original design by efficiently supporting key-value pair serialization, thereby 
 addressing the limitations of the previous IR format.
 
-This new IR format has been successfully deployed in production environments to serialize real-
-world log events for cost reduction. These log events originate from diverse sources, including:
-- Application and services logs in datacenters.
+This new IR format has been successfully deployed in production environments to serialize 
+real-world log events for cost reduction. These log events originate from diverse sources, 
+including:
+- Application and services logs in data centers.
 - User, application, and FSD (full self-driving) operational logs on electrical vehicles on the 
   road.
 
@@ -49,16 +188,16 @@ world log events for cost reduction. These log events originate from diverse sou
 
 Our goal for Key-Value Pair IR Stream (KV Pair IR) is to break CLP-S into phases like we did for 
 CLP so that we can still achieve a substantial amount of initial compression, but leave the heavy 
-resource intensive deduplication of variable values for later processing. Like IRv1, KV Pair IR 
+resource intensive deduplication of variable values for later processing. Like CLP IR, KV Pair IR 
 enables the lossless compression of logs on an entry by entry basis. KV Pair IR is a superset of 
-IRv1, expanding on the IRv1 structure to support more types of variables and logs suited for 
+CLP IR, expanding on the CLP IR structure to support more types of variables and logs suited for 
 managing semi-structured logs like JSON. Rather than needing the entire log file in order to 
 compress, KV Pair IR can be built one log entry at a time. Like CLP-S, KV Pair IR utilizes a schema 
-tree format, but the schema trees use a simplified set of types; string, integer, float, boolean, 
+tree format, but the schema trees use a simplified set of types: string, integer, float, boolean, 
 unstructured arrays, and objects. These types can map to multiple CLP-S types, but keeping a 
 simplified list of types limits any specialization to the archive. In addition to a schema tree 
-built from the user generated structured logs such as JSON, KV Pair IR also supports auto generated 
-key value pairs which allows the auto tracking of usueful logging metadata such as timestamp, log 
+built from the user-generated structured logs such as JSON, KV Pair IR also supports auto-generated 
+key-value pairs which allows the automatic tracking of useful logging metadata such as timestamp, log 
 level, machine info, etc.
 
 ### Flattened Representation of Hierarchical Schema Structures
@@ -77,48 +216,49 @@ KV Pair IR categorizes the kv-pairs of a log event into two categories:
   automatically generated by the logging library.
 - **User-generated kv-pairs**: Custom kv-pairs (e.g., log messages).
 
-Each KV Pair IR stream maintains auto-generated keys and user-generated keys in two independent
+Each KV Pair IR stream maintains auto-generated (auto-gen) keys and user-generated (user-gen) keys in two independent
 schema trees, ensuring clear differentiation and avoiding unintended interference. This design 
-prevents conflicts between auto-generated and user-generated keys by keeping them separate. 
+prevents conflicts between auto-gen and user-gen keys by keeping them separate. 
 For example if your log message was already maintaining a local timestamp string called "timestamp" 
-inside the JSON log message, but you wanted the logging library to track a seperate utc timestamp 
+inside the JSON log message, but you wanted the logging library to track a separate UTC timestamp 
 string and call it "timestamp". While you could try to find an unused key name, by keeping the 
-automated key in a seperate schema tree, it allows this automated key to have whatever name you 
+auto-gen key in a separate schema tree, it allows this auto-gen key to have whatever name you 
 want and not conflict with the "timestamp" already in use or with any future key that you haven't 
 encountered yet.
 
-**NOTE**: CLP-S does not currently support automated key value pairs and will not be refelcted in the CLP-S archive generated from a Key-Value Pair IR Stream containing automated generated keys.
+**NOTE**: CLP-S does not currently support auto-generated key-value pairs and will not be reflected in the CLP-S archive generated from a Key-Value Pair IR Stream containing auto-generated keys.
 
 ### Building Schema Tree In A Stream
 
 Using the combined [schema trees](#schema-tree), how can we build the schema trees one log event at 
-a time to enable a serialized streamable format similar to CLP’s IRv1? We do this by breaking each 
-log event down into a series of IR units: schema tree growth IR units describing changes in the 
-schema tree and log event IR units which consists of key and value packets. Although we will use 
+a time to enable a serialized streamable format similar to CLP IR? We do this by breaking each 
+log event down into a series of IR units: schema tree node insertion IR units describing changes in 
+the schema tree and log event IR units which consists of key and value packets. Although we will use
 the terminology IR unit to describe the individual IR stream elements, all of the IR units 
 corresponding to a single log event would be sent in a single network packet to preserve the order 
 of the individual elements, since the order and location of the IR Units in the stream are used 
 inherently by the future log events. 
 
-So the overall format of the IR stream consists of 4 sections; a [magic number](#magic-number) 
+So the overall format of the IR stream consists of 4 sections: a [magic number](#magic-number) 
 which indicates the stream is a KV Pair Stream and how many byte encoding is being used, a 
-[metadata IR unit](#metadata) which provides information necessary to properly deserailize the 
-stream later, a alternating set of [schema tree growth IR units](#schema-tree-node-insertion-unit) 
+[metadata IR unit](#metadata) which provides information necessary to properly deserialize the 
+stream later, a alternating set of 
+[schema tree node insertion IR units](#schema-tree-node-insertion-unit) 
 and [log event IR units](#log-event-unit), and finally a 
-[end of stream IR unit](#end-of-stream-unit) to indicate you've reached the end of a valid KV Pair 
-IR Stream. The bulk of the stream will be in spent in that alternating set of schema tree growth IR 
-units and log event IR units, one set for each log message. The log event unit contains a set of 
-[key and value IR packets](#auto-generated-schema-tree-node-id-value-pairs) for the auto 
-generated schema nodes, and then a set of 
+[end-of-stream IR unit](#end-of-stream-unit) to indicate you've reached the end of a valid KV Pair 
+IR Stream. The bulk of the stream will be in spent in that alternating set of schema tree node 
+insertion IR units and log event IR units, one set for each log message. The log event unit 
+contains a set of [key and value IR packets](#auto-generated-schema-tree-node-id-value-pairs) for 
+the auto-gen schema nodes, and then a set of 
 [key IR packets and corresponding value IR packets](#user-generated-schema-tree-node-id-value-pairs)
- for each user generated key value pair in the log entry (???). To differnetiate between the auto 
- and user generated node ids we use the 1's complement to encode the auto generated node ids. 
- Rather than organizing the IR units so that each value comes directly after its key, we group the 
- keys and values together. We found that in practice the similarities between keys and between 
- values allows for better compression ratios when stored together. If a log record does not result 
- in any new schema tree nodes, there will be no new schema tree growth IR units for that record. 
- While we stream the IR units we keep the schema tree we’ve built in memory for easy reference, so 
- all packets in the stream can reference the same set of schema tree nodes. 
+for each user-gen key-value pair in the log entry (???). To differentiate between the auto-gen 
+and user-gen node ids we use the 1's complement to encode the auto-gen node ids. 
+Rather than organizing the IR units so that each value comes directly after its key, we group the 
+keys and values together. We found that in practice the similarities between keys and between 
+values allows for better compression ratios when stored together. If a log record does not result 
+in any new schema tree nodes, there will be no new schema tree node insertion IR units for that 
+record. While we stream the IR units we keep the schema tree we've built in memory for easy 
+reference, so all packets in the stream can reference the same set of schema tree nodes. 
 
 ## Format Specification
 
@@ -153,7 +293,7 @@ The schema tree follows these structural assumptions:
 
 ### IR Stream
 
-//TODO: Explain high level format of IR Stream ... add summary of the 4 parts that make a stream and point to addditional details.
+//TODO: Explain high level format of IR Stream ... add summary of the 4 parts that make a stream and point to additional details.
 
 :::{mermaid}
 %%{init: {'theme':'neutral'}}%%
@@ -482,7 +622,7 @@ A String Value Packet consists of a header byte, an encoded length, and the payl
     - `StringLen_1byte`: The length is a 1-byte unsigned integer.
     - `StringLen_2byte`: The length is a 2-byte unsigned integer.
     - `StringLen_4byte`: The length is a 4-byte unsigned integer.
-- Length: The unsigned integer representing the string’s length, encoded in big-endian format as
+- Length: The unsigned integer representing the string's length, encoded in big-endian format as
   specified by the header.
 - Payload: The actual string, serialized as a sequence of bytes.
 
@@ -821,7 +961,7 @@ Consider the following two sets of kv-pairs:
   "machine_info": {
     "machine_num": 123
   },
-  "additional_info": {}
+  "other_info": {}
 }
         </pre>
     </td>
@@ -901,11 +1041,11 @@ compactly:
 
 ## Putting It Together
 
-Now that we’ve seen all the IR unit types we can look at what the Key-Value Pair IR Stream would 
+Now that we've seen all the IR unit types we can look at what the Key-Value Pair IR Stream would 
 look like for the two example log events in Figure 1. The stream would start with the schema tree 
 growth IR units for Log Event #1. This would consist of growth IR units for all user generated tree
  nodes with IDs 0 - 10 and the auto generated schema node for the timestamp(Figure 12A). After this
-  would come the auto genererated key value pair(s) (Figure 12B). Next would come Log Event #1’s 
+  would come the auto generated key value pair(s) (Figure 12B). Next would come Log Event #1's 
   user generated keys IR unit group. It will contain a IR unit for each of the user generated 
   schema tree nodes which have values and together with the auto generated keys would make the log 
   events schema (Figure 12C). Completing the IR units corresponding the log event #1 will be the 
@@ -958,18 +1098,18 @@ compression and deduplication.
 TODO!!
 - Pointers to how to use, etc.
 
-## Background in IRv1
+## Background in CLP Intermediary Representation (CLP IR) Format
 
-Before we can discuss the Key-Value Pair IR streaming format, let’s talk about IRv1. CLP (Compressed Log 
-Processor) is a log compression solution that achieves a higher level of compression than general 
-purpose compressors, while maintaining the ability to search the logs without full decompression. 
-It manages this by leveraging the unique repetitive characteristics of logs. CLP was originally 
-designed for use with unstructured logs. Logs are broken into static text, which remains unchanged 
-in different log instances and variables that fill in the blanks in the static text. The building 
-of CLPs archives can be broken into two phases. 
+Before we can discuss the Key-Value Pair IR streaming format, let's talk about CLP IR. CLP 
+(Compressed Log Processor) is a log compression solution that achieves a higher level of compression
+than general purpose compressors, while maintaining the ability to search the logs without full 
+decompression. It manages this by leveraging the unique repetitive characteristics of logs. CLP was 
+originally designed for use with unstructured logs. Logs are broken into static text, which remains 
+unchanged in different log instances and variables that fill in the blanks in the static text. The 
+building of CLPs archives can be broken into two phases. 
 
 Phase 1, is where the logs are parsed and the variables are encoded. This produces an intermediary 
-representation (IRv1) which is built one log entry at a time, perfect for processing and partially 
+representation (IR) which is built one log entry at a time, perfect for processing and partially 
 compressing a stream of log entries as they are produced with minimal buffering. 
 
 Phase 2, which can be done offline when resources are available, further deduplicates the logs by 
