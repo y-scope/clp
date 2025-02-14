@@ -245,7 +245,7 @@ private:
             std::vector<File*>& files_in_segment
     );
     /**
-     * Writes the given files' metadata to the local database using bulk writes
+     * Writes the given files' metadata to the local database using bulk writes.
      * @param files
      * @throw streaming_archive::writer::Archive::OperationFailed if failed to replace old
      * metadata for any file
@@ -254,7 +254,7 @@ private:
     void persist_file_metadata(std::vector<File*> const& files);
     /**
      * Closes a given segment, persists metadata to local database for files in the segment, and
-     * cleans up any data remaining outside the segment
+     * cleans up any data remaining outside the segment.
      * @param segment
      * @param files
      * @param segment_logtype_ids
