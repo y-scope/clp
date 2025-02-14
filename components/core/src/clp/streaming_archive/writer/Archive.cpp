@@ -593,9 +593,6 @@ void Archive::close_segment_and_persist_file_metadata(
 
     for (auto file : files) {
         file->mark_as_in_committed_segment();
-        // Files in this collection only hold metadata. Emplaced files have called method
-        // `File::append_to_segment()` which deallocates memory for timestamp,
-        // logtype, and variable fields.
         m_file_metadata_for_global_update.emplace_back(file);
     }
 
@@ -634,6 +631,7 @@ void Archive::update_local_metadata() {
     m_metadata_file_writer.seek_from_begin(0);
     m_local_metadata->write_to_file(m_metadata_file_writer);
 
+    // Note that stats are printed before archive is added to global metadata database.
     if (m_print_archive_stats_progress) {
         nlohmann::json json_msg;
         json_msg["id"] = m_id_as_string;
