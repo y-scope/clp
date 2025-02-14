@@ -886,7 +886,7 @@ auto JsonParser::parse_from_ir() -> bool {
 
                 if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
                     m_ir_node_to_archive_node_id_mapping.clear();
-                    decompressor.try_get_pos(curr_pos);
+                    curr_pos = decompressor.get_pos();
                     m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
                     last_pos = curr_pos;
                     split_archive();
@@ -911,7 +911,7 @@ auto JsonParser::parse_from_ir() -> bool {
             }
         }
         m_ir_node_to_archive_node_id_mapping.clear();
-        decompressor.try_get_pos(curr_pos);
+        curr_pos = decompressor.get_pos();
         m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
         decompressor.close();
     }
