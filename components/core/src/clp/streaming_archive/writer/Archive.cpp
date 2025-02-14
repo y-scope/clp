@@ -242,6 +242,10 @@ void Archive::close() {
     }
     m_file_metadata_for_global_update.clear();
 
+    if (m_print_archive_stats_progress) {
+        print_archive_stats_progress();
+    }
+
     m_metadata_db.close();
 
     m_creator_id_as_string.clear();
@@ -624,22 +628,21 @@ uint64_t Archive::get_dynamic_compressed_size() {
     return on_disk_size;
 }
 
+auto Archive::print_archive_stats_progress() -> void {
+    nlohmann::json json_msg;
+    json_msg["id"] = m_id_as_string;
+    json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
+    json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
+    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
+              << std::endl;
+}
+
 void Archive::update_local_metadata() {
     m_local_metadata->set_dynamic_uncompressed_size(0);
     m_local_metadata->set_dynamic_compressed_size(get_dynamic_compressed_size());
     // Rewrite (overwrite) the metadata file
     m_metadata_file_writer.seek_from_begin(0);
     m_local_metadata->write_to_file(m_metadata_file_writer);
-
-    // Note that stats are printed before archive is added to global metadata database.
-    if (m_print_archive_stats_progress) {
-        nlohmann::json json_msg;
-        json_msg["id"] = m_id_as_string;
-        json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
-        json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
-        std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
-                  << std::endl;
-    }
 }
 
 auto Archive::update_global_metadata() -> void {

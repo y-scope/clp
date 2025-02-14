@@ -274,6 +274,12 @@ private:
      * is closed
      */
     uint64_t get_dynamic_compressed_size();
+
+    /**
+    * Prints archive progress statistics as a JSON object.
+    */
+    auto print_archive_stats_progress() -> void;
+
     /**
      * Updates the archive's metadata in the local metadata database.
      */
