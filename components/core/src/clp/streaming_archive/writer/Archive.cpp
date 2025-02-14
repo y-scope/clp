@@ -600,7 +600,7 @@ void Archive::close_segment_and_persist_file_metadata(
     }
 
     persist_file_metadata(files);
-    update_metadata();
+    update_local_metadata();
 
     files.clear();
 }
@@ -627,7 +627,7 @@ uint64_t Archive::get_dynamic_compressed_size() {
     return on_disk_size;
 }
 
-void Archive::update_metadata() {
+void Archive::update_local_metadata() {
     m_local_metadata->set_dynamic_uncompressed_size(0);
     m_local_metadata->set_dynamic_compressed_size(get_dynamic_compressed_size());
     // Rewrite (overwrite) the metadata file

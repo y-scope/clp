@@ -245,7 +245,7 @@ private:
             std::vector<File*>& files_in_segment
     );
     /**
-     * Writes the given files' metadata to the database using bulk writes
+     * Writes the given files' metadata to the local database using bulk writes
      * @param files
      * @throw streaming_archive::writer::Archive::OperationFailed if failed to replace old
      * metadata for any file
@@ -253,7 +253,7 @@ private:
      */
     void persist_file_metadata(std::vector<File*> const& files);
     /**
-     * Closes a given segment, persists the metadata of the files in the segment, and cleans up
+     * Closes a given segment, persists metadata to local database for files in the segment, and cleans up
      * any data remaining outside the segment
      * @param segment
      * @param files
@@ -275,12 +275,12 @@ private:
      */
     uint64_t get_dynamic_compressed_size();
     /**
-     * Updates the archive's metadata
+     * Updates the archive's metadata in the local metadata database.
      */
-    void update_metadata();
+    void update_local_metadata();
 
     /**
-     * Updates metadata in the global metadata database.
+     * Updates the archive's metadata in the global metadata database.
      */
     auto update_global_metadata() -> void;
 
@@ -321,6 +321,8 @@ private:
     std::vector<File*> m_files_with_timestamps_in_segment;
     std::vector<File*> m_files_without_timestamps_in_segment;
 
+    // Collection of `File`s which have been written to archive and deallocated, but whose
+    // metadata has not yet been persisted globally.
     std::vector<File*> m_file_metadata_for_global_update;
 
     size_t m_target_segment_uncompressed_size;
