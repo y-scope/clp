@@ -259,6 +259,10 @@ void SchemaReader::initialize_filter(FilterClass* filter) {
     filter->init(this, m_schema_id, m_columns);
 }
 
+void SchemaReader::initialize_filter_with_column_map(FilterClass* filter) {
+    filter->init(this, m_schema_id, m_column_map);
+}
+
 void SchemaReader::generate_local_tree(int32_t global_id) {
     std::stack<int32_t> global_id_stack;
     global_id_stack.emplace(global_id);
