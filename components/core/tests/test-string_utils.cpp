@@ -576,35 +576,54 @@ TEST_CASE("Validate UTF-8 strings", "[validate_utf8]") {
                                                "\xC0"
                                                "4\u1234"};
     constexpr std::string_view cExpectedReplacementForInvalidString2{"abcd123\uFFFD\uFFFD4\u1234"};
+    ValidatingUtf8Parser parser;
 
     SECTION("Error on invalid UTF-8 policy") {
-        ValidatingUtf8Parser parser{ValidatingUtf8Parser::InvalidUtf8Policy::ReturnError};
-        auto outcome = parser.validate(cValidString);
+        constexpr auto cPolicy{ValidatingUtf8Parser::InvalidUtf8Policy::ReturnError};
+        auto outcome = parser.validate(cValidString, cPolicy);
+        REQUIRE(false == outcome.has_error());
+        REQUIRE(cValidString == outcome.value());
+        outcome = parser.validate<cPolicy>(cValidString);
         REQUIRE(false == outcome.has_error());
         REQUIRE(cValidString == outcome.value());
 
-        outcome = parser.validate(cInvalidString1);
+        outcome = parser.validate(cInvalidString1, cPolicy);
+        REQUIRE(true == outcome.has_error());
+        REQUIRE(std::errc::illegal_byte_sequence == outcome.error());
+        outcome = parser.validate<cPolicy>(cInvalidString1);
         REQUIRE(true == outcome.has_error());
         REQUIRE(std::errc::illegal_byte_sequence == outcome.error());
 
-        outcome = parser.validate(cInvalidString2);
+        outcome = parser.validate(cInvalidString2, cPolicy);
+        REQUIRE(true == outcome.has_error());
+        REQUIRE(std::errc::illegal_byte_sequence == outcome.error());
+        outcome = parser.validate<cPolicy>(cInvalidString2);
         REQUIRE(true == outcome.has_error());
         REQUIRE(std::errc::illegal_byte_sequence == outcome.error());
     }
 
     SECTION("Replacement character on invalid UTF-8 policy") {
-        ValidatingUtf8Parser parser{
+        constexpr auto cPolicy{
                 ValidatingUtf8Parser::InvalidUtf8Policy::SubstituteReplacementCharacter
         };
-        auto outcome = parser.validate(cValidString);
+        auto outcome = parser.validate(cValidString, cPolicy);
+        REQUIRE(false == outcome.has_error());
+        REQUIRE(cValidString == outcome.value());
+        outcome = parser.validate<cPolicy>(cValidString);
         REQUIRE(false == outcome.has_error());
         REQUIRE(cValidString == outcome.value());
 
-        outcome = parser.validate(cInvalidString1);
+        outcome = parser.validate(cInvalidString1, cPolicy);
+        REQUIRE(false == outcome.has_error());
+        REQUIRE(cExpectedReplacementForInvalidString1 == outcome.value());
+        outcome = parser.validate<cPolicy>(cInvalidString1);
         REQUIRE(false == outcome.has_error());
         REQUIRE(cExpectedReplacementForInvalidString1 == outcome.value());
 
-        outcome = parser.validate(cInvalidString2);
+        outcome = parser.validate(cInvalidString2, cPolicy);
+        REQUIRE(false == outcome.has_error());
+        REQUIRE(cExpectedReplacementForInvalidString2 == outcome.value());
+        outcome = parser.validate<cPolicy>(cInvalidString2);
         REQUIRE(false == outcome.has_error());
         REQUIRE(cExpectedReplacementForInvalidString2 == outcome.value());
     }

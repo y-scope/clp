@@ -302,12 +302,12 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
     }
 }
 
-auto ValidatingUtf8Parser::validate(std::string_view raw)
+auto ValidatingUtf8Parser::validate(std::string_view raw, InvalidUtf8Policy policy)
         -> OUTCOME_V2_NAMESPACE::std_result<std::string_view> {
     if (simdjson::validate_utf8(raw.data(), raw.size())) {
         return raw;
     }
-    switch (m_policy) {
+    switch (policy) {
         case InvalidUtf8Policy::SubstituteReplacementCharacter:
             m_buffer.clear();
             utf8::replace_invalid(raw.begin(), raw.end(), std::back_inserter(m_buffer));
@@ -317,5 +317,28 @@ auto ValidatingUtf8Parser::validate(std::string_view raw)
         default:
             return std::errc::invalid_argument;
     }
+}
+
+template <>
+auto ValidatingUtf8Parser::validate<ValidatingUtf8Parser::InvalidUtf8Policy::ReturnError>(
+        std::string_view raw
+) -> OUTCOME_V2_NAMESPACE::std_result<std::string_view> {
+    if (simdjson::validate_utf8(raw.data(), raw.size())) {
+        return raw;
+    }
+    return std::errc::illegal_byte_sequence;
+}
+
+template <>
+auto ValidatingUtf8Parser::validate<
+        ValidatingUtf8Parser::InvalidUtf8Policy::SubstituteReplacementCharacter>(
+        std::string_view raw
+) -> OUTCOME_V2_NAMESPACE::std_result<std::string_view> {
+    if (simdjson::validate_utf8(raw.data(), raw.size())) {
+        return raw;
+    }
+    m_buffer.clear();
+    utf8::replace_invalid(raw.begin(), raw.end(), std::back_inserter(m_buffer));
+    return m_buffer;
 }
 }  // namespace clp::string_utils

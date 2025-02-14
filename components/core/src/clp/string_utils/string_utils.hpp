@@ -155,10 +155,21 @@ public:
         ReturnError
     };
 
-    // Constructors
-    ValidatingUtf8Parser() {}
-
-    ValidatingUtf8Parser(InvalidUtf8Policy policy) : m_policy{policy} {}
+    /**
+     * Validates a UTF-8 input string and returns a valid UTF-8 output string or an error.
+     *
+     * The returned string_view is guaranteed to be valid until either the next call to `validate`
+     * or until the input string_view passed to this function becomes invalid, whichever is sooner.
+     *
+     * @param raw
+     * @param policy
+     * @return A result containing a valid UTF-8 string or an error code indicating the failure:
+     * - std::errc::illegal_byte_sequence if the input contains invalid UTF-8 and the policy is
+     *   ReturnError.
+     * - std::errc::invalid_argument if the configured policy is unknown.
+     */
+    auto validate(std::string_view raw, InvalidUtf8Policy policy)
+            -> OUTCOME_V2_NAMESPACE::std_result<std::string_view>;
 
     /**
      * Validates a UTF-8 input string and returns a valid UTF-8 output string or an error.
@@ -167,16 +178,17 @@ public:
      * or until the input string_view passed to this function becomes invalid, whichever is sooner.
      *
      * @param raw
+     * @tparam Policy the error handling policy to apply when encountering invalid UTF-8 characters.
      * @return A result containing a valid UTF-8 string or an error code indicating the failure:
      * - std::errc::illegal_byte_sequence if the input contains invalid UTF-8 and the policy is
      *   ReturnError.
      * - std::errc::invalid_argument if the configured policy is unknown.
      */
+    template <InvalidUtf8Policy Policy>
     auto validate(std::string_view raw) -> OUTCOME_V2_NAMESPACE::std_result<std::string_view>;
 
 private:
     std::string m_buffer;
-    InvalidUtf8Policy m_policy{InvalidUtf8Policy::SubstituteReplacementCharacter};
 };
 }  // namespace clp::string_utils
 
