@@ -2,6 +2,7 @@
 #define CLP_STRING_UTILS_STRING_UTILS_HPP
 
 #include <charconv>
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -150,7 +151,7 @@ bool convert_string_to_int(std::string_view raw, integer_t& converted) {
  */
 class ValidatingUtf8Parser {
 public:
-    enum class InvalidUtf8Policy {
+    enum class InvalidUtf8Policy : uint8_t {
         SubstituteReplacementCharacter,
         ReturnError
     };
@@ -162,7 +163,7 @@ public:
      * or until the input string_view passed to this function becomes invalid, whichever is sooner.
      *
      * @param raw
-     * @param policy
+     * @param policy The error handling policy to apply when encountering invalid UTF-8 characters.
      * @return A result containing a valid UTF-8 string or an error code indicating the failure:
      * - std::errc::illegal_byte_sequence if the input contains invalid UTF-8 and the policy is
      *   ReturnError.
@@ -178,13 +179,13 @@ public:
      * or until the input string_view passed to this function becomes invalid, whichever is sooner.
      *
      * @param raw
-     * @tparam Policy the error handling policy to apply when encountering invalid UTF-8 characters.
+     * @tparam policy The error handling policy to apply when encountering invalid UTF-8 characters.
      * @return A result containing a valid UTF-8 string or an error code indicating the failure:
      * - std::errc::illegal_byte_sequence if the input contains invalid UTF-8 and the policy is
      *   ReturnError.
      * - std::errc::invalid_argument if the configured policy is unknown.
      */
-    template <InvalidUtf8Policy Policy>
+    template <InvalidUtf8Policy policy>
     auto validate(std::string_view raw) -> OUTCOME_V2_NAMESPACE::std_result<std::string_view>;
 
 private:
