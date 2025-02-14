@@ -28,7 +28,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
       - "docs-venv"
     cmds:
       # Call `clean` before building since `sphinx-build --write-all --fresh-env` isn't always
@@ -49,8 +49,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     sources:
       - "{{.G_BUILD_DIR}}/docs-venv.md5"
       - "{{.ROOT_DIR}}/Taskfile.yml"
@@ -64,13 +64,13 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_DOCS_VENV_DIR}}"
-      REQUIREMENTS_FILE: "docs/requirements.txt"
+      REQUIREMENTS_FILE: "{{.ROOT_DIR}}/docs/requirements.txt"
     deps:
       - ":init"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - task: ":utils:create-venv"
         vars:
@@ -80,8 +80,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     sources:
       - "{{.REQUIREMENTS_FILE}}"
       - "{{.ROOT_DIR}}/Taskfile.yml"
@@ -98,15 +98,15 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     sources:
       - "{{.ROOT_DIR}}/Taskfile.yml"
       - "{{.TASKFILE}}"

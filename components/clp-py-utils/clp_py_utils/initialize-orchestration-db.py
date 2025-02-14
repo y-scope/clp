@@ -55,6 +55,7 @@ def main(argv):
                     `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
+                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
                     `duration` FLOAT NULL DEFAULT NULL,
                     `original_size` BIGINT NOT NULL DEFAULT '0',
                     `uncompressed_size` BIGINT NOT NULL DEFAULT '0',
@@ -64,7 +65,8 @@ def main(argv):
                     `clp_binary_version` INT NULL DEFAULT NULL,
                     `clp_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
-                    INDEX `JOB_STATUS` (`status`) USING BTREE
+                    INDEX `JOB_STATUS` (`status`) USING BTREE,
+                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )

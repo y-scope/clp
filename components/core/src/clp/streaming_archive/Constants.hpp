@@ -4,7 +4,6 @@
 #include "../Defs.h"
 
 namespace clp::streaming_archive {
-constexpr archive_format_version_t cArchiveFormatVersion = cArchiveFormatDevVersionFlag | 9;
 constexpr char cSegmentsDirname[] = "s";
 constexpr char cSegmentListFilename[] = "segment_list.txt";
 constexpr char cLogTypeDictFilename[] = "logtype.dict";
@@ -14,6 +13,13 @@ constexpr char cVarSegmentIndexFilename[] = "var.segindex";
 constexpr char cMetadataFileName[] = "metadata";
 constexpr char cMetadataDBFileName[] = "metadata.db";
 constexpr char cSchemaFileName[] = "schema.txt";
+
+namespace cArchiveFormatVersion {
+constexpr uint8_t VersionMajor{0};
+constexpr uint8_t VersionMinor{1};
+constexpr uint16_t VersionPatch{0};
+constexpr archive_format_version_t Version{VersionMajor << 24 | VersionMinor << 16 | VersionPatch};
+}  // namespace cArchiveFormatVersion
 
 namespace cMetadataDB {
 constexpr char ArchivesTableName[] = "archives";
