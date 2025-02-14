@@ -253,8 +253,8 @@ private:
      */
     void persist_file_metadata(std::vector<File*> const& files);
     /**
-     * Closes a given segment, persists metadata to local database for files in the segment, and cleans up
-     * any data remaining outside the segment
+     * Closes a given segment, persists metadata to local database for files in the segment, and
+     * cleans up any data remaining outside the segment
      * @param segment
      * @param files
      * @param segment_logtype_ids
