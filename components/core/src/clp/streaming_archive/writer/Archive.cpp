@@ -633,8 +633,7 @@ auto Archive::print_archive_stats_progress() -> void {
     json_msg["id"] = m_id_as_string;
     json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
     json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
-    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
-              << std::endl;
+    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
 }
 
 void Archive::update_local_metadata() {

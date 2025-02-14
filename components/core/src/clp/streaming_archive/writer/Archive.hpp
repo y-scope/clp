@@ -276,8 +276,8 @@ private:
     uint64_t get_dynamic_compressed_size();
 
     /**
-    * Prints archive progress statistics as a JSON object.
-    */
+     * Prints archive progress statistics as a JSON object.
+     */
     auto print_archive_stats_progress() -> void;
 
     /**
