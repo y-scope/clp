@@ -69,7 +69,7 @@ void Archive::open(UserConfig const& user_config) {
     }
     auto const& archive_path_string = archive_path.string();
     m_local_metadata = std::make_optional<ArchiveMetadata>(
-            cArchiveFormatVersion,
+            cArchiveFormatVersion::Version,
             m_creator_id_as_string,
             m_creation_num
     );

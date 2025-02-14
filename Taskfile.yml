@@ -4,7 +4,7 @@ includes:
   deps: "deps-tasks.yml"
   docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
-  utils: "tools/yscope-dev-utils/taskfiles/utils.yml"
+  utils: "tools/yscope-dev-utils/taskfiles/utils.yaml"
 
 vars:
   # Source paths
@@ -27,7 +27,7 @@ vars:
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
-  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/taskfiles/utils.yml"
+  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/taskfiles/utils.yaml"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
@@ -116,7 +116,7 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
       - "webui"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
@@ -173,8 +173,8 @@ tasks:
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   core:
     vars:
@@ -242,7 +242,7 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - for:
@@ -254,8 +254,8 @@ tasks:
           --output-path "{{.OUTPUT_DIR}}/{{.ITEM}}"
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   webui:
     vars:
@@ -280,7 +280,7 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
       - "webui-node-modules"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
@@ -298,8 +298,8 @@ tasks:
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   nodejs-22:
     internal: true
@@ -342,7 +342,7 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}' '{{.OUTPUT_TMP_DIR}}'"
       - "mkdir -p '{{.OUTPUT_TMP_DIR}}'"
@@ -356,8 +356,8 @@ tasks:
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   # NOTE: The log-viewer-webui has four different node_modules directories:
   # * client
@@ -407,19 +407,19 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
-          DATA_DIR: "{{.CLIENT_OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
-          DATA_DIR: "{{.SERVER_OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
-          DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
-          DATA_DIR: "{{.LOG_VIEWER_OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
     cmds:
       - "rm -f {{.CHECKSUM_FILE}}"
       - task: "clean-log-viewer-webui"
@@ -430,20 +430,20 @@ tasks:
       # These commands must be last
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.CLIENT_OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.LOG_VIEWER_OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.PACKAGE_OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.SERVER_OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
       # This command must be last
       - >-
         cat
@@ -550,18 +550,18 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - task: "utils:create-venv"
         vars:
           LABEL: "package"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "requirements.txt"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/requirements.txt"
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   python-component:
     internal: true
@@ -614,15 +614,15 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "PATH='{{.G_METEOR_BUILD_DIR}}':$PATH meteor npm install --production"
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   component-venv:
     internal: true
@@ -643,7 +643,7 @@ tasks:
       - task: "utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.OUTPUT_DIR}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - task: "utils:create-venv"
         vars:
@@ -653,8 +653,8 @@ tasks:
       # This command must be last
       - task: "utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.OUTPUT_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
   clean-python-component:
     internal: true
     label: "clean-{{.COMPONENT}}"

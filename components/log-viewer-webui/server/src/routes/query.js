@@ -2,22 +2,15 @@ import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
 import {EXTRACT_JOB_TYPES} from "../DbManager.js";
-import S3Manager from "../S3Manager.js";
-
-
-const S3_MANAGER = (
-    null === settings.StreamFilesS3PathPrefix ||
-    null === settings.StreamFilesS3Region
-) ?
-    null :
-    new S3Manager(settings.StreamFilesS3Region);
 
 
 /**
  * Submits a stream extraction job and returns the metadata of the extracted stream.
  *
  * @param {object} props
- * @param {import("fastify").FastifyInstance | {dbManager: DbManager}} props.fastify
+ * @param {import("fastify").FastifyInstance |
+ * {dbManager: DbManager} |
+ * {s3Manager: S3Manager}} props.fastify
  * @param {EXTRACT_JOB_TYPES} props.jobType
  * @param {number} props.logEventIdx
  * @param {string} props.streamId
@@ -63,7 +56,9 @@ const extractStreamAndGetMetadata = async ({
 /**
  * Creates query routes.
  *
- * @param {import("fastify").FastifyInstance | {dbManager: DbManager}} fastify
+ * @param {import("fastify").FastifyInstance |
+ * {dbManager: DbManager} |
+ * {s3Manager: S3Manager}} fastify
  * @param {import("fastify").FastifyPluginOptions} options
  * @return {Promise<void>}
  */
@@ -96,12 +91,12 @@ const routes = async (fastify, options) => {
             });
         }
 
-        if (null === S3_MANAGER) {
-            streamMetadata.path = `/streams/${streamMetadata.path}`;
-        } else {
-            streamMetadata.path = await S3_MANAGER.getPreSignedUrl(
+        if (fastify.hasDecorator("s3Manager")) {
+            streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
                 `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
             );
+        } else {
+            streamMetadata.path = `/streams/${streamMetadata.path}`;
         }
 
         return streamMetadata;
