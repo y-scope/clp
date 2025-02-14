@@ -17,6 +17,7 @@ vars:
   G_OUTCOME_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#outcome.md5"
   G_SIMDJSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#simdjson.md5"
   G_SQLITE3_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#sqlite3.md5"
+  G_UTFCPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#utfcpp.md5"
   G_YAML_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yaml-cpp.md5"
   G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yscope-log-viewer.md5"
 
@@ -38,6 +39,7 @@ tasks:
       - "{{.G_OUTCOME_CHECKSUM_FILE}}"
       - "{{.G_SIMDJSON_CHECKSUM_FILE}}"
       - "{{.G_SQLITE3_CHECKSUM_FILE}}"
+      - "{{.G_UTFCPP_CHECKSUM_FILE}}"
       - "{{.G_YAML_CPP_CHECKSUM_FILE}}"
     generates: ["{{.G_DEPS_CORE_CHECKSUM_FILE}}"]
     deps: ["all-internal-deps"]
@@ -53,6 +55,7 @@ tasks:
         "{{.G_OUTCOME_CHECKSUM_FILE}}"
         "{{.G_SIMDJSON_CHECKSUM_FILE}}"
         "{{.G_SQLITE3_CHECKSUM_FILE}}"
+        "{{.G_UTFCPP_CHECKSUM_FILE}}"
         "{{.G_YAML_CPP_CHECKSUM_FILE}}"
         >> "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
 
@@ -93,6 +96,7 @@ tasks:
       - task: "outcome"
       - task: "simdjson"
       - task: "sqlite3"
+      - task: "utfcpp"
       - task: "yaml-cpp"
       - task: "yscope-log-viewer"
 
@@ -112,7 +116,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -123,8 +127,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   antlr4:
     internal: true
@@ -143,7 +147,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST_DIR}}"
+          INCLUDE_PATTERNS: ["{{.DEST_DIR}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -154,8 +158,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST_DIR}}"]
 
   Catch2:
     internal: true
@@ -173,7 +177,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -184,8 +188,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   date:
     internal: true
@@ -203,7 +207,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -214,8 +218,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   json:
     internal: true
@@ -233,7 +237,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -244,8 +248,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   log-surgeon:
     internal: true
@@ -263,7 +267,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -274,8 +278,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   outcome:
     internal: true
@@ -293,7 +297,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -304,8 +308,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   simdjson:
     internal: true
@@ -323,7 +327,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -334,8 +338,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   # We don't use a git submodule for sqlite3 since that would require building the sqlite
   # amalgamation
@@ -355,7 +359,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -366,8 +370,38 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+
+  utfcpp:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_UTFCPP_CHECKSUM_FILE}}"
+      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/utfcpp"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTILS_TASKFILE}}"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    cmds:
+      - task: "download-dependency"
+        vars:
+          DEST: "{{.DEST}}"
+          FLAGS: "--extract"
+          SRC_NAME: "utfcpp-4.0.6"
+          SRC_URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.zip"
+      # This command must be last
+      - task: ":utils:compute-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   yaml-cpp:
     internal: true
@@ -385,7 +419,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -396,8 +430,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   yscope-log-viewer:
     internal: true
@@ -415,7 +449,7 @@ tasks:
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -426,8 +460,8 @@ tasks:
       # This command must be last
       - task: ":utils:compute-checksum"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   download-dependency:
     internal: true
