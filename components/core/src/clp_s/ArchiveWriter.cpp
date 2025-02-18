@@ -18,6 +18,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_single_file_archive = option.single_file_archive;
     m_min_table_size = option.min_table_size;
     m_archives_dir = option.archives_dir;
+    m_authoritative_timestamp = option.authoritative_timestamp;
     std::string working_dir_name = m_id;
     if (option.single_file_archive) {
         working_dir_name += constants::cTmpPostfix;
@@ -114,6 +115,9 @@ void ArchiveWriter::close() {
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
     m_next_log_event_id = 0;
+    m_authoritative_timestamp.clear();
+    m_matched_timestamp_prefix_length = 0ULL;
+    m_matched_timestamp_prefix_node_id = constants::cRootNodeId;
 }
 
 void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files) {

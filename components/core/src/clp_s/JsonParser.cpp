@@ -103,6 +103,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.single_file_archive = option.single_file_archive;
     m_archive_options.min_table_size = option.min_table_size;
     m_archive_options.id = m_generator();
+    m_archive_options.authoritative_timestamp = m_timestamp_column;
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
     m_archive_writer->open(m_archive_options);
@@ -308,31 +309,11 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
     std::string_view cur_key = key;
     node_id_stack.push(parent_node_id);
 
-    bool can_match_timestamp = !m_timestamp_column.empty();
-    bool may_match_timestamp = can_match_timestamp;
-    int longest_matching_timestamp_prefix = 0;
-    bool matches_timestamp = false;
-
     do {
         if (false == object_stack.empty()) {
             cur_field = *object_it_stack.top();
             cur_key = cur_field.unescaped_key(true);
             line = cur_field.value();
-            if (may_match_timestamp) {
-                if (object_stack.size() <= m_timestamp_column.size()
-                    && cur_key == m_timestamp_column[object_stack.size() - 1])
-                {
-                    if (object_stack.size() == m_timestamp_column.size()) {
-                        // FIXME: technically need to handle the case where this
-                        // isn't a string or number column by resetting matches_timestamp
-                        // to false
-                        matches_timestamp = true;
-                    }
-                } else {
-                    longest_matching_timestamp_prefix = object_stack.size() - 1;
-                    may_match_timestamp = false;
-                }
-            }
         }
 
         switch (line.type()) {
@@ -376,6 +357,8 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             case ondemand::json_type::number: {
                 NodeType type;
                 ondemand::number number_value = line.get_number();
+                auto const matches_timestamp
+                        = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
                 if (false == number_value.is_double()) {
                     // FIXME: should have separate integer and unsigned
                     // integer types to handle values greater than max int64
@@ -397,7 +380,6 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                     if (matches_timestamp) {
                         m_archive_writer
                                 ->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
-                        matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 } else {
                     double double_value = line.get_double();
@@ -405,7 +387,6 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                     if (matches_timestamp) {
                         m_archive_writer
                                 ->ingest_timestamp_entry(m_timestamp_key, node_id, double_value);
-                        matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                     }
                 }
                 m_current_schema.insert_ordered(node_id);
@@ -413,6 +394,8 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             }
             case ondemand::json_type::string: {
                 std::string_view value = line.get_string(true);
+                auto const matches_timestamp
+                        = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
                 if (matches_timestamp) {
                     node_id = m_archive_writer->add_node(
                             node_id_stack.top(),
@@ -427,7 +410,6 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                             encoding_id
                     );
                     m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
-                    matches_timestamp = may_match_timestamp = can_match_timestamp = false;
                 } else if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
@@ -471,15 +453,10 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 node_id_stack.pop();
                 hit_end = true;
             }
-            if (can_match_timestamp
-                && (object_it_stack.size() - 1) <= longest_matching_timestamp_prefix)
-            {
-                may_match_timestamp = true;
-            }
-        } while (!object_it_stack.empty() && hit_end);
+        } while (false == object_it_stack.empty() && hit_end);
     }
 
-    while (!object_stack.empty());
+    while (false == object_stack.empty());
 }
 
 bool JsonParser::parse() {
