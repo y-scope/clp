@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+from typing import Tuple
 from urllib.parse import urlparse
 
 from pymongo import IndexModel, MongoClient
@@ -17,7 +18,7 @@ logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
 
-def check_replica_set_status(client: MongoClient, netloc: str) -> tuple[bool, bool]:
+def check_replica_set_status(client: MongoClient, netloc: str) -> Tuple[bool, bool]:
     """
     Checks the current replica set status of the MongoDB server and determines whether it needs to
     be configured (or reconfigured).

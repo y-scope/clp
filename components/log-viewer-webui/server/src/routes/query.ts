@@ -4,8 +4,8 @@ import {FastifyPluginAsync} from "fastify";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
+import {EXTRACT_JOB_TYPES} from "../DbManager.js";
 import {QUERY_JOB_TYPE} from "../DbManager.js";
-import {EXTRACT_JOB_TYPES} from "../typings/DbManager.js";
 
 
 /**
@@ -60,6 +60,11 @@ const extractStreamAndGetMetadata = async ({
 /**
  * Creates query routes.
  *
+ * @param {import("fastify").FastifyInstance |
+ * {dbManager: DbManager} |
+ * {s3Manager: S3Manager}} fastify
+ * @param {import("fastify").FastifyPluginOptions} options
+ * @return {Promise<void>}
  * @param app
  */
 const routes: FastifyPluginAsync = async (app) => {
@@ -90,31 +95,21 @@ const routes: FastifyPluginAsync = async (app) => {
                 fastify: fastify,
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
-                logEventIdx: sanitizedLogEventIdx,
                 resp: resp,
                 streamId: streamId,
             });
 
-            if (null === extractResult) {
+            if (null === streamMetadata) {
                 resp.code(StatusCodes.BAD_REQUEST);
                 throw new Error("Unable to extract stream with " +
                     `streamId=${streamId} at logEventIdx=${logEventIdx}`);
             }
         }
 
-            streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
-                streamId,
-                logEventIdx
         if (fastify.hasDecorator("s3Manager")) {
             streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
                 `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
             );
-
-            if (null === streamMetadata) {
-                resp.code(StatusCodes.BAD_REQUEST);
-                throw new Error("Unable to find the metadata of extracted stream with " +
-                    `streamId=${streamId} at logEventIdx=${logEventIdx}`);
-            }
         } else {
             streamMetadata.path = `/streams/${streamMetadata.path}`;
         }

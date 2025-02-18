@@ -8,6 +8,7 @@ ANTLR_TARGET(
 add_library(
         kql
         ../../Utils.hpp
+        ../antlr_common/ErrorListener.hpp
         ../AndExpr.hpp
         ../BooleanLiteral.hpp
         ../ColumnDescriptor.hpp
@@ -26,4 +27,3 @@ add_library(
 target_compile_features(kql PRIVATE cxx_std_20)
 target_include_directories(kql PRIVATE ${ANTLR_KqlParser_OUTPUT_DIR})
 target_link_libraries(kql PRIVATE antlr4_static Boost::filesystem)
-

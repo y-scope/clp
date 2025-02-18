@@ -6,8 +6,8 @@
 #include <zstd.h>
 
 #include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
+#include "../../WriterInterface.hpp"
 
 namespace clp::streaming_compression::zstd {
 Compressor::Compressor()
@@ -26,8 +26,8 @@ Compressor::~Compressor() {
     ZSTD_freeCStream(m_compression_stream);
 }
 
-auto Compressor::open(FileWriter& file_writer, int compression_level) -> void {
-    if (nullptr != m_compressed_stream_file_writer) {
+auto Compressor::open(WriterInterface& writer, int compression_level) -> void {
+    if (nullptr != m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }
 
@@ -41,22 +41,22 @@ auto Compressor::open(FileWriter& file_writer, int compression_level) -> void {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
 
-    m_compressed_stream_file_writer = &file_writer;
+    m_compressed_stream_writer = &writer;
 
     m_uncompressed_stream_pos = 0;
 }
 
 auto Compressor::close() -> void {
-    if (nullptr == m_compressed_stream_file_writer) {
+    if (nullptr == m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
     flush();
-    m_compressed_stream_file_writer = nullptr;
+    m_compressed_stream_writer = nullptr;
 }
 
 auto Compressor::write(char const* data, size_t data_length) -> void {
-    if (nullptr == m_compressed_stream_file_writer) {
+    if (nullptr == m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
 
@@ -86,7 +86,7 @@ auto Compressor::write(char const* data, size_t data_length) -> void {
         if (m_compressed_stream_block.pos > 0) {
             // Write to disk only if there is data in the compressed stream
             // block buffer
-            m_compressed_stream_file_writer->write(
+            m_compressed_stream_writer->write(
                     static_cast<char const*>(m_compressed_stream_block.dst),
                     m_compressed_stream_block.pos
             );
@@ -113,7 +113,7 @@ auto Compressor::flush() -> void {
         );
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
-    m_compressed_stream_file_writer->write(
+    m_compressed_stream_writer->write(
             static_cast<char const*>(m_compressed_stream_block.dst),
             m_compressed_stream_block.pos
     );
@@ -122,7 +122,7 @@ auto Compressor::flush() -> void {
 }
 
 auto Compressor::try_get_pos(size_t& pos) const -> ErrorCode {
-    if (nullptr == m_compressed_stream_file_writer) {
+    if (nullptr == m_compressed_stream_writer) {
         return ErrorCode_NotInit;
     }
 
@@ -146,7 +146,7 @@ auto Compressor::flush_without_ending_frame() -> void {
             throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
         }
         if (m_compressed_stream_block.pos > 0) {
-            m_compressed_stream_file_writer->write(
+            m_compressed_stream_writer->write(
                     static_cast<char const*>(m_compressed_stream_block.dst),
                     m_compressed_stream_block.pos
             );

@@ -1494,3 +1494,23 @@ TEMPLATE_TEST_CASE(
     };
     REQUIRE(assert_invalid_serialization(array_with_invalid_submap));
 }
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+TEMPLATE_TEST_CASE(
+        "ffi_ir_stream_Serializer_serialize_invalid_user_defined_metadata",
+        "[clp][ffi][ir_stream][Serializer]",
+        four_byte_encoded_variable_t,
+        eight_byte_encoded_variable_t
+) {
+    auto invalid_user_defined_metadata = GENERATE(
+            nlohmann::json(std::string{"str"}),
+            nlohmann::json(int{0}),
+            nlohmann::json(double{0.0}),
+            nlohmann::json(true),
+            nlohmann::json(nullptr),
+            nlohmann::json(vector<int>{0, 1, 2})
+    );
+    auto const serializer_result{Serializer<TestType>::create(invalid_user_defined_metadata)};
+    REQUIRE(serializer_result.has_error());
+    REQUIRE((std::errc::protocol_not_supported == serializer_result.error()));
+}

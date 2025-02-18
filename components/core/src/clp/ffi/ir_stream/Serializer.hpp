@@ -41,9 +41,11 @@ public:
     // Factory functions
     /**
      * Creates an IR serializer and serializes the stream's preamble.
-     * @param optional_user_defined_metadata Stream-level user-defined metadata.
+     * @param optional_user_defined_metadata Stream-level user-defined metadata, given as a JSON
+     * object.
      * @return A result containing the serializer or an error code indicating the failure:
-     * - std::errc::protocol_error on failure to serialize the preamble.
+     * - std::errc::protocol_error if the stream's metadata couldn't be serialized.
+     * - std::errc::protocol_not_supported if the given user-defined metadata is not a JSON object.
      */
     [[nodiscard]] static auto create(
             std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt

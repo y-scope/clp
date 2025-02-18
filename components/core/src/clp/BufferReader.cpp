@@ -62,6 +62,10 @@ auto BufferReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
 
     auto remaining_data_size = get_remaining_data_size();
     if (0 == remaining_data_size) {
+        if (0 == num_bytes_to_read) {
+            num_bytes_read = 0;
+            return ErrorCode_Success;
+        }
         return ErrorCode_EndOfFile;
     }
 
