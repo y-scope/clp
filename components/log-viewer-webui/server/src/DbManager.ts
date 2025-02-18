@@ -9,7 +9,6 @@ import {
     FastifyPluginAsync,
 } from "fastify";
 import {fastifyPlugin} from "fastify-plugin";
-import {Collection} from "mongodb";
 import {
     Pool as PromisePool,
     ResultSetHeader,
@@ -17,41 +16,17 @@ import {
 
 import {Nullable} from "./typings/common.js";
 import {
+    DbManagerOptions,
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
     QUERY_JOB_TYPE,
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
+    StreamFileMongoDocument,
+    StreamFilesCollection,
 } from "./typings/DbManager.js";
 import {sleep} from "./utils.js";
 
-
-interface DbManagerOptions {
-    mysqlConfig: {
-        user: string;
-        password: string;
-        host: string;
-        port: number;
-        database: string;
-        queryJobsTableName: string;
-    };
-    mongoConfig: {
-        database: string;
-        host: string;
-        streamFilesCollectionName: string;
-        port: number;
-    };
-}
-
-interface StreamFileMongoDocument {
-    path: string;
-    stream_id: string;
-    begin_msg_ix: number;
-    end_msg_ix: number;
-    is_last_chunk: boolean;
-}
-
-type StreamFilesCollection = Collection<StreamFileMongoDocument>;
 
 /**
  * Interval in milliseconds for polling the completion status of a job.

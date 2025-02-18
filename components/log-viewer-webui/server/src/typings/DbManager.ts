@@ -1,3 +1,4 @@
+import {Collection} from "mongodb";
 import {RowDataPacket} from "mysql2/promise";
 
 
@@ -54,7 +55,6 @@ enum QUERY_JOBS_TABLE_COLUMN_NAMES {
     JOB_CONFIG = "job_config",
 }
 
-
 interface QueryJob extends RowDataPacket {
     [QUERY_JOBS_TABLE_COLUMN_NAMES.ID]: number;
     [QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE]: QUERY_JOB_TYPE;
@@ -62,8 +62,39 @@ interface QueryJob extends RowDataPacket {
     [QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG]: string;
 }
 
+interface DbManagerOptions {
+    mysqlConfig: {
+        user: string;
+        password: string;
+        host: string;
+        port: number;
+        database: string;
+        queryJobsTableName: string;
+    };
+    mongoConfig: {
+        database: string;
+        host: string;
+        streamFilesCollectionName: string;
+        port: number;
+    };
+}
 
-export type {QueryJob};
+interface StreamFileMongoDocument {
+    path: string;
+    stream_id: string;
+    begin_msg_ix: number;
+    end_msg_ix: number;
+    is_last_chunk: boolean;
+}
+
+type StreamFilesCollection = Collection<StreamFileMongoDocument>;
+
+export type {
+    DbManagerOptions,
+    QueryJob,
+    StreamFileMongoDocument,
+    StreamFilesCollection,
+};
 export {
     EXTRACT_JOB_TYPES,
     QUERY_JOB_STATUS,
