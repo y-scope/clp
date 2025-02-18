@@ -5,7 +5,6 @@
 
 #include "../ReaderInterface.hpp"
 #include "../TraceableException.hpp"
-#include "Constants.hpp"
 
 namespace clp::streaming_compression {
 class Decompressor : public ReaderInterface {
@@ -24,7 +23,7 @@ public:
     };
 
     // Constructor
-    explicit Decompressor(CompressorType type) : m_compression_type(type) {}
+    Decompressor() = default;
 
     // Destructor
     ~Decompressor() override = default;
@@ -63,10 +62,6 @@ public:
             size_t extraction_len
     ) -> ErrorCode
             = 0;
-
-protected:
-    // Variables
-    CompressorType m_compression_type;
 };
 }  // namespace clp::streaming_compression
 

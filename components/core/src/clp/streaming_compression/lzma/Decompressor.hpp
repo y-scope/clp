@@ -6,7 +6,6 @@
 #include "../../ErrorCode.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
-#include "../Constants.hpp"
 #include "../Decompressor.hpp"
 
 namespace clp::streaming_compression::lzma {
@@ -26,7 +25,7 @@ public:
     };
 
     // Constructor
-    Decompressor() : clp::streaming_compression::Decompressor{CompressorType::LZMA} {}
+    Decompressor() = default;
 
     // Destructor
     ~Decompressor() override = default;

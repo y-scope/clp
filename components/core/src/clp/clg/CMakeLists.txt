@@ -89,7 +89,6 @@ set(
         ../streaming_archive/writer/File.hpp
         ../streaming_archive/writer/Segment.cpp
         ../streaming_archive/writer/Segment.hpp
-        ../streaming_compression/Constants.hpp
         ../streaming_compression/Decompressor.hpp
         ../streaming_compression/passthrough/Compressor.cpp
         ../streaming_compression/passthrough/Compressor.hpp

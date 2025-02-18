@@ -9,8 +9,7 @@
 #include "../../TraceableException.hpp"
 
 namespace clp::streaming_compression::zstd {
-Decompressor::Decompressor()
-        : ::clp::streaming_compression::Decompressor{CompressorType::ZSTD},
+Decompressor::Decompressor() :
           m_decompression_stream{ZSTD_createDStream()},
           m_unused_decompressed_stream_block_buffer{ZSTD_DStreamOutSize()} {
     if (nullptr == m_decompression_stream) {

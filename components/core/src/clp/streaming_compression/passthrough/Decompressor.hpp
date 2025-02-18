@@ -25,8 +25,7 @@ public:
     };
 
     // Constructors
-    Decompressor()
-            : ::clp::streaming_compression::Decompressor(CompressorType::Passthrough),
+    Decompressor() :
               m_input_type(InputType::NotInitialized),
               m_compressed_data_buf(nullptr),
               m_compressed_data_buf_len(0),
