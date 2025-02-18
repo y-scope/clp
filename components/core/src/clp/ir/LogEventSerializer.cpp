@@ -139,10 +139,10 @@ auto LogEventSerializer<encoded_variable_t>::close_writer() -> void {
 // file
 template LogEventSerializer<eight_byte_encoded_variable_t>::~LogEventSerializer();
 template LogEventSerializer<four_byte_encoded_variable_t>::~LogEventSerializer();
-template auto LogEventSerializer<eight_byte_encoded_variable_t>::open(string const& file_path
-) -> bool;
-template auto LogEventSerializer<four_byte_encoded_variable_t>::open(string const& file_path
-) -> bool;
+template auto LogEventSerializer<eight_byte_encoded_variable_t>::open(string const& file_path)
+        -> bool;
+template auto LogEventSerializer<four_byte_encoded_variable_t>::open(string const& file_path)
+        -> bool;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<four_byte_encoded_variable_t>::flush() -> void;
 template auto LogEventSerializer<eight_byte_encoded_variable_t>::close() -> void;

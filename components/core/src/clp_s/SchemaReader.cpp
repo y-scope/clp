@@ -44,11 +44,8 @@ int64_t SchemaReader::get_next_log_event_idx() const {
     return 0;
 }
 
-void SchemaReader::load(
-        std::shared_ptr<char[]> stream_buffer,
-        size_t offset,
-        size_t uncompressed_size
-) {
+void
+SchemaReader::load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t uncompressed_size) {
     m_stream_buffer = stream_buffer;
     BufferViewReader buffer_reader{m_stream_buffer.get() + offset, uncompressed_size};
     for (auto& reader : m_columns) {
@@ -260,6 +257,10 @@ bool SchemaReader::get_next_message_with_metadata(
 
 void SchemaReader::initialize_filter(FilterClass* filter) {
     filter->init(this, m_schema_id, m_columns);
+}
+
+void SchemaReader::initialize_filter_with_column_map(FilterClass* filter) {
+    filter->init(this, m_schema_id, m_column_map);
 }
 
 void SchemaReader::generate_local_tree(int32_t global_id) {

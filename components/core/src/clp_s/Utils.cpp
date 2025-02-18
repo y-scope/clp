@@ -1,42 +1,55 @@
 #include "Utils.hpp"
 
-#include <boost/filesystem.hpp>
+#include <charconv>
+#include <cstdint>
+#include <exception>
+#include <filesystem>
+#include <set>
+
+#include <boost/url.hpp>
+#include <fmt/core.h>
+#include <simdjson.h>
 #include <spdlog/spdlog.h>
+
+#include "archive_constants.hpp"
 
 using std::string;
 using std::string_view;
 
 namespace clp_s {
-bool FileUtils::find_all_files(std::string const& path, std::vector<std::string>& file_paths) {
+bool FileUtils::find_all_files_in_directory(
+        std::string const& path,
+        std::vector<std::string>& file_paths
+) {
     try {
-        if (false == boost::filesystem::is_directory(path)) {
+        if (false == std::filesystem::is_directory(path)) {
             // path is a file
             file_paths.push_back(path);
             return true;
         }
 
-        if (boost::filesystem::is_empty(path)) {
+        if (std::filesystem::is_empty(path)) {
             // path is an empty directory
             return true;
         }
 
         // Iterate directory
-        boost::filesystem::recursive_directory_iterator iter(
+        std::filesystem::recursive_directory_iterator iter(
                 path,
-                boost::filesystem::directory_options::follow_directory_symlink
+                std::filesystem::directory_options::follow_directory_symlink
         );
-        boost::filesystem::recursive_directory_iterator end;
+        std::filesystem::recursive_directory_iterator end;
         for (; iter != end; ++iter) {
             // Check if current entry is an empty directory or a file
-            if (boost::filesystem::is_directory(iter->path())) {
-                if (boost::filesystem::is_empty(iter->path())) {
+            if (std::filesystem::is_directory(iter->path())) {
+                if (std::filesystem::is_empty(iter->path())) {
                     iter.disable_recursion_pending();
                 }
             } else {
                 file_paths.push_back(iter->path().string());
             }
         }
-    } catch (boost::filesystem::filesystem_error& exception) {
+    } catch (std::exception const& exception) {
         SPDLOG_ERROR(
                 "Failed to find files/directories at '{}' - {}.",
                 path.c_str(),
@@ -48,16 +61,106 @@ bool FileUtils::find_all_files(std::string const& path, std::vector<std::string>
     return true;
 }
 
-bool FileUtils::validate_path(std::vector<std::string> const& paths) {
-    bool all_paths_exist = true;
-    for (auto const& path : paths) {
-        if (false == boost::filesystem::exists(path)) {
-            SPDLOG_ERROR("'{}' does not exist.", path.c_str());
-            all_paths_exist = false;
+namespace {
+/**
+ * Determines if a directory is a multi-file archive.
+ * @param path
+ * @return true if this directory is a multi-file archive, false otherwise
+ */
+bool is_multi_file_archive(std::string_view const path) {
+    for (auto const& entry : std::filesystem::directory_iterator{path}) {
+        if (entry.is_directory()) {
+            return false;
+        }
+
+        std::string file_name;
+        if (false == FileUtils::get_last_non_empty_path_component(entry.path().string(), file_name))
+        {
+            return false;
+        }
+        auto formatted_name = fmt::format("/{}", file_name);
+        if (constants::cArchiveHeaderFile == formatted_name
+            || constants::cArchiveSchemaTreeFile == formatted_name
+            || constants::cArchiveSchemaMapFile == formatted_name
+            || constants::cArchiveVarDictFile == formatted_name
+            || constants::cArchiveLogDictFile == formatted_name
+            || constants::cArchiveArrayDictFile == formatted_name
+            || constants::cArchiveTableMetadataFile == formatted_name)
+        {
+            continue;
+        } else {
+            uint64_t segment_file_number{};
+            auto const* begin = file_name.data();
+            auto const* end = file_name.data() + file_name.size();
+            auto [last, rc] = std::from_chars(begin, end, segment_file_number);
+            if (std::errc{} != rc || last != end) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+}  // namespace
+
+bool FileUtils::find_all_archives_in_directory(
+        std::string_view const path,
+        std::vector<std::string>& archive_paths
+) {
+    try {
+        if (false == std::filesystem::is_directory(path)) {
+            return false;
+        }
+    } catch (std::exception const& e) {
+        return false;
+    }
+
+    if (is_multi_file_archive(path)) {
+        archive_paths.emplace_back(path);
+        return true;
+    }
+
+    for (auto const& entry : std::filesystem::directory_iterator{path}) {
+        archive_paths.emplace_back(entry.path().string());
+    }
+    return true;
+}
+
+bool FileUtils::get_last_non_empty_path_component(std::string_view const path, std::string& name) {
+    std::filesystem::path fs_path;
+    try {
+        fs_path = std::filesystem::path{path}.lexically_normal();
+    } catch (std::exception const& e) {
+        return false;
+    }
+
+    if (fs_path.has_filename() && false == fs_path.filename().string().empty()) {
+        name = fs_path.filename().string();
+        return true;
+    }
+
+    while (fs_path.has_parent_path()) {
+        fs_path = fs_path.parent_path();
+        if (fs_path.has_filename() && false == fs_path.filename().string().empty()) {
+            name = fs_path.filename().string();
+            return true;
         }
     }
 
-    return all_paths_exist;
+    return false;
+}
+
+bool UriUtils::get_last_uri_component(std::string_view const uri, std::string& name) {
+    auto parsed_result = boost::urls::parse_uri(uri);
+    if (false == parsed_result.has_value()) {
+        return false;
+    }
+    auto parsed_uri = parsed_result.value();
+    auto path_segments_view = parsed_uri.segments();
+    if (path_segments_view.empty()) {
+        return false;
+    }
+    name = path_segments_view.back();
+    return true;
 }
 
 bool StringUtils::get_bounds_of_next_var(string const& msg, size_t& begin_pos, size_t& end_pos) {
@@ -261,11 +364,8 @@ bool StringUtils::advance_tame_to_next_match(
     return true;
 }
 
-bool StringUtils::wildcard_match_unsafe(
-        string_view tame,
-        string_view wild,
-        bool case_sensitive_match
-) {
+bool
+StringUtils::wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) {
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);
     } else {
@@ -431,30 +531,247 @@ bool StringUtils::tokenize_column_descriptor(
         std::string const& descriptor,
         std::vector<std::string>& tokens
 ) {
-    // TODO: add support for unicode sequences e.g. \u263A
     std::string cur_tok;
-    for (size_t cur = 0; cur < descriptor.size(); ++cur) {
-        if ('\\' == descriptor[cur]) {
-            ++cur;
-            if (cur >= descriptor.size()) {
-                return false;
+    bool escaped{false};
+    for (size_t i = 0; i < descriptor.size(); ++i) {
+        if (false == escaped) {
+            if ('\\' == descriptor[i]) {
+                escaped = true;
+            } else if ('.' == descriptor[i]) {
+                if (cur_tok.empty()) {
+                    return false;
+                }
+                std::string unescaped_token;
+                if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
+                    tokens.push_back(unescaped_token);
+                    cur_tok.clear();
+                } else {
+                    return false;
+                }
+            } else {
+                cur_tok.push_back(descriptor[i]);
             }
-        } else if ('.' == descriptor[cur]) {
-            if (cur_tok.empty()) {
-                return false;
-            }
-            tokens.push_back(cur_tok);
-            cur_tok.clear();
             continue;
         }
-        cur_tok.push_back(descriptor[cur]);
+
+        escaped = false;
+        switch (descriptor[i]) {
+            case '.':
+                cur_tok.push_back('.');
+                break;
+            default:
+                cur_tok.push_back('\\');
+                cur_tok.push_back(descriptor[i]);
+                break;
+        }
+    }
+
+    if (escaped) {
+        return false;
     }
 
     if (cur_tok.empty()) {
         return false;
     }
 
-    tokens.push_back(cur_tok);
+    std::string unescaped_token;
+    if (unescape_kql_internal(cur_tok, unescaped_token, false)) {
+        tokens.push_back(unescaped_token);
+    } else {
+        return false;
+    }
+    return true;
+}
+
+void StringUtils::escape_json_string(std::string& destination, std::string_view const source) {
+    // Escaping is implemented using this `append_unescaped_slice` approach to offer a fast path
+    // when strings are mostly or entirely valid escaped JSON. Benchmarking shows that this offers
+    // a net decompression speedup of ~30% compared to adding every character to the destination one
+    // character at a time.
+    size_t slice_begin{0ULL};
+    auto append_unescaped_slice = [&](size_t i) {
+        if (slice_begin < i) {
+            destination.append(source.substr(slice_begin, i - slice_begin));
+        }
+        slice_begin = i + 1;
+    };
+    for (size_t i = 0; i < source.size(); ++i) {
+        char c = source[i];
+        switch (c) {
+            case '"':
+                append_unescaped_slice(i);
+                destination.append("\\\"");
+                break;
+            case '\\':
+                append_unescaped_slice(i);
+                destination.append("\\\\");
+                break;
+            case '\t':
+                append_unescaped_slice(i);
+                destination.append("\\t");
+                break;
+            case '\r':
+                append_unescaped_slice(i);
+                destination.append("\\r");
+                break;
+            case '\n':
+                append_unescaped_slice(i);
+                destination.append("\\n");
+                break;
+            case '\b':
+                append_unescaped_slice(i);
+                destination.append("\\b");
+                break;
+            case '\f':
+                append_unescaped_slice(i);
+                destination.append("\\f");
+                break;
+            default:
+                if ('\x00' <= c && c <= '\x1f') {
+                    append_unescaped_slice(i);
+                    char_to_escaped_four_char_hex(destination, c);
+                }
+                break;
+        }
+    }
+    append_unescaped_slice(source.size());
+}
+
+namespace {
+/**
+ * Converts a four byte hex sequence to utf8. We perform the conversion in this cumbersome way
+ * because c++20 deprecates most of the much more convenient std::codecvt utilities.
+ */
+bool convert_four_byte_hex_to_utf8(std::string_view const hex, std::string& destination) {
+    std::string buf = "\"\\u";
+    buf += hex;
+    buf.push_back('"');
+    buf.reserve(buf.size() + simdjson::SIMDJSON_PADDING);
+    simdjson::ondemand::parser parser;
+    auto value = parser.iterate(buf);
+    try {
+        if (false == value.is_scalar()) {
+            return false;
+        }
+
+        if (simdjson::ondemand::json_type::string != value.type()) {
+            return false;
+        }
+
+        std::string_view unescaped_utf8 = value.get_string(false);
+        destination.append(unescaped_utf8);
+    } catch (std::exception const& e) {
+        return false;
+    }
+    return true;
+}
+}  // namespace
+
+bool StringUtils::unescape_kql_value(std::string const& value, std::string& unescaped) {
+    return unescape_kql_internal(value, unescaped, true);
+}
+
+bool StringUtils::unescape_kql_internal(
+        std::string const& value,
+        std::string& unescaped,
+        bool is_value
+) {
+    bool escaped{false};
+    for (size_t i = 0; i < value.size(); ++i) {
+        if (false == escaped) {
+            if ('\\' == value[i]) {
+                escaped = true;
+            } else {
+                unescaped.push_back(value[i]);
+            }
+            continue;
+        }
+
+        escaped = false;
+        switch (value[i]) {
+            case '\\':
+                unescaped.append("\\\\");
+                break;
+            case '"':
+                unescaped.push_back('"');
+                break;
+            case 't':
+                unescaped.push_back('\t');
+                break;
+            case 'r':
+                unescaped.push_back('\r');
+                break;
+            case 'n':
+                unescaped.push_back('\n');
+                break;
+            case 'b':
+                unescaped.push_back('\b');
+                break;
+            case 'f':
+                unescaped.push_back('\f');
+                break;
+            case 'u': {
+                size_t last_char_in_codepoint = i + 4;
+                if (value.size() <= last_char_in_codepoint) {
+                    return false;
+                }
+
+                auto four_byte_hex = std::string_view{value}.substr(i + 1, 4);
+                i += 4;
+
+                std::string tmp;
+                if (false == convert_four_byte_hex_to_utf8(four_byte_hex, tmp)) {
+                    return false;
+                }
+
+                // Make sure unicode escape sequences are always treated as literal characters
+                if ("\\" == tmp) {
+                    unescaped.append("\\\\");
+                } else if ("?" == tmp && is_value) {
+                    unescaped.append("\\?");
+                } else if ("*" == tmp) {
+                    unescaped.append("\\*");
+                } else {
+                    unescaped.append(tmp);
+                }
+                break;
+            }
+            case '{':
+                unescaped.push_back('{');
+                break;
+            case '}':
+                unescaped.push_back('}');
+                break;
+            case '(':
+                unescaped.push_back('(');
+                break;
+            case ')':
+                unescaped.push_back(')');
+                break;
+            case '<':
+                unescaped.push_back('<');
+                break;
+            case '>':
+                unescaped.push_back('>');
+                break;
+            case '*':
+                unescaped.append("\\*");
+                break;
+            case '?':
+                if (is_value) {
+                    unescaped.append("\\?");
+                } else {
+                    unescaped.push_back('?');
+                }
+                break;
+            default:
+                return false;
+        }
+    }
+
+    if (escaped) {
+        return false;
+    }
     return true;
 }
 }  // namespace clp_s

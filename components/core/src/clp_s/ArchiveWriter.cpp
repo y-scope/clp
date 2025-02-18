@@ -32,7 +32,13 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 
     m_archive_path = archive_path.string();
     if (false == std::filesystem::create_directory(m_archive_path, ec)) {
-        throw OperationFailed(ErrorCodeErrno, __FILENAME__, __LINE__);
+        SPDLOG_ERROR(
+                "Failed to create archive directory \"{}\" - ({}) {}",
+                m_archive_path,
+                ec.value(),
+                ec.message()
+        );
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
 
     std::string var_dict_path = m_archive_path + constants::cArchiveVarDictFile;
@@ -56,31 +62,40 @@ void ArchiveWriter::close() {
     auto schema_map_compressed_size = m_schema_map.store(m_archive_path, m_compression_level);
     auto [table_metadata_compressed_size, table_compressed_size] = store_tables();
 
+    std::vector<ArchiveFileInfo> files{
+            {constants::cArchiveSchemaTreeFile, schema_tree_compressed_size},
+            {constants::cArchiveSchemaMapFile, schema_map_compressed_size},
+            {constants::cArchiveTableMetadataFile, table_metadata_compressed_size},
+            {constants::cArchiveVarDictFile, var_dict_compressed_size},
+            {constants::cArchiveLogDictFile, log_dict_compressed_size},
+            {constants::cArchiveArrayDictFile, array_dict_compressed_size},
+            {constants::cArchiveTablesFile, table_compressed_size}
+    };
+    uint64_t offset = 0;
+    for (auto& file : files) {
+        uint64_t original_size = file.o;
+        file.o = offset;
+        offset += original_size;
+    }
+
     if (m_single_file_archive) {
-        std::vector<ArchiveFileInfo> files{
-                {constants::cArchiveSchemaTreeFile, schema_tree_compressed_size},
-                {constants::cArchiveSchemaMapFile, schema_map_compressed_size},
-                {constants::cArchiveTableMetadataFile, table_metadata_compressed_size},
-                {constants::cArchiveVarDictFile, var_dict_compressed_size},
-                {constants::cArchiveLogDictFile, log_dict_compressed_size},
-                {constants::cArchiveArrayDictFile, array_dict_compressed_size},
-                {constants::cArchiveTablesFile, table_compressed_size}
-        };
-        uint64_t offset = 0;
-        for (auto& file : files) {
-            uint64_t original_size = file.o;
-            file.o = offset;
-            offset += original_size;
-        }
         write_single_file_archive(files);
     } else {
-        // Timestamp dictionary written separately here until we transition to moving it inside of
-        // the metadata region of multi-file archives.
-        auto timestamp_dict_compressed_size = write_timestamp_dict();
-        m_compressed_size = var_dict_compressed_size + log_dict_compressed_size
-                            + array_dict_compressed_size + timestamp_dict_compressed_size
-                            + schema_tree_compressed_size + schema_map_compressed_size
-                            + table_metadata_compressed_size + table_compressed_size;
+        FileWriter header_and_metadata_writer;
+        header_and_metadata_writer.open(
+                m_archive_path + constants::cArchiveHeaderFile,
+                FileWriter::OpenMode::CreateForWriting
+        );
+        write_archive_metadata(header_and_metadata_writer, files);
+        size_t metadata_size = header_and_metadata_writer.get_pos() - sizeof(ArchiveHeader);
+
+        m_compressed_size
+                = var_dict_compressed_size + log_dict_compressed_size + array_dict_compressed_size
+                  + metadata_size + schema_tree_compressed_size + schema_map_compressed_size
+                  + table_metadata_compressed_size + table_compressed_size + sizeof(ArchiveHeader);
+
+        write_archive_header(header_and_metadata_writer, metadata_size);
+        header_and_metadata_writer.close();
     }
 
     if (m_metadata_db) {
@@ -99,22 +114,6 @@ void ArchiveWriter::close() {
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
     m_next_log_event_id = 0;
-}
-
-size_t ArchiveWriter::write_timestamp_dict() {
-    std::string timestamp_dict_path = m_archive_path + constants::cArchiveTimestampDictFile;
-    FileWriter timestamp_dict_file_writer;
-    ZstdCompressor timestamp_dict_compressor;
-    timestamp_dict_file_writer.open(timestamp_dict_path, FileWriter::OpenMode::CreateForWriting);
-    timestamp_dict_compressor.open(timestamp_dict_file_writer, m_compression_level);
-    std::stringstream timestamp_dict_stream;
-    m_timestamp_dict.write(timestamp_dict_stream);
-    std::string encoded_timestamp_dict = timestamp_dict_stream.str();
-    timestamp_dict_compressor.write(encoded_timestamp_dict.data(), encoded_timestamp_dict.size());
-    timestamp_dict_compressor.close();
-    auto compressed_size = timestamp_dict_file_writer.get_pos();
-    timestamp_dict_file_writer.close();
-    return compressed_size;
 }
 
 void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files) {
@@ -143,7 +142,8 @@ void ArchiveWriter::write_archive_metadata(
 
     ZstdCompressor compressor;
     compressor.open(archive_writer, m_compression_level);
-    compressor.write_numeric_value(static_cast<uint8_t>(3U));  // Number of packets
+    uint8_t const num_packets{3U};
+    compressor.write_numeric_value(num_packets);
 
     // Write archive info
     ArchiveInfoPacket archive_info{.num_segments = 1};
@@ -154,7 +154,6 @@ void ArchiveWriter::write_archive_metadata(
     compressor.write_numeric_value(static_cast<uint32_t>(archive_info_str.size()));
     compressor.write_string(archive_info_str);
 
-    // Write archive file info
     ArchiveFileInfoPacket archive_file_info{.files{files}};
     msgpack_buffer = std::stringstream{};
     msgpack::pack(msgpack_buffer, archive_file_info);
@@ -218,11 +217,8 @@ void ArchiveWriter::write_archive_header(FileWriter& archive_writer, size_t meta
     archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
-void ArchiveWriter::append_message(
-        int32_t schema_id,
-        Schema const& schema,
-        ParsedMessage& message
-) {
+void
+ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message) {
     SchemaWriter* schema_writer;
     auto it = m_id_to_schema_writer.find(schema_id);
     if (it != m_id_to_schema_writer.end()) {
@@ -270,9 +266,10 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::DateString:
                 writer->append_column(new DateStringColumnWriter(id));
                 break;
-            case NodeType::StructuredArray:
-            case NodeType::Object:
+            case NodeType::Metadata:
             case NodeType::NullValue:
+            case NodeType::Object:
+            case NodeType::StructuredArray:
             case NodeType::Unknown:
                 break;
         }

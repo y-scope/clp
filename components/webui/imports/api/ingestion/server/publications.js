@@ -8,20 +8,11 @@ import {
     STATS_COLLECTION_ID,
     StatsCollection,
 } from "../collections";
-import {
-    COMPRESSION_JOB_WAITING_STATES,
-    COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
-} from "../constants";
 import CompressionDbManager from "./CompressionDbManager";
 import StatsDbManager from "./StatsDbManager";
 
 
 const COMPRESSION_JOBS_REFRESH_INTERVAL_MILLIS = 1000;
-
-/**
- * The maximum number of compression jobs to retrieve at a time.
- */
-const COMPRESSION_MAX_RETRIEVE_JOBS = 5;
 
 const STATS_REFRESH_INTERVAL_MILLIS = 5000;
 
@@ -44,6 +35,11 @@ let compressionJobsRefreshTimeout = null;
  * @type {number|null}
  */
 let statsRefreshInterval = null;
+
+/**
+ * @type {number}
+ */
+let lastUpdateTimestampSeconds = 0;
 
 /**
  * Updates the compression statistics in the StatsCollection.
@@ -89,20 +85,16 @@ const refreshCompressionJobs = async () => {
         return;
     }
 
-    const pendingJobIds = await CompressionJobsCollection.find({
-        [COMPRESSION_JOBS_TABLE_COLUMN_NAMES.STATUS]: {
-            $in: COMPRESSION_JOB_WAITING_STATES,
-        },
-    })
-        .fetch()
-        .map((job) => (
-            job._id
-        ));
-
     const jobs = await compressionDbManager.getCompressionJobs(
-        COMPRESSION_MAX_RETRIEVE_JOBS,
-        pendingJobIds
+        lastUpdateTimestampSeconds
     );
+
+    if (0 !== jobs.length) {
+        // `refreshCompressionJobs()` shall not be run concurrently
+        // and therefore incurs no race condition.
+        // eslint-disable-next-line require-atomic-updates
+        lastUpdateTimestampSeconds = jobs[0].retrieval_time;
+    }
 
     const operations = jobs.map((doc) => ({
         updateOne: {

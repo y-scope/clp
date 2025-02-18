@@ -4,8 +4,8 @@
 #include <cstddef>
 
 #include "../../ErrorCode.hpp"
-#include "../../FileWriter.hpp"
 #include "../../TraceableException.hpp"
+#include "../../WriterInterface.hpp"
 #include "../Compressor.hpp"
 
 namespace clp::streaming_compression::passthrough {
@@ -70,13 +70,13 @@ public:
 
     /**
      * Initializes the compression stream
-     * @param file_writer
+     * @param writer
      */
-    auto open(FileWriter& file_writer) -> void override;
+    auto open(WriterInterface& writer) -> void override;
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer{nullptr};
+    WriterInterface* m_compressed_stream_writer{nullptr};
 };
 }  // namespace clp::streaming_compression::passthrough
 

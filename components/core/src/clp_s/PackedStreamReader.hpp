@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "FileReader.hpp"
+#include "../clp/ReaderInterface.hpp"
+#include "ArchiveReaderAdaptor.hpp"
 #include "ZstdDecompressor.hpp"
 
 namespace clp_s {
@@ -43,9 +44,9 @@ public:
 
     /**
      * Opens a file reader for the tables section. Must be invoked before reading packed streams.
-     * @param tables_file_path the path to the tables file for the archive being read
+     * @param adaptor a reader adaptor for the archive
      */
-    void open_packed_streams(std::string const& tables_file_path);
+    void open_packed_streams(std::shared_ptr<ArchiveReaderAdaptor> adaptor);
 
     /**
      * Closes the file reader for the tables section.
@@ -81,14 +82,15 @@ private:
         Uninitialized,
         MetadataRead,
         PackedStreamsOpened,
-        PackedStreamsOpenedAndMetadataRead,
         ReadingPackedStreams
     };
 
     std::vector<PackedStreamMetadata> m_stream_metadata;
-    FileReader m_packed_stream_reader;
+    std::shared_ptr<ArchiveReaderAdaptor> m_adaptor;
+    std::unique_ptr<clp::ReaderInterface> m_packed_stream_reader;
     ZstdDecompressor m_packed_stream_decompressor;
     PackedStreamReaderState m_state{PackedStreamReaderState::Uninitialized};
+    size_t m_begin_offset{};
     size_t m_prev_stream_id{0ULL};
 };
 

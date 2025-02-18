@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 import typing
+from enum import auto
 
+from clp_py_utils.clp_config import S3Credentials
 from pydantic import BaseModel, validator
+from strenum import LowercaseStrEnum
+
+
+class InputType(LowercaseStrEnum):
+    FS = auto()
+    S3 = auto()
 
 
 class PathsToCompress(BaseModel):
@@ -12,10 +20,22 @@ class PathsToCompress(BaseModel):
     empty_directories: typing.List[str] = None
 
 
-class InputConfig(BaseModel):
+class FsInputConfig(BaseModel):
+    type: typing.Literal[InputType.FS.value] = InputType.FS.value
     paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
     timestamp_key: typing.Optional[str] = None
+
+
+class S3InputConfig(BaseModel):
+    type: typing.Literal[InputType.S3.value] = InputType.S3.value
+    timestamp_key: typing.Optional[str] = None
+
+    region_code: str
+    bucket: str
+    key_prefix: str
+
+    credentials: S3Credentials
 
 
 class OutputConfig(BaseModel):
@@ -27,7 +47,7 @@ class OutputConfig(BaseModel):
 
 
 class ClpIoConfig(BaseModel):
-    input: InputConfig
+    input: typing.Union[FsInputConfig, S3InputConfig]
     output: OutputConfig
 
 

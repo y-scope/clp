@@ -272,8 +272,8 @@ public:
      * @return The node's ID if it exists.
      * @return std::nullopt otherwise.
      */
-    [[nodiscard]] auto try_get_node_id(NodeLocator const& locator
-    ) const -> std::optional<Node::id_t>;
+    [[nodiscard]] auto try_get_node_id(NodeLocator const& locator) const
+            -> std::optional<Node::id_t>;
 
     /**
      * @param locator
