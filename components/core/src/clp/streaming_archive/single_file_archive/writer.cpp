@@ -22,7 +22,7 @@
 namespace clp::streaming_archive::single_file_archive {
 
 namespace {
-constexpr size_t cReadBlockSize = 4096;
+constexpr size_t cReadBlockSize{4096};
 
 /**
  * Generates metadata for the file section of a single-file archive. The metadata consists
@@ -31,7 +31,7 @@ constexpr size_t cReadBlockSize = 4096;
  * @param multi_file_archive_path
  * @param num_segments
  * @return Vector containing a `FileInfo` struct for every file in the multi-file archive.
- * @throws `std::filesystem::filesystem_error` if `stat` on archive file fails.
+ * @throws `std::filesystem::filesystem_error` if `stat` on an archive file fails.
  */
 [[nodiscard]] auto
 get_archive_file_infos(std::filesystem::path const& multi_file_archive_path, size_t num_segments)
@@ -39,7 +39,7 @@ get_archive_file_infos(std::filesystem::path const& multi_file_archive_path, siz
 
 /**
  * Combines file section metadata and the number of segments into single-file archive metadata,
- * then serializes the metadata into MsgPack format.
+ * then serializes the metadata into the MessagePack format.
  *
  * @param multi_file_archive_path
  * @param num_segments
@@ -71,7 +71,7 @@ auto write_packed_archive_metadata(
 ) -> void;
 
 /**
- * Reads the content of a file and writes it to the single-file archive.
+ * Reads the content of a file and writes it to the given file writer.
  * @param file_path
  * @param single_file_archive_writer
  * @throws OperationFailed if reading the file fails.
@@ -98,22 +98,21 @@ auto
 get_archive_file_infos(std::filesystem::path const& multi_file_archive_path, size_t num_segments)
         -> std::vector<FileInfo> {
     std::vector<FileInfo> files;
-    uint64_t offset{};
 
+    uint64_t offset{};
     for (auto const& static_archive_file_name : cStaticArchiveFileNames) {
         files.emplace_back(FileInfo{std::string(static_archive_file_name), offset});
         offset += std::filesystem::file_size(multi_file_archive_path / static_archive_file_name);
     }
 
     std::filesystem::path segment_dir_path = multi_file_archive_path / cSegmentsDirname;
-
     for (size_t i = 0; i < num_segments; ++i) {
         auto const segment_id = std::to_string(i);
         files.emplace_back(FileInfo{segment_id, offset});
         offset += std::filesystem::file_size(segment_dir_path / segment_id);
     }
 
-    // Add sentinel indicating total size of all files.
+    // Add sentinel indicating total size of all files
     files.emplace_back(FileInfo{std::string(cFileInfoSentinelName), offset});
 
     return files;
@@ -142,7 +141,6 @@ auto write_archive_header(FileWriter& single_file_archive_writer, size_t packed_
             .metadata_size = packed_metadata_size,
             .unused{}
     };
-
     single_file_archive_writer.write(reinterpret_cast<char const*>(&header), sizeof(header));
 }
 
@@ -156,7 +154,7 @@ auto write_packed_archive_metadata(
 auto
 write_archive_file(std::filesystem::path const& file_path, FileWriter& single_file_archive_writer)
         -> void {
-    FileReader reader(file_path.string());
+    FileReader reader{file_path.string()};
     std::array<char, cReadBlockSize> read_buffer{};
     while (true) {
         size_t num_bytes_read{};
@@ -197,7 +195,6 @@ write_single_file_archive(std::filesystem::path const& multi_file_archive_path, 
             multi_file_archive_path.string()
             + std::string(single_file_archive::cUnstructuredSfaExtension)
     };
-
     if (std::filesystem::exists(single_file_archive_path)) {
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
@@ -209,12 +206,12 @@ write_single_file_archive(std::filesystem::path const& multi_file_archive_path, 
 
     auto const packed_metadata
             = pack_single_file_archive_metadata(multi_file_archive_path, num_segments);
-
     write_archive_header(single_file_archive_writer, packed_metadata.str().size());
     write_packed_archive_metadata(single_file_archive_writer, packed_metadata);
     write_archive_files(single_file_archive_writer, multi_file_archive_path, num_segments);
 
     single_file_archive_writer.close();
+
     try {
         std::filesystem::remove_all(multi_file_archive_path);
     } catch (std::filesystem::filesystem_error& e) {

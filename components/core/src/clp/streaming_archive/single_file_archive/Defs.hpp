@@ -10,10 +10,9 @@
 #include "../Constants.hpp"
 
 namespace clp::streaming_archive::single_file_archive {
-
 using single_file_archive_format_version_t = uint32_t;
 
-// Single file archive version.
+// Single file archive version
 constexpr uint8_t cVersionMajor{0};
 constexpr uint8_t cVersionMinor{2};
 constexpr uint16_t cVersionPatch{0};
@@ -49,7 +48,8 @@ struct __attribute__((packed)) SingleFileArchiveHeader {
 struct FileInfo {
     std::string name;
     uint64_t offset;
-    // Variables are renamed when serialized to match single-file archive specification.
+
+    // Variables are renamed when serialized to match single-file archive specification
     MSGPACK_DEFINE_MAP(MSGPACK_NVP("n", name), MSGPACK_NVP("o", offset));
 };
 
