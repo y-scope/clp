@@ -15,6 +15,7 @@ import {
     ResultSetHeader,
 } from "mysql2/promise";
 
+import {Nullable} from "./typings/common.js";
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
@@ -209,7 +210,7 @@ class DbManager {
      * @return A promise that resolves to the extracted stream's metadata.
      */
     async getExtractedStreamFileMetadata (streamId: string, logEventIdx: number)
-        : Promise<StreamFileMongoDocument | null> {
+        : Promise<Nullable<StreamFileMongoDocument>> {
         return await this.#streamFilesCollection.findOne({
             stream_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},

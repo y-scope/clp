@@ -4,68 +4,15 @@ import {FastifyPluginAsync} from "fastify";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
-import {EXTRACT_JOB_TYPES} from "../DbManager.js";
 import {QUERY_JOB_TYPE} from "../DbManager.js";
+import {EXTRACT_JOB_TYPES} from "../typings/DbManager.js";
 
-
-/**
- * Submits a stream extraction job and returns the metadata of the extracted stream.
- *
- * @param {object} props
- * @param {import("fastify").FastifyInstance |
- * {dbManager: DbManager} |
- * {s3Manager: S3Manager}} props.fastify
- * @param {EXTRACT_JOB_TYPES} props.jobType
- * @param {number} props.logEventIdx
- * @param {string} props.streamId
- * @param {import("fastify").FastifyReply} props.resp
- * @return {Promise<object>} A promise that resolves to the extracted stream's metadata.
- * @throws {Error} if the stream couldn't be extracted or its metadata doesn't exist in the
- * database.
- */
-const extractStreamAndGetMetadata = async ({
-    fastify,
-    jobType,
-    logEventIdx,
-    streamId,
-    resp,
-}) => {
-    const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
-        jobType: jobType,
-        logEventIdx: logEventIdx,
-        streamId: streamId,
-        targetUncompressedSize: settings.StreamTargetUncompressedSize,
-    });
-
-    if (null === extractResult) {
-        resp.code(StatusCodes.BAD_REQUEST);
-        throw new Error(`Unable to extract stream with streamId=${streamId} at ` +
-            `logEventIdx=${logEventIdx}`);
-    }
-
-    const streamMetadata = fastify.dbManager.getExtractedStreamFileMetadata(
-        streamId,
-        logEventIdx
-    );
-
-    if (null === streamMetadata) {
-        resp.code(StatusCodes.BAD_REQUEST);
-        throw new Error("Unable to find the metadata of extracted stream with " +
-            `streamId=${streamId} at logEventIdx=${logEventIdx}`);
-    }
-
-    return streamMetadata;
-};
 
 /**
  * Creates query routes.
  *
- * @param {import("fastify").FastifyInstance |
- * {dbManager: DbManager} |
- * {s3Manager: S3Manager}} fastify
- * @param {import("fastify").FastifyPluginOptions} options
- * @return {Promise<void>}
  * @param app
+ * @return
  */
 const routes: FastifyPluginAsync = async (app) => {
     const fastify = app.withTypeProvider<TypeBoxTypeProvider>();
@@ -91,14 +38,23 @@ const routes: FastifyPluginAsync = async (app) => {
         );
 
         if (null === streamMetadata) {
-            streamMetadata = await extractStreamAndGetMetadata({
-                fastify: fastify,
+            const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
-                resp: resp,
                 streamId: streamId,
+                targetUncompressedSize: settings.StreamTargetUncompressedSize,
             });
 
+            if (null === extractResult) {
+                resp.code(StatusCodes.BAD_REQUEST);
+                throw new Error(`Unable to extract stream with streamId=${streamId} at ` +
+            `logEventIdx=${logEventIdx}`);
+            }
+
+            streamMetadata = await fastify.dbManager.getExtractedStreamFileMetadata(
+                streamId,
+                logEventIdx
+            );
             if (null === streamMetadata) {
                 resp.code(StatusCodes.BAD_REQUEST);
                 throw new Error("Unable to extract stream with " +
@@ -107,7 +63,8 @@ const routes: FastifyPluginAsync = async (app) => {
         }
 
         if (fastify.hasDecorator("s3Manager")) {
-            streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            streamMetadata.path = await fastify.s3Manager!.getPreSignedUrl(
                 `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
             );
         } else {
