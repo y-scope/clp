@@ -10,10 +10,10 @@ namespace clp {
  */
 class LogSurgeonReader : public log_surgeon::Reader {
 public:
-    LogSurgeonReader(ReaderInterface& reader_interface);
+    LogSurgeonReader(::clp::io_interface::ReaderInterface& reader_interface);
 
 private:
-    ReaderInterface& m_reader_interface;
+    ::clp::io_interface::ReaderInterface& m_reader_interface;
 };
 }  // namespace clp
 

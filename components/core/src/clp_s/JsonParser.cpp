@@ -10,7 +10,6 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <curl/curl.h>
-#include <io_interface/ReaderInterface.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 

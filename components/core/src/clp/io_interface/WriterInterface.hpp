@@ -7,7 +7,7 @@
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace clp::io_interface {
 class WriterInterface {
 public:
     // Types

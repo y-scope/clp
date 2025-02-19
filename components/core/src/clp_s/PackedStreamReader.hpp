@@ -88,7 +88,7 @@ private:
 
     std::vector<PackedStreamMetadata> m_stream_metadata;
     std::shared_ptr<ArchiveReaderAdaptor> m_adaptor;
-    std::unique_ptr<clp::ReaderInterface> m_packed_stream_reader;
+    std::unique_ptr<clp::io_interface::ReaderInterface> m_packed_stream_reader;
     ZstdDecompressor m_packed_stream_decompressor;
     PackedStreamReaderState m_state{PackedStreamReaderState::Uninitialized};
     size_t m_begin_offset{};

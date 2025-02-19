@@ -34,7 +34,7 @@ namespace clp {
  * NOTE 3: Although the FILE stream interface provided by glibc also performs buffered reads, it
  * does not allow us to control the buffering.
  */
-class BufferedFileReader : public ReaderInterface {
+class BufferedFileReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

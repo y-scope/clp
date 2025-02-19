@@ -6,11 +6,14 @@
 #include <string>
 #include <string_view>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../../ir/types.hpp"
 #include "byteswap.hpp"
 #include "protocol_constants.hpp"
 #include "utils.hpp"
 
+using clp::io_interface::ReaderInterface;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::epoch_time_ms_t;
 using clp::ir::four_byte_encoded_variable_t;

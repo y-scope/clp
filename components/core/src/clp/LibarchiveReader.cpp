@@ -2,10 +2,14 @@
 
 #include <archive_entry.h>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "Defs.h"
 #include "spdlog_with_specializations.hpp"
 
 namespace clp {
+using clp::io_interface::ReaderInterface;
+
 ErrorCode
 LibarchiveReader::try_open(ReaderInterface& reader, std::string const& path_if_compressed_file) {
     // Create and initialize internal libarchive

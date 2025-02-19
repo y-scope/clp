@@ -14,7 +14,7 @@
 #include "../../type_utils.hpp"
 
 namespace clp::streaming_compression::lzma {
-auto Compressor::open(WriterInterface& writer) -> void {
+auto Compressor::open(clp::io_interface::WriterInterface& writer) -> void {
     if (nullptr != m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }

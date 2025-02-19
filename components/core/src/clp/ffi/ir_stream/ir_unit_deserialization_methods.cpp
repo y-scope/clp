@@ -27,6 +27,8 @@
 #include "utils.hpp"
 
 namespace clp::ffi::ir_stream {
+using clp::io_interface::ReaderInterface;
+
 namespace {
 /**
  * A collection of schema tree leaf node IDs. It represents the schema of a `KeyValuePairLogEvent`.

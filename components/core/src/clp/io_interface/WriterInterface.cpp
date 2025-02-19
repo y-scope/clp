@@ -2,7 +2,7 @@
 
 #include "Defs.h"
 
-namespace clp {
+namespace clp::io_interface {
 void WriterInterface::write_char(char c) {
     write(&c, 1);
 }

@@ -15,6 +15,8 @@
 #include "Utils.hpp"
 
 namespace clp_s {
+using clp::io_interface::ReaderInterface;
+
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) {
     ZstdDecompressor schema_tree_decompressor;
     std::shared_ptr<SchemaTree> tree = std::make_shared<SchemaTree>();
@@ -145,7 +147,7 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
 }
 
 namespace {
-std::shared_ptr<clp::ReaderInterface> try_create_file_reader(std::string_view const file_path) {
+std::shared_ptr<ReaderInterface> try_create_file_reader(std::string_view const file_path) {
     try {
         return std::make_shared<clp::FileReader>(std::string{file_path});
     } catch (clp::FileReader::OperationFailed const& e) {
@@ -190,7 +192,7 @@ bool try_sign_url(std::string& url) {
     return true;
 }
 
-std::shared_ptr<clp::ReaderInterface>
+std::shared_ptr<ReaderInterface>
 try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth) {
     std::string request_url{url};
     switch (auth.method) {
@@ -214,7 +216,7 @@ try_create_network_reader(std::string_view const url, NetworkAuthOption const& a
 }
 }  // namespace
 
-std::shared_ptr<clp::ReaderInterface>
+std::shared_ptr<ReaderInterface>
 ReaderUtils::try_create_reader(Path const& path, NetworkAuthOption const& network_auth) {
     if (InputSource::Filesystem == path.source) {
         return try_create_file_reader(path.path);

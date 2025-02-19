@@ -73,11 +73,11 @@ public:
      * Initializes the compression stream
      * @param writer
      */
-    auto open(WriterInterface& writer) -> void override;
+    auto open(::clp::io_interface::WriterInterface& writer) -> void override;
 
 private:
     // Variables
-    WriterInterface* m_compressed_stream_writer{nullptr};
+    ::clp::io_interface::WriterInterface* m_compressed_stream_writer{nullptr};
 };
 }  // namespace clp::streaming_compression::passthrough
 

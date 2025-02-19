@@ -24,7 +24,7 @@ namespace clp {
  * Note: If you don't plan to handle the data buffering yourself, do not use this class. Use
  * `clp::FileReader` instead.
  */
-class FileDescriptorReader : public ReaderInterface {
+class FileDescriptorReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

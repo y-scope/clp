@@ -1,5 +1,7 @@
 #include "MessageParser.hpp"
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "Defs.h"
 #include "TimestampPattern.hpp"
 
@@ -47,7 +49,7 @@ bool MessageParser::parse_next_message(
 
 bool MessageParser::parse_next_message(
         bool drain_source,
-        ReaderInterface& reader,
+        clp::io_interface::ReaderInterface& reader,
         ParsedMessage& message
 ) {
     message.clear_except_ts_patt();

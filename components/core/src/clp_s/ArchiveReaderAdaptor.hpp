@@ -47,7 +47,7 @@ public:
      * @throw OperationFailed if a reader is already checked out, or checking out this section would
      *        force a backwards seek.
      */
-    std::unique_ptr<clp::ReaderInterface> checkout_reader_for_section(std::string_view section);
+    std::unique_ptr<clp::io_interface::ReaderInterface> checkout_reader_for_section(std::string_view section);
 
     /**
      * Checks in a reader for a given section of the archive.
@@ -96,7 +96,7 @@ private:
      * @return A ReaderInterface opened and pointing to the archive header on success.
      * @return nullptr on failure.
      */
-    std::shared_ptr<clp::ReaderInterface> try_create_reader_at_header();
+    std::shared_ptr<clp::io_interface::ReaderInterface> try_create_reader_at_header();
 
     /**
      * Checks out a reader for a given section of the single file archive.
@@ -105,7 +105,7 @@ private:
      * @throw OperationFailed if the requested section does not exist in ArchiveFileInfo, if
      *        checking out the section would force a backward seek, or on any I/O error.
      */
-    std::unique_ptr<clp::ReaderInterface> checkout_reader_for_sfa_section(std::string_view section);
+    std::unique_ptr<clp::io_interface::ReaderInterface> checkout_reader_for_sfa_section(std::string_view section);
 
     /**
      * Tries to read the header for the archive from the given reader.
@@ -113,7 +113,7 @@ private:
      * @return ErrorCodeSuccess on success.
      * @return relevant ErrorCode on failure.
      */
-    ErrorCode try_read_header(clp::ReaderInterface& reader);
+    ErrorCode try_read_header(clp::io_interface::ReaderInterface& reader);
 
     /**
      * Tries to read the archive metadata from the given decompressor.
@@ -132,7 +132,7 @@ private:
     size_t m_files_section_offset{};
     std::optional<std::string> m_current_reader_holder;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
-    std::shared_ptr<clp::ReaderInterface> m_reader;
+    std::shared_ptr<clp::io_interface::ReaderInterface> m_reader;
 };
 
 }  // namespace clp_s

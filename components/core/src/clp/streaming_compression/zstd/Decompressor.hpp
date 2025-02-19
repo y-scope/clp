@@ -80,7 +80,7 @@ public:
 
     // Methods implementing the Decompressor interface
     auto open(char const* compressed_data_buf, size_t compressed_data_buf_size) -> void override;
-    auto open(ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
+    auto open(::clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
     auto close() -> void override;
     /**
      * Decompresses and copies the range of uncompressed data described by
@@ -133,7 +133,7 @@ private:
     ZSTD_DStream* m_decompression_stream{nullptr};
 
     std::unique_ptr<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
-    ReaderInterface* m_reader{nullptr};
+    ::clp::io_interface::ReaderInterface* m_reader{nullptr};
     size_t m_reader_initial_pos{0ULL};
 
     std::optional<Array<char>> m_read_buffer;

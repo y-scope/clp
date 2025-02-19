@@ -56,7 +56,7 @@ private:
  * @return ErrorCode_Corrupted_IR if reader contains invalid IR
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
-IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encoding);
+IRErrorCode get_encoding_type(::clp::io_interface::ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
  * Deserializes the tag for the next packet.
@@ -65,7 +65,7 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
-[[nodiscard]] IRErrorCode deserialize_tag(ReaderInterface& reader, encoded_tag_t& tag);
+[[nodiscard]] IRErrorCode deserialize_tag(::clp::io_interface::ReaderInterface& reader, encoded_tag_t& tag);
 
 /**
  * Deserializes a log event from the given stream
@@ -83,7 +83,7 @@ IRErrorCode get_encoding_type(ReaderInterface& reader, bool& is_four_bytes_encod
  */
 template <typename encoded_variable_t>
 auto deserialize_log_event(
-        ReaderInterface& reader,
+        ::clp::io_interface::ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
@@ -105,7 +105,7 @@ auto deserialize_log_event(
  */
 template <typename encoded_variable_t>
 auto deserialize_encoded_text_ast(
-        ReaderInterface& reader,
+        ::clp::io_interface::ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         std::string& logtype,
         std::vector<encoded_variable_t>& encoded_vars,
@@ -162,7 +162,7 @@ void generic_decode_message(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 IRErrorCode deserialize_preamble(
-        ReaderInterface& reader,
+        ::clp::io_interface::ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         size_t& metadata_pos,
         uint16_t& metadata_size
@@ -178,7 +178,7 @@ IRErrorCode deserialize_preamble(
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 IRErrorCode deserialize_preamble(
-        ReaderInterface& reader,
+        ::clp::io_interface::ReaderInterface& reader,
         encoded_tag_t& metadata_type,
         std::vector<int8_t>& metadata
 );
@@ -190,7 +190,7 @@ IRErrorCode deserialize_preamble(
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
-IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset);
+IRErrorCode deserialize_utc_offset_change(::clp::io_interface::ReaderInterface& reader, UtcOffset& utc_offset);
 
 /**
  * Validates whether the given protocol version can be supported by the current build.
@@ -222,7 +222,7 @@ namespace eight_byte_encoding {
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 IRErrorCode deserialize_log_event(
-        ReaderInterface& reader,
+        ::clp::io_interface::ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp
@@ -242,7 +242,7 @@ namespace four_byte_encoding {
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
 IRErrorCode deserialize_log_event(
-        ReaderInterface& reader,
+        ::clp::io_interface::ReaderInterface& reader,
         encoded_tag_t encoded_tag,
         std::string& message,
         ir::epoch_time_ms_t& timestamp_delta

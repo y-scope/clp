@@ -7,7 +7,7 @@ namespace clp {
 /**
  * Class for reading from a fixed-size in-memory buffer
  */
-class BufferReader : public ReaderInterface {
+class BufferReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

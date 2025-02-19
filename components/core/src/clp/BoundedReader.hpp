@@ -18,18 +18,18 @@ namespace clp {
  * particular, reading part of a later segment may force the reader for that later segment to seek
  * backwards, which can be either inefficient or impossible for certain kinds of input streams.
  */
-class BoundedReader : public ReaderInterface {
+class BoundedReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Constructor
-    explicit BoundedReader(ReaderInterface* reader, size_t bound)
+    explicit BoundedReader(::clp::io_interface::ReaderInterface* reader, size_t bound)
             : m_reader{reader},
               m_bound{bound} {
         if (nullptr == m_reader) {
-            throw ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
+            throw ::clp::io_interface::ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
         }
         m_curr_pos = m_reader->get_pos();
         if (m_curr_pos > m_bound) {
-            throw ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
+            throw ::clp::io_interface::ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
         }
     }
 
@@ -81,7 +81,7 @@ public:
     }
 
 private:
-    ReaderInterface* m_reader{nullptr};
+    ::clp::io_interface::ReaderInterface* m_reader{nullptr};
     size_t m_bound{};
     size_t m_curr_pos{};
 };

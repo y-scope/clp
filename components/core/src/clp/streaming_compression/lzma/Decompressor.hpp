@@ -82,7 +82,7 @@ public:
      * @param read_buffer_capacity The maximum amount of data to read from a reader at a time.
      * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
-    auto open(ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
+    auto open(clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
 
     /**
      * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.

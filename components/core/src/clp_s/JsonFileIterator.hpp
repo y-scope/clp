@@ -21,7 +21,7 @@ public:
      * @param buf_size the initial buffer size
      */
     explicit JsonFileIterator(
-            clp::ReaderInterface& reader,
+            clp::io_interface::ReaderInterface& reader,
             size_t max_document_size,
             size_t buf_size = 1024 * 1024 /*1MB default*/
     );
@@ -79,7 +79,7 @@ private:
     size_t m_buf_occupied{0};
     size_t m_max_document_size{0};
     char* m_buf{nullptr};
-    clp::ReaderInterface& m_reader;
+    clp::io_interface::ReaderInterface& m_reader;
     simdjson::ondemand::parser m_parser;
     simdjson::ondemand::document_stream m_stream;
     bool m_eof{false};

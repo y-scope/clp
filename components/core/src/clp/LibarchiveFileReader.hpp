@@ -14,7 +14,7 @@ namespace clp {
 /**
  * Class for reading a file from an archive through libarchive
  */
-class LibarchiveFileReader : public ReaderInterface {
+class LibarchiveFileReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

@@ -49,7 +49,7 @@ public:
      *   - the IR stream's version is unsupported;
      *   - or the IR stream's user-defined metadata is not a JSON object.
      */
-    [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
+    [[nodiscard]] static auto create(clp::io_interface::ReaderInterface& reader, IrUnitHandler ir_unit_handler)
             -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>;
 
     // Delete copy constructor and assignment
@@ -97,7 +97,7 @@ public:
      * - Forwards `handle_end_of_stream`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
      */
-    [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader)
+    [[nodiscard]] auto deserialize_next_ir_unit(clp::io_interface::ReaderInterface& reader)
             -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType>;
 
     /**
@@ -134,7 +134,7 @@ private:
 
 template <IrUnitHandlerInterface IrUnitHandler>
 requires(std::move_constructible<IrUnitHandler>)
-auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
+auto Deserializer<IrUnitHandler>::create(clp::io_interface::ReaderInterface& reader, IrUnitHandler ir_unit_handler)
         -> OUTCOME_V2_NAMESPACE::std_result<Deserializer> {
     bool is_four_byte_encoded{};
     if (auto const err{get_encoding_type(reader, is_four_byte_encoded)};
@@ -181,7 +181,7 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
 
 template <IrUnitHandlerInterface IrUnitHandler>
 requires(std::move_constructible<IrUnitHandler>)
-auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& reader)
+auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(clp::io_interface::ReaderInterface& reader)
         -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
     if (is_stream_completed()) {
         return std::errc::operation_not_permitted;

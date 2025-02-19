@@ -26,7 +26,7 @@ Compressor::~Compressor() {
     ZSTD_freeCStream(m_compression_stream);
 }
 
-auto Compressor::open(WriterInterface& writer, int compression_level) -> void {
+auto Compressor::open(clp::io_interface::WriterInterface& writer, int compression_level) -> void {
     if (nullptr != m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }

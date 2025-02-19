@@ -43,7 +43,7 @@ public:
 
     void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
 
-    void open(clp::ReaderInterface& reader, size_t file_read_buffer_capacity) override;
+    void open(clp::io_interface::ReaderInterface& reader, size_t file_read_buffer_capacity) override;
 
     void close() override;
 
@@ -131,7 +131,7 @@ private:
 
     boost::iostreams::mapped_file_source m_memory_mapped_compressed_file;
     FileReader* m_file_reader;
-    clp::ReaderInterface* m_reader;
+    clp::io_interface::ReaderInterface* m_reader;
     size_t m_file_reader_initial_pos;
     std::unique_ptr<char[]> m_file_read_buffer;
     size_t m_file_read_buffer_length;

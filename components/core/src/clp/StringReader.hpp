@@ -11,7 +11,7 @@
 #include "TraceableException.hpp"
 
 namespace clp {
-class StringReader : public ReaderInterface {
+class StringReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

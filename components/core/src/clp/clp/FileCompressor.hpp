@@ -4,6 +4,7 @@
 #include <system_error>
 
 #include <boost/uuid/random_generator.hpp>
+#include <io_interface/ReaderInterface.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
@@ -71,7 +72,7 @@ private:
             std::string const& path_for_compression,
             group_id_t group_id,
             streaming_archive::writer::Archive& archive_writer,
-            ReaderInterface& reader
+            ::clp::io_interface::ReaderInterface& reader
     );
 
     void parse_and_encode_with_heuristic(
@@ -81,7 +82,7 @@ private:
             std::string const& path_for_compression,
             group_id_t group_id,
             streaming_archive::writer::Archive& archive_writer,
-            ReaderInterface& reader
+            ::clp::io_interface::ReaderInterface& reader
     );
 
     /**
@@ -121,7 +122,7 @@ private:
             std::string const& path,
             group_id_t group_id,
             streaming_archive::writer::Archive& archive_writer,
-            ReaderInterface& reader
+            ::clp::io_interface::ReaderInterface& reader
     );
 
     /**

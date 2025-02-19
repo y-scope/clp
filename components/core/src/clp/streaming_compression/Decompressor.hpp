@@ -9,7 +9,7 @@
 #include "Constants.hpp"
 
 namespace clp::streaming_compression {
-class Decompressor : public ReaderInterface {
+class Decompressor : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -52,7 +52,7 @@ public:
      * @param reader
      * @param read_buffer_capacity The maximum amount of data to read from a reader at a time
      */
-    virtual auto open(ReaderInterface& reader, size_t read_buffer_capacity) -> void = 0;
+    virtual auto open(::clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity) -> void = 0;
     /**
      * Closes decompression stream
      */

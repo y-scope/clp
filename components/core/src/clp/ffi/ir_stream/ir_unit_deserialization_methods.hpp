@@ -40,7 +40,7 @@ namespace clp::ffi::ir_stream {
  *   - Forwards `deserialize_schema_tree_node_parent_id`'s return values.
  */
 [[nodiscard]] auto deserialize_ir_unit_schema_tree_node_insertion(
-        ReaderInterface& reader,
+        clp::io_interface::ReaderInterface& reader,
         encoded_tag_t tag,
         std::string& key_name
 ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::NodeLocator>>;
@@ -52,7 +52,7 @@ namespace clp::ffi::ir_stream {
  * - std::errc::result_out_of_range if the IR stream is truncated.
  * - Forwards `clp::ffi::ir_stream::deserialize_utc_offset_change`'s return values.
  */
-[[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
+[[nodiscard]] auto deserialize_ir_unit_utc_offset_change(clp::io_interface::ReaderInterface& reader)
         -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset>;
 
 /**
@@ -74,7 +74,7 @@ namespace clp::ffi::ir_stream {
  *   cannot construct a valid key-value pair log event.
  */
 [[nodiscard]] auto deserialize_ir_unit_kv_pair_log_event(
-        ReaderInterface& reader,
+        clp::io_interface::ReaderInterface& reader,
         encoded_tag_t tag,
         std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
         std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,

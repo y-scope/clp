@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 #include <string_utils/string_utils.hpp>
@@ -12,6 +13,8 @@
 #include "types.hpp"
 
 namespace clp::ir {
+using clp::io_interface::ReaderInterface;
+
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
         -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {

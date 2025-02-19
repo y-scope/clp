@@ -74,7 +74,7 @@ public:
      * Initializes the compression stream with the default compression level
      * @param writer
      */
-    auto open(WriterInterface& writer) -> void override {
+    auto open(::clp::io_interface::WriterInterface& writer) -> void override {
         this->open(writer, cDefaultCompressionLevel);
     }
 
@@ -83,7 +83,7 @@ public:
      * @param writer
      * @param compression_level
      */
-    auto open(WriterInterface& writer, int compression_level) -> void;
+    auto open(::clp::io_interface::WriterInterface& writer, int compression_level) -> void;
 
     /**
      * Flushes the stream without ending the current frame
@@ -92,7 +92,7 @@ public:
 
 private:
     // Variables
-    WriterInterface* m_compressed_stream_writer{nullptr};
+    ::clp::io_interface::WriterInterface* m_compressed_stream_writer{nullptr};
 
     // Compressed stream variables
     ZSTD_CStream* m_compression_stream{ZSTD_createCStream()};

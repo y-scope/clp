@@ -34,7 +34,7 @@ public:
      * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
      *   or uses an unsupported version
      */
-    static auto create(ReaderInterface& reader)
+    static auto create(::clp::io_interface::ReaderInterface& reader)
             -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
 
     // Delete copy constructor and assignment
@@ -66,9 +66,9 @@ public:
 
 private:
     // Constructors
-    explicit LogEventDeserializer(ReaderInterface& reader) : m_reader{reader} {}
+    explicit LogEventDeserializer(::clp::io_interface::ReaderInterface& reader) : m_reader{reader} {}
 
-    LogEventDeserializer(ReaderInterface& reader, epoch_time_ms_t ref_timestamp)
+    LogEventDeserializer(::clp::io_interface::ReaderInterface& reader, epoch_time_ms_t ref_timestamp)
             : m_reader{reader},
               m_prev_msg_timestamp{ref_timestamp} {}
 
@@ -79,7 +79,7 @@ private:
             std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>,
             epoch_time_ms_t,
             EmptyType> m_prev_msg_timestamp{};
-    ReaderInterface& m_reader;
+    ::clp::io_interface::ReaderInterface& m_reader;
 };
 }  // namespace clp::ir
 

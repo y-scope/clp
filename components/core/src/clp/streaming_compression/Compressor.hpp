@@ -14,7 +14,7 @@ namespace clp::streaming_compression {
 /**
  * Abstract compressor interface.
  */
-class Compressor : public WriterInterface {
+class Compressor : public ::clp::io_interface::WriterInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -72,7 +72,7 @@ public:
      * Initializes the compression stream
      * @param writer
      */
-    virtual auto open(WriterInterface& writer) -> void = 0;
+    virtual auto open(::clp::io_interface::WriterInterface& writer) -> void = 0;
 };
 }  // namespace clp::streaming_compression
 

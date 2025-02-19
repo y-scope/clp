@@ -7,7 +7,7 @@
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace clp::io_interface {
 class ReaderInterface {
 public:
     // Types
@@ -148,6 +148,6 @@ bool ReaderInterface::read_numeric_value(ValueType& value, bool eof_possible) {
     }
     return true;
 }
-}  // namespace clp
+}  // namespace clp::io_interface
 
 #endif  // CLP_IO_INTERFACE_READERINTERFACE_HPP

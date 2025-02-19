@@ -10,7 +10,7 @@
 #include "TraceableException.hpp"
 
 namespace clp {
-class FileWriter : public WriterInterface {
+class FileWriter : public ::clp::io_interface::WriterInterface {
 public:
     // Types
     enum class OpenMode {
