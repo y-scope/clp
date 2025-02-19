@@ -10,6 +10,7 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <curl/curl.h>
+#include <io_interface/ReaderInterface.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
@@ -21,7 +22,6 @@
 #include "../clp/ffi/Value.hpp"
 #include "../clp/ir/EncodedTextAst.hpp"
 #include "../clp/NetworkReader.hpp"
-#include "../clp/ReaderInterface.hpp"
 #include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "../clp/time_types.hpp"
 #include "archive_constants.hpp"

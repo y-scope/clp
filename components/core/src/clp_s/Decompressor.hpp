@@ -5,7 +5,8 @@
 
 #include <string>
 
-#include "../clp/ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
+
 #include "FileReader.hpp"
 #include "TraceableException.hpp"
 

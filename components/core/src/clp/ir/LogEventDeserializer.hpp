@@ -3,9 +3,9 @@
 
 #include <optional>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <outcome/single-header/outcome.hpp>
 
-#include "../ReaderInterface.hpp"
 #include "../time_types.hpp"
 #include "../TimestampPattern.hpp"
 #include "../TraceableException.hpp"

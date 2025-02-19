@@ -4,12 +4,12 @@
 #include <string>
 #include <string_view>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../clp/aws/AwsAuthenticationSigner.hpp"
 #include "../clp/FileReader.hpp"
 #include "../clp/NetworkReader.hpp"
-#include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
 #include "archive_constants.hpp"
 #include "Utils.hpp"

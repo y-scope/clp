@@ -5,9 +5,10 @@
 
 #include <cstddef>
 
+#include <io_interface/WriterInterface.hpp>
+
 #include "../ErrorCode.hpp"
 #include "../TraceableException.hpp"
-#include "../WriterInterface.hpp"
 
 namespace clp::streaming_compression {
 /**

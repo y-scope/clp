@@ -1,7 +1,7 @@
 #ifndef CLP_BUFFERREADER_HPP
 #define CLP_BUFFERREADER_HPP
 
-#include "ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
 
 namespace clp {
 /**

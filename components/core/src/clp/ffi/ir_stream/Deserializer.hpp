@@ -9,10 +9,10 @@
 #include <tuple>
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 
-#include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
 #include "decoding_methods.hpp"

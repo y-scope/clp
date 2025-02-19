@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "../clp/ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
+
 #include "ArchiveReaderAdaptor.hpp"
 #include "ZstdDecompressor.hpp"
 

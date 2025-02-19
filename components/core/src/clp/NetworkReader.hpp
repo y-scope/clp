@@ -18,12 +18,12 @@
 #include <vector>
 
 #include <curl/curl.h>
+#include <io_interface/ReaderInterface.hpp>
 
 #include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
 #include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
 #include "Thread.hpp"
 #include "TraceableException.hpp"
 

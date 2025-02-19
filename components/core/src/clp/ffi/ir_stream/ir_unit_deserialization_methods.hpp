@@ -6,9 +6,9 @@
 #include <string>
 #include <utility>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <outcome/single-header/outcome.hpp>
 
-#include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"

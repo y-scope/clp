@@ -7,9 +7,9 @@
 #include <string>
 
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <io_interface/ReaderInterface.hpp>
 #include <zstd.h>
 
-#include "../clp/ReaderInterface.hpp"
 #include "Decompressor.hpp"
 #include "TraceableException.hpp"
 

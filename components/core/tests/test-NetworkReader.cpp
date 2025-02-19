@@ -12,6 +12,7 @@
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <curl/curl.h>
 #include <fmt/core.h>
+#include <io_interface/ReaderInterface.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 
 #include "../src/clp/Array.hpp"
@@ -21,7 +22,6 @@
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/NetworkReader.hpp"
 #include "../src/clp/Platform.hpp"
-#include "../src/clp/ReaderInterface.hpp"
 
 namespace {
 constexpr size_t cDefaultReaderBufferSize{1024};

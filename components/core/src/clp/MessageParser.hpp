@@ -3,9 +3,10 @@
 
 #include <string>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "ErrorCode.hpp"
 #include "ParsedMessage.hpp"
-#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {

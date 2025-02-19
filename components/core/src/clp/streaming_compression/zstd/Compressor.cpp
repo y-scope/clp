@@ -2,12 +2,12 @@
 
 #include <cstddef>
 
+#include <io_interface/WriterInterface.hpp>
 #include <spdlog/spdlog.h>
 #include <zstd.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
-#include "../../WriterInterface.hpp"
 
 namespace clp::streaming_compression::zstd {
 Compressor::Compressor()

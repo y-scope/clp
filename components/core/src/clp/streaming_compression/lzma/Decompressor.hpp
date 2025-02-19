@@ -3,8 +3,9 @@
 
 #include <cstddef>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../../ErrorCode.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
 #include "../Constants.hpp"
 #include "../Decompressor.hpp"

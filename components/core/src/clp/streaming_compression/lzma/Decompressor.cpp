@@ -2,8 +2,9 @@
 
 #include <cstddef>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../../ErrorCode.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
 
 namespace clp::streaming_compression::lzma {

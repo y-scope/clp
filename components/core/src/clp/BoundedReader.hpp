@@ -4,8 +4,9 @@
 #include <cstddef>
 #include <string>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
 
 namespace clp {
 /**

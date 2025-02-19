@@ -5,8 +5,9 @@
 #include <string>
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../../ir/types.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../encoding_methods.hpp"
 

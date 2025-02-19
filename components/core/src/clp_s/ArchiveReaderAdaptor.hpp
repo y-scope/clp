@@ -6,8 +6,9 @@
 #include <string>
 #include <string_view>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../clp/BoundedReader.hpp"
-#include "../clp/ReaderInterface.hpp"
 #include "InputConfig.hpp"
 #include "SingleFileArchiveDefs.hpp"
 #include "TimestampDictionaryReader.hpp"

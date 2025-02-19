@@ -6,9 +6,10 @@
 #include <cstdio>
 #include <string>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "Defs.h"
 #include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {

@@ -10,12 +10,12 @@
 #include <utility>
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <outcome/single-header/outcome.hpp>
 
 #include "../../ErrorCode.hpp"
 #include "../../ir/EncodedTextAst.hpp"
 #include "../../ir/types.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../../type_utils.hpp"
 #include "../KeyValuePairLogEvent.hpp"

@@ -3,12 +3,12 @@
 
 #include <cstddef>
 
+#include <io_interface/WriterInterface.hpp>
 #include <zstd.h>
 
 #include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
-#include "../../WriterInterface.hpp"
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 

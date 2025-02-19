@@ -3,9 +3,10 @@
 
 #include <cstddef>
 
+#include <io_interface/WriterInterface.hpp>
+
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
-#include "../../WriterInterface.hpp"
 #include "../Compressor.hpp"
 
 namespace clp::streaming_compression::passthrough {

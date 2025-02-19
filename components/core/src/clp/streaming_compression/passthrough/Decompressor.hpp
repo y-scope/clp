@@ -1,7 +1,8 @@
 #ifndef CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 
-#include "../../ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 

@@ -1,5 +1,5 @@
-#ifndef CLP_WRITERINTERFACE_HPP
-#define CLP_WRITERINTERFACE_HPP
+#ifndef CLP_IO_INTERFACE_WRITERINTERFACE_HPP
+#define CLP_IO_INTERFACE_WRITERINTERFACE_HPP
 
 #include <cstddef>
 #include <string>
@@ -79,4 +79,4 @@ void WriterInterface::write_numeric_value(ValueType val) {
 }
 }  // namespace clp
 
-#endif  // CLP_WRITERINTERFACE_HPP
+#endif  // CLP_IO_INTERFACE_WRITERINTERFACE_HPP

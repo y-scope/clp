@@ -3,7 +3,8 @@
 
 #include <string>
 
-#include "../ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../TraceableException.hpp"
 #include "Constants.hpp"
 

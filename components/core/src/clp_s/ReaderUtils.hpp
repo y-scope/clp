@@ -3,7 +3,8 @@
 
 #include <string>
 
-#include "../clp/ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
+
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
 #include "InputConfig.hpp"

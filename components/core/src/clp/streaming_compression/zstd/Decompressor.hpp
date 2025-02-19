@@ -5,10 +5,10 @@
 #include <optional>
 #include <string>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <zstd.h>
 
 #include "../../Array.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"

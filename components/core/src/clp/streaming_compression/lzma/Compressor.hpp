@@ -4,12 +4,12 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <io_interface/WriterInterface.hpp>
 #include <lzma.h>
 
 #include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
-#include "../../WriterInterface.hpp"
 #include "../Compressor.hpp"
 #include "Constants.hpp"
 

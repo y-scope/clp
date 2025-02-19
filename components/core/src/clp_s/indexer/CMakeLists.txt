@@ -27,8 +27,6 @@ set(
         ../../clp/MySQLPreparedStatement.hpp
         ../../clp/NetworkReader.cpp
         ../../clp/NetworkReader.hpp
-        ../../clp/ReaderInterface.cpp
-        ../../clp/ReaderInterface.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
         ../archive_constants.hpp
@@ -86,6 +84,7 @@ target_link_libraries(indexer
         absl::flat_hash_map
         Boost::iostreams Boost::program_options Boost::url
         ${CURL_LIBRARIES}
+        clp::io_interface
         clp::string_utils
         MariaDBClient::MariaDBClient
         OpenSSL::Crypto

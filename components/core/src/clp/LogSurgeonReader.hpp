@@ -1,9 +1,8 @@
 #ifndef CLP_LOGSURGEONREADER_HPP
 #define CLP_LOGSURGEONREADER_HPP
 
+#include <io_interface/ReaderInterface.hpp>
 #include <log_surgeon/Reader.hpp>
-
-#include "ReaderInterface.hpp"
 
 namespace clp {
 /*
