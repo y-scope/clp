@@ -1,6 +1,8 @@
 version: "3"
 
 vars:
+  G_CORE_DIR: "{{.ROOT_DIR}}/components/core"
+  G_LINT_CLANG_TIDY_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
   G_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
 
@@ -24,28 +26,18 @@ tasks:
       - "{{.ROOT_DIR}}/.clang-format"
       - "{{.ROOT_DIR}}/.clang-tidy"
       - "{{.TASKFILE}}"
-      - ".clang-format"
-      - "src/**/*.cpp"
-      - "src/**/*.h"
-      - "src/**/*.hpp"
-      - "src/**/*.inc"
-      - "tests/**/*.cpp"
-      - "tests/**/*.h"
-      - "tests/**/*.hpp"
-      - "tests/**/*.inc"
-    dir: "components/core"
+      - "{{.G_CORE_DIR}}/.clang-format"
+      - "{{.G_CORE_DIR}}/src/**"
+      - "{{.G_CORE_DIR}}/tests/**"
     cmds:
-      - task: "cpp"
-        vars:
-          FLAGS: "--dry-run"
+      - task: "cpp-format-check"
+      - task: "cpp-static-check-ci"
 
   cpp-fix:
     sources: *cpp_source_files
-    dir: "components/core"
     cmds:
-      - task: "cpp"
-        vars:
-          FLAGS: "-i"
+      - task: "cpp-format-fix"
+      - task: "cpp-static-fix"
 
   js-check:
     sources: &js_source_files
@@ -116,24 +108,74 @@ tasks:
           lint-tasks.yml \
           Taskfile.yml
 
-  cpp:
-    internal: true
-    requires:
-      vars: ["FLAGS"]
-    dir: "components/core"
+  cpp-format-check:
+    sources: *cpp_source_files
     deps: ["cpp-lint-configs", "venv"]
     cmds:
-      - |-
-        . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        find src tests \
-          -type f \
-          \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
-          -print0 | \
-            xargs -0 clang-format {{.FLAGS}} -Werror
+      - task: ":utils:clang-format"
+        vars:
+          FLAGS: ["--dry-run"]
+          ROOT_PATHS: *cpp_source_files
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  cpp-format-fix:
+    sources: *cpp_source_files
+    deps: ["cpp-lint-configs", "venv"]
+    cmds:
+      - task: ":utils:clang-format"
+        vars:
+          FLAGS: ["-i"]
+          ROOT_PATHS: *cpp_source_files
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   cpp-lint-configs:
     internal: true
     cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/lint-configs/symlink-cpp-lint-configs.sh"
+  cpp-static-check-all:
+    sources: *cpp_source_files
+    deps:
+      - "cpp-lint-configs"
+      - "venv"
+      - task: ":utils:cmake-generate"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}/components/core"
+    cmds:
+      - task: ":utils:clang-tidy-find"
+        vars:
+          EXCLUDE_PATTERNS:
+            - "{{.G_CORE_DIR}}/tests/LogSuppressor.hpp"
+          FLAGS:
+            - --config-file "{{.ROOT_DIR}}/.clang-tidy"
+            - -p "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          INCLUDE_PATTERNS:
+            - "{{.G_CORE_DIR}}/tests/*"
+          OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
+          ROOT_PATHS: *cpp_source_files
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  cpp-static-check-ci:
+    # Alias task to `cpp-static-fix` since we don't currently support automatic fixes.
+    # NOTE: clang-tidy does have the ability to fix some errors, but the fixes can be inaccurate.
+    # When we eventually determine which errors can be safely fixed, we'll allow clang-tidy to
+    # fix them.
+    aliases: ["cpp-static-fix"]
+    sources: *cpp_source_files
+    deps:
+      - "cpp-lint-configs"
+      - "venv"
+      - task: ":utils:cmake-generate"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          SOURCE_DIR: "{{.ROOT_DIR}}/components/core"
+    cmds:
+      - task: ":utils:clang-tidy-diff"
+        vars:
+          FLAGS:
+            - --config-file "{{.ROOT_DIR}}/.clang-tidy"
+            - -p "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   js:
     internal: true
@@ -185,6 +227,7 @@ tasks:
     deps:
       - ":init"
       - ":webui-node-modules"
+      # - task: ":utils:validate-checksum"
       - task: ":utils:validate-checksum"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"

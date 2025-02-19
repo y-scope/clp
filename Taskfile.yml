@@ -51,6 +51,12 @@ tasks:
           COMPONENT: "job-orchestration"
       - task: "clean-webui"
 
+  clean-core:
+    cmds:
+      - task: "utils:cmake-clean"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+
   clean-log-viewer-webui:
     cmds:
       - "rm -rf 'components/log-viewer-webui/client/node_modules'"
@@ -178,7 +184,7 @@ tasks:
 
   core:
     vars:
-      SRC_DIR: "components/core"
+      SRC_DIR: "{{.ROOT_DIR}}/components/core"
     sources:
       - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
       - "{{.SRC_DIR}}/cmake/**/*"
@@ -194,13 +200,14 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
     deps: ["deps:core", "init"]
     cmds:
-      - "mkdir -p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-      - "cmake -S '{{.SRC_DIR}}' -B '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-      - >-
-        cmake
-        --build "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-        --parallel
-        --target clg clo clp clp-s reducer-server
+      - task: "utils:cmake-generate"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          SOURCE_DIR: "{{.SRC_DIR}}"
+      - task: "utils:cmake-build"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          TARGETS: ["clg", "clo", "clp", "clp-s", "reducer-server"]
 
   clp-package-utils:
     - task: "python-component"
