@@ -11,6 +11,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
