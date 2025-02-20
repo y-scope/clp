@@ -157,10 +157,6 @@ void Archive::open(UserConfig const& user_config) {
 
     m_global_metadata_db = user_config.global_metadata_db;
 
-    m_global_metadata_db->open();
-    m_global_metadata_db->add_archive(m_id_as_string, *m_local_metadata);
-    m_global_metadata_db->close();
-
     m_file = nullptr;
 
     // Open log-type dictionary
@@ -238,7 +234,17 @@ void Archive::close() {
 
     m_metadata_file_writer.close();
 
+    update_global_metadata();
     m_global_metadata_db = nullptr;
+
+    for (auto* file : m_file_metadata_for_global_update) {
+        delete file;
+    }
+    m_file_metadata_for_global_update.clear();
+
+    if (m_print_archive_stats_progress) {
+        print_archive_stats_progress();
+    }
 
     m_metadata_db.close();
 
@@ -557,8 +563,6 @@ void Archive::persist_file_metadata(vector<File*> const& files) {
 
     m_metadata_db.update_files(files);
 
-    m_global_metadata_db->update_metadata_for_files(m_id_as_string, files);
-
     // Mark files' metadata as clean
     for (auto file : files) {
         file->mark_metadata_as_clean();
@@ -593,16 +597,12 @@ void Archive::close_segment_and_persist_file_metadata(
 
     for (auto file : files) {
         file->mark_as_in_committed_segment();
+        m_file_metadata_for_global_update.emplace_back(file);
     }
 
-    m_global_metadata_db->open();
     persist_file_metadata(files);
-    update_metadata();
-    m_global_metadata_db->close();
+    update_local_metadata();
 
-    for (auto file : files) {
-        delete file;
-    }
     files.clear();
 }
 
@@ -628,23 +628,33 @@ uint64_t Archive::get_dynamic_compressed_size() {
     return on_disk_size;
 }
 
-void Archive::update_metadata() {
+auto Archive::print_archive_stats_progress() -> void {
+    nlohmann::json json_msg;
+    json_msg["id"] = m_id_as_string;
+    json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
+    json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
+    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
+}
+
+void Archive::update_local_metadata() {
     m_local_metadata->set_dynamic_uncompressed_size(0);
     m_local_metadata->set_dynamic_compressed_size(get_dynamic_compressed_size());
     // Rewrite (overwrite) the metadata file
     m_metadata_file_writer.seek_from_begin(0);
     m_local_metadata->write_to_file(m_metadata_file_writer);
+}
 
-    m_global_metadata_db->update_archive_metadata(m_id_as_string, *m_local_metadata);
-
-    if (m_print_archive_stats_progress) {
-        nlohmann::json json_msg;
-        json_msg["id"] = m_id_as_string;
-        json_msg["uncompressed_size"] = m_local_metadata->get_uncompressed_size_bytes();
-        json_msg["size"] = m_local_metadata->get_compressed_size_bytes();
-        std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore)
-                  << std::endl;
+auto Archive::update_global_metadata() -> void {
+    m_global_metadata_db->open();
+    if (false == m_local_metadata.has_value()) {
+        throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
     }
+    m_global_metadata_db->add_archive(m_id_as_string, m_local_metadata.value());
+    m_global_metadata_db->update_metadata_for_files(
+            m_id_as_string,
+            m_file_metadata_for_global_update
+    );
+    m_global_metadata_db->close();
 }
 
 // Explicitly declare template specializations so that we can define the template methods in this
