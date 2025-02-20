@@ -631,29 +631,46 @@ auto JsonParser::get_archive_node_type(
     }
 }
 
+auto JsonParser::adjust_archive_node_type(NodeType node_type, bool is_timestamp) -> NodeType {
+    if (false == is_timestamp) {
+        return node_type;
+    }
+
+    switch (node_type) {
+        case NodeType::ClpString:
+        case NodeType::VarString:
+            return NodeType::DateString;
+        default:
+            return node_type;
+    }
+}
+
 auto JsonParser::add_node_to_archive_and_translations(
         uint32_t ir_node_id,
         clp::ffi::SchemaTree::Node const& ir_node_to_add,
         NodeType archive_node_type,
-        int32_t parent_node_id
+        int32_t parent_node_id,
+        bool is_timestamp
 ) -> int {
+    auto const adjusted_archive_node_type
+            = adjust_archive_node_type(archive_node_type, is_timestamp);
     int const curr_node_archive_id = m_archive_writer->add_node(
             parent_node_id,
-            archive_node_type,
+            adjusted_archive_node_type,
             ir_node_to_add.get_key_name()
     );
     m_ir_node_to_archive_node_id_mapping.emplace(
             std::make_pair(ir_node_id, archive_node_type),
-            curr_node_archive_id
+            std::make_pair(curr_node_archive_id, is_timestamp)
     );
     return curr_node_archive_id;
 }
 
-auto JsonParser::get_archive_node_id(
+auto JsonParser::get_archive_node_id_and_check_timestamp(
         uint32_t ir_node_id,
         NodeType archive_node_type,
         clp::ffi::SchemaTree const& ir_tree
-) -> int {
+) -> std::pair<int32_t, bool> {
     int curr_node_archive_id{constants::cRootNodeId};
     auto flat_map_location
             = m_ir_node_to_archive_node_id_mapping.find(std::pair{ir_node_id, archive_node_type});
@@ -682,52 +699,64 @@ auto JsonParser::get_archive_node_id(
                 std::pair{ir_id_stack.back(), next_node_type}
         );
         if (m_ir_node_to_archive_node_id_mapping.end() != flat_map_location) {
-            curr_node_archive_id = flat_map_location->second;
-            next_parent_archive_id = flat_map_location->second;
+            curr_node_archive_id = next_parent_archive_id = flat_map_location->second.first;
             ir_id_stack.pop_back();
             break;
         }
     }
 
+    bool matches_timestamp{false};
     while (false == ir_id_stack.empty()) {
         auto const& curr_node = ir_tree.get_node(ir_id_stack.back());
         if (1 == ir_id_stack.size()) {
+            matches_timestamp = m_archive_writer->matches_timestamp(
+                    next_parent_archive_id,
+                    curr_node.get_key_name()
+            );
             curr_node_archive_id = add_node_to_archive_and_translations(
                     ir_id_stack.back(),
                     curr_node,
                     archive_node_type,
-                    next_parent_archive_id
+                    next_parent_archive_id,
+                    matches_timestamp
             );
         } else {
             curr_node_archive_id = add_node_to_archive_and_translations(
                     ir_id_stack.back(),
                     curr_node,
                     NodeType::Object,
-                    next_parent_archive_id
+                    next_parent_archive_id,
+                    false
             );
         }
         next_parent_archive_id = curr_node_archive_id;
         ir_id_stack.pop_back();
     }
-    return curr_node_archive_id;
+    return {curr_node_archive_id, matches_timestamp};
 }
 
 void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
     clp::ffi::SchemaTree const& tree = kv.get_user_gen_keys_schema_tree();
     for (auto const& pair : kv.get_user_gen_node_id_value_pairs()) {
-        NodeType const archive_node_type = get_archive_node_type(tree, pair);
-        auto const node_id = get_archive_node_id(pair.first, archive_node_type, tree);
-
+        auto const archive_node_type = get_archive_node_type(tree, pair);
+        auto const [node_id, is_timestamp]
+                = get_archive_node_id_and_check_timestamp(pair.first, archive_node_type, tree);
         switch (archive_node_type) {
             case NodeType::Integer: {
                 auto const i64_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_int_t>();
                 m_current_parsed_message.add_value(node_id, i64_value);
+                if (is_timestamp) {
+                    m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
+                }
             } break;
             case NodeType::Float: {
                 auto const d_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_float_t>();
                 m_current_parsed_message.add_value(node_id, d_value);
+                if (is_timestamp) {
+                    m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, d_value);
+                }
             } break;
             case NodeType::Boolean: {
                 auto const b_value
@@ -736,7 +765,18 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
             } break;
             case NodeType::VarString: {
                 auto const var_value{pair.second.value().get_immutable_view<std::string>()};
-                m_current_parsed_message.add_value(node_id, var_value);
+                if (is_timestamp) {
+                    uint64_t encoding_id{};
+                    auto const timestamp = m_archive_writer->ingest_timestamp_entry(
+                            m_timestamp_key,
+                            node_id,
+                            var_value,
+                            encoding_id
+                    );
+                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
+                } else {
+                    m_current_parsed_message.add_value(node_id, var_value);
+                }
             } break;
             case NodeType::ClpString: {
                 std::string decoded_value;
@@ -752,7 +792,19 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                                             .decode_and_unparse()
                                             .value();
                 }
-                m_current_parsed_message.add_value(node_id, decoded_value);
+                if (is_timestamp) {
+                    uint64_t encoding_id{};
+                    auto const timestamp = m_archive_writer->ingest_timestamp_entry(
+                            m_timestamp_key,
+                            node_id,
+                            decoded_value,
+                            encoding_id
+                    );
+                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
+
+                } else {
+                    m_current_parsed_message.add_value(node_id, decoded_value);
+                }
             } break;
             case NodeType::UnstructuredArray: {
                 std::string array_str;
