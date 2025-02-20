@@ -43,7 +43,8 @@ public:
 
     void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
 
-    void open(clp::io_interface::ReaderInterface& reader, size_t file_read_buffer_capacity) override;
+    void
+    open(clp::io_interface::ReaderInterface& reader, size_t file_read_buffer_capacity) override;
 
     void close() override;
 

@@ -56,7 +56,8 @@ private:
  * @return ErrorCode_Corrupted_IR if reader contains invalid IR
  * @return ErrorCode_Incomplete_IR if reader doesn't contain enough data to decode
  */
-IRErrorCode get_encoding_type(::clp::io_interface::ReaderInterface& reader, bool& is_four_bytes_encoding);
+IRErrorCode
+get_encoding_type(::clp::io_interface::ReaderInterface& reader, bool& is_four_bytes_encoding);
 
 /**
  * Deserializes the tag for the next packet.
@@ -65,7 +66,8 @@ IRErrorCode get_encoding_type(::clp::io_interface::ReaderInterface& reader, bool
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
-[[nodiscard]] IRErrorCode deserialize_tag(::clp::io_interface::ReaderInterface& reader, encoded_tag_t& tag);
+[[nodiscard]] IRErrorCode
+deserialize_tag(::clp::io_interface::ReaderInterface& reader, encoded_tag_t& tag);
 
 /**
  * Deserializes a log event from the given stream
@@ -190,7 +192,8 @@ IRErrorCode deserialize_preamble(
  * @return IRErrorCode_Success on success
  * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize
  */
-IRErrorCode deserialize_utc_offset_change(::clp::io_interface::ReaderInterface& reader, UtcOffset& utc_offset);
+IRErrorCode
+deserialize_utc_offset_change(::clp::io_interface::ReaderInterface& reader, UtcOffset& utc_offset);
 
 /**
  * Validates whether the given protocol version can be supported by the current build.

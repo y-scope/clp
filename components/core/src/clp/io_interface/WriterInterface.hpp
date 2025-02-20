@@ -77,6 +77,6 @@ template <typename ValueType>
 void WriterInterface::write_numeric_value(ValueType val) {
     write(reinterpret_cast<char*>(&val), sizeof(val));
 }
-}  // namespace clp
+}  // namespace clp::io_interface
 
 #endif  // CLP_IO_INTERFACE_WRITERINTERFACE_HPP

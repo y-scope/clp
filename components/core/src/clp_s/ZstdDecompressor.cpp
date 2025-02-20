@@ -187,7 +187,10 @@ void ZstdDecompressor::open(FileReader& file_reader, size_t file_read_buffer_cap
     reset_stream();
 }
 
-void ZstdDecompressor::open(clp::io_interface::ReaderInterface& reader, size_t file_read_buffer_capacity) {
+void ZstdDecompressor::open(
+        clp::io_interface::ReaderInterface& reader,
+        size_t file_read_buffer_capacity
+) {
     if (InputType::NotInitialized != m_input_type) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }

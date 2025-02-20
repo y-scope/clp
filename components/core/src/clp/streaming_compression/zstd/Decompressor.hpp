@@ -80,7 +80,8 @@ public:
 
     // Methods implementing the Decompressor interface
     auto open(char const* compressed_data_buf, size_t compressed_data_buf_size) -> void override;
-    auto open(::clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
+    auto open(::clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity)
+            -> void override;
     auto close() -> void override;
     /**
      * Decompresses and copies the range of uncompressed data described by

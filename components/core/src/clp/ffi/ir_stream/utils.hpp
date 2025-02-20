@@ -49,7 +49,8 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void;
  * @return Whether the reader contained enough data to deserialize.
  */
 template <IntegerType integer_t>
-[[nodiscard]] auto deserialize_int(clp::io_interface::ReaderInterface& reader, integer_t& value) -> bool;
+[[nodiscard]] auto deserialize_int(clp::io_interface::ReaderInterface& reader, integer_t& value)
+        -> bool;
 
 /**
  * Serializes a string using CLP's encoding for unstructured text.

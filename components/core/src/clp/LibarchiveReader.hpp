@@ -44,7 +44,10 @@ public:
      * @return ErrorCode_Success on success
      * @return ErrorCode_Failure on failure
      */
-    ErrorCode try_open(::clp::io_interface::ReaderInterface& reader, std::string const& path_if_compressed_file);
+    ErrorCode try_open(
+            ::clp::io_interface::ReaderInterface& reader,
+            std::string const& path_if_compressed_file
+    );
     /**
      * Closes the reader
      */

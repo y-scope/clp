@@ -52,7 +52,9 @@ public:
      * @param reader
      * @param read_buffer_capacity The maximum amount of data to read from a reader at a time
      */
-    virtual auto open(::clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity) -> void = 0;
+    virtual auto open(::clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity)
+            -> void
+            = 0;
     /**
      * Closes decompression stream
      */

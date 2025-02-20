@@ -25,11 +25,19 @@ public:
             : m_reader{reader},
               m_bound{bound} {
         if (nullptr == m_reader) {
-            throw ::clp::io_interface::ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
+            throw ::clp::io_interface::ReaderInterface::OperationFailed(
+                    ErrorCode_BadParam,
+                    __FILE__,
+                    __LINE__
+            );
         }
         m_curr_pos = m_reader->get_pos();
         if (m_curr_pos > m_bound) {
-            throw ::clp::io_interface::ReaderInterface::OperationFailed(ErrorCode_BadParam, __FILE__, __LINE__);
+            throw ::clp::io_interface::ReaderInterface::OperationFailed(
+                    ErrorCode_BadParam,
+                    __FILE__,
+                    __LINE__
+            );
         }
     }
 

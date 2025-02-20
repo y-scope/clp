@@ -34,4 +34,4 @@ size_t WriterInterface::get_pos() const {
 
     return pos;
 }
-}  // namespace clp
+}  // namespace clp::io_interface

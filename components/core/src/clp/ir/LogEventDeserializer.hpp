@@ -66,9 +66,13 @@ public:
 
 private:
     // Constructors
-    explicit LogEventDeserializer(::clp::io_interface::ReaderInterface& reader) : m_reader{reader} {}
+    explicit LogEventDeserializer(::clp::io_interface::ReaderInterface& reader)
+            : m_reader{reader} {}
 
-    LogEventDeserializer(::clp::io_interface::ReaderInterface& reader, epoch_time_ms_t ref_timestamp)
+    LogEventDeserializer(
+            ::clp::io_interface::ReaderInterface& reader,
+            epoch_time_ms_t ref_timestamp
+    )
             : m_reader{reader},
               m_prev_msg_timestamp{ref_timestamp} {}
 

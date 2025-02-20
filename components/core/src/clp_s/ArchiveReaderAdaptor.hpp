@@ -47,7 +47,9 @@ public:
      * @throw OperationFailed if a reader is already checked out, or checking out this section would
      *        force a backwards seek.
      */
-    std::unique_ptr<clp::io_interface::ReaderInterface> checkout_reader_for_section(std::string_view section);
+    std::unique_ptr<clp::io_interface::ReaderInterface> checkout_reader_for_section(
+            std::string_view section
+    );
 
     /**
      * Checks in a reader for a given section of the archive.
@@ -105,7 +107,9 @@ private:
      * @throw OperationFailed if the requested section does not exist in ArchiveFileInfo, if
      *        checking out the section would force a backward seek, or on any I/O error.
      */
-    std::unique_ptr<clp::io_interface::ReaderInterface> checkout_reader_for_sfa_section(std::string_view section);
+    std::unique_ptr<clp::io_interface::ReaderInterface> checkout_reader_for_sfa_section(
+            std::string_view section
+    );
 
     /**
      * Tries to read the header for the archive from the given reader.

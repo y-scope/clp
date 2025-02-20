@@ -123,4 +123,4 @@ size_t ReaderInterface::get_pos() {
 
     return pos;
 }
-}  // namespace clp
+}  // namespace clp::io_interface

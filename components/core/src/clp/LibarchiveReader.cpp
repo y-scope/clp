@@ -1,7 +1,6 @@
 #include "LibarchiveReader.hpp"
 
 #include <archive_entry.h>
-
 #include <io_interface/ReaderInterface.hpp>
 
 #include "Defs.h"
