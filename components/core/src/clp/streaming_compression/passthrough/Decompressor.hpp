@@ -26,8 +26,7 @@ public:
 
     // Constructors
     Decompressor()
-            : ::clp::streaming_compression::Decompressor(CompressorType::Passthrough),
-              m_input_type(InputType::NotInitialized),
+            : m_input_type(InputType::NotInitialized),
               m_compressed_data_buf(nullptr),
               m_compressed_data_buf_len(0),
               m_decompressed_stream_pos(0) {}

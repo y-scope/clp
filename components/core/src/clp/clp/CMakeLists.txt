@@ -117,7 +117,6 @@ set(
         ../streaming_archive/writer/utils.cpp
         ../streaming_archive/writer/utils.hpp
         ../streaming_compression/Compressor.hpp
-        ../streaming_compression/Constants.hpp
         ../streaming_compression/Decompressor.hpp
         ../streaming_compression/passthrough/Compressor.cpp
         ../streaming_compression/passthrough/Compressor.hpp
