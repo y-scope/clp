@@ -117,9 +117,9 @@ public:
      * @param schema_tree
      * @return IRErrorCode::IRErrorCode_Success on success.
      * @return IRErrorCode::IRErrorCode_Decode_Error if the node specified by the locator doesn't
-     * exist.
+     * exist in the corresponding schema tree.
      * @return IRErrorCode::IRErrorCode_Corrupted_IR if the node specified by the locator is not the
-     * last inserted node.
+     * node that was last inserted into the corresponding schema tree.
      */
     [[nodiscard]] static auto handle_schema_tree_node_insertion(
             [[maybe_unused]] bool is_auto_generated,
