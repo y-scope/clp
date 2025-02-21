@@ -9,12 +9,12 @@
 #include <utility>
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 
 #include "../../ErrorCode.hpp"
 #include "../../ir/types.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../type_utils.hpp"
 #include "../SchemaTree.hpp"
 #include "byteswap.hpp"
@@ -49,7 +49,8 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void;
  * @return Whether the reader contained enough data to deserialize.
  */
 template <IntegerType integer_t>
-[[nodiscard]] auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool;
+[[nodiscard]] auto deserialize_int(clp::io_interface::ReaderInterface& reader, integer_t& value)
+        -> bool;
 
 /**
  * Serializes a string using CLP's encoding for unstructured text.
@@ -123,7 +124,7 @@ template <
         int8_t four_byte_length_indicator_tag>
 [[nodiscard]] auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
-        ReaderInterface& reader
+        clp::io_interface::ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
 
 /**
@@ -151,7 +152,7 @@ auto serialize_int(integer_t value, std::vector<int8_t>& output_buf) -> void {
 }
 
 template <IntegerType integer_t>
-auto deserialize_int(ReaderInterface& reader, integer_t& value) -> bool {
+auto deserialize_int(clp::io_interface::ReaderInterface& reader, integer_t& value) -> bool {
     integer_t value_little_endian;
     if (reader.try_read_numeric_value(value_little_endian) != clp::ErrorCode_Success) {
         return false;
@@ -236,7 +237,7 @@ template <
         int8_t four_byte_length_indicator_tag>
 auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
-        ReaderInterface& reader
+        clp::io_interface::ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
     auto size_dependent_deserialize_and_decode_schema_tree_node_id
             = [&reader]<SignedIntegerType encoded_node_id_t>(

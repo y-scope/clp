@@ -247,6 +247,7 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
+add_subdirectory(src/clp/io_interface)
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
@@ -547,8 +548,6 @@ set(SOURCE_FILES_unitTest
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
-        src/clp/ReaderInterface.cpp
-        src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
         src/clp/ReadOnlyMemoryMappedFile.hpp
         src/clp/spdlog_with_specializations.hpp
@@ -618,8 +617,6 @@ set(SOURCE_FILES_unitTest
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
         src/clp/version.hpp
-        src/clp/WriterInterface.cpp
-        src/clp/WriterInterface.hpp
         submodules/sqlite3/sqlite3.c
         submodules/sqlite3/sqlite3.h
         submodules/sqlite3/sqlite3ext.h
@@ -686,6 +683,7 @@ target_link_libraries(unitTest
         OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
+        clp::io_interface
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp

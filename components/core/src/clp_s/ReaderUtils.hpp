@@ -3,7 +3,8 @@
 
 #include <string>
 
-#include "../clp/ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
+
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
 #include "InputConfig.hpp"
@@ -68,12 +69,12 @@ public:
     );
 
     /**
-     * Tries to open a clp::ReaderInterface using the given Path and NetworkAuthOption.
+     * Tries to open a ReaderInterface using the given Path and NetworkAuthOption.
      * @param path
      * @param network_auth
-     * @return the opened clp::ReaderInterface or nullptr on error
+     * @return the opened ReaderInterface or nullptr on error
      */
-    static std::shared_ptr<clp::ReaderInterface>
+    static std::shared_ptr<clp::io_interface::ReaderInterface>
     try_create_reader(Path const& path, NetworkAuthOption const& network_auth);
 
 private:

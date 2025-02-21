@@ -82,8 +82,6 @@ set(
         ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
-        ../ReaderInterface.cpp
-        ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
         ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
@@ -145,8 +143,6 @@ set(
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
         ../version.hpp
-        ../WriterInterface.cpp
-        ../WriterInterface.hpp
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
         "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
         clp.cpp
@@ -179,6 +175,7 @@ target_link_libraries(clp
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         ${STD_FS_LIBS}
+        clp::io_interface
         clp::string_utils
         yaml-cpp::yaml-cpp
         ZStd::ZStd

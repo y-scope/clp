@@ -3,11 +3,12 @@
 #include <cctype>
 #include <cstring>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <spdlog/spdlog.h>
 
 namespace clp_s {
 JsonFileIterator::JsonFileIterator(
-        clp::ReaderInterface& reader,
+        clp::io_interface::ReaderInterface& reader,
         size_t max_document_size,
         size_t buf_size
 )

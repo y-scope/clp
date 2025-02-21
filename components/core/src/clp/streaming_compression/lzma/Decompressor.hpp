@@ -3,8 +3,9 @@
 
 #include <cstddef>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../../ErrorCode.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
 #include "../Constants.hpp"
 #include "../Decompressor.hpp"
@@ -81,7 +82,8 @@ public:
      * @param read_buffer_capacity The maximum amount of data to read from a reader at a time.
      * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.
      */
-    auto open(ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
+    auto open(clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity)
+            -> void override;
 
     /**
      * @throw clp::streaming_compression::lzma::Decompressor::OperationFailed if unsupported.

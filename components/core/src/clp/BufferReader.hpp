@@ -1,13 +1,13 @@
 #ifndef CLP_BUFFERREADER_HPP
 #define CLP_BUFFERREADER_HPP
 
-#include "ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
 
 namespace clp {
 /**
  * Class for reading from a fixed-size in-memory buffer
  */
-class BufferReader : public ReaderInterface {
+class BufferReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

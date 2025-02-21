@@ -2,8 +2,9 @@
 
 #include <cstddef>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "../../ErrorCode.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
 
 namespace clp::streaming_compression::lzma {
@@ -31,7 +32,7 @@ auto Decompressor::open(
 }
 
 auto Decompressor::open(
-        [[maybe_unused]] ReaderInterface& reader,
+        [[maybe_unused]] clp::io_interface::ReaderInterface& reader,
         [[maybe_unused]] size_t read_buffer_capacity
 ) -> void {
     throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);

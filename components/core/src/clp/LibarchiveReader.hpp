@@ -5,11 +5,11 @@
 #include <vector>
 
 #include <archive.h>
+#include <io_interface/ReaderInterface.hpp>
 
 #include "ErrorCode.hpp"
 #include "FileReader.hpp"
 #include "LibarchiveFileReader.hpp"
-#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -44,7 +44,10 @@ public:
      * @return ErrorCode_Success on success
      * @return ErrorCode_Failure on failure
      */
-    ErrorCode try_open(ReaderInterface& reader, std::string const& path_if_compressed_file);
+    ErrorCode try_open(
+            ::clp::io_interface::ReaderInterface& reader,
+            std::string const& path_if_compressed_file
+    );
     /**
      * Closes the reader
      */
@@ -145,7 +148,7 @@ private:
     struct archive_entry* m_archive_entry;
 
     std::vector<char> m_buffer;
-    ReaderInterface* m_reader;
+    ::clp::io_interface::ReaderInterface* m_reader;
 
     std::string m_filename_if_compressed;
 

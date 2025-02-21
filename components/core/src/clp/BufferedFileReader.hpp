@@ -7,10 +7,11 @@
 #include <string>
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "BufferReader.hpp"
 #include "Defs.h"
 #include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -33,7 +34,7 @@ namespace clp {
  * NOTE 3: Although the FILE stream interface provided by glibc also performs buffered reads, it
  * does not allow us to control the buffering.
  */
-class BufferedFileReader : public ReaderInterface {
+class BufferedFileReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

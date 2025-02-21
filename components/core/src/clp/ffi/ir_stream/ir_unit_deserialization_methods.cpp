@@ -10,12 +10,12 @@
 #include <utility>
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <outcome/single-header/outcome.hpp>
 
 #include "../../ErrorCode.hpp"
 #include "../../ir/EncodedTextAst.hpp"
 #include "../../ir/types.hpp"
-#include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../../type_utils.hpp"
 #include "../KeyValuePairLogEvent.hpp"
@@ -27,6 +27,8 @@
 #include "utils.hpp"
 
 namespace clp::ffi::ir_stream {
+using clp::io_interface::ReaderInterface;
+
 namespace {
 /**
  * A collection of schema tree leaf node IDs. It represents the schema of a `KeyValuePairLogEvent`.

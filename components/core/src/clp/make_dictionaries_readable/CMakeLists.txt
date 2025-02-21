@@ -17,8 +17,6 @@ set(
         ../LogTypeDictionaryReader.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
-        ../ReaderInterface.cpp
-        ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
         ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
@@ -32,8 +30,6 @@ set(
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
         ../VariableDictionaryReader.hpp
-        ../WriterInterface.cpp
-        ../WriterInterface.hpp
         "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         CommandLineArguments.cpp
         CommandLineArguments.hpp
@@ -48,6 +44,7 @@ target_link_libraries(make-dictionaries-readable
         Boost::filesystem Boost::program_options
         log_surgeon::log_surgeon
         spdlog::spdlog
+        clp::io_interface
         clp::string_utils
         ZStd::ZStd
 )

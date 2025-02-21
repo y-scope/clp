@@ -62,8 +62,6 @@ set(
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
         ../clp/networking/socket_utils.hpp
-        ../clp/ReaderInterface.cpp
-        ../clp/ReaderInterface.hpp
         ../clp/ReadOnlyMemoryMappedFile.cpp
         ../clp/ReadOnlyMemoryMappedFile.hpp
         ../clp/spdlog_with_specializations.hpp
@@ -78,8 +76,6 @@ set(
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
-        ../clp/WriterInterface.cpp
-        ../clp/WriterInterface.hpp
 )
 
 set(
@@ -253,6 +249,7 @@ target_link_libraries(
         absl::flat_hash_map
         Boost::iostreams Boost::program_options Boost::regex Boost::url
         ${CURL_LIBRARIES}
+        clp::io_interface
         clp::string_utils
         kql
         MariaDBClient::MariaDBClient

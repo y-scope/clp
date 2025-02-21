@@ -5,16 +5,16 @@
 #include <cstdint>
 #include <cstring>
 
+#include <io_interface/WriterInterface.hpp>
 #include <lzma.h>
 #include <spdlog/spdlog.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
 #include "../../type_utils.hpp"
-#include "../../WriterInterface.hpp"
 
 namespace clp::streaming_compression::lzma {
-auto Compressor::open(WriterInterface& writer) -> void {
+auto Compressor::open(clp::io_interface::WriterInterface& writer) -> void {
     if (nullptr != m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }

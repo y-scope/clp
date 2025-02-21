@@ -8,6 +8,7 @@
 #include <string_view>
 #include <vector>
 
+#include <io_interface/ReaderInterface.hpp>
 #include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
@@ -19,6 +20,7 @@
 #include "SingleFileArchiveDefs.hpp"
 
 namespace clp_s {
+using clp::io_interface::ReaderInterface;
 
 ArchiveReaderAdaptor::ArchiveReaderAdaptor(
         Path const& archive_path,
@@ -118,7 +120,7 @@ ErrorCode ArchiveReaderAdaptor::load_archive_metadata() {
     return rc;
 }
 
-ErrorCode ArchiveReaderAdaptor::try_read_header(clp::ReaderInterface& reader) {
+ErrorCode ArchiveReaderAdaptor::try_read_header(ReaderInterface& reader) {
     auto const clp_rc = reader.try_read_exact_length(
             reinterpret_cast<char*>(&m_archive_header),
             sizeof(m_archive_header)
@@ -185,7 +187,7 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
     return ErrorCodeSuccess;
 }
 
-std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
+std::shared_ptr<ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at_header() {
     if (InputSource::Filesystem == m_archive_path.source && false == m_single_file_archive) {
         try {
             return std::make_shared<clp::FileReader>(
@@ -200,7 +202,7 @@ std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at
     }
 }
 
-std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_section(
+std::unique_ptr<ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_section(
         std::string_view section
 ) {
     if (m_current_reader_holder.has_value()) {
@@ -215,7 +217,7 @@ std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_
     }
 }
 
-std::unique_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_sfa_section(
+std::unique_ptr<ReaderInterface> ArchiveReaderAdaptor::checkout_reader_for_sfa_section(
         std::string_view section
 ) {
     auto it = std::find_if(

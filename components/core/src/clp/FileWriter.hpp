@@ -4,12 +4,13 @@
 #include <cstdio>
 #include <string>
 
+#include <io_interface/WriterInterface.hpp>
+
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
-#include "WriterInterface.hpp"
 
 namespace clp {
-class FileWriter : public WriterInterface {
+class FileWriter : public ::clp::io_interface::WriterInterface {
 public:
     // Types
     enum class OpenMode {

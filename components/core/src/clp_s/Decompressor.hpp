@@ -5,7 +5,8 @@
 
 #include <string>
 
-#include "../clp/ReaderInterface.hpp"
+#include <io_interface/ReaderInterface.hpp>
+
 #include "FileReader.hpp"
 #include "TraceableException.hpp"
 
@@ -56,7 +57,7 @@ public:
      * @param reader
      * @param read_buffer_capacity The maximum amount of data to read at a time
      */
-    virtual void open(clp::ReaderInterface& reader, size_t read_buffer_capacity) = 0;
+    virtual void open(clp::io_interface::ReaderInterface& reader, size_t read_buffer_capacity) = 0;
 
     /**
      * Closes decompression stream

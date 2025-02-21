@@ -2,9 +2,10 @@
 
 #include <cstddef>
 
+#include <io_interface/WriterInterface.hpp>
+
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
-#include "../../WriterInterface.hpp"
 
 namespace clp::streaming_compression::passthrough {
 auto Compressor::write(char const* data, size_t const data_length) -> void {
@@ -43,7 +44,7 @@ auto Compressor::close() -> void {
     m_compressed_stream_writer = nullptr;
 }
 
-auto Compressor::open(WriterInterface& writer) -> void {
+auto Compressor::open(clp::io_interface::WriterInterface& writer) -> void {
     m_compressed_stream_writer = &writer;
 }
 }  // namespace clp::streaming_compression::passthrough

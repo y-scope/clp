@@ -3,9 +3,10 @@
 
 #include <string>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "ErrorCode.hpp"
 #include "ParsedMessage.hpp"
-#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -53,7 +54,11 @@ public:
      * @param message
      * @return true if message parsed, false otherwise
      */
-    bool parse_next_message(bool drain_source, ReaderInterface& reader, ParsedMessage& message);
+    bool parse_next_message(
+            bool drain_source,
+            ::clp::io_interface::ReaderInterface& reader,
+            ParsedMessage& message
+    );
 
 private:
     // Methods

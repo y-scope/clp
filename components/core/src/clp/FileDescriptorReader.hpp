@@ -8,9 +8,10 @@
 #include <string_view>
 #include <utility>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "ErrorCode.hpp"
 #include "FileDescriptor.hpp"
-#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
@@ -23,7 +24,7 @@ namespace clp {
  * Note: If you don't plan to handle the data buffering yourself, do not use this class. Use
  * `clp::FileReader` instead.
  */
-class FileDescriptorReader : public ReaderInterface {
+class FileDescriptorReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

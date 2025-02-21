@@ -18,12 +18,12 @@
 #include <vector>
 
 #include <curl/curl.h>
+#include <io_interface/ReaderInterface.hpp>
 
 #include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
 #include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
 #include "Thread.hpp"
 #include "TraceableException.hpp"
 
@@ -36,7 +36,7 @@ namespace clp {
  * operations will read from the next filled buffer from a queue. If no filled buffer is available,
  * the thread calling read will block until there is a filled buffer, or the download times out.
  */
-class NetworkReader : public ReaderInterface {
+class NetworkReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     using BufferView = std::span<char>;
@@ -123,7 +123,7 @@ public:
     auto operator=(NetworkReader const&) -> NetworkReader& = delete;
     auto operator=(NetworkReader&&) -> NetworkReader& = delete;
 
-    // Methods implementing `clp::ReaderInterface`
+    // Methods implementing ReaderInterface
     /**
      * Tries to read up to a given number of bytes from the buffered data.
      * @param buf

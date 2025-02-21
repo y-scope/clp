@@ -5,13 +5,14 @@
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <io_interface/ReaderInterface.hpp>
 
 #include "../src/clp/Array.hpp"
 #include "../src/clp/FileDescriptorReader.hpp"
 #include "../src/clp/FileReader.hpp"
-#include "../src/clp/ReaderInterface.hpp"
 
 using clp::Array;
+using clp::io_interface::ReaderInterface;
 
 namespace {
 // Reused code starts
@@ -26,7 +27,7 @@ constexpr size_t cDefaultReaderBufferSize{1024};
  * @param read_buf_size The size of the buffer to use for individual reads from the reader.
  * @return All data read from the given reader.
  */
-auto get_content(clp::ReaderInterface& reader, size_t read_buf_size = cDefaultReaderBufferSize)
+auto get_content(ReaderInterface& reader, size_t read_buf_size = cDefaultReaderBufferSize)
         -> std::vector<char>;
 
 auto get_test_input_local_path() -> std::string {
@@ -39,7 +40,7 @@ auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
     return std::filesystem::path{"test_log_files"} / "log.txt";
 }
 
-auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vector<char> {
+auto get_content(ReaderInterface& reader, size_t read_buf_size) -> std::vector<char> {
     std::vector<char> buf;
     Array<char> read_buf{read_buf_size};
     for (bool has_more_content{true}; has_more_content;) {

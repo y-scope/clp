@@ -4,13 +4,14 @@
 #include <cstdio>
 #include <string>
 
+#include <io_interface/ReaderInterface.hpp>
+
 #include "Defs.h"
 #include "ErrorCode.hpp"
-#include "ReaderInterface.hpp"
 #include "TraceableException.hpp"
 
 namespace clp {
-class StringReader : public ReaderInterface {
+class StringReader : public ::clp::io_interface::ReaderInterface {
 public:
     // Types
     class OperationFailed : public TraceableException {

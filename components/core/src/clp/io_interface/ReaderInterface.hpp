@@ -1,14 +1,13 @@
-#ifndef CLP_READERINTERFACE_HPP
-#define CLP_READERINTERFACE_HPP
+#ifndef CLP_IO_INTERFACE_READERINTERFACE_HPP
+#define CLP_IO_INTERFACE_READERINTERFACE_HPP
 
 #include <cstddef>
 #include <string>
 
-#include "Defs.h"
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
-namespace clp {
+namespace clp::io_interface {
 class ReaderInterface {
 public:
     // Types
@@ -149,6 +148,6 @@ bool ReaderInterface::read_numeric_value(ValueType& value, bool eof_possible) {
     }
     return true;
 }
-}  // namespace clp
+}  // namespace clp::io_interface
 
-#endif  // CLP_READERINTERFACE_HPP
+#endif  // CLP_IO_INTERFACE_READERINTERFACE_HPP

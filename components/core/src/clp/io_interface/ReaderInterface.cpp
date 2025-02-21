@@ -2,7 +2,7 @@
 
 using std::string;
 
-namespace clp {
+namespace clp::io_interface {
 ErrorCode ReaderInterface::try_read_to_delimiter(
         char delim,
         bool keep_delimiter,
@@ -123,4 +123,4 @@ size_t ReaderInterface::get_pos() {
 
     return pos;
 }
-}  // namespace clp
+}  // namespace clp::io_interface

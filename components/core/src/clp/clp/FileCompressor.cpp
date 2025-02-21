@@ -7,6 +7,7 @@
 #include <archive_entry.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
+#include <io_interface/ReaderInterface.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
@@ -19,6 +20,7 @@
 #include "../utf8_utils.hpp"
 #include "utils.hpp"
 
+using clp::io_interface::ReaderInterface;
 using clp::ir::eight_byte_encoded_variable_t;
 using clp::ir::four_byte_encoded_variable_t;
 using clp::ir::has_ir_stream_magic_number;

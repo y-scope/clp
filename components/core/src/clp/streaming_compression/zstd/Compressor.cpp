@@ -2,12 +2,12 @@
 
 #include <cstddef>
 
+#include <io_interface/WriterInterface.hpp>
 #include <spdlog/spdlog.h>
 #include <zstd.h>
 
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
-#include "../../WriterInterface.hpp"
 
 namespace clp::streaming_compression::zstd {
 Compressor::Compressor()
@@ -26,7 +26,7 @@ Compressor::~Compressor() {
     ZSTD_freeCStream(m_compression_stream);
 }
 
-auto Compressor::open(WriterInterface& writer, int compression_level) -> void {
+auto Compressor::open(clp::io_interface::WriterInterface& writer, int compression_level) -> void {
     if (nullptr != m_compressed_stream_writer) {
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }

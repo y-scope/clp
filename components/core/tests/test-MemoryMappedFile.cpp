@@ -5,10 +5,12 @@
 #include <vector>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <io_interface/ReaderInterface.hpp>
 
 #include "../src/clp/FileReader.hpp"
-#include "../src/clp/ReaderInterface.hpp"
 #include "../src/clp/ReadOnlyMemoryMappedFile.hpp"
+
+using clp::io_interface::ReaderInterface;
 
 namespace {
 /**
@@ -16,11 +18,11 @@ namespace {
  * @param reader
  * @return The content.
  */
-[[nodiscard]] auto read_content(clp::ReaderInterface& reader) -> std::vector<char>;
+[[nodiscard]] auto read_content(ReaderInterface& reader) -> std::vector<char>;
 
 [[nodiscard]] auto get_test_dir() -> std::filesystem::path;
 
-auto read_content(clp::ReaderInterface& reader) -> std::vector<char> {
+auto read_content(ReaderInterface& reader) -> std::vector<char> {
     constexpr size_t cBufferSize{4096};
     std::array<char, cBufferSize> read_buf{};
     std::vector<char> buf;
