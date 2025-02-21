@@ -631,8 +631,9 @@ auto JsonParser::get_archive_node_type(
     }
 }
 
-auto JsonParser::adjust_archive_node_type(NodeType node_type, bool is_timestamp) -> NodeType {
-    if (false == is_timestamp) {
+auto JsonParser::adjust_archive_node_type_for_timestamp(NodeType node_type, bool matches_timestamp)
+        -> NodeType {
+    if (false == matches_timestamp) {
         return node_type;
     }
 
@@ -650,10 +651,10 @@ auto JsonParser::add_node_to_archive_and_translations(
         clp::ffi::SchemaTree::Node const& ir_node_to_add,
         NodeType archive_node_type,
         int32_t parent_node_id,
-        bool is_timestamp
+        bool matches_timestamp
 ) -> int {
     auto const adjusted_archive_node_type
-            = adjust_archive_node_type(archive_node_type, is_timestamp);
+            = adjust_archive_node_type_for_timestamp(archive_node_type, matches_timestamp);
     int const curr_node_archive_id = m_archive_writer->add_node(
             parent_node_id,
             adjusted_archive_node_type,
@@ -661,7 +662,7 @@ auto JsonParser::add_node_to_archive_and_translations(
     );
     m_ir_node_to_archive_node_id_mapping.emplace(
             std::make_pair(ir_node_id, archive_node_type),
-            std::make_pair(curr_node_archive_id, is_timestamp)
+            std::make_pair(curr_node_archive_id, matches_timestamp)
     );
     return curr_node_archive_id;
 }
@@ -739,14 +740,14 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
     clp::ffi::SchemaTree const& tree = kv.get_user_gen_keys_schema_tree();
     for (auto const& pair : kv.get_user_gen_node_id_value_pairs()) {
         auto const archive_node_type = get_archive_node_type(tree, pair);
-        auto const [node_id, is_timestamp]
+        auto const [node_id, matches_timestamp]
                 = get_archive_node_id_and_check_timestamp(pair.first, archive_node_type, tree);
         switch (archive_node_type) {
             case NodeType::Integer: {
                 auto const i64_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_int_t>();
                 m_current_parsed_message.add_value(node_id, i64_value);
-                if (is_timestamp) {
+                if (matches_timestamp) {
                     m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
                 }
             } break;
@@ -754,7 +755,7 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                 auto const d_value
                         = pair.second.value().get_immutable_view<clp::ffi::value_float_t>();
                 m_current_parsed_message.add_value(node_id, d_value);
-                if (is_timestamp) {
+                if (matches_timestamp) {
                     m_archive_writer->ingest_timestamp_entry(m_timestamp_key, node_id, d_value);
                 }
             } break;
@@ -765,7 +766,7 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
             } break;
             case NodeType::VarString: {
                 auto const var_value{pair.second.value().get_immutable_view<std::string>()};
-                if (is_timestamp) {
+                if (matches_timestamp) {
                     uint64_t encoding_id{};
                     auto const timestamp = m_archive_writer->ingest_timestamp_entry(
                             m_timestamp_key,
@@ -792,7 +793,7 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                                             .decode_and_unparse()
                                             .value();
                 }
-                if (is_timestamp) {
+                if (matches_timestamp) {
                     uint64_t encoding_id{};
                     auto const timestamp = m_archive_writer->ingest_timestamp_entry(
                             m_timestamp_key,

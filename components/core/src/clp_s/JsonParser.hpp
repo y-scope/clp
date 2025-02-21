@@ -115,10 +115,11 @@ private:
      * Adjusts the node type used to represent an IR node in an archive based on whether it is a
      * timestamp as well as its original type.
      * @param node_type
-     * @param is_timestamp
+     * @param matches_timestamp
      * @return The NodeType that should be used to represent the original IR node in the archive.
      */
-    static auto adjust_archive_node_type(NodeType node_type, bool is_timestamp) -> NodeType;
+    static auto adjust_archive_node_type_for_timestamp(NodeType node_type, bool matches_timestamp)
+            -> NodeType;
 
     /**
      * Adds new schema node to archive and adds translation for IR node ID and NodeType to mapping
@@ -126,7 +127,7 @@ private:
      * @param ir_node_to_add IR Schema Node that is being translated to archive
      * @param archive_node_type Type of the archive node
      * @param parent_node_id ID of the parent of the IR node
-     * @param is_timestamp
+     * @param matches_timestamp
      * @return The ID of the node added to the archive's Schema Tree
      */
     auto add_node_to_archive_and_translations(
@@ -134,7 +135,7 @@ private:
             clp::ffi::SchemaTree::Node const& ir_node_to_add,
             NodeType archive_node_type,
             int32_t parent_node_id,
-            bool is_timestamp
+            bool matches_timestamp
     ) -> int32_t;
 
     /**
