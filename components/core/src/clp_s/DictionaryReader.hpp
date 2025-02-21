@@ -61,10 +61,10 @@ public:
     std::string const& get_value(DictionaryIdType id) const;
 
     /**
-     * Gets the entry exactly matching the given search string
+     * Gets the entries matching the given search string
      * @param search_string
      * @param ignore_case
-     * @return a (possibly empty) vector of entries
+     * @return a vector of matching entries, or an empty vector if no entry matches.
      */
     std::vector<EntryType const*>
     get_entry_matching_value(std::string const& search_string, bool ignore_case) const;
@@ -161,24 +161,26 @@ DictionaryReader<DictionaryIdType, EntryType>::get_entry_matching_value(
         std::string const& search_string,
         bool ignore_case
 ) const {
-    std::vector<EntryType const*> entries;
     if (false == ignore_case) {
-        for (auto const& entry : m_entries) {
-            if (entry.get_value() == search_string) {
-                entries.push_back(&entry);
-                // early exit for case sensitive branch
-                return entries;
-            }
+        // In case-sensitive match, there can be only one matched entry.
+        if (auto const it = std::ranges::find_if(
+                    m_entries,
+                    [&](auto const& entry) { return entry.get_value() == search_string; }
+            );
+            m_entries.cend() != it)
+        {
+            return {&(*it)};
         }
-    } else {
-        auto const& search_string_uppercase = boost::algorithm::to_upper_copy(search_string);
-        for (auto const& entry : m_entries) {
-            if (boost::algorithm::to_upper_copy(entry.get_value()) == search_string_uppercase) {
-                entries.push_back(&entry);
-            }
-        }
+        return {};
     }
 
+    std::vector<EntryType const*> entries;
+    auto const search_string_uppercase = boost::algorithm::to_upper_copy(search_string);
+    for (auto const& entry : m_entries) {
+        if (boost::algorithm::to_upper_copy(entry.get_value()) == search_string_uppercase) {
+            entries.push_back(&entry);
+        }
+    }
     return entries;
 }
 
