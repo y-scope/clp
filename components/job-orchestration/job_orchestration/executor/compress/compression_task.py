@@ -353,15 +353,27 @@ def run_clp(
                         last_archive_stats,
                     )
                     db_conn.commit()
+
                 if StorageEngine.CLP_S == clp_storage_engine:
+                    # TODO: Since CLP doesn't currently support datasets but users of the index
+                    # require a dataset name, we hardcode a name for now.
+                    dataset_name = "default"
                     indexer_cmd = [
                         str(clp_home / "bin" / "indexer"),
                         "--db-config-file",
                         str(db_config_file_path),
-                        "default",  # hardcode the table name for now
+                        dataset_name,
                         archive_path,
                     ]
-                    subprocess.run(indexer_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file)
+                    try:
+                        subprocess.run(
+                            indexer_cmd,
+                            stdout=subprocess.DEVNULL,
+                            stderr=stderr_log_file,
+                            check=True,
+                        )
+                    except subprocess.CalledProcessError:
+                        logger.exception("Failed to index archive.")
 
             if enable_s3_write:
                 archive_path.unlink()
