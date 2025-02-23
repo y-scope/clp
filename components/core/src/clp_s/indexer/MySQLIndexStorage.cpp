@@ -31,7 +31,7 @@ void MySQLIndexStorage::init(std::string const& table_name, bool should_create_t
         m_db.execute_query(fmt::format(
                 "CREATE TABLE IF NOT EXISTS {}{} ("
                 "name VARCHAR(512) NOT NULL, "
-                "type BIGINT NOT NULL,"
+                "type INT NOT NULL,"
                 "PRIMARY KEY (name, type)"
                 ")",
                 m_table_prefix,
