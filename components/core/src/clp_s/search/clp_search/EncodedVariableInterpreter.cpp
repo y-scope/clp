@@ -54,6 +54,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
                 entries.cend()
         };
         std::unordered_set<encoded_variable_t> encoded_vars;
+        encoded_vars.reserve(entries.size());
         for (auto const* entry : entries) {
             encoded_vars.emplace(VariableEncoder::encode_var_dict_id(entry->get_id()));
         }
