@@ -62,14 +62,16 @@ auto unpack_and_serialize_msgpack_bytes(
 ) -> bool;
 
 /**
- * Given user specified options and a file path to a JSON file calls the serailizer one each JSON
+ * Given user specified options and a file path to a JSON file calls the serializer one each JSON
  * entry to serialize into IR
+ * @tparam encoded variable type used in serializer
  * @param option
  * @param path
  * @return Whether serialization was successful
  */
-template <typename T>
-auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path);
+template <typename encoded_variable_t>
+[[nodiscard]] auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path)
+        -> bool;
 
 /**
  * Iterates over the input JSON files specified by the command line arguments to generate and IR
@@ -180,9 +182,9 @@ auto unpack_and_serialize_msgpack_bytes(
     }
 }
 
-template <typename T>
-auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path) {
-    auto result{Serializer<T>::create()};
+template <typename encoded_variable_t>
+auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path) -> bool {
+    auto result{Serializer<encoded_variable_t>::create()};
     if (result.has_error()) {
         SPDLOG_ERROR("Failed to create Serializer");
         return false;
@@ -210,66 +212,62 @@ auto run_serializer(clp_s::JsonToIrParserOption const& option, std::string path)
         return false;
     }
 
-    std::string line = "";
-    size_t total_size = 0;
+    std::string line;
 
-    if (in_file.is_open()) {
-        while (getline(in_file, line)) {
-            try {
-                auto j_obj = nlohmann::json::parse(line);
-                if (false
-                    == unpack_and_serialize_msgpack_bytes(
-                            nlohmann::json::to_msgpack(j_obj),
-                            serializer
-                    ))
-                {
-                    SPDLOG_ERROR("Failed to serialize msgpack bytes for line: {}", line);
-                    in_file.close();
-                    out_file.close();
-                    zc.close();
-                    return false;
-                }
-                auto bufferSize = serializer.get_ir_buf_view().size();
-                if (bufferSize >= option.max_ir_buffer_size) {
-                    total_size = total_size + bufferSize;
-                    zc.write(
-                            reinterpret_cast<char*>(
-                                    const_cast<int8_t*>(serializer.get_ir_buf_view().data())
-                            ),
-                            bufferSize
-                    );
-                    zc.flush();
-                    serializer.clear_ir_buf();
-                }
-            } catch (nlohmann::json::parse_error const& e) {
-                SPDLOG_ERROR("JSON parsing error: {}", e.what());
-                in_file.close();
-                out_file.close();
-                zc.close();
-                return false;
-            } catch (std::exception const& e) {
-                SPDLOG_ERROR("Error during serialization: {}", e.what());
+    while (getline(in_file, line)) {
+        try {
+            auto const j_obj = nlohmann::json::parse(line);
+            if (false
+                == unpack_and_serialize_msgpack_bytes(
+                        nlohmann::json::to_msgpack(j_obj),
+                        serializer
+                ))
+            {
+                SPDLOG_ERROR("Failed to serialize msgpack bytes for line: {}", line);
                 in_file.close();
                 out_file.close();
                 zc.close();
                 return false;
             }
+            auto const buffer_size = serializer.get_ir_buf_view().size();
+            if (buffer_size >= option.max_ir_buffer_size) {
+                zc.write(
+                        clp::size_checked_pointer_cast<char const>(
+                                serializer.get_ir_buf_view().data()
+                        ),
+                        buffer_size
+                );
+                zc.flush();
+                serializer.clear_ir_buf();
+            }
+        } catch (nlohmann::json::parse_error const& e) {
+            SPDLOG_ERROR("JSON parsing error: {}", e.what());
+            in_file.close();
+            out_file.close();
+            zc.close();
+            return false;
+        } catch (std::exception const& e) {
+            SPDLOG_ERROR("Error during serialization: {}", e.what());
+            in_file.close();
+            out_file.close();
+            zc.close();
+            return false;
         }
-        total_size = total_size + serializer.get_ir_buf_view().size();
-        zc.write(
-                reinterpret_cast<char*>(const_cast<int8_t*>(serializer.get_ir_buf_view().data())),
-                serializer.get_ir_buf_view().size()
-        );
-        std::vector<int8_t> ir_buf;
-        ir_buf.push_back(clp::ffi::ir_stream::cProtocol::Eof);
-        zc.write(reinterpret_cast<char*>(ir_buf.data()), ir_buf.size());
-        zc.flush();
-        serializer.clear_ir_buf();
-        in_file.close();
-        zc.close();
-        out_file.close();
     }
-
+    zc.write(
+            clp::size_checked_pointer_cast<char const>(serializer.get_ir_buf_view().data()),
+            serializer.get_ir_buf_view().size()
+    );
+    constexpr std::array<int8_t, 1> cEndOfStreamBuf{clp::ffi::ir_stream::cProtocol::Eof};
+    zc.write(
+            clp::size_checked_pointer_cast<char const>(cEndOfStreamBuf.data()),
+            cEndOfStreamBuf.size()
+    );
+    zc.flush();
+    serializer.clear_ir_buf();
+    in_file.close();
+    zc.close();
+    out_file.close();
     return true;
 }
 
@@ -298,10 +296,10 @@ auto generate_ir(CommandLineArguments const& command_line_arguments) -> bool {
 
     for (auto& path : all_file_paths) {
         bool success;
-        if (option.encoding == 4) {
-            success = run_serializer<int32_t>(option, path);
+        if (option.encoding == 8) {
+            success = run_serializer<clp::ir::eight_byte_encoded_variable_t>(option, path);
         } else {
-            success = run_serializer<int64_t>(option, path);
+            success = run_serializer<clp::ir::four_byte_encoded_variable_t>(option, path);
         }
         if (false == success) {
             return false;

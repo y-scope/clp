@@ -201,7 +201,7 @@ private:
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
     FileType m_file_type{FileType::Json};
-    int m_encoding_type{8};
+    int m_encoding_type{4};
     size_t m_max_ir_buffer_size{512ULL * 1024 * 1024};
 
     // Metadata db variables
