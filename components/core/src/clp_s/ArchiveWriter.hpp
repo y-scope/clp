@@ -91,32 +91,14 @@ public:
     void append_message(int32_t schema_id, Schema const& schema, ParsedMessage& message);
 
     /**
-     * Adds a node to the schema tree
+     * Adds a node to the schema tree and attempts to resolve the node against the authoritative
+     * timestamp key.
      * @param parent_node_id
      * @param type
      * @param key
      * @return the node id
      */
-    int32_t add_node(int parent_node_id, NodeType type, std::string_view key) {
-        auto const node_id{m_schema_tree.add_node(parent_node_id, type, key)};
-        if (m_matched_timestamp_prefix_node_id == parent_node_id
-            && m_authoritative_timestamp.size() > 0)
-        {
-            if (constants::cRootNodeId == parent_node_id) {
-                if (NodeType::Object == type) {
-                    m_matched_timestamp_prefix_node_id = node_id;
-                }
-            } else if ((m_authoritative_timestamp.size() - m_matched_timestamp_prefix_length) > 1) {
-                if (NodeType::Object == type
-                    && m_authoritative_timestamp.at(m_matched_timestamp_prefix_length) == key)
-                {
-                    m_matched_timestamp_prefix_length += 1;
-                    m_matched_timestamp_prefix_node_id = node_id;
-                }
-            }
-        }
-        return node_id;
-    }
+    int32_t add_node(int parent_node_id, NodeType type, std::string_view key);
 
     /**
      * Checks if a leaf key with a given parent node id matches the authoritative timestamp column.
@@ -124,16 +106,7 @@ public:
      * @param key
      * @return true if this leaf node would match the authoritative timestamp and false otherwise
      */
-    bool matches_timestamp(int parent_node_id, std::string_view key) {
-        if (m_matched_timestamp_prefix_node_id == parent_node_id) {
-            if (1 == (m_authoritative_timestamp.size() - m_matched_timestamp_prefix_length)
-                && m_authoritative_timestamp.back() == key)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+    bool matches_timestamp(int parent_node_id, std::string_view key);
 
     /**
      * @return The Id that will be assigned to the next log event when appended to the archive.
