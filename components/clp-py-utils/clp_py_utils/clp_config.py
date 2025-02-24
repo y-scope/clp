@@ -565,6 +565,7 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
+    aws_config_directory: pathlib.Path = pathlib.Path.home() / ".aws"
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
