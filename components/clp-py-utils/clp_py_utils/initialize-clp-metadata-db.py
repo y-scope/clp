@@ -99,7 +99,7 @@ def main(argv):
                 f"""
                 CREATE TABLE IF NOT EXISTS `{table_prefix}column_metadata_default` (
                     `name` VARCHAR(512) NOT NULL,
-                    `type` INT NOT NULL,
+                    `type` TINYINT NOT NULL,
                     PRIMARY KEY (`name`, `type`)
                 )
                 """
