@@ -86,7 +86,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
         aws_session = boto3.Session(profile_name=aws_profile)
     else:
         aws_session = boto3.Session(
-            aws_access_key_id=aws_access_key_id, 
+            aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             region_name=s3_input_config.region_code,
         )
@@ -150,7 +150,7 @@ def s3_put(
         aws_session = boto3.Session(profile_name=aws_profile)
     else:
         aws_session = boto3.Session(
-            aws_access_key_id=aws_access_key_id, 
+            aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             region_name=s3_config.region_code,
         )
