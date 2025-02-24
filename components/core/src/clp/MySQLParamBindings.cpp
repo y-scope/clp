@@ -32,7 +32,6 @@ void MySQLParamBindings::bind_uint8(size_t field_index, uint8_t& value) {
     m_statement_binding_lengths[field_index] = sizeof(value);
 }
 
-
 void MySQLParamBindings::bind_int64(size_t field_index, int64_t& value) {
     if (field_index >= m_statement_bindings.size()) {
         throw OperationFailed(ErrorCode_OutOfBounds, __FILENAME__, __LINE__);

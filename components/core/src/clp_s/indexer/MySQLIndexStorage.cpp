@@ -78,9 +78,11 @@ void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_
             field_name.c_str(),
             field_name.length()
     );
+
+    auto field_type_value = static_cast<uint8_t>(field_type);
     statement_bindings.bind_uint8(
             clp::enum_to_underlying_type(TableMetadataFieldIndexes::Type),
-            field_type
+            field_type_value
     );
 
     if (false == m_insert_field_statement->execute()) {
