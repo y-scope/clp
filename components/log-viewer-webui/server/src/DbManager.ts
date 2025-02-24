@@ -86,11 +86,15 @@ class DbManager {
      * @return The MySQL connection pool created during initialization.
      */
     static async #initMySql (app: FastifyInstance, config: DbManagerOptions["mysqlConfig"]) {
-        await app.register(fastifyMysql, {
+        await (app.register(fastifyMysql, {
             promise: true,
             connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
                 `${config.port}/${config.database}`,
-        });
+        }).after((err) => {
+            if (null !== err) {
+                throw err;
+            }
+        }) as unknown as Promise<void>);
 
         return app.mysql.pool;
     }
@@ -106,10 +110,14 @@ class DbManager {
         : Promise<{
             streamFilesCollection: StreamFilesCollection;
         }> {
-        await app.register(fastifyMongo, {
+        await (app.register(fastifyMongo, {
             forceClose: true,
             url: `mongodb://${config.host}:${config.port}/${config.database}`,
-        });
+        }).after((err) => {
+            if (null !== err) {
+                throw err;
+            }
+        }) as unknown as Promise<void>);
         if ("undefined" === typeof app.mongo.db) {
             throw new Error("Failed to initialize MongoDB plugin.");
         }
