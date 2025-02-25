@@ -2,6 +2,7 @@
 #define CLP_S_ARCHIVE_CONSTANTS_HPP
 
 #include <cstdint>
+#include <string_view>
 
 namespace clp_s::constants {
 // Single file archive
@@ -28,6 +29,7 @@ constexpr char cRootNodeName[] = "";
 constexpr int32_t cRootNodeId = -1;
 constexpr char cMetadataSubtreeName[] = "";
 constexpr char cLogEventIdxName[] = "log_event_idx";
+constexpr std::string_view cAutogenNamespace{"@"};
 
 namespace results_cache::decompression {
 constexpr char cPath[]{"path"};

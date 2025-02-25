@@ -646,6 +646,7 @@ auto JsonParser::adjust_archive_node_type_for_timestamp(NodeType node_type, bool
     }
 }
 
+template <bool autogen>
 auto JsonParser::add_node_to_archive_and_translations(
         uint32_t ir_node_id,
         clp::ffi::SchemaTree::Node const& ir_node_to_add,
@@ -655,11 +656,15 @@ auto JsonParser::add_node_to_archive_and_translations(
 ) -> int {
     auto const adjusted_archive_node_type
             = adjust_archive_node_type_for_timestamp(archive_node_type, matches_timestamp);
-    int const curr_node_archive_id = m_archive_writer->add_node(
-            parent_node_id,
-            adjusted_archive_node_type,
-            ir_node_to_add.get_key_name()
-    );
+
+    auto key_name = ir_node_to_add.get_key_name();
+    if (autogen && constants::cRootNodeId == parent_node_id) {
+        // We adjust the name of the root of the auto-gen subtree to "@" in order to namespace the
+        // auto-gen subtree within the archive's schema tree.
+        key_name = constants::cAutogenNamespace;
+    }
+    int const curr_node_archive_id
+            = m_archive_writer->add_node(parent_node_id, adjusted_archive_node_type, key_name);
     m_ir_node_to_archive_node_id_mapping.emplace(
             std::make_pair(ir_node_id, archive_node_type),
             std::make_pair(curr_node_archive_id, matches_timestamp)
@@ -667,6 +672,7 @@ auto JsonParser::add_node_to_archive_and_translations(
     return curr_node_archive_id;
 }
 
+template <bool autogen>
 auto JsonParser::get_archive_node_id_and_check_timestamp(
         uint32_t ir_node_id,
         NodeType archive_node_type,
@@ -714,7 +720,7 @@ auto JsonParser::get_archive_node_id_and_check_timestamp(
                     next_parent_archive_id,
                     curr_node.get_key_name()
             );
-            curr_node_archive_id = add_node_to_archive_and_translations(
+            curr_node_archive_id = add_node_to_archive_and_translations<autogen>(
                     ir_id_stack.back(),
                     curr_node,
                     archive_node_type,
@@ -722,7 +728,7 @@ auto JsonParser::get_archive_node_id_and_check_timestamp(
                     matches_timestamp
             );
         } else {
-            curr_node_archive_id = add_node_to_archive_and_translations(
+            curr_node_archive_id = add_node_to_archive_and_translations<autogen>(
                     ir_id_stack.back(),
                     curr_node,
                     NodeType::Object,
@@ -736,12 +742,18 @@ auto JsonParser::get_archive_node_id_and_check_timestamp(
     return {curr_node_archive_id, matches_timestamp};
 }
 
-void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
-    clp::ffi::SchemaTree const& tree = kv.get_user_gen_keys_schema_tree();
-    for (auto const& pair : kv.get_user_gen_node_id_value_pairs()) {
+template <bool autogen>
+void JsonParser::parse_kv_log_event_subtree(
+        KeyValuePairLogEvent::NodeIdValuePairs const& kv_pairs,
+        clp::ffi::SchemaTree const& tree
+) {
+    for (auto const& pair : kv_pairs) {
         auto const archive_node_type = get_archive_node_type(tree, pair);
-        auto const [node_id, matches_timestamp]
-                = get_archive_node_id_and_check_timestamp(pair.first, archive_node_type, tree);
+        auto const [node_id, matches_timestamp] = get_archive_node_id_and_check_timestamp<autogen>(
+                pair.first,
+                archive_node_type,
+                tree
+        );
         switch (archive_node_type) {
             case NodeType::Integer: {
                 auto const i64_value
@@ -828,6 +840,19 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
         }
         m_current_schema.insert_ordered(node_id);
     }
+}
+
+void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
+    clp::ffi::SchemaTree const& tree = kv.get_user_gen_keys_schema_tree();
+
+    parse_kv_log_event_subtree<true>(
+            kv.get_auto_gen_node_id_value_pairs(),
+            kv.get_auto_gen_keys_schema_tree()
+    );
+    parse_kv_log_event_subtree<false>(
+            kv.get_user_gen_node_id_value_pairs(),
+            kv.get_user_gen_keys_schema_tree()
+    );
 
     int32_t const current_schema_id = m_archive_writer->add_schema(m_current_schema);
     m_current_parsed_message.set_id(current_schema_id);
