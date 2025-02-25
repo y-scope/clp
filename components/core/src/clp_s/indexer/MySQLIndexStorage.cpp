@@ -31,7 +31,7 @@ void MySQLIndexStorage::init(std::string const& table_name, bool should_create_t
         m_db.execute_query(fmt::format(
                 "CREATE TABLE IF NOT EXISTS {}{} ("
                 "name VARCHAR(512) NOT NULL, "
-                "type BIGINT NOT NULL,"
+                "type TINYINT NOT NULL,"
                 "PRIMARY KEY (name, type)"
                 ")",
                 m_table_prefix,
@@ -79,8 +79,8 @@ void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_
             field_name.length()
     );
 
-    uint64_t field_type_value = static_cast<uint64_t>(field_type);
-    statement_bindings.bind_uint64(
+    auto field_type_value = static_cast<uint8_t>(field_type);
+    statement_bindings.bind_uint8(
             clp::enum_to_underlying_type(TableMetadataFieldIndexes::Type),
             field_type_value
     );
