@@ -1,6 +1,7 @@
 #ifndef CLP_GLOBALMETADATADBCONFIG_HPP
 #define CLP_GLOBALMETADATADBCONFIG_HPP
 
+#include <cstdint>
 #include <string>
 
 namespace clp {
