@@ -231,6 +231,8 @@ private:
 
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;
+    absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
+            m_autogen_ir_node_to_archive_node_id_mapping;
 };
 }  // namespace clp_s
 

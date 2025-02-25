@@ -686,7 +686,10 @@ auto JsonParser::add_node_to_archive_and_translations(
     }
     int const curr_node_archive_id
             = m_archive_writer->add_node(parent_node_id, adjusted_archive_node_type, key_name);
-    m_ir_node_to_archive_node_id_mapping.emplace(
+    auto& ir_node_to_archive_node_id_mapping
+            = autogen ? m_autogen_ir_node_to_archive_node_id_mapping
+                      : m_ir_node_to_archive_node_id_mapping;
+    ir_node_to_archive_node_id_mapping.emplace(
             std::make_pair(ir_node_id, archive_node_type),
             std::make_pair(curr_node_archive_id, matches_timestamp)
     );
@@ -700,10 +703,13 @@ auto JsonParser::get_archive_node_id_and_check_timestamp(
         clp::ffi::SchemaTree const& ir_tree
 ) -> std::pair<int32_t, bool> {
     int curr_node_archive_id{constants::cRootNodeId};
+    auto const& ir_node_to_archive_node_id_mapping
+            = autogen ? m_autogen_ir_node_to_archive_node_id_mapping
+                      : m_ir_node_to_archive_node_id_mapping;
     auto flat_map_location
-            = m_ir_node_to_archive_node_id_mapping.find(std::pair{ir_node_id, archive_node_type});
+            = ir_node_to_archive_node_id_mapping.find(std::pair{ir_node_id, archive_node_type});
 
-    if (m_ir_node_to_archive_node_id_mapping.end() != flat_map_location) {
+    if (ir_node_to_archive_node_id_mapping.end() != flat_map_location) {
         return flat_map_location->second;
     }
 
@@ -723,10 +729,10 @@ auto JsonParser::get_archive_node_id_and_check_timestamp(
             break;
         }
 
-        flat_map_location = m_ir_node_to_archive_node_id_mapping.find(
+        flat_map_location = ir_node_to_archive_node_id_mapping.find(
                 std::pair{ir_id_stack.back(), next_node_type}
         );
-        if (m_ir_node_to_archive_node_id_mapping.end() != flat_map_location) {
+        if (ir_node_to_archive_node_id_mapping.end() != flat_map_location) {
             curr_node_archive_id = next_parent_archive_id = flat_map_location->second.first;
             ir_id_stack.pop_back();
             break;
@@ -962,6 +968,7 @@ auto JsonParser::parse_from_ir() -> bool {
 
                 if (m_archive_writer->get_data_size() >= m_target_encoded_size) {
                     m_ir_node_to_archive_node_id_mapping.clear();
+                    m_autogen_ir_node_to_archive_node_id_mapping.clear();
                     curr_pos = decompressor.get_pos();
                     m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
                     last_pos = curr_pos;
@@ -987,6 +994,7 @@ auto JsonParser::parse_from_ir() -> bool {
             }
         }
         m_ir_node_to_archive_node_id_mapping.clear();
+        m_autogen_ir_node_to_archive_node_id_mapping.clear();
         curr_pos = decompressor.get_pos();
         m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
         decompressor.close();
