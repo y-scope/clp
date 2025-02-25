@@ -1,7 +1,9 @@
 #include "SchemaReader.hpp"
 
 #include <stack>
+#include <string>
 
+#include "archive_constants.hpp"
 #include "BufferViewReader.hpp"
 #include "Schema.hpp"
 
@@ -569,9 +571,11 @@ void SchemaReader::initialize_serializer() {
     }
 
     // TODO: this code will have to change once we allow mixing log lines parsed by different
-    // parsers.
+    // parsers and if we add support for serializing auto-generated keys in regular JSON.
     if (false == m_local_schema_tree.get_nodes().empty()) {
-        generate_json_template(m_local_schema_tree.get_object_subtree_node_id());
+        generate_json_template(m_local_schema_tree.get_object_subtree_node_id_for_namespace(
+                std::string{constants::cDefaultNamespace}
+        ));
     }
 }
 

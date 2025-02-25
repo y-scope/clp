@@ -2,6 +2,7 @@
 #define CLP_S_SCHEMATREE_HPP
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -127,13 +128,22 @@ public:
     }
 
     /**
-     * @return the Id of the root of the Object sub-tree that records the structure of JSON data.
+     * Gets the root of the object sub-tree within a namespace.
+     * @param subtree_namespace
+     * @return the Id of the root of the Object sub-tree for the given namespace.
      * @return -1 if the Object sub-tree does not exist.
      */
-    int32_t get_object_subtree_node_id() const { return m_object_subtree_id; }
+    int32_t get_object_subtree_node_id_for_namespace(std::string const& subtree_namespace) const {
+        if (auto it = m_namespace_to_object_subtree_id.find(subtree_namespace);
+            it != m_namespace_to_object_subtree_id.end())
+        {
+            return it->second;
+        }
+        return -1;
+    }
 
     /**
-     * Get the field Id for a specified field within the Metadata subtree.
+     * Gets the field Id for a specified field within the Metadata subtree.
      * @param field_name
      *
      * @return the field Id if the field exists within the Metadata sub-tree, -1 otherwise.
@@ -181,7 +191,7 @@ public:
 private:
     std::vector<SchemaNode> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string_view const, NodeType>, int32_t> m_node_map;
-    int32_t m_object_subtree_id{-1};
+    std::map<std::string, int32_t> m_namespace_to_object_subtree_id;
     int32_t m_metadata_subtree_id{-1};
 };
 }  // namespace clp_s

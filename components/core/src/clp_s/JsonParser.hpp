@@ -219,6 +219,7 @@ private:
 
     std::string m_timestamp_key;
     std::vector<std::string> m_timestamp_column;
+    std::string m_timestamp_namespace;
 
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;

@@ -89,8 +89,13 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
+        // FIXME: should probably convert to ColumnDescriptor and validate that no '*'
         if (false
-            == clp_s::StringUtils::tokenize_column_descriptor(m_timestamp_key, m_timestamp_column))
+            == clp_s::StringUtils::tokenize_column_descriptor(
+                    m_timestamp_key,
+                    m_timestamp_column,
+                    m_timestamp_namespace
+            ))
         {
             SPDLOG_ERROR("Can not parse invalid timestamp key: \"{}\"", m_timestamp_key);
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
