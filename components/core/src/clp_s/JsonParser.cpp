@@ -28,6 +28,7 @@
 #include "ErrorCode.hpp"
 #include "JsonFileIterator.hpp"
 #include "JsonParser.hpp"
+#include "search/ColumnDescriptor.hpp"
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -89,7 +90,6 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
-        // FIXME: should probably convert to ColumnDescriptor and validate that no '*'
         if (false
             == clp_s::StringUtils::tokenize_column_descriptor(
                     m_timestamp_key,
@@ -100,6 +100,21 @@ JsonParser::JsonParser(JsonParserOption const& option)
             SPDLOG_ERROR("Can not parse invalid timestamp key: \"{}\"", m_timestamp_key);
             throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
         }
+
+        // Unescape individual tokens to match unescaped JSON and confirm there are no wildcards in
+        // the timestamp column.
+        auto column = clp_s::search::ColumnDescriptor::create_from_escaped_tokens(
+                m_timestamp_column,
+                m_timestamp_namespace
+        );
+        m_timestamp_column.clear();
+        for (auto it = column->descriptor_begin(); it != column->descriptor_end(); ++it) {
+            if (it->wildcard()) {
+                SPDLOG_ERROR("Timestamp key can not contain wildcards: \"{}\"", m_timestamp_key);
+                throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+            }
+            m_timestamp_column.push_back(it->get_token());
+        }
     }
 
     m_archive_options.archives_dir = option.archives_dir;
@@ -109,6 +124,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.min_table_size = option.min_table_size;
     m_archive_options.id = m_generator();
     m_archive_options.authoritative_timestamp = m_timestamp_column;
+    m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
 
     m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
     m_archive_writer->open(m_archive_options);

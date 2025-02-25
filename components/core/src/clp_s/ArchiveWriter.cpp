@@ -19,6 +19,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_min_table_size = option.min_table_size;
     m_archives_dir = option.archives_dir;
     m_authoritative_timestamp = option.authoritative_timestamp;
+    m_authoritative_timestamp_namespace = option.authoritative_timestamp_namespace;
     std::string working_dir_name = m_id;
     if (option.single_file_archive) {
         working_dir_name += constants::cTmpPostfix;
@@ -116,6 +117,7 @@ void ArchiveWriter::close() {
     m_compressed_size = 0UL;
     m_next_log_event_id = 0;
     m_authoritative_timestamp.clear();
+    m_authoritative_timestamp_namespace.clear();
     m_matched_timestamp_prefix_length = 0ULL;
     m_matched_timestamp_prefix_node_id = constants::cRootNodeId;
 }
@@ -243,7 +245,7 @@ int32_t ArchiveWriter::add_node(int parent_node_id, NodeType type, std::string_v
         && m_authoritative_timestamp.size() > 0)
     {
         if (constants::cRootNodeId == parent_node_id) {
-            if (NodeType::Object == type) {
+            if (NodeType::Object == type && m_authoritative_timestamp_namespace == key) {
                 m_matched_timestamp_prefix_node_id = node_id;
             }
         } else if (m_authoritative_timestamp.size() - m_matched_timestamp_prefix_length > 1) {
