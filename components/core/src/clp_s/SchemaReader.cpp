@@ -572,10 +572,12 @@ void SchemaReader::initialize_serializer() {
 
     // TODO: this code will have to change once we allow mixing log lines parsed by different
     // parsers and if we add support for serializing auto-generated keys in regular JSON.
-    if (false == m_local_schema_tree.get_nodes().empty()) {
-        generate_json_template(m_local_schema_tree.get_object_subtree_node_id_for_namespace(
+    if (auto subtree_root = m_local_schema_tree.get_object_subtree_node_id_for_namespace(
                 std::string{constants::cDefaultNamespace}
-        ));
+        );
+        -1 != subtree_root)
+    {
+        generate_json_template(subtree_root);
     }
 }
 

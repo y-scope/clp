@@ -53,6 +53,9 @@ void Projection::resolve_column(
      */
 
     auto cur_node_id = tree->get_object_subtree_node_id_for_namespace(column->get_namespace());
+    if (-1 == cur_node_id) {
+        return;
+    }
     auto it = column->descriptor_begin();
     while (it != column->descriptor_end()) {
         bool matched_any{false};

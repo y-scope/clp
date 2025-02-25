@@ -99,13 +99,16 @@ void IndexManager::traverse_schema_tree_and_update_metadata(
         return;
     }
 
+    auto const object_subtree_root
+            = schema_tree->get_object_subtree_node_id_for_namespace(constants::cDefaultNamespace);
+    if (-1 == object_subtree_root) {
+        return;
+    }
+
     std::string path_buffer;
     // Stack of pairs of node_id and path_length
     std::stack<std::pair<int32_t, uint64_t>> s;
-    s.emplace(
-            schema_tree->get_object_subtree_node_id_for_namespace(constants::cDefaultNamespace),
-            0
-    );
+    s.emplace(object_subtree_root, 0);
 
     while (false == s.empty()) {
         auto [node_id, path_length] = s.top();

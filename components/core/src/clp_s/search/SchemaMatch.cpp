@@ -120,6 +120,8 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
 
 bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     bool matched = false;
+    // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
+    // namespaces.
     if (column->is_pure_wildcard()) {
         for (auto const& node : m_tree->get_nodes()) {
             if (column->matches_type(node_to_literal_type(node.get_type()))) {
@@ -137,9 +139,12 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
 
     // TODO: Once we start supporting mixing different types of logs we will have to match against
     // more than just the object subtree.
-    auto const& root = m_tree->get_node(
-            m_tree->get_object_subtree_node_id_for_namespace(column->get_namespace())
-    );
+    auto const subtree_root_node_id
+            = m_tree->get_object_subtree_node_id_for_namespace(column->get_namespace());
+    if (-1 == subtree_root_node_id) {
+        return matched;
+    }
+    auto const& root = m_tree->get_node(subtree_root_node_id);
     for (int32_t child_node_id : root.get_children_ids()) {
         matched |= populate_column_mapping(column, child_node_id);
     }
