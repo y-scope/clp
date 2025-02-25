@@ -802,7 +802,6 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
                             encoding_id
                     );
                     m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
-
                 } else {
                     m_current_parsed_message.add_value(node_id, decoded_value);
                 }
