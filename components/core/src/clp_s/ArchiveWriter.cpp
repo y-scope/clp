@@ -18,6 +18,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_single_file_archive = option.single_file_archive;
     m_min_table_size = option.min_table_size;
     m_archives_dir = option.archives_dir;
+    m_authoritative_timestamp = option.authoritative_timestamp;
     std::string working_dir_name = m_id;
     if (option.single_file_archive) {
         working_dir_name += constants::cTmpPostfix;
@@ -114,6 +115,9 @@ void ArchiveWriter::close() {
     m_uncompressed_size = 0UL;
     m_compressed_size = 0UL;
     m_next_log_event_id = 0;
+    m_authoritative_timestamp.clear();
+    m_matched_timestamp_prefix_length = 0ULL;
+    m_matched_timestamp_prefix_node_id = constants::cRootNodeId;
 }
 
 void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files) {
@@ -231,6 +235,38 @@ ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMes
 
     m_encoded_message_size += schema_writer->append_message(message);
     ++m_next_log_event_id;
+}
+
+int32_t ArchiveWriter::add_node(int parent_node_id, NodeType type, std::string_view key) {
+    auto const node_id{m_schema_tree.add_node(parent_node_id, type, key)};
+    if (m_matched_timestamp_prefix_node_id == parent_node_id
+        && m_authoritative_timestamp.size() > 0)
+    {
+        if (constants::cRootNodeId == parent_node_id) {
+            if (NodeType::Object == type) {
+                m_matched_timestamp_prefix_node_id = node_id;
+            }
+        } else if (m_authoritative_timestamp.size() - m_matched_timestamp_prefix_length > 1) {
+            if (NodeType::Object == type
+                && m_authoritative_timestamp.at(m_matched_timestamp_prefix_length) == key)
+            {
+                m_matched_timestamp_prefix_length += 1;
+                m_matched_timestamp_prefix_node_id = node_id;
+            }
+        }
+    }
+    return node_id;
+}
+
+bool ArchiveWriter::matches_timestamp(int parent_node_id, std::string_view key) {
+    if (m_matched_timestamp_prefix_node_id == parent_node_id) {
+        if (1 == (m_authoritative_timestamp.size() - m_matched_timestamp_prefix_length)
+            && m_authoritative_timestamp.back() == key)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 size_t ArchiveWriter::get_data_size() {
