@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <unordered_set>
 
 #include <string_utils/string_utils.hpp>
 
@@ -386,15 +387,30 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
         LogTypeDictionaryEntry::add_float_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
-        auto entry = var_dict.get_entry_matching_value(var_str, ignore_case);
-        if (nullptr == entry) {
+        auto const entries = var_dict.get_entry_matching_value(var_str, ignore_case);
+        if (entries.empty()) {
             // Not in dictionary
             return false;
         }
-        encoded_var = encode_var_dict_id(entry->get_id());
 
         LogTypeDictionaryEntry::add_dict_var(logtype);
-        sub_query.add_dict_var(encoded_var, entry);
+
+        if (entries.size() == 1) {
+            auto const* entry = entries.at(0);
+            sub_query.add_dict_var(encode_var_dict_id(entry->get_id()), entry);
+            return true;
+        }
+
+        std::unordered_set<clp::VariableDictionaryEntry const*> const entries_set{
+                entries.cbegin(),
+                entries.cend()
+        };
+        std::unordered_set<encoded_variable_t> encoded_vars;
+        encoded_vars.reserve(entries.size());
+        for (auto const* entry : entries) {
+            encoded_vars.emplace(encode_var_dict_id(entry->get_id()));
+        }
+        sub_query.add_imprecise_dict_var(encoded_vars, entries_set);
     }
 
     return true;
