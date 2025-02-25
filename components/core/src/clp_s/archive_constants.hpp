@@ -30,6 +30,7 @@ constexpr int32_t cRootNodeId = -1;
 constexpr char cMetadataSubtreeName[] = "";
 constexpr char cLogEventIdxName[] = "log_event_idx";
 constexpr std::string_view cAutogenNamespace{"@"};
+constexpr std::string_view cDefaultNamespace{""};
 
 namespace results_cache::decompression {
 constexpr char cPath[]{"path"};
