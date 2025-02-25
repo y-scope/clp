@@ -322,10 +322,9 @@ def run_clp(
         if last_archive_stats is not None and (
             None is stats or stats["id"] != last_archive_stats["id"]
         ):
+            archive_id = last_archive_stats["id"]
+            archive_path = archive_output_dir / archive_id
             if enable_s3_write:
-                archive_id = last_archive_stats["id"]
-                archive_path = archive_output_dir / archive_id
-
                 if s3_error is None:
                     logger.info(f"Uploading archive {archive_id} to S3...")
                     try:
@@ -337,8 +336,6 @@ def run_clp(
                         # NOTE: It's possible `proc` finishes before we call `terminate` on it, in
                         # which case the process will still return success.
                         proc.terminate()
-
-                archive_path.unlink()
 
             if s3_error is None:
                 # We've started a new archive so add the previous archive's last reported size to
@@ -356,6 +353,30 @@ def run_clp(
                         last_archive_stats,
                     )
                     db_conn.commit()
+
+                if StorageEngine.CLP_S == clp_storage_engine:
+                    # TODO: Since CLP doesn't currently support datasets but users of the index
+                    # require a dataset name, we hardcode a name for now.
+                    dataset_name = "default"
+                    indexer_cmd = [
+                        str(clp_home / "bin" / "indexer"),
+                        "--db-config-file",
+                        str(db_config_file_path),
+                        dataset_name,
+                        archive_path,
+                    ]
+                    try:
+                        subprocess.run(
+                            indexer_cmd,
+                            stdout=subprocess.DEVNULL,
+                            stderr=stderr_log_file,
+                            check=True,
+                        )
+                    except subprocess.CalledProcessError:
+                        logger.exception("Failed to index archive.")
+
+            if enable_s3_write:
+                archive_path.unlink()
 
         last_archive_stats = stats
 
