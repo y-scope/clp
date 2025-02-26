@@ -930,15 +930,21 @@ auto JsonParser::parse_from_ir() -> bool {
 
             if (kv_log_event_result.has_error()) {
                 auto err = kv_log_event_result.error();
-                SPDLOG_ERROR(
-                        "Encountered error while deserializing kv-ir log event: ({}) - {}",
+                SPDLOG_WARN(
+                        "Encountered error while deserializing kv-ir log event from stream \"{}\": "
+                        "({}) - {}",
+                        path.path,
                         err.value(),
                         err.message()
                 );
-                m_archive_writer->close();
-                decompressor.close();
-                check_and_log_curl_error(path, reader);
-                return false;
+                if (check_and_log_curl_error(path, reader)) {
+                    m_archive_writer->close();
+                    decompressor.close();
+                    return false;
+                } else {
+                    // Treat deserialization error as end of a truncated stream
+                    break;
+                }
             }
             if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
                 break;
