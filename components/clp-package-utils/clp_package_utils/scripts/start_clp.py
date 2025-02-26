@@ -599,6 +599,7 @@ def generic_start_scheduler(
     # fmt: on
     necessary_mounts = [
         mounts.logs_dir,
+        mounts.aws_config_dir,
     ]
     if COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
         necessary_mounts.append(mounts.input_logs_dir)
@@ -742,6 +743,7 @@ def generic_start_worker(
         mounts.data_dir,
         mounts.logs_dir,
         mounts.input_logs_dir,
+        mounts.aws_config_dir,
     ]
     if worker_specific_mount:
         necessary_mounts.extend(worker_specific_mount)

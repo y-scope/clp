@@ -680,6 +680,7 @@ class CLPConfig(BaseModel):
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
         d["logs_directory"] = str(self.logs_directory)
+        d["aws_config_directory"]  = str(self.aws_config_directory)
         return d
 
 
