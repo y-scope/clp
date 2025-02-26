@@ -26,6 +26,7 @@ struct ArchiveWriterOption {
     bool single_file_archive;
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
+    std::string authoritative_timestamp_namespace;
 };
 
 class ArchiveWriter {
@@ -244,6 +245,7 @@ private:
     size_t m_min_table_size{};
 
     std::vector<std::string> m_authoritative_timestamp;
+    std::string m_authoritative_timestamp_namespace;
     size_t m_matched_timestamp_prefix_length{0ULL};
     int32_t m_matched_timestamp_prefix_node_id{constants::cRootNodeId};
 

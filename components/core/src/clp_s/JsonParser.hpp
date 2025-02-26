@@ -36,7 +36,6 @@
 #include "ZstdCompressor.hpp"
 
 using namespace simdjson;
-using clp::ffi::KeyValuePairLogEvent;
 
 namespace clp_s {
 struct JsonParserOption {
@@ -128,8 +127,10 @@ private:
      * @param archive_node_type Type of the archive node
      * @param parent_node_id ID of the parent of the IR node
      * @param matches_timestamp
+     * @tparam autogen whether this node is being added in the auto-generated subtree or not
      * @return The ID of the node added to the archive's Schema Tree
      */
+    template <bool autogen>
     auto add_node_to_archive_and_translations(
             uint32_t ir_node_id,
             clp::ffi::SchemaTree::Node const& ir_node_to_add,
@@ -143,9 +144,11 @@ private:
      * @param ir_node_id ID of the IR node
      * @param archive_node_type Type of the archive node
      * @param ir_tree The IR schema tree
+     * @tparam autogen whether this node is being added in the auto-generated subtree or not
      * @return The ID of the corresponding node in the archive's schema tree and a flag indicating
      * whether the field should be treated as a timestamp.
      */
+    template <bool autogen>
     auto get_archive_node_id_and_check_timestamp(
             uint32_t ir_node_id,
             NodeType archive_node_type,
@@ -153,10 +156,22 @@ private:
     ) -> std::pair<int32_t, bool>;
 
     /**
+     * Parses a subtree (user-gen or auto-gen) of a Key Value Log Event.
+     * @param kv_pairs
+     * @param tree
+     * @tparam autogen whether this node is being added in the auto-generated subtree or not
+     */
+    template <bool autogen>
+    void parse_kv_log_event_subtree(
+            clp::ffi::KeyValuePairLogEvent::NodeIdValuePairs const& kv_pairs,
+            clp::ffi::SchemaTree const& tree
+    );
+
+    /**
      * Parses a Key Value Log Event.
      * @param kv the Key Value Log Event
      */
-    void parse_kv_log_event(KeyValuePairLogEvent const& kv);
+    void parse_kv_log_event(clp::ffi::KeyValuePairLogEvent const& kv);
 
     /**
      * Parses an array within a JSON line
@@ -204,6 +219,7 @@ private:
 
     std::string m_timestamp_key;
     std::vector<std::string> m_timestamp_column;
+    std::string m_timestamp_namespace;
 
     boost::uuids::random_generator m_generator;
     std::unique_ptr<ArchiveWriter> m_archive_writer;
@@ -215,6 +231,8 @@ private:
 
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;
+    absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
+            m_autogen_ir_node_to_archive_node_id_mapping;
 };
 }  // namespace clp_s
 
