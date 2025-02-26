@@ -72,7 +72,7 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
-      - task: ":utils:create-venv"
+      - task: ":utils:misc:create-venv"
         vars:
           LABEL: "docs"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
