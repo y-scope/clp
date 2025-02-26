@@ -18,6 +18,7 @@
 #include "../clp/ffi/SchemaTree.hpp"
 #include "../clp/ffi/Value.hpp"
 #include "../clp/GlobalMySQLMetadataDB.hpp"
+#include "../clp/ReaderInterface.hpp"
 #include "ArchiveWriter.hpp"
 #include "CommandLineArguments.hpp"
 #include "DictionaryWriter.hpp"
@@ -111,30 +112,45 @@ private:
     ) -> NodeType;
 
     /**
+     * Adjusts the node type used to represent an IR node in an archive based on whether it is a
+     * timestamp as well as its original type.
+     * @param node_type
+     * @param matches_timestamp
+     * @return The NodeType that should be used to represent the original IR node in the archive.
+     */
+    static auto adjust_archive_node_type_for_timestamp(NodeType node_type, bool matches_timestamp)
+            -> NodeType;
+
+    /**
      * Adds new schema node to archive and adds translation for IR node ID and NodeType to mapping
      * @param ir_node_id ID of the IR node
      * @param ir_node_to_add IR Schema Node that is being translated to archive
      * @param archive_node_type Type of the archive node
      * @param parent_node_id ID of the parent of the IR node
+     * @param matches_timestamp
+     * @return The ID of the node added to the archive's Schema Tree
      */
     auto add_node_to_archive_and_translations(
             uint32_t ir_node_id,
             clp::ffi::SchemaTree::Node const& ir_node_to_add,
             NodeType archive_node_type,
-            int32_t parent_node_id
-    ) -> int;
+            int32_t parent_node_id,
+            bool matches_timestamp
+    ) -> int32_t;
 
     /**
      * Gets the archive node ID for an IR node.
      * @param ir_node_id ID of the IR node
      * @param archive_node_type Type of the archive node
      * @param ir_tree The IR schema tree
+     * @return The ID of the corresponding node in the archive's schema tree and a flag indicating
+     * whether the field should be treated as a timestamp.
      */
-    auto get_archive_node_id(
+    auto get_archive_node_id_and_check_timestamp(
             uint32_t ir_node_id,
             NodeType archive_node_type,
             clp::ffi::SchemaTree const& ir_tree
-    ) -> int;
+    ) -> std::pair<int32_t, bool>;
 
     /**
      * Parses a Key Value Log Event.
@@ -169,6 +185,16 @@ private:
      */
     int32_t add_metadata_field(std::string_view const field_name, NodeType type);
 
+    /**
+     * Checks if a reader interface is a clp::NetworkReader that has encountered a CURL error and
+     * logs relevant CURL error information if a CURL error has occurred.
+     * @param path
+     * @param reader
+     * @return true if the provided ReaderInterface has experienced a CURL error and false otherwise
+     */
+    static bool
+    check_and_log_curl_error(Path const& path, std::shared_ptr<clp::ReaderInterface> reader);
+
     int m_num_messages;
     std::vector<Path> m_input_paths;
     NetworkAuthOption m_network_auth{};
@@ -187,7 +213,7 @@ private:
     bool m_structurize_arrays{false};
     bool m_record_log_order{true};
 
-    absl::flat_hash_map<std::pair<uint32_t, NodeType>, int32_t>
+    absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;
 };
 }  // namespace clp_s

@@ -2,6 +2,7 @@
 #define CLP_FFI_IR_STREAM_IRUNITHANDLERINTERFACE_HPP
 
 #include <concepts>
+#include <memory>
 #include <utility>
 
 #include "../../time_types.hpp"
@@ -20,7 +21,8 @@ concept IrUnitHandlerInterface = requires(
         bool is_auto_generated,
         UtcOffset utc_offset_old,
         UtcOffset utc_offset_new,
-        SchemaTree::NodeLocator schema_tree_node_locator
+        SchemaTree::NodeLocator schema_tree_node_locator,
+        std::shared_ptr<SchemaTree const> schema_tree
 ) {
     /**
      * Handles a log event IR unit.
@@ -45,10 +47,15 @@ concept IrUnitHandlerInterface = requires(
      * Handles a schema tree node insertion IR unit.
      * @param is_auto_generated Whether the node is from the auto-gen keys schema tree.
      * @param schema_tree_node_locator The locator of the node to insert.
+     * @param schema_tree The schema tree that contains the inserted node.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
-        handler.handle_schema_tree_node_insertion(is_auto_generated, schema_tree_node_locator)
+        handler.handle_schema_tree_node_insertion(
+                is_auto_generated,
+                schema_tree_node_locator,
+                schema_tree
+        )
     } -> std::same_as<IRErrorCode>;
 
     /**
