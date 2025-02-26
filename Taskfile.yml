@@ -210,7 +210,7 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-          TARGETS: ["clg", "clo", "clp", "clp-s", "reducer-server"]
+          TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
   clp-package-utils:
     - task: "python-component"
