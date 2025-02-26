@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <stack>
+#include <string>
 
 #include "../archive_constants.hpp"
 
@@ -99,8 +100,9 @@ void IndexManager::traverse_schema_tree_and_update_metadata(
         return;
     }
 
-    auto const object_subtree_root
-            = schema_tree->get_object_subtree_node_id_for_namespace(constants::cDefaultNamespace);
+    auto const object_subtree_root = schema_tree->get_object_subtree_node_id_for_namespace(
+            std::string{constants::cDefaultNamespace}
+    );
     if (-1 == object_subtree_root) {
         return;
     }
