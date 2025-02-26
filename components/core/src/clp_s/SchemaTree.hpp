@@ -172,6 +172,8 @@ public:
     void clear() {
         m_nodes.clear();
         m_node_map.clear();
+        m_metadata_subtree_id = -1;
+        m_namespace_to_object_subtree_id.clear();
     }
 
     /**
