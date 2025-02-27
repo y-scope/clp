@@ -1,7 +1,6 @@
 version: "3"
 
 vars:
-  G_CORE_DIR: "{{.ROOT_DIR}}/components/core"
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
   G_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
 
@@ -21,18 +20,10 @@ tasks:
       - task: "yml-fix"
 
   cpp-check:
-    sources: &cpp_source_files
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.TASKFILE}}"
-      - "{{.G_CORE_DIR}}/.clang-format"
-      - "{{.G_CORE_DIR}}/src/**"
-      - "{{.G_CORE_DIR}}/tests/**"
     cmds:
       - task: "cpp-format-check"
 
   cpp-fix:
-    sources: *cpp_source_files
     cmds:
       - task: "cpp-format-fix"
 
@@ -106,7 +97,13 @@ tasks:
           Taskfile.yml
 
   cpp-format-check:
-    sources: *cpp_source_files
+    sources: &cpp_source_files
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
+      - "{{.TASKFILE}}"
+      - "{{.G_CORE_COMPONENT_DIR}}/.clang-format"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/**"
+      - "{{.G_CORE_COMPONENT_DIR}}/tests/**"
     deps: ["cpp-lint-configs", "venv"]
     cmds:
       - task: ":utils:cpp-lint:clang-format"
