@@ -377,21 +377,26 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
     }
 
     SECTION("Test multiple metching values") {
-        char const cVarDictPath[] = "var.dict";
-        char const cVarSegmentIndexPath[] = "var.segindex";
-        vector<string> var_strs = {"python2.7.3", "Python2.7.3", "PyThOn2.7.3", "PYTHON2.7.3"};
+        constexpr std::string_view cVarDictPath{"var.dict"};
+        constexpr std::string_view cVarSegmentIndexPath{"var.segindex"};
+        constexpr std::array<std::string_view, 4> var_strs
+                = {"python2.7.3", "Python2.7.3", "PyThOn2.7.3", "PYTHON2.7.3"};
         clp::VariableDictionaryWriter var_dict_writer;
 
-        var_dict_writer.open(cVarDictPath, cVarSegmentIndexPath, cVariableDictionaryIdMax);
+        var_dict_writer.open(
+                std::string{cVarDictPath},
+                std::string{cVarSegmentIndexPath},
+                cVariableDictionaryIdMax
+        );
 
-        vector<encoded_variable_t> encoded_vars;
-        vector<clp::variable_dictionary_id_t> var_ids;
+        std::vector<encoded_variable_t> encoded_vars;
+        std::vector<clp::variable_dictionary_id_t> var_ids;
         clp::LogTypeDictionaryEntry logtype_dict_entry;
-        string const msg_template = "here is a string with a dictionary var: ";
+        std::string const msg_template{"here is a string with a dictionary var: "};
 
         for (auto const& var_str : var_strs) {
             EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                    msg_template + var_str,
+                    msg_template + std::string{var_str},
                     logtype_dict_entry,
                     var_dict_writer,
                     encoded_vars,
@@ -401,20 +406,19 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         var_dict_writer.close();
 
         clp::VariableDictionaryReader var_dict_reader;
-        var_dict_reader.open(cVarDictPath, cVarSegmentIndexPath);
+        var_dict_reader.open(std::string{cVarDictPath}, std::string{cVarSegmentIndexPath});
         var_dict_reader.read_new_entries();
 
-        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), true).size()
+        REQUIRE(var_dict_reader.get_entry_matching_value(std::string{var_strs.at(0)}, true).size()
                 == var_strs.size());
-        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), false).size() == 1);
+        REQUIRE(var_dict_reader.get_entry_matching_value(std::string{var_strs.at(0)}, false).size()
+                == 1);
 
         var_dict_reader.close();
 
         // Clean-up
-        int retval = unlink(cVarDictPath);
-        REQUIRE(0 == retval);
-        retval = unlink(cVarSegmentIndexPath);
-        REQUIRE(0 == retval);
+        REQUIRE(0 == unlink(cVarDictPath.data()));
+        REQUIRE(0 == unlink(cVarSegmentIndexPath.data()));
     }
 
     SECTION("Test encoding and decoding") {
