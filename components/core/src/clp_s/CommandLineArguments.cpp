@@ -346,14 +346,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     );
                     return ParsingResult::Failure;
                 }
-                if (false == m_timestamp_key.empty()) {
-                    SPDLOG_ERROR(
-                            "Invalid combination of arguments; --file-type {} and "
-                            "--timestamp-key can't be used together",
-                            cKeyValueIrFileType
-                    );
-                    return ParsingResult::Failure;
-                }
             } else {
                 throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
             }
