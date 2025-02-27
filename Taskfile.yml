@@ -210,7 +210,7 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-          TARGETS: ["clg", "clo", "clp", "clp-s", "reducer-server"]
+          TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
   clp-package-utils:
     - task: "python-component"
@@ -530,12 +530,12 @@ tasks:
       # `/parents/A` -> `/parents/B` rather than `/parents/A` -> `/parents/B/A`
       - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
       # Set the storage engine for the package
-      - task: "utils:replace-text"
+      - task: "utils:misc:replace-text"
         vars:
           FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
           SED_EXP: >-
             s/([[:space:]]*storage_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-      - task: "utils:replace-text"
+      - task: "utils:misc:replace-text"
         vars:
           FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
           SED_EXP: >-

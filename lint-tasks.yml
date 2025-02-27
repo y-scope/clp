@@ -22,19 +22,11 @@ tasks:
       - task: "yml-fix"
 
   cpp-check:
-    sources: &cpp_source_files
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.TASKFILE}}"
-      - "{{.G_CORE_DIR}}/.clang-format"
-      - "{{.G_CORE_DIR}}/src/**"
-      - "{{.G_CORE_DIR}}/tests/**"
     cmds:
       - task: "cpp-format-check"
       - task: "cpp-static-check-ci"
 
   cpp-fix:
-    sources: *cpp_source_files
     cmds:
       - task: "cpp-format-fix"
       - task: "cpp-static-fix"
@@ -109,12 +101,19 @@ tasks:
           Taskfile.yml
 
   cpp-format-check:
-    sources: *cpp_source_files
+    sources: &cpp_source_files
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
+      - "{{.TASKFILE}}"
+      - "{{.G_CORE_COMPONENT_DIR}}/.clang-format"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/**"
+      - "{{.G_CORE_COMPONENT_DIR}}/tests/**"
     deps: ["cpp-lint-configs", "venv"]
     cmds:
       - task: ":utils:cpp-lint:clang-format"
         vars:
           FLAGS: ["--dry-run"]
+          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
@@ -125,6 +124,7 @@ tasks:
       - task: ":utils:cpp-lint:clang-format"
         vars:
           FLAGS: ["-i"]
+          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
