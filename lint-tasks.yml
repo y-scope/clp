@@ -28,7 +28,6 @@ tasks:
   cpp-fix:
     cmds:
       - task: "cpp-format-fix"
-      - task: "cpp-static-fix"
 
   js-check:
     sources: &js_source_files
@@ -717,19 +716,11 @@ tasks:
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   cpp-static-check-ci:
-    # Alias task to `cpp-static-fix` since we don't currently support automatic fixes.
-    # NOTE: clang-tidy does have the ability to fix some errors, but the fixes can be inaccurate.
-    # When we eventually determine which errors can be safely fixed, we'll allow clang-tidy to
-    # fix them.
-    aliases: ["cpp-static-fix"]
     sources: *cpp_source_files
     deps:
       - "cpp-lint-configs"
       - "venv"
-      - task: ":utils:cmake:generate"
-        vars:
-          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-          SOURCE_DIR: "{{.ROOT_DIR}}/components/core"
+      - task: ":core-generate"
     cmds:
       - task: ":utils:cpp-lint:clang-tidy-diff"
         vars:
