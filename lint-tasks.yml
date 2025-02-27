@@ -112,6 +112,7 @@ tasks:
       - task: ":utils:cpp-lint:clang-format"
         vars:
           FLAGS: ["--dry-run"]
+          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
@@ -122,6 +123,7 @@ tasks:
       - task: ":utils:cpp-lint:clang-format"
         vars:
           FLAGS: ["-i"]
+          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
