@@ -1,3 +1,7 @@
+/**
+ * Reference:
+ * https://github.com/vitejs/vite/tree/e9120805df4dcf202caa65f15edc7d94fb521a63/packages/create-vite/template-react-ts
+ */
 {
   "files": [],
   "references": [
