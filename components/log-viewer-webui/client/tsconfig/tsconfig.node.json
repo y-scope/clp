@@ -6,7 +6,7 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "target": "ES2022",
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.node.tsbuildinfo",
 
     /* Bundler mode */
     "allowImportingTsExtensions": true,
@@ -34,6 +34,6 @@
     "useUnknownInCatchVariables": true
   },
   "include": [
-    "vite.config.ts"
+    "../vite.config.ts"
   ]
 }

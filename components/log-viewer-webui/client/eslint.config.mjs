@@ -26,11 +26,11 @@ const EslintConfig = [
             "src/**/*.ts",
             "src/**/*.tsx",
         ],
-        "tsconfig.app.json"
+        "./tsconfig/tsconfig.app.json"
     ),
     createTsConfigOverride(
         ["vite.config.ts"],
-        "tsconfig.node.json"
+        "./tsconfig/tsconfig.node.json"
     ),
     ...StylisticConfigArray,
     ...ReactConfigArray,
