@@ -14,6 +14,7 @@ import {isAxiosError} from "axios";
 import {submitExtractStreamJob} from "../api/query";
 import {Nullable} from "../typings/common";
 import {
+    EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,
     QUERY_LOADING_STATE,
 } from "../typings/query";
@@ -44,7 +45,6 @@ const QueryStatus = () => {
         let parseResult: Static<typeof ExtractJobSearchParams>;
         try {
             parseResult = Value.Parse(ExtractJobSearchParams, paramsObj);
-            console.log(parseResult);
         } catch (e: unknown) {
             let error = "URL parameters parsing failed";
             if (e instanceof AssertError) {
@@ -57,7 +57,7 @@ const QueryStatus = () => {
         }
 
         submitExtractStreamJob(
-            parseResult.type,
+            EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
             parseResult.streamId,
             parseResult.logEventIdx,
             () => {

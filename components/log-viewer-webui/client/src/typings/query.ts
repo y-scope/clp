@@ -1,7 +1,4 @@
-import {
-    TEnum,
-    Type,
-} from "@sinclair/typebox";
+import {Type} from "@sinclair/typebox";
 
 
 enum QUERY_LOADING_STATE {
@@ -39,14 +36,9 @@ const EXTRACT_JOB_TYPE = Object.freeze({
  * URL search parameters required for extract job.
  */
 const ExtractJobSearchParams = Type.Object({
-    // The `.Encode()` path is to satisfy TS and will never be executed.
-    type: (
-        Type.Transform(
-            Type.Union(Object.keys(EXTRACT_JOB_TYPE).map((key) => Type.Literal(key)))
-        )
-            .Decode((value: keyof typeof EXTRACT_JOB_TYPE) => EXTRACT_JOB_TYPE[value])
-            .Encode(() => null as never)
-    ) as unknown as TEnum<typeof EXTRACT_JOB_TYPE>,
+    type: Type.Union(
+        Object.keys(EXTRACT_JOB_TYPE).map((key) => Type.Literal(key))
+    ),
     streamId: Type.String(),
     logEventIdx: Type.Number(),
 });
@@ -77,6 +69,7 @@ const QUERY_LOADING_STATE_DESCRIPTIONS
     });
 
 export {
+    EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,
     QUERY_JOB_TYPE,
     QUERY_LOADING_STATE,
