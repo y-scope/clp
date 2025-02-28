@@ -20,8 +20,6 @@ const QUERY_LOADING_STATE_VALUES = Object.freeze(
 /**
  * Enum of job type, matching the `QueryJobType` class in
  * `job_orchestration.query_scheduler.constants`.
- *
- * @enum {number}
  */
 enum QUERY_JOB_TYPE {
     SEARCH_OR_AGGREGATION = 0,
