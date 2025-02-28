@@ -8,7 +8,7 @@
 namespace clp_s {
 // define the version
 constexpr uint8_t cArchiveMajorVersion = 0;
-constexpr uint8_t cArchiveMinorVersion = 2;
+constexpr uint8_t cArchiveMinorVersion = 3;
 constexpr uint16_t cArchivePatchVersion = 0;
 
 // define the magic number

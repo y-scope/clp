@@ -49,6 +49,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == filter->has_only_expression_operands());
         REQUIRE(false == filter->is_inverted());
         REQUIRE(filter->get_column()->is_pure_wildcard());
+        REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         std::string extracted_value;
         REQUIRE(filter->get_operand()->as_var_string(extracted_value, filter->get_operation()));
@@ -66,6 +67,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == filter->is_inverted());
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
+        REQUIRE(filter->get_column()->get_namespace().empty());
         auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
         REQUIRE(key_token == *filter->get_column()->descriptor_begin());
         std::string extracted_value;
@@ -84,6 +86,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(true == not_filter->is_inverted());
         REQUIRE(FilterOperation::EQ == not_filter->get_operation());
         REQUIRE(1 == not_filter->get_column()->get_descriptor_list().size());
+        REQUIRE(not_filter->get_column()->get_namespace().empty());
         auto const key_token = DescriptorToken::create_descriptor_from_escaped_token("key");
         REQUIRE(key_token == *not_filter->get_column()->descriptor_begin());
         std::string extracted_value;
@@ -132,6 +135,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(value == extracted_value);
             auto const key_token = DescriptorToken::create_descriptor_from_escaped_token(key);
             REQUIRE(key_token == *filter->get_column()->descriptor_begin());
+            REQUIRE(filter->get_column()->get_namespace().empty());
             ++suffix_number;
         }
     }
@@ -182,6 +186,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
             REQUIRE(value == extracted_value);
             auto const key_token = DescriptorToken::create_descriptor_from_escaped_token(key);
             REQUIRE(key_token == *filter->get_column()->descriptor_begin());
+            REQUIRE(filter->get_column()->get_namespace().empty());
             ++suffix_number;
         }
     }
@@ -210,6 +215,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == filter->is_inverted());
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         REQUIRE(2 == filter->get_column()->get_descriptor_list().size());
+        REQUIRE(filter->get_column()->get_namespace().empty());
         auto it = filter->get_column()->descriptor_begin();
         auto const a_b_token = DescriptorToken::create_descriptor_from_escaped_token("a.b");
         REQUIRE(a_b_token == *it++);
@@ -264,8 +270,43 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == filter->is_inverted());
         REQUIRE(FilterOperation::EQ == filter->get_operation());
         REQUIRE(true == filter->get_column()->is_pure_wildcard());
+        REQUIRE(filter->get_column()->get_namespace().empty());
         std::string literal;
         REQUIRE(true == filter->get_operand()->as_var_string(literal, FilterOperation::EQ));
         REQUIRE(literal == translated_pair.second);
+    }
+
+    SECTION("Column in @ namespace") {
+        auto namespaced_query = GENERATE("@column : *", "\"@column\": *");
+        stringstream query{namespaced_query};
+        auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query));
+        REQUIRE(nullptr != filter);
+        REQUIRE(nullptr != filter->get_operand());
+        REQUIRE(nullptr != filter->get_column());
+        REQUIRE(false == filter->has_only_expression_operands());
+        REQUIRE(false == filter->is_inverted());
+        REQUIRE(FilterOperation::EQ == filter->get_operation());
+        REQUIRE("@" == filter->get_column()->get_namespace());
+        REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
+        auto it = filter->get_column()->descriptor_begin();
+        auto const column_token = DescriptorToken::create_descriptor_from_escaped_token("column");
+        REQUIRE(column_token == *it);
+    }
+
+    SECTION("Escaped @ namespace in column") {
+        auto escaped_namespace_query = GENERATE("\\@column : *", "\"\\@column\": *");
+        stringstream query{escaped_namespace_query};
+        auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query));
+        REQUIRE(nullptr != filter);
+        REQUIRE(nullptr != filter->get_operand());
+        REQUIRE(nullptr != filter->get_column());
+        REQUIRE(false == filter->has_only_expression_operands());
+        REQUIRE(false == filter->is_inverted());
+        REQUIRE(FilterOperation::EQ == filter->get_operation());
+        REQUIRE(filter->get_column()->get_namespace().empty());
+        REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
+        auto it = filter->get_column()->descriptor_begin();
+        auto const column_token = DescriptorToken::create_descriptor_from_escaped_token("@column");
+        REQUIRE(column_token == *it);
     }
 }

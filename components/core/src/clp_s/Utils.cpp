@@ -529,11 +529,24 @@ bool StringUtils::convert_string_to_double(std::string const& raw, double& conve
 
 bool StringUtils::tokenize_column_descriptor(
         std::string const& descriptor,
-        std::vector<std::string>& tokens
+        std::vector<std::string>& tokens,
+        std::string& descriptor_namespace
 ) {
     std::string cur_tok;
     bool escaped{false};
-    for (size_t i = 0; i < descriptor.size(); ++i) {
+    descriptor_namespace.clear();
+    size_t start_index = 0;
+    if (descriptor.size() > 0
+        && std::string_view{descriptor.data(), 1} == constants::cAutogenNamespace)
+    {
+        descriptor_namespace = constants::cAutogenNamespace;
+        start_index += 1;
+
+        if (descriptor.size() <= descriptor_namespace.size()) {
+            return false;
+        }
+    }
+    for (size_t i = start_index; i < descriptor.size(); ++i) {
         if (false == escaped) {
             if ('\\' == descriptor[i]) {
                 escaped = true;
@@ -763,6 +776,9 @@ bool StringUtils::unescape_kql_internal(
                 } else {
                     unescaped.push_back('?');
                 }
+                break;
+            case '@':
+                unescaped.push_back('@');
                 break;
             default:
                 return false;
