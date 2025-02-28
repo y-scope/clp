@@ -20,32 +20,12 @@ tasks:
       - task: "yml-fix"
 
   cpp-check:
-    sources: &cpp_source_files
-      - "{{.ROOT_DIR}}/.clang-format"
-      - "{{.ROOT_DIR}}/.clang-tidy"
-      - "{{.TASKFILE}}"
-      - ".clang-format"
-      - "src/**/*.cpp"
-      - "src/**/*.h"
-      - "src/**/*.hpp"
-      - "src/**/*.inc"
-      - "tests/**/*.cpp"
-      - "tests/**/*.h"
-      - "tests/**/*.hpp"
-      - "tests/**/*.inc"
-    dir: "components/core"
     cmds:
-      - task: "cpp"
-        vars:
-          FLAGS: "--dry-run"
+      - task: "cpp-format-check"
 
   cpp-fix:
-    sources: *cpp_source_files
-    dir: "components/core"
     cmds:
-      - task: "cpp"
-        vars:
-          FLAGS: "-i"
+      - task: "cpp-format-fix"
 
   js-check:
     sources: &js_source_files
@@ -116,20 +96,33 @@ tasks:
           lint-tasks.yml \
           Taskfile.yml
 
-  cpp:
-    internal: true
-    requires:
-      vars: ["FLAGS"]
-    dir: "components/core"
+  cpp-format-check:
+    sources: &cpp_source_files
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
+      - "{{.TASKFILE}}"
+      - "{{.G_CORE_COMPONENT_DIR}}/.clang-format"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/**"
+      - "{{.G_CORE_COMPONENT_DIR}}/tests/**"
     deps: ["cpp-lint-configs", "venv"]
     cmds:
-      - |-
-        . "{{.G_LINT_VENV_DIR}}/bin/activate"
-        find src tests \
-          -type f \
-          \( -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" -o -iname "*.inc" \) \
-          -print0 | \
-            xargs -0 clang-format {{.FLAGS}} -Werror
+      - task: ":utils:cpp-lint:clang-format"
+        vars:
+          FLAGS: ["--dry-run"]
+          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
+          ROOT_PATHS: *cpp_source_files
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  cpp-format-fix:
+    sources: *cpp_source_files
+    deps: ["cpp-lint-configs", "venv"]
+    cmds:
+      - task: ":utils:cpp-lint:clang-format"
+        vars:
+          FLAGS: ["-i"]
+          INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
+          ROOT_PATHS: *cpp_source_files
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   cpp-lint-configs:
     internal: true
@@ -185,7 +178,7 @@ tasks:
     deps:
       - ":init"
       - ":webui-node-modules"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
@@ -194,7 +187,7 @@ tasks:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm clean-install"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
@@ -211,18 +204,18 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
-      - task: ":utils:create-venv"
+      - task: ":utils:misc:create-venv"
         vars:
           LABEL: "lint"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           REQUIREMENTS_FILE: "{{.ROOT_DIR}}/lint-requirements.txt"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
