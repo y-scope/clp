@@ -121,7 +121,7 @@ def _make_clp_s_command_and_env_vars(
             env_vars = {
                 **os.environ,
                 "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
-                "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_acces_key,
+                "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
                 "AWS_SESSION_TOKEN": aws_credentials.session_token,
             }
     else:
