@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
 import boto3
 from botocore.config import Config
@@ -13,17 +13,18 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def get_temporary_credentials(aws_profile : str = "default") -> Optional[S3Credentials]:
+def get_temporary_credentials(aws_profile: str = "default") -> Optional[S3Credentials]:
     aws_session = boto3.Session(profile_name=aws_profile)
     credentials = aws_session.get_credentials()
     if credentials is None:
         return None
-    
+
     return S3Credentials(
         access_key_id=credentials.access_key,
         secret_access_key=credentials.secret_key,
         session_token=credentials.token,
     )
+
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     """

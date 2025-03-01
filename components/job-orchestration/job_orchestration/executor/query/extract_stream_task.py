@@ -6,9 +6,20 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import Database, S3Config, StorageEngine, StorageType, WorkerConfig, S3Credentials
+from clp_py_utils.clp_config import (
+    Database,
+    S3Config,
+    S3Credentials,
+    StorageEngine,
+    StorageType,
+    WorkerConfig,
+)
 from clp_py_utils.clp_logging import set_logging_level
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, s3_put, get_temporary_credentials
+from clp_py_utils.s3_utils import (
+    generate_s3_virtual_hosted_style_url,
+    get_temporary_credentials,
+    s3_put,
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
@@ -101,7 +112,7 @@ def _make_clp_s_command_and_env_vars(
             "s3",
         ))
         # fmt: on
-        env_vars: Dict[str,str] = None
+        env_vars: Dict[str, str] = None
 
         if s3_config.credentials is not None:
             aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
@@ -111,9 +122,7 @@ def _make_clp_s_command_and_env_vars(
                 "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
             }
         else:
-            aws_credentials: S3Credentials = get_temporary_credentials(
-                s3_config.profile
-            )
+            aws_credentials: S3Credentials = get_temporary_credentials(s3_config.profile)
             if aws_credentials is None:
                 logger.error(f"Failed to get credentials")
                 return None, None
