@@ -7,6 +7,7 @@ A single-node deployment allows you to run CLP on a single host.
 * [Docker]
   * If you're not running as root, ensure `docker` can be run
     [without superuser privileges][docker-non-root].
+  * If you're using Docker Desktop, you will need version 4.34 or later, and [enable host networking][docker-desktop-host-networking].
 * Python 3.8 or higher
 
 ## Starting CLP
@@ -34,4 +35,5 @@ sbin/stop-clp.sh
 ```
 
 [Docker]: https://docs.docker.com/engine/install/
+[docker-desktop-host-networking]: https://docs.docker.com/engine/network/drivers/host/#docker-desktop
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
