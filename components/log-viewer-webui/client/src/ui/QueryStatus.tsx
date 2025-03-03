@@ -57,6 +57,7 @@ const QueryStatus = () => {
         }
 
         submitExtractStreamJob(
+            // `parseResult.type` must be valid key since parsed using with typebox type `ExtractJobSearchParams`
             EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
             parseResult.streamId,
             parseResult.logEventIdx,
