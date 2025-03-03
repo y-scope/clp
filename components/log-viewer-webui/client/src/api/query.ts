@@ -3,17 +3,10 @@ import axios, {
     AxiosResponse,
 } from "axios";
 
-import {QUERY_JOB_TYPE} from "../typings/query";
-
-
-interface ExtractStreamResp {
-    _id: string;
-    begin_msg_ix: number;
-    end_msg_ix: number;
-    is_last_chunk: boolean;
-    path: string;
-    stream_id: string;
-}
+import {
+    ExtractStreamResp,
+    QUERY_JOB_TYPE,
+} from "../typings/query";
 
 
 /**
