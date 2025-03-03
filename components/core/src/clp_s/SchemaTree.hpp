@@ -9,6 +9,7 @@
 #include <string_view>
 #include <vector>
 
+#include <absl/container/btree_map.h>
 #include <absl/container/flat_hash_map.h>
 
 namespace clp_s {
@@ -133,7 +134,7 @@ public:
      * @return the Id of the root of the Object sub-tree for the given namespace.
      * @return -1 if the Object sub-tree does not exist.
      */
-    int32_t get_object_subtree_node_id_for_namespace(std::string const& subtree_namespace) const {
+    int32_t get_object_subtree_node_id_for_namespace(std::string_view subtree_namespace) const {
         if (auto it = m_namespace_to_object_subtree_id.find(subtree_namespace);
             it != m_namespace_to_object_subtree_id.end())
         {
@@ -193,7 +194,7 @@ public:
 private:
     std::vector<SchemaNode> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string_view const, NodeType>, int32_t> m_node_map;
-    std::map<std::string, int32_t> m_namespace_to_object_subtree_id;
+    absl::btree_map<std::string, int32_t> m_namespace_to_object_subtree_id;
     int32_t m_metadata_subtree_id{-1};
 };
 }  // namespace clp_s
