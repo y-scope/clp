@@ -202,11 +202,21 @@ bool search_archive(
     try {
         for (auto const& column : command_line_arguments.get_projection_columns()) {
             std::vector<std::string> descriptor_tokens;
-            if (false == StringUtils::tokenize_column_descriptor(column, descriptor_tokens)) {
+            std::string descriptor_namespace;
+            if (false
+                == StringUtils::tokenize_column_descriptor(
+                        column,
+                        descriptor_tokens,
+                        descriptor_namespace
+                ))
+            {
                 SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
                 return false;
             }
-            projection->add_column(ColumnDescriptor::create_from_escaped_tokens(descriptor_tokens));
+            projection->add_column(ColumnDescriptor::create_from_escaped_tokens(
+                    descriptor_tokens,
+                    descriptor_namespace
+            ));
         }
     } catch (std::exception const& e) {
         SPDLOG_ERROR("{}", e.what());
