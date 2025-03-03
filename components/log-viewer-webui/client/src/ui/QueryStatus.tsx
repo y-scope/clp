@@ -74,7 +74,7 @@ const QueryStatus = () => {
             })
             .catch((e: unknown) => {
                 let msg = "Unknown error.";
-                if (isAxiosError<{message?: string}>(e)) {
+                if (isAxiosError<{message: string}>(e)) {
                     msg = e.message;
                     if ("undefined" !== typeof e.response) {
                         if ("undefined" !== typeof e.response.data.message) {
