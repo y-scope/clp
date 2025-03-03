@@ -1,9 +1,17 @@
 import {Type} from "@sinclair/typebox";
 
 
+/**
+ * Enum for the different UI states of a query's loading process.
+ */
 enum QUERY_LOADING_STATE {
+    // The query request is being formulated from user inputs.
     SUBMITTING = 0,
+
+    // The request is being sent to the server, or it is sent and is pending response.
     WAITING,
+
+    // The query is currently in the process of processing the response.
     LOADING,
 }
 
