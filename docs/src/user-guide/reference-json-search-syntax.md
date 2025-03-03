@@ -63,7 +63,7 @@ The kv-pair may be nested one or more levels deep.
 
 ### Querying auto-generated kv-pairs
 
-If the kv-pair is an auto-generated kv-pair ingested from a kv-ir stream you can specify that the
+If the kv-pair is an auto-generated kv-pair ingested from a kv-ir stream, you can specify that the
 key exists within the auto-generated namespace by prefixing the key with "@" as follows: 
 
 ```

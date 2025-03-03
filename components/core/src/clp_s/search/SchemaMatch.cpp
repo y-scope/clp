@@ -76,7 +76,7 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                     auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
-                    // FIXME: this needs to be adjusted to be not JUST object subtrees
+                    // FIXME: this needs to be adjusted to handle more than JUST object subtrees
                     // TODO: consider whether fully resolving descriptors in this way is actually
                     // necessary. In principal the set of matching nodes is all that is really
                     // required (and has already been determined) so the main utility of the
