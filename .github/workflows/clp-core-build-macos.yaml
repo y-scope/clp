@@ -70,9 +70,6 @@ jobs:
         shell: "bash"
 
       - run: "task deps:core"
-        shell: "bash"
-
-      - name: "Build CLP-core and run unit tests"
         env: >-
           ${{
           'macos-14' == matrix.os
@@ -87,6 +84,9 @@ jobs:
           }')
           || fromJson('{}')
           }}
+        shell: "bash"
+
+      - name: "Build CLP-core and run unit tests"
         shell: "bash"
         working-directory: "./components/core"
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
