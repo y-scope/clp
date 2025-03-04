@@ -35,7 +35,8 @@ class S3InputConfig(BaseModel):
     bucket: str
     key_prefix: str
 
-    credentials: S3Credentials
+    profile: typing.Optional[str] = None
+    credentials: typing.Optional[S3Credentials] = None
 
 
 class OutputConfig(BaseModel):

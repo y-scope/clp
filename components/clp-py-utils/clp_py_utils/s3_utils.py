@@ -1,16 +1,29 @@
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
-from clp_py_utils.clp_config import S3Config
+from clp_py_utils.clp_config import S3Config, S3Credentials
 from clp_py_utils.compression import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
+
+
+def get_temporary_credentials(aws_profile: str = "default") -> Optional[S3Credentials]:
+    aws_session = boto3.Session(profile_name=aws_profile)
+    credentials = aws_session.get_credentials()
+    if credentials is None:
+        return None
+
+    return S3Credentials(
+        access_key_id=credentials.access_key,
+        secret_access_key=credentials.secret_key,
+        session_token=credentials.token,
+    )
 
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
@@ -74,11 +87,25 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
-    s3_client = boto3.client(
+    aws_profile = s3_input_config.profile
+
+    if aws_profile is None and s3_input_config.credentials is None:
+        raise ValueError("AWS credentials are not provided")
+
+    aws_session = None
+    if aws_profile is not None:
+        aws_session = boto3.Session(profile_name=aws_profile)
+    else:
+        aws_access_key_id = s3_input_config.credentials.access_key_id
+        aws_secret_access_key = s3_input_config.credentials.secret_access_key
+        aws_session = boto3.Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=s3_input_config.region_code,
+        )
+
+    s3_client = aws_session.client(
         "s3",
-        region_name=s3_input_config.region_code,
-        aws_access_key_id=s3_input_config.credentials.access_key_id,
-        aws_secret_access_key=s3_input_config.credentials.secret_access_key,
     )
 
     file_metadata_list: List[FileMetadata] = list()
@@ -124,13 +151,25 @@ def s3_put(
         )
 
     config = Config(retries=dict(total_max_attempts=total_max_attempts, mode="adaptive"))
+
+    aws_profile = s3_config.get_profile()
     aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
 
-    my_s3_client = boto3.client(
+    if aws_profile is None and (aws_access_key_id is None or aws_secret_access_key is None):
+        raise ValueError("AWS credentials are not provided")
+
+    aws_session = None
+    if aws_profile is not None:
+        aws_session = boto3.Session(profile_name=aws_profile)
+    else:
+        aws_session = boto3.Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=s3_config.region_code,
+        )
+
+    my_s3_client = aws_session.client(
         "s3",
-        region_name=s3_config.region_code,
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
         config=config,
     )
 
