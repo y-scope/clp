@@ -5,7 +5,7 @@ on:
     paths:
       - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/workflows/clp-core-build.yaml"
+      - ".github/workflows/clp-deps-images.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "deps-tasks.yml"
@@ -16,7 +16,7 @@ on:
     paths:
       - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/workflows/clp-core-build.yaml"
+      - ".github/workflows/clp-deps-images.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "deps-tasks.yml"
