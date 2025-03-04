@@ -87,7 +87,7 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
-      - "deps-image"
+      - "deps-images"
       - "filter-relevant-changes"
     strategy:
       matrix:
@@ -121,8 +121,8 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
+      - "deps-images"
       - "filter-relevant-changes"
-      - "ubuntu-focal-deps-image"
     strategy:
       matrix:
         include:
@@ -160,8 +160,8 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
+      - "deps-images"
       - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
     strategy:
       matrix:
         use_shared_libs: [true, false]
