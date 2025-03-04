@@ -34,4 +34,4 @@
 	url = https://github.com/nemtrif/utfcpp.git
 [submodule "components/core/submodules/ystdlib-cpp"]
 	path = components/core/submodules/ystdlib-cpp
-	url = https://github.com/Bill-hbrhbr/ystdlib-cpp.git
+	url = https://github.com/y-scope/ystdlib-cpp.git
