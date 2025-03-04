@@ -75,15 +75,15 @@ jobs:
       - name: "Build CLP-core and run unit tests"
         env: >-
           ${{
-          'macos-14' == matrix.os
+          'macos-14' == matrix.runner
           && fromJson('{
           "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
           "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
           }')
-          || 'macos-13' == matrix.os
+          || 'macos-13' == matrix.runner
           && fromJson('{
           "CC": "/usr/local/opt/llvm@16/bin/clang",
-          "CXX": "/user/local/opt/llvm@16/bin/clang++"
+          "CXX": "/usr/local/opt/llvm@16/bin/clang++"
           }')
           || fromJson('{}')
           }}
