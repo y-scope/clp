@@ -205,7 +205,7 @@ def _make_clp_s_command_and_env(
             if aws_credentials is None:
                 logger.error(f"Failed to get credentials")
                 return None, None
-            
+
             compression_env_vars = {
                 **os.environ,
                 "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
