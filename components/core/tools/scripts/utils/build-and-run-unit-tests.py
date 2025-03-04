@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -31,7 +32,7 @@ def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool)
     ]
     if use_shared_libs:
         cmd.append("-DCLP_USE_STATIC_LIBS=OFF")
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=os.environ)
 
 
 def _build_project(build_dir: Path, num_jobs: Optional[int]):
@@ -48,7 +49,7 @@ def _build_project(build_dir: Path, num_jobs: Optional[int]):
     ]
     if num_jobs is not None:
         cmd.append(str(num_jobs))
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=os.environ)
 
 
 def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
@@ -62,7 +63,7 @@ def _run_unit_tests(build_dir: Path, test_spec: Optional[str]):
     ]
     if test_spec is not None:
         cmd.append(test_spec)
-    subprocess.run(cmd, cwd=build_dir, check=True)
+    subprocess.run(cmd, cwd=build_dir, check=True, env=os.environ)
 
 
 def main(argv: List[str]) -> int:
