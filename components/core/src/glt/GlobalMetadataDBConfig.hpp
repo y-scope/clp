@@ -1,7 +1,6 @@
 #ifndef GLT_GLOBALMETADATADBCONFIG_HPP
 #define GLT_GLOBALMETADATADBCONFIG_HPP
 
-#include <cstdint>
 #include <string>
 
 namespace glt {
