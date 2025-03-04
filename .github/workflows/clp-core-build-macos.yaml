@@ -91,6 +91,8 @@ jobs:
         working-directory: "./components/core"
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
         run: >-
+          CC=$CC
+          CXX=$CXX
           python3 ./tools/scripts/utils/build-and-run-unit-tests.py
           ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
           --source-dir .
