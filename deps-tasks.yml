@@ -492,7 +492,7 @@ tasks:
           SRC_NAME: "ystdlib-cpp-95d89d148312c7c447f4164766ad35dd7996b1cc"
           SRC_URL: "https://github.com/y-scope/ystdlib-cpp/archive/95d89d1.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.DEST}}"]
