@@ -1,4 +1,4 @@
-name: "clp-core-build"
+name: "clp-core-image-run"
 description: "Builds CLP-core in the specified container"
 
 inputs:
@@ -8,6 +8,11 @@ inputs:
   use_published_image:
     description: "Whether to use the published container image"
     required: true
+
+  run_args:
+    description: "String appended to docker run."
+    required: true
+
   use_shared_libs:
     description: "Whether to build the core binaries by linking against shared libraries"
     required: true
@@ -45,21 +50,13 @@ runs:
         fi
       shell: "bash"
 
-    - run: "./tools/scripts/deps-download/init.sh"
-      shell: "bash"
-
     - run: >-
         docker run
         --user $(id -u):$(id -g)
         --volume "$GITHUB_WORKSPACE":/mnt/clp
         --workdir /mnt/clp
         ${{steps.get_image_props.outputs.qualified_image_name}}
-        bash -c "task deps:core &&
-        python3 /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.py
-        ${{inputs.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
-        --source-dir /mnt/clp/components/core
-        --build-dir /mnt/clp/components/core/build
-        --num-jobs $(getconf _NPROCESSORS_ONLN)"
+        ${{inputs.run_args}}
       shell: "bash"
 
     - if: "inputs.upload_binaries == 'true'"
