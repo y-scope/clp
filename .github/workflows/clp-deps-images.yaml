@@ -34,7 +34,7 @@ env:
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
 
 # Currency group to prevent multiple workflow instances from trying to publish container images
-concurrency: "${{github.workflow}}-${{github.ref}}"
+concurrency: "${{github.workflow}}-${{github.ref}}-deps-images"
 
 jobs:
   filter-relevant-changes:
