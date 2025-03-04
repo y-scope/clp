@@ -73,9 +73,20 @@ jobs:
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
-        env:
-          "CC": "/opt/homebrew/opt/llvm@16/bin/clang"
+        env: >-
+          ${{
+          'macos-14' == matrix.os
+          && fromJson('{
+          "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
           "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
+          }')
+          || 'macos-13' == matrix.os
+          && fromJson('{
+          "CC": "/usr/local/opt/llvm@16/bin/clang",
+          "CXX": "/user/local/opt/llvm@16/bin/clang++"
+          }')
+          || fromJson('{}')
+          }}
         shell: "bash"
         working-directory: "./components/core"
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
