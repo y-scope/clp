@@ -58,6 +58,11 @@ jobs:
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
 
+      - name: "Install coreutils (for md5sum) and Apple Clang 16 (for C++20)"
+        run: |-
+          brew install coreutils
+          brew install llvm@16
+
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
@@ -68,6 +73,9 @@ jobs:
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
+        env:
+          "CC": "/opt/homebrew/opt/llvm@16/bin/clang"
+          "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
         shell: "bash"
         working-directory: "./components/core"
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
