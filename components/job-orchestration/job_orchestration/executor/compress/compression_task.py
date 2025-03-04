@@ -14,13 +14,18 @@ from clp_py_utils.clp_config import (
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
     S3Config,
+    S3Credentials,
     StorageEngine,
     StorageType,
     WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, s3_put
+from clp_py_utils.s3_utils import (
+    generate_s3_virtual_hosted_style_url,
+    get_temporary_credentials,
+    s3_put,
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
@@ -115,7 +120,7 @@ def _generate_s3_logs_list(
             file.write("\n")
 
 
-def make_clp_command_and_env(
+def _make_clp_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
@@ -156,7 +161,7 @@ def make_clp_command_and_env(
     return compression_cmd, None
 
 
-def make_clp_s_command_and_env(
+def _make_clp_s_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
@@ -185,11 +190,28 @@ def make_clp_s_command_and_env(
     # fmt: on
 
     if InputType.S3 == clp_config.input.type:
-        compression_env_vars = {
-            **os.environ,
-            "AWS_ACCESS_KEY_ID": clp_config.input.credentials.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": clp_config.input.credentials.secret_access_key,
-        }
+        compression_env_vars: Dict[str, str] = None
+
+        if clp_config.input.credentials is not None:
+            aws_access_key_id = clp_config.input.credentials.access_key_id
+            aws_secret_access_key = clp_config.input.credentials.secret_access_key
+            compression_env_vars = {
+                **os.environ,
+                "AWS_ACCESS_KEY_ID": aws_access_key_id,
+                "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+            }
+        else:
+            aws_credentials: S3Credentials = get_temporary_credentials(clp_config.input.profile)
+            if aws_credentials is None:
+                logger.error(f"Failed to get credentials")
+                return None, None
+            
+            compression_env_vars = {
+                **os.environ,
+                "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
+                "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
+                "AWS_SESSION_TOKEN": aws_credentials.session_token,
+            }
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
     else:
@@ -258,14 +280,14 @@ def run_clp(
         enable_s3_write = True
 
     if StorageEngine.CLP == clp_storage_engine:
-        compression_cmd, compression_env = make_clp_command_and_env(
+        compression_cmd, compression_env = _make_clp_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
-        compression_cmd, compression_env = make_clp_s_command_and_env(
+        compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,

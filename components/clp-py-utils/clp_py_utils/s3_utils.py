@@ -88,16 +88,16 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     """
 
     aws_profile = s3_input_config.profile
-    aws_access_key_id = s3_input_config.credentials.access_key_id
-    aws_secret_access_key = s3_input_config.credentials.secret_access_key
 
-    if aws_profile is None and (aws_access_key_id is None or aws_secret_access_key is None):
+    if aws_profile is None and s3_input_config.credentials is None:
         raise ValueError("AWS credentials are not provided")
 
     aws_session = None
     if aws_profile is not None:
         aws_session = boto3.Session(profile_name=aws_profile)
     else:
+        aws_access_key_id = s3_input_config.credentials.access_key_id
+        aws_secret_access_key = s3_input_config.credentials.secret_access_key
         aws_session = boto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
