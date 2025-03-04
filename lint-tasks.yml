@@ -13,6 +13,13 @@ tasks:
       - task: "py-check"
       - task: "yml-check"
 
+  check-full:
+    cmds:
+      - task: "cpp-check-full"
+      - task: "js-check"
+      - task: "py-check"
+      - task: "yml-check"
+
   fix:
     cmds:
       - task: "cpp-fix"
@@ -23,7 +30,12 @@ tasks:
   cpp-check:
     cmds:
       - task: "cpp-format-check"
-      - task: "cpp-static-check-ci"
+      - task: "cpp-static-check-diff"
+
+  cpp-check:
+    cmds:
+      - task: "cpp-format-check"
+      - task: "cpp-static-check-full"
 
   cpp-fix:
     cmds:
@@ -715,7 +727,7 @@ tasks:
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  cpp-static-check-ci:
+  cpp-static-check-diff:
     sources: *cpp_source_files
     deps:
       - "cpp-lint-configs"

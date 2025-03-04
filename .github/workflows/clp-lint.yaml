@@ -36,6 +36,12 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      - name: "Run lint task"
+      - if: "${{ github.event_name == 'schedule' }}"
+        name: "Run full lint task"
+        shell: "bash"
+        run: "task lint:check-full"
+
+      - if: "${{ github.event_name != 'schedule' }}"
+        name: "Run lint task"
         shell: "bash"
         run: "task lint:check"
