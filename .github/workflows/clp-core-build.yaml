@@ -1,12 +1,11 @@
-name: "clp-core-binaries"
+name: "clp-core-build"
 
 on:
   pull_request:
     paths:
       - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/workflows/clp-core-binaries.yaml"
-      - ".github/workflows/clp-deps-images.yaml"
+      - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "deps-tasks.yml"
@@ -17,8 +16,7 @@ on:
     paths:
       - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/workflows/clp-core-binaries.yaml"
-      - ".github/workflows/clp-deps-images.yaml"
+      - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
       - "deps-tasks.yml"
@@ -38,12 +36,12 @@ env:
 concurrency: "${{github.workflow}}-${{github.ref}}"
 
 jobs:
-  deps-images:
-    uses: "./.github/workflows/clp-deps-images.yaml"
-
   filter-relevant-changes:
     runs-on: "ubuntu-latest"
     outputs:
+      centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
+      ubuntu_focal_image_changed: "${{steps.filter.outputs.ubuntu_focal_image}}"
+      ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
       - uses: "actions/checkout@v4"
@@ -68,9 +66,27 @@ jobs:
           # image (since it would be different from the published image).
           base: "main"
           filters: |
+            centos_stream_9_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
+              - "components/core/tools/scripts/lib_install/centos-stream-9/**"
+            ubuntu_focal_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-ubuntu-focal/**"
+              - "components/core/tools/scripts/lib_install/ubuntu-focal/**"
+            ubuntu_jammy_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
+              - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
             clp:
               - ".github/actions/**"
-              - ".github/workflows/clp-*.yaml"
+              - ".github/workflows/clp-core-build.yaml"
               - ".gitmodules"
               - "components/core/cmake/**"
               - "components/core/CMakeLists.txt"
@@ -81,13 +97,88 @@ jobs:
               - "Taskfile.yml"
               - "tools/scripts/deps-download/**"
 
+  centos-stream-9-deps-image:
+    if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "centos-stream-9"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-focal-deps-image:
+    if: "needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-focal"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-jammy-deps-image:
+    if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
   centos-stream-9-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
-      - "deps-images"
+      - "centos-stream-9-deps-image"
       - "filter-relevant-changes"
     strategy:
       matrix:
@@ -111,7 +202,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
-            ${{needs.deps-images.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
+            ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           upload_binaries: "false"
 
@@ -121,8 +212,8 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
-      - "deps-images"
       - "filter-relevant-changes"
+      - "ubuntu-focal-deps-image"
     strategy:
       matrix:
         include:
@@ -149,7 +240,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
-            ${{needs.deps-images.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
+            ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           upload_binaries: "${{matrix.upload_binaries}}"
           binaries_artifact_name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
@@ -160,8 +251,8 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
-      - "deps-images"
       - "filter-relevant-changes"
+      - "ubuntu-jammy-deps-image"
     strategy:
       matrix:
         use_shared_libs: [true, false]
@@ -184,7 +275,7 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
-            ${{needs.deps-images.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           upload_binaries: "false"
 
