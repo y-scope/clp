@@ -4,7 +4,7 @@ import tap from "tap";
 import app from "./app.js";
 
 
-await tap.test("Tests the example routes", async (t) => {
+tap.test("Tests the example routes", async (t) => {
     const server = await app({fastifyOptions: {}, sqlDbPass: "", sqlDbUser: ""});
     t.teardown(() => server.close());
 

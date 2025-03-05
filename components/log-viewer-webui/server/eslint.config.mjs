@@ -20,6 +20,18 @@ const EslintConfig = [
                 // in their function bodies.
                 "off",
             ],
+            "@typescript-eslint/no-floating-promises": [
+                "error",
+                {
+                    allowForKnownSafeCalls: [
+                        {
+                            from: "package",
+                            name: "test",
+                            package: "tap"
+                        },
+                    ],
+                },
+            ],
             "new-cap": [
                 "error",
                 {
