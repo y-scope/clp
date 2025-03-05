@@ -61,7 +61,7 @@ class S3Manager {
 
 /**
  * Initializes a Fastify plugin, which decorates the application with an S3 manager at the
- * "s3Manager" property when all plugin options are valid.
+ * "s3Manager" property only when all plugin options are valid.
  */
 export default fastifyPlugin(async (app, options: {region: Nullable<string>}) => {
     const {region} = options;
