@@ -228,7 +228,7 @@ jobs:
             upload_binaries: true
     env:
       OS_NAME: "ubuntu-jammy"
-    name: "${{env.OS_NAME}}-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    name: "$ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
