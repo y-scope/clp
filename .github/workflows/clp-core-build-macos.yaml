@@ -78,8 +78,6 @@ jobs:
           echo "-----------------"
           ar --version
           echo "-----------------"
-          cmake --system-information | grep CMAKE_AR
-          echo "-----------------"
           ls -l $(brew --prefix)/bin/ar
           echo "-----------------"
           $(brew --prefix)/bin/ar --version
