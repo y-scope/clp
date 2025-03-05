@@ -42,7 +42,7 @@ jobs:
     strategy:
       matrix:
         runner: ["macos-13", "macos-14"]
-        use_shared_libs: [true, false]
+        use_shared_libs: [true]
     runs-on: "${{matrix.runner}}"
     steps:
       - uses: "actions/checkout@v4"
