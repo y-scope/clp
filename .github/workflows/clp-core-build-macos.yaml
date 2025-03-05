@@ -77,6 +77,7 @@ jobs:
           ls /usr/local/opt/llvm@16/bin/llvm-ranlib || true
           echo "-----------------"
           ls -l /usr/bin/ar
+          ls -l /usr/bin/ranlib
           echo "-----------------"
 
       - name: "Build CLP-core and run unit tests"
@@ -92,8 +93,8 @@ jobs:
           || 'macos-14' == matrix.runner
           && fromJson('{
           "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
-          "CMAKE_AR": "/opt/homebrew/opt/llvm@16/bin/llvm-ar",
-          "CMAKE_RANLIB": "/opt/homebrew/opt/llvm@16/bin/llvm-ranlib",
+          "CMAKE_AR": "/usr/bin/ar",
+          "CMAKE_RANLIB": "usr/bin/ranlib",
           "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
           }')
           || fromJson('{}')
