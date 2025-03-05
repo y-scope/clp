@@ -25,7 +25,7 @@ import {
     StreamFileMongoDocument,
     StreamFilesCollection,
 } from "./typings/DbManager.js";
-import {sleep} from "./utils.js";
+import {sleep} from "./utils/time.js";
 
 
 /**
