@@ -10,13 +10,6 @@ and running CLP:
   ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos-stream-9:main
   ```
 
-* An [image][core-deps-ubuntu-focal] containing the dependencies necessary to build CLP core in an
-  Ubuntu Focal x86 environment.
-
-  ```text
-  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main
-  ```
-
 * An [image][core-deps-ubuntu-jammy] containing the dependencies necessary to build CLP core in an
   Ubuntu Jammy x86 environment.
 
@@ -39,7 +32,6 @@ and running CLP:
   ```
 
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
-[core-deps-ubuntu-focal]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-focal
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy
 [exe-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy

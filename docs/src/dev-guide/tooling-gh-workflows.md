@@ -29,15 +29,12 @@ shown below.
 }%%
 flowchart LR
     filter-relevant-changes --> centos-stream-9-deps-image
-    filter-relevant-changes --> ubuntu-focal-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries
-    filter-relevant-changes --> ubuntu-focal-binaries
     filter-relevant-changes --> ubuntu-jammy-binaries
     centos-stream-9-deps-image --> centos-stream-9-binaries
-    ubuntu-focal-deps-image --> ubuntu-focal-binaries
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
-    ubuntu-focal-binaries --> ubuntu-focal-binaries-image
+    ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
 :::
 
 Arrows between jobs indicate a dependency. The jobs are as follows:
@@ -46,14 +43,10 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   the following jobs should run.
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
-* `ubuntu-focal-deps-image`: Builds a container image containing the dependencies necessary to build
-  CLP-core in an Ubuntu Focal x86 environment.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
   CLP-core in an Ubuntu Jammy x86 environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
   and runs core's unit tests.
-* `ubuntu-focal-binaries`: Builds the CLP-core binaries in the built Ubuntu Focal container and runs
-  core's unit tests.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
 * `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
