@@ -70,15 +70,9 @@ jobs:
       - name: "Check AR version"
         run: |-
           echo "-----------------"
-          which ar
+          ls /opt/homebrew/opt/llvm@16/bin/llvm-ar
           echo "-----------------"
-          command -v ar
-          echo "-----------------"
-          which -a ar
-          echo "-----------------"
-          ls -l $(brew --prefix)/bin/ar
-          echo "-----------------"
-          $(brew --prefix)/bin/ar --version
+          ls -l /usr/bin/ar
           echo "-----------------"
 
       - name: "Build CLP-core and run unit tests"
