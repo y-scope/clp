@@ -69,19 +69,8 @@ jobs:
 
       - name: "Check AR version"
         run: |-
-          echo "-----------------"
           which ar
-          echo "-----------------"
           command -v ar
-          echo "-----------------"
-          which -a ar
-          echo "-----------------"
-          ar --version
-          echo "-----------------"
-          ls -l $(brew --prefix)/bin/ar
-          echo "-----------------"
-          $(brew --prefix)/bin/ar --version
-          echo "-----------------"
 
       - name: "Build CLP-core and run unit tests"
         env: >-
