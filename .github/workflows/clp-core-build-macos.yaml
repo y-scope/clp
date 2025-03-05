@@ -68,7 +68,7 @@ jobs:
         shell: "bash"
 
       - name: "Check AR version"
-        run: |-
+        run: |
           which ar
           command -v ar
 
