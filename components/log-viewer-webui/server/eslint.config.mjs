@@ -35,6 +35,7 @@ const EslintConfig = [
             "new-cap": [
                 "error",
                 {
+                    //TypeBox imports
                     capIsNewExceptions: [
                         "Type.Enum",
                         "Type.Integer",
