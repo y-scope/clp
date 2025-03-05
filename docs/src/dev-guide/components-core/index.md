@@ -55,7 +55,6 @@ See the relevant README for your OS:
 
 * [CentOS Stream 9](centos-stream-9-deps-install)
 * [macOS](macos-deps-install)
-* [Ubuntu 20.04](ubuntu-focal-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
 Want to build natively on an OS not listed here? You can file a [feature request][feature-req].
@@ -71,7 +70,7 @@ docker run --rm -it \
   -u$(id -u):$(id -g) \
   -v$(readlink -f /path/to/clp/components/core):/mnt/clp \
   -v$(readlink -f /path/to/my/logs):/mnt/logs \
-  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main \
+  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main \
   /bin/bash -l
 
 cd /mnt/clp
@@ -99,7 +98,6 @@ the relevant paths on your machine.
 
 centos-stream-9-deps-install
 macos-deps-install
-ubuntu-focal-deps-install
 ubuntu-jammy-deps-install
 regex-utils
 :::
