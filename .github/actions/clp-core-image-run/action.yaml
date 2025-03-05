@@ -8,20 +8,9 @@ inputs:
   use_published_image:
     description: "Whether to use the published container image"
     required: true
-
-  run_args:
-    description: "String appended to docker run."
+  run_command:
+    description: "Bash script executed inside docker run"
     required: true
-
-  use_shared_libs:
-    description: "Whether to build the core binaries by linking against shared libraries"
-    required: true
-  upload_binaries:
-    description: "Whether to upload the core binaries"
-    required: true
-  binaries_artifact_name:
-    description: "Name of the artifact containing the core binaries"
-    required: false
 
 runs:
   using: "composite"
@@ -56,23 +45,5 @@ runs:
         --volume "$GITHUB_WORKSPACE":/mnt/clp
         --workdir /mnt/clp
         ${{steps.get_image_props.outputs.qualified_image_name}}
-        ${{inputs.run_args}}
+        bash -c "${{inputs.run_command}}"
       shell: "bash"
-
-    - if: "inputs.upload_binaries == 'true'"
-      id: "copy_binaries"
-      run: |-
-        output_dir="/tmp/${{inputs.binaries_artifact_name}}"
-        echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
-
-        mkdir -p "${output_dir}"
-        cd "$GITHUB_WORKSPACE/components/core/build"
-        tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
-      shell: "bash"
-
-    - if: "inputs.upload_binaries == 'true'"
-      uses: "actions/upload-artifact@v4"
-      with:
-        name: "${{inputs.binaries_artifact_name}}"
-        path: "${{steps.copy_binaries.outputs.output_dir}}"
-        retention-days: 1
