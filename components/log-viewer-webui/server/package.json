@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/main.ts",
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc -b",
     "build:watch": "npm run build -- --watch",
     "lint:check": "npx eslint .",
     "lint:fix": "npm run lint:check -- --fix",
