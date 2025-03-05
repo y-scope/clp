@@ -39,6 +39,9 @@ runs:
         fi
       shell: "bash"
 
+    - run: "./tools/scripts/deps-download/init.sh"
+      shell: "bash"
+
     - run: >-
         docker run
         --user $(id -u):$(id -g)
