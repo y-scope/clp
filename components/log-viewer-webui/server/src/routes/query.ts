@@ -62,9 +62,8 @@ const routes: FastifyPluginAsync = async (app) => {
             }
         }
 
-        if (fastify.hasDecorator("s3Manager")) {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            streamMetadata.path = await fastify.s3Manager!.getPreSignedUrl(
+        if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
+            streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
                 `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
             );
         } else {
