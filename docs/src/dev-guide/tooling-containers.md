@@ -31,13 +31,6 @@ and running CLP:
   ghcr.io/y-scope/clp/clp-core-x86-ubuntu-jammy:main
   ```
 
-* An [image][exe-ubuntu-focal] containing the dependencies necessary to run the CLP package in an
-  Ubuntu Focal x86 environment.
-
-  ```text
-  ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-focal:main
-  ```
-
 * An [image][exe-ubuntu-jammy] containing the dependencies necessary to run the CLP package in an
   Ubuntu Jammy x86 environment.
 
@@ -49,6 +42,5 @@ and running CLP:
 [core-deps-ubuntu-focal]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-focal
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy
-[exe-ubuntu-focal]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-focal
 [exe-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy
 [gh-packages]: https://github.com/orgs/y-scope/packages?repo_name=clp
