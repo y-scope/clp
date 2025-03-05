@@ -61,6 +61,11 @@ jobs:
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
+      - name: "Install coreutils (for md5sum) and Apple Clang 16 (for C++20)"
+        run: |-
+          brew install coreutils
+          brew install llvm@16
+
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
@@ -68,6 +73,20 @@ jobs:
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
+        env: >-
+          ${{
+          'macos-13' == matrix.runner
+          && fromJson('{
+          "CC": "/usr/local/opt/llvm@16/bin/clang",
+          "CXX": "/usr/local/opt/llvm@16/bin/clang++"
+          }')
+          || 'macos-14' == matrix.runner
+          && fromJson('{
+          "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
+          "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
+          }')
+          || fromJson('{}')
+          }}
         shell: "bash"
         working-directory: "./components/core"
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
