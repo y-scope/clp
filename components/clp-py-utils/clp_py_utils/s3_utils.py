@@ -13,7 +13,7 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def get_temporary_credentials(aws_profile: str = "default") -> Optional[S3Credentials]:
+def get_session_credentials(aws_profile: str = "default") -> Optional[S3Credentials]:
     aws_session = boto3.Session(profile_name=aws_profile)
     credentials = aws_session.get_credentials()
     if credentials is None:

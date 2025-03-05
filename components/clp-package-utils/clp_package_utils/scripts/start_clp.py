@@ -33,7 +33,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
-from clp_py_utils.s3_utils import get_temporary_credentials
+from clp_py_utils.s3_utils import get_session_credentials
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
 
@@ -972,7 +972,7 @@ def start_log_viewer_webui(
                 )
             )
         else:
-            aws_credentials: S3Credentials = get_temporary_credentials(s3_config.profile)
+            aws_credentials: S3Credentials = get_session_credentials(s3_config.profile)
             if aws_credentials is None:
                 raise ValueError("AWS credentials not found")
             container_cmd_extra_opts.extend(

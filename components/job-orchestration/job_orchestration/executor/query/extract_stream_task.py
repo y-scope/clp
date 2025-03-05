@@ -17,7 +17,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.s3_utils import (
     generate_s3_virtual_hosted_style_url,
-    get_temporary_credentials,
+    get_session_credentials,
     s3_put,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -122,7 +122,7 @@ def _make_clp_s_command_and_env_vars(
                 "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
             }
         else:
-            aws_credentials: S3Credentials = get_temporary_credentials(s3_config.profile)
+            aws_credentials: S3Credentials = get_session_credentials(s3_config.profile)
             if aws_credentials is None:
                 logger.error(f"Failed to get credentials")
                 return None, None
@@ -131,8 +131,10 @@ def _make_clp_s_command_and_env_vars(
                 **os.environ,
                 "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
                 "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
-                "AWS_SESSION_TOKEN": aws_credentials.session_token,
             }
+            aws_session_token = aws_credentials.session_token
+            if aws_session_token is not None:
+                env_vars["AWS_SESSION_TOKEN"] = aws_session_token
     else:
         # fmt: off
         command.extend((
