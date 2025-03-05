@@ -78,12 +78,14 @@ jobs:
           'macos-13' == matrix.runner
           && fromJson('{
           "CC": "/usr/local/opt/llvm@16/bin/clang",
-          "CXX": "/usr/local/opt/llvm@16/bin/clang++"
+          "CXX": "/usr/local/opt/llvm@16/bin/clang++",
+          "CMAKE_AR": "/usr/bin/ar"
           }')
           || 'macos-14' == matrix.runner
           && fromJson('{
           "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
-          "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
+          "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++",
+          "CMAKE_AR": "/usr/bin/ar"
           }')
           || fromJson('{}')
           }}
