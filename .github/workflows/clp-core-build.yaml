@@ -40,7 +40,6 @@ jobs:
     runs-on: "ubuntu-latest"
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
-      ubuntu_focal_image_changed: "${{steps.filter.outputs.ubuntu_focal_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
@@ -72,12 +71,6 @@ jobs:
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
               - "components/core/tools/scripts/lib_install/centos-stream-9/**"
-            ubuntu_focal_image:
-              - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
-              - "components/core/tools/scripts/lib_install/*.sh"
-              - "components/core/tools/docker-images/clp-env-base-ubuntu-focal/**"
-              - "components/core/tools/scripts/lib_install/ubuntu-focal/**"
             ubuntu_jammy_image:
               - ".github/actions/**"
               - ".github/workflows/clp-core-build.yaml"
@@ -113,31 +106,6 @@ jobs:
       - uses: "./.github/actions/clp-core-build-containers"
         env:
           OS_NAME: "centos-stream-9"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          docker_context: "components/core"
-          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
-            /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
-
-  ubuntu-focal-deps-image:
-    if: "needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'true'"
-    needs: "filter-relevant-changes"
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v4"
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - uses: "./.github/actions/clp-core-build-containers"
-        env:
-          OS_NAME: "ubuntu-focal"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
@@ -228,7 +196,7 @@ jobs:
             upload_binaries: true
     env:
       OS_NAME: "ubuntu-jammy"
-    name: "$ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
