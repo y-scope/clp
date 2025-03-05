@@ -76,7 +76,7 @@ jobs:
           echo "-----------------"
           which -a ar
           echo "-----------------"
-          ar --version
+          strings $(which ar) | grep -i cctools
           echo "-----------------"
           cmake --system-information | grep CMAKE_AR
           echo "-----------------"
