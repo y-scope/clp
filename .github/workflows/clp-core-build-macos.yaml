@@ -70,7 +70,9 @@ jobs:
       - name: "Check AR version"
         run: |-
           echo "-----------------"
-          ls /opt/homebrew/opt/llvm@16/bin/llvm-ar
+          ls /opt/homebrew/opt/llvm@16/bin/llvm-ar || true
+          echo "-----------------"
+          ls /usr/local/opt/llvm@16/bin/llvm-ar || true
           echo "-----------------"
           ls -l /usr/bin/ar
           echo "-----------------"
@@ -81,13 +83,13 @@ jobs:
           'macos-13' == matrix.runner
           && fromJson('{
           "CC": "/usr/local/opt/llvm@16/bin/clang",
-          "CMAKE_AR": "/usr/bin/ar",
+          "CMAKE_AR": "/usr/local/opt/llvm@16/bin/llvm-ar",
           "CXX": "/usr/local/opt/llvm@16/bin/clang++"
           }')
           || 'macos-14' == matrix.runner
           && fromJson('{
           "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
-          "CMAKE_AR": "/usr/bin/ar",
+          "CMAKE_AR": "/opt/homebrew/opt/llvm@16/bin/llvm-ar",
           "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
           }')
           || fromJson('{}')
