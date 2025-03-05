@@ -567,7 +567,7 @@ def generic_start_scheduler(
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
-    scheduler_specific_mount: Optional[DockerMount]
+    scheduler_specific_mount: Optional[DockerMount],
 ):
     logger.info(f"Starting {component_name}...")
 
