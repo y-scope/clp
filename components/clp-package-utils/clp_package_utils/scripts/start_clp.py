@@ -523,6 +523,9 @@ def start_compression_scheduler(
     mounts: CLPDockerMounts,
 ):
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
+    compression_scheduler_mount = None
+    if StorageType.S3 == clp_config.archive_output.storage.type:
+        compression_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -530,6 +533,7 @@ def start_compression_scheduler(
         clp_config,
         container_clp_config,
         mounts,
+        compression_scheduler_mount,
     )
 
 
@@ -540,6 +544,11 @@ def start_query_scheduler(
     mounts: CLPDockerMounts,
 ):
     module_name = "job_orchestration.scheduler.query.query_scheduler"
+    query_scheduler_mount = None
+    if StorageType.S3 == clp_config.archive_output.storage.type:
+        query_scheduler_mount = mounts.aws_config_dir
+    elif StorageType.S3 == clp_config.stream_output.storage.type:
+        query_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         QUERY_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -547,6 +556,7 @@ def start_query_scheduler(
         clp_config,
         container_clp_config,
         mounts,
+        query_scheduler_mount,
     )
 
 
@@ -557,6 +567,7 @@ def generic_start_scheduler(
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
+    scheduler_specific_mount: Optional[DockerMount]
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -599,10 +610,9 @@ def generic_start_scheduler(
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on
-    necessary_mounts = [
-        mounts.logs_dir,
-        mounts.aws_config_dir,
-    ]
+    necessary_mounts = [mounts.logs_dir]
+    if scheduler_specific_mount:
+        necessary_mounts.append(scheduler_specific_mount)
     if COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
         necessary_mounts.append(mounts.input_logs_dir)
     for mount in necessary_mounts:
@@ -634,6 +644,8 @@ def start_compression_worker(
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
+    if StorageType.S3 == clp_config.archive_output.storage.type:
+        compression_worker_mounts.append(mounts.aws_config_dir)
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -660,7 +672,11 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mounts = [mounts.stream_output_dir]
-    if clp_config.archive_output.storage.type == StorageType.FS:
+    if StorageType.S3 == clp_config.stream_output.storage.type:
+        query_worker_mounts.append(mounts.aws_config_dir)
+    elif StorageType.S3 == clp_config.archive_output.storage.type:
+        query_worker_mounts.append(mounts.aws_config_dir)
+    if StorageType.FS == clp_config.archive_output.storage.type:
         query_worker_mounts.append(mounts.archives_output_dir)
 
     generic_start_worker(
@@ -745,7 +761,6 @@ def generic_start_worker(
         mounts.data_dir,
         mounts.logs_dir,
         mounts.input_logs_dir,
-        mounts.aws_config_dir,
     ]
     if worker_specific_mount:
         necessary_mounts.extend(worker_specific_mount)
