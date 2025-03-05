@@ -61,16 +61,29 @@ jobs:
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
-      - name: "Install coreutils (for md5sum) and Apple Clang 16 (for C++20)"
-        run: |-
-          brew install coreutils
-          brew install llvm@16
-
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
       - run: "task deps:core"
         shell: "bash"
+
+      - name: "Check AR version"
+        run: |-
+          echo "-----------------"
+          which ar
+          echo "-----------------"
+          command -v ar
+          echo "-----------------"
+          which -a ar
+          echo "-----------------"
+          ar --version
+          echo "-----------------"
+          cmake --system-information | grep CMAKE_AR
+          echo "-----------------"
+          ls -l $(brew --prefix)/bin/ar
+          echo "-----------------"
+          $(brew --prefix)/bin/ar --version
+          echo "-----------------"
 
       - name: "Build CLP-core and run unit tests"
         env: >-
@@ -78,14 +91,14 @@ jobs:
           'macos-13' == matrix.runner
           && fromJson('{
           "CC": "/usr/local/opt/llvm@16/bin/clang",
-          "CXX": "/usr/local/opt/llvm@16/bin/clang++",
           "CMAKE_AR": "/usr/bin/ar"
+          "CXX": "/usr/local/opt/llvm@16/bin/clang++",
           }')
           || 'macos-14' == matrix.runner
           && fromJson('{
           "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
-          "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++",
           "CMAKE_AR": "/usr/bin/ar"
+          "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++",
           }')
           || fromJson('{}')
           }}
