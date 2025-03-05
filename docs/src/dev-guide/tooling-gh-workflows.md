@@ -56,8 +56,8 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   core's unit tests.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
-* `ubuntu-focal-binaries-image`: Builds an Ubuntu Focal container image containing CLP-core's
-  binaries built in the `ubuntu-focal-binaries` job.
+* `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
+  binaries built in the `ubuntu-jammy-binaries` job.
 
 When the PR or commit doesn't change any of the files that affect CLP's dependencies (or the
 dependency container images), then the dependency container images won't be rebuilt; instead the
@@ -71,7 +71,7 @@ Actions, and then dependent jobs will download and load the image(s) from there.
 
 Note that for the images containing CLP's dependencies (built by the `xxx-deps-image` jobs), we need
 to build and test an image for each Linux distro where we support building CLP natively. However,
-for the image containing CLP's binaries (built by the `ubuntu-focal-binaries-image` job), we only
+for the image containing CLP's binaries (built by the `ubuntu-jammy-binaries-image` job), we only
 need it for one OS since users can use the container on any OS.
 
 ## clp-core-build-macos

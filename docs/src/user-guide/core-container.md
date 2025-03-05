@@ -1,12 +1,12 @@
 # Core container
 
 To quickly try CLP's core compression, decompression, and search (outside of the package), you can
-use the [clp-core-x86-ubuntu-focal][1] container as follows.
+use the [clp-core-x86-ubuntu-jammy][1] container as follows.
 
 Pull the container image:
 
 ```shell
-docker pull ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main
+docker pull ghcr.io/y-scope/clp/clp-core-x86-ubuntu-jammy:main
 ```
 
 Start the container with mounts for your logs and output directories:
@@ -22,7 +22,7 @@ docker run \
   -u $(id -u):$(id -g) \
   --volume /my/logs/dir:/mnt/logs \
   --volume /my/data/dir:/mnt/data \
-  ghcr.io/y-scope/clp/clp-core-x86-ubuntu-focal:main /bin/bash
+  ghcr.io/y-scope/clp/clp-core-x86-ubuntu-jammy:main /bin/bash
 ```
 
 * Change `/my/logs/dir` to the directory on your machine that contains the logs you wish to
@@ -33,4 +33,4 @@ docker run \
 Follow the usage instructions in [clp for unstructured logs](core-unstructured/index) or
 [clp for JSON logs](core-clp-s), depending on the format of your logs.
 
-[1]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-focal
+[1]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy

@@ -216,11 +216,7 @@ jobs:
       - "ubuntu-focal-deps-image"
     strategy:
       matrix:
-        include:
-          - use_shared_libs: true
-            upload_binaries: false
-          - use_shared_libs: false
-            upload_binaries: true
+        use_shared_libs: [true, false]
     name: "ubuntu-focal-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
@@ -242,8 +238,7 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "${{matrix.upload_binaries}}"
-          binaries_artifact_name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          upload_binaries: false
 
   ubuntu-jammy-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
@@ -255,7 +250,11 @@ jobs:
       - "ubuntu-jammy-deps-image"
     strategy:
       matrix:
-        use_shared_libs: [true, false]
+        include:
+          - use_shared_libs: true
+            upload_binaries: false
+          - use_shared_libs: false
+            upload_binaries: true
     name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
@@ -277,21 +276,22 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "false"
+          upload_binaries: "${{matrix.upload_binaries}}"
+          binaries_artifact_name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
 
-  ubuntu-focal-binaries-image:
+  ubuntu-jammy-binaries-image:
     # Run if the ancestor jobs were successful/skipped, building clp was successful, and this is a
     # push to `main`.
     if: >-
       !cancelled()
       && !failure()
-      && needs.ubuntu-focal-binaries.result == 'success'
+      && needs.ubuntu-jammy-binaries.result == 'success'
       && github.event_name == 'push'
       && github.ref == 'refs/heads/main'
-    needs: "ubuntu-focal-binaries"
+    needs: "ubuntu-jammy-binaries"
     runs-on: "ubuntu-latest"
     env:
-      OS_NAME: "ubuntu-focal"
+      OS_NAME: "ubuntu-jammy"
       TMP_OUTPUT_DIR: "/tmp"
     steps:
       - uses: "actions/checkout@v4"
