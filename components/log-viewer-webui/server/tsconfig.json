@@ -1,3 +1,7 @@
+/**
+ * Reference:
+ * https://github.com/tsconfig/bases/blob/2604892973bcb1822c204e2aa2add10a8b0d1c8c/bases/node22.json
+ */
 {
   "compilerOptions": {
     "esModuleInterop": true,
