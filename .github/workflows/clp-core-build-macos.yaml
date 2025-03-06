@@ -97,7 +97,7 @@ jobs:
           && fromJson('{
           "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
           "CMAKE_AR": "/usr/bin/ar",
-          "CMAKE_RANLIB": "usr/bin/ranlib",
+          "CMAKE_RANLIB": "/usr/bin/ranlib",
           "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
           }')
           || fromJson('{}')
