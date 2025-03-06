@@ -3,8 +3,8 @@ name: "clp-core-build"
 on:
   pull_request:
     paths:
-      - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/actions/run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -14,8 +14,8 @@ on:
       - "!components/core/tools/scripts/lib_install/macos/**"
   push:
     paths:
-      - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/actions/run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -40,7 +40,6 @@ jobs:
     runs-on: "ubuntu-latest"
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
-      ubuntu_focal_image_changed: "${{steps.filter.outputs.ubuntu_focal_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
@@ -72,12 +71,6 @@ jobs:
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
               - "components/core/tools/scripts/lib_install/centos-stream-9/**"
-            ubuntu_focal_image:
-              - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
-              - "components/core/tools/scripts/lib_install/*.sh"
-              - "components/core/tools/docker-images/clp-env-base-ubuntu-focal/**"
-              - "components/core/tools/scripts/lib_install/ubuntu-focal/**"
             ubuntu_jammy_image:
               - ".github/actions/**"
               - ".github/workflows/clp-core-build.yaml"
@@ -113,31 +106,6 @@ jobs:
       - uses: "./.github/actions/clp-core-build-containers"
         env:
           OS_NAME: "centos-stream-9"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          docker_context: "components/core"
-          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
-            /Dockerfile"
-          push_deps_image: >-
-            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
-          token: "${{secrets.GITHUB_TOKEN}}"
-
-  ubuntu-focal-deps-image:
-    if: "needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'true'"
-    needs: "filter-relevant-changes"
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v4"
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - uses: "./.github/actions/clp-core-build-containers"
-        env:
-          OS_NAME: "ubuntu-focal"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
@@ -195,55 +163,21 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-build"
+      - uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "centos-stream-9"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "false"
-
-  ubuntu-focal-binaries:
-    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
-    if: >-
-      success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
-    needs:
-      - "filter-relevant-changes"
-      - "ubuntu-focal-deps-image"
-    strategy:
-      matrix:
-        include:
-          - use_shared_libs: true
-            upload_binaries: false
-          - use_shared_libs: false
-            upload_binaries: true
-    name: "ubuntu-focal-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
-    continue-on-error: true
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v4"
-        with:
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - uses: "./.github/actions/clp-core-build"
-        env:
-          OS_NAME: "ubuntu-focal"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_shared_libs: "${{matrix.use_shared_libs}}"
-          use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_focal_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "${{matrix.upload_binaries}}"
-          binaries_artifact_name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          run_command: >-
+            task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
 
   ubuntu-jammy-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
@@ -255,7 +189,13 @@ jobs:
       - "ubuntu-jammy-deps-image"
     strategy:
       matrix:
-        use_shared_libs: [true, false]
+        include:
+          - use_shared_libs: true
+            upload_binaries: false
+          - use_shared_libs: false
+            upload_binaries: true
+    env:
+      OS_NAME: "ubuntu-jammy"
     name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
@@ -268,30 +208,51 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-build"
-        env:
-          OS_NAME: "ubuntu-jammy"
+      - uses: "./.github/actions/run-on-image"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "false"
+          run_command: >-
+            task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-  ubuntu-focal-binaries-image:
+      - if: "matrix.upload_binaries == 'true'"
+        id: "copy_binaries"
+        run: |-
+          output_dir="/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p "${output_dir}"
+          cd "$GITHUB_WORKSPACE/components/core/build"
+          tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
+        shell: "bash"
+
+      - if: "matrix.upload_binaries == 'true'"
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{steps.copy_binaries.outputs.output_dir}}"
+          retention-days: 1
+
+  ubuntu-jammy-binaries-image:
     # Run if the ancestor jobs were successful/skipped, building clp was successful, and this is a
     # push to `main`.
     if: >-
       !cancelled()
       && !failure()
-      && needs.ubuntu-focal-binaries.result == 'success'
+      && needs.ubuntu-jammy-binaries.result == 'success'
       && github.event_name == 'push'
       && github.ref == 'refs/heads/main'
-    needs: "ubuntu-focal-binaries"
+    needs: "ubuntu-jammy-binaries"
     runs-on: "ubuntu-latest"
     env:
-      OS_NAME: "ubuntu-focal"
+      OS_NAME: "ubuntu-jammy"
       TMP_OUTPUT_DIR: "/tmp"
     steps:
       - uses: "actions/checkout@v4"

@@ -15,4 +15,4 @@ docker run \
   -u"$(id -u):$(id -g)" \
   --mount "type=bind,src=$(readlink -f "$component_root"),dst=$container_component_root" \
   -w "$container_component_root" \
-  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-focal:main "$@"
+  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main "$@"

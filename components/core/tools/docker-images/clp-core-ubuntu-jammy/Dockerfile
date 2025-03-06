@@ -1,4 +1,4 @@
-FROM ubuntu:focal AS BASE
+FROM ubuntu:jammy AS BASE
 
 # Install runtime dependencies
 # TODO: Investigate why libssl-dev is a hidden dependency of clp-s
