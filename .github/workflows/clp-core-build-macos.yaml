@@ -41,9 +41,9 @@ jobs:
   build-macos:
     strategy:
       matrix:
-        runner: ["macos-13", "macos-14"]
+        os: ["macos-13", "macos-14"]
         use_shared_libs: [true, false]
-    runs-on: "${{matrix.runner}}"
+    runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
         with:
@@ -67,38 +67,23 @@ jobs:
       - run: "task deps:core"
         shell: "bash"
 
-      - name: "Check AR version"
-        run: |-
-          echo "-----------------"
-          ls /opt/homebrew/opt/llvm@16/bin/llvm-ar || true
-          ls /opt/homebrew/opt/llvm@16/bin/llvm-ranlib || true
-          ls /opt/homebrew/opt/llvm@16/bin/llvm-ar -V || true
-          echo "-----------------"
-          ls /usr/local/opt/llvm@16/bin/llvm-ar || true
-          ls /usr/local/opt/llvm@16/bin/llvm-ranlib || true
-          ls /usr/local/opt/llvm@16/bin/llvm-ar -V || true
-          echo "-----------------"
-          ls -l /usr/bin/ar
-          /usr/bin/ar -V || true
-          ls -l /usr/bin/ranlib
-          echo "-----------------"
+      - if: "'macos-13' == matrix.os || 'macos-14' == matrix.os"
+        name: "Upgrade the default AppleClang to LLVM Clang for C++20 features"
+        shell: "bash"
+        run: |
+          brew install llvm@16
+          echo "USE_LLVM_COMPILER=true" >> $GITHUB_ENV
+          echo "LLVM_INSTALL_BINDIR=$(brew --prefix llvm@16)" >> $GITHUB_ENV
 
       - name: "Build CLP-core and run unit tests"
         env: >-
           ${{
-          'macos-13' == matrix.runner
+          env.USE_LLVM_COMPILER
           && fromJson('{
-          "CC": "/usr/local/opt/llvm@16/bin/clang",
-          "CMAKE_AR": "/usr/local/opt/llvm@16/bin/llvm-ar",
-          "CMAKE_RANLIB": "/usr/local/opt/llvm@16/bin/llvm-ranlib",
-          "CXX": "/usr/local/opt/llvm@16/bin/clang++"
-          }')
-          || 'macos-14' == matrix.runner
-          && fromJson('{
-          "CC": "/opt/homebrew/opt/llvm@16/bin/clang",
-          "CMAKE_AR": "/usr/bin/ar",
-          "CMAKE_RANLIB": "/usr/bin/ranlib",
-          "CXX": "/opt/homebrew/opt/llvm@16/bin/clang++"
+          "CC": "${{ env.LLVM_INSTALL_BINDIR }}/clang",
+          "CMAKE_AR": "${{ env.LLVM_INSTALL_BINDIR }}/llvm-ar",
+          "CMAKE_RANLIB": "${{ env.LLVM_INSTALL_BINDIR }}/llvm-ranlib",
+          "CXX": "${{ env.LLVM_INSTALL_BINDIR }}/clang++"
           }')
           || fromJson('{}')
           }}
@@ -112,5 +97,5 @@ jobs:
           --build-dir build
           --num-jobs $(getconf _NPROCESSORS_ONLN)
           --test-spec "~[Stopwatch]"
-          ${{ env.CMAKE_AR != '' && format('--ar {0}', env.CMAKE_AR) || '' }}
-          ${{ env.CMAKE_RANLIB != '' && format('--ranlib {0}', env.CMAKE_RANLIB) || '' }}
+          ${{ env.USE_LLVM_COMPILER
+          && format('--ar {0} --ranlib {1}', env.CMAKE_AR, env.CMAKE_RANLIB) || '' }}

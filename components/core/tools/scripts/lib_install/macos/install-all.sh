@@ -16,7 +16,6 @@ brew install \
   go-task \
   java11 \
   libarchive \
-  llvm@16 \
   lz4 \
   mariadb-connector-c \
   mongo-cxx-driver \
