@@ -25,9 +25,6 @@ else()
     message(SEND_ERROR "GENERAL_COMPRESSOR=${GENERAL_COMPRESSOR} is unimplemented.")
 endif()
 
-message(STATUS "CMAKE_AR: ${CMAKE_AR}")
-message(STATUS "CMAKE_RANLIB: ${CMAKE_RANLIB}")
-
 # Add local CMake module directory to CMake's modules path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
