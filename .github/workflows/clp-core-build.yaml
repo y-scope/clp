@@ -333,4 +333,4 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            task lint:check${{(github.event_name == "schedule") && "-full" || ""}}
+            task lint:check${{ (github.event_name == "schedule") && "-full" || "" }}
