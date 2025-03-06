@@ -332,4 +332,5 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            task lint:check${{(github.event_name == 'schedule') && '-full' || ''}}
+            sudo apt install python3.10-venv
+            && task lint:check${{(github.event_name == 'schedule') && '-full' || ''}}
