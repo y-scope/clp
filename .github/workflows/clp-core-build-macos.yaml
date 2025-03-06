@@ -112,5 +112,5 @@ jobs:
           --build-dir build
           --num-jobs $(getconf _NPROCESSORS_ONLN)
           --test-spec "~[Stopwatch]"
-          ${{ env.CMAKE_AR != '' && format('--archive-tool {0}', env.CMAKE_AR) || '' }}
-          ${{ env.CMAKE_RANLIB != '' && format('--ranlib-tool {0}', env.CMAKE_RANLIB) || '' }}
+          ${{ env.CMAKE_AR != '' && format('--ar {0}', env.CMAKE_AR) || '' }}
+          ${{ env.CMAKE_RANLIB != '' && format('--ranlib {0}', env.CMAKE_RANLIB) || '' }}
