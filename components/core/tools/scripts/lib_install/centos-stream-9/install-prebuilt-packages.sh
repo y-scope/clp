@@ -6,6 +6,9 @@ set -e
 # Error on undefined variable
 set -u
 
+dnf search venv
+dnf search virtualenv
+
 dnf install -y \
     cmake \
     diffutils \
