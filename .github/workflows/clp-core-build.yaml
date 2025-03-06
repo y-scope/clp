@@ -313,9 +313,6 @@ jobs:
     needs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-deps-image"
-    env:
-      OS_NAME: "ubuntu-jammy"
-    name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v4"

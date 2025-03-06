@@ -7,15 +7,15 @@ vars:
 
 tasks:
   check:
-    cmds:
+    deps:
       - task: "cpp-check"
       - task: "js-check"
       - task: "py-check"
       - task: "yml-check"
 
-  check-full:
-    cmds:
-      - task: "cpp-check-full"
+  check-all:
+    deps:
+      - task: "cpp-check-all"
       - task: "js-check"
       - task: "py-check"
       - task: "yml-check"
@@ -32,10 +32,10 @@ tasks:
       - task: "cpp-format-check"
       - task: "cpp-static-check-diff"
 
-  cpp-check:
+  cpp-check-all:
     cmds:
       - task: "cpp-format-check"
-      - task: "cpp-static-check-full"
+      - task: "cpp-static-check-all"
 
   cpp-fix:
     cmds:
