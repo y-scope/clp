@@ -158,6 +158,7 @@ tasks:
           #     src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
           #     src/clp/ir/EncodedTextAst.cpp
           #     tests/test-ffi_IrUnitHandlerInterface.cpp
+          # yamllint disable rule:line-length
           EXCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ArrayBackedPosIntSet.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/aws/AwsAuthenticationSigner.cpp"
@@ -717,9 +718,10 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/tests/test-TimestampPattern.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/tests/test-utf8_utils.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/tests/test-Utils.cpp"
+          # yamllint enable rule:line-length
           FLAGS:
-            - --config-file "{{.ROOT_DIR}}/.clang-tidy"
-            - -p "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+            - "--config-file \"{{.ROOT_DIR}}/.clang-tidy\""
+            - "-p \"{{.G_CORE_COMPONENT_BUILD_DIR}}\""
           INCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/*"
             - "{{.G_CORE_COMPONENT_DIR}}/tests/*"
@@ -737,8 +739,8 @@ tasks:
       - task: ":utils:cpp-lint:clang-tidy-diff"
         vars:
           FLAGS:
-            - --config-file "{{.ROOT_DIR}}/.clang-tidy"
-            - -p "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+            - "--config-file \"{{.ROOT_DIR}}/.clang-tidy\""
+            - "-p \"{{.G_CORE_COMPONENT_BUILD_DIR}}\""
           OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
