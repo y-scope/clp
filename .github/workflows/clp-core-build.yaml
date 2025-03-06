@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/actions/clp-core-image-run/action.yaml"
+      - ".github/actions/clp-core-run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -15,7 +15,7 @@ on:
   push:
     paths:
       - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/actions/clp-core-image-run/action.yaml"
+      - ".github/actions/clp-core-run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -163,7 +163,7 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-image-run"
+      - uses: "./.github/actions/clp-core-run-on-image"
         env:
           OS_NAME: "centos-stream-9"
         with:
@@ -208,7 +208,7 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-image-run"
+      - uses: "./.github/actions/clp-core-run-on-image"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-

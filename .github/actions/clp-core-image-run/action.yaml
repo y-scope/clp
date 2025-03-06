@@ -1,4 +1,4 @@
-name: "clp-core-image-run"
+name: "clp-core-run-on-image"
 description: "Runs a command inside a downloaded/published container image with the repo mounted"
 
 inputs:
