@@ -57,24 +57,31 @@ jobs:
           echo "USE_LLVM_COMPILER=true" >> $GITHUB_ENV
           echo "LLVM_INSTALL_BINDIR=$(brew --prefix llvm@16)" >> $GITHUB_ENV
 
-      - name: "Test env var"
+      - name: "Build CLP-core and run unit tests"
         env: >-
           ${{
           env.USE_LLVM_COMPILER
           && fromJson('{
-          "CC": "$LLVM_INSTALL_BINDIR/clang",
-          "CMAKE_AR": "$LLVM_INSTALL_BINDIR/llvm-ar",
-          "CMAKE_RANLIB": "$LLVM_INSTALL_BINDIR/llvm-ranlib",
-          "CXX": "$LLVM_INSTALL_BINDIR/clang++"
+          "CC": "${{ env.LLVM_INSTALL_BINDIR }}/clang",
+          "CXX": "${{ env.LLVM_INSTALL_BINDIR }}/clang++"
           }')
           || fromJson('{}')
           }}
         shell: "bash"
-        run: |
-          echo CC=$CC
-          echo CXX=$CXX
-          echo AR=$CMAKE_AR
-          echo RANLIB=$CMAKE_RANLIB
+        working-directory: "./components/core"
+        # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
+        run: >-
+          python3 ./tools/scripts/utils/build-and-run-unit-tests.py
+          ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+          --source-dir .
+          --build-dir build
+          --num-jobs $(getconf _NPROCESSORS_ONLN)
+          --test-spec "~[Stopwatch]"
+          ${{ env.USE_LLVM_COMPILER == 'true'
+          && format('--ar {0} --ranlib {1}',
+          'env.LLVM_INSTALL_BINDIR/llvm-ar',
+          'env.LLVM_INSTALL_BINDIR/llvm-ranlib')
+          || ''}}
 
       # See https://github.com/actions/setup-python/issues/577
       - name: "Remove preinstalled binaries which conflict with brew's installs"
@@ -93,28 +100,3 @@ jobs:
 
       - run: "task deps:core"
         shell: "bash"
-
-      - name: "Build CLP-core and run unit tests"
-        env: >-
-          ${{
-          env.USE_LLVM_COMPILER
-          && fromJson('{
-          "CC": "${{ env.LLVM_INSTALL_BINDIR }}/clang",
-          "CMAKE_AR": "${{ env.LLVM_INSTALL_BINDIR }}/llvm-ar",
-          "CMAKE_RANLIB": "${{ env.LLVM_INSTALL_BINDIR }}/llvm-ranlib",
-          "CXX": "${{ env.LLVM_INSTALL_BINDIR }}/clang++"
-          }')
-          || fromJson('{}')
-          }}
-        shell: "bash"
-        working-directory: "./components/core"
-        # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
-        run: >-
-          python3 ./tools/scripts/utils/build-and-run-unit-tests.py
-          ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
-          --source-dir .
-          --build-dir build
-          --num-jobs $(getconf _NPROCESSORS_ONLN)
-          --test-spec "~[Stopwatch]"
-          ${{ env.USE_LLVM_COMPILER
-          && format('--ar {0} --ranlib {1}', env.CMAKE_AR, env.CMAKE_RANLIB) || '' }}
