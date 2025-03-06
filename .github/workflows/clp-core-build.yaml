@@ -172,8 +172,8 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            task deps:core &&
-            python3 /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            task deps:core
+            && python3 /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.py
             ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
             --source-dir /mnt/clp/components/core
             --build-dir /mnt/clp/components/core/build
@@ -215,14 +215,14 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            task deps:core &&
-            python3 /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            task deps:core
+            && python3 /mnt/clp/components/core/tools/scripts/utils/build-and-run-unit-tests.py
             ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
             --source-dir /mnt/clp/components/core
             --build-dir /mnt/clp/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      - if: "${{matrix.upload_binaries}}"
+      - if: "matrix.upload_binaries == 'true'"
         id: "copy_binaries"
         run: |-
           output_dir="/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
@@ -233,7 +233,7 @@ jobs:
           tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
         shell: "bash"
 
-      - if: "${{matrix.upload_binaries}}"
+      - if: "matrix.upload_binaries == 'true'"
         uses: "actions/upload-artifact@v4"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"

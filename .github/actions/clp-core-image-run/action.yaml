@@ -1,5 +1,5 @@
 name: "clp-core-image-run"
-description: "Builds CLP-core in the specified container"
+description: "Runs a command inside a downloaded/published container image with the repo mounted"
 
 inputs:
   image_name:
@@ -9,7 +9,7 @@ inputs:
     description: "Whether to use the published container image"
     required: true
   run_command:
-    description: "Bash script executed inside docker run"
+    description: "Command to execute"
     required: true
 
 runs:
