@@ -79,8 +79,8 @@ jobs:
           --test-spec "~[Stopwatch]"
           ${{ env.USE_LLVM_COMPILER == 'true'
           && format('--ar {0} --ranlib {1}',
-          'env.LLVM_INSTALL_BINDIR/llvm-ar',
-          'env.LLVM_INSTALL_BINDIR/llvm-ranlib')
+          env.LLVM_INSTALL_BINDIR/llvm-ar,
+          env.LLVM_INSTALL_BINDIR/llvm-ranlib)
           || ''}}
 
       # See https://github.com/actions/setup-python/issues/577
