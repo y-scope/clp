@@ -21,7 +21,13 @@ root_logger.addHandler(logging_console_handler)
 logger = logging.getLogger(__name__)
 
 
-def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool):
+def _config_cmake_project(
+    src_dir: Path,
+    build_dir: Path,
+    use_shared_libs: bool,
+    ar: Optional[Path],
+    ranlib: Optional[Path],
+):
     cmd = [
         "cmake",
         "-S",
@@ -31,6 +37,10 @@ def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool)
     ]
     if use_shared_libs:
         cmd.append("-DCLP_USE_STATIC_LIBS=OFF")
+    if ar:
+        cmd.append(f"-DCMAKE_AR={ar}")
+    if ranlib:
+        cmd.append(f"-DCMAKE_RANLIB={ranlib}")
     subprocess.run(cmd, check=True)
 
 
@@ -82,6 +92,8 @@ def main(argv: List[str]) -> int:
         "--num-jobs", type=int, help="Max number of jobs to run when building."
     )
     args_parser.add_argument("--test-spec", help="Catch2 test specification.")
+    args_parser.add_argument("--ar", help="Archiver tool to use.")
+    args_parser.add_argument("--ranlib", help="Ranlib indexing tool to use.")
 
     parsed_args = args_parser.parse_args(argv[1:])
     src_dir: Path = Path(parsed_args.source_dir)
@@ -89,8 +101,10 @@ def main(argv: List[str]) -> int:
     use_shared_libs: bool = parsed_args.use_shared_libs
     num_jobs: Optional[int] = parsed_args.num_jobs
     test_spec: Optional[str] = parsed_args.test_spec
+    ar: Optional[Path] = parsed_args.ar
+    ranlib: Optional[Path] = parsed_args.ranlib
 
-    _config_cmake_project(src_dir, build_dir, use_shared_libs)
+    _config_cmake_project(src_dir, build_dir, use_shared_libs, ar, ranlib)
     _build_project(build_dir, num_jobs)
     _run_unit_tests(build_dir, test_spec)
 
