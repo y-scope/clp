@@ -816,6 +816,7 @@ tasks:
       - "{{.TASKFILE}}"
       - "lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]
+    run: "once"
     deps:
       - ":init"
       - task: ":utils:checksum:validate"

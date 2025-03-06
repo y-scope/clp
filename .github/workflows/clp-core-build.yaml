@@ -324,6 +324,8 @@ jobs:
         shell: "bash"
 
       - uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
