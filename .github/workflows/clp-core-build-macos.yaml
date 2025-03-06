@@ -41,13 +41,34 @@ jobs:
   build-macos:
     strategy:
       matrix:
-        os: ["macos-13", "macos-14"]
+        os:
+          - "macos-13"
+          - "macos-14"
+          - "macos-15"
         use_shared_libs: [true, false]
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
         with:
           submodules: "recursive"
+
+      # See https://github.com/actions/setup-python/issues/577
+      - name: "Remove preinstalled binaries which conflict with brew's installs"
+        run: |
+          rm -f /usr/local/bin/2to3*
+          rm -f /usr/local/bin/go*
+          rm -f /usr/local/bin/idle3*
+          rm -f /usr/local/bin/pydoc3*
+          rm -f /usr/local/bin/python3*
+
+      - name: "Install dependencies"
+        run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
+
+      - run: "./tools/scripts/deps-download/init.sh"
+        shell: "bash"
+
+      - run: "task deps:core"
+        shell: "bash"
 
       - if: "'macos-13' == matrix.os || 'macos-14' == matrix.os"
         name: "Upgrade the default AppleClang to LLVM Clang for C++20 features"
@@ -81,21 +102,3 @@ jobs:
           "--ar ${{ env.LLVM_INSTALL_BINDIR }}/llvm-ar"
           "--ranlib ${{ env.LLVM_INSTALL_BINDIR }}/llvm-ranlib"
           )
-
-      # See https://github.com/actions/setup-python/issues/577
-      - name: "Remove preinstalled binaries which conflict with brew's installs"
-        run: |
-          rm -f /usr/local/bin/2to3*
-          rm -f /usr/local/bin/go*
-          rm -f /usr/local/bin/idle3*
-          rm -f /usr/local/bin/pydoc3*
-          rm -f /usr/local/bin/python3*
-
-      - name: "Install dependencies"
-        run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
-
-      - run: "./tools/scripts/deps-download/init.sh"
-        shell: "bash"
-
-      - run: "task deps:core"
-        shell: "bash"
