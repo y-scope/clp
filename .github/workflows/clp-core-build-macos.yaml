@@ -78,3 +78,14 @@ jobs:
           --build-dir build
           --num-jobs $(getconf _NPROCESSORS_ONLN)
           --test-spec "~[Stopwatch]"
+
+      - run: >-
+          task lint:check${{(github.event_name == "schedule") && "-full" || ""}}
+        shell: "bash"
+      # - if: "${{ github.event_name == 'schedule' }}"
+      #   run: "task lint:check-full"
+      #   shell: "bash"
+
+      # - if: "${{ github.event_name != 'schedule' }}"
+      #   run: "task lint:check"
+      #   shell: "bash"
