@@ -80,7 +80,7 @@ jobs:
           --test-spec "~[Stopwatch]"
 
       - run: >-
-          task lint:check${{ (github.event_name == "schedule") && "-full" || "" }}
+          task lint:check${{(github.event_name == 'schedule') && '-full' || ''}}
         shell: "bash"
       # - if: "${{ github.event_name == 'schedule' }}"
       #   run: "task lint:check-full"
