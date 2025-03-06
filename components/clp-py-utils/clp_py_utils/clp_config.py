@@ -3,7 +3,7 @@ from enum import auto
 from typing import Literal, Optional, Tuple, Union
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, PrivateAttr, validator
+from pydantic import BaseModel, PrivateAttr, root_validator, validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -355,6 +355,17 @@ class S3Config(BaseModel):
         if not field.endswith("/"):
             raise ValueError('key_prefix must end with "/"')
         return field
+
+    @root_validator(pre=True)
+    def check_profile_and_credentials(cls, values):
+        profile = values.get("profile")
+        credentials = values.get("credentials")
+
+        if profile and credentials:
+            raise ValueError("profile and credentials cannot be set simultaneously")
+        elif not profile and not credentials:
+            raise ValueError("one of either profile or credentials must be set")
+        return values
 
     def get_profile(self) -> Optional[str]:
         return self.profile

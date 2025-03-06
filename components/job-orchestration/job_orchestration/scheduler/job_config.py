@@ -38,6 +38,14 @@ class S3InputConfig(BaseModel):
     profile: typing.Optional[str] = None
     credentials: typing.Optional[S3Credentials] = None
 
+    def get_profile(self) -> typing.Optional[str]:
+        return self.profile
+
+    def get_credentials(self) -> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
+        if self.credentials is None:
+            return None, None
+        return self.credentials.access_key_id, self.credentials.secret_access_key
+
 
 class OutputConfig(BaseModel):
     tags: typing.Optional[typing.List[str]] = None

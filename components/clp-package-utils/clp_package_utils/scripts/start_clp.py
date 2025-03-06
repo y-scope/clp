@@ -545,9 +545,10 @@ def start_query_scheduler(
 ):
     module_name = "job_orchestration.scheduler.query.query_scheduler"
     query_scheduler_mount = None
-    if StorageType.S3 == clp_config.archive_output.storage.type:
-        query_scheduler_mount = mounts.aws_config_dir
-    elif StorageType.S3 == clp_config.stream_output.storage.type:
+    if (
+        StorageType.S3 == clp_config.archive_output.storage.type
+        or StorageType.S3 == clp_config.stream_output.storage.type
+    ):
         query_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         QUERY_SCHEDULER_COMPONENT_NAME,

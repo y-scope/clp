@@ -1,6 +1,7 @@
+import os
 import re
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import boto3
 from botocore.config import Config
@@ -13,7 +14,12 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def get_session_credentials(aws_profile: str = "default") -> Optional[S3Credentials]:
+def get_session_credentials(aws_profile: str) -> Optional[S3Credentials]:
+    """
+    Generates AWS credentials created by boto3 when starting a session with given profile.
+    :param aws_profile: Name of profile configured in ~/.aws directory
+    :return: An S3Credentials object with access key pair and session token if applicable.
+    """
     aws_session = boto3.Session(profile_name=aws_profile)
     credentials = aws_session.get_credentials()
     if credentials is None:
@@ -24,6 +30,43 @@ def get_session_credentials(aws_profile: str = "default") -> Optional[S3Credenti
         secret_access_key=credentials.secret_key,
         session_token=credentials.token,
     )
+
+
+def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
+    """
+    Generates AWS credential environment variables for tasks.
+    :param config: S3Config or S3InputConfig from which to retrieve credentials.
+    :return: A [str, str] Dict which access key pair and session token if applicable.
+    :raise: ValueError if `credentials` and `profile` are both `None`
+    """
+    env_vars: Dict[str, str] = None
+
+    if config.get_profile() is not None:
+        aws_credentials: S3Credentials = get_session_credentials(config.get_profile())
+        if aws_credentials is None:
+            return None
+
+        env_vars = {
+            **os.environ,
+            "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
+            "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
+        }
+        aws_session_token = aws_credentials.session_token
+        if aws_session_token is not None:
+            env_vars["AWS_SESSION_TOKEN"] = aws_session_token
+        return env_vars
+
+    elif config.credentials is not None:
+        aws_access_key_id, aws_secret_access_key = config.get_credentials()
+        env_vars = {
+            **os.environ,
+            "AWS_ACCESS_KEY_ID": aws_access_key_id,
+            "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+        }
+        return env_vars
+
+    else:
+        raise ValueError("No AWS credential source found")
 
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
@@ -87,22 +130,18 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
-    aws_profile = s3_input_config.profile
-
-    if aws_profile is None and s3_input_config.credentials is None:
-        raise ValueError("AWS credentials are not provided")
-
     aws_session = None
-    if aws_profile is not None:
-        aws_session = boto3.Session(profile_name=aws_profile)
-    else:
-        aws_access_key_id = s3_input_config.credentials.access_key_id
-        aws_secret_access_key = s3_input_config.credentials.secret_access_key
+    if s3_input_config.profile is not None:
+        aws_session = boto3.Session(profile_name=s3_input_config.get_profile())
+    elif s3_input_config.credentials is not None:
+        aws_access_key_id, aws_secret_access_key = s3_input_config.get_credentials()
         aws_session = boto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             region_name=s3_input_config.region_code,
         )
+    else:
+        raise ValueError("No AWS credential soruce found")
 
     s3_client = aws_session.client(
         "s3",
@@ -154,9 +193,6 @@ def s3_put(
 
     aws_profile = s3_config.get_profile()
     aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
-
-    if aws_profile is None and (aws_access_key_id is None or aws_secret_access_key is None):
-        raise ValueError("AWS credentials are not provided")
 
     aws_session = None
     if aws_profile is not None:
