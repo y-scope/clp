@@ -49,6 +49,33 @@ jobs:
         with:
           submodules: "recursive"
 
+      - if: "'macos-13' == matrix.os || 'macos-14' == matrix.os"
+        name: "Upgrade the default AppleClang to LLVM Clang for C++20 features"
+        shell: "bash"
+        run: |
+          brew install llvm@16
+          echo "USE_LLVM_COMPILER=true" >> $GITHUB_ENV
+          echo "LLVM_INSTALL_BINDIR=$(brew --prefix llvm@16)" >> $GITHUB_ENV
+
+      - name: "Test env var"
+        env: >-
+          ${{
+          env.USE_LLVM_COMPILER
+          && fromJson('{
+          "CC": "$LLVM_INSTALL_BINDIR/clang",
+          "CMAKE_AR": "$LLVM_INSTALL_BINDIR/llvm-ar",
+          "CMAKE_RANLIB": "$LLVM_INSTALL_BINDIR/llvm-ranlib",
+          "CXX": "$LLVM_INSTALL_BINDIR/clang++"
+          }')
+          || fromJson('{}')
+          }}
+        shell: "bash"
+        run: |
+          echo CC=$CC
+          echo CXX=$CXX
+          echo AR=$CMAKE_AR
+          echo RANLIB=$CMAKE_RANLIB
+
       # See https://github.com/actions/setup-python/issues/577
       - name: "Remove preinstalled binaries which conflict with brew's installs"
         run: |
@@ -66,14 +93,6 @@ jobs:
 
       - run: "task deps:core"
         shell: "bash"
-
-      - if: "'macos-13' == matrix.os || 'macos-14' == matrix.os"
-        name: "Upgrade the default AppleClang to LLVM Clang for C++20 features"
-        shell: "bash"
-        run: |
-          brew install llvm@16
-          echo "USE_LLVM_COMPILER=true" >> $GITHUB_ENV
-          echo "LLVM_INSTALL_BINDIR=$(brew --prefix llvm@16)" >> $GITHUB_ENV
 
       - name: "Build CLP-core and run unit tests"
         env: >-
