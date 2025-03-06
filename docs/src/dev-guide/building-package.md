@@ -5,8 +5,8 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 
 ## Requirements
 
-* An x86_64 Ubuntu 20.04 (Focal) machine or container
-  * At runtime, the CLP package uses an Ubuntu Focal container, so we need to build in a matching
+* An x86_64 Ubuntu 22.04 (Jammy) machine or container
+  * At runtime, the CLP package uses an Ubuntu Jammy container, so we need to build in a matching
     environment.
   * It should be possible to build a package for a different environment, it just requires a some
     extra configuration.
@@ -26,7 +26,7 @@ tools/scripts/deps-download/init.sh
 Install CLP core's dependencies
 
 ```shell
-components/core/tools/scripts/lib_install/ubuntu-focal/install-all.sh
+components/core/tools/scripts/lib_install/ubuntu-jammy/install-all.sh
 ```
 
 ## Build
