@@ -42,7 +42,7 @@ jobs:
     strategy:
       matrix:
         runner: ["macos-13", "macos-14"]
-        use_shared_libs: [true]
+        use_shared_libs: [true, false]
     runs-on: "${{matrix.runner}}"
     steps:
       - uses: "actions/checkout@v4"
@@ -72,11 +72,14 @@ jobs:
           echo "-----------------"
           ls /opt/homebrew/opt/llvm@16/bin/llvm-ar || true
           ls /opt/homebrew/opt/llvm@16/bin/llvm-ranlib || true
+          ls /opt/homebrew/opt/llvm@16/bin/llvm-ar -V || true
           echo "-----------------"
           ls /usr/local/opt/llvm@16/bin/llvm-ar || true
           ls /usr/local/opt/llvm@16/bin/llvm-ranlib || true
+          ls /usr/local/opt/llvm@16/bin/llvm-ar -V || true
           echo "-----------------"
           ls -l /usr/bin/ar
+          /usr/bin/ar -V || true
           ls -l /usr/bin/ranlib
           echo "-----------------"
 
