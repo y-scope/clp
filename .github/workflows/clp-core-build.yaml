@@ -3,8 +3,8 @@ name: "clp-core-build"
 on:
   pull_request:
     paths:
-      - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/actions/run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -14,8 +14,8 @@ on:
       - "!components/core/tools/scripts/lib_install/macos/**"
   push:
     paths:
-      - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/actions/run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -163,16 +163,21 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-build"
+      - uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "centos-stream-9"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "false"
+          run_command: >-
+            task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
 
   ubuntu-jammy-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
@@ -189,6 +194,8 @@ jobs:
             upload_binaries: false
           - use_shared_libs: false
             upload_binaries: true
+    env:
+      OS_NAME: "ubuntu-jammy"
     name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
@@ -201,17 +208,37 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-build"
-        env:
-          OS_NAME: "ubuntu-jammy"
+      - uses: "./.github/actions/run-on-image"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "${{matrix.upload_binaries}}"
-          binaries_artifact_name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          run_command: >-
+            task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
+
+      - if: "matrix.upload_binaries == 'true'"
+        id: "copy_binaries"
+        run: |-
+          output_dir="/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p "${output_dir}"
+          cd "$GITHUB_WORKSPACE/components/core/build"
+          tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
+        shell: "bash"
+
+      - if: "matrix.upload_binaries == 'true'"
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{steps.copy_binaries.outputs.output_dir}}"
+          retention-days: 1
 
   ubuntu-jammy-binaries-image:
     # Run if the ancestor jobs were successful/skipped, building clp was successful, and this is a
