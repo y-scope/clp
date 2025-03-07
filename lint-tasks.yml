@@ -7,27 +7,27 @@ vars:
 tasks:
   check:
     cmds:
-      - task: "cpp-check"
-      - task: "js-check"
-      - task: "py-check"
-      - task: "yml-check"
+      - task: "check-cpp"
+      - task: "check-js"
+      - task: "check-py"
+      - task: "check-yaml"
 
   fix:
     cmds:
-      - task: "cpp-fix"
-      - task: "js-fix"
-      - task: "py-fix"
-      - task: "yml-fix"
+      - task: "fix-cpp"
+      - task: "fix-js"
+      - task: "fix-py"
+      - task: "fix-yaml"
 
-  cpp-check:
+  check-cpp:
     cmds:
-      - task: "cpp-format-check"
+      - task: "check-cpp-format"
 
-  cpp-fix:
+  fix-cpp:
     cmds:
-      - task: "cpp-format-fix"
+      - task: "fix-cpp-format"
 
-  js-check:
+  check-js:
     sources: &js_source_files
       - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
       - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
@@ -56,31 +56,31 @@ tasks:
         vars:
           LINT_CMD: "check"
 
-  js-fix:
+  fix-js:
     sources: *js_source_files
     cmds:
       - task: "js"
         vars:
           LINT_CMD: "fix"
 
-  py-check:
+  check-py:
     cmds:
       - task: "py"
         vars:
           BLACK_FLAGS: "--check --diff"
           RUFF_FLAGS: ""
 
-  py-fix:
+  fix-py:
     cmds:
       - task: "py"
         vars:
           BLACK_FLAGS: ""
           RUFF_FLAGS: "--fix"
 
-  yml:
+  yaml:
     aliases:
-      - "yml-check"
-      - "yml-fix"
+      - "check-yaml"
+      - "fix-yaml"
     deps: ["venv"]
     cmds:
       - |-
@@ -96,7 +96,7 @@ tasks:
           lint-tasks.yml \
           Taskfile.yml
 
-  cpp-format-check:
+  check-cpp-format:
     sources: &cpp_source_files
       - "{{.ROOT_DIR}}/.clang-format"
       - "{{.ROOT_DIR}}/.clang-tidy"
@@ -113,7 +113,7 @@ tasks:
           ROOT_PATHS: *cpp_source_files
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
-  cpp-format-fix:
+  fix-cpp-format:
     sources: *cpp_source_files
     deps: ["cpp-lint-configs", "venv"]
     cmds:
