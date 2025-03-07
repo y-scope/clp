@@ -248,10 +248,14 @@ public:
      * descriptor is tokenized and unescaped per the escaping rules for KQL columns.
      * @param descriptor
      * @param tokens
+     * @param descriptor_namespace
      * @return true if the descriptor was tokenized successfully, false otherwise
      */
-    [[nodiscard]] static bool
-    tokenize_column_descriptor(std::string const& descriptor, std::vector<std::string>& tokens);
+    [[nodiscard]] static bool tokenize_column_descriptor(
+            std::string const& descriptor,
+            std::vector<std::string>& tokens,
+            std::string& descriptor_namespace
+    );
 
     /**
      * Escapes a string according to JSON string escaping rules and appends the escaped string to
