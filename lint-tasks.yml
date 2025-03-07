@@ -7,25 +7,11 @@ vars:
 
 tasks:
   check:
-    cmds:
+    deps:
       - task: "check-cpp-diff"
       - task: "check-js"
       - task: "check-py"
       - task: "check-yaml"
-
-  check-full:
-    deps:
-      - task: "check-cpp-full"
-      - task: "check-js"
-      - task: "check-py"
-      - task: "check-yaml"
-
-  fix:
-    cmds:
-      - task: "fix-cpp"
-      - task: "fix-js"
-      - task: "fix-py"
-      - task: "fix-yaml"
 
   check-cpp-diff:
     cmds:
@@ -36,6 +22,19 @@ tasks:
     cmds:
       - task: "check-cpp-format"
       - task: "check-cpp-static-full"
+
+  check-no-cpp:
+    deps:
+      - task: "check-js"
+      - task: "check-py"
+      - task: "check-yaml"
+
+  fix:
+    cmds:
+      - task: "fix-cpp"
+      - task: "fix-js"
+      - task: "fix-py"
+      - task: "fix-yaml"
 
   fix-cpp:
     cmds:
