@@ -21,6 +21,3 @@ dnf install -y \
     openssl-devel \
     python3-pip \
     xz-devel
-
-pip3 install --upgrade pip
-pip3 install clang-tidy
