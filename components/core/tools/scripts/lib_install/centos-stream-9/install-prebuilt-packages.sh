@@ -6,9 +6,6 @@ set -e
 # Error on undefined variable
 set -u
 
-dnf search venv
-dnf search virtualenv
-
 dnf install -y \
     cmake \
     diffutils \
@@ -22,5 +19,8 @@ dnf install -y \
     make \
     mariadb-connector-c-devel \
     openssl-devel \
-    python3-virtualenv \
+    python3-pip \
     xz-devel
+
+pip3 install --upgrade pip
+pip3 install clang-tidy
