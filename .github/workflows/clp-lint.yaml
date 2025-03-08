@@ -24,6 +24,11 @@ jobs:
         with:
           submodules: "recursive"
 
+      - name: "DEBUG"
+        shell: "bash"
+        run: |-
+          git diff --name-only --ignore-submodules "origin/HEAD" -- **/*.{cpp,h,hpp}
+
       - uses: "actions/setup-python@v5"
         with:
           python-version: "3.11"
