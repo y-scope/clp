@@ -28,6 +28,7 @@ jobs:
         shell: "bash"
         run: |-
           git branch -avvv
+          git fetch origin
           git diff --name-only --ignore-submodules "origin/main" -- **/*.{cpp,h,hpp}
 
       - uses: "actions/setup-python@v5"
