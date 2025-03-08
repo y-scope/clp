@@ -241,14 +241,8 @@ jobs:
           retention-days: 1
 
   ubuntu-jammy-binaries-image:
-    # Run if the ancestor jobs were successful/skipped, building clp was successful, and this is a
-    # push to `main`.
-    if: >-
-      !cancelled()
-      && !failure()
-      && needs.ubuntu-jammy-binaries.result == 'success'
-      && github.event_name == 'push'
-      && github.ref == 'refs/heads/main'
+    # Run if the ancestor jobs were successful/skipped and building clp was successful.
+    if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
     runs-on: "ubuntu-latest"
     env:
@@ -297,7 +291,10 @@ jobs:
             ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
           tags: "type=raw,value=${{github.ref_name}}"
 
-      - uses: "docker/build-push-action@v5"
+      # Only publish the image if this workflow was triggered by a push to `main`.
+      # NOTE: We run the rest of the job to test that the binaries were uploaded correctly.
+      - if: "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+        uses: "docker/build-push-action@v5"
         with:
           context: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
