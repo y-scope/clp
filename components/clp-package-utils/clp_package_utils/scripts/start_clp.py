@@ -29,9 +29,11 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    S3Credentials,
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
+from clp_py_utils.s3_utils import get_session_credentials
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
 
@@ -521,6 +523,9 @@ def start_compression_scheduler(
     mounts: CLPDockerMounts,
 ):
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
+    compression_scheduler_mount = None
+    if StorageType.S3 == clp_config.archive_output.storage.type:
+        compression_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -528,6 +533,7 @@ def start_compression_scheduler(
         clp_config,
         container_clp_config,
         mounts,
+        compression_scheduler_mount,
     )
 
 
@@ -538,6 +544,12 @@ def start_query_scheduler(
     mounts: CLPDockerMounts,
 ):
     module_name = "job_orchestration.scheduler.query.query_scheduler"
+    query_scheduler_mount = None
+    if (
+        StorageType.S3 == clp_config.archive_output.storage.type
+        or StorageType.S3 == clp_config.stream_output.storage.type
+    ):
+        query_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         QUERY_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -545,6 +557,7 @@ def start_query_scheduler(
         clp_config,
         container_clp_config,
         mounts,
+        query_scheduler_mount,
     )
 
 
@@ -555,6 +568,7 @@ def generic_start_scheduler(
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
+    scheduler_specific_mount: Optional[DockerMount],
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -597,9 +611,9 @@ def generic_start_scheduler(
         "--mount", str(mounts.clp_home),
     ]
     # fmt: on
-    necessary_mounts = [
-        mounts.logs_dir,
-    ]
+    necessary_mounts = [mounts.logs_dir]
+    if scheduler_specific_mount:
+        necessary_mounts.append(scheduler_specific_mount)
     if COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
         necessary_mounts.append(mounts.input_logs_dir)
     for mount in necessary_mounts:
@@ -631,6 +645,8 @@ def start_compression_worker(
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
+    if StorageType.S3 == clp_config.archive_output.storage.type:
+        compression_worker_mounts.append(mounts.aws_config_dir)
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -657,7 +673,11 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mounts = [mounts.stream_output_dir]
-    if clp_config.archive_output.storage.type == StorageType.FS:
+    if StorageType.S3 == clp_config.stream_output.storage.type:
+        query_worker_mounts.append(mounts.aws_config_dir)
+    elif StorageType.S3 == clp_config.archive_output.storage.type:
+        query_worker_mounts.append(mounts.aws_config_dir)
+    if StorageType.FS == clp_config.archive_output.storage.type:
         query_worker_mounts.append(mounts.archives_output_dir)
 
     generic_start_worker(
@@ -942,15 +962,30 @@ def start_log_viewer_webui(
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
 
-        access_key_id, secret_access_key = s3_config.get_credentials()
-        container_cmd_extra_opts.extend(
-            (
-                "-e",
-                f"AWS_ACCESS_KEY_ID={access_key_id}",
-                "-e",
-                f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+        if s3_config.credentials is not None:
+            access_key_id, secret_access_key = s3_config.get_credentials()
+            container_cmd_extra_opts.extend(
+                (
+                    "-e",
+                    f"AWS_ACCESS_KEY_ID={access_key_id}",
+                    "-e",
+                    f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+                )
             )
-        )
+        else:
+            aws_credentials: S3Credentials = get_session_credentials(s3_config.profile)
+            if aws_credentials is None:
+                raise ValueError("AWS credentials not found")
+            container_cmd_extra_opts.extend(
+                (
+                    "-e",
+                    f"AWS_ACCESS_KEY_ID={aws_credentials.access_key_id}",
+                    "-e",
+                    f"AWS_SECRET_ACCESS_KEY={aws_credentials.secret_access_key}",
+                    "-e",
+                    f"AWS_SESSION_TOKEN={aws_credentials.session_token}",
+                )
+            )
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
