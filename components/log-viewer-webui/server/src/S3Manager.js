@@ -64,7 +64,6 @@ class S3Manager {
 export default fastifyPlugin(async (app, options) => {
     const {region, profile} = options;
     if (!region || !profile) {
-        console.log("No profile or region")
         return;
     }
 
