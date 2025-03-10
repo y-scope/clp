@@ -151,7 +151,7 @@ jobs:
     strategy:
       matrix:
         use_shared_libs: [true, false]
-    name: "centos-stream-9-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    name: "centos-stream-9-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
@@ -174,7 +174,7 @@ jobs:
           run_command: >-
             task deps:core
             && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
-            ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
             --source-dir /mnt/repo/components/core
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
@@ -196,7 +196,7 @@ jobs:
             upload_binaries: true
     env:
       OS_NAME: "ubuntu-jammy"
-    name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    name: "ubuntu-jammy-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
@@ -217,12 +217,12 @@ jobs:
           run_command: >-
             task deps:core
             && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
-            ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
             --source-dir /mnt/repo/components/core
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
-      - if: "matrix.upload_binaries == 'true'"
+      - if: "matrix.upload_binaries == true"
         id: "copy_binaries"
         run: |-
           output_dir="/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
@@ -233,7 +233,7 @@ jobs:
           tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
         shell: "bash"
 
-      - if: "matrix.upload_binaries == 'true'"
+      - if: "matrix.upload_binaries == true"
         uses: "actions/upload-artifact@v4"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
@@ -241,14 +241,8 @@ jobs:
           retention-days: 1
 
   ubuntu-jammy-binaries-image:
-    # Run if the ancestor jobs were successful/skipped, building clp was successful, and this is a
-    # push to `main`.
-    if: >-
-      !cancelled()
-      && !failure()
-      && needs.ubuntu-jammy-binaries.result == 'success'
-      && github.event_name == 'push'
-      && github.ref == 'refs/heads/main'
+    # Run if the ancestor jobs were successful/skipped and building clp was successful.
+    if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
     runs-on: "ubuntu-latest"
     env:
@@ -297,7 +291,10 @@ jobs:
             ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
           tags: "type=raw,value=${{github.ref_name}}"
 
-      - uses: "docker/build-push-action@v5"
+      # Only publish the image if this workflow was triggered by a push to `main`.
+      # NOTE: We run the rest of the job to test that the binaries were uploaded correctly.
+      - if: "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+        uses: "docker/build-push-action@v5"
         with:
           context: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
