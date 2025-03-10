@@ -22,14 +22,14 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
         with:
+          fetch-depth: 0
           submodules: "recursive"
 
       - name: "DEBUG"
         shell: "bash"
         run: |-
           git branch -avvv
-          git fetch origin
-          git diff --name-only --ignore-submodules "origin/main" -- **/*.{cpp,h,hpp}
+          git diff --name-only --ignore-submodules "origin/HEAD" -- **/*.{cpp,h,hpp}
 
       - uses: "actions/setup-python@v5"
         with:
