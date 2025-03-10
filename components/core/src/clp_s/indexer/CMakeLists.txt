@@ -87,6 +87,7 @@ target_link_libraries(indexer
         Boost::iostreams Boost::program_options Boost::url
         ${CURL_LIBRARIES}
         clp::string_utils
+	clp_s::search::ast
         MariaDBClient::MariaDBClient
         OpenSSL::Crypto
         simdjson
