@@ -151,8 +151,8 @@ tasks:
       - task: ":utils:cpp-lint:clang-tidy-diff"
         vars:
           FLAGS:
-            - "--config-file \"{{.ROOT_DIR}}/.clang-tidy\""
-            - "-p \"{{.G_CORE_COMPONENT_BUILD_DIR}}\""
+            - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
           OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
@@ -165,13 +165,14 @@ tasks:
     cmds:
       - task: ":utils:cpp-lint:clang-tidy-find"
         vars:
-          # Note, the following files only error is a circular header by including
-          # decoding_methods.hpp (due to decoding_methods.inc):
-          #     src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
-          #     src/clp/ffi/ir_stream/IrUnitHandlerInterface.cpp
-          #     src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
-          #     src/clp/ir/EncodedTextAst.cpp
-          #     tests/test-ffi_IrUnitHandlerInterface.cpp
+          # NOTE: The only error in the following files is a circular include due to including
+          # decoding_methods.hpp (decoding_methods.hpp and decoding_methods.inc include each other):
+          #
+          # - src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
+          # - src/clp/ffi/ir_stream/IrUnitHandlerInterface.cpp
+          # - src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+          # - src/clp/ir/EncodedTextAst.cpp
+          # - tests/test-ffi_IrUnitHandlerInterface.cpp
           # yamllint disable rule:line-length
           EXCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ArrayBackedPosIntSet.hpp"
@@ -734,8 +735,8 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/tests/test-Utils.cpp"
           # yamllint enable rule:line-length
           FLAGS:
-            - "--config-file \"{{.ROOT_DIR}}/.clang-tidy\""
-            - "-p \"{{.G_CORE_COMPONENT_BUILD_DIR}}\""
+            - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
           INCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/*"
             - "{{.G_CORE_COMPONENT_DIR}}/tests/*"
