@@ -5,12 +5,12 @@
 #include <tuple>
 #include <utility>
 
+#include "../SchemaTree.hpp"
 #include "AndExpr.hpp"
 #include "ConstantProp.hpp"
 #include "EmptyExpr.hpp"
 #include "OrExpr.hpp"
 #include "OrOfAndForm.hpp"
-#include "SearchUtils.hpp"
 
 namespace clp_s::search {
 // TODO: write proper iterators on the AST to make this code less awful.

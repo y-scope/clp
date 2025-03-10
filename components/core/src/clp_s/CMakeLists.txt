@@ -83,8 +83,16 @@ set(
 )
 
 set(
-        CLP_S_SOURCES
+        CLP_S_TIMESTAMP_PATTERN_SOURCES
         "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
+        Defs.hpp
+        TimestampPattern.cpp
+        TimestampPattern.hpp
+        TraceableException.hpp
+)
+
+set(
+        CLP_S_SOURCES
         archive_constants.hpp
         ArchiveReader.cpp
         ArchiveReader.hpp
@@ -142,8 +150,6 @@ set(
         TimestampDictionaryWriter.hpp
         TimestampEntry.cpp
         TimestampEntry.hpp
-        TimestampPattern.cpp
-        TimestampPattern.hpp
         TraceableException.hpp
         Utils.cpp
         Utils.hpp
@@ -158,19 +164,12 @@ set(
 )
 
 set(
-        CLP_S_SEARCH_SOURCES
-        search/AddTimestampConditions.cpp
-        search/AddTimestampConditions.hpp
+        CLP_S_CORE_AST_SOURCES
+        archive_constants.hpp
         search/AndExpr.cpp
         search/AndExpr.hpp
         search/BooleanLiteral.cpp
         search/BooleanLiteral.hpp
-        search/clp_search/EncodedVariableInterpreter.cpp
-        search/clp_search/EncodedVariableInterpreter.hpp
-        search/clp_search/Grep.cpp
-        search/clp_search/Grep.hpp
-        search/clp_search/Query.cpp
-        search/clp_search/Query.hpp
         search/ColumnDescriptor.cpp
         search/ColumnDescriptor.hpp
         search/ConstantProp.cpp
@@ -181,8 +180,6 @@ set(
         search/DateLiteral.hpp
         search/EmptyExpr.cpp
         search/EmptyExpr.hpp
-        search/EvaluateTimestampIndex.cpp
-        search/EvaluateTimestampIndex.hpp
         search/Expression.cpp
         search/Expression.hpp
         search/FilterExpr.cpp
@@ -199,6 +196,26 @@ set(
         search/OrExpr.hpp
         search/OrOfAndForm.cpp
         search/OrOfAndForm.hpp
+        search/SearchUtils.cpp
+        search/SearchUtils.hpp
+        search/StringLiteral.cpp
+        search/StringLiteral.hpp
+        search/Transformation.hpp
+        search/Value.hpp
+)
+
+set(
+        CLP_S_SEARCH_SOURCES
+        search/AddTimestampConditions.cpp
+        search/AddTimestampConditions.hpp
+        search/clp_search/EncodedVariableInterpreter.cpp
+        search/clp_search/EncodedVariableInterpreter.hpp
+        search/clp_search/Grep.cpp
+        search/clp_search/Grep.hpp
+        search/clp_search/Query.cpp
+        search/clp_search/Query.hpp
+        search/EvaluateTimestampIndex.cpp
+        search/EvaluateTimestampIndex.hpp
         search/Output.cpp
         search/Output.hpp
         search/OutputHandler.cpp
@@ -207,12 +224,6 @@ set(
         search/Projection.hpp
         search/SchemaMatch.cpp
         search/SchemaMatch.hpp
-        search/SearchUtils.cpp
-        search/SearchUtils.hpp
-        search/StringLiteral.cpp
-        search/StringLiteral.hpp
-        search/Transformation.hpp
-        search/Value.hpp
 )
 
 set(
@@ -238,6 +249,34 @@ set(
         ../reducer/types.hpp
 )
 
+add_library(
+        clp_s_TimestampPattern
+        ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
+)
+add_library(clp_s::TimestampPattern ALIAS clp_s_TimestampPattern)
+target_compile_features(clp_s_TimestampPattern PRIVATE cxx_std_20)
+target_link_libraries(
+        clp_s_TimestampPattern
+        PRIVATE
+        clp::string_utils
+        spdlog::spdlog
+)
+target_include_directories(clp_s_TimestampPattern PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+
+add_library(
+        clp_s_search_ast
+        ${CLP_S_CORE_AST_SOURCES}
+)
+add_library(clp_s::search::ast ALIAS clp_s_search_ast)
+target_compile_features(clp_s_search_ast PRIVATE cxx_std_20)
+target_link_libraries(
+        clp_s_search_ast
+        PRIVATE
+        clp_s::TimestampPattern
+        simdjson
+)
+target_include_directories(clp_s_search_ast PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+
 add_executable(
         clp-s
         clp-s.cpp
@@ -254,6 +293,8 @@ target_link_libraries(
         Boost::iostreams Boost::program_options Boost::regex Boost::url
         ${CURL_LIBRARIES}
         clp::string_utils
+        clp_s::search::ast
+        clp_s::TimestampPattern
         kql
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}

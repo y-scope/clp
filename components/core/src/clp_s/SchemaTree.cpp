@@ -5,6 +5,33 @@
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {
+auto node_to_literal_type(NodeType type) -> clp_s::search::LiteralType {
+    // TODO: properly support NodeType::Object once we add LiteralType::ObjectT when implementing
+    // type-per-token support.
+    switch (type) {
+        case NodeType::Integer:
+            return clp_s::search::LiteralType::IntegerT;
+        case NodeType::Float:
+            return clp_s::search::LiteralType::FloatT;
+        case NodeType::ClpString:
+            return clp_s::search::LiteralType::ClpStringT;
+        case NodeType::VarString:
+            return clp_s::search::LiteralType::VarStringT;
+        case NodeType::Boolean:
+            return clp_s::search::LiteralType::BooleanT;
+        case NodeType::UnstructuredArray:
+            return clp_s::search::LiteralType::ArrayT;
+        case NodeType::NullValue:
+            return clp_s::search::LiteralType::NullT;
+        case NodeType::DateString:
+            return clp_s::search::LiteralType::EpochDateT;
+        case NodeType::Metadata:
+        case NodeType::Unknown:
+        default:
+            return clp_s::search::LiteralType::UnknownT;
+    }
+}
+
 int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_view const key) {
     auto node_it = m_node_map.find({parent_node_id, key, type});
     if (node_it != m_node_map.end()) {
