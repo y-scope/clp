@@ -31,14 +31,26 @@ tasks:
 
   fix:
     cmds:
-      - task: "fix-cpp"
+      - task: "fix-cpp-diff"
       - task: "fix-js"
       - task: "fix-py"
       - task: "fix-yaml"
 
-  fix-cpp:
+  fix-cpp-diff:
     cmds:
       - task: "fix-cpp-format"
+      - task: "fix-cpp-static-diff"
+
+  fix-cpp-full:
+    cmds:
+      - task: "fix-cpp-format"
+      - task: "fix-cpp-static-full"
+
+  fix-no-cpp:
+    cmds:
+      - task: "fix-js"
+      - task: "fix-py"
+      - task: "fix-yaml"
 
   check-js:
     sources: &js_source_files
@@ -145,8 +157,8 @@ tasks:
     sources: *cpp_source_files
     deps:
       - "cpp-lint-configs"
+      - ":core-generate"
       - "venv"
-      - task: ":core-generate"
     cmds:
       - task: ":utils:cpp-lint:clang-tidy-diff"
         vars:
@@ -160,8 +172,8 @@ tasks:
     sources: *cpp_source_files
     deps:
       - "cpp-lint-configs"
+      - ":core-generate"
       - "venv"
-      - task: ":core-generate"
     cmds:
       - task: ":utils:cpp-lint:clang-tidy-find"
         vars:

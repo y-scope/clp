@@ -190,6 +190,7 @@ tasks:
       - task: "core-build"
 
   core-generate:
+    internal: true
     sources: &core_source_files
       - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
@@ -205,6 +206,7 @@ tasks:
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
 
   core-build:
+    internal: true
     sources: *core_source_files
     generates:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
