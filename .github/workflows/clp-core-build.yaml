@@ -301,33 +301,3 @@ jobs:
           push: true
           tags: "${{steps.core_image_meta.outputs.tags}}"
           labels: "${{steps.core_image_meta.outputs.labels}}"
-
-  ubuntu-jammy-lint:
-    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
-    if: >-
-      success()
-      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
-    needs:
-      - "filter-relevant-changes"
-      - "ubuntu-jammy-deps-image"
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@v4"
-        with:
-          fetch-depth: 0
-          submodules: "recursive"
-
-      - name: "Work around actions/runner-images/issues/6775"
-        run: "chown $(id -u):$(id -g) -R ."
-        shell: "bash"
-
-      - uses: "./.github/actions/run-on-image"
-        env:
-          OS_NAME: "ubuntu-jammy"
-        with:
-          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_published_image: >-
-            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
-            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          run_command: >-
-            task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}

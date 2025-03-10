@@ -7,7 +7,7 @@ vars:
 
 tasks:
   check:
-    deps:
+    cmds:
       - task: "check-cpp-diff"
       - task: "check-js"
       - task: "check-py"
@@ -24,7 +24,7 @@ tasks:
       - task: "check-cpp-static-full"
 
   check-no-cpp:
-    deps:
+    cmds:
       - task: "check-js"
       - task: "check-py"
       - task: "check-yaml"
