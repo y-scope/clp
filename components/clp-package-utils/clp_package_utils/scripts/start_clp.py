@@ -962,31 +962,7 @@ def start_log_viewer_webui(
         settings_json_updates["StreamFilesS3PathPrefix"] = (
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
-
-        if s3_config.credentials is not None:
-            access_key_id, secret_access_key = s3_config.get_credentials()
-            container_cmd_extra_opts.extend(
-                (
-                    "-e",
-                    f"AWS_ACCESS_KEY_ID={access_key_id}",
-                    "-e",
-                    f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
-                )
-            )
-        else:
-            aws_credentials: S3Credentials = get_session_credentials(s3_config.profile)
-            if aws_credentials is None:
-                raise ValueError("AWS credentials not found")
-            container_cmd_extra_opts.extend(
-                (
-                    "-e",
-                    f"AWS_ACCESS_KEY_ID={aws_credentials.access_key_id}",
-                    "-e",
-                    f"AWS_SECRET_ACCESS_KEY={aws_credentials.secret_access_key}",
-                    "-e",
-                    f"AWS_SESSION_TOKEN={aws_credentials.session_token}",
-                )
-            )
+        settings_json_updates["StreamFilesS3Profile"] = s3_config.get_profile()
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
@@ -1014,6 +990,8 @@ def start_log_viewer_webui(
         mounts.clp_home,
         mounts.stream_output_dir,
     ]
+    if StorageType.S3 == stream_storage.type:
+        necessary_mounts.append(mounts.aws_config_dir)
     for mount in necessary_mounts:
         if mount:
             container_cmd.append("--mount")
