@@ -156,8 +156,8 @@ tasks:
   check-cpp-static-diff:
     sources: *cpp_source_files
     deps:
-      - "cpp-lint-configs"
       - ":core-generate"
+      - "cpp-lint-configs"
       - "venv"
     cmds:
       - task: ":utils:cpp-lint:clang-tidy-diff"
@@ -171,23 +171,24 @@ tasks:
   check-cpp-static-full:
     sources: *cpp_source_files
     deps:
-      - "cpp-lint-configs"
       - ":core-generate"
+      - "cpp-lint-configs"
       - "venv"
     cmds:
       - task: ":utils:cpp-lint:clang-tidy-find"
         vars:
-          # NOTE: We do not lint `.inc` files because they result in false positives due to circular
-          # includes and we plan to remove them going forward.
+          # NOTE:
           #
-          # The only error in the following files is a circular include due to including
-          # decoding_methods.hpp (decoding_methods.hpp and decoding_methods.inc include each other)
-          # and should be removed from the exclude list once decoding_methods.inc is removed:
-          #
-          # - src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
-          # - src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
-          # - src/clp/ir/EncodedTextAst.cpp
-          # - tests/test-ffi_IrUnitHandlerInterface.cpp
+          # - We don't lint `.inc` files because they result in false positives due to circular
+          #   includes, and we plan to remove them going forward.
+          # - The only error in the following files is a circular include due to including
+          #   decoding_methods.hpp (decoding_methods.hpp and decoding_methods.inc include each
+          #   other); the files should be removed from the exclude list once decoding_methods.inc
+          #   is removed:
+          #   - src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
+          #   - src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+          #   - src/clp/ir/EncodedTextAst.cpp
+          #   - tests/test-ffi_IrUnitHandlerInterface.cpp
           # yamllint disable rule:line-length
           EXCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ArrayBackedPosIntSet.hpp"
