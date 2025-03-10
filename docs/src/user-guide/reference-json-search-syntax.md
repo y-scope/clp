@@ -61,6 +61,25 @@ parent1: {parent2: {child: value}}
 
 The kv-pair may be nested one or more levels deep.
 
+### Querying auto-generated kv-pairs
+
+If the kv-pair is an auto-generated kv-pair ingested from a kv-ir stream, you can specify that the
+key exists within the auto-generated namespace by prefixing the key with `@` as follows:
+
+```
+@key: value
+```
+
+In the query above, the key's name is `key` and the `@` only indicates the namespace (i.e., `@` is
+not considered to be part of the key).
+
+To query for a key named `@key` within the default namespace, the `@` character can be escaped as
+follows:
+
+```
+\@key: value
+```
+
 ### Wildcards in values
 
 To search for a kv-pair with *any* value, you can specify the value as a single `*`.
@@ -172,6 +191,7 @@ Keys containing the following literal characters must escape the characters usin
 * `"`
 * `.`
 * `*`
+* `@` (only when `@` is the first character of the key)
 
 Values containing the following literal characters must escape the characters using a `\`
 (backslash):
