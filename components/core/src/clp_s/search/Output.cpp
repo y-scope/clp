@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../../clp/type_utils.hpp"
+#include "../SchemaTree.hpp"
 #include "../Utils.hpp"
 #include "AndExpr.hpp"
 #include "clp_search/EncodedVariableInterpreter.hpp"
@@ -12,7 +13,6 @@
 #include "FilterExpr.hpp"
 #include "Literal.hpp"
 #include "OrExpr.hpp"
-#include "SearchUtils.hpp"
 
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
@@ -592,7 +592,11 @@ bool Output::evaluate_array_filter_value(
         } break;
         case ondemand::json_type::string: {
             if (true == m_maybe_string && unresolved_tokens.size() == cur_idx
-                && wildcard_match(item.get_string().value(), m_array_search_string))
+                && StringUtils::wildcard_match_unsafe(
+                        item.get_string().value(),
+                        m_array_search_string,
+                        false == m_ignore_case
+                ))
             {
                 match = op == FilterOperation::EQ;
             }
@@ -728,7 +732,12 @@ bool Output::evaluate_wildcard_array_filter(
                 if (false == m_maybe_string) {
                     break;
                 }
-                if (wildcard_match(item.get_string().value(), m_array_search_string)) {
+                if (StringUtils::wildcard_match_unsafe(
+                            item.get_string().value(),
+                            m_array_search_string,
+                            false == m_ignore_case
+                    ))
+                {
                     match |= op == FilterOperation::EQ;
                 }
                 break;
@@ -797,7 +806,12 @@ bool Output::evaluate_wildcard_array_filter(
                 if (false == m_maybe_string) {
                     break;
                 }
-                if (wildcard_match(item.get_string().value(), m_array_search_string)) {
+                if (StringUtils::wildcard_match_unsafe(
+                            item.get_string().value(),
+                            m_array_search_string,
+                            false == m_ignore_case
+                    ))
+                {
                     match |= op == FilterOperation::EQ;
                 }
                 break;
