@@ -78,6 +78,8 @@ jobs:
           --num-jobs $(getconf _NPROCESSORS_ONLN)
           --test-spec "~[Stopwatch]"
 
-      - run: >-
-          task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+      # When enough files are passing clang-tidy switch to a full pass on schedule only.
+      # - run: >-
+      #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+      - run: "task lint:check-cpp-full"
         shell: "bash"
