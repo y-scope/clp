@@ -673,9 +673,10 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mounts = [mounts.stream_output_dir]
-    if StorageType.S3 == clp_config.stream_output.storage.type:
-        query_worker_mounts.append(mounts.aws_config_dir)
-    elif StorageType.S3 == clp_config.archive_output.storage.type:
+    if (
+        StorageType.S3 == clp_config.archive_output.storage.type
+        or StorageType.S3 == clp_config.stream_output.storage.type
+    ):
         query_worker_mounts.append(mounts.aws_config_dir)
     if StorageType.FS == clp_config.archive_output.storage.type:
         query_worker_mounts.append(mounts.archives_output_dir)

@@ -191,6 +191,8 @@ def _make_clp_s_command_and_env(
 
     if InputType.S3 == clp_config.input.type:
         compression_env_vars: Dict[str, str] = make_s3_env_vars(clp_config.input)
+        compression_cmd.append("--auth")
+        compression_cmd.append("s3")
     else:
         compression_env_vars = None
 

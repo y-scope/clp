@@ -41,10 +41,10 @@ def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
     """
     env_vars: Dict[str, str] = None
 
-    if config.get_profile() is not None:
+    if config.profile is not None:
         aws_credentials: S3Credentials = get_session_credentials(config.get_profile())
         if aws_credentials is None:
-            return None
+            raise ValueError(f"Failed to authenticate with profile {config.get_profile()}")
 
         env_vars = {
             **os.environ,
