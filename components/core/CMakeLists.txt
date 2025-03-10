@@ -301,44 +301,14 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AddTimestampConditions.cpp
     src/clp_s/search/AddTimestampConditions.hpp
-    src/clp_s/search/AndExpr.cpp
-    src/clp_s/search/AndExpr.hpp
-    src/clp_s/search/BooleanLiteral.cpp
-    src/clp_s/search/BooleanLiteral.hpp
     src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp
     src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp
     src/clp_s/search/clp_search/Grep.cpp
     src/clp_s/search/clp_search/Grep.hpp
     src/clp_s/search/clp_search/Query.cpp
     src/clp_s/search/clp_search/Query.hpp
-    src/clp_s/search/ColumnDescriptor.cpp
-    src/clp_s/search/ColumnDescriptor.hpp
-    src/clp_s/search/ConstantProp.cpp
-    src/clp_s/search/ConstantProp.hpp
-    src/clp_s/search/ConvertToExists.cpp
-    src/clp_s/search/ConvertToExists.hpp
-    src/clp_s/search/DateLiteral.cpp
-    src/clp_s/search/DateLiteral.hpp
-    src/clp_s/search/EmptyExpr.cpp
-    src/clp_s/search/EmptyExpr.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
     src/clp_s/search/EvaluateTimestampIndex.hpp
-    src/clp_s/search/Expression.cpp
-    src/clp_s/search/Expression.hpp
-    src/clp_s/search/FilterExpr.cpp
-    src/clp_s/search/FilterExpr.hpp
-    src/clp_s/search/FilterOperation.hpp
-    src/clp_s/search/Integral.cpp
-    src/clp_s/search/Integral.hpp
-    src/clp_s/search/Literal.hpp
-    src/clp_s/search/NarrowTypes.cpp
-    src/clp_s/search/NarrowTypes.hpp
-    src/clp_s/search/NullLiteral.cpp
-    src/clp_s/search/NullLiteral.hpp
-    src/clp_s/search/OrExpr.cpp
-    src/clp_s/search/OrExpr.hpp
-    src/clp_s/search/OrOfAndForm.cpp
-    src/clp_s/search/OrOfAndForm.hpp
     src/clp_s/search/Output.cpp
     src/clp_s/search/Output.hpp
     src/clp_s/search/OutputHandler.cpp
@@ -347,20 +317,12 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/Projection.hpp
     src/clp_s/search/SchemaMatch.cpp
     src/clp_s/search/SchemaMatch.hpp
-    src/clp_s/search/SearchUtils.cpp
-    src/clp_s/search/SearchUtils.hpp
-    src/clp_s/search/StringLiteral.cpp
-    src/clp_s/search/StringLiteral.hpp
-    src/clp_s/search/Transformation.hpp
-    src/clp_s/search/Value.hpp
     src/clp_s/TimestampDictionaryReader.cpp
     src/clp_s/TimestampDictionaryReader.hpp
     src/clp_s/TimestampDictionaryWriter.cpp
     src/clp_s/TimestampDictionaryWriter.hpp
     src/clp_s/TimestampEntry.cpp
     src/clp_s/TimestampEntry.hpp
-    src/clp_s/TimestampPattern.cpp
-    src/clp_s/TimestampPattern.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
     src/clp_s/VariableDecoder.cpp
@@ -688,6 +650,8 @@ target_link_libraries(unitTest
         ${STD_FS_LIBS}
         clp::regex_utils
         clp::string_utils
+        clp_s::search::ast
+        clp_s::TimestampPattern
         yaml-cpp::yaml-cpp
         ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
