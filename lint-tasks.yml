@@ -8,7 +8,7 @@ vars:
 tasks:
   check:
     cmds:
-      - task: "check-cpp-diff"
+      - task: "check-cpp-full"
       - task: "check-js"
       - task: "check-py"
       - task: "check-yaml"
@@ -31,7 +31,7 @@ tasks:
 
   fix:
     cmds:
-      - task: "fix-cpp-diff"
+      - task: "fix-cpp-full"
       - task: "fix-js"
       - task: "fix-py"
       - task: "fix-yaml"
