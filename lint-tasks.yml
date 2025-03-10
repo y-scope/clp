@@ -177,11 +177,14 @@ tasks:
     cmds:
       - task: ":utils:cpp-lint:clang-tidy-find"
         vars:
-          # NOTE: The only error in the following files is a circular include due to including
-          # decoding_methods.hpp (decoding_methods.hpp and decoding_methods.inc include each other):
+          # NOTE: We do not lint `.inc` files because they result in false positives due to circular
+          # includes and we plan to remove them going forward.
+          #
+          # The only error in the following files is a circular include due to including
+          # decoding_methods.hpp (decoding_methods.hpp and decoding_methods.inc include each other)
+          # and should be removed from the exclude list once decoding_methods.inc is removed:
           #
           # - src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
-          # - src/clp/ffi/ir_stream/IrUnitHandlerInterface.cpp
           # - src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
           # - src/clp/ir/EncodedTextAst.cpp
           # - tests/test-ffi_IrUnitHandlerInterface.cpp
@@ -245,7 +248,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/encoding_methods.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/IrErrorCode.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/IrUnitHandlerInterface.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/protocol_constants.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/Serializer.cpp"
