@@ -59,8 +59,6 @@ set(
         ../TimestampDictionaryReader.hpp
         ../TimestampEntry.cpp
         ../TimestampEntry.hpp
-        ../TimestampPattern.cpp
-        ../TimestampPattern.hpp
         ../Utils.cpp
         ../Utils.hpp
         ../VariableDecoder.cpp
@@ -88,6 +86,7 @@ target_link_libraries(indexer
         ${CURL_LIBRARIES}
         clp::string_utils
 	clp_s::search::ast
+        clp_s::TimestampPattern
         MariaDBClient::MariaDBClient
         OpenSSL::Crypto
         simdjson
