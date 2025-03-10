@@ -35,7 +35,16 @@ class S3InputConfig(BaseModel):
     bucket: str
     key_prefix: str
 
-    credentials: S3Credentials
+    profile: typing.Optional[str] = None
+    credentials: typing.Optional[S3Credentials] = None
+
+    def get_profile(self) -> typing.Optional[str]:
+        return self.profile
+
+    def get_credentials(self) -> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
+        if self.credentials is None:
+            return None, None
+        return self.credentials.access_key_id, self.credentials.secret_access_key
 
 
 class OutputConfig(BaseModel):
