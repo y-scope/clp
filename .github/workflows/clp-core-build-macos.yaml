@@ -4,29 +4,27 @@ on:
   pull_request:
     paths:
       - ".github/workflows/clp-core-build-macos.yaml"
-      - "components/core/cmake/**"
-      - "components/core/CMakeLists.txt"
-      - "components/core/src/**"
-      - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos/**"
-      - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
+      - ".gitmodules"
+      - "components/core/**"
       - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
+      - "!components/core/tools/scripts/docker-images/*-centos-*/**"
+      - "!components/core/tools/scripts/docker-images/*-ubuntu-*/**"
+      - "!components/core/tools/scripts/lib_install/centos-*/**"
+      - "!components/core/tools/scripts/lib_install/ubuntu-*/**"
   push:
     paths:
       - ".github/workflows/clp-core-build-macos.yaml"
-      - "components/core/cmake/**"
-      - "components/core/CMakeLists.txt"
-      - "components/core/src/**"
-      - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos/**"
-      - "components/core/tools/scripts/deps-download/**"
-      - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
+      - ".gitmodules"
+      - "components/core/**"
       - "deps-tasks.yml"
       - "Taskfile.yml"
       - "tools/scripts/deps-download/**"
+      - "!components/core/tools/scripts/docker-images/*-centos-*/**"
+      - "!components/core/tools/scripts/docker-images/*-ubuntu-*/**"
+      - "!components/core/tools/scripts/lib_install/centos-*/**"
+      - "!components/core/tools/scripts/lib_install/ubuntu-*/**"
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
@@ -47,6 +45,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
         with:
+          fetch-depth: 0
           submodules: "recursive"
 
       # See https://github.com/actions/setup-python/issues/577
@@ -78,3 +77,7 @@ jobs:
           --build-dir build
           --num-jobs $(getconf _NPROCESSORS_ONLN)
           --test-spec "~[Stopwatch]"
+
+      - run: >-
+          task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+        shell: "bash"
