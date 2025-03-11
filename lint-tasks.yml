@@ -484,6 +484,7 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/streaming_archive/writer/File.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/streaming_archive/writer/Segment.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/streaming_archive/writer/Segment.hpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp/streaming_compression/Compressor.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/streaming_compression/Constants.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/streaming_compression/Decompressor.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/streaming_compression/passthrough/Decompressor.cpp"
