@@ -343,8 +343,8 @@ uint64_t GLTSegment::get_uncompressed_size() {
 size_t GLTSegment::get_compressed_size() {
     if (!m_segment_path.empty()) {
         SPDLOG_ERROR(
-                "streaming_archive::writer::GLTSegment: get_compressed_size called before "
-                "closing the segment"
+                "streaming_archive::writer::GLTSegment: get_compressed_size called before closing"
+                " the segment"
         );
         throw OperationFailed(ErrorCode_NotReady, __FILENAME__, __LINE__);
     }

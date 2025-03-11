@@ -41,8 +41,8 @@ void JsonConstructor::store() {
 
     if (m_option.ordered && false == m_archive_reader->has_log_order()) {
         SPDLOG_WARN(
-                "This archive is missing ordering information and can not be decompressed in "
-                "log order. Falling back to out of order decompression."
+                "This archive is missing ordering information and can not be decompressed in log"
+                " order. Falling back to out of order decompression."
         );
     }
 

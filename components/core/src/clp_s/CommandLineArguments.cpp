@@ -499,8 +499,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
                 if (false == m_mongodb_uri.empty()) {
                     throw std::invalid_argument(
-                            "Recording decompression metadata only supported"
-                            " for ordered decompression"
+                            "Recording decompression metadata only supported for ordered"
+                            " decompression"
                     );
                 }
             }
@@ -822,8 +822,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                         && OutputHandlerType::Reducer == m_output_handler_type))
             {
                 throw std::invalid_argument(
-                        "The reducer output handler currently only supports "
-                        "count and count-by-time aggregations."
+                        "The reducer output handler currently only supports count and"
+                        " count-by-time aggregations."
                 );
             }
 

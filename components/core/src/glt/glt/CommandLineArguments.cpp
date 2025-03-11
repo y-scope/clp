@@ -475,8 +475,8 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             if (m_search_strings_file_path.empty() == false) {
                 if (m_search_string.empty() == false) {
                     throw invalid_argument(
-                            "Wildcard strings cannot be specified both through the "
-                            "command line and a file."
+                            "Wildcard strings cannot be specified both through the command line"
+                            " and a file."
                     );
                 }
             } else if (m_search_string.empty()) {

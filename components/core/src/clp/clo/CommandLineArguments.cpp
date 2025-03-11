@@ -600,8 +600,8 @@ auto CommandLineArguments::parse_search_arguments(
     if ((false == aggregation_was_specified && OutputHandlerType::Reducer == m_output_handler_type))
     {
         throw invalid_argument(
-                "The reducer output handler currently only supports count and "
-                "count-by-time aggregations."
+                "The reducer output handler currently only supports count and count-by-time"
+                " aggregations."
         );
     }
 

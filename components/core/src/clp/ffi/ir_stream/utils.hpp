@@ -174,10 +174,10 @@ template <typename encoded_variable_t>
 [[nodiscard]] auto
 serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& output_buf)
         -> bool {
-    static_assert((
+    static_assert(
             std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
             || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>
-    ));
+    );
     bool succeeded{};
     if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
         output_buf.push_back(cProtocol::Payload::ValueFourByteEncodingClpStr);
