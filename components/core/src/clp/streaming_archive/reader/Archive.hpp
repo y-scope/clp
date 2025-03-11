@@ -125,7 +125,8 @@ public:
         );
     }
 
-    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_path(std::string const& file_path
+    std::unique_ptr<MetadataDB::FileIterator> get_file_iterator_by_path(
+            std::string const& file_path
     ) {
         return m_metadata_db.get_file_iterator(
                 cEpochTimeMin,

@@ -470,9 +470,11 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     vector<string> tameVec, wildVec;
 
     // Typical apache log
-    tameVec.push_back("64.242.88.10 - - [07/Mar/2004:16:06:51 -0800] \"GET "
-                      "/twiki/bin/rdiff/TWiki/NewUserTemplate?rev1=1"
-                      ".3&rev2=1.2 HTTP/1.1\" 200 4523");
+    tameVec.push_back(
+            "64.242.88.10 - - [07/Mar/2004:16:06:51 -0800] \"GET "
+            "/twiki/bin/rdiff/TWiki/NewUserTemplate?rev1=1"
+            ".3&rev2=1.2 HTTP/1.1\" 200 4523"
+    );
     wildVec.push_back("*64.242.88.10*Mar/2004*GET*200*");
 
     /***********************************************************************************************

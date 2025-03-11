@@ -86,8 +86,10 @@ Segment::try_read(uint64_t decompressed_stream_pos, char* extraction_buf, uint64
     // We always assume the passed in buffer is already pre-allocated, but we check anyway as a
     // precaution
     if (nullptr == extraction_buf) {
-        SPDLOG_ERROR("streaming_archive::reader::Segment: Extraction buffer not allocated "
-                     "during decompression");
+        SPDLOG_ERROR(
+                "streaming_archive::reader::Segment: Extraction buffer not allocated "
+                "during decompression"
+        );
         return ErrorCode_BadParam;
     }
     return m_decompressor.get_decompressed_stream_region(

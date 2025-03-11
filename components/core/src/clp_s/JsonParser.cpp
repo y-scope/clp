@@ -475,9 +475,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 hit_end = true;
             }
         } while (false == object_it_stack.empty() && hit_end);
-    }
-
-    while (false == object_stack.empty());
+    } while (false == object_stack.empty());
 }
 
 bool JsonParser::parse() {
@@ -900,7 +898,8 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t last_pos{};
         decompressor.open(*reader, cDecompressorReadBufferCapacity);
 
-        auto deserializer_result{Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
+        auto deserializer_result{
+                Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
         };
         if (deserializer_result.has_error()) {
             auto err = deserializer_result.error();

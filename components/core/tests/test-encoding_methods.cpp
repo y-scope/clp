@@ -37,10 +37,10 @@ TEMPLATE_TEST_CASE(
         four_byte_encoded_variable_t
 ) {
     // Code below only supports these two types right now
-    static_assert(
-            (std::is_same_v<TestType, eight_byte_encoded_variable_t>
-             || std::is_same_v<TestType, four_byte_encoded_variable_t>)
-    );
+    static_assert((
+            std::is_same_v<TestType, eight_byte_encoded_variable_t>
+            || std::is_same_v<TestType, four_byte_encoded_variable_t>
+    ));
 
     string value;
     string decoded_value;

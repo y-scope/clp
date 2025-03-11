@@ -259,13 +259,13 @@ void GlobalSQLiteMetadataDB::open() {
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)].second
             = "TEXT PRIMARY KEY";
 
-    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp
-                                  )]
-            .first
+    archive_field_names_and_types
+            [enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp)]
+                    .first
             = streaming_archive::cMetadataDB::Archive::BeginTimestamp;
-    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp
-                                  )]
-            .second
+    archive_field_names_and_types
+            [enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp)]
+                    .second
             = "INTEGER";
 
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::EndTimestamp)]
@@ -333,13 +333,13 @@ void GlobalSQLiteMetadataDB::open() {
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp)].second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .first
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .first
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .second
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]
@@ -597,5 +597,4 @@ bool GlobalSQLiteMetadataDB::get_file_split(
 
     return true;
 }
-
 }  // namespace clp

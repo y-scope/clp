@@ -47,6 +47,5 @@ constexpr char cTimestamp[]{"timestamp"};
 constexpr char cMessage[]{"message"};
 constexpr char cArchiveId[]{"archive_id"};
 }  // namespace results_cache::search
-
 }  // namespace clp_s::constants
 #endif  // CLP_S_ARCHIVE_CONSTANTS_HPP
