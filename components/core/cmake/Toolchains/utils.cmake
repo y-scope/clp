@@ -2,20 +2,11 @@ function(setup_toolchains)
     if("Darwin" STREQUAL "${CMAKE_HOST_SYSTEM_NAME}")
         execute_process(
             COMMAND
-                xcrun --show-sdk-version
-            OUTPUT_VARIABLE CMAKE_OSX_DEPLOYMENT_TARGET
+                sw_vers --productVersion
+            OUTPUT_VARIABLE CMAKE_OSX_VERSION
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
-        string(REPLACE "." ";" CMAKE_OSX_VERSION_LIST ${CMAKE_OSX_DEPLOYMENT_TARGET})
-        list(GET CMAKE_OSX_VERSION_LIST 0 CMAKE_OSX_MAJOR_VERSION)
-        if(
-            "13"
-                VERSION_EQUAL
-                "${CMAKE_OSX_MAJOR_VERSION}"
-            OR "14"
-                VERSION_EQUAL
-                "${CMAKE_OSX_MAJOR_VERSION}"
-        )
+        if("${CMAKE_OSX_VERSION}" VERSION_LESS "15")
             set(CMAKE_TOOLCHAIN_FILE
                 "${CMAKE_TOOLCHAINS_DIR}/llvm-clang-toolchains.cmake"
                 CACHE STRING
@@ -25,8 +16,8 @@ function(setup_toolchains)
     endif()
 endfunction()
 
+# Require compiler versions that support the C++20 features necessary for compiling CLP
 function(validate_compiler_versions)
-    # Require compiler versions that support the C++20 features necessary for compiling CLP
 	if("AppleClang" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
 		set(CLP_CMAKE_CXX_COMPILER_MIN_VERSION "16")
 	elseif("Clang" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
