@@ -45,7 +45,9 @@ jobs:
           - "macos-13"
           - "macos-14"
           - "macos-15"
-        use_shared_libs: [true, false]
+        use_shared_libs:
+          - true
+          - false
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@v4"
@@ -69,14 +71,6 @@ jobs:
 
       - run: "task deps:core"
         shell: "bash"
-
-      - if: "'macos-13' == matrix.os || 'macos-14' == matrix.os"
-        name: "Upgrade the default AppleClang to LLVM Clang for C++20 features"
-        shell: "bash"
-        run: |
-          brew install llvm@16
-          echo "USE_LLVM_COMPILER=true" >> $GITHUB_ENV
-          echo "LLVM_INSTALL_BINDIR=$(brew --prefix llvm@16)/bin" >> $GITHUB_ENV
 
       - name: "Build CLP-core and run unit tests"
         shell: "bash"

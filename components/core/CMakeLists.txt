@@ -5,15 +5,14 @@ set(CMAKE_TOOLCHAINS_DIR
     CACHE STRING
     "Directory containing CMake toolchain files"
 )
-include("${CMAKE_TOOLCHAINS_DIR}/setup.cmake")
-setup_toolchain()
+include("${CMAKE_TOOLCHAINS_DIR}/utils.cmake")
+
+# Toolchain setup must come before the project() call
+setup_toolchains()
 
 project(CLP LANGUAGES CXX C)
 
-message(STATUS "CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
-message(STATUS "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
-message(STATUS "CMAKE_AR=${CMAKE_AR}")
-message(STATUS "CMAKE_RANLIB=${CMAKE_RANLIB}")
+validate_compiler_versions()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
