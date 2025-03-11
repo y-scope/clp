@@ -314,6 +314,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
         with:
+          # Fetch history so that the `clang-tidy-diff` task can compare against the main branch.
           fetch-depth: 0
           submodules: "recursive"
 
@@ -329,7 +330,7 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          # When enough files are passing clang-tidy switch to a full pass on schedule only.
+          # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
           # run_command: >-
           #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
           run_command: "task lint:check-cpp-full"
