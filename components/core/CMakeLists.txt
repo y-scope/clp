@@ -1,5 +1,19 @@
 cmake_minimum_required(VERSION 3.16.3)
+
+set(CMAKE_TOOLCHAINS_DIR
+    "${CMAKE_SOURCE_DIR}/cmake/Toolchains"
+    CACHE STRING
+    "Directory containing CMake toolchain files"
+)
+include("${CMAKE_TOOLCHAINS_DIR}/setup.cmake")
+setup_toolchain()
+
 project(CLP LANGUAGES CXX C)
+
+message(STATUS "CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+message(STATUS "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+message(STATUS "CMAKE_AR=${CMAKE_AR}")
+message(STATUS "CMAKE_RANLIB=${CMAKE_RANLIB}")
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
