@@ -39,3 +39,18 @@ jobs:
       - name: "Build docs"
         shell: "bash"
         run: "task docs:site"
+
+      - if: >-
+          'push' == github.event_name && 'refs/heads/main' == github.ref
+          && 'ubuntu-latest' == matrix.os
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "docs"
+          path: "build/docs/html"
+          if-no-files-found: "error"
+
+          # Retain the artifact for a week in case we need to debug why it wasn't automatically
+          # published.
+          retention-days: "7"
+
+          overwrite: true
