@@ -46,8 +46,8 @@ constexpr std::string_view cStringToEncode{"uid=0, CPU usage: 99.99%, \"user_nam
  */
 template <typename encoded_variable_t>
 requires(
-        (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-         || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+        std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+        || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
 )
 [[nodiscard]] auto get_encoded_text_ast(std::string_view text)
         -> clp::ir::EncodedTextAst<encoded_variable_t>;
@@ -105,8 +105,8 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
 
 template <typename encoded_variable_t>
 requires(
-        (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-         || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+        std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+        || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
 )
 auto get_encoded_text_ast(std::string_view text) -> clp::ir::EncodedTextAst<encoded_variable_t> {
     string logtype;

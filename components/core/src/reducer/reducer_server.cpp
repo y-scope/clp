@@ -205,8 +205,9 @@ void SchedulerUpdateListenerTask::operator()(
 
         if (m_server_ctx->is_timeline_aggregation()) {
             auto& upsert_timer = m_server_ctx->get_upsert_timer();
-            upsert_timer.expires_after(std::chrono::milliseconds(m_server_ctx->get_upsert_interval()
-            ));
+            upsert_timer.expires_after(
+                    std::chrono::milliseconds(m_server_ctx->get_upsert_interval())
+            );
             upsert_timer.async_wait(PeriodicUpsertTask(m_server_ctx));
         }
 

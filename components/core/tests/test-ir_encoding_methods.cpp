@@ -261,8 +261,8 @@ template <typename encoded_variable_t>
         vector<string>& encoded_logtypes
 ) -> bool {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     string logtype;
@@ -300,8 +300,8 @@ auto serialize_log_event(
         vector<int8_t>& ir_buf
 ) -> bool {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -529,8 +529,8 @@ static void set_timestamp_info(nlohmann::json const& metadata_json, TimestampInf
 template <typename encoded_variable_t>
 bool match_encoding_type(bool is_four_bytes_encoding) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -543,8 +543,8 @@ bool match_encoding_type(bool is_four_bytes_encoding) {
 template <typename encoded_variable_t>
 epoch_time_ms_t get_next_timestamp_for_test() {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     // We return an absolute timestamp for the eight-byte encoding and a mocked timestamp delta for
@@ -569,8 +569,8 @@ bool serialize_preamble(
         vector<int8_t>& ir_buf
 ) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -599,8 +599,8 @@ IRErrorCode deserialize_log_event(
         epoch_time_ms_t& decoded_ts
 ) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {

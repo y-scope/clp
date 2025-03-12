@@ -187,7 +187,8 @@ public:
      */
     ErrorCode flush() override;
 
-    [[nodiscard]] bool can_skip_file(::clp::streaming_archive::MetadataDB::FileIterator const& it
+    [[nodiscard]] bool can_skip_file(
+            ::clp::streaming_archive::MetadataDB::FileIterator const& it
     ) override {
         return is_latest_results_full() && get_smallest_timestamp() > it.get_end_ts();
     }

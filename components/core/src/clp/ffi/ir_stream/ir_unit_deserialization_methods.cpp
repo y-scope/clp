@@ -147,8 +147,8 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
  */
 template <typename encoded_variable_t>
 requires(
-        (std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
-         || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
+        std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
+        || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>
 )
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,
@@ -452,8 +452,8 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
 
 template <typename encoded_variable_t>
 requires(
-        (std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
-         || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>)
+        std::is_same_v<ir::four_byte_encoded_variable_t, encoded_variable_t>
+        || std::is_same_v<ir::eight_byte_encoded_variable_t, encoded_variable_t>
 )
 [[nodiscard]] auto deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs(
         ReaderInterface& reader,

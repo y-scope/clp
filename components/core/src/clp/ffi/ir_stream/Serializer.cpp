@@ -526,8 +526,8 @@ auto Serializer<encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
 ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
     static_assert(
-            (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     Serializer<encoded_variable_t> serializer;

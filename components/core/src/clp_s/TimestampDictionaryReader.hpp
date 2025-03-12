@@ -3,6 +3,7 @@
 
 #include <map>
 #include <optional>
+#include <utility>
 
 #include "FileReader.hpp"
 #include "search/FilterOperation.hpp"
@@ -52,7 +53,8 @@ public:
 
     auto tokenized_column_to_range_end() const { return m_tokenized_column_to_range.end(); }
 
-    std::optional<std::vector<std::string>>& get_authoritative_timestamp_tokenized_column() {
+    std::optional<std::pair<std::vector<std::string>, std::string>>&
+    get_authoritative_timestamp_tokenized_column() {
         return m_authoritative_timestamp_tokenized_column;
     }
 
@@ -70,7 +72,8 @@ private:
     std::vector<TimestampEntry> m_entries;
     tokenized_column_to_range_t m_tokenized_column_to_range;
 
-    std::optional<std::vector<std::string>> m_authoritative_timestamp_tokenized_column;
+    std::optional<std::pair<std::vector<std::string>, std::string>>
+            m_authoritative_timestamp_tokenized_column;
     std::unordered_set<int32_t> m_authoritative_timestamp_column_ids;
 };
 }  // namespace clp_s

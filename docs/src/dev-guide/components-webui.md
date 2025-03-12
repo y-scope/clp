@@ -63,7 +63,7 @@ performing linting; you may choose either one according to your preference.
 #### Checking for linting errors
 
 ```shell
-task lint:js-check
+task lint:check-js
 ```
 
 This will run ESLint on the entire project's source code and report any linting errors.
@@ -71,7 +71,7 @@ This will run ESLint on the entire project's source code and report any linting 
 #### Automatically fixing linting errors
 
 ```shell
-task lint:js-fix
+task lint:fix-js
 ```
 
 This command attempts to automatically fix any linting issues found in the project.
