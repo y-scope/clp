@@ -19,8 +19,10 @@ namespace clp::ir {
 template <typename encoded_variable_t>
 LogEventSerializer<encoded_variable_t>::~LogEventSerializer() {
     if (m_is_open) {
-        SPDLOG_ERROR("clp::ir::LogEventSerializer not closed before being destroyed - output maybe "
-                     "corrupted.");
+        SPDLOG_ERROR(
+                "clp::ir::LogEventSerializer not closed before being destroyed - output maybe "
+                "corrupted."
+        );
     }
 }
 

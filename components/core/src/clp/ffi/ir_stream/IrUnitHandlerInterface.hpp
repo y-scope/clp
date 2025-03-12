@@ -30,7 +30,7 @@ concept IrUnitHandlerInterface = requires(
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
-        handler.handle_log_event(std::forward<KeyValuePairLogEvent&&>(log_event))
+        handler.handle_log_event(std::forward<KeyValuePairLogEvent &&>(log_event))
     } -> std::same_as<IRErrorCode>;
 
     /**

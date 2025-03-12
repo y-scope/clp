@@ -19,7 +19,6 @@
 #include "SingleFileArchiveDefs.hpp"
 
 namespace clp_s {
-
 ArchiveReaderAdaptor::ArchiveReaderAdaptor(
         Path const& archive_path,
         NetworkAuthOption const& network_auth

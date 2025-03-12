@@ -475,9 +475,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 hit_end = true;
             }
         } while (false == object_it_stack.empty() && hit_end);
-    }
-
-    while (false == object_stack.empty());
+    } while (false == object_stack.empty());
 }
 
 bool JsonParser::parse() {
@@ -900,7 +898,8 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t last_pos{};
         decompressor.open(*reader, cDecompressorReadBufferCapacity);
 
-        auto deserializer_result{Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
+        auto deserializer_result{
+                Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
         };
         if (deserializer_result.has_error()) {
             auto err = deserializer_result.error();
@@ -930,15 +929,21 @@ auto JsonParser::parse_from_ir() -> bool {
 
             if (kv_log_event_result.has_error()) {
                 auto err = kv_log_event_result.error();
-                SPDLOG_ERROR(
-                        "Encountered error while deserializing kv-ir log event: ({}) - {}",
+                SPDLOG_WARN(
+                        "Encountered error while deserializing kv-ir log event from stream \"{}\": "
+                        "({}) - {}",
+                        path.path,
                         err.value(),
                         err.message()
                 );
-                m_archive_writer->close();
-                decompressor.close();
-                check_and_log_curl_error(path, reader);
-                return false;
+                if (check_and_log_curl_error(path, reader)) {
+                    m_archive_writer->close();
+                    decompressor.close();
+                    return false;
+                } else {
+                    // Treat deserialization error as end of a truncated stream
+                    break;
+                }
             }
             if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
                 break;
