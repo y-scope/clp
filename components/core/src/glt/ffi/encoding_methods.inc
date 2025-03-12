@@ -92,8 +92,8 @@ encoded_variable_t encode_float_properties(
         size_t decimal_point_pos
 ) {
     static_assert(
-            (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>)
+            std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
+            || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
     );
     if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
         // Encode into 64 bits with the following format (from MSB to LSB):
@@ -176,8 +176,8 @@ void decode_float_properties(
         uint8_t& decimal_point_pos
 ) {
     static_assert(
-            (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>)
+            std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
+            || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
     );
     if constexpr (std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>) {
         auto encoded_float = bit_cast<uint64_t>(encoded_var);
