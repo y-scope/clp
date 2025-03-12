@@ -2,7 +2,7 @@
 
 Before submitting a PR, ensure you've run our linting tools and either fixed any violations or
 suppressed the warning. If you can't run the linting workflows locally, you can enable and run the
-[clp-lint] workflow in your fork.
+[clp-lint] and [clp-core-build] workflows in your fork.
 
 ## Requirements
 
@@ -32,5 +32,6 @@ task lint:fix
 ```
 
 [clp-lint]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-lint.yaml
+[clp-core-build]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-core-build.yaml
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
 [Task]: https://taskfile.dev/
