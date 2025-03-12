@@ -221,7 +221,8 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
 
         case IrUnitType::SchemaTreeNodeInsertion: {
             std::string key_name;
-            auto const result{deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
+            auto const result{
+                    deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
             };
             if (result.has_error()) {
                 return result.error();

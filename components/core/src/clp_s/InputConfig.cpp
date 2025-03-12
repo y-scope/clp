@@ -84,5 +84,4 @@ auto get_archive_id_from_path(Path const& archive_path, std::string& archive_id)
     }
     return true;
 }
-
 }  // namespace clp_s

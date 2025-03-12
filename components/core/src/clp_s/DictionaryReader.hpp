@@ -147,8 +147,8 @@ EntryType& DictionaryReader<DictionaryIdType, EntryType>::get_entry(DictionaryId
 }
 
 template <typename DictionaryIdType, typename EntryType>
-std::string const& DictionaryReader<DictionaryIdType, EntryType>::get_value(DictionaryIdType id
-) const {
+std::string const&
+DictionaryReader<DictionaryIdType, EntryType>::get_value(DictionaryIdType id) const {
     if (id >= m_entries.size()) {
         throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
     }

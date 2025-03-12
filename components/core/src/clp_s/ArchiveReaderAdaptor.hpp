@@ -133,6 +133,5 @@ private:
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
     std::shared_ptr<clp::ReaderInterface> m_reader;
 };
-
 }  // namespace clp_s
 #endif  // CLP_S_ARCHIVEREADERADAPTOR_HPP
