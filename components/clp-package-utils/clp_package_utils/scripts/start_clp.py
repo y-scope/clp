@@ -524,7 +524,8 @@ def start_compression_scheduler(
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
     compression_scheduler_mount = None
     if StorageType.S3 == clp_config.archive_output.storage.type:
-        compression_scheduler_mount = mounts.aws_config_dir
+        if clp_config.archive_output.storage.s3_config.profile is not None:
+            compression_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -548,7 +549,11 @@ def start_query_scheduler(
         StorageType.S3 == clp_config.archive_output.storage.type
         or StorageType.S3 == clp_config.stream_output.storage.type
     ):
-        query_scheduler_mount = mounts.aws_config_dir
+        if (
+            clp_config.archive_output.storage.s3_config.profile is not None
+            or clp_config.stream_output.storage.s3_config.profile is not None
+        ):
+            query_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         QUERY_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -645,7 +650,8 @@ def start_compression_worker(
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
     if StorageType.S3 == clp_config.archive_output.storage.type:
-        compression_worker_mounts.append(mounts.aws_config_dir)
+        if clp_config.archive_output.storage.s3_config.profile is not None:
+            compression_worker_mounts.append(mounts.aws_config_dir)
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -676,7 +682,11 @@ def start_query_worker(
         StorageType.S3 == clp_config.archive_output.storage.type
         or StorageType.S3 == clp_config.stream_output.storage.type
     ):
-        query_worker_mounts.append(mounts.aws_config_dir)
+        if (
+            clp_config.archive_output.storage.s3_config.profile is not None
+            or clp_config.stream_output.storage.s3_config.profile is not None
+        ):
+            query_worker_mounts.append(mounts.aws_config_dir)
     if StorageType.FS == clp_config.archive_output.storage.type:
         query_worker_mounts.append(mounts.archives_output_dir)
 
@@ -990,7 +1000,8 @@ def start_log_viewer_webui(
         mounts.stream_output_dir,
     ]
     if StorageType.S3 == stream_storage.type:
-        necessary_mounts.append(mounts.aws_config_dir)
+        if stream_storage.s3_config.profile is not None:
+            necessary_mounts.append(mounts.aws_config_dir)
     for mount in necessary_mounts:
         if mount:
             container_cmd.append("--mount")

@@ -7,7 +7,7 @@ import sys
 import uuid
 from typing import List, Tuple
 
-from clp_py_utils.clp_config import CLPConfig, StorageEngine
+from clp_py_utils.clp_config import CLPConfig, StorageEngine, StorageType
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
@@ -232,6 +232,9 @@ def main(argv):
         mounts.logs_dir,
         mounts.aws_config_dir,
     ]
+    if StorageType.S3 == clp_config.archive_output.storage.type:
+        if clp_config.archive_output.storage.s3_config.profile is not None:
+            necessary_mounts.append(mounts.aws_config_dir)
 
     # Write compression logs to a file
     while True:
