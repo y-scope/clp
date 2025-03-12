@@ -1,9 +1,9 @@
 # This file contains utility functions for setting up toolchains and validating toolchain versions
-# to ensure compatibility with C++20 features required by the project.
+# to ensure compatibility with the C++20 features required by the project.
 
 # Sets up the appropriate toolchain file based on the host system.
-# For macOS versions below 15, uses the LLVM Clang toolchain.
 function(setup_toolchains)
+    # For macOS versions below 15, use the LLVM 16 Clang toolchain.
     if("Darwin" STREQUAL "${CMAKE_HOST_SYSTEM_NAME}")
         execute_process(
             COMMAND
@@ -22,7 +22,7 @@ function(setup_toolchains)
 endfunction()
 
 # Checks if the compiler ID and version meet the minimum requirements to support C++20 features
-# required by the project.
+# required by the project:
 # - AppleClang: version 16+
 # - Clang: version 16+
 # - GNU: version 11+
