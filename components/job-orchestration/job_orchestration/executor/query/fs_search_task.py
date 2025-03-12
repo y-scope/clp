@@ -7,7 +7,6 @@ from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     Database,
-    S3Credentials,
     StorageEngine,
     StorageType,
     WorkerConfig,

@@ -14,7 +14,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
     S3Config,
-    S3Credentials,
     StorageEngine,
     StorageType,
     WorkerConfig,

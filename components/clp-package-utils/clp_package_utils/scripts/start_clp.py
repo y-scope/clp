@@ -29,7 +29,6 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    S3Credentials,
     StorageType,
     WEBUI_COMPONENT_NAME,
 )

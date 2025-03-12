@@ -132,7 +132,10 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
 
     aws_session = None
     if s3_input_config.profile is not None:
-        aws_session = boto3.Session(profile_name=s3_input_config.get_profile())
+        aws_session = boto3.Session(
+            profile_name=s3_input_config.get_profile(),
+            region_name=s3_input_config.region_code,
+        )
     elif s3_input_config.credentials is not None:
         aws_access_key_id, aws_secret_access_key = s3_input_config.get_credentials()
         aws_session = boto3.Session(

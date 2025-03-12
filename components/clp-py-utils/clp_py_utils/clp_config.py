@@ -357,7 +357,7 @@ class S3Config(BaseModel):
         return field
 
     @root_validator(pre=True)
-    def check_profile_and_credentials(cls, values):
+    def validate_profile_and_credentials(cls, values):
         profile = values.get("profile")
         credentials = values.get("credentials")
 
