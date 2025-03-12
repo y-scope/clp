@@ -6,7 +6,9 @@ CLP core is the low-level component that performs compression, decompression, an
 
 * We have built and tested CLP on the OSes listed [below](#native-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
-* A compiler that supports C++20 and std::span (e.g., gcc-10)
+* A recent compiler that fully supports C++20 features such as
+  * std::span
+  * std::source_location
 * [Task](https://taskfile.dev/) >= 3.38.0
 
 To build, we require some source dependencies, packages from package managers, and libraries built
