@@ -27,23 +27,23 @@ endfunction()
 # - Clang: version 16+
 # - GNU: version 11+
 function(validate_compiler_versions)
-	if("AppleClang" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
-		set(CXX_COMPILER_MIN_VERSION "16")
-	elseif("Clang" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
-		set(CXX_COMPILER_MIN_VERSION "16")
-	elseif("GNU" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
-		set(CXX_COMPILER_MIN_VERSION "11")
-	else()
-		message(
-			FATAL_ERROR
-			"Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}. Please use AppleClang, Clang, or GNU."
-		)
-	endif()
-	if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS "${CXX_COMPILER_MIN_VERSION}")
-		message(
-			FATAL_ERROR
-			"${CMAKE_CXX_COMPILER_ID} version ${CMAKE_CXX_COMPILER_VERSION} is too low. Must be at \
+    if("AppleClang" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
+        set(CXX_COMPILER_MIN_VERSION "16")
+    elseif("Clang" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
+        set(CXX_COMPILER_MIN_VERSION "16")
+    elseif("GNU" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
+        set(CXX_COMPILER_MIN_VERSION "11")
+    else()
+        message(
+            FATAL_ERROR
+            "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}. Please use AppleClang, Clang, or GNU."
+        )
+    endif()
+    if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS "${CXX_COMPILER_MIN_VERSION}")
+        message(
+            FATAL_ERROR
+            "${CMAKE_CXX_COMPILER_ID} version ${CMAKE_CXX_COMPILER_VERSION} is too low. Must be at \
 			least ${CXX_COMPILER_MIN_VERSION}."
-		)
-	endif()
+        )
+    endif()
 endfunction()
