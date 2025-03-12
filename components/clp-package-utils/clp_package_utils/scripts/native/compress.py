@@ -233,7 +233,10 @@ def main(argv):
         "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."
     )
     s3_compressor_parser.add_argument(
-        "--aws-profile", type=str, default=None, help="AWS configuration profile to use for authentication"
+        "--aws-profile",
+        type=str,
+        default=None,
+        help="AWS configuration profile to use for authentication",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
