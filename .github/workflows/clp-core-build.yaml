@@ -3,8 +3,8 @@ name: "clp-core-build"
 on:
   pull_request:
     paths:
-      - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/actions/run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -14,8 +14,8 @@ on:
       - "!components/core/tools/scripts/lib_install/macos/**"
   push:
     paths:
-      - ".github/actions/clp-core-build/action.yaml"
       - ".github/actions/clp-core-build-containers/action.yaml"
+      - ".github/actions/run-on-image/action.yaml"
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
@@ -151,7 +151,7 @@ jobs:
     strategy:
       matrix:
         use_shared_libs: [true, false]
-    name: "centos-stream-9-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+    name: "centos-stream-9-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
@@ -163,16 +163,21 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-build"
+      - uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "centos-stream-9"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "false"
+          run_command: >-
+            task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
 
   ubuntu-jammy-binaries:
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
@@ -184,8 +189,14 @@ jobs:
       - "ubuntu-jammy-deps-image"
     strategy:
       matrix:
-        use_shared_libs: [true, false]
-    name: "ubuntu-jammy-${{matrix.use_shared_libs && 'dynamic' || 'static'}}-linked-bins"
+        include:
+          - use_shared_libs: true
+            upload_binaries: false
+          - use_shared_libs: false
+            upload_binaries: true
+    env:
+      OS_NAME: "ubuntu-jammy"
+    name: "ubuntu-jammy-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
@@ -197,13 +208,129 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "./.github/actions/clp-core-build"
+      - uses: "./.github/actions/run-on-image"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
+
+      - if: "matrix.upload_binaries == true"
+        id: "copy_binaries"
+        run: |-
+          output_dir="/tmp/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p "${output_dir}"
+          cd "$GITHUB_WORKSPACE/components/core/build"
+          tar cfvv "${output_dir}/clp.tar" clg clp clp-s glt make-dictionaries-readable
+        shell: "bash"
+
+      - if: "matrix.upload_binaries == true"
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{steps.copy_binaries.outputs.output_dir}}"
+          retention-days: 1
+
+  ubuntu-jammy-binaries-image:
+    # Run if the ancestor jobs were successful/skipped and building clp was successful.
+    if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
+    needs: "ubuntu-jammy-binaries"
+    runs-on: "ubuntu-latest"
+    env:
+      OS_NAME: "ubuntu-jammy"
+      TMP_OUTPUT_DIR: "/tmp"
+    steps:
+      - uses: "actions/checkout@v4"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "actions/download-artifact@v4"
+        with:
+          name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          path: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+
+      - name: "Untar binaries"
+        working-directory: >-
+          ${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}
+        run: |-
+          tar xf clp.tar
+          rm clp.tar
+
+      - uses: "docker/login-action@v3"
+        with:
+          registry: "ghcr.io"
+          username: "${{github.actor}}"
+          password: "${{secrets.GITHUB_TOKEN}}"
+
+      - name: "Sanitize the repo's name"
+        id: "sanitize_repo_name"
+        run: |-
+          # Docker doesn't support repository names with uppercase characters, so we convert to
+          # lowercase here.
+          lowercase_repo=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
+          echo "repository=${lowercase_repo}" >> "$GITHUB_OUTPUT"
+        shell: "bash"
+
+      - id: "core_image_meta"
+        uses: "docker/metadata-action@v5"
+        with:
+          images: >-
+            ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
+          tags: "type=raw,value=${{github.ref_name}}"
+
+      # Only publish the image if this workflow was triggered by a push to `main`.
+      # NOTE: We run the rest of the job to test that the binaries were uploaded correctly.
+      - if: "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+        uses: "docker/build-push-action@v5"
+        with:
+          context: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
+          file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
+          push: true
+          tags: "${{steps.core_image_meta.outputs.tags}}"
+          labels: "${{steps.core_image_meta.outputs.labels}}"
+
+  ubuntu-jammy-lint:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "filter-relevant-changes"
+      - "ubuntu-jammy-deps-image"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+        with:
+          # Fetch history so that the `clang-tidy-diff` task can compare against the main branch.
+          fetch-depth: 0
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "ubuntu-jammy"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
-          use_shared_libs: "${{matrix.use_shared_libs}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          upload_binaries: "false"
+          # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
+          # run_command: >-
+          #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+          run_command: "task lint:check-cpp-full"
