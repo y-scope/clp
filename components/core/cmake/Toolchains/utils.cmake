@@ -13,7 +13,7 @@ function(setup_toolchains)
         )
         if("${MACOS_VERSION}" VERSION_LESS "15")
             set(CMAKE_TOOLCHAIN_FILE
-                "${CMAKE_SOURCE_DIR}/cmake/Toolchains/llvm-clang-toolchain.cmake"
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/llvm-clang-toolchain.cmake"
                 CACHE STRING
                 "Toolchain file"
             )
