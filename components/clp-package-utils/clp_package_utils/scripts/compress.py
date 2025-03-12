@@ -233,7 +233,6 @@ def main(argv):
         mounts.input_logs_dir,
         mounts.data_dir,
         mounts.logs_dir,
-        mounts.aws_config_dir,
     ]
     if StorageType.S3 == clp_config.archive_output.storage.type:
         if clp_config.archive_output.storage.s3_config.profile is not None:
