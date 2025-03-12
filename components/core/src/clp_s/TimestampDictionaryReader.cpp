@@ -76,5 +76,4 @@ TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t forma
 
     return ret;
 }
-
 }  // namespace clp_s

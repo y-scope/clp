@@ -119,5 +119,4 @@ void ColumnDescriptor::simplify_descriptor_wildcards() {
         m_pure_wildcard = true;
     }
 }
-
 }  // namespace clp_s::search

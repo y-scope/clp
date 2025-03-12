@@ -190,28 +190,32 @@ bool extract_ir(CommandLineArguments const& command_line_args) {
                 );
                 return false;
             }
-            results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::Path,
-                            dest_ir_file_name
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::StreamId,
-                            orig_file_id
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,
-                            static_cast<int64_t>(begin_message_ix)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::EndMsgIx,
-                            static_cast<int64_t>(end_message_ix)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            clp::clo::cResultsCacheKeys::IrOutput::IsLastChunk,
-                            is_last_chunk
+            results.emplace_back(
+                    std::move(
+                            bsoncxx::builder::basic::make_document(
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::Path,
+                                            dest_ir_file_name
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::StreamId,
+                                            orig_file_id
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::BeginMsgIx,
+                                            static_cast<int64_t>(begin_message_ix)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::EndMsgIx,
+                                            static_cast<int64_t>(end_message_ix)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            clp::clo::cResultsCacheKeys::IrOutput::IsLastChunk,
+                                            is_last_chunk
+                                    )
+                            )
                     )
-            )));
+            );
 
             if (command_line_args.print_ir_stats()) {
                 nlohmann::json json_msg;

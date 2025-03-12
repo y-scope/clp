@@ -81,7 +81,8 @@ public:
 
     NodeType get_type() override { return NodeType::Integer; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
     ) override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
@@ -103,7 +104,8 @@ public:
 
     NodeType get_type() override { return NodeType::Float; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
     ) override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
@@ -125,7 +127,8 @@ public:
 
     NodeType get_type() override { return NodeType::Boolean; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
     ) override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
@@ -158,7 +161,8 @@ public:
         return m_is_array ? NodeType::UnstructuredArray : NodeType::ClpString;
     }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
     ) override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
@@ -205,7 +209,8 @@ public:
 
     NodeType get_type() override { return NodeType::VarString; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
     ) override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
@@ -241,7 +246,8 @@ public:
 
     NodeType get_type() override { return NodeType::DateString; }
 
-    std::variant<int64_t, double, std::string, uint8_t> extract_value(uint64_t cur_message
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
     ) override;
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;

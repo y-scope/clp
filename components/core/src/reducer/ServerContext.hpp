@@ -179,7 +179,6 @@ private:
     mongocxx::database m_mongodb_results_database;
     mongocxx::collection m_mongodb_results_collection;
 };
-
 }  // namespace reducer
 
 #endif  // REDUCER_SERVERCONTEXT_HPP

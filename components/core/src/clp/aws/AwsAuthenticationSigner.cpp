@@ -260,11 +260,13 @@ AwsAuthenticationSigner::get_canonical_query_string(string_view scope, string_vi
             cDefaultExpireTime.count()
     );
     if (m_session_token.has_value()) {
-        canonical_query_string.append(fmt::format(
-                "&{}={}",
-                cXAmzSecurityToken,
-                encode_uri(m_session_token.value(), false)
-        ));
+        canonical_query_string.append(
+                fmt::format(
+                        "&{}={}",
+                        cXAmzSecurityToken,
+                        encode_uri(m_session_token.value(), false)
+                )
+        );
     }
     canonical_query_string.append(fmt::format("&{}={}", cXAmzSignedHeaders, cDefaultSignedHeaders));
     return canonical_query_string;

@@ -18,7 +18,6 @@ using std::unordered_set;
 using std::vector;
 
 namespace glt::glt {
-
 static bool
 obtain_input_paths(CommandLineArguments const& command_line_args, vector<string>& input_paths) {
     input_paths = command_line_args.get_input_paths();
