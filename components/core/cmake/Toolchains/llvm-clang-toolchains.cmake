@@ -1,8 +1,8 @@
-message(STATUS "Setting up LLVM v16 toolchains for MacOS 13 Ventura and MacOS 14 Sonoma...")
+message(STATUS "Setting up LLVM v16 toolchain...")
 
 execute_process(
     COMMAND
-        brew --prefix llvm@16
+        "brew" "--prefix" "llvm@16"
     OUTPUT_VARIABLE LLVM_TOOLCHAIN_PREFIX
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )

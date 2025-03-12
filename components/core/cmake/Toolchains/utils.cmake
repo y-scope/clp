@@ -2,7 +2,7 @@ function(setup_toolchains)
     if("Darwin" STREQUAL "${CMAKE_HOST_SYSTEM_NAME}")
         execute_process(
             COMMAND
-                sw_vers --productVersion
+                "sw_vers" "--productVersion"
             OUTPUT_VARIABLE CMAKE_OSX_VERSION
             OUTPUT_STRIP_TRAILING_WHITESPACE
         )
