@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.16.3)
 
-set(CMAKE_TOOLCHAINS_DIR
-    "${CMAKE_SOURCE_DIR}/cmake/Toolchains"
-    CACHE STRING
-    "Directory containing CMake toolchain files"
-)
-include("${CMAKE_TOOLCHAINS_DIR}/utils.cmake")
+include("${CMAKE_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
 
 # Toolchain setup must come before the project() call
 setup_toolchains()
