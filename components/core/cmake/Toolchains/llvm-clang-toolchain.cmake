@@ -3,9 +3,14 @@ message(STATUS "Setting up LLVM v16 toolchain...")
 execute_process(
     COMMAND
         "brew" "--prefix" "llvm@16"
+    RESULT_VARIABLE BREW_RESULT
     OUTPUT_VARIABLE LLVM_TOOLCHAIN_PREFIX
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+if(NOT BREW_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to locate LLVM v16 using Homebrew. Please ensure llvm@16 is installed: 'brew install llvm@16'")
+endif()
 
 set(CMAKE_C_COMPILER "${LLVM_TOOLCHAIN_PREFIX}/bin/clang")
 set(CMAKE_CXX_COMPILER "${LLVM_TOOLCHAIN_PREFIX}/bin/clang++")
