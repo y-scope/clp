@@ -272,6 +272,7 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/utils.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileDescriptor.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileDescriptor.hpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileDescriptorReader.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileReader.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileReader.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileWriter.cpp"
