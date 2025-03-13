@@ -153,7 +153,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
-    s3_client = _generate_s3_client(S3InputConfig)
+    s3_client = _generate_s3_client(s3_input_config)
 
     file_metadata_list: List[FileMetadata] = list()
     paginator = s3_client.get_paginator("list_objects_v2")
