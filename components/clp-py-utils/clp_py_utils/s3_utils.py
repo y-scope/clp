@@ -75,7 +75,9 @@ def _generate_s3_client(s3_config: Union[S3Config, S3InputConfig]) -> boto3.clie
     aws_session = None
     if s3_config.profile is not None:
         aws_session = boto3.Session(
-            profile_name=s3_config.get_profile(), region_name=s3_config.region_code)
+            profile_name=s3_config.get_profile(),
+            region_name=s3_config.region_code,
+        )
     elif s3_config.credentials is not None:
         aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
         aws_session = boto3.Session(
@@ -172,8 +174,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     return file_metadata_list
 
 
-def s3_put(
-    s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
+def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
     """
     Uploads a local file to an S3 bucket using AWS's PutObject operation.
     :param s3_config: S3 configuration specifying the upload destination and credentials.

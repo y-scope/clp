@@ -33,7 +33,6 @@ class S3Manager {
                 region: region,
             });
         }
-        
     }
 
     /**
