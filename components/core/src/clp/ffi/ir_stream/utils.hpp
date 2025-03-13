@@ -175,8 +175,8 @@ template <typename encoded_variable_t>
 serialize_clp_string(std::string_view str, std::string& logtype, std::vector<int8_t>& output_buf)
         -> bool {
     static_assert(
-            (std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
-             || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>)
+            std::is_same_v<encoded_variable_t, clp::ir::eight_byte_encoded_variable_t>
+            || std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>
     );
     bool succeeded{};
     if constexpr (std::is_same_v<encoded_variable_t, clp::ir::four_byte_encoded_variable_t>) {
@@ -246,8 +246,8 @@ auto deserialize_and_decode_schema_tree_node_id(
             return std::errc::result_out_of_range;
         }
         if (0 > encoded_node_id) {
-            return {true, static_cast<SchemaTree::Node::id_t>(get_ones_complement(encoded_node_id))
-            };
+            return {true,
+                    static_cast<SchemaTree::Node::id_t>(get_ones_complement(encoded_node_id))};
         }
         return {false, static_cast<SchemaTree::Node::id_t>(encoded_node_id)};
     };

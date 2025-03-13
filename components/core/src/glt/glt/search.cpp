@@ -37,7 +37,6 @@ using std::string;
 using std::vector;
 
 namespace glt::glt {
-
 /**
  * Opens the archive and reads the dictionaries
  * @param archive_path

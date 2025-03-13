@@ -213,10 +213,12 @@ bool search_archive(
                 SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
                 return false;
             }
-            projection->add_column(ColumnDescriptor::create_from_escaped_tokens(
-                    descriptor_tokens,
-                    descriptor_namespace
-            ));
+            projection->add_column(
+                    ColumnDescriptor::create_from_escaped_tokens(
+                            descriptor_tokens,
+                            descriptor_namespace
+                    )
+            );
         }
     } catch (std::exception const& e) {
         SPDLOG_ERROR("{}", e.what());

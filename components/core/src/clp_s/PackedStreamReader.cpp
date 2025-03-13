@@ -5,7 +5,6 @@
 #include "ArchiveReaderAdaptor.hpp"
 
 namespace clp_s {
-
 void PackedStreamReader::read_metadata(ZstdDecompressor& decompressor) {
     switch (m_state) {
         case PackedStreamReaderState::Uninitialized:

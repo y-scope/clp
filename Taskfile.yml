@@ -185,15 +185,29 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   core:
-    vars:
-      SRC_DIR: "{{.ROOT_DIR}}/components/core"
-    sources:
+    cmds:
+      - task: "core-generate"
+      - task: "core-build"
+
+  core-generate:
+    internal: true
+    sources: &core_source_files
       - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
-      - "{{.SRC_DIR}}/cmake/**/*"
-      - "{{.SRC_DIR}}/CMakeLists.txt"
-      - "{{.SRC_DIR}}/src/**/*"
+      - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
+      - "{{.G_CORE_COMPONENT_DIR}}/CMakeLists.txt"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
+    deps: ["deps:core"]
+    cmds:
+      - task: "utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+
+  core-build:
+    internal: true
+    sources: *core_source_files
     generates:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
@@ -201,12 +215,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-    deps: ["deps:core", "init"]
     cmds:
-      - task: "utils:cmake:generate"
-        vars:
-          BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-          SOURCE_DIR: "{{.SRC_DIR}}"
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
