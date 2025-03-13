@@ -53,5 +53,3 @@ jobs:
 
           # Retain the artifact for a week in case there was a deployment issue
           retention-days: "7"
-
-          overwrite: true
