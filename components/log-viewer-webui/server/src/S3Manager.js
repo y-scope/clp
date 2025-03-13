@@ -20,13 +20,20 @@ class S3Manager {
 
     /**
      * @param {string} region
-     * @param {string} profile
+     * @param {string} [profile]
      */
     constructor (region, profile) {
-        this.#s3Client = new S3Client({
-            region: region,
-            profile: profile,
-        });
+        if (profile) {
+            this.#s3Client = new S3Client({
+                region: region,
+                profile: profile,
+            });
+        } else {
+            this.#s3Client = new S3Client({
+                region: region,
+            });
+        }
+        
     }
 
     /**
@@ -63,7 +70,7 @@ class S3Manager {
  */
 export default fastifyPlugin(async (app, options) => {
     const {region, profile} = options;
-    if (!region || !profile) {
+    if (!region) {
         return;
     }
 
