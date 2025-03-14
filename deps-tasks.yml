@@ -20,6 +20,7 @@ vars:
   G_UTFCPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#utfcpp.md5"
   G_YAML_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yaml-cpp.md5"
   G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yscope-log-viewer.md5"
+  G_YSTDLIB_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#ystdlib-cpp.md5"
 
 tasks:
   default:
@@ -41,6 +42,7 @@ tasks:
       - "{{.G_SQLITE3_CHECKSUM_FILE}}"
       - "{{.G_UTFCPP_CHECKSUM_FILE}}"
       - "{{.G_YAML_CPP_CHECKSUM_FILE}}"
+      - "{{.G_YSTDLIB_CPP_CHECKSUM_FILE}}"
     generates: ["{{.G_DEPS_CORE_CHECKSUM_FILE}}"]
     deps: ["all-internal-deps"]
     cmds:
@@ -57,6 +59,7 @@ tasks:
         "{{.G_SQLITE3_CHECKSUM_FILE}}"
         "{{.G_UTFCPP_CHECKSUM_FILE}}"
         "{{.G_YAML_CPP_CHECKSUM_FILE}}"
+        "{{.G_YSTDLIB_CPP_CHECKSUM_FILE}}"
         >> "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
 
   log-viewer:
@@ -99,6 +102,7 @@ tasks:
       - task: "utfcpp"
       - task: "yaml-cpp"
       - task: "yscope-log-viewer"
+      - task: "ystdlib-cpp"
 
   abseil-cpp:
     internal: true
@@ -462,6 +466,37 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.DEST}}"]
+
+  ystdlib-cpp:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_YSTDLIB_CPP_CHECKSUM_FILE}}"
+      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/ystdlib-cpp"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTILS_TASKFILE}}"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    cmds:
+      - task: "download-dependency"
+        vars:
+          DEST: "{{.DEST}}"
+          FLAGS: "--extract"
+          SRC_NAME: "ystdlib-cpp-d1b4ae0"
+          SRC_URL: "https://github.com/y-scope/ystdlib-cpp/archive/d1b4ae0.zip"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+
 
   download-dependency:
     internal: true

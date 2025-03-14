@@ -5,7 +5,8 @@ IncludeCategories:
   # Library headers. Update when adding new libraries.
   # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
   - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|curl|date|fmt|json|log_surgeon|lzma|mongocxx\
-|msgpack|mysql|openssl|outcome|regex_utils|simdjson|spdlog|sqlite3|string_utils|yaml-cpp|zstd)"
+|msgpack|mysql|openssl|outcome|regex_utils|simdjson|spdlog|sqlite3|string_utils|yaml-cpp|ystdlib\
+|zstd)"
     Priority: 3
   # C system headers
   - Regex: "^<.+\\.h>"
