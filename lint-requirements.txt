@@ -1,5 +1,6 @@
 black>=24.4.2
 clang-format>=20.1
-clang-tidy>=19.1
+# Lock to v19.x until we can upgrade our code to fix new v20 issues.
+clang-tidy~=19.1
 ruff>=0.4.4
 yamllint>=1.35.1
