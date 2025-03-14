@@ -3,7 +3,7 @@ from enum import auto
 from typing import Literal, Optional, Tuple, Union
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, PrivateAttr, validator
+from pydantic import BaseModel, PrivateAttr, root_validator, validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -313,6 +313,7 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: str
     secret_access_key: str
+    session_token: Optional[str]
 
     @validator("access_key_id")
     def validate_access_key_id(cls, field):
@@ -332,7 +333,8 @@ class S3Config(BaseModel):
     bucket: str
     key_prefix: str
 
-    credentials: S3Credentials
+    profile: Optional[str] = None
+    credentials: Optional[S3Credentials] = None
 
     @validator("region_code")
     def validate_region_code(cls, field):
@@ -354,9 +356,23 @@ class S3Config(BaseModel):
             raise ValueError('key_prefix must end with "/"')
         return field
 
-    # TODO: When we support empty credentials, this method should be used to return a tuple that's
-    # either (None, None) if empty, or the credentials otherwise.
-    def get_credentials(self) -> Tuple[str, str]:
+    @root_validator(pre=True)
+    def validate_profile_and_credentials(cls, values):
+        profile = values.get("profile")
+        credentials = values.get("credentials")
+
+        if profile and credentials:
+            raise ValueError("profile and credentials cannot be set simultaneously")
+        elif not profile and not credentials:
+            raise ValueError("one of either profile or credentials must be set")
+        return values
+
+    def get_profile(self) -> Optional[str]:
+        return self.profile
+
+    def get_credentials(self) -> Tuple[Optional[str], Optional[str]]:
+        if self.credentials is None:
+            return None, None
         return self.credentials.access_key_id, self.credentials.secret_access_key
 
 
@@ -561,6 +577,7 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
+    aws_config_directory: pathlib.Path = pathlib.Path.home() / ".aws"
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
@@ -675,6 +692,7 @@ class CLPConfig(BaseModel):
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
         d["logs_directory"] = str(self.logs_directory)
+        d["aws_config_directory"] = str(self.aws_config_directory)
         return d
 
 

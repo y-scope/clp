@@ -4,7 +4,7 @@ import typing
 from enum import auto
 
 from clp_py_utils.clp_config import S3Credentials
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, root_validator, validator
 from strenum import LowercaseStrEnum
 
 
@@ -35,7 +35,27 @@ class S3InputConfig(BaseModel):
     bucket: str
     key_prefix: str
 
-    credentials: S3Credentials
+    profile: typing.Optional[str] = None
+    credentials: typing.Optional[S3Credentials] = None
+
+    @root_validator(pre=True)
+    def validate_profile_and_credentials(cls, values):
+        profile = values.get("profile")
+        credentials = values.get("credentials")
+
+        if profile and credentials:
+            raise ValueError("profile and credentials cannot be set simultaneously")
+        elif not profile and not credentials:
+            raise ValueError("one of either profile or credentials must be set")
+        return values
+
+    def get_profile(self) -> typing.Optional[str]:
+        return self.profile
+
+    def get_credentials(self) -> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
+        if self.credentials is None:
+            return None, None
+        return self.credentials.access_key_id, self.credentials.secret_access_key
 
 
 class OutputConfig(BaseModel):
