@@ -52,4 +52,4 @@ jobs:
           if-no-files-found: "error"
 
           # Retain the artifact for a week in case there was a deployment issue
-          retention-days: "7"
+          retention-days: 7
