@@ -27,7 +27,7 @@ public:
               m_filename{filename},
               m_line_number{line_number} {
         m_message = std::string(m_filename) + ":" + std::to_string(m_line_number)
-                     + "  Error code: " + std::to_string(m_error_code) + "\n";
+                    + "  Error code: " + std::to_string(m_error_code) + "\n";
     }
 
     // Methods
