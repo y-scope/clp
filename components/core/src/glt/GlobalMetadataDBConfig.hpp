@@ -48,7 +48,7 @@ public:
 
 private:
     // Variables
-    static constexpr int cDefaultMetadataDbPort = 3306;
+    constexpr int cDefaultMetadataDbPort{3306};
 
     MetadataDBType m_metadata_db_type{MetadataDBType::SQLite};
 
