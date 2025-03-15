@@ -11,12 +11,12 @@ namespace clp_s {
 // Types
 using epochtime_t = int64_t;
 static epochtime_t const cEpochTimeMin = INT64_MIN;
-static epochtime_t const cEpochTimeMax = INT64_MAX;
-static double const cDoubleEpochTimeMin = std::numeric_limits<double>::lowest();
-static double const cDoubleEpochTimeMax = std::numeric_limits<double>::max();
+static epochtime_t const cEpochTimeMax{INT64_MAX};
+static double const cDoubleEpochTimeMin{std::numeric_limits<double>::lowest()};
+static double const cDoubleEpochTimeMax{std::numeric_limits<double>::max()};
 
 using variable_dictionary_id_t = uint64_t;
-static variable_dictionary_id_t const cVariableDictionaryIdMax = UINT64_MAX;
+static variable_dictionary_id_t const cVariableDictionaryIdMax{UINT64_MAX};
 using logtype_dictionary_id_t = int64_t;
 static logtype_dictionary_id_t const cLogtypeDictionaryIdMax = INT64_MAX;
 
