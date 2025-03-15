@@ -7,7 +7,6 @@ ANTLR_TARGET(
 
 add_library(
         kql
-        ../../Utils.hpp
         ../antlr_common/ErrorListener.hpp
         ../AndExpr.hpp
         ../BooleanLiteral.hpp
