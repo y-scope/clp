@@ -5,9 +5,9 @@
 
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../../archive_constants.hpp"
-#include "../../Utils.hpp"
 #include "../AndExpr.hpp"
 #include "../antlr_common/ErrorListener.hpp"
 #include "../BooleanLiteral.hpp"
@@ -18,6 +18,7 @@
 #include "../Integral.hpp"
 #include "../NullLiteral.hpp"
 #include "../OrExpr.hpp"
+#include "../SearchUtils.hpp"
 #include "../StringLiteral.hpp"
 #include "KqlBaseVisitor.h"
 #include "KqlLexer.h"
@@ -73,7 +74,7 @@ public:
 
     static std::shared_ptr<Literal> unquote_literal(std::string const& text) {
         std::string token;
-        if (false == StringUtils::unescape_kql_value(unquote_string(text), token)) {
+        if (false == clp_s::search::unescape_kql_value(unquote_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid literal: {}", text);
             throw std::runtime_error{"Invalid literal."};
         }
@@ -85,13 +86,13 @@ public:
         } else if (auto ret = NullLiteral::create_from_string(token)) {
             return ret;
         } else {
-            return StringLiteral::create(StringUtils::clean_up_wildcard_search_string(token));
+            return StringLiteral::create(clp::string_utils::clean_up_wildcard_search_string(token));
         }
     }
 
     static std::shared_ptr<Literal> unquote_date_literal(std::string const& text) {
         std::string token;
-        if (false == StringUtils::unescape_kql_value(unquote_date_string(text), token)) {
+        if (false == clp_s::search::unescape_kql_value(unquote_date_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid date literal: {}", text);
             throw std::runtime_error{"Invalid date literal."};
         }
@@ -111,7 +112,7 @@ public:
         std::vector<std::string> descriptor_tokens;
         std::string descriptor_namespace;
         if (false
-            == StringUtils::tokenize_column_descriptor(
+            == clp_s::search::tokenize_column_descriptor(
                     column,
                     descriptor_tokens,
                     descriptor_namespace
