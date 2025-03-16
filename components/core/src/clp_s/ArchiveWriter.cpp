@@ -241,14 +241,15 @@ ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMes
 
 int32_t ArchiveWriter::add_node(int parent_node_id, NodeType type, std::string_view key) {
     auto const node_id{m_schema_tree.add_node(parent_node_id, type, key)};
-    if (NodeType::Object == type && m_matched_timestamp_prefix_node_id == parent_node_id
-        && m_authoritative_timestamp.size() > (m_matched_timestamp_prefix_length + 1))
-    {
-        if (constants::cRootNodeId == parent_node_id) {
+    if (NodeType::Object == type && m_matched_timestamp_prefix_node_id == parent_node_id) {
+        if (false == m_authoritative_timestamp.empty() && constants::cRootNodeId == parent_node_id)
+        {
             if (m_authoritative_timestamp_namespace == key) {
                 m_matched_timestamp_prefix_node_id = node_id;
             }
-        } else if (m_authoritative_timestamp.at(m_matched_timestamp_prefix_length) == key) {
+        } else if (m_authoritative_timestamp.size() > (m_matched_timestamp_prefix_length + 1)
+                   && m_authoritative_timestamp.at(m_matched_timestamp_prefix_length) == key)
+        {
             m_matched_timestamp_prefix_length += 1;
             m_matched_timestamp_prefix_node_id = node_id;
         }
