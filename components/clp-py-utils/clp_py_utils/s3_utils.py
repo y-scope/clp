@@ -14,13 +14,17 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def get_session_credentials(aws_profile: str) -> Optional[S3Credentials]:
+def get_session_credentials(aws_profile: Optional[str]) -> Optional[S3Credentials]:
     """
     Generates AWS credentials created by boto3 when starting a session with given profile.
     :param aws_profile: Name of profile configured in ~/.aws directory
     :return: An S3Credentials object with access key pair and session token if applicable.
     """
-    aws_session = boto3.Session(profile_name=aws_profile)
+    aws_session = None
+    if aws_profile is not None:
+        aws_session = boto3.Session(profile_name=aws_profile)
+    else:
+        aws_session = boto3.Session()
     credentials = aws_session.get_credentials()
     if credentials is None:
         return None
