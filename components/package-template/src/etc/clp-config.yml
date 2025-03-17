@@ -83,6 +83,9 @@
 #
 #  # How much data CLP should try to fit into each segment within an archive
 #  target_segment_size: 268435456  # 256 MB
+#  
+#  # How much archives should be compressed: 1 (fast/low compression) to 9 (slow/high compression)
+#  compression_level: 3
 #
 ## Where CLP stream files (e.g., IR streams) should be output
 #stream_output:

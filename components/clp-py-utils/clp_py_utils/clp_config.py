@@ -443,6 +443,7 @@ class ArchiveOutput(BaseModel):
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
+    compression_level: int = 3
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -466,6 +467,12 @@ class ArchiveOutput(BaseModel):
     def validate_target_segment_size(cls, field):
         if field <= 0:
             raise ValueError("target_segment_size must be greater than 0")
+        return field
+        
+    @validator("compression_level")
+    def validate_compression_level(cls, field):
+        if field < 1 or field > 9:
+            raise ValueError("compression_level must be a value from 1 to 9")
         return field
 
     def set_directory(self, directory: pathlib.Path):
