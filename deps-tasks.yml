@@ -489,8 +489,8 @@ tasks:
         vars:
           DEST: "{{.DEST}}"
           FLAGS: "--extract"
-          SRC_NAME: "ystdlib-cpp-8c30cec"
-          SRC_URL: "https://github.com/y-scope/ystdlib-cpp/archive/8c30cec.zip"
+          SRC_NAME: "ystdlib-cpp-d1b4ae0"
+          SRC_URL: "https://github.com/y-scope/ystdlib-cpp/archive/d1b4ae0.zip"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
