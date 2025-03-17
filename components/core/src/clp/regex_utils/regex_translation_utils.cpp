@@ -4,18 +4,18 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <system_error>
 
 #include <outcome/single-header/outcome.hpp>
 #include <string_utils/string_utils.hpp>
 
-#include "regex_utils/constants.hpp"
-#include "regex_utils/ErrorCode.hpp"
-#include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
+#include "constants.hpp"
+#include "RegexErrorCode.hpp"
+#include "RegexToWildcardTranslatorConfig.hpp"
 
 namespace clp::regex_utils {
+using clp::regex_utils::RegexErrorCode;
+using clp::regex_utils::RegexErrorCodeEnum;
 using clp::string_utils::is_alphabet;
-using std::error_code;
 using std::optional;
 using std::string;
 using std::string_view;
@@ -85,13 +85,13 @@ private:
  * updated to advance or backtrack the scan position.
  * @param[out] wildcard_str The translated wildcard string. May or may not be updated.
  * @param[in] config The translator config predefined by the user.
- * @return clp::regex_utils::ErrorCode
+ * @return clp::regex_utils::RegexErrorCode
  */
 using StateTransitionFuncSig
         = auto(TranslatorState& state,
                string_view::const_iterator& it,
                string& wildcard_str,
-               RegexToWildcardTranslatorConfig const& config) -> error_code;
+               RegexToWildcardTranslatorConfig const& config) -> RegexErrorCode;
 
 /**
  * Treats each character literally and directly append it to the wildcard string, unless it is a
@@ -173,7 +173,7 @@ auto normal_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> RegexErrorCode {
     auto const ch{*it};
     switch (ch) {
         case '.':
@@ -190,22 +190,22 @@ auto normal_state_transition(
             state.set_next_state(TranslatorState::RegexPatternState::End);
             break;
         case cRegexZeroOrMore:
-            return ErrorCode::UntranslatableStar;
+            return RegexErrorCodeEnum::UntranslatableStar;
         case cRegexOneOrMore:
-            return ErrorCode::UntranslatablePlus;
+            return RegexErrorCodeEnum::UntranslatablePlus;
         case cRegexZeroOrOne:
-            return ErrorCode::UnsupportedQuestionMark;
+            return RegexErrorCodeEnum::UnsupportedQuestionMark;
         case '|':
-            return ErrorCode::UnsupportedPipe;
+            return RegexErrorCodeEnum::UnsupportedPipe;
         case cRegexStartAnchor:
-            return ErrorCode::IllegalCaret;
+            return RegexErrorCodeEnum::IllegalCaret;
         case ')':
-            return ErrorCode::UnmatchedParenthesis;
+            return RegexErrorCodeEnum::UnmatchedParenthesis;
         default:
             wildcard_str += ch;
             break;
     }
-    return ErrorCode::Success;
+    return RegexErrorCodeEnum::Success;
 }
 
 auto dot_state_transition(
@@ -213,7 +213,7 @@ auto dot_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> RegexErrorCode {
     switch (*it) {
         case cZeroOrMoreCharsWildcard:
             wildcard_str += cZeroOrMoreCharsWildcard;
@@ -228,7 +228,7 @@ auto dot_state_transition(
             break;
     }
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
-    return ErrorCode::Success;
+    return RegexErrorCodeEnum::Success;
 }
 
 auto escaped_state_transition(
@@ -236,14 +236,14 @@ auto escaped_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> RegexErrorCode {
     auto const ch{*it};
     if (false == cRegexEscapeSeqMetaCharsLut.at(ch)) {
-        return ErrorCode::IllegalEscapeSequence;
+        return RegexErrorCodeEnum::IllegalEscapeSequence;
     }
     append_char_to_wildcard(ch, wildcard_str);
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
-    return ErrorCode::Success;
+    return RegexErrorCodeEnum::Success;
 }
 
 auto charset_state_transition(
@@ -251,25 +251,25 @@ auto charset_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> RegexErrorCode {
     auto const charset_begin_it_opt{state.get_charset_begin_it()};
     if (false == charset_begin_it_opt.has_value()) {
-        return ErrorCode::IllegalState;
+        return RegexErrorCodeEnum::IllegalState;
     }
     string_view::const_iterator const charset_begin_it = charset_begin_it_opt.value();
 
     auto const ch{*it};
     if (cEscapeChar == ch) {
         state.set_next_state(TranslatorState::RegexPatternState::CharsetEscaped);
-        return ErrorCode::Success;
+        return RegexErrorCodeEnum::Success;
     }
     if (']' != ch) {
-        return ErrorCode::Success;
+        return RegexErrorCodeEnum::Success;
     }
 
     auto const charset_len{it - charset_begin_it};
     if (0 == charset_len || charset_len > 2) {
-        return ErrorCode::UnsupportedCharsetPattern;
+        return RegexErrorCodeEnum::UnsupportedCharsetPattern;
     }
 
     auto const ch0{*charset_begin_it};
@@ -278,7 +278,7 @@ auto charset_state_transition(
 
     if (1 == charset_len) {
         if (cCharsetNegate == ch0 || cEscapeChar == ch0) {
-            return ErrorCode::UnsupportedCharsetPattern;
+            return RegexErrorCodeEnum::UnsupportedCharsetPattern;
         }
         parsed_char = ch0;
     } else {  // 2 == charset_len
@@ -287,14 +287,14 @@ auto charset_state_transition(
         } else if (config.case_insensitive_wildcard() && is_same_char_opposite_case(ch0, ch1)) {
             parsed_char = ch0 > ch1 ? ch0 : ch1;  // choose the lower case character
         } else {
-            return ErrorCode::UnsupportedCharsetPattern;
+            return RegexErrorCodeEnum::UnsupportedCharsetPattern;
         }
     }
 
     append_char_to_wildcard(parsed_char, wildcard_str);
     state.invalidate_charset_begin_it();
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
-    return ErrorCode::Success;
+    return RegexErrorCodeEnum::Success;
 }
 
 auto charset_escaped_state_transition(
@@ -302,9 +302,9 @@ auto charset_escaped_state_transition(
         [[maybe_unused]] string_view::const_iterator& it,
         [[maybe_unused]] string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> RegexErrorCode {
     state.set_next_state(TranslatorState::RegexPatternState::Charset);
-    return ErrorCode::Success;
+    return RegexErrorCodeEnum::Success;
 }
 
 auto end_state_transition(
@@ -312,11 +312,11 @@ auto end_state_transition(
         string_view::const_iterator& it,
         [[maybe_unused]] string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> RegexErrorCode {
     if (cRegexEndAnchor != *it) {
-        return ErrorCode::IllegalDollarSign;
+        return RegexErrorCodeEnum::IllegalDollarSign;
     }
-    return ErrorCode::Success;
+    return RegexErrorCodeEnum::Success;
 }
 
 auto final_state_cleanup(
@@ -324,7 +324,7 @@ auto final_state_cleanup(
         [[maybe_unused]] string_view::const_iterator& it,
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> RegexErrorCode {
     switch (state.get_state()) {
         case TranslatorState::RegexPatternState::Dot:
             // The last character is a single `.`, without the possibility of becoming a
@@ -333,7 +333,7 @@ auto final_state_cleanup(
             break;
         case TranslatorState::RegexPatternState::Charset:
         case TranslatorState::RegexPatternState::CharsetEscaped:
-            return ErrorCode::IncompleteCharsetStructure;
+            return RegexErrorCodeEnum::IncompleteCharsetStructure;
         default:
             break;
     }
@@ -343,7 +343,7 @@ auto final_state_cleanup(
     {
         wildcard_str += cZeroOrMoreCharsWildcard;
     }
-    return ErrorCode::Success;
+    return RegexErrorCodeEnum::Success;
 }
 
 auto append_char_to_wildcard(char ch, string& wildcard_str) -> void {
@@ -385,7 +385,7 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
         wildcard_str += cZeroOrMoreCharsWildcard;
     }
 
-    error_code ec{};
+    RegexErrorCode ec{RegexErrorCodeEnum::Success};
     while (it != regex_str.cend()) {
         switch (state.get_state()) {
             case TranslatorState::RegexPatternState::Normal:
@@ -407,17 +407,17 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
                 ec = end_state_transition(state, it, wildcard_str, config);
                 break;
             default:
-                ec = ErrorCode::IllegalState;
+                ec = RegexErrorCodeEnum::IllegalState;
                 break;
         }
-        if (ec) {
+        if (ec.get_error() != RegexErrorCodeEnum::Success) {
             return ec;
         }
         ++it;
     }
 
     ec = final_state_cleanup(state, it, wildcard_str, config);
-    if (ec) {
+    if (ec.get_error() != RegexErrorCodeEnum::Success) {
         return ec;
     }
     return wildcard_str;
