@@ -42,8 +42,8 @@ This will download:
 * [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [uftcpp](https://github.com/nemtrif/utfcpp.git) (v4.0.6)
-* [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) (969ff35)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
+* [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) (969ff35)
 
 ### Environment
 
