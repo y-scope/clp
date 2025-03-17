@@ -4,8 +4,8 @@
 
 #include <ystdlib/error_handling/ErrorCode.hpp>
 
-using clp::ffi::ir_stream::IrErrorCodeEnum;
 using clp::ffi::ir_stream::IrErrorCategory;
+using clp::ffi::ir_stream::IrErrorCodeEnum;
 
 template <>
 auto IrErrorCategory::name() const noexcept -> char const* {
