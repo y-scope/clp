@@ -17,5 +17,10 @@ target_include_directories(regex_utils
         ../
         "${PROJECT_SOURCE_DIR}/submodules"
 )
-target_link_libraries(regex_utils PRIVATE clp::string_utils ystdlib::error_handling)
+target_link_libraries(regex_utils
+        PUBLIC
+        ystdlib::error_handling
+        PRIVATE
+        clp::string_utils
+)
 target_compile_features(regex_utils PRIVATE cxx_std_20)
