@@ -701,6 +701,7 @@ target_link_libraries(unitTest
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ystdlib::error_handling
         ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
         )
