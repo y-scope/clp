@@ -224,6 +224,10 @@ find_package(Threads REQUIRED)
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
 
+# Add ystdlib-cpp
+set(YSTDLIB_CPP_BUILD_TESTING OFF)
+add_subdirectory(submodules/ystdlib-cpp EXCLUDE_FROM_ALL)
+
 # Find and setup ZStd Library
 if(CLP_USE_STATIC_LIBS)
     set(ZStd_USE_STATIC_LIBS ON)
