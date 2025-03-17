@@ -32,6 +32,7 @@ const EslintConfig = [
                 "error",
                 {
                     capIsNewExceptions: [
+                        // TypeBox imports
                         "Decode",
                         "Encode",
                         "Type.Transform",
