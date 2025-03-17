@@ -249,7 +249,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/encoding_methods.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/encoding_methods.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/IrErrorCode.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/protocol_constants.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/Serializer.cpp"
