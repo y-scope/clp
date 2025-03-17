@@ -468,7 +468,7 @@ class ArchiveOutput(BaseModel):
         if field <= 0:
             raise ValueError("target_segment_size must be greater than 0")
         return field
-        
+
     @validator("compression_level")
     def validate_compression_level(cls, field):
         if field < 1 or field > 9:
