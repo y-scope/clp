@@ -12,37 +12,37 @@ using clp::regex_utils::RegexToWildcardTranslatorConfig;
 
 namespace {
 auto test_translation_error(
-        std::string const& wildcard_str,
+        std::string const& regex_str,
         RegexErrorCodeEnum error,
         RegexToWildcardTranslatorConfig const* config = nullptr
 ) -> void;
 auto test_translation_value(
-        std::string const& wildcard_str,
         std::string const& regex_str,
+        std::string const& wildcard_str,
         RegexToWildcardTranslatorConfig const* config = nullptr
 ) -> void;
 
 auto test_translation_error(
-        std::string const& wildcard_str,
+        std::string const& regex_str,
         RegexErrorCodeEnum error,
         RegexToWildcardTranslatorConfig const* config
 ) -> void {
     if (config != nullptr) {
-        REQUIRE((regex_to_wildcard(wildcard_str, *config).error() == RegexErrorCode{error}));
+        REQUIRE((regex_to_wildcard(regex_str, *config).error() == RegexErrorCode{error}));
     } else {
-        REQUIRE((regex_to_wildcard(wildcard_str).error() == RegexErrorCode{error}));
+        REQUIRE((regex_to_wildcard(regex_str).error() == RegexErrorCode{error}));
     }
 }
 
 auto test_translation_value(
-        std::string const& wildcard_str,
         std::string const& regex_str,
+        std::string const& wildcard_str,
         RegexToWildcardTranslatorConfig const* config
 ) -> void {
     if (config != nullptr) {
-        REQUIRE((regex_to_wildcard(wildcard_str, *config).value() == regex_str));
+        REQUIRE((regex_to_wildcard(regex_str, *config).value() == wildcard_str));
     } else {
-        REQUIRE((regex_to_wildcard(wildcard_str).value() == regex_str));
+        REQUIRE((regex_to_wildcard(regex_str).value() == wildcard_str));
     }
 }
 }  // namespace
