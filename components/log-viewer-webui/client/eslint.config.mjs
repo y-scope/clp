@@ -12,15 +12,7 @@ const EslintConfig = [
         ],
     },
     CommonConfig,
-    ...TsConfigArray.map(
-        (config) => ({
-            files: [
-                "**/*.ts",
-                "**/*.tsx",
-            ],
-            ...config,
-        })
-    ),
+    ...TsConfigArray,
     createTsConfigOverride(
         [
             "src/**/*.ts",
