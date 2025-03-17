@@ -33,7 +33,7 @@ enum QUERY_JOB_TYPE {
 }
 
 /**
- * Mapping between job type enums and stream type
+ * Mapping between extract job type enums and stream type.
  */
 const EXTRACT_JOB_TYPE = Object.freeze({
     ir: QUERY_JOB_TYPE.EXTRACT_IR,
