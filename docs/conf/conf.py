@@ -49,6 +49,7 @@ html_theme = "pydata_sphinx_theme"
 # https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest/
 
 mermaid_version = "11.5.0"
+mermaid_include_elk = "0.1.7"
 
 # -- Theme options -------------------------------------------------------------
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html
