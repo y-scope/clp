@@ -8,12 +8,12 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
-#include <ystdlib/container/Array.hpp>
 
 #include <Catch2/single_include/catch2/catch.hpp>
 #include <curl/curl.h>
 #include <fmt/core.h>
 #include <json/single_include/nlohmann/json.hpp>
+#include <ystdlib/containers/Array.hpp>
 
 #include "../src/clp/CurlDownloadHandler.hpp"
 #include "../src/clp/CurlGlobalInstance.hpp"
@@ -69,7 +69,7 @@ auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
 
 auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vector<char> {
     std::vector<char> buf;
-    ystdlib::container::Array<char> read_buf{read_buf_size};
+    ystdlib::containers::Array<char> read_buf(read_buf_size);
     for (bool has_more_content{true}; has_more_content;) {
         size_t num_bytes_read{};
         has_more_content = reader.read(read_buf.data(), read_buf_size, num_bytes_read);

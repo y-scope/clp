@@ -259,9 +259,6 @@ set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
 include(cmake/Modules/FindLibraryDependencies.cmake)
 FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 
-# Add ystdlib-cpp
-add_subdirectory(submodules/ystdlib-cpp EXCLUDE_FROM_ALL)
-
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
@@ -703,8 +700,8 @@ target_link_libraries(unitTest
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ystdlib::containers
         ${LIBLZMA_LIBRARIES}
-        ystdlib::container
         ZStd::ZStd
         )
 target_compile_features(unitTest

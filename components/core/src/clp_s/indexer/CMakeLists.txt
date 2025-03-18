@@ -92,7 +92,7 @@ target_link_libraries(indexer
         simdjson
         spdlog::spdlog
         yaml-cpp::yaml-cpp
-        ystdlib::container
+        ystdlib::containers
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory

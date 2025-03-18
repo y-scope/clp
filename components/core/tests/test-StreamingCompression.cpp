@@ -6,10 +6,10 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <ystdlib/container/Array.hpp>
 
 #include <boost/filesystem/operations.hpp>
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <ystdlib/containers/Array.hpp>
 #include <zstd.h>
 
 #include "../src/clp/ErrorCode.hpp"
@@ -30,7 +30,7 @@ using clp::streaming_compression::Compressor;
 using clp::streaming_compression::Decompressor;
 using std::string;
 using std::string_view;
-using ystdlib::container::Array;
+using ystdlib::containers::Array;
 
 namespace {
 constexpr string_view cCompressedFilePath{"test_streaming_compressed_file.bin"};
@@ -111,8 +111,8 @@ TEST_CASE("StreamingCompression", "[StreamingCompression]") {
     std::unique_ptr<Compressor> compressor;
     std::unique_ptr<Decompressor> decompressor;
 
-    Array<char> decompressed_buffer{cBufferSize};
-    Array<char> uncompressed_buffer{cBufferSize};
+    Array<char> decompressed_buffer(cBufferSize);
+    Array<char> uncompressed_buffer(cBufferSize);
     for (size_t i{0}; i < cBufferSize; ++i) {
         uncompressed_buffer.at(i) = static_cast<char>(('a' + (i % cAlphabetLength)));
     }
