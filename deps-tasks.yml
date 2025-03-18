@@ -17,8 +17,10 @@ vars:
   G_OUTCOME_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#outcome.md5"
   G_SIMDJSON_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#simdjson.md5"
   G_SQLITE3_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#sqlite3.md5"
+  G_UTFCPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#utfcpp.md5"
   G_YAML_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yaml-cpp.md5"
   G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#yscope-log-viewer.md5"
+  G_YSTDLIB_CPP_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/deps#ystdlib-cpp.md5"
 
 tasks:
   default:
@@ -38,7 +40,9 @@ tasks:
       - "{{.G_OUTCOME_CHECKSUM_FILE}}"
       - "{{.G_SIMDJSON_CHECKSUM_FILE}}"
       - "{{.G_SQLITE3_CHECKSUM_FILE}}"
+      - "{{.G_UTFCPP_CHECKSUM_FILE}}"
       - "{{.G_YAML_CPP_CHECKSUM_FILE}}"
+      - "{{.G_YSTDLIB_CPP_CHECKSUM_FILE}}"
     generates: ["{{.G_DEPS_CORE_CHECKSUM_FILE}}"]
     deps: ["all-internal-deps"]
     cmds:
@@ -53,7 +57,9 @@ tasks:
         "{{.G_OUTCOME_CHECKSUM_FILE}}"
         "{{.G_SIMDJSON_CHECKSUM_FILE}}"
         "{{.G_SQLITE3_CHECKSUM_FILE}}"
+        "{{.G_UTFCPP_CHECKSUM_FILE}}"
         "{{.G_YAML_CPP_CHECKSUM_FILE}}"
+        "{{.G_YSTDLIB_CPP_CHECKSUM_FILE}}"
         >> "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
 
   log-viewer:
@@ -93,8 +99,10 @@ tasks:
       - task: "outcome"
       - task: "simdjson"
       - task: "sqlite3"
+      - task: "utfcpp"
       - task: "yaml-cpp"
       - task: "yscope-log-viewer"
+      - task: "ystdlib-cpp"
 
   abseil-cpp:
     internal: true
@@ -109,10 +117,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -121,10 +129,10 @@ tasks:
           SRC_NAME: "abseil-cpp-20230802.1"
           SRC_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   antlr4:
     internal: true
@@ -140,10 +148,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST_DIR}}"
+          INCLUDE_PATTERNS: ["{{.DEST_DIR}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -152,10 +160,10 @@ tasks:
           SRC_NAME: "antlr-4.13.1-complete.jar"
           SRC_URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST_DIR}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST_DIR}}"]
 
   Catch2:
     internal: true
@@ -170,10 +178,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -182,10 +190,10 @@ tasks:
           SRC_NAME: "Catch2-2.13.7"
           SRC_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.7.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   date:
     internal: true
@@ -200,10 +208,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -212,10 +220,10 @@ tasks:
           SRC_NAME: "date-3.0.1"
           SRC_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   json:
     internal: true
@@ -230,10 +238,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -242,10 +250,10 @@ tasks:
           SRC_NAME: "json-3.11.3"
           SRC_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   log-surgeon:
     internal: true
@@ -260,10 +268,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -272,10 +280,10 @@ tasks:
           SRC_NAME: "log-surgeon-895f46489b1911ab3b3aac3202afd56c96e8cd98"
           SRC_URL: "https://github.com/y-scope/log-surgeon/archive/895f464.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   outcome:
     internal: true
@@ -290,10 +298,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -302,10 +310,10 @@ tasks:
           SRC_NAME: "outcome-2.2.9"
           SRC_URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.9.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   simdjson:
     internal: true
@@ -320,10 +328,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -332,10 +340,10 @@ tasks:
           SRC_NAME: "simdjson-3.6.3"
           SRC_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   # We don't use a git submodule for sqlite3 since that would require building the sqlite
   # amalgamation
@@ -352,10 +360,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -364,10 +372,40 @@ tasks:
           SRC_NAME: "sqlite-amalgamation-3360000"
           SRC_URL: "https://www.sqlite.org/2021/sqlite-amalgamation-3360000.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+
+  utfcpp:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_UTFCPP_CHECKSUM_FILE}}"
+      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/utfcpp"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTILS_TASKFILE}}"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    cmds:
+      - task: "download-dependency"
+        vars:
+          DEST: "{{.DEST}}"
+          FLAGS: "--extract"
+          SRC_NAME: "utfcpp-4.0.6"
+          SRC_URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.zip"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   yaml-cpp:
     internal: true
@@ -382,10 +420,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -394,10 +432,10 @@ tasks:
           SRC_NAME: "yaml-cpp-yaml-cpp-0.7.0"
           SRC_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
 
   yscope-log-viewer:
     internal: true
@@ -412,10 +450,10 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          DATA_DIR: "{{.DEST}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
     cmds:
       - task: "download-dependency"
         vars:
@@ -424,10 +462,41 @@ tasks:
           SRC_NAME: "yscope-log-viewer-969ff35b2387bcdc3580b441907e3656640ce16d"
           SRC_URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.zip"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
-          DATA_DIR: "{{.DEST}}"
-          OUTPUT_FILE: "{{.CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+
+  ystdlib-cpp:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_YSTDLIB_CPP_CHECKSUM_FILE}}"
+      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/ystdlib-cpp"
+    sources:
+      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
+      - "{{.G_UTILS_TASKFILE}}"
+      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    cmds:
+      - task: "download-dependency"
+        vars:
+          DEST: "{{.DEST}}"
+          FLAGS: "--extract"
+          SRC_NAME: "ystdlib-cpp-d1b4ae0"
+          SRC_URL: "https://github.com/y-scope/ystdlib-cpp/archive/d1b4ae0.zip"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.DEST}}"]
+
 
   download-dependency:
     internal: true

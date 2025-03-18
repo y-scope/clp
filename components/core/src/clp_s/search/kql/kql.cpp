@@ -6,6 +6,7 @@
 #include <antlr4-runtime.h>
 #include <spdlog/spdlog.h>
 
+#include "../../archive_constants.hpp"
 #include "../../Utils.hpp"
 #include "../AndExpr.hpp"
 #include "../antlr_common/ErrorListener.hpp"
@@ -30,12 +31,22 @@ namespace clp_s::search::kql {
 namespace {
 class ParseTreeVisitor : public KqlBaseVisitor {
 private:
-    static void
-    prepend_column(std::shared_ptr<ColumnDescriptor> const& desc, DescriptorList const& prefix) {
-        desc->insert(desc->get_descriptor_list().begin(), prefix);
+    static void prepend_column(
+            std::shared_ptr<ColumnDescriptor> const& desc,
+            std::shared_ptr<ColumnDescriptor> const& prefix
+    ) {
+        desc->insert(desc->get_descriptor_list().begin(), prefix->get_descriptor_list());
+        if (false == desc->get_namespace().empty()) {
+            throw std::runtime_error{"Invalid descriptor."};
+        }
+
+        desc->set_namespace(prefix->get_namespace());
     }
 
-    void prepend_column(std::shared_ptr<Expression> const& expr, DescriptorList const& prefix) {
+    void prepend_column(
+            std::shared_ptr<Expression> const& expr,
+            std::shared_ptr<ColumnDescriptor> const& prefix
+    ) {
         for (auto const& op : expr->get_op_list()) {
             if (auto col = std::dynamic_pointer_cast<ColumnDescriptor>(op)) {
                 prepend_column(col, prefix);
@@ -98,20 +109,29 @@ public:
         std::string column = unquote_string(ctx->LITERAL()->getText());
 
         std::vector<std::string> descriptor_tokens;
-        if (false == StringUtils::tokenize_column_descriptor(column, descriptor_tokens)) {
+        std::string descriptor_namespace;
+        if (false
+            == StringUtils::tokenize_column_descriptor(
+                    column,
+                    descriptor_tokens,
+                    descriptor_namespace
+            ))
+        {
             SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
             return nullptr;
         }
 
-        return ColumnDescriptor::create_from_escaped_tokens(descriptor_tokens);
+        return ColumnDescriptor::create_from_escaped_tokens(
+                descriptor_tokens,
+                descriptor_namespace
+        );
     }
 
     std::any visitNestedQuery(KqlParser::NestedQueryContext* ctx) override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
-        DescriptorList prefix = descriptor->get_descriptor_list();
 
         auto nested_expr = std::any_cast<std::shared_ptr<Expression>>(ctx->q->accept(this));
-        prepend_column(nested_expr, prefix);
+        prepend_column(nested_expr, descriptor);
 
         return nested_expr;
     }
@@ -147,8 +167,7 @@ public:
             return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
         } else /*if (ctx->list) */ {
             auto list_expr = std::any_cast<std::shared_ptr<Expression>>(ctx->list->accept(this));
-            DescriptorList prefix = descriptor->get_descriptor_list();
-            prepend_column(list_expr, prefix);
+            prepend_column(list_expr, descriptor);
             return list_expr;
         }
     }
@@ -179,7 +198,9 @@ public:
 
     std::any visitValue_expression(KqlParser::Value_expressionContext* ctx) override {
         auto lit = unquote_literal(ctx->LITERAL()->getText());
-        auto descriptor = ColumnDescriptor::create_from_escaped_token("*");
+        // TODO: consider if this should somehow be allowed to match all namespaces. "*" namespace?
+        auto descriptor
+                = ColumnDescriptor::create_from_escaped_tokens({"*"}, constants::cDefaultNamespace);
         return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
     }
 
@@ -199,7 +220,10 @@ public:
             base = OrExpr::create();
         }
 
-        auto empty_descriptor = ColumnDescriptor::create_from_descriptors(DescriptorList());
+        auto empty_descriptor = ColumnDescriptor::create_from_descriptors(
+                DescriptorList(),
+                constants::cDefaultNamespace
+        );
         for (auto token : ctx->literals) {
             auto literal = unquote_literal(token->getText());
             auto expr = FilterExpr::create(

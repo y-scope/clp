@@ -19,4 +19,5 @@ dnf install -y \
     make \
     mariadb-connector-c-devel \
     openssl-devel \
+    python3-pip \
     xz-devel

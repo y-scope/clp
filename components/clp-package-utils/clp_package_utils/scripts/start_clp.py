@@ -168,7 +168,7 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     if "mysql" == clp_config.database.type:
         cmd.append("mysql:8.0.23")
     elif "mariadb" == clp_config.database.type:
-        cmd.append("mariadb:10.6.4-focal")
+        cmd.append("mariadb:10-jammy")
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     # fmt: off

@@ -89,7 +89,8 @@ public:
         return new ArchiveIterator(m_db, begin_ts, end_ts);
     }
 
-    GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_file_path(std::string const& path
+    GlobalMetadataDB::ArchiveIterator* get_archive_iterator_for_file_path(
+            std::string const& path
     ) override {
         return new ArchiveIterator(m_db, path);
     }

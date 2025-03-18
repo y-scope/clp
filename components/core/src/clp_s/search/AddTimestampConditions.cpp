@@ -18,8 +18,10 @@ std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expressi
         return EmptyExpr::create();
     }
 
-    auto timestamp_column
-            = ColumnDescriptor::create_from_escaped_tokens(m_timestamp_column.value());
+    auto timestamp_column = ColumnDescriptor::create_from_escaped_tokens(
+            m_timestamp_column.value().first,
+            m_timestamp_column.value().second
+    );
 
     auto and_expr = AndExpr::create();
     if (m_begin_ts.has_value()) {

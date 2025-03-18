@@ -1,7 +1,9 @@
 #include "SchemaReader.hpp"
 
 #include <stack>
+#include <string>
 
+#include "archive_constants.hpp"
 #include "BufferViewReader.hpp"
 #include "Schema.hpp"
 
@@ -257,6 +259,10 @@ bool SchemaReader::get_next_message_with_metadata(
 
 void SchemaReader::initialize_filter(FilterClass* filter) {
     filter->init(this, m_schema_id, m_columns);
+}
+
+void SchemaReader::initialize_filter_with_column_map(FilterClass* filter) {
+    filter->init(this, m_schema_id, m_column_map);
 }
 
 void SchemaReader::generate_local_tree(int32_t global_id) {
@@ -565,9 +571,13 @@ void SchemaReader::initialize_serializer() {
     }
 
     // TODO: this code will have to change once we allow mixing log lines parsed by different
-    // parsers.
-    if (false == m_local_schema_tree.get_nodes().empty()) {
-        generate_json_template(m_local_schema_tree.get_object_subtree_node_id());
+    // parsers and if we add support for serializing auto-generated keys in regular JSON.
+    if (auto subtree_root = m_local_schema_tree.get_object_subtree_node_id_for_namespace(
+                constants::cDefaultNamespace
+        );
+        -1 != subtree_root)
+    {
+        generate_json_template(subtree_root);
     }
 }
 

@@ -221,7 +221,8 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
 
         case IrUnitType::SchemaTreeNodeInsertion: {
             std::string key_name;
-            auto const result{deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
+            auto const result{
+                    deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
             };
             if (result.has_error()) {
                 return result.error();
@@ -236,16 +237,17 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
                 return std::errc::protocol_error;
             }
 
+            std::ignore = schema_tree_to_insert->insert_node(node_locator);
+
             if (auto const err{m_ir_unit_handler.handle_schema_tree_node_insertion(
                         is_auto_generated,
-                        node_locator
+                        node_locator,
+                        schema_tree_to_insert
                 )};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return ir_error_code_to_errc(err);
             }
-
-            std::ignore = schema_tree_to_insert->insert_node(node_locator);
             break;
         }
 
