@@ -39,7 +39,7 @@ auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
 
 auto get_content(clp::ReaderInterface& reader, size_t read_buf_size) -> std::vector<char> {
     std::vector<char> buf;
-    ystdlib::containers::Array<char> read_buf{read_buf_size};
+    ystdlib::containers::Array<char> read_buf(read_buf_size);
     for (bool has_more_content{true}; has_more_content;) {
         size_t num_bytes_read{};
         has_more_content = reader.read(read_buf.data(), read_buf_size, num_bytes_read);
