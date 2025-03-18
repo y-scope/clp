@@ -61,6 +61,7 @@ auto validate_and_append_escaped_utf8_string(std::string_view src, std::string& 
                 constexpr uint8_t cLargestControlCharacter{0x1F};
                 auto const byte{static_cast<uint8_t>(*it)};
                 if (cLargestControlCharacter >= byte) {
+                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
                     std::ignore = snprintf(buf.data(), buf.size(), "\\u00%02x", byte);
                     escaped_char = {buf.data(), buf.size() - 1};
                 } else {
