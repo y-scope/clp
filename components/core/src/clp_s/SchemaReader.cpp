@@ -455,6 +455,7 @@ size_t SchemaReader::generate_structured_array_template(
                 }
                 case NodeType::DateString:
                 case NodeType::UnstructuredArray:
+                case NodeType::Metadata:
                 case NodeType::Unknown:
                     break;
             }
@@ -539,6 +540,7 @@ size_t SchemaReader::generate_structured_object_template(
                 }
                 case NodeType::DateString:
                 case NodeType::UnstructuredArray:
+                case NodeType::Metadata:
                 case NodeType::Unknown:
                     break;
             }
@@ -645,6 +647,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_special_key(key);
                 break;
             }
+            case NodeType::Metadata:
             case NodeType::Unknown:
                 break;
         }

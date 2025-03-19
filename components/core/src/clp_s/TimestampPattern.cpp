@@ -111,7 +111,7 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
     if ("0" != value_str) {
         str.append(max_length - value_str.length(), padding_character);
         size_t last_zero = string::npos;
-        for (size_t last = value_str.size() - 1; last >= 0; --last) {
+        for (int last = value_str.size() - 1; last >= 0; --last) {
             if (value_str[last] == '0') {
                 last_zero = last;
             } else {
