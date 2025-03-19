@@ -144,7 +144,6 @@ jobs:
           token: "${{secrets.GITHUB_TOKEN}}"
 
   centos-stream-9-binaries:
-    name: "centos-stream-9-binaries"
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success()
@@ -184,7 +183,6 @@ jobs:
             --num-jobs $(getconf _NPROCESSORS_ONLN)
 
   ubuntu-jammy-binaries:
-    name: "ubuntu-jammy-binaries"
     # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
     if: >-
       success()
