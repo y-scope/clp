@@ -41,6 +41,7 @@ concurrency:
 
 jobs:
   build-macos:
+    name: "build-macos"
     strategy:
       matrix:
         os:
@@ -52,7 +53,7 @@ jobs:
           - false
     runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           # Fetch history so that the `clang-tidy-diff` task can compare against the main branch.
           fetch-depth: 0
