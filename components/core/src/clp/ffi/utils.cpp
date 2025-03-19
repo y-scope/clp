@@ -66,6 +66,8 @@ auto validate_and_append_escaped_utf8_string(std::string_view src, std::string& 
                     // escaped_char = fmt::format("\\u00{:02x}", byte);
                     // We should update it once `fmtlib` is fully integrated into the FFI library.
 
+                    // Necessary since implementations (besides `fmtlib`) that don't violate
+                    // `cppcoreguidelines-pro-type-vararg` have much worse performance.
                     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
                     std::ignore = snprintf(buf.data(), buf.size(), "\\u00%02x", byte);
                     escaped_char = {buf.data(), buf.size() - 1};
