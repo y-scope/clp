@@ -18,8 +18,8 @@
 #include <vector>
 
 #include <curl/curl.h>
+#include <ystdlib/containers/Array.hpp>
 
-#include "Array.hpp"
 #include "CurlDownloadHandler.hpp"
 #include "CurlGlobalInstance.hpp"
 #include "ErrorCode.hpp"
@@ -344,7 +344,7 @@ private:
     size_t m_buffer_size{cDefaultBufferSize};
     size_t m_curr_downloader_buf_idx{0};
 
-    std::vector<Array<char>> m_buffer_pool;
+    std::vector<ystdlib::containers::Array<char>> m_buffer_pool;
     std::queue<BufferView> m_filled_buffer_queue;
     std::optional<BufferView> m_curr_downloader_buf;
     std::optional<BufferView> m_curr_reader_buf;

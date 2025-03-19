@@ -408,7 +408,6 @@ set(SOURCE_FILES_reducer_unitTest
     )
 
 set(SOURCE_FILES_unitTest
-        src/clp/Array.hpp
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
@@ -701,6 +700,7 @@ target_link_libraries(unitTest
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ystdlib::containers
         ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
         )

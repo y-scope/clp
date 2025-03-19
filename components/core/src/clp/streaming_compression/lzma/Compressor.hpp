@@ -5,8 +5,8 @@
 #include <cstdint>
 
 #include <lzma.h>
+#include <ystdlib/containers/Array.hpp>
 
-#include "../../Array.hpp"
 #include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
 #include "../../WriterInterface.hpp"
@@ -37,7 +37,8 @@ public:
     Compressor() : Compressor{cDefaultCompressionLevel, cDefaultDictionarySize, LZMA_CHECK_CRC64} {}
 
     Compressor(int compression_level, size_t dict_size, lzma_check check)
-            : m_lzma_stream{compression_level, dict_size, check} {}
+            : m_compressed_stream_block_buffer(cCompressedStreamBlockBufferSize),
+              m_lzma_stream{compression_level, dict_size, check} {}
 
     // Destructor
     ~Compressor() override = default;
@@ -224,7 +225,7 @@ private:
     WriterInterface* m_compressed_stream_writer{nullptr};
 
     // Compressed stream variables
-    Array<uint8_t> m_compressed_stream_block_buffer{cCompressedStreamBlockBufferSize};
+    ystdlib::containers::Array<uint8_t> m_compressed_stream_block_buffer;
     LzmaStream m_lzma_stream;
     size_t m_uncompressed_stream_pos{0};
 };
