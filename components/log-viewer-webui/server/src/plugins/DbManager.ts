@@ -14,7 +14,7 @@ import {
     ResultSetHeader,
 } from "mysql2/promise";
 
-import {Nullable} from "./typings/common.js";
+import {Nullable} from "../typings/common.js";
 import {
     DbManagerOptions,
     QUERY_JOB_STATUS,
@@ -24,8 +24,8 @@ import {
     QueryJob,
     StreamFileMongoDocument,
     StreamFilesCollection,
-} from "./typings/DbManager.js";
-import {sleep} from "./utils/time.js";
+} from "../typings/DbManager.js";
+import {sleep} from "../utils/time.js";
 
 
 /**

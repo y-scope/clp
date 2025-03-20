@@ -5,7 +5,7 @@ import {
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import fastifyPlugin from "fastify-plugin";
 
-import {Nullable} from "./typings/common.js";
+import {Nullable} from "../typings/common.js";
 
 
 /**

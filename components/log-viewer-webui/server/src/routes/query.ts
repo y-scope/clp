@@ -4,7 +4,7 @@ import {FastifyPluginAsync} from "fastify";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
-import {QUERY_JOB_TYPE} from "../DbManager.js";
+import {QUERY_JOB_TYPE} from "../plugins/DbManager.js";
 import {EXTRACT_JOB_TYPES} from "../typings/DbManager.js";
 
 
