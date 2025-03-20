@@ -100,8 +100,8 @@ public:
     void add_child(int32_t child_id) { m_children_ids.push_back(child_id); }
 
 private:
-    int32_t m_id;
     int32_t m_parent_id;
+    int32_t m_id;
     std::vector<int32_t> m_children_ids;
     // We use a buffer so that references to this key name are stable after this SchemaNode is move
     // constructed

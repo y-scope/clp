@@ -257,6 +257,7 @@ void ArchiveReader::append_unordered_reader_columns(
             // No need to push columns without associated object readers into the SchemaReader.
             case NodeType::StructuredArray:
             case NodeType::Object:
+            case NodeType::Metadata:
             case NodeType::NullValue:
             case NodeType::Unknown:
                 break;

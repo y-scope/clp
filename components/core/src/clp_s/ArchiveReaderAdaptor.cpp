@@ -25,8 +25,8 @@ ArchiveReaderAdaptor::ArchiveReaderAdaptor(
 )
         : m_archive_path{archive_path},
           m_network_auth{network_auth},
-          m_timestamp_dictionary{std::make_shared<TimestampDictionaryReader>()},
-          m_single_file_archive{false} {
+          m_single_file_archive{false},
+          m_timestamp_dictionary{std::make_shared<TimestampDictionaryReader>()} {
     if (InputSource::Filesystem != archive_path.source
         || std::filesystem::is_regular_file(archive_path.path))
     {
