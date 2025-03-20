@@ -144,6 +144,7 @@ def _make_clp_command_and_env(
         "--target-dictionaries-size", str(clp_config.output.target_dictionaries_size),
         "--target-segment-size", str(clp_config.output.target_segment_size),
         "--target-encoded-file-size", str(clp_config.output.target_encoded_file_size),
+        "--compression-level", str(clp_config.output.compression_level),
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
@@ -184,6 +185,7 @@ def _make_clp_s_command_and_env(
         "--print-archive-stats",
         "--target-encoded-size",
         str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
+        "--compression-level", str(clp_config.output.compression_level),
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on

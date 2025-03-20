@@ -64,6 +64,7 @@ class OutputConfig(BaseModel):
     target_dictionaries_size: int
     target_segment_size: int
     target_encoded_file_size: int
+    compression_level: int
 
 
 class ClpIoConfig(BaseModel):

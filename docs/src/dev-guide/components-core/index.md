@@ -42,6 +42,7 @@ This will download:
 * [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
+* [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git) (d1b4ae0)
 
 ### Environment
 
