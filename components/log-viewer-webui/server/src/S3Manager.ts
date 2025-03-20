@@ -35,7 +35,7 @@ class S3Manager {
      * @return The pre-signed URL string.
      * @throws {Error} If a pre-signed URL couldn't be generated.
      */
-    async getPreSignedUrl (s3UriString: string) {
+    async getPreSignedUrl (s3UriString: string): Promise<string> {
         const s3Uri = new URL(s3UriString);
         const command = new GetObjectCommand({
             Bucket: s3Uri.hostname,
