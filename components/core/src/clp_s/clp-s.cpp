@@ -32,6 +32,7 @@
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
+#include "search/SearchUtils.hpp"
 #include "TimestampPattern.hpp"
 #include "Utils.hpp"
 
@@ -204,7 +205,7 @@ bool search_archive(
             std::vector<std::string> descriptor_tokens;
             std::string descriptor_namespace;
             if (false
-                == StringUtils::tokenize_column_descriptor(
+                == clp_s::search::tokenize_column_descriptor(
                         column,
                         descriptor_tokens,
                         descriptor_namespace

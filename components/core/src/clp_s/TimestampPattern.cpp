@@ -208,6 +208,10 @@ static bool convert_string_to_number_notz(
  * only done once when the program starts.
  */
 void TimestampPattern::init() {
+    // Terminate if already initialized.
+    if (nullptr != m_known_ts_patterns) {
+        return;
+    }
     // First create vector of observed patterns so that it's easy to maintain
     vector<TimestampPattern> patterns;
     // E.g. 1706980946603

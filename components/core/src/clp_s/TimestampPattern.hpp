@@ -11,7 +11,6 @@
 #include <utility>
 
 #include "Defs.hpp"
-#include "FileWriter.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
@@ -71,7 +70,10 @@ public:
 
     // Methods
     /**
-     * Static initializer for class. This must be called before using the class.
+     * Initializes global data needed to use this class. This function must be called before using
+     * this class.
+     *
+     * Note: this function is NOT thread-safe.
      */
     static void init();
 
