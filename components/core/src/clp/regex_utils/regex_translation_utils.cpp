@@ -13,8 +13,6 @@
 #include "RegexToWildcardTranslatorConfig.hpp"
 
 namespace clp::regex_utils {
-using clp::regex_utils::ErrorCode;
-using clp::regex_utils::ErrorCodeEnum;
 using clp::string_utils::is_alphabet;
 using std::optional;
 using std::string;
