@@ -1,59 +1,61 @@
-#include "RegexErrorCode.hpp"
+#include "ErrorCode.hpp"
 
 #include <string>
 
-using clp::regex_utils::RegexErrorCategory;
-using clp::regex_utils::RegexErrorCodeEnum;
+#include <ystdlib/error_handling/ErrorCode.hpp>
+
+using clp::regex_utils::ErrorCodeEnum;
+using RegexErrorCategory = ystdlib::error_handling::ErrorCategory<ErrorCodeEnum>;
 
 template <>
 auto RegexErrorCategory::name() const noexcept -> char const* {
-    return "clp::regex_utils::RegexErrorCode";
+    return "clp::regex_utils::ErrorCode";
 }
 
 template <>
-auto RegexErrorCategory::message(RegexErrorCodeEnum error_enum) const -> std::string {
+auto RegexErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
-        case RegexErrorCodeEnum::Success:
+        case ErrorCodeEnum::Success:
             return "Success.";
 
-        case RegexErrorCodeEnum::IllegalState:
+        case ErrorCodeEnum::IllegalState:
             return "Unrecognized state.";
 
-        case RegexErrorCodeEnum::UntranslatableStar:
+        case ErrorCodeEnum::UntranslatableStar:
             return "Unable to express regex quantifier `*` in wildcard, which repeats a token for "
                    "zero or more occurences, unless it is combined with a wildcard `.`";
 
-        case RegexErrorCodeEnum::UntranslatablePlus:
+        case ErrorCodeEnum::UntranslatablePlus:
             return "Unable to express regex quantifier `+` in wildcard, which repeats a token for "
                    "one or more occurences, unless it is combined with a wildcard `.`";
 
-        case RegexErrorCodeEnum::UnsupportedQuestionMark:
+        case ErrorCodeEnum::UnsupportedQuestionMark:
             return "Unable to express regex quantifier `?` in wildcard, which makes the preceding "
                    "token optional, unless the translator supports returning a list of possible "
                    "wildcard translations.";
 
-        case RegexErrorCodeEnum::UnsupportedPipe:
+        case ErrorCodeEnum::UnsupportedPipe:
             return "Unable to express regex OR `|` in wildcard, which allows the query string to "
                    "match a single token out of a series of options, unless the translator "
                    "supports returning a list of possible wildcard translations.";
 
-        case RegexErrorCodeEnum::IllegalCaret:
+        case ErrorCodeEnum::IllegalCaret:
             return "Failed to translate due to start anchor `^` in the middle of the string.";
 
-        case RegexErrorCodeEnum::IllegalDollarSign:
+        case ErrorCodeEnum::IllegalDollarSign:
             return "Failed to translate due to end anchor `$` in the middle of the string.";
 
-        case RegexErrorCodeEnum::IllegalEscapeSequence:
+        case ErrorCodeEnum::IllegalEscapeSequence:
             return "Currently only supports escape sequences that are used to suppress special "
                    "meanings of regex metacharacters. Alphanumeric characters are disallowed.";
 
-        case RegexErrorCodeEnum::UnmatchedParenthesis:
+        case ErrorCodeEnum::UnmatchedParenthesis:
             return "Unmatched opening `(` or closing `)`.";
 
-        case RegexErrorCodeEnum::IncompleteCharsetStructure:
+        case ErrorCodeEnum::IncompleteCharsetStructure:
             return "Unmatched closing `]` at the end of the string.";
 
-        case RegexErrorCodeEnum::UnsupportedCharsetPattern:
+        case ErrorCodeEnum::UnsupportedCharsetPattern:
             return "Currently only supports character set that can be reduced to a single "
                    "character.";
         default:

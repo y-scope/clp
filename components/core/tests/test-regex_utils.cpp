@@ -1,19 +1,19 @@
 #include <string>
 
 #include <Catch2/single_include/catch2/catch.hpp>
+#include <regex_utils/ErrorCode.hpp>
 #include <regex_utils/regex_translation_utils.hpp>
-#include <regex_utils/RegexErrorCode.hpp>
 #include <regex_utils/RegexToWildcardTranslatorConfig.hpp>
 
+using clp::regex_utils::ErrorCode;
+using clp::regex_utils::ErrorCodeEnum;
 using clp::regex_utils::regex_to_wildcard;
-using clp::regex_utils::RegexErrorCode;
-using clp::regex_utils::RegexErrorCodeEnum;
 using clp::regex_utils::RegexToWildcardTranslatorConfig;
 
 namespace {
 auto test_translation_error(
         std::string const& regex_str,
-        RegexErrorCodeEnum error,
+        ErrorCodeEnum error,
         RegexToWildcardTranslatorConfig const* config = nullptr
 ) -> void;
 auto test_translation_value(
@@ -24,13 +24,13 @@ auto test_translation_value(
 
 auto test_translation_error(
         std::string const& regex_str,
-        RegexErrorCodeEnum error,
+        ErrorCodeEnum error,
         RegexToWildcardTranslatorConfig const* config
 ) -> void {
     if (config != nullptr) {
-        REQUIRE((regex_to_wildcard(regex_str, *config).error() == RegexErrorCode{error}));
+        REQUIRE((regex_to_wildcard(regex_str, *config).error() == ErrorCode{error}));
     } else {
-        REQUIRE((regex_to_wildcard(regex_str).error() == RegexErrorCode{error}));
+        REQUIRE((regex_to_wildcard(regex_str).error() == ErrorCode{error}));
     }
 }
 
@@ -56,12 +56,12 @@ TEST_CASE("regex_to_wildcard_simple_translations", "[regex_utils][re2wc][simple_
 }
 
 TEST_CASE("regex_to_wildcard_unescaped_metachar", "[regex_utils][re2wc][unescaped_metachar]") {
-    test_translation_error(".? xyz .* zyx .", RegexErrorCodeEnum::UnsupportedQuestionMark);
-    test_translation_error(". xyz .** zyx .", RegexErrorCodeEnum::UntranslatableStar);
-    test_translation_error(". xyz .*+ zyx .", RegexErrorCodeEnum::UntranslatablePlus);
-    test_translation_error(". xyz |.* zyx .", RegexErrorCodeEnum::UnsupportedPipe);
-    test_translation_error(". xyz ^.* zyx .", RegexErrorCodeEnum::IllegalCaret);
-    test_translation_error(". xyz $.* zyx .", RegexErrorCodeEnum::IllegalDollarSign);
+    test_translation_error(".? xyz .* zyx .", ErrorCodeEnum::UnsupportedQuestionMark);
+    test_translation_error(". xyz .** zyx .", ErrorCodeEnum::UntranslatableStar);
+    test_translation_error(". xyz .*+ zyx .", ErrorCodeEnum::UntranslatablePlus);
+    test_translation_error(". xyz |.* zyx .", ErrorCodeEnum::UnsupportedPipe);
+    test_translation_error(". xyz ^.* zyx .", ErrorCodeEnum::IllegalCaret);
+    test_translation_error(". xyz $.* zyx .", ErrorCodeEnum::IllegalDollarSign);
 }
 
 TEST_CASE("regex_to_wildcard_escaped_metachar", "[regex_utils][re2wc][escaped_metachar]") {
@@ -74,7 +74,7 @@ TEST_CASE("regex_to_wildcard_escaped_metachar", "[regex_utils][re2wc][escaped_me
             R"(\*+\?|^$.{}[]()<>-_/=!\\)"
     );
     // Test unsupported escape sequences
-    test_translation_error("abc\\Qdefghi\\Ejkl", RegexErrorCodeEnum::IllegalEscapeSequence);
+    test_translation_error("abc\\Qdefghi\\Ejkl", ErrorCodeEnum::IllegalEscapeSequence);
 }
 
 TEST_CASE("regex_to_wildcard_charset", "[regex_utils][re2wc][charset]") {
@@ -86,17 +86,17 @@ TEST_CASE("regex_to_wildcard_charset", "[regex_utils][re2wc][charset]") {
     test_translation_value("x[\\\\]z", "x\\\\z");
     test_translation_value(R"([a][b][\^][-][\-][\]][\\][c][d])", "ab^--]\\\\cd");
 
-    test_translation_error("x[]y", RegexErrorCodeEnum::UnsupportedCharsetPattern);
-    test_translation_error("x[a-z]y", RegexErrorCodeEnum::UnsupportedCharsetPattern);
-    test_translation_error("x[^^]y", RegexErrorCodeEnum::UnsupportedCharsetPattern);
-    test_translation_error("x[^0-9]y", RegexErrorCodeEnum::UnsupportedCharsetPattern);
-    test_translation_error("[xX][yY]", RegexErrorCodeEnum::UnsupportedCharsetPattern);
-    test_translation_error("ch:[a-zA-Z0-9]", RegexErrorCodeEnum::UnsupportedCharsetPattern);
+    test_translation_error("x[]y", ErrorCodeEnum::UnsupportedCharsetPattern);
+    test_translation_error("x[a-z]y", ErrorCodeEnum::UnsupportedCharsetPattern);
+    test_translation_error("x[^^]y", ErrorCodeEnum::UnsupportedCharsetPattern);
+    test_translation_error("x[^0-9]y", ErrorCodeEnum::UnsupportedCharsetPattern);
+    test_translation_error("[xX][yY]", ErrorCodeEnum::UnsupportedCharsetPattern);
+    test_translation_error("ch:[a-zA-Z0-9]", ErrorCodeEnum::UnsupportedCharsetPattern);
 
-    test_translation_error("[\\", RegexErrorCodeEnum::IncompleteCharsetStructure);
-    test_translation_error("[\\\\", RegexErrorCodeEnum::IncompleteCharsetStructure);
-    test_translation_error("[xX", RegexErrorCodeEnum::IncompleteCharsetStructure);
-    test_translation_error("ch:[a-zA-Z0-9", RegexErrorCodeEnum::IncompleteCharsetStructure);
+    test_translation_error("[\\", ErrorCodeEnum::IncompleteCharsetStructure);
+    test_translation_error("[\\\\", ErrorCodeEnum::IncompleteCharsetStructure);
+    test_translation_error("[xX", ErrorCodeEnum::IncompleteCharsetStructure);
+    test_translation_error("ch:[a-zA-Z0-9", ErrorCodeEnum::IncompleteCharsetStructure);
 }
 
 TEST_CASE("regex_to_wildcard_case_insensitive_config", "[regex_utils][re2wc][case_insensitive]") {
@@ -106,16 +106,16 @@ TEST_CASE("regex_to_wildcard_case_insensitive_config", "[regex_utils][re2wc][cas
     test_translation_value("[aA][Bb][Cc]", "abc", &config);
     test_translation_value("[aA][Bb][\\^][-][\\]][Cc][dD]", "ab^-]cd", &config);
 
-    test_translation_error("[xX", RegexErrorCodeEnum::IncompleteCharsetStructure);
+    test_translation_error("[xX", ErrorCodeEnum::IncompleteCharsetStructure);
     test_translation_error(
             "[aA][Bb][^[-[\\[Cc[dD",
-            RegexErrorCodeEnum::IncompleteCharsetStructure,
+            ErrorCodeEnum::IncompleteCharsetStructure,
             &config
     );
-    test_translation_error("ch:[a-zA-Z0-9]", RegexErrorCodeEnum::UnsupportedCharsetPattern);
+    test_translation_error("ch:[a-zA-Z0-9]", ErrorCodeEnum::UnsupportedCharsetPattern);
     test_translation_error(
             "[aA][Bb][^[-[\\[Cc[dD]",
-            RegexErrorCodeEnum::UnsupportedCharsetPattern,
+            ErrorCodeEnum::UnsupportedCharsetPattern,
             &config
     );
 }
@@ -129,5 +129,5 @@ TEST_CASE("regex_to_wildcard_anchor_config", "[regex_utils][re2wc][anchor_config
     test_translation_value("xyz", "*xyz*", &config);
     test_translation_value("xyz$$", "*xyz", &config);
 
-    test_translation_error("xyz$zyx$", RegexErrorCodeEnum::IllegalDollarSign, &config);
+    test_translation_error("xyz$zyx$", ErrorCodeEnum::IllegalDollarSign, &config);
 }
