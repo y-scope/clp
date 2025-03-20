@@ -1,6 +1,5 @@
 import {
     useEffect,
-    useRef,
     useState,
 } from "react";
 
@@ -21,6 +20,8 @@ import {
 import Loading from "./Loading";
 
 
+let isFirstRun = true;
+
 /**
  * Submits queries and renders the query states.
  *
@@ -31,7 +32,6 @@ const QueryStatus = () => {
         QUERY_LOADING_STATE.SUBMITTING
     );
     const [errorMsg, setErrorMsg] = useState<Nullable<string>>(null);
-    const isFirstRun = useRef(true);
 
     useEffect(() => {
         // eslint-disable-next-line no-warning-comments
@@ -39,10 +39,10 @@ const QueryStatus = () => {
         //  requests via an AbortController in useEffect's cleanup function.
 
         // Skip duplicate execution caused by React StrictMode.
-        if (false === isFirstRun.current) {
+        if (false === isFirstRun) {
             return;
         }
-        isFirstRun.current = false;
+        isFirstRun = false;
 
         // Validates and parse search parameters.
         const searchParams = new URLSearchParams(window.location.search);
