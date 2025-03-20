@@ -1,10 +1,11 @@
-import fastifyPlugin from "fastify-plugin";
-
 import {
     GetObjectCommand,
     S3Client,
 } from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
+import fastifyPlugin from "fastify-plugin";
+
+import {Nullable} from "../typings/common.js";
 
 
 /**
@@ -16,12 +17,12 @@ const PRE_SIGNED_URL_EXPIRY_TIME_SECONDS = 3600;
  * Class to manage Simple Storage Service (S3) objects.
  */
 class S3Manager {
-    #s3Client;
+    readonly #s3Client;
 
     /**
-     * @param {string} region
+     * @param region
      */
-    constructor (region) {
+    constructor (region: string) {
         this.#s3Client = new S3Client({
             region: region,
         });
@@ -30,11 +31,11 @@ class S3Manager {
     /**
      * Generates a pre-signed URL for accessing an S3 object.
      *
-     * @param {string} s3UriString The S3 object URI string.
-     * @return {Promise<string>} The pre-signed URL string.
+     * @param s3UriString The S3 object URI string.
+     * @return The pre-signed URL string.
      * @throws {Error} If a pre-signed URL couldn't be generated.
      */
-    async getPreSignedUrl (s3UriString) {
+    async getPreSignedUrl (s3UriString: string): Promise<string> {
         const s3Uri = new URL(s3UriString);
         const command = new GetObjectCommand({
             Bucket: s3Uri.hostname,
@@ -49,7 +50,10 @@ class S3Manager {
                     expiresIn: PRE_SIGNED_URL_EXPIRY_TIME_SECONDS,
                 }
             );
-        } catch (error) {
+        } catch (error: unknown) {
+            if (false === error instanceof Error) {
+                throw error;
+            }
             throw new Error(`Failed to generate pre-signed URL: ${error.message}`);
         }
     }
@@ -57,14 +61,20 @@ class S3Manager {
 
 /**
  * Initializes a Fastify plugin, which decorates the application with an S3 manager at the
- * "s3Manager" property when all plugin options are valid.
+ * "s3Manager" property only when all plugin options are valid.
  */
-export default fastifyPlugin(async (app, options) => {
+export default fastifyPlugin(async (app, options: {region: Nullable<string>}) => {
     const {region} = options;
     if (null === region) {
         return;
     }
 
     console.log(`Initializing S3Manager with region="${region}"...`);
-    await app.decorate("s3Manager", new S3Manager(region));
+    app.decorate("s3Manager", new S3Manager(region));
 });
+
+declare module "fastify" {
+    interface FastifyInstance {
+        s3Manager?: S3Manager;
+    }
+}
