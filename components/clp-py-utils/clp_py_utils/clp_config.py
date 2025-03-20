@@ -379,6 +379,15 @@ class FsStorage(BaseModel):
         return d
 
 
+class S3InputStorage(BaseModel):
+    type: Literal[StorageType.S3.value] = StorageType.S3.value
+    s3_config: S3Config
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        return d
+
+
 class S3OutputStorage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     staging_directory: pathlib.Path
