@@ -1,10 +1,7 @@
 import process from "node:process";
 
 import {config as dotenvConfig} from "dotenv";
-import {
-    FastifyLoggerOptions,
-    PinoLoggerOptions,
-} from "fastify/types/logger.js";
+import type {FastifyServerOptions} from "fastify";
 
 
 type NodeEnv = "development" | "production" | "test";
@@ -21,7 +18,7 @@ const NODE_ENV_DEFAULT: NodeEnv = "development";
  * Maps known Node.js environments to Fastify logger configuration options.
  */
 const ENV_TO_LOGGER
-: Record<NodeEnv, boolean | FastifyLoggerOptions & PinoLoggerOptions> = Object.freeze({
+: Record<NodeEnv, FastifyServerOptions["logger"]> = Object.freeze({
     development: {
         transport: {
             target: "pino-pretty",
