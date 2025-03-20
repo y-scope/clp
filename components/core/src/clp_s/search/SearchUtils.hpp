@@ -6,7 +6,6 @@
 #include "Literal.hpp"
 
 namespace clp_s::search {
-
 /**
  * Splice a child expression into a parent expression at a given location
  * @param parent

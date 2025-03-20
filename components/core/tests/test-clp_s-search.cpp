@@ -67,10 +67,12 @@ void compress(bool structurize_arrays, bool single_file_archive) {
     REQUIRE((std::filesystem::is_directory(cTestSearchArchiveDirectory)));
 
     clp_s::JsonParserOption parser_option{};
-    parser_option.input_paths.emplace_back(clp_s::Path{
-            .source = clp_s::InputSource::Filesystem,
-            .path = get_test_input_local_path()
-    });
+    parser_option.input_paths.emplace_back(
+            clp_s::Path{
+                    .source = clp_s::InputSource::Filesystem,
+                    .path = get_test_input_local_path()
+            }
+    );
     parser_option.archives_dir = cTestSearchArchiveDirectory;
     parser_option.target_encoded_size = cDefaultTargetEncodedSize;
     parser_option.max_document_size = cDefaultMaxDocumentSize;

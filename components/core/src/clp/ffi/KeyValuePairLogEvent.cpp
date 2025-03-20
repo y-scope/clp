@@ -572,8 +572,8 @@ auto KeyValuePairLogEvent::get_user_gen_keys_schema_subtree_bitmap() const
 
 auto KeyValuePairLogEvent::serialize_to_json() const
         -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
-    auto const auto_gen_keys_schema_subtree_bitmap_result{get_auto_gen_keys_schema_subtree_bitmap()
-    };
+    auto const auto_gen_keys_schema_subtree_bitmap_result{get_auto_gen_keys_schema_subtree_bitmap(
+    )};
     if (auto_gen_keys_schema_subtree_bitmap_result.has_error()) {
         return auto_gen_keys_schema_subtree_bitmap_result.error();
     }
@@ -586,8 +586,8 @@ auto KeyValuePairLogEvent::serialize_to_json() const
         return serialized_auto_gen_kv_pairs_result.error();
     }
 
-    auto const user_gen_keys_schema_subtree_bitmap_result{get_user_gen_keys_schema_subtree_bitmap()
-    };
+    auto const user_gen_keys_schema_subtree_bitmap_result{get_user_gen_keys_schema_subtree_bitmap(
+    )};
     if (user_gen_keys_schema_subtree_bitmap_result.has_error()) {
         return user_gen_keys_schema_subtree_bitmap_result.error();
     }

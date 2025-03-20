@@ -126,20 +126,23 @@ public:
      * A '*' that is not escaped is treated as a wildcard descriptor.
      *
      * @param token(s) the escaped token or list of escaped tokens making up the descriptor
+     * @param descriptor_namespace
      * @return A ColumnDescriptor literal
      */
-    static std::shared_ptr<ColumnDescriptor> create_from_escaped_token(std::string const& token);
     static std::shared_ptr<ColumnDescriptor> create_from_escaped_tokens(
-            std::vector<std::string> const& tokens
+            std::vector<std::string> const& tokens,
+            std::string_view descriptor_namespace
     );
 
     /**
      * Create a ColumnDescriptor literal from a list of already-parsed DescriptorToken.
      * @param descriptors the list of parsed DescriptorToken
+     * @param descriptor_namespace
      * @return A ColumnDescriptor literal
      */
     static std::shared_ptr<ColumnDescriptor> create_from_descriptors(
-            DescriptorList const& descriptors
+            DescriptorList const& descriptors,
+            std::string_view descriptor_namespace
     );
 
     /**
@@ -270,20 +273,25 @@ public:
      */
     bool operator==(ColumnDescriptor const& rhs) const;
 
+    std::string const& get_namespace() const { return m_namespace; }
+
+    void set_namespace(std::string_view descriptor_namespace) {
+        m_namespace = descriptor_namespace;
+    }
+
 private:
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
+    std::string m_namespace;
     LiteralTypeBitmask m_flags;  // set of types this column can match
     int32_t m_id;  // unambiguous CLJ column id this column represents. May be unset.
     bool m_unresolved_descriptors;  // true if contains wildcards
     bool m_pure_wildcard;  // true if column is single wildcard
 
     // Constructors
-    explicit ColumnDescriptor(std::string const&);
+    explicit ColumnDescriptor(std::vector<std::string> const&, std::string_view);
 
-    explicit ColumnDescriptor(std::vector<std::string> const&);
-
-    explicit ColumnDescriptor(DescriptorList const&);
+    explicit ColumnDescriptor(DescriptorList const&, std::string_view);
 
     /**
      * Scan the list of descriptors to check if they contain wildcards and

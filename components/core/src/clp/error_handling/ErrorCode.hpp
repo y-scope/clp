@@ -100,7 +100,7 @@ public:
     /**
      * @return The reference to the singleton of the corresponded error category.
      */
-    [[nodiscard]] constexpr static auto get_category() -> ErrorCategory<ErrorCodeEnum> const& {
+    [[nodiscard]] static constexpr auto get_category() -> ErrorCategory<ErrorCodeEnum> const& {
         return cCategory;
     }
 

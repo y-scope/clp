@@ -57,13 +57,13 @@ You can lint this component either as part of the entire project or as a standal
 To check for linting errors:
 
 ```shell
-task lint:js-check
+task lint:check-js
 ```
 
 To also fix linting errors (if applicable):
 
 ```shell
-task lint:js-fix
+task lint:fix-js
 ```
 
 ### Lint the component alone

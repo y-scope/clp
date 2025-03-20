@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.16.3)
+
+# Toolchain setup must come before the first project() call in the entire CMake buildsystem.
+# If CLP is not the top-level project, the following setup has no effect.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
+setup_toolchains()
+
 project(CLP LANGUAGES CXX C)
+
+validate_compiler_versions()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -215,6 +223,10 @@ find_package(Threads REQUIRED)
 
 # Add yaml-cpp
 add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
+
+# Add ystdlib-cpp
+set(YSTDLIB_CPP_BUILD_TESTING OFF)
+add_subdirectory(submodules/ystdlib-cpp EXCLUDE_FROM_ALL)
 
 # Find and setup ZStd Library
 if(CLP_USE_STATIC_LIBS)
