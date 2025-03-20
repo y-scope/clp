@@ -65,14 +65,12 @@ const parseEnvVars = (): EnvVars => {
         ],
     });
 
-
     const {
         NODE_ENV, CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
     } = process.env;
     const mandatoryEnvVars = {
         CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
     } as EnvVars;
-
 
     // Check for mandatory environment variables
     for (const [key, value] of Object.entries(mandatoryEnvVars)) {
