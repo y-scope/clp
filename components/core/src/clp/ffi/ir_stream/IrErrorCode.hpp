@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-#include "../../error_handling/ErrorCode.hpp"
+#include <ystdlib/error_handling/ErrorCode.hpp>
 
 namespace clp::ffi::ir_stream {
 /**
@@ -16,9 +16,9 @@ enum class IrErrorCodeEnum : uint8_t {
     IncompleteStream,
 };
 
-using IrErrorCode = clp::error_handling::ErrorCode<IrErrorCodeEnum>;
+using IrErrorCode = ystdlib::error_handling::ErrorCode<IrErrorCodeEnum>;
 }  // namespace clp::ffi::ir_stream
 
-CLP_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp::ffi::ir_stream::IrErrorCodeEnum);
+YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp::ffi::ir_stream::IrErrorCodeEnum);
 
 #endif  // CLP_IRERRORCODE_HPP

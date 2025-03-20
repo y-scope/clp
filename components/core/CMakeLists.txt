@@ -448,7 +448,6 @@ set(SOURCE_FILES_unitTest
         src/clp/DictionaryEntry.hpp
         src/clp/DictionaryReader.hpp
         src/clp/DictionaryWriter.hpp
-        src/clp/error_handling/ErrorCode.hpp
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
         src/clp/ErrorCode.hpp
@@ -644,7 +643,6 @@ set(SOURCE_FILES_unitTest
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-error_handling.cpp
         tests/test-ffi_IrUnitHandlerInterface.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
@@ -701,6 +699,7 @@ target_link_libraries(unitTest
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ystdlib::error_handling
         ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
         )

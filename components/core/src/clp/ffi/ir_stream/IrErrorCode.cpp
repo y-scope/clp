@@ -2,8 +2,10 @@
 
 #include <string>
 
-using IrErrorCategory = clp::error_handling::ErrorCategory<clp::ffi::ir_stream::IrErrorCodeEnum>;
+#include <ystdlib/error_handling/ErrorCode.hpp>
+
 using clp::ffi::ir_stream::IrErrorCodeEnum;
+using IrErrorCategory = ystdlib::error_handling::ErrorCategory<IrErrorCodeEnum>;
 
 template <>
 auto IrErrorCategory::name() const noexcept -> char const* {
