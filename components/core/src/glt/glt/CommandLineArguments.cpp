@@ -278,7 +278,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::value<int>(&m_compression_level)
                             ->value_name("LEVEL")
                             ->default_value(m_compression_level),
-                    "1 (fast/low compression) to 9 (slow/high compression)"
+                    "1 (fast/low compression) to 19 (slow/high compression)"
             )(
                     "print-archive-stats-progress",
                     po::bool_switch(&m_print_archive_stats_progress),
