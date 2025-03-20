@@ -2,8 +2,9 @@
 
 #include <string>
 
-using clp::ffi::ir_stream::IrErrorCategory;
 using clp::ffi::ir_stream::IrErrorCodeEnum;
+using IrErrorCategory
+        = ystdlib::error_handling::ErrorCategory<clp::ffi::ir_stream::IrErrorCodeEnum>;
 
 template <>
 auto IrErrorCategory::name() const noexcept -> char const* {
