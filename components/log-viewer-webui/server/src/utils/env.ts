@@ -4,20 +4,22 @@ import {config as dotenvConfig} from "dotenv";
 import type {FastifyServerOptions} from "fastify";
 
 
-type NodeEnv = "development" | "production" | "test";
-
-const KNOWN_NODE_ENVS = new Set<NodeEnv>([
+const KNOWN_NODE_ENV = new Set([
     "development",
     "production",
     "test",
 ]);
+
+type NodeEnv = typeof KNOWN_NODE_ENV extends Set<infer T> ?
+    T :
+    never;
 
 const NODE_ENV_DEFAULT: NodeEnv = "development";
 
 /**
  * Maps known Node.js environments to Fastify logger configuration options.
  */
-const ENV_TO_LOGGER
+const ENV_TO_LOGGER_CONFIG
 : Record<NodeEnv, FastifyServerOptions["logger"]> = Object.freeze({
     development: {
         transport: {
@@ -28,16 +30,6 @@ const ENV_TO_LOGGER
     test: false,
 });
 
-/**
- * Validates whether the given string corresponds to a known Node.js environment.
- *
- * @param value
- * @return True if the `value` is a known Node.js environment; otherwise, false.
- */
-const isKnownNodeEnv = (value: string): value is NodeEnv => {
-    return KNOWN_NODE_ENVS.has(value as NodeEnv);
-};
-
 interface EnvVars {
     NODE_ENV: NodeEnv;
 
@@ -47,6 +39,17 @@ interface EnvVars {
     CLP_DB_USER: string;
     CLP_DB_PASS: string;
 }
+
+/**
+ * Validates whether the given value corresponds to a known Node.js environment.
+ *
+ * @param value
+ * @return True if the `value` is a known Node.js environment; otherwise, false.
+ */
+const isKnownNodeEnv = (value: string | undefined)
+: value is NodeEnv => {
+    return KNOWN_NODE_ENV.has(value as NodeEnv);
+};
 
 /**
  * Parses environment variables into config values for the application.
@@ -69,33 +72,22 @@ const parseEnvVars = (): EnvVars => {
         CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
     } as EnvVars;
 
-    // Check for mandatory environment variables
-    for (const [key, value] of Object.entries(mandatoryEnvVars)) {
+    Object.entries(mandatoryEnvVars).forEach(([key, value]) => {
         if ("undefined" === typeof value) {
             throw new Error(`Environment variable ${key} must be defined.`);
         }
-    }
-
-    // Sanitize other environment variables
-    const sanitizedEnvVars = {
-        NODE_ENV: NODE_ENV_DEFAULT as NodeEnv,
-    };
-
-    if ("undefined" === typeof NODE_ENV || false === isKnownNodeEnv(NODE_ENV)) {
-        console.log("NODE_ENV is not set, or the configured value is not known." +
-            `Using default: ${NODE_ENV_DEFAULT}`);
-    } else {
-        sanitizedEnvVars.NODE_ENV = NODE_ENV;
-    }
+    });
 
     return {
         ...mandatoryEnvVars,
-        ...sanitizedEnvVars,
+        NODE_ENV: isKnownNodeEnv(NODE_ENV) ?
+            NODE_ENV :
+            NODE_ENV_DEFAULT,
     };
 };
 
 export type {NodeEnv};
 export {
-    ENV_TO_LOGGER,
+    ENV_TO_LOGGER_CONFIG,
     parseEnvVars,
 };

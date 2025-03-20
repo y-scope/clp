@@ -2,7 +2,7 @@ import process from "node:process";
 
 import app from "./app.js";
 import {
-    ENV_TO_LOGGER,
+    ENV_TO_LOGGER_CONFIG,
     parseEnvVars,
 } from "./utils/env.js";
 
@@ -12,9 +12,10 @@ import {
  */
 const main = async () => {
     const envVars = parseEnvVars();
+    const loggerConfig = ENV_TO_LOGGER_CONFIG[envVars.NODE_ENV];
     const server = await app({
         fastifyOptions: {
-            logger: ENV_TO_LOGGER[envVars.NODE_ENV],
+            ...(loggerConfig && {logger: loggerConfig}),
         },
         sqlDbPass: envVars.CLP_DB_PASS,
         sqlDbUser: envVars.CLP_DB_USER,
