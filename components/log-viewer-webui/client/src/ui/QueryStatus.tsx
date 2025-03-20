@@ -20,6 +20,9 @@ import {
 import Loading from "./Loading";
 
 
+/**
+ * Flag to prevent duplicate execution of `useEffect`.
+ */
 let isFirstRun = true;
 
 /**
