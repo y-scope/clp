@@ -45,6 +45,12 @@ html_static_path = ["../src/_static"]
 
 html_theme = "pydata_sphinx_theme"
 
+# -- sphinxcontrib-mermaid options ---------------------------------------------
+# https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest/
+
+mermaid_include_elk = "0.1.7"
+mermaid_version = "11.5.0"
+
 # -- Theme options -------------------------------------------------------------
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html
 
