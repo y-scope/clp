@@ -379,7 +379,7 @@ class FsStorage(BaseModel):
         return d
 
 
-class S3Storage(BaseModel):
+class S3OutputStorage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     staging_directory: pathlib.Path
     s3_config: S3Config
@@ -407,15 +407,15 @@ class StreamFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 
 
-class ArchiveS3Storage(S3Storage):
+class ArchiveS3OutputStorage(S3OutputStorage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
-class StreamS3Storage(S3Storage):
+class StreamS3OutputStorage(S3OutputStorage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
-def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:
+def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3OutputStorage]) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
@@ -426,7 +426,7 @@ def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storag
 
 
 def _set_directory_for_storage_config(
-    storage_config: Union[FsStorage, S3Storage], directory
+    storage_config: Union[FsStorage, S3OutputStorage], directory
 ) -> None:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
@@ -438,7 +438,7 @@ def _set_directory_for_storage_config(
 
 
 class ArchiveOutput(BaseModel):
-    storage: Union[ArchiveFsStorage, ArchiveS3Storage] = ArchiveFsStorage()
+    storage: Union[ArchiveFsStorage, ArchiveS3OutputStorage] = ArchiveFsStorage()
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
@@ -488,7 +488,7 @@ class ArchiveOutput(BaseModel):
 
 
 class StreamOutput(BaseModel):
-    storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
+    storage: Union[StreamFsStorage, StreamS3OutputStorage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
 
     @validator("target_uncompressed_size")
