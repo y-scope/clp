@@ -39,7 +39,7 @@ const QueryStatus = () => {
     useEffect(() => {
         // eslint-disable-next-line no-warning-comments
         // TODO: Address server-side concurrency issues and replace this workaround by aborting
-        //  requests via an AbortController in useEffect's cleanup function.
+        // requests via an AbortController in useEffect's cleanup function.
 
         // Skip duplicate execution caused by React StrictMode.
         if (false === isFirstRun) {
