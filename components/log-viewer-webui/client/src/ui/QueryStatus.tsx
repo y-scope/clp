@@ -87,11 +87,7 @@ const QueryStatus = () => {
                 if (isAxiosError<{message: string}>(e)) {
                     msg = e.message;
                     if ("undefined" !== typeof e.response) {
-                        if ("undefined" !== typeof e.response.data.message) {
-                            msg = e.response.data.message;
-                        } else {
-                            msg = e.response.statusText;
-                        }
+                        msg = e.response.data.message;
                     }
                 }
                 console.error(msg, e);
