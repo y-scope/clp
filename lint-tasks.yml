@@ -535,7 +535,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/ErrorCode.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/ffi/encoding_methods.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/ffi/encoding_methods.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/glt/ffi/ir_stream/byteswap.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/ffi/ir_stream/decoding_methods.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/ffi/ir_stream/decoding_methods.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/ffi/ir_stream/decoding_methods.inc"

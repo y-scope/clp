@@ -12,7 +12,9 @@
     #define bswap_32(x) _byteswap_ulong(x)
     #define bswap_64(x) _byteswap_uint64(x)
 #else
+    // IWYU pragma: begin_exports
     #include <byteswap.h>
+    // IWYU pragma: end_exports
 #endif
 
 #endif  // CLP_FFI_IR_STREAM_BYTESWAP_HPP
