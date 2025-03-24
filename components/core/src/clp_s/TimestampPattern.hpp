@@ -70,7 +70,7 @@ public:
 
     // Methods
     /**
-     * Initializes global data needed to use this class. This function must be called before using
+     * Initializes global data required by this class. This function must be called before any other methods of the class are used.
      * this class.
      *
      * Note: this function is NOT thread-safe.
