@@ -37,7 +37,7 @@ autodoc_typehints = "description"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_favicon = "https://docs.yscope.com/_static/favicon.ico"
-html_logo = "https://yscope.com/img/clp-logo.png"
+html_logo = "../src/clp-logo.png"
 html_title = "CLP"
 html_show_copyright = True
 
