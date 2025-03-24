@@ -32,3 +32,6 @@
 [submodule "components/core/submodules/utfcpp"]
 	path = components/core/submodules/utfcpp
 	url = https://github.com/nemtrif/utfcpp.git
+[submodule "components/core/submodules/ystdlib-cpp"]
+	path = components/core/submodules/ystdlib-cpp
+	url = https://github.com/y-scope/ystdlib-cpp.git

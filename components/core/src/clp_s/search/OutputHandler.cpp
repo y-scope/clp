@@ -73,28 +73,32 @@ ErrorCode ResultsCacheOutputHandler::flush() {
         m_latest_results.pop();
 
         try {
-            m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::search::cOrigFilePath,
-                            std::move(result.original_path)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::search::cMessage,
-                            std::move(result.message)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::search::cTimestamp,
-                            result.timestamp
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::search::cArchiveId,
-                            std::move(result.archive_id)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            constants::results_cache::search::cLogEventIx,
-                            result.log_event_idx
+            m_results.emplace_back(
+                    std::move(
+                            bsoncxx::builder::basic::make_document(
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cOrigFilePath,
+                                            std::move(result.original_path)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cMessage,
+                                            std::move(result.message)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cTimestamp,
+                                            result.timestamp
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cArchiveId,
+                                            std::move(result.archive_id)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            constants::results_cache::search::cLogEventIx,
+                                            result.log_event_idx
+                                    )
+                            )
                     )
-            )));
+            );
             count++;
 
             if (count == m_batch_size) {
@@ -125,22 +129,16 @@ void ResultsCacheOutputHandler::write(
         int64_t log_event_idx
 ) {
     if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>(
-                string_view{},
-                message,
-                timestamp,
-                archive_id,
-                log_event_idx
-        ));
+        m_latest_results.emplace(
+                std::make_unique<
+                        QueryResult>(string_view{}, message, timestamp, archive_id, log_event_idx)
+        );
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>(
-                string_view{},
-                message,
-                timestamp,
-                archive_id,
-                log_event_idx
-        ));
+        m_latest_results.emplace(
+                std::make_unique<
+                        QueryResult>(string_view{}, message, timestamp, archive_id, log_event_idx)
+        );
     }
 }
 
@@ -178,5 +176,4 @@ ErrorCode CountByTimeOutputHandler::finish() {
     }
     return ErrorCode::ErrorCodeSuccess;
 }
-
 }  // namespace clp_s::search

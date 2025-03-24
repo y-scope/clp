@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../Defs.hpp"
@@ -22,7 +23,7 @@ class AddTimestampConditions : public Transformation {
 public:
     // Constructors
     AddTimestampConditions(
-            std::optional<std::vector<std::string>> const& timestamp_column,
+            std::optional<std::pair<std::vector<std::string>, std::string>> const& timestamp_column,
             std::optional<epochtime_t> begin_ts,
             std::optional<epochtime_t> end_ts
     )
@@ -38,7 +39,7 @@ public:
     std::shared_ptr<Expression> run(std::shared_ptr<Expression>& expr) override;
 
 private:
-    std::optional<std::vector<std::string>> m_timestamp_column;
+    std::optional<std::pair<std::vector<std::string>, std::string>> m_timestamp_column;
     std::optional<epochtime_t> m_begin_ts;
     std::optional<epochtime_t> m_end_ts;
 };

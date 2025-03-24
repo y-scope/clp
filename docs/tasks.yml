@@ -25,7 +25,7 @@ tasks:
     dir: "{{.TASKFILE_DIR}}"
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
@@ -47,7 +47,7 @@ tasks:
           --builder html \
           src "{{.OUTPUT_DIR}}"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
@@ -67,18 +67,18 @@ tasks:
       REQUIREMENTS_FILE: "{{.ROOT_DIR}}/docs/requirements.txt"
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
-      - task: ":utils:create-venv"
+      - task: ":utils:misc:create-venv"
         vars:
           LABEL: "docs"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
           REQUIREMENTS_FILE: "{{.REQUIREMENTS_FILE}}"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
@@ -95,7 +95,7 @@ tasks:
       OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
     deps:
       - ":init"
-      - task: ":utils:validate-checksum"
+      - task: ":utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
@@ -103,7 +103,7 @@ tasks:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
       # This command must be last
-      - task: ":utils:compute-checksum"
+      - task: ":utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]

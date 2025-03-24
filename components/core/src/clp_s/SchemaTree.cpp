@@ -18,7 +18,7 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
     node.increase_count();
     if (constants::cRootNodeId == parent_node_id) {
         if (NodeType::Object == type) {
-            m_object_subtree_id = node_id;
+            m_namespace_to_object_subtree_id.emplace(node.get_key_name(), node_id);
         } else if (NodeType::Metadata == type) {
             m_metadata_subtree_id = node_id;
         }
@@ -91,5 +91,4 @@ int32_t SchemaTree::find_matching_subtree_root_in_subtree(
     }
     return earliest_match;
 }
-
 }  // namespace clp_s

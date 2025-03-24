@@ -470,13 +470,13 @@ void MetadataDB::open(string const& path) {
             .second
             = "TEXT";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .first
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .first
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .second
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)]

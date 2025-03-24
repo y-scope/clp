@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -110,10 +111,28 @@ public:
         return IRErrorCode::IRErrorCode_Success;
     }
 
+    /**
+     * @param is_auto_generated
+     * @param schema_tree_node_locator
+     * @param schema_tree
+     * @return IRErrorCode::IRErrorCode_Success on success.
+     * @return IRErrorCode::IRErrorCode_Decode_Error if the node specified by the locator doesn't
+     * exist in the corresponding schema tree.
+     * @return IRErrorCode::IRErrorCode_Corrupted_IR if the node specified by the locator is not the
+     * node that was last inserted into the corresponding schema tree.
+     */
     [[nodiscard]] static auto handle_schema_tree_node_insertion(
             [[maybe_unused]] bool is_auto_generated,
-            [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator
+            [[maybe_unused]] clp::ffi::SchemaTree::NodeLocator schema_tree_node_locator,
+            [[maybe_unused]] std::shared_ptr<clp::ffi::SchemaTree const> const& schema_tree
     ) -> IRErrorCode {
+        auto const optional_node_id{schema_tree->try_get_node_id(schema_tree_node_locator)};
+        if (false == optional_node_id.has_value()) {
+            return IRErrorCode::IRErrorCode_Decode_Error;
+        }
+        if (optional_node_id.value() != schema_tree->get_size() - 1) {
+            return IRErrorCode::IRErrorCode_Corrupted_IR;
+        }
         return IRErrorCode::IRErrorCode_Success;
     }
 
@@ -242,8 +261,8 @@ template <typename encoded_variable_t>
         vector<string>& encoded_logtypes
 ) -> bool {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     string logtype;
@@ -281,8 +300,8 @@ auto serialize_log_event(
         vector<int8_t>& ir_buf
 ) -> bool {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -510,8 +529,8 @@ static void set_timestamp_info(nlohmann::json const& metadata_json, TimestampInf
 template <typename encoded_variable_t>
 bool match_encoding_type(bool is_four_bytes_encoding) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -524,8 +543,8 @@ bool match_encoding_type(bool is_four_bytes_encoding) {
 template <typename encoded_variable_t>
 epoch_time_ms_t get_next_timestamp_for_test() {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     // We return an absolute timestamp for the eight-byte encoding and a mocked timestamp delta for
@@ -550,8 +569,8 @@ bool serialize_preamble(
         vector<int8_t>& ir_buf
 ) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -580,8 +599,8 @@ IRErrorCode deserialize_log_event(
         epoch_time_ms_t& decoded_ts
 ) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>)
-            || (is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
