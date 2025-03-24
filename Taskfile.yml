@@ -243,10 +243,13 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
       - "{{.TASKFILE}}"
+      - "client/index.html"
+      - "client/tsconfig/**/*"
+      - "client/tsconfig.json"
       - "client/package.json"
       - "client/src/**/*.css"
-      - "client/src/**/*.jsx"
-      - "client/src/webpack.config.js"
+      - "client/src/**/*.ts"
+      - "client/src/**/*.tsx"
       - "yscope-log-viewer/package.json"
       - "yscope-log-viewer/public/**/*"
       - "yscope-log-viewer/src/**/*"
@@ -265,12 +268,14 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - for:
-          - "client"
-          - "yscope-log-viewer"
+          - PATH: "client"
+            OUTPUT_DIR_FLAG: "--emptyOutDir --outDir"
+          - PATH: "yscope-log-viewer"
+            OUTPUT_DIR_FLAG: "--output-path"
         cmd: |-
-          cd "{{.ITEM}}"
+          cd "{{.ITEM.PATH}}"
           PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-          --output-path "{{.OUTPUT_DIR}}/{{.ITEM}}"
+          {{.ITEM.OUTPUT_DIR_FLAG}} "{{.OUTPUT_DIR}}/{{.ITEM.PATH}}"
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
