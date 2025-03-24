@@ -91,7 +91,7 @@ class DbManager {
             connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
                 `${config.port}/${config.database}`,
         }).after((err) => {
-            if (null !== err) {
+            if ("undefined" !== typeof err && null !== err) {
                 throw err;
             }
         }) as unknown as Promise<void>);
@@ -114,7 +114,7 @@ class DbManager {
             forceClose: true,
             url: `mongodb://${config.host}:${config.port}/${config.database}`,
         }).after((err) => {
-            if (null !== err) {
+            if ("undefined" !== typeof err && null !== err) {
                 throw err;
             }
         }) as unknown as Promise<void>);
