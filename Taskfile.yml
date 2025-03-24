@@ -264,22 +264,18 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - for:
-          - PATH: "client"
-            OUTPUT_DIR_FLAG: "--emptyOutDir --outDir"
-          - PATH: "server/dist"
-            OUTPUT_DIR_FLAG: "--emptyOutDir --outDir"
-          - PATH: "yscope-log-viewer"
-            OUTPUT_DIR_FLAG: "--output-path"
-        cmd: |-
-          cd "{{.ITEM.PATH}}"
-          PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-          {{.ITEM.OUTPUT_DIR_FLAG}} "{{.OUTPUT_DIR}}/{{.ITEM.PATH}}"
       - |-
-         cd "server"
-         rsync -a \
-         package.json package-lock.json \
-         "{{.OUTPUT_DIR}}/server/"
+        cd client
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- --emptyOutDir --outDir '{{.OUTPUT_DIR}}/client'
+      - |-
+        cd server
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
+        rsync -a \
+        package.json package-lock.json \
+        "{{.OUTPUT_DIR}}/server/"
+      - |-
+        cd yscope-log-viewer
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- --output-path '{{.OUTPUT_DIR}}/yscope-log-viewer'
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
