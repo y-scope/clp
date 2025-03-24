@@ -420,11 +420,11 @@ class StreamFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 
 
-class ArchiveS3OutputStorage(S3OutputStorage):
+class ArchiveS3Storage(S3OutputStorage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
-class StreamS3OutputStorage(S3OutputStorage):
+class StreamS3Storage(S3OutputStorage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
@@ -451,7 +451,7 @@ def _set_directory_for_storage_config(
 
 
 class ArchiveOutput(BaseModel):
-    storage: Union[ArchiveFsStorage, ArchiveS3OutputStorage] = ArchiveFsStorage()
+    storage: Union[ArchiveFsStorage, ArchiveS3Storage] = ArchiveFsStorage()
     target_archive_size: int = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
@@ -501,7 +501,7 @@ class ArchiveOutput(BaseModel):
 
 
 class StreamOutput(BaseModel):
-    storage: Union[StreamFsStorage, StreamS3OutputStorage] = StreamFsStorage()
+    storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
 
     @validator("target_uncompressed_size")
