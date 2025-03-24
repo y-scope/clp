@@ -5,15 +5,15 @@
 #include <ystdlib/error_handling/ErrorCode.hpp>
 
 using clp::regex_utils::ErrorCodeEnum;
-using RegexErrorCategory = ystdlib::error_handling::ErrorCategory<ErrorCodeEnum>;
+using ErrorCategory = ystdlib::error_handling::ErrorCategory<ErrorCodeEnum>;
 
 template <>
-auto RegexErrorCategory::name() const noexcept -> char const* {
+auto ErrorCategory::name() const noexcept -> char const* {
     return "clp::regex_utils::ErrorCode";
 }
 
 template <>
-auto RegexErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
+auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
         case ErrorCodeEnum::Success:
             return "Success.";
