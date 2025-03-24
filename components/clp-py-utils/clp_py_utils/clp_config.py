@@ -379,7 +379,7 @@ class FsStorage(BaseModel):
         return d
 
 
-class InputS3Storage(BaseModel):
+class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
 
@@ -388,7 +388,7 @@ class InputS3Storage(BaseModel):
         return d
 
 
-class OutputS3Storage(InputS3Storage):
+class OutputS3Storage(S3Storage):
     staging_directory: pathlib.Path
 
     @validator("staging_directory")
@@ -559,7 +559,7 @@ class LogViewerWebUi(BaseModel):
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
-    logs_input: Union[InputFsStorage, InputS3Storage] = InputFsStorage()
+    logs_input: Union[InputFsStorage, S3Storage] = InputFsStorage()
 
     package: Package = Package()
     database: Database = Database()
