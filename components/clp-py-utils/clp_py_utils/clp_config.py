@@ -379,7 +379,7 @@ class FsStorage(BaseModel):
         return d
 
 
-class S3InputStorage(BaseModel):
+class InputS3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
 
@@ -388,10 +388,8 @@ class S3InputStorage(BaseModel):
         return d
 
 
-class S3OutputStorage(BaseModel):
-    type: Literal[StorageType.S3.value] = StorageType.S3.value
+class OutputS3Storage(InputS3Storage):
     staging_directory: pathlib.Path
-    s3_config: S3Config
 
     @validator("staging_directory")
     def validate_staging_directory(cls, field):
@@ -403,7 +401,7 @@ class S3OutputStorage(BaseModel):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = super().dump_to_primitive_dict()
         d["staging_directory"] = str(d["staging_directory"])
         return d
 
@@ -420,15 +418,15 @@ class StreamFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 
 
-class ArchiveS3Storage(S3OutputStorage):
+class ArchiveS3Storage(OutputS3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
-class StreamS3Storage(S3OutputStorage):
+class StreamS3Storage(OutputS3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
-def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3OutputStorage]) -> pathlib.Path:
+def _get_directory_from_storage_config(storage_config: Union[FsStorage, OutputS3Storage]) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
@@ -439,7 +437,7 @@ def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Output
 
 
 def _set_directory_for_storage_config(
-    storage_config: Union[FsStorage, S3OutputStorage], directory
+    storage_config: Union[FsStorage, OutputS3Storage], directory
 ) -> None:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
@@ -561,7 +559,7 @@ class LogViewerWebUi(BaseModel):
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
-    logs_input: Union[InputFsStorage, S3InputStorage] = InputFsStorage()
+    logs_input: Union[InputFsStorage, InputS3Storage] = InputFsStorage()
 
     package: Package = Package()
     database: Database = Database()
