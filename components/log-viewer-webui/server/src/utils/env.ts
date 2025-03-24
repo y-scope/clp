@@ -1,26 +1,31 @@
 import process from "node:process";
 
+import {
+    Static,
+    Type,
+} from "@sinclair/typebox";
+import {
+    AssertError,
+    Value,
+} from "@sinclair/typebox/value";
 import {config as dotenvConfig} from "dotenv";
 import type {FastifyServerOptions} from "fastify";
 
 
-const KNOWN_NODE_ENV = new Set([
-    "development",
-    "production",
-    "test",
+const NodeEnv = Type.Union([
+    Type.Literal("development"),
+    Type.Literal("production"),
+    Type.Literal("test"),
 ]);
-
-type NodeEnv = typeof KNOWN_NODE_ENV extends Set<infer T> ?
-    T :
-    never;
-
-const NODE_ENV_DEFAULT: NodeEnv = "development";
+const NODE_ENV_DEFAULT = "development";
 
 /**
  * Maps known Node.js environments to Fastify logger configuration options.
  */
-const ENV_TO_LOGGER_CONFIG
-: Record<NodeEnv, FastifyServerOptions["logger"]> = Object.freeze({
+const ENV_TO_LOGGER_MAP: Record<
+    Static<typeof NodeEnv>,
+    FastifyServerOptions["logger"]
+> = Object.freeze({
     development: {
         transport: {
             target: "pino-pretty",
@@ -29,65 +34,48 @@ const ENV_TO_LOGGER_CONFIG
     production: true,
     test: false,
 });
-
-interface EnvVars {
-    NODE_ENV: NodeEnv;
-
-    HOST: string;
-    PORT: string;
-
-    CLP_DB_USER: string;
-    CLP_DB_PASS: string;
-}
-
-/**
- * Validates whether the given value corresponds to a known Node.js environment.
- *
- * @param value
- * @return True if the `value` is a known Node.js environment; otherwise, false.
- */
-const isKnownNodeEnv = (value: string | undefined)
-: value is NodeEnv => {
-    return KNOWN_NODE_ENV.has(value as NodeEnv);
-};
+const EnvVars = Type.Required(
+    Type.Object({
+        CLP_DB_PASS: Type.String(),
+        CLP_DB_USER: Type.String({minLength: 1}),
+        HOST: Type.String({minLength: 1}),
+        NODE_ENV: NodeEnv,
+        PORT: Type.Number({minimum: 1, maximum: 65535}),
+    })
+);
 
 /**
  * Parses environment variables into config values for the application.
  *
  * @return
- * @throws {Error} if any required environment variable is undefined.
+ * @throws {Error} If any required environment variable is undefined or invalid.
  */
-const parseEnvVars = (): EnvVars => {
+const parseEnvVars = (): Static<typeof EnvVars> => {
     dotenvConfig({
         path: [
             ".env.local",
             ".env",
         ],
     });
+    process.env.NODE_ENV ??= NODE_ENV_DEFAULT;
+    try {
+        return Value.Parse(EnvVars, process.env);
+    } catch (e: unknown) {
+        let message = "Environment variable is missing:";
+        if (e instanceof AssertError) {
+            const errors = [...Value.Errors(EnvVars, process.env)]
+                .map((err) => `${err.path}: ${err.message}`)
+                .join("; ");
 
-    const {
-        NODE_ENV, CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
-    } = process.env;
-    const mandatoryEnvVars = {
-        CLP_DB_USER, CLP_DB_PASS, HOST, PORT,
-    } as EnvVars;
-
-    Object.entries(mandatoryEnvVars).forEach(([key, value]) => {
-        if ("undefined" === typeof value) {
-            throw new Error(`Environment variable ${key} must be defined.`);
+            message += ` Details: ${errors}`;
         }
-    });
-
-    return {
-        ...mandatoryEnvVars,
-        NODE_ENV: isKnownNodeEnv(NODE_ENV) ?
-            NODE_ENV :
-            NODE_ENV_DEFAULT,
-    };
+        throw new Error(message);
+    }
 };
 
-export type {NodeEnv};
+
+export type {EnvVars};
 export {
-    ENV_TO_LOGGER_CONFIG,
+    ENV_TO_LOGGER_MAP,
     parseEnvVars,
 };

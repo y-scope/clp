@@ -22,6 +22,11 @@ const EslintConfig = [
                     capIsNewExceptions: [
                         "Type.Enum",
                         "Type.Integer",
+                        "Type.Literal",
+                        "Type.Required",
+                        "Type.Union",
+                        "Value.Errors",
+                        "Value.Parse",
                     ],
                 },
             ],

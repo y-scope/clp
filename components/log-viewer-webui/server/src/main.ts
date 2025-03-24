@@ -2,7 +2,7 @@ import process from "node:process";
 
 import app from "./app.js";
 import {
-    ENV_TO_LOGGER_CONFIG,
+    ENV_TO_LOGGER_MAP,
     parseEnvVars,
 } from "./utils/env.js";
 
@@ -12,7 +12,7 @@ import {
  */
 const main = async () => {
     const envVars = parseEnvVars();
-    const loggerConfig = ENV_TO_LOGGER_CONFIG[envVars.NODE_ENV];
+    const loggerConfig = ENV_TO_LOGGER_MAP[envVars.NODE_ENV];
     const server = await app({
         fastifyOptions: {
             ...(loggerConfig && {logger: loggerConfig}),
