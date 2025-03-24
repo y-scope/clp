@@ -125,7 +125,6 @@ void load_lexer_from_file(
         bool reverse,
         log_surgeon::lexers::ByteLexer& lexer
 ) {
-    log_surgeon::SchemaParser sp;
     std::unique_ptr<log_surgeon::SchemaAST> schema_ast
             = log_surgeon::SchemaParser::try_schema_file(schema_file_path);
     if (!lexer.m_symbol_id.empty()) {
@@ -134,43 +133,43 @@ void load_lexer_from_file(
 
     // cTokenEnd and cTokenUncaughtString never need to be added as a rule to the lexer as they are
     // not parsed
-    lexer.m_symbol_id[log_surgeon::cTokenEnd] = static_cast<int>(log_surgeon::SymbolID::TokenEndID);
+    lexer.m_symbol_id[log_surgeon::cTokenEnd] = static_cast<int>(log_surgeon::SymbolId::TokenEnd);
     lexer.m_symbol_id[log_surgeon::cTokenUncaughtString]
-            = static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID);
+            = static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString);
     // cTokenInt, cTokenFloat, cTokenFirstTimestamp, and cTokenNewlineTimestamp each have unknown
     // rule(s) until specified by the user so can't be explicitly added and are done by looping over
     // schema_vars (user schema)
-    lexer.m_symbol_id[log_surgeon::cTokenInt] = static_cast<int>(log_surgeon::SymbolID::TokenIntId);
+    lexer.m_symbol_id[log_surgeon::cTokenInt] = static_cast<int>(log_surgeon::SymbolId::TokenInt);
     lexer.m_symbol_id[log_surgeon::cTokenFloat]
-            = static_cast<int>(log_surgeon::SymbolID::TokenFloatId);
+            = static_cast<int>(log_surgeon::SymbolId::TokenFloat);
     lexer.m_symbol_id[log_surgeon::cTokenFirstTimestamp]
-            = static_cast<int>(log_surgeon::SymbolID::TokenFirstTimestampId);
+            = static_cast<int>(log_surgeon::SymbolId::TokenFirstTimestamp);
     lexer.m_symbol_id[log_surgeon::cTokenNewlineTimestamp]
-            = static_cast<int>(log_surgeon::SymbolID::TokenNewlineTimestampId);
+            = static_cast<int>(log_surgeon::SymbolId::TokenNewlineTimestamp);
     // cTokenNewline is not added in schema_vars and can be explicitly added as '\n' to catch the
     // end of non-timestamped log messages
     lexer.m_symbol_id[log_surgeon::cTokenNewline]
-            = static_cast<int>(log_surgeon::SymbolID::TokenNewlineId);
+            = static_cast<int>(log_surgeon::SymbolId::TokenNewline);
 
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolID::TokenEndID)] = log_surgeon::cTokenEnd;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)]
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenEnd)] = log_surgeon::cTokenEnd;
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)]
             = log_surgeon::cTokenUncaughtString;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolID::TokenIntId)] = log_surgeon::cTokenInt;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolID::TokenFloatId)]
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenInt)] = log_surgeon::cTokenInt;
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenFloat)]
             = log_surgeon::cTokenFloat;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolID::TokenFirstTimestampId)]
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenFirstTimestamp)]
             = log_surgeon::cTokenFirstTimestamp;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolID::TokenNewlineTimestampId)]
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenNewlineTimestamp)]
             = log_surgeon::cTokenNewlineTimestamp;
-    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolID::TokenNewlineId)]
+    lexer.m_id_symbol[static_cast<int>(log_surgeon::SymbolId::TokenNewline)]
             = log_surgeon::cTokenNewline;
 
     lexer.add_rule(
             lexer.m_symbol_id["newLine"],
             std::move(std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
-                              log_surgeon::finite_automata::RegexNFAByteState>>(
+                              log_surgeon::finite_automata::ByteNfaState>>(
                     log_surgeon::finite_automata::RegexASTLiteral<
-                            log_surgeon::finite_automata::RegexNFAByteState>('\n')
+                            log_surgeon::finite_automata::ByteNfaState>('\n')
             ))
     );
 
@@ -201,7 +200,7 @@ void load_lexer_from_file(
         // transform '.' from any-character into any non-delimiter character
         rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
-        bool is_possible_input[log_surgeon::cUnicodeMax] = {false};
+        std::array<bool, log_surgeon::cSizeOfUnicode> is_possible_input{};
         rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
         bool contains_delimiter = false;
         uint32_t delimiter_name;
@@ -241,7 +240,8 @@ void load_lexer_from_file(
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }
     if (reverse) {
-        lexer.generate_reverse();
+        // TODO: This isn't used anymore for the new search, supporting it here is a waste of time
+        //lexer.generate_reverse();
     } else {
         lexer.generate();
     }

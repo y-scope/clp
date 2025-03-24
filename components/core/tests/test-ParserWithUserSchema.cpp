@@ -170,7 +170,7 @@ TEST_CASE("Test forward lexer", "[Search]") {
     Token token;
     auto error_code = forward_lexer.scan(parser_input_buffer, token);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolID::TokenEndID)) {
+    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEndID)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
                 "token.m_type_ids->back():"
@@ -194,7 +194,7 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     Token token;
     auto error_code = reverse_lexer.scan(parser_input_buffer, token);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolID::TokenEndID)) {
+    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEndID)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
                 "token.m_type_ids->back():"

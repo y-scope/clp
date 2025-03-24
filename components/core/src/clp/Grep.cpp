@@ -871,16 +871,16 @@ bool Grep::get_bounds_of_next_potential_var(
                 }
                 // TODO: use a set so its faster
                 // auto const& set = search_token.m_type_ids_set;
-                // if (set.find(static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID))
+                // if (set.find(static_cast<int>(log_surgeon::SymbolId::TokenUncaughtStringID))
                 //            == set.end()
-                //     && set.find(static_cast<int>(log_surgeon::SymbolID::TokenEndID))
+                //     && set.find(static_cast<int>(log_surgeon::SymbolId::TokenEndID))
                 //            == set.end())
                 // {
                 //     is_var = true;
                 // }
                 auto const& type = search_token.m_type_ids_ptr->at(0);
-                if (type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
-                    && type != static_cast<int>(log_surgeon::SymbolID::TokenEndID))
+                if (type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtStringID)
+                    && type != static_cast<int>(log_surgeon::SymbolId::TokenEndID))
                 {
                     is_var = true;
                 }
