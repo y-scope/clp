@@ -110,16 +110,16 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
     string value_str = to_string(value);
     if ("0" != value_str) {
         str.append(max_length - value_str.length(), padding_character);
-        size_t last_zero = string::npos;
-        for (int last = value_str.size() - 1; last >= 0; --last) {
-            if (value_str[last] == '0') {
-                last_zero = last;
+        size_t last_zero = value_str.size();
+        for (auto it = value_str.crbegin(); it != value_str.crend(); ++it) {
+            if ('0' == *it) {
+                --last_zero;
             } else {
                 break;
             }
         }
 
-        if (last_zero != string::npos) {
+        if (last_zero < value_str.size()) {
             value_str.erase(last_zero, string::npos);
         }
     }
