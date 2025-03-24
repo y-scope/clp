@@ -23,11 +23,11 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
 
         case ErrorCodeEnum::UntranslatableStar:
             return "Unable to express regex quantifier `*` in wildcard, which repeats a token for "
-                   "zero or more occurences, unless it is combined with a wildcard `.`";
+                   "zero or more occurrences, unless it is combined with a wildcard `.`";
 
         case ErrorCodeEnum::UntranslatablePlus:
             return "Unable to express regex quantifier `+` in wildcard, which repeats a token for "
-                   "one or more occurences, unless it is combined with a wildcard `.`";
+                   "one or more occurrences, unless it is combined with a wildcard `.`";
 
         case ErrorCodeEnum::UnsupportedQuestionMark:
             return "Unable to express regex quantifier `?` in wildcard, which makes the preceding "
