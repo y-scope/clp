@@ -606,7 +606,7 @@ def generic_start_scheduler(
     for mount in necessary_mounts:
         if mount:
             container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))  
+            container_start_cmd.append(str(mount))
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
