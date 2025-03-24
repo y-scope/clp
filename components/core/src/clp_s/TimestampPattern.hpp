@@ -70,8 +70,8 @@ public:
 
     // Methods
     /**
-     * Initializes global data required by this class. This function must be called before any other methods of the class are used.
-     * this class.
+     * Initializes global data required by this class. This function must be called before any other
+     * methods of the class are used.
      *
      * Note: this function is NOT thread-safe.
      */
