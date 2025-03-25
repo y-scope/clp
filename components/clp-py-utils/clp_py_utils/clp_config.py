@@ -426,7 +426,9 @@ class StreamS3Storage(OutputS3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
-def _get_directory_from_storage_config(storage_config: Union[FsStorage, OutputS3Storage]) -> pathlib.Path:
+def _get_directory_from_storage_config(
+    storage_config: Union[FsStorage, OutputS3Storage],
+) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
