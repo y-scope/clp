@@ -27,7 +27,7 @@ shown below.
     }
   }
 }%%
-flowchart LR
+flowchart TD
     filter-relevant-changes --> centos-stream-9-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries

@@ -54,8 +54,10 @@ void Projection::resolve_column(
 
     auto cur_node_id = tree->get_object_subtree_node_id_for_namespace(column->get_namespace());
     if (-1 == cur_node_id) {
+        m_ordered_matching_nodes.emplace_back(std::vector<int32_t>{});
         return;
     }
+    std::vector<int32_t> matching_nodes_for_column;
     auto it = column->descriptor_begin();
     while (it != column->descriptor_end()) {
         bool matched_any{false};
@@ -77,6 +79,7 @@ void Projection::resolve_column(
             matched_any = true;
             if (last_token && column->matches_type(node_to_literal_type(child_node.get_type()))) {
                 m_matching_nodes.insert(child_node_id);
+                matching_nodes_for_column.emplace_back(child_node_id);
             } else if (false == last_token) {
                 cur_node_id = child_node_id;
                 break;
@@ -87,5 +90,6 @@ void Projection::resolve_column(
             break;
         }
     }
+    m_ordered_matching_nodes.emplace_back(std::move(matching_nodes_for_column));
 }
 }  // namespace clp_s::search
