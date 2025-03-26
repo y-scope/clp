@@ -55,6 +55,8 @@ set(
         ../SchemaReader.hpp
         ../SchemaTree.cpp
         ../SchemaTree.hpp
+        ../search/SearchUtils.cpp
+        ../search/SearchUtils.hpp
         ../TimestampDictionaryReader.cpp
         ../TimestampDictionaryReader.hpp
         ../TimestampEntry.cpp

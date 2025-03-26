@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "SearchUtils.hpp"
+#include "../SchemaTree.hpp"
 
 namespace clp_s::search {
 void Projection::add_column(std::shared_ptr<ColumnDescriptor> column) {
