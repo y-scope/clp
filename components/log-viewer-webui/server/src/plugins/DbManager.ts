@@ -1,4 +1,4 @@
-import fastifyMongo from "@fastify/mongodb";
+import fastifyMongoDb from "@fastify/mongodb";
 import {
     fastifyMysql,
     MySQLPromisePool,
@@ -86,15 +86,20 @@ class DbManager {
      * @return The MySQL connection pool created during initialization.
      */
     static async #initMySql (app: FastifyInstance, config: DbManagerOptions["mysqlConfig"]) {
-        await (app.register(fastifyMysql, {
-            promise: true,
-            connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
-                `${config.port}/${config.database}`,
-        }).after((err) => {
-            if ("undefined" !== typeof err && null !== err) {
-                throw err;
-            }
-        }) as unknown as Promise<void>);
+        try {
+            await app.register(fastifyMysql, {
+                promise: true,
+                connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
+                    `${config.port}/${config.database}`,
+            });
+        } catch (e: unknown) {
+            throw new Error(
+                `Failed to init MySql: ${e instanceof Error ?
+                    e.message :
+                    JSON.stringify(e)}`,
+                {cause: e}
+            );
+        }
 
         return app.mysql.pool;
     }
@@ -110,14 +115,19 @@ class DbManager {
         : Promise<{
             streamFilesCollection: StreamFilesCollection;
         }> {
-        await (app.register(fastifyMongo, {
-            forceClose: true,
-            url: `mongodb://${config.host}:${config.port}/${config.database}`,
-        }).after((err) => {
-            if ("undefined" !== typeof err && null !== err) {
-                throw err;
-            }
-        }) as unknown as Promise<void>);
+        try {
+            await app.register(fastifyMongoDb, {
+                forceClose: true,
+                url: `mongodb://${config.host}:${config.port}/${config.database}`,
+            });
+        } catch (e: unknown) {
+            throw new Error(
+                `Failed to init MongoDB: ${e instanceof Error ?
+                    e.message :
+                    JSON.stringify(e)}`,
+                {cause: e}
+            );
+        }
         if ("undefined" === typeof app.mongo.db) {
             throw new Error("Failed to initialize MongoDB plugin.");
         }
