@@ -1,11 +1,10 @@
 import argparse
-import configparser
 import logging
 import pathlib
 import subprocess
 import sys
 import uuid
-from typing import List, Tuple
+from typing import List
 
 from clp_py_utils.clp_config import CLPConfig, StorageEngine
 from job_orchestration.scheduler.job_config import InputType
