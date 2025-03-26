@@ -139,7 +139,7 @@ def _generate_clp_io_config(
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) != 1:
-            ValueError(f"Too many prefixes: {len(logs_to_compress)} > 1")
+            raise ValueError(f"Too many prefixes: {len(logs_to_compress)} > 1")
 
         s3_config = clp_config.logs_input.s3_config
         return S3InputConfig(
