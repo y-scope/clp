@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -b",
     "build:watch": "npm run build -- --watch",
-    "lint:check": "npx eslint .",
+    "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "npm run lint:check -- --fix",
     "prod": "NODE_ENV=production node dist/src/main.js",
     "start": "NODE_ENV=development concurrently \"npm run build:watch\" \"nodemon dist/src/main.js\"",
