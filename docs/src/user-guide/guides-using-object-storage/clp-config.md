@@ -101,3 +101,4 @@ future release.
 :::
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
+[compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
