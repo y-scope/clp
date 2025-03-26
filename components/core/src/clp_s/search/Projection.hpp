@@ -65,6 +65,14 @@ public:
                || m_matching_nodes.contains(node_id);
     }
 
+    /**
+     * Gets the matching nodes for each column. The matching nodes for each column are provided in
+     * the same order as `add_column` was invoked.
+     */
+    auto get_ordered_matching_nodes() const -> std::vector<std::vector<int32_t>> const& {
+        return m_ordered_matching_nodes;
+    }
+
 private:
     /**
      * Resolves an individual column as described by the `resolve_columns` method.
@@ -75,6 +83,7 @@ private:
 
     std::vector<std::shared_ptr<ColumnDescriptor>> m_selected_columns;
     absl::flat_hash_set<int32_t> m_matching_nodes;
+    std::vector<std::vector<int32_t>> m_ordered_matching_nodes;
     ProjectionMode m_projection_mode{ProjectionMode::ReturnAllColumns};
 };
 }  // namespace clp_s::search

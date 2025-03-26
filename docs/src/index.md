@@ -1,4 +1,4 @@
-:::{image} https://yscope.com/img/clp-logo.png
+:::{image} clp-logo.png
 :class: bg-transparent
 :width: 300
 :::
