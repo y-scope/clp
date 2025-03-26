@@ -23,7 +23,7 @@ logs_input:
       access_key_id: "<aws-access-key-id>"
       secret_access_key: "<aws-secret-access-key>"
 ```
-* `s3_config` configures both the S3 bucket where archives should be stored and the credentials
+* `s3_config` configures both the S3 bucket where logs are to be retrieved from and the credentials
   for accessing it.
   * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
   * `<bucket-name>` is the bucket's name.
