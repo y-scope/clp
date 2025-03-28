@@ -23,16 +23,16 @@
 #include "search/AddTimestampConditions.hpp"
 #include "search/ast/ConvertToExists.hpp"
 #include "search/ast/EmptyExpr.hpp"
-#include "search/EvaluateTimestampIndex.hpp"
 #include "search/ast/Expression.hpp"
-#include "search/kql/kql.hpp"
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
+#include "search/ast/SearchUtils.hpp"
+#include "search/EvaluateTimestampIndex.hpp"
+#include "search/kql/kql.hpp"
 #include "search/Output.hpp"
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
-#include "search/ast/SearchUtils.hpp"
 #include "TimestampPattern.hpp"
 #include "Utils.hpp"
 
@@ -150,7 +150,8 @@ bool search_archive(
             command_line_arguments.get_search_begin_ts(),
             command_line_arguments.get_search_end_ts()
     );
-    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
+    {
         SPDLOG_ERROR(
                 "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
                 "timestamp column was found for this archive",

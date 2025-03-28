@@ -2,8 +2,8 @@
 
 #include "archive_constants.hpp"
 #include "FileWriter.hpp"
-#include "ZstdCompressor.hpp"
 #include "search/ast/Literal.hpp"
+#include "ZstdCompressor.hpp"
 
 namespace clp_s {
 auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {

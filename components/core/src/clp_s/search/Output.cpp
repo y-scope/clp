@@ -9,12 +9,12 @@
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
-#include "clp_search/EncodedVariableInterpreter.hpp"
-#include "clp_search/Grep.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
+#include "clp_search/EncodedVariableInterpreter.hpp"
+#include "clp_search/Grep.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;

@@ -14,11 +14,11 @@
 #include "../ArchiveReader.hpp"
 #include "../SchemaReader.hpp"
 #include "../Utils.hpp"
-#include "clp_search/Query.hpp"
 #include "ast/Expression.hpp"
+#include "ast/StringLiteral.hpp"
+#include "clp_search/Query.hpp"
 #include "OutputHandler.hpp"
 #include "SchemaMatch.hpp"
-#include "ast/StringLiteral.hpp"
 
 using namespace simdjson;
 using namespace clp_s::search::clp_search;
@@ -356,7 +356,8 @@ private:
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise
      */
-    EvaluatedValue constant_propagate(std::shared_ptr<ast::Expression> const& expr, int32_t schema_id);
+    EvaluatedValue
+    constant_propagate(std::shared_ptr<ast::Expression> const& expr, int32_t schema_id);
 
     /**
      * Populates searched wildcard columns

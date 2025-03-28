@@ -1,13 +1,13 @@
 #include "AddTimestampConditions.hpp"
 
+#include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/DateLiteral.hpp"
-#include "ast/Expression.hpp"
 #include "ast/EmptyExpr.hpp"
+#include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
-#include "../Utils.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;

@@ -79,7 +79,8 @@ private:
      * @param tree
      * @param column
      */
-    void resolve_column(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ast::ColumnDescriptor> column);
+    void
+    resolve_column(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ast::ColumnDescriptor> column);
 
     std::vector<std::shared_ptr<ast::ColumnDescriptor>> m_selected_columns;
     absl::flat_hash_set<int32_t> m_matching_nodes;

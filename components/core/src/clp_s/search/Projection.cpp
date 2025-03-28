@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "ast/ColumnDescriptor.hpp"
 #include "../SchemaTree.hpp"
+#include "ast/ColumnDescriptor.hpp"
 
 namespace clp_s::search {
 void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {

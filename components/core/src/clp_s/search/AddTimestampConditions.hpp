@@ -1,15 +1,15 @@
 #ifndef CLP_S_SEARCH_ADDTIMESTAMPCONDITIONS_HPP
 #define CLP_S_SEARCH_ADDTIMESTAMPCONDITIONS_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
-#include <memory>
 
 #include "../Defs.hpp"
-#include "ast/Transformation.hpp"
 #include "ast/Expression.hpp"
+#include "ast/Transformation.hpp"
 
 namespace clp_s::search {
 /**

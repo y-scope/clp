@@ -19,8 +19,8 @@ using sql::SqlBaseVisitor;
 using sql::SqlLexer;
 using sql::SqlParser;
 
-using clp_s::search::ast::Expression;
 using clp_s::search::ast::EmptyExpr;
+using clp_s::search::ast::Expression;
 
 namespace clp_s::search::sql {
 namespace {

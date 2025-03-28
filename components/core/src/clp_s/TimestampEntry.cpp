@@ -4,7 +4,6 @@
 #include <sstream>
 
 #include "search/ast/FilterOperation.hpp"
-
 #include "Utils.hpp"
 
 using clp_s::search::ast::FilterOperation;

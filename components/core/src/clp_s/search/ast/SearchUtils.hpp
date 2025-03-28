@@ -2,8 +2,8 @@
 #define CLP_S_SEARCH_SEARCHUTILS_HPP
 
 #include <string>
-#include <vector>
 #include <string_view>
+#include <vector>
 
 #include "Expression.hpp"
 #include "Literal.hpp"

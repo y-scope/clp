@@ -2,8 +2,8 @@
 
 #include <cmath>
 #include <string>
-#include <vector>
 #include <string_view>
+#include <vector>
 
 #include <simdjson.h>
 

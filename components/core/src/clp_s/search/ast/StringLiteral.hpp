@@ -4,8 +4,8 @@
 #include <memory>
 #include <string>
 
-#include "SearchUtils.hpp"
 #include "Literal.hpp"
+#include "SearchUtils.hpp"
 
 namespace clp_s::search::ast {
 /**

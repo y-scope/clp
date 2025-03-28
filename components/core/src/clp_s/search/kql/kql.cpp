@@ -8,8 +8,8 @@
 #include <string_utils/string_utils.hpp>
 
 #include "../../archive_constants.hpp"
-#include "../ast/AndExpr.hpp"
 #include "../antlr_common/ErrorListener.hpp"
+#include "../ast/AndExpr.hpp"
 #include "../ast/BooleanLiteral.hpp"
 #include "../ast/ColumnDescriptor.hpp"
 #include "../ast/DateLiteral.hpp"

@@ -7,18 +7,18 @@
 #include <spdlog/spdlog.h>
 
 #include "../src/clp_s/search/ast/AndExpr.hpp"
-#include "../src/clp_s/search/ast/FilterExpr.hpp"
-#include "../src/clp_s/search/kql/kql.hpp"
-#include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
+#include "../src/clp_s/search/ast/FilterExpr.hpp"
+#include "../src/clp_s/search/ast/OrExpr.hpp"
+#include "../src/clp_s/search/kql/kql.hpp"
 #include "LogSuppressor.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::DescriptorToken;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
-using clp_s::search::kql::parse_kql_expression;
 using clp_s::search::ast::OrExpr;
+using clp_s::search::kql::parse_kql_expression;
 using std::string;
 using std::stringstream;
 using std::vector;
