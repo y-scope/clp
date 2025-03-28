@@ -4,12 +4,6 @@
 #if defined(__APPLE__)
     #include <libkern/OSByteOrder.h>
 
-    // TODO: Improve byte swapping implementation by replacing macros with a templated function.
-    // Ideally, we should implement a general, type-safe, templated byte swap function where the
-    // input size is inferred from the type. This would:
-    // - Improve usability by removing the need to specify the size explicitly.
-    // - Encapsulate platform-specific details, improving portability and maintainability.
-
     // NOTE:
     // - We disable `cppcoreguidelines-macro-usage` since we're using macros as wrappers around
     //   platform-specific byte swap functions, and we don't yet have a proper templated
