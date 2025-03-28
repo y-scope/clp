@@ -10,11 +10,12 @@
     // - Improve usability by removing the need to specify the size explicitly.
     // - Encapsulate platform-specific details, improving portability and maintainability.
 
-    // NOTE: Currently, we disable the following two checks for the following reasons:
-    // - We're mirroring the GNU `byteswap.h` method names (e.g., `bswap_16`), so we're using
-    //   lowercase names.
-    // - We're using macros as wrappers around platform-specific byte swap functions because we
-    //   don't yet have a proper templated implementation.
+    // NOTE:
+    // - We disable `cppcoreguidelines-macro-usage` since we're using macros as wrappers around
+    //   platform-specific byte swap functions, and we don't yet have a proper templated
+    //   implementation.
+    // - We disable `readability-identifier-naming` since we're mirroring the GNU `byteswap.h`
+    //   method names (e.g., `bswap_16`) which are lowercase.
     // NOLINTBEGIN(cppcoreguidelines-macro-usage, readability-identifier-naming)
     #define bswap_16(x) OSSwapInt16(x)
     #define bswap_32(x) OSSwapInt32(x)
@@ -23,7 +24,7 @@
 #elif defined(_MSC_VER)
     #include <stdlib.h>
 
-    // NOTE: The following two checks are disabled for the same reasons as metioned above.
+    // We disable the checks below for the same reasons mentioned above.
     // NOLINTBEGIN(cppcoreguidelines-macro-usage, readability-identifier-naming)
     #define bswap_16(x) _byteswap_ushort(x)
     #define bswap_32(x) _byteswap_ulong(x)
