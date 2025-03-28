@@ -20,6 +20,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
 )
@@ -216,13 +217,14 @@ def generate_container_config(
 
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
-    input_logs_dir = clp_config.input_logs_directory.resolve()
-    container_clp_config.input_logs_directory = (
-        CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(input_logs_dir.anchor)
-    )
-    docker_mounts.input_logs_dir = DockerMount(
-        DockerMountType.BIND, input_logs_dir, container_clp_config.input_logs_directory, True
-    )
+    if StorageType.FS == clp_config.logs_input.type:
+        input_logs_dir = clp_config.logs_input.directory.resolve()
+        container_clp_config.logs_input.directory = (
+            CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(input_logs_dir.anchor)
+        )
+        docker_mounts.input_logs_dir = DockerMount(
+            DockerMountType.BIND, input_logs_dir, container_clp_config.logs_input.directory, True
+        )
 
     container_clp_config.data_directory = CONTAINER_CLP_HOME / "var" / "data"
     if not is_path_already_mounted(
@@ -494,7 +496,7 @@ def validate_results_cache_config(
 
 
 def validate_worker_config(clp_config: CLPConfig):
-    clp_config.validate_input_logs_dir()
+    clp_config.validate_logs_input_config()
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_dir()
 

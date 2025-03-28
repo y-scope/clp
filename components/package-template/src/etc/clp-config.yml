@@ -2,7 +2,9 @@
 ## workers.
 ## - This path will be exposed inside the container, so symbolic links to files
 ##   outside this path will be ignored.
-#input_logs_directory: "/"
+#logs_input:
+#  type: "fs"
+#  directory: "/"
 #
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"
