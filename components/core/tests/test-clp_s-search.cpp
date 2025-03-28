@@ -16,13 +16,13 @@
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonParser.hpp"
-#include "../src/clp_s/search/ConvertToExists.hpp"
-#include "../src/clp_s/search/EmptyExpr.hpp"
+#include "../src/clp_s/search/ast/ConvertToExists.hpp"
+#include "../src/clp_s/search/ast/EmptyExpr.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
-#include "../src/clp_s/search/Expression.hpp"
+#include "../src/clp_s/search/ast/Expression.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
-#include "../src/clp_s/search/NarrowTypes.hpp"
-#include "../src/clp_s/search/OrOfAndForm.hpp"
+#include "../src/clp_s/search/ast/NarrowTypes.hpp"
+#include "../src/clp_s/search/ast/OrOfAndForm.hpp"
 #include "../src/clp_s/search/Output.hpp"
 #include "../src/clp_s/search/OutputHandler.hpp"
 #include "../src/clp_s/search/Projection.hpp"
@@ -115,17 +115,17 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
     auto query_stream = std::istringstream{query};
     auto expr = clp_s::search::kql::parse_kql_expression(query_stream);
     REQUIRE(nullptr != expr);
-    REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::EmptyExpr>(expr));
+    REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(expr));
 
-    clp_s::search::OrOfAndForm standardize_pass;
+    clp_s::search::ast::OrOfAndForm standardize_pass;
     expr = standardize_pass.run(expr);
     REQUIRE(nullptr != expr);
 
-    clp_s::search::NarrowTypes narrow_pass;
+    clp_s::search::ast::NarrowTypes narrow_pass;
     expr = narrow_pass.run(expr);
     REQUIRE(nullptr != expr);
 
-    clp_s::search::ConvertToExists convert_pass;
+    clp_s::search::ast::ConvertToExists convert_pass;
     expr = convert_pass.run(expr);
     REQUIRE(nullptr != expr);
 
