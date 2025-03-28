@@ -8,17 +8,6 @@ ANTLR_TARGET(
 add_library(
         sql
         ../antlr_common/ErrorListener.hpp
-        ../AndExpr.hpp
-        ../BooleanLiteral.hpp
-        ../ColumnDescriptor.hpp
-        ../DateLiteral.hpp
-        ../EmptyExpr.hpp
-        ../Expression.hpp
-        ../FilterExpr.hpp
-        ../Integral.hpp
-        ../NullLiteral.hpp
-        ../OrExpr.hpp
-        ../StringLiteral.hpp
         ${ANTLR_SqlParser_CXX_OUTPUTS}
         sql.cpp
         sql.hpp
@@ -29,5 +18,6 @@ target_link_libraries(
 	sql
 	PRIVATE
 	antlr4_static
+        clp_s::search::ast
 	spdlog::spdlog
 )

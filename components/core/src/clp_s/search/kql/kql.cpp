@@ -8,18 +8,19 @@
 #include <string_utils/string_utils.hpp>
 
 #include "../../archive_constants.hpp"
-#include "../AndExpr.hpp"
 #include "../antlr_common/ErrorListener.hpp"
-#include "../BooleanLiteral.hpp"
-#include "../ColumnDescriptor.hpp"
-#include "../DateLiteral.hpp"
-#include "../EmptyExpr.hpp"
-#include "../FilterExpr.hpp"
-#include "../Integral.hpp"
-#include "../NullLiteral.hpp"
-#include "../OrExpr.hpp"
-#include "../SearchUtils.hpp"
-#include "../StringLiteral.hpp"
+#include "../ast/AndExpr.hpp"
+#include "../ast/BooleanLiteral.hpp"
+#include "../ast/ColumnDescriptor.hpp"
+#include "../ast/DateLiteral.hpp"
+#include "../ast/EmptyExpr.hpp"
+#include "../ast/FilterExpr.hpp"
+#include "../ast/FilterOperation.hpp"
+#include "../ast/Integral.hpp"
+#include "../ast/NullLiteral.hpp"
+#include "../ast/OrExpr.hpp"
+#include "../ast/SearchUtils.hpp"
+#include "../ast/StringLiteral.hpp"
 #include "KqlBaseVisitor.h"
 #include "KqlLexer.h"
 #include "KqlParser.h"
@@ -27,6 +28,21 @@
 using namespace antlr4;
 using namespace kql;
 using clp_s::search::antlr_common::ErrorListener;
+
+using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::BooleanLiteral;
+using clp_s::search::ast::ColumnDescriptor;
+using clp_s::search::ast::DateLiteral;
+using clp_s::search::ast::DescriptorList;
+using clp_s::search::ast::EmptyExpr;
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::FilterExpr;
+using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::Integral;
+using clp_s::search::ast::Literal;
+using clp_s::search::ast::NullLiteral;
+using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::StringLiteral;
 
 namespace clp_s::search::kql {
 namespace {
@@ -74,7 +90,7 @@ public:
 
     static std::shared_ptr<Literal> unquote_literal(std::string const& text) {
         std::string token;
-        if (false == clp_s::search::unescape_kql_value(unquote_string(text), token)) {
+        if (false == clp_s::search::ast::unescape_kql_value(unquote_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid literal: {}", text);
             throw std::runtime_error{"Invalid literal."};
         }
@@ -92,7 +108,7 @@ public:
 
     static std::shared_ptr<Literal> unquote_date_literal(std::string const& text) {
         std::string token;
-        if (false == clp_s::search::unescape_kql_value(unquote_date_string(text), token)) {
+        if (false == clp_s::search::ast::unescape_kql_value(unquote_date_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid date literal: {}", text);
             throw std::runtime_error{"Invalid date literal."};
         }
@@ -112,7 +128,7 @@ public:
         std::vector<std::string> descriptor_tokens;
         std::string descriptor_namespace;
         if (false
-            == clp_s::search::tokenize_column_descriptor(
+            == clp_s::search::ast::tokenize_column_descriptor(
                     column,
                     descriptor_tokens,
                     descriptor_namespace

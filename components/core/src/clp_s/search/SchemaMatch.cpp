@@ -6,11 +6,30 @@
 #include <utility>
 
 #include "../SchemaTree.hpp"
-#include "AndExpr.hpp"
-#include "ConstantProp.hpp"
-#include "EmptyExpr.hpp"
-#include "OrExpr.hpp"
-#include "OrOfAndForm.hpp"
+#include "ast/AndExpr.hpp"
+#include "ast/ColumnDescriptor.hpp"
+#include "ast/ConstantProp.hpp"
+#include "ast/EmptyExpr.hpp"
+#include "ast/Expression.hpp"
+#include "ast/FilterExpr.hpp"
+#include "ast/FilterOperation.hpp"
+#include "ast/Literal.hpp"
+#include "ast/OrExpr.hpp"
+#include "ast/OrOfAndForm.hpp"
+
+using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::ColumnDescriptor;
+using clp_s::search::ast::ConstantProp;
+using clp_s::search::ast::DescriptorList;
+using clp_s::search::ast::DescriptorToken;
+using clp_s::search::ast::EmptyExpr;
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::FilterExpr;
+using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::LiteralType;
+using clp_s::search::ast::LiteralTypeBitmask;
+using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
 // TODO: write proper iterators on the AST to make this code less awful.

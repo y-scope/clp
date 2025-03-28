@@ -12,7 +12,7 @@
 #include <absl/container/btree_map.h>
 #include <absl/container/flat_hash_map.h>
 
-#include "search/Literal.hpp"
+#include "search/ast/Literal.hpp"
 
 namespace clp_s {
 /**
@@ -48,7 +48,7 @@ enum class NodeType : uint8_t {
  * @param type
  * @return A literal type
  */
-auto node_to_literal_type(NodeType type) -> clp_s::search::LiteralType;
+auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType;
 
 /**
  * This class represents a single node in the SchemaTree.

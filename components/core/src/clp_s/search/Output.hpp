@@ -14,11 +14,11 @@
 #include "../ArchiveReader.hpp"
 #include "../SchemaReader.hpp"
 #include "../Utils.hpp"
+#include "ast/Expression.hpp"
+#include "ast/StringLiteral.hpp"
 #include "clp_search/Query.hpp"
-#include "Expression.hpp"
 #include "OutputHandler.hpp"
 #include "SchemaMatch.hpp"
-#include "StringLiteral.hpp"
 
 using namespace simdjson;
 using namespace clp_s::search::clp_search;
@@ -27,7 +27,7 @@ namespace clp_s::search {
 class Output : public FilterClass {
 public:
     Output(SchemaMatch& match,
-           std::shared_ptr<Expression> expr,
+           std::shared_ptr<ast::Expression> expr,
            std::shared_ptr<ArchiveReader> archive_reader,
            std::shared_ptr<TimestampDictionaryReader> timestamp_dict,
            std::unique_ptr<OutputHandler> output_handler,
@@ -56,7 +56,7 @@ private:
     };
 
     std::shared_ptr<ArchiveReader> m_archive_reader;
-    std::shared_ptr<Expression> m_expr;
+    std::shared_ptr<ast::Expression> m_expr;
     SchemaMatch& m_match;
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_ignore_case;
@@ -76,8 +76,8 @@ private:
 
     std::map<std::string, std::optional<Query>> m_string_query_map;
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
-    std::unordered_map<Expression*, Query*> m_expr_clp_query;
-    std::unordered_map<Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
+    std::unordered_map<ast::Expression*, Query*> m_expr_clp_query;
+    std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
     std::unordered_map<int32_t, std::vector<ClpStringColumnReader*>> m_clp_string_readers;
     std::unordered_map<int32_t, std::vector<VariableStringColumnReader*>> m_var_string_readers;
     std::unordered_map<int32_t, DateStringColumnReader*> m_datestring_readers;
@@ -86,14 +86,14 @@ private:
     uint64_t m_cur_message;
     EvaluatedValue m_expression_value;
 
-    std::vector<ColumnDescriptor*> m_wildcard_columns;
-    std::map<ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
-    LiteralTypeBitmask m_wildcard_type_mask{0};
+    std::vector<ast::ColumnDescriptor*> m_wildcard_columns;
+    std::map<ast::ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
+    ast::LiteralTypeBitmask m_wildcard_type_mask{0};
     std::unordered_set<int32_t> m_metadata_columns;
 
     std::stack<
-            std::pair<ExpressionType, OpList::iterator>,
-            std::vector<std::pair<ExpressionType, OpList::iterator>>>
+            std::pair<ExpressionType, ast::OpList::iterator>,
+            std::vector<std::pair<ExpressionType, ast::OpList::iterator>>>
             m_expression_state;
 
     simdjson::ondemand::parser m_array_parser;
@@ -119,7 +119,7 @@ private:
      * @param schema
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate(Expression* expr, int32_t schema);
+    bool evaluate(ast::Expression* expr, int32_t schema);
 
     /**
      * Evaluates a filter expression
@@ -127,7 +127,7 @@ private:
      * @param schema
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_filter(FilterExpr* expr, int32_t schema);
+    bool evaluate_filter(ast::FilterExpr* expr, int32_t schema);
 
     /**
      * Evaluates a wildcard filter expression
@@ -135,7 +135,7 @@ private:
      * @param schema
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_wildcard_filter(FilterExpr* expr, int32_t schema);
+    bool evaluate_wildcard_filter(ast::FilterExpr* expr, int32_t schema);
 
     /**
      * Evaluates a int filter expression
@@ -145,9 +145,9 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_int_filter(
-            FilterOperation op,
+            ast::FilterOperation op,
             int32_t column_id,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     );
 
     /**
@@ -157,7 +157,7 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static bool evaluate_int_filter_core(FilterOperation op, int64_t value, int64_t operand);
+    static bool evaluate_int_filter_core(ast::FilterOperation op, int64_t value, int64_t operand);
 
     /**
      * Evaluates a float filter expression
@@ -167,9 +167,9 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_float_filter(
-            FilterOperation op,
+            ast::FilterOperation op,
             int32_t column_id,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     );
 
     /**
@@ -179,7 +179,7 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static bool evaluate_float_filter_core(FilterOperation op, double value, double operand);
+    static bool evaluate_float_filter_core(ast::FilterOperation op, double value, double operand);
 
     /**
      * Evaluates a clp string filter expression
@@ -189,7 +189,7 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_clp_string_filter(
-            FilterOperation op,
+            ast::FilterOperation op,
             Query* q,
             std::vector<ClpStringColumnReader*> const& readers
     ) const;
@@ -202,7 +202,7 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_var_string_filter(
-            FilterOperation op,
+            ast::FilterOperation op,
             std::vector<VariableStringColumnReader*> const& readers,
             std::unordered_set<int64_t>* matching_vars
     ) const;
@@ -215,9 +215,9 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_epoch_date_filter(
-            FilterOperation op,
+            ast::FilterOperation op,
             DateStringColumnReader* reader,
-            std::shared_ptr<Literal>& operand
+            std::shared_ptr<ast::Literal>& operand
     );
 
     /**
@@ -229,10 +229,10 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_array_filter(
-            FilterOperation op,
-            DescriptorList const& unresolved_tokens,
+            ast::FilterOperation op,
+            ast::DescriptorList const& unresolved_tokens,
             std::string& value,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     );
 
     /**
@@ -246,10 +246,10 @@ private:
      */
     inline bool evaluate_array_filter_value(
             ondemand::value& item,
-            FilterOperation op,
-            DescriptorList const& unresolved_tokens,
+            ast::FilterOperation op,
+            ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     ) const;
 
     /**
@@ -263,10 +263,10 @@ private:
      */
     bool evaluate_array_filter_array(
             ondemand::array& array,
-            FilterOperation op,
-            DescriptorList const& unresolved_tokens,
+            ast::FilterOperation op,
+            ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     ) const;
 
     /**
@@ -280,10 +280,10 @@ private:
      */
     bool evaluate_array_filter_object(
             ondemand::object& object,
-            FilterOperation op,
-            DescriptorList const& unresolved_tokens,
+            ast::FilterOperation op,
+            ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     ) const;
 
     /**
@@ -294,9 +294,9 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_wildcard_array_filter(
-            FilterOperation op,
+            ast::FilterOperation op,
             std::string& value,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     );
 
     /**
@@ -308,8 +308,8 @@ private:
      */
     bool evaluate_wildcard_array_filter(
             ondemand::array& array,
-            FilterOperation op,
-            std::shared_ptr<Literal> const& operand
+            ast::FilterOperation op,
+            std::shared_ptr<ast::Literal> const& operand
     ) const;
 
     /**
@@ -321,8 +321,8 @@ private:
      */
     bool evaluate_wildcard_array_filter(
             ondemand::object& object,
-            FilterOperation op,
-            std::shared_ptr<Literal> const& operand
+            ast::FilterOperation op,
+            std::shared_ptr<ast::Literal> const& operand
     ) const;
 
     /**
@@ -333,16 +333,16 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     bool evaluate_bool_filter(
-            FilterOperation op,
+            ast::FilterOperation op,
             int32_t column_id,
-            std::shared_ptr<Literal> const& operand
+            std::shared_ptr<ast::Literal> const& operand
     );
 
     /**
      * Populates the string queries
      * @param expr
      */
-    void populate_string_queries(std::shared_ptr<Expression> const& expr);
+    void populate_string_queries(std::shared_ptr<ast::Expression> const& expr);
 
     /**
      * Populates the set of internal columns that get ignored during dynamic wildcard expansion.
@@ -356,13 +356,14 @@ private:
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise
      */
-    EvaluatedValue constant_propagate(std::shared_ptr<Expression> const& expr, int32_t schema_id);
+    EvaluatedValue
+    constant_propagate(std::shared_ptr<ast::Expression> const& expr, int32_t schema_id);
 
     /**
      * Populates searched wildcard columns
      * @param expr
      */
-    void populate_searched_wildcard_columns(std::shared_ptr<Expression> const& expr);
+    void populate_searched_wildcard_columns(std::shared_ptr<ast::Expression> const& expr);
 
     /**
      * Adds wildcard columns to searched columns

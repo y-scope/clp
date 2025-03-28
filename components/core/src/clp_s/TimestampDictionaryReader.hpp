@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "FileReader.hpp"
-#include "search/FilterOperation.hpp"
 #include "TimestampEntry.hpp"
 #include "TimestampPattern.hpp"
 #include "ZstdDecompressor.hpp"
