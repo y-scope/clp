@@ -6,8 +6,8 @@
 #include <spdlog/spdlog.h>
 
 #include "../antlr_common/ErrorListener.hpp"
-#include "../EmptyExpr.hpp"
-#include "../Expression.hpp"
+#include "../ast/EmptyExpr.hpp"
+#include "../ast/Expression.hpp"
 #include "SqlBaseVisitor.h"
 #include "SqlLexer.h"
 #include "SqlParser.h"
@@ -18,6 +18,9 @@ using clp_s::search::antlr_common::ErrorListener;
 using sql::SqlBaseVisitor;
 using sql::SqlLexer;
 using sql::SqlParser;
+
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::EmptyExpr;
 
 namespace clp_s::search::sql {
 namespace {
