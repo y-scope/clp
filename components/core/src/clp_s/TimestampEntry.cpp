@@ -3,7 +3,11 @@
 #include <cmath>
 #include <sstream>
 
+#include "search/ast/FilterOperation.hpp"
+
 #include "Utils.hpp"
+
+using clp_s::search::ast::FilterOperation;
 
 namespace clp_s {
 void TimestampEntry::ingest_timestamp(epochtime_t timestamp) {

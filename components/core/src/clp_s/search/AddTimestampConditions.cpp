@@ -1,10 +1,21 @@
 #include "AddTimestampConditions.hpp"
 
-#include "AndExpr.hpp"
-#include "ColumnDescriptor.hpp"
-#include "DateLiteral.hpp"
-#include "EmptyExpr.hpp"
-#include "FilterExpr.hpp"
+#include "ast/AndExpr.hpp"
+#include "ast/ColumnDescriptor.hpp"
+#include "ast/DateLiteral.hpp"
+#include "ast/Expression.hpp"
+#include "ast/EmptyExpr.hpp"
+#include "ast/FilterExpr.hpp"
+#include "ast/FilterOperation.hpp"
+#include "../Utils.hpp"
+
+using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::ColumnDescriptor;
+using clp_s::search::ast::DateLiteral;
+using clp_s::search::ast::EmptyExpr;
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::FilterExpr;
+using clp_s::search::ast::FilterOperation;
 
 namespace clp_s::search {
 std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expression>& expr) {

@@ -7,7 +7,7 @@
 
 #include "../SchemaTree.hpp"
 #include "../TraceableException.hpp"
-#include "ColumnDescriptor.hpp"
+#include "ast/ColumnDescriptor.hpp"
 
 namespace clp_s::search {
 enum ProjectionMode : uint8_t {
@@ -39,7 +39,7 @@ public:
      * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns
      * @throws OperationFailed if `column` is identical to a previously added column
      */
-    void add_column(std::shared_ptr<ColumnDescriptor> column);
+    void add_column(std::shared_ptr<ast::ColumnDescriptor> column);
 
     /**
      * Resolves all columns for the purpose of projection. This key resolution implementation is
@@ -79,9 +79,9 @@ private:
      * @param tree
      * @param column
      */
-    void resolve_column(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ColumnDescriptor> column);
+    void resolve_column(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ast::ColumnDescriptor> column);
 
-    std::vector<std::shared_ptr<ColumnDescriptor>> m_selected_columns;
+    std::vector<std::shared_ptr<ast::ColumnDescriptor>> m_selected_columns;
     absl::flat_hash_set<int32_t> m_matching_nodes;
     std::vector<std::vector<int32_t>> m_ordered_matching_nodes;
     ProjectionMode m_projection_mode{ProjectionMode::ReturnAllColumns};

@@ -3,32 +3,33 @@
 #include "archive_constants.hpp"
 #include "FileWriter.hpp"
 #include "ZstdCompressor.hpp"
+#include "search/ast/Literal.hpp"
 
 namespace clp_s {
-auto node_to_literal_type(NodeType type) -> clp_s::search::LiteralType {
+auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
     // TODO: properly support NodeType::Object once we add LiteralType::ObjectT when implementing
     // type-per-token support.
     switch (type) {
         case NodeType::Integer:
-            return clp_s::search::LiteralType::IntegerT;
+            return clp_s::search::ast::LiteralType::IntegerT;
         case NodeType::Float:
-            return clp_s::search::LiteralType::FloatT;
+            return clp_s::search::ast::LiteralType::FloatT;
         case NodeType::ClpString:
-            return clp_s::search::LiteralType::ClpStringT;
+            return clp_s::search::ast::LiteralType::ClpStringT;
         case NodeType::VarString:
-            return clp_s::search::LiteralType::VarStringT;
+            return clp_s::search::ast::LiteralType::VarStringT;
         case NodeType::Boolean:
-            return clp_s::search::LiteralType::BooleanT;
+            return clp_s::search::ast::LiteralType::BooleanT;
         case NodeType::UnstructuredArray:
-            return clp_s::search::LiteralType::ArrayT;
+            return clp_s::search::ast::LiteralType::ArrayT;
         case NodeType::NullValue:
-            return clp_s::search::LiteralType::NullT;
+            return clp_s::search::ast::LiteralType::NullT;
         case NodeType::DateString:
-            return clp_s::search::LiteralType::EpochDateT;
+            return clp_s::search::ast::LiteralType::EpochDateT;
         case NodeType::Metadata:
         case NodeType::Unknown:
         default:
-            return clp_s::search::LiteralType::UnknownT;
+            return clp_s::search::ast::LiteralType::UnknownT;
     }
 }
 

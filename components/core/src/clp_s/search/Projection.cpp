@@ -2,10 +2,11 @@
 
 #include <algorithm>
 
+#include "ast/ColumnDescriptor.hpp"
 #include "../SchemaTree.hpp"
 
 namespace clp_s::search {
-void Projection::add_column(std::shared_ptr<ColumnDescriptor> column) {
+void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
     if (column->is_unresolved_descriptor()) {
         throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
     }
@@ -33,7 +34,7 @@ void Projection::resolve_columns(std::shared_ptr<SchemaTree> tree) {
 
 void Projection::resolve_column(
         std::shared_ptr<SchemaTree> tree,
-        std::shared_ptr<ColumnDescriptor> column
+        std::shared_ptr<ast::ColumnDescriptor> column
 ) {
     /**
      * Ideally we would reuse the code from SchemaMatch for resolving columns, but unfortunately we

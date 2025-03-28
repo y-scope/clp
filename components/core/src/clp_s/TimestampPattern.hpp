@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "Defs.hpp"
+#include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
