@@ -9,7 +9,7 @@ import "./index.css";
 
 /* eslint-disable-next-line no-warning-comments */
 // TODO: Remove flag and related logic when the new UI is fully implemented.
-const antdFlag = true;
+const antdFlag = false;
 
 const rootElement = document.getElementById("root");
 if (null === rootElement) {
