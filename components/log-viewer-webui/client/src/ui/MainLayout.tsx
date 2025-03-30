@@ -1,40 +1,59 @@
-import React, { useState } from 'react';
+import React, {useState} from "react";
+
 import {
-  UploadOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
-import type { MenuProps } from 'antd';
-import { Layout, Menu } from 'antd';
-import './MainLayout.css';
+    SearchOutlined,
+    UploadOutlined,
+} from "@ant-design/icons";
+import {
+    Layout,
+    Menu,
+    MenuProps,
+} from "antd";
 
-const {Sider } = Layout;
+import "./MainLayout.css";
 
-type MenuItem = Required<MenuProps>['items'][number];
+
+const {Sider} = Layout;
+
+type MenuItem = Required<MenuProps>["items"][number];
 
 const items: MenuItem[] = [
-    {label: "Ingest", key: "/ingest", icon: <UploadOutlined />},
-    {label: "Search", key: "/search", icon: <SearchOutlined />},
+    {label: "Ingest", key: "/ingest", icon: <UploadOutlined/>},
+    {label: "Search", key: "/search", icon: <SearchOutlined/>},
 ];
 
+/**
+ * The top-level layout of web ui.
+ *
+ * @return
+ */
 const MainLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  
-  return (
-    <Layout className="main-layout">
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={(value) => setCollapsed(value)}
-        theme="light"
-        width="150"
-      >
-        <div className="sider-logo-container">
-          <img src="/clp-logo.png" alt="CLP Logo" className="sider-logo" />
-        </div>
-        <Menu defaultSelectedKeys={['1']} mode="inline" items={items} />
-      </Sider>
-    </Layout>
-  );
+    const [collapsed, setCollapsed] = useState(false);
+
+    return (
+        <Layout className={"main-layout"}>
+            <Sider
+                collapsed={collapsed}
+                collapsible={true}
+                theme={"light"}
+                width={"150"}
+                onCollapse={(value) => {
+                    setCollapsed(value);
+                }}
+            >
+                <div className={"sider-logo-container"}>
+                    <img
+                        alt={"CLP Logo"}
+                        className={"sider-logo"}
+                        src={"/clp-logo.png"}/>
+                </div>
+                <Menu
+                    defaultSelectedKeys={["1"]}
+                    items={items}
+                    mode={"inline"}/>
+            </Sider>
+        </Layout>
+    );
 };
 
 export default MainLayout;

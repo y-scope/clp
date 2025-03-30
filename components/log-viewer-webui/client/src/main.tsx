@@ -1,14 +1,15 @@
 import {StrictMode} from "react";
 import {createRoot} from "react-dom/client";
 
+import AntdApp from "./AntdApp";
 import App from "./App";
-import AntdApp from "./AntApp";
 
 import "./index.css";
 
-// Temporary flag to switch between old UI and new UI.
-// TODO: Remove flag and related conditional logic when the new UI is finished.
-let antdFlag = true;
+
+/* eslint-disable-next-line no-warning-comments */
+// TODO: Remove flag and related logic when the new UI is fully implemented.
+const antdFlag = true;
 
 const rootElement = document.getElementById("root");
 if (null === rootElement) {
@@ -16,14 +17,14 @@ if (null === rootElement) {
 }
 
 const root = createRoot(rootElement);
+/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
 if (antdFlag) {
     root.render(
-         <StrictMode>
-             <AntdApp/>
-         </StrictMode>
+        <StrictMode>
+            <AntdApp/>
+        </StrictMode>
     );
-}
-else {
+} else {
     root.render(
         <StrictMode>
             <App/>
