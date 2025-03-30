@@ -4,7 +4,7 @@ import MainLayout from "./ui/MainLayout";
 
 
 /**
- * App entry point.
+ * Web UI app.
  *
  * @return
  */

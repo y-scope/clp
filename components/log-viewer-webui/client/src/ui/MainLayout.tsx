@@ -23,7 +23,7 @@ const items: MenuItem[] = [
 ];
 
 /**
- * The top-level layout of web ui.
+ * The main layout of web ui.
  *
  * @return
  */
