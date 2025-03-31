@@ -151,6 +151,15 @@ int run(int argc, char const* argv[]) {
 
     Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::Compression>();
     LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::Compression)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::Watch)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::Parse)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::GetNext)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::ProcessState)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::ScanWhileLoop)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::TokenCreation)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::ParseLogFile)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::ProcessCharWatch)
+    LOG_FRAGMENTED_MEASUREMENT(Profiler::FragmentedMeasurementIndex::ProcessChar)
 
     return 0;
 }
