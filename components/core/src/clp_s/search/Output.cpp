@@ -15,6 +15,7 @@
 #include "ast/OrExpr.hpp"
 #include "clp_search/EncodedVariableInterpreter.hpp"
 #include "clp_search/Grep.hpp"
+#include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;
@@ -54,6 +55,15 @@ bool Output::filter() {
     // Skip decompressing archive if it contains no
     // relevant schemas
     if (matched_schemas.empty()) {
+        return true;
+    }
+
+    // Skip decompressing the rest of the archive if it won't match based on the timestamp range
+    // index. This check happens a second time here because some ambiguous columns may now match the
+    // timestamp column after column resolution.
+    EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
+    if (EvaluatedValue::False == timestamp_index.run(top_level_expr)) {
+        m_archive_reader->close();
         return true;
     }
 

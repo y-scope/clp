@@ -1,3 +1,6 @@
+# This CMakeLists file contains the recipe for the Abstract Syntax Tree (ast) library used to
+# represent queries for both clp-s and kv-ir search.
+
 set(
     CLP_S_AST_SOURCES
     AndExpr.cpp
@@ -61,4 +64,3 @@ target_link_libraries(
     PRIVATE
     simdjson
 )
-
