@@ -131,7 +131,7 @@ auto encode_uri(string_view uri, bool is_object_key) -> string {
     string encoded_uri;
 
     for (auto const c : uri) {
-        if (is_unreserved_characters(c) || ('/' == c) && is_object_key) {
+        if (is_unreserved_characters(c) || ('/' == c && is_object_key)) {
             encoded_uri += c;
         } else {
             encoded_uri += fmt::format("%{:02X}", c);

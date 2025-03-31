@@ -29,6 +29,7 @@
 #include "JsonFileIterator.hpp"
 #include "JsonParser.hpp"
 #include "search/ColumnDescriptor.hpp"
+#include "search/SearchUtils.hpp"
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -91,7 +92,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
-            == clp_s::StringUtils::tokenize_column_descriptor(
+            == clp_s::search::tokenize_column_descriptor(
                     m_timestamp_key,
                     m_timestamp_column,
                     m_timestamp_namespace
