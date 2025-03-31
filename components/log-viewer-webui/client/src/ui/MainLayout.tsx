@@ -48,7 +48,6 @@ const MainLayout: React.FC = () => {
                         src={"/clp-logo.png"}/>
                 </div>
                 <Menu
-                    defaultSelectedKeys={["1"]}
                     items={items}
                     mode={"inline"}/>
             </Sider>
