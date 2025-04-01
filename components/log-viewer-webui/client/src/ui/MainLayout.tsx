@@ -1,4 +1,5 @@
 import React, {useState} from "react";
+import {Link, Outlet} from "react-router";
 
 import {
     SearchOutlined,
@@ -12,14 +13,13 @@ import {
 
 import "./MainLayout.css";
 
-
 const {Sider} = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
 
 const items: MenuItem[] = [
-    {label: "Ingest", key: "/ingest", icon: <UploadOutlined/>},
-    {label: "Search", key: "/search", icon: <SearchOutlined/>},
+    {label: <Link to="/ingest">Ingest</Link>, key: "/ingest", icon: <UploadOutlined/>},
+    {label: <Link to="/search">Search</Link>, key: "/search", icon: <SearchOutlined/>},
 ];
 
 /**
@@ -51,6 +51,9 @@ const MainLayout = () => {
                     items={items}
                     mode={"inline"}/>
             </Sider>
+            <Layout>
+                <Outlet />
+            </Layout>
         </Layout>
     );
 };
