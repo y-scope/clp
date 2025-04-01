@@ -38,3 +38,6 @@ brew install \
 if ! command -v pkg-config ; then
     brew install pkg-config
 fi
+
+# TODO: https://github.com/y-scope/clp/issues/795
+"${script_dir}/../check-cmake.sh"
