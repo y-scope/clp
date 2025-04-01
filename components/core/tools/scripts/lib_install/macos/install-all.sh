@@ -40,4 +40,5 @@ if ! command -v pkg-config ; then
 fi
 
 # TODO: https://github.com/y-scope/clp/issues/795
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 "${script_dir}/../check-cmake.sh"
