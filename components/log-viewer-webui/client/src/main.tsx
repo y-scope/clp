@@ -14,8 +14,10 @@ if (null === rootElement) {
 
 /* eslint-disable-next-line no-warning-comments */
 // TODO: Remove flag and related logic when the new UI is fully implemented.
-const { VITE_USE_ANTD_APP } = import.meta.env;
-const AppComponent = (VITE_USE_ANTD_APP === 'true') ? AntdApp : App;
+const {VITE_USE_ANTD_APP} = import.meta.env;
+const AppComponent = ("true" === VITE_USE_ANTD_APP) ?
+    AntdApp :
+    App;
 
 const root = createRoot(rootElement);
 root.render(
