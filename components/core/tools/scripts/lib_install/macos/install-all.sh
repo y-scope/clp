@@ -7,9 +7,16 @@ set -e
 set -u
 
 brew update
+
+# Install CMake v3.31.6 since we're using yaml-cpp that doesn't yet support CMake v4 yet
+cmake_formula_path=/tmp/cmake.rb
+curl --fail --show-error --location --remote-name \
+  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce/Formula/c/cmake.rb \
+  --output "${cmake_formula_path}"
+brew install --formula "${cmake_formula_path}"
+
 brew install \
   boost \
-  cmake \
   coreutils \
   fmt \
   gcc \
