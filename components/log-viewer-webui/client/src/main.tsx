@@ -6,28 +6,19 @@ import App from "./App";
 
 import "./index.css";
 
-
-/* eslint-disable-next-line no-warning-comments */
-// TODO: Remove flag and related logic when the new UI is fully implemented.
-const antdFlag = false;
-
 const rootElement = document.getElementById("root");
 if (null === rootElement) {
     throw new Error("Root element not found");
 }
 
+/* eslint-disable-next-line no-warning-comments */
+// TODO: Remove flag and related logic when the new UI is fully implemented.
+const { VITE_USE_ANTD_APP } = import.meta.env;
+const AppComponent = (VITE_USE_ANTD_APP === 'true') ? AntdApp : App;
+
 const root = createRoot(rootElement);
-/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition */
-if (antdFlag) {
-    root.render(
-        <StrictMode>
-            <AntdApp/>
-        </StrictMode>
-    );
-} else {
-    root.render(
-        <StrictMode>
-            <App/>
-        </StrictMode>
-    );
-}
+root.render(
+    <StrictMode>
+        <AppComponent/>
+    </StrictMode>
+);

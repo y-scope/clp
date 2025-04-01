@@ -27,7 +27,7 @@ const items: MenuItem[] = [
  *
  * @return
  */
-const MainLayout: React.FC = () => {
+const MainLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
