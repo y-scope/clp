@@ -429,8 +429,8 @@ tasks:
         vars:
           DEST: "{{.DEST}}"
           FLAGS: "--extract"
-          SRC_NAME: "yaml-cpp-yaml-cpp-0.7.0"
-          SRC_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.zip"
+          SRC_NAME: "yaml-cpp-yaml-cpp-c2680200486572baf8221ba052ef50b58ecd816e"
+          SRC_URL: "https://github.com/jbeder/yaml-cpp/archive/c268020.zip"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
