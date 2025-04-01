@@ -6,6 +6,7 @@ import App from "./App";
 
 import "./index.css";
 
+
 const rootElement = document.getElementById("root");
 if (null === rootElement) {
     throw new Error("Root element not found");
