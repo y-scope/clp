@@ -8,10 +8,11 @@ set -u
 
 brew update
 
-# Install CMake v3.31.6 since we're using yaml-cpp that doesn't yet support CMake v4 yet
+# Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 cmake_formula_path=/tmp/cmake.rb
-curl --fail --show-error --location --output "${cmake_formula_path}" \
-  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce/Formula/c/cmake.rb
+curl --fail --location --show-error \
+  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce/Formula/c/cmake.rb \
+  --output "${cmake_formula_path}"
 brew install --formula "${cmake_formula_path}"
 
 brew install \
