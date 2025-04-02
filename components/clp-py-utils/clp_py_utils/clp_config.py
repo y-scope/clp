@@ -339,11 +339,17 @@ class AwsAuthentication(BaseModel):
         profile = values.get("profile")
         credentials = values.get("credentials")
 
-        if auth_type == "profile" and not profile:
-            raise ValueError("profile must be set when type is 'profile'")
-        if auth_type == "credentials" and not credentials:
-            raise ValueError("credentials must be set when type is 'credentials'")
-        if auth_type in ["ec2", "env_vars"] and (profile or credentials):
+        if auth_type == "profile":
+            if not profile:
+                raise ValueError("profile must be set when type is 'profile'")
+            if credentials:
+                raise ValueError("credentials must not be set when type is 'profile'")
+        elif auth_type == "credentials":
+            if not credentials:
+                raise ValueError("credentials must be set when type is 'credentials'")
+            if profile:
+                raise ValueError("profile must not be set when type is 'credentials'")
+        elif auth_type in ["ec2", "env_vars"] and (profile or credentials):
             raise ValueError(
                 f"profile and credentials must not be set when type is '{auth_type}'"
             )
@@ -354,9 +360,7 @@ class S3Config(BaseModel):
     region_code: str
     bucket: str
     key_prefix: str
-
-    profile: Optional[str] = None
-    credentials: Optional[S3Credentials] = None
+    aws_authentication: AwsAuthentication
 
     @validator("region_code")
     def validate_region_code(cls, field):
@@ -377,25 +381,6 @@ class S3Config(BaseModel):
         if not field.endswith("/"):
             raise ValueError('key_prefix must end with "/"')
         return field
-
-    @root_validator(pre=True)
-    def validate_profile_and_credentials(cls, values):
-        profile = values.get("profile")
-        credentials = values.get("credentials")
-
-        if profile and credentials:
-            raise ValueError("profile and credentials cannot be set simultaneously")
-        elif not profile and not credentials:
-            raise ValueError("one of either profile or credentials must be set")
-        return values
-
-    def get_profile(self) -> Optional[str]:
-        return self.profile
-
-    def get_credentials(self) -> Tuple[Optional[str], Optional[str]]:
-        if self.credentials is None:
-            return None, None
-        return self.credentials.access_key_id, self.credentials.secret_access_key
 
 
 class FsStorage(BaseModel):
