@@ -328,6 +328,28 @@ class S3Credentials(BaseModel):
         return field
 
 
+class AwsAuthentication(BaseModel):
+    type: Literal["ec2", "env_vars", "profile", "credentials"]
+    profile: Optional[str] = None
+    credentials: Optional[S3Credentials] = None
+
+    @root_validator(pre=True)
+    def validate_authentication(cls, values):
+        auth_type = values.get("type")
+        profile = values.get("profile")
+        credentials = values.get("credentials")
+
+        if auth_type == "profile" and not profile:
+            raise ValueError("profile must be set when type is 'profile'")
+        if auth_type == "credentials" and not credentials:
+            raise ValueError("credentials must be set when type is 'credentials'")
+        if auth_type in ["ec2", "env_vars"] and (profile or credentials):
+            raise ValueError(
+                f"profile and credentials must not be set when type is '{auth_type}'"
+            )
+        return values
+
+
 class S3Config(BaseModel):
     region_code: str
     bucket: str
