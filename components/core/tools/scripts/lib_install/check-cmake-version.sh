@@ -7,7 +7,7 @@ set -e
 set -u
 
 # Get the installed cmake version string
-cmake_version=$(cmake -E capabilities | jq -r ".version.string")
+cmake_version=$(cmake -E capabilities | jq --raw-output ".version.string")
 
 # Check if version is 4.0 or higher
 # shellcheck disable=SC2071
