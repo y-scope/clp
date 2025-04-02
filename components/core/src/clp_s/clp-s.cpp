@@ -21,18 +21,18 @@
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
 #include "search/AddTimestampConditions.hpp"
-#include "search/ConvertToExists.hpp"
-#include "search/EmptyExpr.hpp"
+#include "search/ast/ConvertToExists.hpp"
+#include "search/ast/EmptyExpr.hpp"
+#include "search/ast/Expression.hpp"
+#include "search/ast/NarrowTypes.hpp"
+#include "search/ast/OrOfAndForm.hpp"
+#include "search/ast/SearchUtils.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
-#include "search/Expression.hpp"
 #include "search/kql/kql.hpp"
-#include "search/NarrowTypes.hpp"
-#include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
-#include "search/SearchUtils.hpp"
 #include "TimestampPattern.hpp"
 #include "Utils.hpp"
 
@@ -68,7 +68,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<Expression> expr,
+        std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 );
 
@@ -139,7 +139,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<Expression> expr,
+        std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 ) {
     auto const& query = command_line_arguments.get_query();
@@ -150,7 +150,8 @@ bool search_archive(
             command_line_arguments.get_search_begin_ts(),
             command_line_arguments.get_search_end_ts()
     );
-    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
+    {
         SPDLOG_ERROR(
                 "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
                 "timestamp column was found for this archive",
@@ -161,20 +162,20 @@ bool search_archive(
         return false;
     }
 
-    OrOfAndForm standardize_pass;
-    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::OrOfAndForm standardize_pass;
+    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
 
-    NarrowTypes narrow_pass;
-    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::NarrowTypes narrow_pass;
+    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
 
-    ConvertToExists convert_pass;
-    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::ConvertToExists convert_pass;
+    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
@@ -189,7 +190,7 @@ bool search_archive(
 
     // Narrow against schemas
     SchemaMatch match_pass(archive_reader->get_schema_tree(), archive_reader->get_schema_map());
-    if (expr = match_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    if (expr = match_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
@@ -205,7 +206,7 @@ bool search_archive(
             std::vector<std::string> descriptor_tokens;
             std::string descriptor_namespace;
             if (false
-                == clp_s::search::tokenize_column_descriptor(
+                == clp_s::search::ast::tokenize_column_descriptor(
                         column,
                         descriptor_tokens,
                         descriptor_namespace
@@ -215,7 +216,7 @@ bool search_archive(
                 return false;
             }
             projection->add_column(
-                    ColumnDescriptor::create_from_escaped_tokens(
+                    ast::ColumnDescriptor::create_from_escaped_tokens(
                             descriptor_tokens,
                             descriptor_namespace
                     )
@@ -348,7 +349,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        if (std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+        if (std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
             return 1;
         }
