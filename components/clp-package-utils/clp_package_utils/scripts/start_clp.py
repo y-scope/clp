@@ -618,7 +618,10 @@ def generic_start_scheduler(
     necessary_mounts = [mounts.logs_dir]
     if scheduler_specific_mount:
         necessary_mounts.append(scheduler_specific_mount)
-    if COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name:
+    if (
+        COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name
+        and StorageType.FS == clp_config.logs_input.type
+    ):
         necessary_mounts.append(mounts.input_logs_dir)
     for mount in necessary_mounts:
         if mount:
@@ -771,10 +774,11 @@ def generic_start_worker(
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
-        mounts.input_logs_dir,
     ]
     if worker_specific_mount:
         necessary_mounts.extend(worker_specific_mount)
+    if StorageType.FS == clp_config.logs_input.type:
+        necessary_mounts.append(mounts.input_logs_dir)
 
     for mount in necessary_mounts:
         if not mount:
