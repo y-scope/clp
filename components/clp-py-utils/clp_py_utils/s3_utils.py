@@ -1,13 +1,12 @@
 import os
-import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
 import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
-from clp_py_utils.clp_config import S3Config, S3Credentials, AwsAuthentication
+from clp_py_utils.clp_config import S3Config, S3Credentials
 from clp_py_utils.compression import FileMetadata
 
 # Constants
