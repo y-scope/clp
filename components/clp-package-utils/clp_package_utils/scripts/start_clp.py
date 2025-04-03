@@ -524,7 +524,7 @@ def start_compression_scheduler(
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
     compression_scheduler_mount = None
     if StorageType.S3 == clp_config.archive_output.storage.type:
-        if clp_config.archive_output.storage.s3_config.profile is not None:
+        if clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile":
             compression_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -550,8 +550,8 @@ def start_query_scheduler(
         or StorageType.S3 == clp_config.stream_output.storage.type
     ):
         if (
-            clp_config.archive_output.storage.s3_config.profile is not None
-            or clp_config.stream_output.storage.s3_config.profile is not None
+            clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile"
+            or clp_config.stream_output.storage.s3_config.aws_authentication.type == "profile"
         ):
             query_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
@@ -653,7 +653,7 @@ def start_compression_worker(
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
     if StorageType.S3 == clp_config.archive_output.storage.type:
-        if clp_config.archive_output.storage.s3_config.profile is not None:
+        if clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile":
             compression_worker_mounts.append(mounts.aws_config_dir)
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
@@ -686,8 +686,8 @@ def start_query_worker(
         or StorageType.S3 == clp_config.stream_output.storage.type
     ):
         if (
-            clp_config.archive_output.storage.s3_config.profile is not None
-            or clp_config.stream_output.storage.s3_config.profile is not None
+            clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile"
+            or clp_config.stream_output.storage.s3_config.aws_authentication.type == "profile"
         ):
             query_worker_mounts.append(mounts.aws_config_dir)
     if StorageType.FS == clp_config.archive_output.storage.type:
@@ -975,24 +975,25 @@ def start_log_viewer_webui(
         settings_json_updates["StreamFilesS3PathPrefix"] = (
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
-        if s3_config.credentials is not None:
-            access_key_id, secret_access_key = s3_config.get_credentials()
+        auth = s3_config.aws_authentication
+        if auth.type == "credentials":
+            credentials = auth.credentials
             container_cmd_extra_opts.extend(
                 (
                     "-e",
-                    f"AWS_ACCESS_KEY_ID={access_key_id}",
+                    f"AWS_ACCESS_KEY_ID={credentials.access_key_id}",
                     "-e",
-                    f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+                    f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}",
                 )
             )
-        elif s3_config.profile is not None:
-            settings_json_updates["StreamFilesS3Profile"] = s3_config.get_profile()
+        elif auth.type == "profile":
+            settings_json_updates["StreamFilesS3Profile"] = auth.profile
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(settings_json))
 
-    # fmt: off
+        # fmt: off
     container_cmd = [
         "docker", "run",
         "-d",
@@ -1015,7 +1016,7 @@ def start_log_viewer_webui(
         mounts.stream_output_dir,
     ]
     if StorageType.S3 == stream_storage.type:
-        if stream_storage.s3_config.profile is not None:
+        if stream_storage.s3_config.aws_authentication.type == "profile":
             necessary_mounts.append(mounts.aws_config_dir)
     for mount in necessary_mounts:
         if mount:

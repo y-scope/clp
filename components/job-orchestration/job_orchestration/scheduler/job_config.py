@@ -4,7 +4,7 @@ import typing
 from enum import auto
 
 from clp_py_utils.clp_config import AwsAuthentication
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel, validator
 from strenum import LowercaseStrEnum
 
 

@@ -142,22 +142,14 @@ def _generate_clp_io_config(
             raise ValueError(f"Too many prefixes: {len(logs_to_compress)} > 1")
 
         s3_config = clp_config.logs_input.s3_config
-        if bool(s3_config.credentials):
-            return S3InputConfig(
-                region_code=s3_config.region_code,
-                bucket=s3_config.bucket,
-                key_prefix=s3_config.key_prefix + logs_to_compress[0],
-                credentials=s3_config.credentials,
-                timestamp_key=parsed_args.timestamp_key,
-            )
-        elif bool(s3_config.profile):
-            return S3InputConfig(
-                region_code=s3_config.region_code,
-                bucket=s3_config.bucket,
-                key_prefix=s3_config.key_prefix + logs_to_compress[0],
-                profile=s3_config.profile,
-                timestamp_key=parsed_args.timestamp_key,
-            )
+        
+        return S3InputConfig(
+            region_code=s3_config.region_code,
+            bucket=s3_config.bucket,
+            key_prefix=s3_config.key_prefix + logs_to_compress[0],
+            aws_authentication=s3_config.aws_authentication,
+            timestamp_key=parsed_args.timestamp_key,
+        )
     else:
         raise ValueError(f"Unsupported input type: {input_type}")
 

@@ -7,7 +7,7 @@ import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
-from clp_py_utils.clp_config import S3Config, S3Credentials
+from clp_py_utils.clp_config import S3Config, S3Credentials, AwsAuthentication
 from clp_py_utils.compression import FileMetadata
 
 # Constants
@@ -41,14 +41,15 @@ def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
     Generates AWS credential environment variables for tasks.
     :param config: S3Config or S3InputConfig from which to retrieve credentials.
     :return: A [str, str] Dict which access key pair and session token if applicable.
-    :raise: ValueError if `credentials` and `profile` are both `None`
+    :raise: ValueError if auth type is not supported
     """
     env_vars: Dict[str, str] = None
+    auth = config.aws_authentication
 
-    if config.profile is not None:
-        aws_credentials: S3Credentials = get_session_credentials(config.get_profile())
+    if auth.type == "profile":
+        aws_credentials: S3Credentials = get_session_credentials(auth.profile)
         if aws_credentials is None:
-            raise ValueError(f"Failed to authenticate with profile {config.get_profile()}")
+            raise ValueError(f"Failed to authenticate with profile {auth.profile}")
 
         env_vars = {
             **os.environ,
@@ -60,37 +61,52 @@ def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
             env_vars["AWS_SESSION_TOKEN"] = aws_session_token
         return env_vars
 
-    elif config.credentials is not None:
-        aws_access_key_id, aws_secret_access_key = config.get_credentials()
+    elif auth.type == "credentials":
+        credentials = auth.credentials
         env_vars = {
             **os.environ,
-            "AWS_ACCESS_KEY_ID": aws_access_key_id,
-            "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+            "AWS_ACCESS_KEY_ID": credentials.access_key_id,
+            "AWS_SECRET_ACCESS_KEY": credentials.secret_access_key,
         }
+        if credentials.session_token:
+            env_vars["AWS_SESSION_TOKEN"] = credentials.session_token
         return env_vars
+    
+    elif auth.type == "env_vars":
+        # Environment variables are already set in the process
+        return dict(os.environ)
+
+    elif auth.type == "ec2":
+        # EC2 instance role will be used automatically
+        return dict(os.environ)
 
     else:
-        raise ValueError("No AWS credential source found")
+        raise ValueError(f"Unsupported authentication type: {auth.type}")
 
 
 def _generate_s3_client(s3_config: Union[S3Config, S3InputConfig]) -> boto3.client:
     config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
-
+    auth = s3_config.aws_authentication
     aws_session = None
-    if s3_config.profile is not None:
+    
+    if auth.type == "profile":
         aws_session = boto3.Session(
-            profile_name=s3_config.get_profile(),
+            profile_name=auth.profile,
             region_name=s3_config.region_code,
         )
-    elif s3_config.credentials is not None:
-        aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
+    elif auth.type == "credentials":
+        credentials = auth.credentials
         aws_session = boto3.Session(
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
+            aws_access_key_id=credentials.access_key_id,
+            aws_secret_access_key=credentials.secret_access_key,
             region_name=s3_config.region_code,
+            aws_session_token=credentials.session_token,
         )
+    elif auth.type == "env_vars" or auth.type == "ec2":
+        # Use default session which will use environment variables or instance role
+        aws_session = boto3.Session(region_name=s3_config.region_code)
     else:
-        raise ValueError("No AWS credential soruce found")
+        raise ValueError(f"Unsupported authentication type: {auth.type}")
 
     s3_client = aws_session.client("s3", config=config)
     return s3_client
