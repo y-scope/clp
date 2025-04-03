@@ -986,6 +986,20 @@ def start_log_viewer_webui(
                     f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}",
                 )
             )
+        elif auth.type == "env_vars":
+            access_key = os.getenv("AWS_ACCESS_KEY_ID")
+            secret_key = os.getenv("AWS_SECRET_ACCESS_KEY") 
+            if access_key and secret_key:
+                container_cmd_extra_opts.extend(
+                    (
+                    "-e",
+                    f"AWS_ACCESS_KEY_ID={access_key}",
+                    "-e", 
+                    f"AWS_SECRET_ACCESS_KEY={secret_key}",
+                    )
+                )
+            else:
+                raise ValueError("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables are not set")
         elif auth.type == "profile":
             settings_json_updates["StreamFilesS3Profile"] = auth.profile
 
