@@ -15,7 +15,7 @@ std::shared_ptr<Literal> BooleanLiteral::create_from_string(std::string const& v
     return {nullptr};
 }
 
-void BooleanLiteral::print() {
+void BooleanLiteral::print() const {
     auto& os = get_print_stream();
     if (m_v) {
         os << "true";

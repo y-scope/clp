@@ -38,7 +38,7 @@ public:
      * Literals are considered to have 1 operand.
      * @return 1
      */
-    unsigned get_num_operands() override { return 1; }
+    auto get_num_operands() const -> size_t override { return 1ULL; }
 
     /**
      * Strict checks for type matching against a given literal type.

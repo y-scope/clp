@@ -32,15 +32,19 @@ public:
     /**
      * @return The number of operands that this expression has
      */
-    unsigned get_num_operands() override { return m_operands.size(); }
+    auto get_num_operands() const -> size_t override { return m_operands.size(); }
 
     /**
-     * Get iterators to this Expression's OpList
+     * Gets iterators to this Expression's OpList
      * @return Iterators to the beggining/end of the OpList
      */
     OpList::iterator op_begin() { return m_operands.begin(); }
 
     OpList::iterator op_end() { return m_operands.end(); }
+
+    OpList::const_iterator op_begin() const { return m_operands.cbegin(); }
+
+    OpList::const_iterator op_end() const { return m_operands.cend(); }
 
     /**
      * @return A reference to the underlying OpList. Useful in cases where certain children
@@ -60,7 +64,7 @@ public:
     /**
      * @return The parent for this Expression. Can be nullptr if this is the top level.
      */
-    Expression* get_parent() { return m_parent; }
+    auto get_parent() const -> Expression* { return m_parent; }
 
     /**
      * Set the parent for this Expression
@@ -97,7 +101,7 @@ public:
     virtual bool has_only_expression_operands() = 0;
 
     // Methods inherited from Value
-    void print() override = 0;
+    void print() const override = 0;
 
 protected:
     /**

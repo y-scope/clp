@@ -39,7 +39,7 @@ std::string FilterExpr::op_type_str(FilterOperation op) {
     }
 }
 
-void FilterExpr::print() {
+void FilterExpr::print() const {
     auto& os = get_print_stream();
     if (is_inverted()) {
         os << "!";
