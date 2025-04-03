@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_VALUE_HPP
 #define CLP_S_SEARCH_VALUE_HPP
 
+#include <cstddef>
 #include <iostream>
 
 namespace clp_s::search::ast {
@@ -18,7 +19,7 @@ public:
     /**
      * @return The number of operands of this Value.
      */
-    virtual auto get_num_operands() const -> size_t = 0;
+    [[nodiscard]] virtual auto get_num_operands() const -> size_t = 0;
 
     /**
      * Prints a string representation of this Value to the output stream designated by
@@ -32,7 +33,7 @@ protected:
     /**
      * @return The output stream that should be used by the `print` function.
      */
-    static std::ostream& get_print_stream() { return std::cerr; }
+    [[nodiscard]] static auto get_print_stream() -> std::ostream& { return std::cerr; }
 };
 }  // namespace clp_s::search::ast
 

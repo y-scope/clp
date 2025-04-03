@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_EXPRESSION_HPP
 #define CLP_S_SEARCH_EXPRESSION_HPP
 
+#include <cstddef>
 #include <list>
 #include <memory>
 
@@ -32,7 +33,7 @@ public:
     /**
      * @return The number of operands that this expression has
      */
-    auto get_num_operands() const -> size_t override { return m_operands.size(); }
+    [[nodiscard]] auto get_num_operands() const -> size_t override { return m_operands.size(); }
 
     /**
      * Gets iterators to this Expression's OpList

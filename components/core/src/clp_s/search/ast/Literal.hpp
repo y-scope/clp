@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_LITERAL_HPP
 #define CLP_S_SEARCH_LITERAL_HPP
 
+#include <cstddef>
 #include <string>
 
 #include "FilterOperation.hpp"
@@ -38,7 +39,7 @@ public:
      * Literals are considered to have 1 operand.
      * @return 1
      */
-    auto get_num_operands() const -> size_t override { return 1ULL; }
+    [[nodiscard]] auto get_num_operands() const -> size_t override { return 1ULL; }
 
     /**
      * Strict checks for type matching against a given literal type.
