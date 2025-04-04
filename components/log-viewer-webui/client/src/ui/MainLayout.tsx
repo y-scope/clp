@@ -12,6 +12,7 @@ import {
 } from "antd";
 
 import "./MainLayout.css";
+import styles from './MainLayout.module.css';
 
 const {Sider} = Layout;
 
@@ -31,7 +32,7 @@ const MainLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Layout className={"main-layout"}>
+        <Layout className={styles[`main-layout`]}>
             <Sider
                 collapsed={collapsed}
                 collapsible={true}
@@ -41,10 +42,10 @@ const MainLayout = () => {
                     setCollapsed(value);
                 }}
             >
-                <div className={"sider-logo-container"}>
+                <div className={styles[`sider-logo-container`]}>
                     <img
                         alt={"CLP Logo"}
-                        className={"sider-logo"}
+                        className={styles[`sider-logo`]}
                         src={"/clp-logo.png"}/>
                 </div>
                 <Menu
