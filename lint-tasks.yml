@@ -475,7 +475,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/StringLiteral.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/StringLiteral.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Transformation.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Value.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/antlr_common/ErrorListener.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp"

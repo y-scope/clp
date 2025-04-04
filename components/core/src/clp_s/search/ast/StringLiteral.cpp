@@ -9,7 +9,7 @@ std::shared_ptr<Literal> StringLiteral::create(std::string const& v) {
     return std::shared_ptr<Literal>(static_cast<Literal*>(new StringLiteral(v)));
 }
 
-void StringLiteral::print() {
+void StringLiteral::print() const {
     get_print_stream() << "\"" << m_v << "\"";
 }
 

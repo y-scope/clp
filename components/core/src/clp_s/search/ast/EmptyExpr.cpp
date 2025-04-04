@@ -9,7 +9,7 @@ std::shared_ptr<Expression> EmptyExpr::create(Expression* parent) {
     return std::shared_ptr<Expression>(static_cast<Expression*>(new EmptyExpr(parent)));
 }
 
-void EmptyExpr::print() {
+void EmptyExpr::print() const {
     auto& os = get_print_stream();
     os << "EmptyExpr()";
 

@@ -13,7 +13,7 @@ std::shared_ptr<Literal> NullLiteral::create_from_string(std::string const& v) {
     return {nullptr};
 }
 
-void NullLiteral::print() {
+void NullLiteral::print() const {
     get_print_stream() << "null";
 }
 

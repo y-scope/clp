@@ -35,7 +35,7 @@ public:
     );
 
     // Methods inherited from Value
-    void print() override;
+    void print() const override;
 
     // Methods inherited from Expression
     bool has_only_expression_operands() override { return true; }

@@ -5,7 +5,7 @@ OrExpr::OrExpr(bool inverted, Expression* parent) : Expression(inverted, parent)
 
 OrExpr::OrExpr(OrExpr const& expr) : Expression(expr) {}
 
-void OrExpr::print() {
+void OrExpr::print() const {
     auto& os = get_print_stream();
     if (is_inverted()) {
         os << "!";

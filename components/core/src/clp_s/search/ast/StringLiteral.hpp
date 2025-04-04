@@ -34,7 +34,7 @@ public:
     std::string& get();
 
     // Methods inherited from Value
-    void print() override;
+    void print() const override;
 
     // Methods inherited from Literal
     bool matches_type(LiteralType type) override { return type & m_string_type; }

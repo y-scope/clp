@@ -18,7 +18,7 @@ public:
     static std::shared_ptr<Expression> create(Expression* parent = nullptr);
 
     // Methods inherited from Value
-    void print() override;
+    void print() const override;
 
     // Methods inherited from Expression
     // EmptyExpr never has any operands, so we arbitrarily say that all operands are Expression

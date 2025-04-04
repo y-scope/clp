@@ -7,7 +7,7 @@ AndExpr::AndExpr(bool inverted, Expression* parent) : Expression(inverted, paren
 
 AndExpr::AndExpr(AndExpr const& expr) : Expression(expr) {}
 
-void AndExpr::print() {
+void AndExpr::print() const {
     auto& os = get_print_stream();
     if (is_inverted()) {
         os << "!";
