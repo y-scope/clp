@@ -1,16 +1,99 @@
+import os
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
-from clp_py_utils.clp_config import S3Config
+from clp_py_utils.clp_config import S3Config, S3Credentials
 from clp_py_utils.compression import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
+
+
+def get_session_credentials(aws_profile: Optional[str]) -> Optional[S3Credentials]:
+    """
+    Generates AWS credentials created by boto3 when starting a session with given profile.
+    :param aws_profile: Name of profile configured in ~/.aws directory
+    :return: An S3Credentials object with access key pair and session token if applicable.
+    """
+    aws_session = None
+    if aws_profile is not None:
+        aws_session = boto3.Session(profile_name=aws_profile)
+    else:
+        aws_session = boto3.Session()
+    credentials = aws_session.get_credentials()
+    if credentials is None:
+        return None
+
+    return S3Credentials(
+        access_key_id=credentials.access_key,
+        secret_access_key=credentials.secret_key,
+        session_token=credentials.token,
+    )
+
+
+def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
+    """
+    Generates AWS credential environment variables for tasks.
+    :param config: S3Config or S3InputConfig from which to retrieve credentials.
+    :return: A [str, str] Dict which access key pair and session token if applicable.
+    :raise: ValueError if `credentials` and `profile` are both `None`
+    """
+    env_vars: Dict[str, str] = None
+
+    if config.profile is not None:
+        aws_credentials: S3Credentials = get_session_credentials(config.get_profile())
+        if aws_credentials is None:
+            raise ValueError(f"Failed to authenticate with profile {config.get_profile()}")
+
+        env_vars = {
+            **os.environ,
+            "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
+            "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
+        }
+        aws_session_token = aws_credentials.session_token
+        if aws_session_token is not None:
+            env_vars["AWS_SESSION_TOKEN"] = aws_session_token
+        return env_vars
+
+    elif config.credentials is not None:
+        aws_access_key_id, aws_secret_access_key = config.get_credentials()
+        env_vars = {
+            **os.environ,
+            "AWS_ACCESS_KEY_ID": aws_access_key_id,
+            "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
+        }
+        return env_vars
+
+    else:
+        raise ValueError("No AWS credential source found")
+
+
+def _generate_s3_client(s3_config: Union[S3Config, S3InputConfig]) -> boto3.client:
+    config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
+
+    aws_session = None
+    if s3_config.profile is not None:
+        aws_session = boto3.Session(
+            profile_name=s3_config.get_profile(),
+            region_name=s3_config.region_code,
+        )
+    elif s3_config.credentials is not None:
+        aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
+        aws_session = boto3.Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=s3_config.region_code,
+        )
+    else:
+        raise ValueError("No AWS credential soruce found")
+
+    s3_client = aws_session.client("s3", config=config)
+    return s3_client
 
 
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
@@ -74,12 +157,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
-    s3_client = boto3.client(
-        "s3",
-        region_name=s3_input_config.region_code,
-        aws_access_key_id=s3_input_config.credentials.access_key_id,
-        aws_secret_access_key=s3_input_config.credentials.secret_access_key,
-    )
+    s3_client = _generate_s3_client(s3_input_config)
 
     file_metadata_list: List[FileMetadata] = list()
     paginator = s3_client.get_paginator("list_objects_v2")
@@ -100,15 +178,12 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     return file_metadata_list
 
 
-def s3_put(
-    s3_config: S3Config, src_file: Path, dest_file_name: str, total_max_attempts: int = 3
-) -> None:
+def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
     """
     Uploads a local file to an S3 bucket using AWS's PutObject operation.
     :param s3_config: S3 configuration specifying the upload destination and credentials.
     :param src_file: Local file to upload.
     :param dest_file_name: The name for the uploaded file in the S3 bucket.
-    :param total_max_attempts: Maximum number of retry attempts for the upload.
     :raises: ValueError if `src_file` doesn't exist, doesn't resolve to a file or is larger than the
     S3 PutObject limit.
     :raises: Propagates `boto3.client`'s exceptions.
@@ -123,18 +198,9 @@ def s3_put(
             f"{src_file} is larger than the limit (5GiB) for a single PutObject operation."
         )
 
-    config = Config(retries=dict(total_max_attempts=total_max_attempts, mode="adaptive"))
-    aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
-
-    my_s3_client = boto3.client(
-        "s3",
-        region_name=s3_config.region_code,
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        config=config,
-    )
+    s3_client = _generate_s3_client(s3_config)
 
     with open(src_file, "rb") as file_data:
-        my_s3_client.put_object(
+        s3_client.put_object(
             Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_file_name
         )
