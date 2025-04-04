@@ -1,5 +1,8 @@
 import React, {useState} from "react";
-import {Link, Outlet} from "react-router";
+import {
+    Link,
+    Outlet,
+} from "react-router";
 
 import {
     SearchOutlined,
@@ -11,16 +14,16 @@ import {
     MenuProps,
 } from "antd";
 
-import "./MainLayout.css";
-import styles from './MainLayout.module.css';
+import styles from "./MainLayout.module.css";
+
 
 const {Sider} = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
 
 const items: MenuItem[] = [
-    {label: <Link to="/ingest">Ingest</Link>, key: "/ingest", icon: <UploadOutlined/>},
-    {label: <Link to="/search">Search</Link>, key: "/search", icon: <SearchOutlined/>},
+    {label: <Link to={"/ingest"}>Ingest</Link>, key: "/ingest", icon: <UploadOutlined/>},
+    {label: <Link to={"/search"}>Search</Link>, key: "/search", icon: <SearchOutlined/>},
 ];
 
 /**
@@ -32,7 +35,7 @@ const MainLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Layout className={styles[`main-layout`]}>
+        <Layout className={styles["main-layout"]}>
             <Sider
                 collapsed={collapsed}
                 collapsible={true}
@@ -42,10 +45,10 @@ const MainLayout = () => {
                     setCollapsed(value);
                 }}
             >
-                <div className={styles[`sider-logo-container`]}>
+                <div className={styles["sider-logo-container"]}>
                     <img
                         alt={"CLP Logo"}
-                        className={styles[`sider-logo`]}
+                        className={styles["sider-logo"]}
                         src={"/clp-logo.png"}/>
                 </div>
                 <Menu
@@ -53,7 +56,7 @@ const MainLayout = () => {
                     mode={"inline"}/>
             </Sider>
             <Layout>
-                <Outlet />
+                <Outlet/>
             </Layout>
         </Layout>
     );
