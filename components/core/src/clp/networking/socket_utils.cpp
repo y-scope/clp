@@ -2,16 +2,18 @@
 
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <cstdio>
 #include <string>
 
-#include "../Defs.h"
+#include "../ErrorCode.hpp"
+#include "../TraceableException.hpp"
 #include "SocketOperationFailed.hpp"
 
 namespace clp::networking {
-int connect_to_server(std::string const& host, std::string const& port) {
+auto connect_to_server(std::string const& host, std::string const& port) -> int {
     // Get address info
     struct addrinfo hints = {};
     // Address can be IPv4 or IPV6
@@ -28,7 +30,7 @@ int connect_to_server(std::string const& host, std::string const& port) {
 
     // Try each address until a socket can be created and connected to
     int socket_fd = -1;
-    for (auto curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
+    for (auto* curr = addresses_head; nullptr != curr; curr = curr->ai_next) {
         // Create socket
         socket_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
         if (-1 == socket_fd) {
@@ -49,12 +51,12 @@ int connect_to_server(std::string const& host, std::string const& port) {
     return socket_fd;
 }
 
-ErrorCode try_send(int fd, char const* buf, size_t buf_len) {
+auto try_send(int fd, char const* buf, size_t buf_len) -> ErrorCode {
     if (fd < 0 || nullptr == buf) {
         return ErrorCode_BadParam;
     }
 
-    ssize_t num_bytes_sent = ::send(fd, buf, buf_len, 0);
+    ssize_t const num_bytes_sent = ::send(fd, buf, buf_len, 0);
     if (-1 == num_bytes_sent) {
         return ErrorCode_errno;
     }
@@ -62,19 +64,19 @@ ErrorCode try_send(int fd, char const* buf, size_t buf_len) {
     return ErrorCode_Success;
 }
 
-void send(int fd, char const* buf, size_t buf_len) {
+auto send(int fd, char const* buf, size_t buf_len) -> void {
     auto error_code = try_send(fd, buf, buf_len);
     if (ErrorCode_Success != error_code) {
         throw SocketOperationFailed(error_code, __FILENAME__, __LINE__);
     }
 }
 
-ErrorCode try_receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received) {
+auto try_receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received) -> ErrorCode {
     if (fd < 0 || nullptr == buf) {
         return ErrorCode_BadParam;
     }
 
-    ssize_t result = recv(fd, buf, buf_len, 0);
+    ssize_t const result = recv(fd, buf, buf_len, 0);
     if (result < 0) {
         return ErrorCode_errno;
     }
@@ -86,7 +88,7 @@ ErrorCode try_receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_recei
     return ErrorCode_Success;
 }
 
-void receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received) {
+auto receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received) -> void {
     auto error_code = try_receive(fd, buf, buf_len, num_bytes_received);
     if (ErrorCode_Success != error_code) {
         throw SocketOperationFailed(error_code, __FILENAME__, __LINE__);

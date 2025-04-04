@@ -12,7 +12,9 @@ public:
             : TraceableException(error_code, filename, line_number) {}
 
     // Methods
-    [[nodiscard]] char const* what() const noexcept override { return "Socket operation failed"; }
+    [[nodiscard]] auto what() const noexcept -> char const* override {
+        return "Socket operation failed";
+    }
 };
 }  // namespace clp::networking
 

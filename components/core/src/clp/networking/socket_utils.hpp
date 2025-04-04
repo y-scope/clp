@@ -13,7 +13,7 @@ namespace clp::networking {
  * @return An open socket file descriptor on success
  * @return -1 on any error
  */
-int connect_to_server(std::string const& host, std::string const& port);
+auto connect_to_server(std::string const& host, std::string const& port) -> int;
 
 /**
  * Tries to send a buffer of data over the socket
@@ -24,14 +24,14 @@ int connect_to_server(std::string const& host, std::string const& port);
  * @return ErrorCode_errno if sending failed
  * @return ErrorCode_Success otherwise
  */
-ErrorCode try_send(int fd, char const* buf, size_t buf_len);
+auto try_send(int fd, char const* buf, size_t buf_len) -> ErrorCode;
 /**
  * Sends a buffer of data over the socket
  * @param fd
  * @param buf
  * @param buf_len
  */
-void send(int fd, char const* buf, size_t buf_len);
+auto send(int fd, char const* buf, size_t buf_len) -> void;
 
 /**
  * Tries to receive up to a given number of bytes over a socket
@@ -42,13 +42,13 @@ void send(int fd, char const* buf, size_t buf_len);
  * @return ErrorCode_errno if receiving failed
  * @return ErrorCode_Success otherwise
  */
-ErrorCode try_receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received);
+auto try_receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received) -> ErrorCode;
 /**
  * Receives up to the give number of bytes over a socket
  * @param buf Buffer to store received bytes
  * @param buf_len Number of bytes to receive
  */
-void receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received);
+auto receive(int fd, char* buf, size_t buf_len, size_t& num_bytes_received) -> void;
 }  // namespace clp::networking
 
 #endif  // CLP_NETWORKING_SOCKET_UTILS_HPP
