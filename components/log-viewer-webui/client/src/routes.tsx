@@ -1,8 +1,8 @@
 import {createBrowserRouter} from "react-router";
 
-import IngestView from "../ui/IngestView";
-import MainLayout from "../ui/MainLayout";
-import SearchView from "../ui/SearchView";
+import IngestView from "./ui/IngestView";
+import MainLayout from "./ui/MainLayout";
+import SearchView from "./ui/SearchView";
 
 
 const router = createBrowserRouter([
