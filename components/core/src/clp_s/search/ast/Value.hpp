@@ -14,6 +14,7 @@ namespace clp_s::search::ast {
 class Value {
 public:
     // Default copy & move constructors and assignment operators and destructor
+    Value() = default;
     Value(Value const&) = default;
     auto operator=(Value const&) -> Value& = default;
     Value(Value&&) = default;
