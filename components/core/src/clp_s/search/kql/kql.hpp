@@ -3,7 +3,7 @@
 
 #include <istream>
 
-#include "../Expression.hpp"
+#include "../ast/Expression.hpp"
 
 namespace clp_s::search::kql {
 /**
@@ -11,7 +11,7 @@ namespace clp_s::search::kql {
  * @param in input stream containing a Kibana expression followed by EOF
  * @return a search AST on success, nullptr otherwise
  */
-std::shared_ptr<Expression> parse_kql_expression(std::istream& in);
+std::shared_ptr<clp_s::search::ast::Expression> parse_kql_expression(std::istream& in);
 }  // namespace clp_s::search::kql
 
 #endif  // CLP_S_SEARCH_KQL_KQL_HPP
