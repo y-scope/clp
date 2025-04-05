@@ -83,7 +83,7 @@ def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
 
-def _generate_s3_client(s3_config: Union[S3Config, S3InputConfig]) -> boto3.client:
+def _create_s3_client(s3_config: Union[S3Config, S3InputConfig]) -> boto3.client:
     config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     auth = s3_config.aws_authentication
     aws_session = None
@@ -137,7 +137,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
-    s3_client = _generate_s3_client(s3_input_config)
+    s3_client = _create_s3_client(s3_input_config)
 
     file_metadata_list: List[FileMetadata] = list()
     paginator = s3_client.get_paginator("list_objects_v2")
@@ -178,7 +178,7 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
             f"{src_file} is larger than the limit (5GiB) for a single PutObject operation."
         )
 
-    s3_client = _generate_s3_client(s3_config)
+    s3_client = _create_s3_client(s3_config)
 
     with open(src_file, "rb") as file_data:
         s3_client.put_object(
