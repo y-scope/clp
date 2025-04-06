@@ -28,9 +28,8 @@ logger = logging.getLogger(__file__)
 def _generate_logs_list(
     container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
-    clp_config: CLPConfig,
+    input_type: InputType,
 ) -> None:
-    input_type = clp_config.logs_input.type
 
     if InputType.FS == input_type:
         host_logs_list_path = parsed_args.path_list
@@ -67,9 +66,7 @@ def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
-    clp_config: CLPConfig,
 ) -> List[str]:
-    input_type = clp_config.logs_input.type
 
     # fmt: off
     compress_cmd = [
@@ -192,13 +189,13 @@ def main(argv):
         if not container_logs_list_path.exists():
             break
 
-    _generate_logs_list(container_logs_list_path, parsed_args, clp_config)
+    _generate_logs_list(container_logs_list_path, parsed_args, clp_config.logs_input.type)
 
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container
     )
     compress_cmd = _generate_compress_cmd(
-        parsed_args, generated_config_path_on_container, logs_list_path_on_container, clp_config
+        parsed_args, generated_config_path_on_container, logs_list_path_on_container
     )
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)
