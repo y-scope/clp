@@ -15,4 +15,5 @@ const IngestView = () => {
     );
 };
 
+
 export default IngestView;
