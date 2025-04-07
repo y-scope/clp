@@ -151,7 +151,7 @@ tasks:
 
   cpp-lint-configs:
     internal: true
-    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/lint-configs/symlink-cpp-lint-configs.sh"
+    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
 
   check-cpp-static-diff:
     sources: *cpp_source_files
