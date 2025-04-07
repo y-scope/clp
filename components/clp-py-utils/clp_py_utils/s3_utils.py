@@ -35,7 +35,7 @@ def get_session_credentials(aws_profile: Optional[str]) -> Optional[S3Credential
     )
 
 
-def make_s3_env_vars(config: S3Config) -> Dict[str, str]:
+def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
     """
     Generates AWS credential environment variables for tasks.
     :param config: S3Config or S3InputConfig from which to retrieve credentials.
@@ -51,7 +51,6 @@ def make_s3_env_vars(config: S3Config) -> Dict[str, str]:
             raise ValueError(f"Failed to authenticate with profile {auth.profile}")
 
         env_vars = {
-            **os.environ,
             "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
             "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
         }
@@ -63,7 +62,6 @@ def make_s3_env_vars(config: S3Config) -> Dict[str, str]:
     elif auth.type == "credentials":
         credentials = auth.credentials
         env_vars = {
-            **os.environ,
             "AWS_ACCESS_KEY_ID": credentials.access_key_id,
             "AWS_SECRET_ACCESS_KEY": credentials.secret_access_key,
         }
@@ -73,11 +71,11 @@ def make_s3_env_vars(config: S3Config) -> Dict[str, str]:
     
     elif auth.type == "env_vars":
         # Environment variables are already set in the process
-        return dict(os.environ)
+        return
 
     elif auth.type == "ec2":
         # EC2 instance role will be used automatically
-        return dict(os.environ)
+        return
 
     else:
         raise ValueError(f"Unsupported authentication type: {auth.type}")

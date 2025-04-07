@@ -12,7 +12,7 @@ from clp_py_utils.clp_config import (
     WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, make_s3_env_vars
+from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, get_credential_env_vars
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
@@ -76,7 +76,8 @@ def _make_core_clp_s_command_and_env_vars(
             "s3"
         ))
         # fmt: on
-        env_vars: Dict[str, str] = make_s3_env_vars(s3_config)
+        compression_env_vars = dict(os.environ)
+        compression_env_vars.update(get_credential_env_vars(s3_config))
     else:
         # fmt: off
         command.extend((
