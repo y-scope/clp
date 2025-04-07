@@ -61,21 +61,21 @@ public:
     // NOTE: We use lambdas so that we can programmatically initialize the constexpr array
     static constexpr auto cContinuousMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type(ContinuousMeasurementIndex::Length)> enabled{};
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Compression)] = true;
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Search)] = true;
+        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Compression)] = false;
+        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Search)] = false;
         return enabled;
     }();
     static constexpr auto cFragmentedMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type(FragmentedMeasurementIndex::Length)> enabled{};
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::Watch)] = false;
         enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ParseLogFile)] = false;
         enabled[enum_to_underlying_type(FragmentedMeasurementIndex::Parse)] = false;
         enabled[enum_to_underlying_type(FragmentedMeasurementIndex::GetNext)] = false;
         enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessState)] = false;
         enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ScanWhileLoop)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::TokenCreation)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessCharWatch)] = true;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessChar)] = true;
+        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::Watch)] = true;
+        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::TokenCreation)] = true;
+        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessCharWatch)] = false;
+        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessChar)] = false;
         return enabled;
     }();
 
