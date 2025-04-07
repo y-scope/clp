@@ -1,6 +1,6 @@
-import React from "react";
+import {RouterProvider} from "react-router";
 
-import MainLayout from "./ui/MainLayout";
+import router from "./routes";
 
 
 /**
@@ -9,9 +9,7 @@ import MainLayout from "./ui/MainLayout";
  * @return
  */
 const AntApp = () => {
-    return (
-        <MainLayout/>
-    );
+    return <RouterProvider router={router}/>;
 };
 
 export default AntApp;
