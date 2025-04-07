@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import boto3
 from botocore.config import Config
@@ -35,7 +35,7 @@ def get_session_credentials(aws_profile: Optional[str]) -> Optional[S3Credential
     )
 
 
-def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
+def make_s3_env_vars(config: S3Config) -> Dict[str, str]:
     """
     Generates AWS credential environment variables for tasks.
     :param config: S3Config or S3InputConfig from which to retrieve credentials.
@@ -83,7 +83,7 @@ def make_s3_env_vars(config: Union[S3Config, S3InputConfig]) -> Dict[str, str]:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
 
-def _create_s3_client(s3_config: Union[S3Config, S3InputConfig]) -> boto3.client:
+def _create_s3_client(s3_config: S3Config) -> boto3.client:
     config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     auth = s3_config.aws_authentication
     aws_session = None
