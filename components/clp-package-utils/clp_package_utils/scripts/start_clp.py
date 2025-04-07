@@ -523,8 +523,14 @@ def start_compression_scheduler(
 ):
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
     compression_scheduler_mount = None
-    if StorageType.S3 == clp_config.archive_output.storage.type:
-        if clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile":
+    if (
+        StorageType.S3 == clp_config.archive_output.storage.type
+        or StorageType.S3 == clp_config.logs_input.type
+    ):
+        if (
+            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
+            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
+        ):
             compression_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -548,10 +554,12 @@ def start_query_scheduler(
     if (
         StorageType.S3 == clp_config.archive_output.storage.type
         or StorageType.S3 == clp_config.stream_output.storage.type
+        or StorageType.S3 == clp_config.logs_input.type
     ):
         if (
-            clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile"
-            or clp_config.stream_output.storage.s3_config.aws_authentication.type == "profile"
+            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
+            or "profile" == clp_config.stream_output.storage.s3_config.aws_authentication.type
+            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
         ):
             query_scheduler_mount = mounts.aws_config_dir
     generic_start_scheduler(
@@ -652,8 +660,14 @@ def start_compression_worker(
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
-    if StorageType.S3 == clp_config.archive_output.storage.type:
-        if clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile":
+    if (
+        StorageType.S3 == clp_config.archive_output.storage.type
+        or StorageType.S3 == clp_config.logs_input.type
+    ):
+        if (
+            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
+            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
+        ):
             compression_worker_mounts.append(mounts.aws_config_dir)
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
@@ -684,10 +698,12 @@ def start_query_worker(
     if (
         StorageType.S3 == clp_config.archive_output.storage.type
         or StorageType.S3 == clp_config.stream_output.storage.type
+        or StorageType.S3 == clp_config.logs_input.type
     ):
         if (
-            clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile"
-            or clp_config.stream_output.storage.s3_config.aws_authentication.type == "profile"
+            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
+            or "profile" == clp_config.stream_output.storage.s3_config.aws_authentication.type
+            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
         ):
             query_worker_mounts.append(mounts.aws_config_dir)
     if StorageType.FS == clp_config.archive_output.storage.type:
