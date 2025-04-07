@@ -76,8 +76,8 @@ def _make_core_clp_s_command_and_env_vars(
             "s3"
         ))
         # fmt: on
-        compression_env_vars = dict(os.environ)
-        compression_env_vars.update(get_credential_env_vars(s3_config))
+        env_vars = dict(os.environ)
+        env_vars.update(get_credential_env_vars(s3_config))
     else:
         # fmt: off
         command.extend((
