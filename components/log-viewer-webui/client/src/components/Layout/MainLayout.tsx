@@ -21,7 +21,7 @@ const {Sider} = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
 
-const items: MenuItem[] = [
+const SIDEBAR_MENU_ITEMS: MenuItem[] = [
     {label: <Link to={"/ingest"}>Ingest</Link>, key: "/ingest", icon: <UploadOutlined/>},
     {label: <Link to={"/search"}>Search</Link>, key: "/search", icon: <SearchOutlined/>},
 ];
@@ -52,7 +52,7 @@ const MainLayout = () => {
                         src={"/clp-logo.png"}/>
                 </div>
                 <Menu
-                    items={items}
+                    items={SIDEBAR_MENU_ITEMS}
                     mode={"inline"}/>
             </Sider>
             <Layout>

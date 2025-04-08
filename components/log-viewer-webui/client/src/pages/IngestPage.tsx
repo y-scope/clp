@@ -1,6 +1,3 @@
-import React from "react";
-
-
 /**
  * Presents compression statistics.
  *

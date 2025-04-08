@@ -1,6 +1,3 @@
-import React from "react";
-
-
 /**
  * Provides a search interface that allows users to query archives and visualize search results.
  *
