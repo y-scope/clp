@@ -6,13 +6,28 @@
 #include "../../clp/type_utils.hpp"
 #include "../SchemaTree.hpp"
 #include "../Utils.hpp"
-#include "AndExpr.hpp"
+#include "ast/AndExpr.hpp"
+#include "ast/ColumnDescriptor.hpp"
+#include "ast/Expression.hpp"
+#include "ast/FilterExpr.hpp"
+#include "ast/FilterOperation.hpp"
+#include "ast/Literal.hpp"
+#include "ast/OrExpr.hpp"
 #include "clp_search/EncodedVariableInterpreter.hpp"
 #include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
-#include "FilterExpr.hpp"
-#include "Literal.hpp"
-#include "OrExpr.hpp"
+
+using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::ColumnDescriptor;
+using clp_s::search::ast::DescriptorList;
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::FilterExpr;
+using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::Literal;
+using clp_s::search::ast::LiteralType;
+using clp_s::search::ast::LiteralTypeBitmask;
+using clp_s::search::ast::OpList;
+using clp_s::search::ast::OrExpr;
 
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
@@ -43,10 +58,11 @@ bool Output::filter() {
         return true;
     }
 
-    // Skip decompressing archive if it won't match based on the timestamp
-    // range index
+    // Skip decompressing the rest of the archive if it won't match based on the timestamp range
+    // index. This check happens a second time here because some ambiguous columns may now match the
+    // timestamp column after column resolution.
     EvaluateTimestampIndex timestamp_index(m_archive_reader->get_timestamp_dictionary());
-    if (timestamp_index.run(top_level_expr) == EvaluatedValue::False) {
+    if (EvaluatedValue::False == timestamp_index.run(top_level_expr)) {
         m_archive_reader->close();
         return true;
     }
@@ -932,7 +948,7 @@ void Output::populate_string_queries(std::shared_ptr<Expression> const& expr) {
             }
 
             std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
-            if (false == StringUtils::has_unescaped_wildcards(query_string)) {
+            if (false == ast::has_unescaped_wildcards(query_string)) {
                 std::string unescaped_query_string;
                 bool escape = false;
                 for (char const c : query_string) {
@@ -1117,7 +1133,7 @@ Output::constant_propagate(std::shared_ptr<Expression> const& expr, int32_t sche
             bool matches_var_string = false;
             bool has_clp_string = false;
             bool matches_clp_string = false;
-            constexpr LiteralTypeBitmask other_types = LiteralType::ArrayT | cIntegralTypes
+            constexpr LiteralTypeBitmask other_types = LiteralType::ArrayT | ast::cIntegralTypes
                                                        | LiteralType::NullT | LiteralType::BooleanT
                                                        | LiteralType::EpochDateT;
             bool has_other = wildcard->matches_any(other_types);

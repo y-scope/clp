@@ -7,7 +7,8 @@
     "build": "tsc -b && vite build",
     "lint:check": "eslint",
     "lint:fix": "eslint --fix",
-    "start": "vite"
+    "start": "vite",
+    "antd": "VITE_USE_ANTD_APP=true npm run start"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
@@ -17,6 +18,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/joy": "^5.0.0-beta.51",
     "@sinclair/typebox": "^0.34.25",
+    "antd": "^5.24.5",
     "axios": "^1.7.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -27,6 +29,6 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint-config-yscope": "latest",
     "typescript": "~5.6.2",
-    "vite": "^6.2.4"
+    "vite": "^6.2.5"
   }
 }

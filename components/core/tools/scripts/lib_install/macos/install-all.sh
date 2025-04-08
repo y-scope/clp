@@ -7,9 +7,17 @@ set -e
 set -u
 
 brew update
+
+# Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+cmake_formula_path=/tmp/cmake.rb
+curl --fail --location --show-error \
+  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce/Formula/c/cmake.rb \
+  --output "${cmake_formula_path}"
+brew install --formula "${cmake_formula_path}"
+
 brew install \
   boost \
-  cmake \
   coreutils \
   fmt \
   gcc \
@@ -32,3 +40,7 @@ brew install \
 if ! command -v pkg-config ; then
     brew install pkg-config
 fi
+
+# TODO: https://github.com/y-scope/clp/issues/795
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+"${script_dir}/../check-cmake-version.sh"
