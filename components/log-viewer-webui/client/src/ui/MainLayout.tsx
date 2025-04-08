@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import {useState} from "react";
 import {
     Link,
     Outlet,
@@ -35,7 +35,7 @@ const MainLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Layout className={styles["main-layout"]}>
+        <Layout className={styles["mainLayout"]}>
             <Sider
                 collapsed={collapsed}
                 collapsible={true}
@@ -45,10 +45,10 @@ const MainLayout = () => {
                     setCollapsed(value);
                 }}
             >
-                <div className={styles["sider-logo-container"]}>
+                <div className={styles["siderLogoContainer"]}>
                     <img
                         alt={"CLP Logo"}
-                        className={styles["sider-logo"]}
+                        className={styles["siderLogo"]}
                         src={"/clp-logo.png"}/>
                 </div>
                 <Menu
