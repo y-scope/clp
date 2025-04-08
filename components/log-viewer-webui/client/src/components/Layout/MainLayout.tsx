@@ -35,7 +35,7 @@ const MainLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Layout className={styles.mainLayout}>
+        <Layout className={styles["mainLayout"]}>
             <Sider
                 collapsed={collapsed}
                 collapsible={true}
@@ -45,10 +45,10 @@ const MainLayout = () => {
                     setCollapsed(value);
                 }}
             >
-                <div className={styles.siderLogoContainer}>
+                <div className={styles["siderLogoContainer"]}>
                     <img
                         alt={"CLP Logo"}
-                        className={styles.siderLogo}
+                        className={styles["siderLogo"]}
                         src={"/clp-logo.png"}/>
                 </div>
                 <Menu
@@ -61,5 +61,6 @@ const MainLayout = () => {
         </Layout>
     );
 };
+
 
 export default MainLayout;

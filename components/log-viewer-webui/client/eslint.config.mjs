@@ -28,6 +28,7 @@ const EslintConfig = [
     ...ReactConfigArray,
     {
         rules: {
+            "dot-notation": "off",
             "new-cap": [
                 "error",
                 {
