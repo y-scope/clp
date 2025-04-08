@@ -1,7 +1,7 @@
 import {createBrowserRouter} from "react-router";
 
-import IngestView from "./pages/IngestPage";
 import MainLayout from "./components/Layout/MainLayout";
+import IngestView from "./pages/IngestPage";
 import SearchView from "./pages/SearchPage";
 
 
