@@ -11,8 +11,8 @@ import styles from "./index.module.css";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
-    TIME_RANGE_OPTION_NAMES,
     TIME_RANGE_OPTION_DAYJS_MAP,
+    TIME_RANGE_OPTION_NAMES,
 } from "./utils";
 
 
