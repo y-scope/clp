@@ -75,6 +75,18 @@ def container_exists(container_name):
     return False
 
 
+def append_docker_mounts(cmd: List[str], mounts: List[DockerMount]):
+    for mount in mounts:
+        cmd.append("--mount")
+        cmd.append(str(mount))
+
+
+def append_docker_env_vars(cmd: List[str], env_vars: List[str]):
+    for env_var in env_vars:
+        cmd.append("-e")
+        cmd.append(env_var)
+
+
 def append_docker_port_settings_for_host_ips(
     hostname: str, host_port: int, container_port: int, cmd: [str]
 ):
