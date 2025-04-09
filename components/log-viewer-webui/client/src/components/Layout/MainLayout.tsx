@@ -21,7 +21,7 @@ const {Sider} = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
 
-const items: MenuItem[] = [
+const SIDEBAR_MENU_ITEMS: MenuItem[] = [
     {label: <Link to={"/ingest"}>Ingest</Link>, key: "/ingest", icon: <UploadOutlined/>},
     {label: <Link to={"/search"}>Search</Link>, key: "/search", icon: <SearchOutlined/>},
 ];
@@ -35,7 +35,7 @@ const MainLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <Layout className={styles["main-layout"]}>
+        <Layout className={styles["mainLayout"]}>
             <Sider
                 collapsed={collapsed}
                 collapsible={true}
@@ -45,14 +45,14 @@ const MainLayout = () => {
                     setCollapsed(value);
                 }}
             >
-                <div className={styles["sider-logo-container"]}>
+                <div className={styles["siderLogoContainer"]}>
                     <img
                         alt={"CLP Logo"}
-                        className={styles["sider-logo"]}
+                        className={styles["siderLogo"]}
                         src={"/clp-logo.png"}/>
                 </div>
                 <Menu
-                    items={items}
+                    items={SIDEBAR_MENU_ITEMS}
                     mode={"inline"}/>
             </Sider>
             <Layout>
@@ -61,5 +61,6 @@ const MainLayout = () => {
         </Layout>
     );
 };
+
 
 export default MainLayout;
