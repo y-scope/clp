@@ -3,14 +3,14 @@
  *
  * @return
  */
-const IngestView = () => {
+const IngestPage = () => {
     return (
         <div>
-            <h1>Ingest View</h1>
-            <p>This is the Ingest view.</p>
+            <h1>Ingest Page</h1>
+            <p>This is the Ingest Page.</p>
         </div>
     );
 };
 
 
-export default IngestView;
+export default IngestPage;

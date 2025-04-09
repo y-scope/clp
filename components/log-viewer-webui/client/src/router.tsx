@@ -1,8 +1,8 @@
 import {createBrowserRouter} from "react-router";
 
 import MainLayout from "./components/Layout/MainLayout";
-import IngestView from "./pages/IngestPage";
-import SearchView from "./pages/SearchPage";
+import IngestPage from "./pages/IngestPage";
+import SearchPage from "./pages/SearchPage";
 
 
 const router = createBrowserRouter([
@@ -10,8 +10,8 @@ const router = createBrowserRouter([
         path: "/",
         Component: MainLayout,
         children: [
-            {path: "ingest", Component: IngestView},
-            {path: "search", Component: SearchView},
+            {path: "ingest", Component: IngestPage},
+            {path: "search", Component: SearchPage},
         ],
     },
 ]);

@@ -3,14 +3,14 @@
  *
  * @return
  */
-const SearchView = () => {
+const SearchPage = () => {
     return (
         <div>
-            <h1>Search View</h1>
-            <p>This is the Search view.</p>
+            <h1>Search Page</h1>
+            <p>This is the Search Page.</p>
         </div>
     );
 };
 
 
-export default SearchView;
+export default SearchPage;
