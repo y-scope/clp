@@ -3,7 +3,7 @@ import {create} from "zustand";
 
 import {
     TIME_RANGE_OPTION,
-    timeRangeOptionDayJsMap,
+    TIME_RANGE_OPTION_DAYJS_MAP,
 } from "./SearchControls/TimeRangeInput/utils";
 
 
@@ -12,7 +12,7 @@ import {
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     queryString: "",
-    timeRange: timeRangeOptionDayJsMap[TIME_RANGE_OPTION.TODAY],
+    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[TIME_RANGE_OPTION.TODAY],
 });
 
 interface SearchState {

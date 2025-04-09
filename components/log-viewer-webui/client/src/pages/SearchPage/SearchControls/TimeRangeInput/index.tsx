@@ -12,7 +12,7 @@ import {
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_NAMES,
-    timeRangeOptionDayJsMap,
+    TIME_RANGE_OPTION_DAYJS_MAP,
 } from "./utils";
 
 
@@ -32,7 +32,7 @@ const TimeRangeInput = () => {
     const handleSelectChange = (timeRangeOption: TIME_RANGE_OPTION) => {
         setSelectedOption(timeRangeOption);
         if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = timeRangeOptionDayJsMap[timeRangeOption];
+            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption];
             updateTimeRange(dayJsRange);
         }
     };

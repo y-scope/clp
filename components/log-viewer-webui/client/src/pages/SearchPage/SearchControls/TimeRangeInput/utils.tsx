@@ -23,16 +23,16 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs
         dayjs()],
     [TIME_RANGE_OPTION.TODAY]: [dayjs().startOf("day"),
         dayjs().endOf("day")],
-    [TIME_RANGE_OPTION.YESTERDAY]: [dayjs().subtract(-1, "d"),
-        dayjs().add(-1, "d")],
-    [TIME_RANGE_OPTION.LAST_7_DAYS]: [dayjs().subtract(-7, "d"),
+    [TIME_RANGE_OPTION.YESTERDAY]: [dayjs().subtract(1, "d"),
+        dayjs().subtract(1, "d")],
+    [TIME_RANGE_OPTION.LAST_7_DAYS]: [dayjs().subtract(7, "d"),
         dayjs()],
-    [TIME_RANGE_OPTION.LAST_30_DAYS]: [dayjs().subtract(-30, "d"),
+    [TIME_RANGE_OPTION.LAST_30_DAYS]: [dayjs().subtract(30, "d"),
         dayjs()],
     [TIME_RANGE_OPTION.MONTH_TO_DATE]: [dayjs().startOf("month"),
         dayjs()],
 
-    // Custom option is just a placeholder for typing purposes, it's dayJs values should not
+    // Custom option is just a placeholder for typing purposes, its DayJs values should not
     // be used.
     [TIME_RANGE_OPTION.CUSTOM]: [dayjs(),
         dayjs()],
@@ -62,5 +62,5 @@ export {
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_NAMES,
-    TIME_RANGE_OPTION_DAYJS_MAP as timeRangeOptionDayJsMap,
+    TIME_RANGE_OPTION_DAYJS_MAP,
 };
