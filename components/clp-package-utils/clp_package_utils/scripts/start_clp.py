@@ -160,22 +160,23 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
         DockerMount(DockerMountType.BIND, db_data_dir, pathlib.Path("/") / "var" / "lib" / "mysql"),
         DockerMount(DockerMountType.BIND, db_logs_dir, pathlib.Path("/") / "var" / "log" / "mysql"),
     ]
+    env_vars = [
+        f"MYSQL_ROOT_PASSWORD={clp_config.database.password}",
+        f"MYSQL_USER={clp_config.database.username}",
+        f"MYSQL_PASSWORD={clp_config.database.password}",
+        f"MYSQL_DATABASE={clp_config.database.name}",
+    ]
     # fmt: off
     cmd = [
         "docker", "run",
         "-d",
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"MYSQL_ROOT_PASSWORD={clp_config.database.password}",
-        "-e", f"MYSQL_USER={clp_config.database.username}",
-        "-e", f"MYSQL_PASSWORD={clp_config.database.password}",
-        "-e", f"MYSQL_DATABASE={clp_config.database.name}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    for mount in mounts:
-        cmd.append("--mount")
-        cmd.append(str(mount))
+    append_docker_env_vars(cmd, env_vars)
+    append_docker_mounts(cmd, mounts)
     append_docker_port_settings_for_host_ips(
         clp_config.database.host, clp_config.database.port, 3306, cmd
     )
@@ -227,16 +228,13 @@ def create_db_tables(
         "--rm",
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-u", f"{os.getuid()}:{os.getgid()}",
-        "--mount", str(mounts.clp_home),
     ]
     # fmt: on
-    necessary_mounts = [mounts.data_dir, mounts.logs_dir]
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))
+    necessary_env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
+    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
+    append_docker_env_vars(container_start_cmd, necessary_env_vars)
+    append_docker_mounts(container_start_cmd, necessary_mounts)
     container_start_cmd.append(clp_config.execution_container)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
@@ -277,15 +275,13 @@ def create_results_cache_indices(
         "--rm",
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
+    necessary_env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))
+    append_docker_env_vars(container_start_cmd, necessary_env_vars)
+    append_docker_mounts(container_start_cmd, necessary_mounts)
     container_start_cmd.append(clp_config.execution_container)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
@@ -340,6 +336,10 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         ),
         DockerMount(DockerMountType.BIND, queue_logs_dir, rabbitmq_logs_dir),
     ]
+    env_vars = [
+        f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
+        f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
+    ]
     rabbitmq_pid_file_path = pathlib.Path("/") / "tmp" / "rabbitmq.pid"
 
     host_user_id = os.getuid()
@@ -361,17 +361,14 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         "--name", container_name,
         "--log-driver", "local",
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
-        "-e", f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
-        "-e", f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
         "-u", container_user
     ]
     # fmt: on
+    append_docker_env_vars(cmd, env_vars)
+    append_docker_mounts(cmd, mounts)
     append_docker_port_settings_for_host_ips(
         clp_config.queue.host, clp_config.queue.port, 5672, cmd
     )
-    for mount in mounts:
-        cmd.append("--mount")
-        cmd.append(str(mount))
     cmd.append("rabbitmq:3.9.8")
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
@@ -439,9 +436,7 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
         "-u", container_user,
     ]
     # fmt: on
-    for mount in mounts:
-        cmd.append("--mount")
-        cmd.append(str(mount))
+    append_docker_mounts(cmd, mounts)
     append_docker_port_settings_for_host_ips(
         clp_config.redis.host, clp_config.redis.port, 6379, cmd
     )
@@ -513,9 +508,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         "-u", container_user,
     ]
     # fmt: on
-    for mount in mounts:
-        cmd.append("--mount")
-        cmd.append(str(mount))
+    append_docker_mounts(cmd, mounts)
     cmd.append("mongo:7.0.1")
     cmd.append("--config")
     cmd.append(str(pathlib.Path("/") / "etc" / "mongo" / "mongod.conf"))
@@ -619,24 +612,26 @@ def generic_start_scheduler(
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
-        "-e", (
+        "-u", f"{os.getuid()}:{os.getgid()}",
+    ]
+    # fmt: on
+
+    necessary_env_vars = [
+        f"PYTHONPATH={clp_site_packages_dir}",
+        (
             f"BROKER_URL=amqp://"
             f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
             f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
         ),
-        "-e", (
+        (
             f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
             f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
             f"{container_clp_config.redis.query_backend_database}"
         ),
-        "-e", f"CLP_LOGS_DIR={container_logs_dir}",
-        "-e", f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
-        "-u", f"{os.getuid()}:{os.getgid()}",
-        "--mount", str(mounts.clp_home),
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
     ]
-    # fmt: on
-    necessary_mounts = [mounts.logs_dir]
+    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
     if scheduler_specific_mount:
         necessary_mounts.append(scheduler_specific_mount)
     if (
@@ -644,10 +639,8 @@ def generic_start_scheduler(
         and StorageType.FS == clp_config.logs_input.type
     ):
         necessary_mounts.append(mounts.input_logs_dir)
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))
+    append_docker_env_vars(container_start_cmd, necessary_env_vars)
+    append_docker_mounts(container_start_cmd, necessary_mounts)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
@@ -780,25 +773,27 @@ def generic_start_worker(
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
-        "-e", (
-            f"BROKER_URL=amqp://"
-            f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
-            f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
-        ),
-        "-e", (
-            f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
-            f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
-        ),
-        "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
-        "-e", f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
-        "-e", f"CLP_LOGS_DIR={container_logs_dir}",
-        "-e", f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
-        "-e", f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
 
+    necessary_env_vars = [
+        f"PYTHONPATH={clp_site_packages_dir}",
+        (
+            f"BROKER_URL=amqp://"
+            f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
+            f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
+        ),
+        (
+            f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
+            f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
+        ),
+        f"CLP_HOME={CONTAINER_CLP_HOME}",
+        f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
+        f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
+    ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
@@ -809,11 +804,8 @@ def generic_start_worker(
     if StorageType.FS == clp_config.logs_input.type:
         necessary_mounts.append(mounts.input_logs_dir)
 
-    for mount in necessary_mounts:
-        if not mount:
-            raise ValueError(f"Required mount configuration is empty: {necessary_mounts}")
-        container_start_cmd.append("--mount")
-        container_start_cmd.append(str(mount))
+    append_docker_env_vars(container_start_cmd, necessary_env_vars)
+    append_docker_mounts(container_start_cmd, necessary_mounts)
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
@@ -924,26 +916,25 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         "--network", "host",
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"NODE_PATH={node_path}",
-        "-e", f"MONGO_URL={clp_config.results_cache.get_uri()}",
-        "-e", f"PORT={clp_config.webui.port}",
-        "-e", f"ROOT_URL=http://{clp_config.webui.host}",
-        "-e", f"METEOR_SETTINGS={json.dumps(meteor_settings)}",
-        "-e", f"CLP_DB_USER={clp_config.database.username}",
-        "-e", f"CLP_DB_PASS={clp_config.database.password}",
-        "-e", f"WEBUI_LOGS_DIR={container_webui_logs_dir}",
-        "-e", f"WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
+    necessary_env_vars = [
+        f"NODE_PATH={node_path}",
+        f"MONGO_URL={clp_config.results_cache.get_uri()}",
+        f"PORT={clp_config.webui.port}",
+        f"ROOT_URL=http://{clp_config.webui.host}",
+        f"METEOR_SETTINGS={json.dumps(meteor_settings)}",
+        f"CLP_DB_USER={clp_config.database.username}",
+        f"CLP_DB_PASS={clp_config.database.password}",
+        f"WEBUI_LOGS_DIR={container_webui_logs_dir}",
+    ]
     necessary_mounts = [
         mounts.clp_home,
         DockerMount(DockerMountType.BIND, webui_logs_dir, container_webui_logs_dir),
     ]
-    for mount in necessary_mounts:
-        if mount:
-            container_cmd.append("--mount")
-            container_cmd.append(str(mount))
+    append_docker_env_vars(container_cmd, necessary_env_vars)
+    append_docker_mounts(container_cmd, necessary_mounts)
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
@@ -1005,31 +996,7 @@ def start_log_viewer_webui(
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
         auth = s3_config.aws_authentication
-        if auth.type == "credentials":
-            credentials = auth.credentials
-            container_cmd_extra_opts.extend(
-                (
-                    "-e",
-                    f"AWS_ACCESS_KEY_ID={credentials.access_key_id}",
-                    "-e",
-                    f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}",
-                )
-            )
-        elif auth.type == "env_vars":
-            access_key = os.getenv("AWS_ACCESS_KEY_ID")
-            secret_key = os.getenv("AWS_SECRET_ACCESS_KEY") 
-            if access_key and secret_key:
-                container_cmd_extra_opts.extend(
-                    (
-                    "-e",
-                    f"AWS_ACCESS_KEY_ID={access_key}",
-                    "-e", 
-                    f"AWS_SECRET_ACCESS_KEY={secret_key}",
-                    )
-                )
-            else:
-                raise ValueError("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables are not set")
-        elif auth.type == "profile":
+        if auth.type == "profile":
             settings_json_updates["StreamFilesS3Profile"] = auth.profile
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
@@ -1043,28 +1010,33 @@ def start_log_viewer_webui(
         "--network", "host",
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"NODE_PATH={node_path}",
-        "-e", f"HOST={clp_config.log_viewer_webui.host}",
-        "-e", f"PORT={clp_config.log_viewer_webui.port}",
-        "-e", f"CLP_DB_USER={clp_config.database.username}",
-        "-e", f"CLP_DB_PASS={clp_config.database.password}",
-        "-e", f"NODE_ENV=production",
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
     container_cmd.extend(container_cmd_extra_opts)
 
+    necessary_env_vars = [
+        f"NODE_PATH={node_path}",
+        f"HOST={clp_config.log_viewer_webui.host}",
+        f"PORT={clp_config.log_viewer_webui.port}",
+        f"CLP_DB_USER={clp_config.database.username}",
+        f"CLP_DB_PASS={clp_config.database.password}",
+        f"NODE_ENV=production",
+    ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.stream_output_dir,
     ]
     if StorageType.S3 == stream_storage.type:
-        if stream_storage.s3_config.aws_authentication.type == "profile":
+        auth = stream_storage.s3_config.aws_authentication
+        if auth.type == "credentials":
+            credentials = auth.credentials
+            necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
+            necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
+        if auth.type == "profile":
             necessary_mounts.append(mounts.aws_config_dir)
-    for mount in necessary_mounts:
-        if mount:
-            container_cmd.append("--mount")
-            container_cmd.append(str(mount))
+    append_docker_env_vars(container_cmd, necessary_env_vars)
+    append_docker_mounts(container_cmd, necessary_mounts)
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
@@ -1111,21 +1083,21 @@ def start_reducer(
         "-w", str(CONTAINER_CLP_HOME),
         "--name", container_name,
         "--log-driver", "local",
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
-        "-e", f"CLP_LOGS_DIR={container_logs_dir}",
-        "-e", f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
-        "-e", f"CLP_HOME={CONTAINER_CLP_HOME}",
         "-u", f"{os.getuid()}:{os.getgid()}",
-        "--mount", str(mounts.clp_home),
     ]
     # fmt: on
+    necessary_env_vars = [
+        f"PYTHONPATH={clp_site_packages_dir}",
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
+        f"CLP_HOME={CONTAINER_CLP_HOME}",
+    ]
     necessary_mounts = [
+        mounts.clp_home,
         mounts.logs_dir,
     ]
-    for mount in necessary_mounts:
-        if mount:
-            container_start_cmd.append("--mount")
-            container_start_cmd.append(str(mount))
+    append_docker_env_vars(container_start_cmd, necessary_env_vars)
+    append_docker_mounts(container_start_cmd, necessary_mounts)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
