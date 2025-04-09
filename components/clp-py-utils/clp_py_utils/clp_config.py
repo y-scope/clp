@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -350,9 +350,7 @@ class AwsAuthentication(BaseModel):
             if profile:
                 raise ValueError("profile must not be set when type is 'credentials'")
         elif auth_type in ["ec2", "env_vars"] and (profile or credentials):
-            raise ValueError(
-                f"profile and credentials must not be set when type is '{auth_type}'"
-            )
+            raise ValueError(f"profile and credentials must not be set when type is '{auth_type}'")
         return values
 
 

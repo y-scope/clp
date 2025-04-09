@@ -142,7 +142,7 @@ def _generate_clp_io_config(
             raise ValueError(f"Too many prefixes: {len(logs_to_compress)} > 1")
 
         s3_config = clp_config.logs_input.s3_config
-        
+
         return S3InputConfig(
             region_code=s3_config.region_code,
             bucket=s3_config.bucket,
