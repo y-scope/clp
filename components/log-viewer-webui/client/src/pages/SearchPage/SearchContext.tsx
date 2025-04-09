@@ -8,7 +8,7 @@ import {
 
 
 /**
- * Default values of the search context.
+ * Default values of the search state.
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     queryString: "",
