@@ -16,18 +16,18 @@ enum TIME_RANGE_OPTION {
 }
 
 /* eslint-disable no-magic-numbers */
-const timeRangeOptionDayJsMap: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs.Dayjs]> = {
+const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs.Dayjs]> = {
     [TIME_RANGE_OPTION.LAST_15_MINUTES]: [dayjs().subtract(15, "minute"),
         dayjs()],
     [TIME_RANGE_OPTION.LAST_HOUR]: [dayjs().subtract(1, "hour"),
         dayjs()],
     [TIME_RANGE_OPTION.TODAY]: [dayjs().startOf("day"),
         dayjs().endOf("day")],
-    [TIME_RANGE_OPTION.YESTERDAY]: [dayjs().add(-1, "d"),
+    [TIME_RANGE_OPTION.YESTERDAY]: [dayjs().subtract(-1, "d"),
         dayjs().add(-1, "d")],
-    [TIME_RANGE_OPTION.LAST_7_DAYS]: [dayjs().add(-7, "d"),
+    [TIME_RANGE_OPTION.LAST_7_DAYS]: [dayjs().subtract(-7, "d"),
         dayjs()],
-    [TIME_RANGE_OPTION.LAST_30_DAYS]: [dayjs().add(-30, "d"),
+    [TIME_RANGE_OPTION.LAST_30_DAYS]: [dayjs().subtract(-30, "d"),
         dayjs()],
     [TIME_RANGE_OPTION.MONTH_TO_DATE]: [dayjs().startOf("month"),
         dayjs()],
@@ -62,5 +62,5 @@ export {
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_NAMES,
-    timeRangeOptionDayJsMap,
+    TIME_RANGE_OPTION_DAYJS_MAP as timeRangeOptionDayJsMap,
 };

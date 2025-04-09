@@ -4,8 +4,9 @@ import {
     Tooltip,
 } from "antd";
 
-import useSearchStore from "../SearchContext";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchContext";
 import styles from "./index.module.css";
+
 
 /**
  * Renders a button to submit the search query.
@@ -15,17 +16,18 @@ import styles from "./index.module.css";
 const SearchButton = () => {
     const queryString = useSearchStore((state) => state.queryString);
 
-    const isQueryStringValid: boolean = queryString === "";
+    const isQueryStringEmpty: boolean =
+        queryString === SEARCH_STATE_DEFAULT.queryString;
 
     return (
         <Tooltip
-            title={isQueryStringValid ?
+            title={isQueryStringEmpty ?
                 "Enter query to search" :
                 ""}
         >
             <Button
                 className={styles["gradient-button"] || ""}
-                disabled={false === isQueryStringValid}
+                disabled={isQueryStringEmpty}
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}

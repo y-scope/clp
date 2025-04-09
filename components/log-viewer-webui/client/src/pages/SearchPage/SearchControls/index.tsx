@@ -5,6 +5,7 @@ import styles from "./index.module.css";
 import SearchButton from "./SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
 
+
 /**
  * Renders controls for submitting queries.
  *
