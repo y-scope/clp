@@ -77,8 +77,9 @@ def container_exists(container_name):
 
 def append_docker_mounts(cmd: List[str], mounts: List[DockerMount]):
     for mount in mounts:
-        cmd.append("--mount")
-        cmd.append(str(mount))
+        if mount:
+            cmd.append("--mount")
+            cmd.append(str(mount))
 
 
 def append_docker_env_vars(cmd: List[str], env_vars: List[str]):
