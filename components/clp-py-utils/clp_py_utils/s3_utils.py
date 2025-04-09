@@ -1,12 +1,12 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
 import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
-from clp_py_utils.clp_config import S3Config, S3Credentials
+from clp_py_utils.clp_config import CLPConfig, S3Config, S3Credentials, StorageType
 from clp_py_utils.compression import FileMetadata
 
 # Constants
@@ -68,7 +68,7 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
         if credentials.session_token:
             env_vars["AWS_SESSION_TOKEN"] = credentials.session_token
         return env_vars
-    
+
     elif auth.type == "env_vars":
         # Environment variables are already set in the process
         return
@@ -81,11 +81,62 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
 
+def get_container_authentication(
+    clp_config: CLPConfig, type: Literal["compression", "log_viewer", "query"]
+) -> Tuple[bool, List[str]]:
+    """
+    Generates Docker container authentication options for AWS S3 access based on the given type.
+    Handles authentication methods that require extra configuration (profile, env_vars).
+    
+    :param clp_config: CLPConfig containing storage configurations
+    :param type: Type of calling container (compression, log_viewer, or query)
+    :return: A list of Docker command-line options for authentication
+    :raises: ValueError if required environment variables are not set or if type is invalid
+    """
+    if type not in ["compression", "log_viewer", "query"]:
+        raise ValueError(f"Unsupported authentication type: {type}")
+    
+    storages = {
+        "compression": [clp_config.logs_input, clp_config.archive_output],
+        "log_viewer": [clp_config.stream_output],
+        "query": [clp_config.logs_input, clp_config.archive_output, clp_config.stream_output],
+    }
+
+    config_mount = False
+    credentials_env_vars = []
+
+    for storage in storages[type]:
+        if StorageType.S3 == storage.type:
+            auth = storage.s3_config.aws_authentication
+            if "profile" == auth.type and not config_mount:
+                config_mount = True
+            elif "env_vars" == auth.type and 0 == len(credentials_env_vars):
+                access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+                secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+                if access_key_id and secret_access_key:
+                    credentials_env_vars.extend(
+                        (
+                            f"AWS_ACCESS_KEY_ID={access_key_id}",
+                            f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+                        )
+                    )
+                else:
+                    raise ValueError(
+                        "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables not set"
+                    )
+                if os.getenv("AWS_SESSION_TOKEN"):
+                    raise ValueError(
+                        "AWS_SESSION_TOKEN not supported for environmental variable credentials."
+                    )
+
+    return (config_mount, credentials_env_vars)
+
+
 def _create_s3_client(s3_config: S3Config) -> boto3.client:
     config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     auth = s3_config.aws_authentication
     aws_session = None
-    
+
     if auth.type == "profile":
         aws_session = boto3.Session(
             profile_name=auth.profile,
