@@ -36,8 +36,8 @@ public:
     [[nodiscard]] auto get_num_operands() const -> size_t override { return m_operands.size(); }
 
     /**
-     * Gets iterators to this Expression's OpList
-     * @return Iterators to the beggining/end of the OpList
+     * Gets iterators to this `Expression`'s OpList.
+     * @return Iterators to the beginning/end of the OpList
      */
     OpList::iterator op_begin() { return m_operands.begin(); }
 
