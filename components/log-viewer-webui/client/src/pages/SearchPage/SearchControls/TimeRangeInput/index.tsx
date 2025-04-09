@@ -6,7 +6,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 
-import useSearchStore from "../../SearchContext";
+import useSearchStore from "../../SearchState";
 import styles from "./index.module.css";
 import {
     isValidDateRange,
@@ -16,6 +16,8 @@ import {
 } from "./utils";
 
 
+// Note if you update default `SEARCH_STATE_DEFAULT.timeRange`, you should also update
+// default time range option here for select component.
 const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.TODAY;
 
 /**

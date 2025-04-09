@@ -1,6 +1,6 @@
 import {Input} from "antd";
 
-import useSearchStore from "../SearchContext";
+import useSearchStore from "../SearchState";
 import styles from "./index.module.css";
 import SearchButton from "./SearchButton";
 import TimeRangeInput from "./TimeRangeInput";

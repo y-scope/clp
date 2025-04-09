@@ -4,7 +4,7 @@ import {
     Tooltip,
 } from "antd";
 
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchContext";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState";
 import styles from "./index.module.css";
 
 
