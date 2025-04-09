@@ -1,7 +1,7 @@
-.time-range-input-container {
+.timeRangeInputContainer {
     display: inline-flex;
 }
 
-.range-picker {
+.rangePicker {
     min-width: 200px;
 }

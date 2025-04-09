@@ -26,7 +26,7 @@ const SearchButton = () => {
                 ""}
         >
             <Button
-                className={styles["gradient-button"] || ""}
+                className={styles["gradienButton"] || ""}
                 disabled={isQueryStringEmpty}
                 icon={<SearchOutlined/>}
                 size={"large"}

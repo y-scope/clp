@@ -50,7 +50,7 @@ const TimeRangeInput = () => {
 
     return (
         <div
-            className={styles["time-range-input-container"]}
+            className={styles["timeRangeInputContainer"]}
         >
             <Select
                 defaultValue={DEFAULT_TIME_RANGE}
@@ -62,7 +62,7 @@ const TimeRangeInput = () => {
                 onChange={handleSelectChange}/>
             {selectedOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
-                    className={styles["range-picker"] || ""}
+                    className={styles["rangePicker"] || ""}
                     showNow={true}
                     showTime={true}
                     size={"large"}

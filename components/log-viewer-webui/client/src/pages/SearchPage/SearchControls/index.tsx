@@ -16,7 +16,7 @@ const SearchControls = () => {
     const updateQueryString = useSearchStore((state) => state.updateQueryString);
 
     return (
-        <div className={styles["search-controls-container"]}>
+        <div className={styles["searchControlsContainer"]}>
             <Input
                 placeholder={"Enter your query"}
                 size={"large"}
