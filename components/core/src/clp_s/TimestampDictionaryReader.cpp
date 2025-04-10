@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "Utils.hpp"
+#include "search/ast/SearchUtils.hpp"
 
 namespace clp_s {
 ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
@@ -22,7 +22,7 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
         }
 
         if (false
-            == StringUtils::tokenize_column_descriptor(
+            == clp_s::search::ast::tokenize_column_descriptor(
                     entry.get_key_name(),
                     tokens,
                     descriptor_namespace

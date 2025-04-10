@@ -216,7 +216,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "compression-level",
                     po::value<int>(&m_compression_level)->value_name("LEVEL")->
                         default_value(m_compression_level),
-                    "1 (fast/low compression) to 9 (slow/high compression)."
+                    "1 (fast/low compression) to 19 (slow/high compression)."
             )(
                     "target-encoded-size",
                     po::value<size_t>(&m_target_encoded_size)->value_name("TARGET_ENCODED_SIZE")->

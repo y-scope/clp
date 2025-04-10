@@ -12,6 +12,8 @@
 #include <absl/container/btree_map.h>
 #include <absl/container/flat_hash_map.h>
 
+#include "search/ast/Literal.hpp"
+
 namespace clp_s {
 /**
  * This enum defines the valid MPT node types as well as the 8-bit number used to encode them.
@@ -40,6 +42,13 @@ enum class NodeType : uint8_t {
     Metadata,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
+
+/**
+ * Converts a node type to a literal type.
+ * @param type
+ * @return A literal type
+ */
+auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType;
 
 /**
  * This class represents a single node in the SchemaTree.
@@ -100,8 +109,8 @@ public:
     void add_child(int32_t child_id) { m_children_ids.push_back(child_id); }
 
 private:
-    int32_t m_id;
     int32_t m_parent_id;
+    int32_t m_id;
     std::vector<int32_t> m_children_ids;
     // We use a buffer so that references to this key name are stable after this SchemaNode is move
     // constructed
