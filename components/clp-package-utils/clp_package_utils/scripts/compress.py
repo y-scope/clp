@@ -182,10 +182,6 @@ def main(argv):
         mounts.data_dir,
         mounts.logs_dir,
     ]
-    if StorageType.S3 == clp_config.archive_output.storage.type:
-        if clp_config.archive_output.storage.s3_config.aws_authentication.type == "profile":
-            necessary_mounts.append(mounts.aws_config_dir)
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
     if InputType.FS == input_type:
         necessary_mounts.append(mounts.input_logs_dir)
 
