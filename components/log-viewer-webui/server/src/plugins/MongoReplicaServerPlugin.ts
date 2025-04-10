@@ -13,32 +13,6 @@ import {
 import MongoReplicaServerCollection from "./MongoReplicaServerCollection.js";
 
 
-// TODO: Move Initialization and delete from this file before merge
-/**
- * Initialize the MongoDB replica set.
- *
- * @param fastify
- * @return
- * @throws {Error} If the replica set initialization fails.
- */
-const initializeReplicaSet = async (fastify: FastifyInstance): Promise<void> => {
-    try {
-        const directMongoClient = new MongoClient(
-            "mongodb://localhost:27017",
-            {replicaSet: "rs0", directConnection: true}
-        );
-        const response = await directMongoClient.db("admin").admin()
-            .command({replSetInitiate: {}});
-
-        fastify.log.info("Replica set initialized:", response);
-    } catch (e) {
-        if (e instanceof MongoServerError && "AlreadyInitialized" === e.codeName) {
-            return;
-        }
-        throw new Error("Failed to initialize replica set", {cause: e});
-    }
-};
-
 interface CollectionInitPayload {
     collectionName: string;
 }
@@ -235,9 +209,6 @@ const MongoReplicaServerPlugin = async (
     app: FastifyInstance,
     options: {host: string; port: number; database: string}
 ) => {
-    // FIXME: remove below
-    await initializeReplicaSet(app);
-
     app.decorate(
         "MongoReplicaServer",
         MongoReplicaServer.create({
