@@ -32,7 +32,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
-from clp_py_utils.s3_utils import get_session_credentials
+from clp_py_utils.s3_utils import get_container_authentication
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
 
@@ -530,15 +530,12 @@ def start_compression_scheduler(
 ):
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
     compression_scheduler_mount = None
-    if (
-        StorageType.S3 == clp_config.archive_output.storage.type
-        or StorageType.S3 == clp_config.logs_input.type
-    ):
-        if (
-            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
-            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
-        ):
-            compression_scheduler_mount = mounts.aws_config_dir
+    compression_scheduler_env_vars = []
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, "compression")
+    if aws_mount:
+        compression_scheduler_mount = mounts.aws_config_dir
+    if aws_env_vars:
+        compression_scheduler_env_vars.extend(aws_env_vars)
     generic_start_scheduler(
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -547,6 +544,7 @@ def start_compression_scheduler(
         container_clp_config,
         mounts,
         compression_scheduler_mount,
+        compression_scheduler_env_vars,
     )
 
 
@@ -558,17 +556,12 @@ def start_query_scheduler(
 ):
     module_name = "job_orchestration.scheduler.query.query_scheduler"
     query_scheduler_mount = None
-    if (
-        StorageType.S3 == clp_config.archive_output.storage.type
-        or StorageType.S3 == clp_config.stream_output.storage.type
-        or StorageType.S3 == clp_config.logs_input.type
-    ):
-        if (
-            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
-            or "profile" == clp_config.stream_output.storage.s3_config.aws_authentication.type
-            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
-        ):
-            query_scheduler_mount = mounts.aws_config_dir
+    query_scheduler_env_vars = []
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, "query")
+    if aws_mount:
+        query_scheduler_mount = mounts.aws_config_dir
+    if aws_env_vars:
+        query_scheduler_env_vars.extend(aws_env_vars)
     generic_start_scheduler(
         QUERY_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -577,6 +570,7 @@ def start_query_scheduler(
         container_clp_config,
         mounts,
         query_scheduler_mount,
+        query_scheduler_env_vars,
     )
 
 
@@ -588,6 +582,7 @@ def generic_start_scheduler(
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
     scheduler_specific_mount: Optional[DockerMount],
+    scheduler_specific_env_vars: Optional[List[str]],
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -635,6 +630,8 @@ def generic_start_scheduler(
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
     if scheduler_specific_mount:
         necessary_mounts.append(scheduler_specific_mount)
+    if scheduler_specific_env_vars:
+        necessary_env_vars.extend(scheduler_specific_env_vars)
     if (
         COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name
         and StorageType.FS == clp_config.logs_input.type
@@ -667,15 +664,12 @@ def start_compression_worker(
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
-    if (
-        StorageType.S3 == clp_config.archive_output.storage.type
-        or StorageType.S3 == clp_config.logs_input.type
-    ):
-        if (
-            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
-            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
-        ):
-            compression_worker_mounts.append(mounts.aws_config_dir)
+    compression_worker_env_vars = []
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, "compression")
+    if aws_mount:
+        compression_worker_mounts.append(mounts.aws_config_dir)
+    if aws_env_vars:
+        compression_worker_env_vars.extend(aws_env_vars)
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -688,6 +682,7 @@ def start_compression_worker(
         num_cpus,
         mounts,
         compression_worker_mounts,
+        compression_worker_env_vars,
     )
 
 
@@ -702,17 +697,12 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mounts = [mounts.stream_output_dir]
-    if (
-        StorageType.S3 == clp_config.archive_output.storage.type
-        or StorageType.S3 == clp_config.stream_output.storage.type
-        or StorageType.S3 == clp_config.logs_input.type
-    ):
-        if (
-            "profile" == clp_config.archive_output.storage.s3_config.aws_authentication.type
-            or "profile" == clp_config.stream_output.storage.s3_config.aws_authentication.type
-            or "profile" == clp_config.logs_input.s3_config.aws_authentication.type
-        ):
-            query_worker_mounts.append(mounts.aws_config_dir)
+    query_worker_env_vars = []
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, "query")
+    if aws_mount:
+        query_worker_mounts.append(mounts.aws_config_dir)
+    if aws_env_vars:
+        query_worker_env_vars.extend(aws_env_vars)
     if StorageType.FS == clp_config.archive_output.storage.type:
         query_worker_mounts.append(mounts.archives_output_dir)
 
@@ -728,6 +718,7 @@ def start_query_worker(
         num_cpus,
         mounts,
         query_worker_mounts,
+        query_worker_env_vars,
     )
 
 
@@ -743,6 +734,7 @@ def generic_start_worker(
     num_cpus: int,
     mounts: CLPDockerMounts,
     worker_specific_mount: Optional[List[Optional[DockerMount]]],
+    worker_specific_env_vars: Optional[List[str]],
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -804,6 +796,9 @@ def generic_start_worker(
         necessary_mounts.extend(worker_specific_mount)
     if StorageType.FS == clp_config.logs_input.type:
         necessary_mounts.append(mounts.input_logs_dir)
+
+    if worker_specific_env_vars:
+        necessary_env_vars.extend(worker_specific_env_vars)
 
     append_docker_env_vars(container_start_cmd, necessary_env_vars)
     append_docker_mounts(container_start_cmd, necessary_mounts)
@@ -1034,8 +1029,11 @@ def start_log_viewer_webui(
             credentials = auth.credentials
             necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
             necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
-        if auth.type == "profile":
+        aws_mount, aws_env_vars = get_container_authentication(clp_config, "log_viewer")
+        if aws_mount:
             necessary_mounts.append(mounts.aws_config_dir)
+        if aws_env_vars:
+            necessary_env_vars.extend(aws_env_vars)
     append_docker_env_vars(container_cmd, necessary_env_vars)
     append_docker_mounts(container_cmd, necessary_mounts)
     container_cmd.append(clp_config.execution_container)
