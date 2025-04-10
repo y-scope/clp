@@ -104,9 +104,9 @@ def _validate_fs_input_args(
 
 
 def _validate_s3_input_args(
-    parsed_args: argparse.Namespace, args_parser: argparse.ArgumentParser, clp_config: CLPConfig
+    parsed_args: argparse.Namespace, args_parser: argparse.ArgumentParser, storage_engine: StorageEngine
 ) -> None:
-    if StorageEngine.CLP_S != clp_config.package.storage_engine:
+    if StorageEngine.CLP_S != storage_engine:
         args_parser.error(
             f"Input type {InputType.S3} is only supported for the storage engine"
             f" {StorageEngine.CLP_S}."
@@ -163,7 +163,7 @@ def main(argv):
     if InputType.FS == input_type:
         _validate_fs_input_args(parsed_args, args_parser)
     elif InputType.S3 == input_type:
-        _validate_s3_input_args(parsed_args, args_parser, clp_config)
+        _validate_s3_input_args(parsed_args, args_parser, clp_config.package.storage_engine)
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 
