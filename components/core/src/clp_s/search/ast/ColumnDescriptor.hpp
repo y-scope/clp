@@ -258,7 +258,7 @@ public:
     bool is_pure_wildcard() const { return m_pure_wildcard; }
 
     // Methods inherited from Value
-    void print() override;
+    void print() const override;
 
     // Methods inherited from Literal
     // ColumnDescriptor can implicitly match several different types at the same time.

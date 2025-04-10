@@ -10,7 +10,7 @@ namespace clp_s::search::ast {
  */
 class AndExpr : public Expression {
 public:
-    void print() override;
+    void print() const override;
 
     /**
      * And expressions only have other expressions as children by construction

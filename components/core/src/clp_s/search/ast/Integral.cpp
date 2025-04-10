@@ -39,7 +39,7 @@ std::shared_ptr<Literal> Integral::create_from_string(std::string const& v) {
     return std::shared_ptr<Literal>(static_cast<Literal*>(ret));
 }
 
-void Integral::print() {
+void Integral::print() const {
     auto& os = get_print_stream();
     if (false == m_vstr.empty()) {
         os << m_vstr;

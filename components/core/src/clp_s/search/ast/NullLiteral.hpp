@@ -32,7 +32,7 @@ public:
     static std::shared_ptr<Literal> create_from_string(std::string const& v);
 
     // Methods inherited from Value
-    void print() override;
+    void print() const override;
 
     // Methods inherited from Literal
     bool matches_type(LiteralType type) override { return type & LiteralType::NullT; }
