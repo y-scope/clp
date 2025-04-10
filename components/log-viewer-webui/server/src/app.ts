@@ -55,13 +55,12 @@ const app = async ({
             },
         });
         await server.register(S3Manager, {region: settings.StreamFilesS3Region});
+        await server.register(MongoReplicaServer, {
+            host: settings.MongoDbHost,
+            port: settings.MongoDbPort,
+            database: settings.MongoDbName,
+        });
     }
-
-    await server.register(MongoReplicaServer, {
-        host: settings.MongoDbHost,
-        port: settings.MongoDbPort,
-        database: settings.MongoDbName,
-    });
 
     await server.register(staticRoutes);
     await server.register(exampleRoutes);
