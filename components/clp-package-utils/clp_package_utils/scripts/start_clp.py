@@ -84,8 +84,9 @@ def append_docker_mounts(cmd: List[str], mounts: List[DockerMount]):
 
 def append_docker_env_vars(cmd: List[str], env_vars: List[str]):
     for env_var in env_vars:
-        cmd.append("-e")
-        cmd.append(env_var)
+        if env_var is not "":
+            cmd.append("-e")
+            cmd.append(env_var)
 
 
 def append_docker_port_settings_for_host_ips(
