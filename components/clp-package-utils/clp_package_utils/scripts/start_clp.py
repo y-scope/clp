@@ -337,10 +337,6 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         ),
         DockerMount(DockerMountType.BIND, queue_logs_dir, rabbitmq_logs_dir),
     ]
-    env_vars = [
-        f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
-        f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
-    ]
     rabbitmq_pid_file_path = pathlib.Path("/") / "tmp" / "rabbitmq.pid"
 
     host_user_id = os.getuid()
@@ -363,6 +359,10 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         "--log-driver", "local",
         # Override RABBITMQ_LOGS since the image sets it to *only* log to stdout
         "-u", container_user
+    ]
+    env_vars = [
+        f"RABBITMQ_LOGS={rabbitmq_logs_dir / log_filename}",
+        f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
     ]
     # fmt: on
     append_docker_env_vars(cmd, env_vars)

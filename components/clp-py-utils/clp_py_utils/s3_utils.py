@@ -97,9 +97,13 @@ def get_container_authentication(
         raise ValueError(f"Unsupported authentication type: {type}")
     
     storages = {
-        "compression": [clp_config.logs_input, clp_config.archive_output],
+        "compression": [clp_config.logs_input, clp_config.archive_output.storage],
         "log_viewer": [clp_config.stream_output],
-        "query": [clp_config.logs_input, clp_config.archive_output, clp_config.stream_output],
+        "query": [
+            clp_config.logs_input,
+            clp_config.archive_output.storage,
+            clp_config.stream_output.storage,
+        ],
     }
 
     config_mount = False
