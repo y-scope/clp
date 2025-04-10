@@ -127,8 +127,8 @@ tasks:
       - "{{.ROOT_DIR}}/.clang-tidy"
       - "{{.TASKFILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/.clang-format"
-      - "{{.G_CORE_COMPONENT_DIR}}/src/**"
-      - "{{.G_CORE_COMPONENT_DIR}}/tests/**"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
+      - "{{.G_CORE_COMPONENT_DIR}}/tests/**/*"
     deps: ["cpp-lint-configs", "venv"]
     cmds:
       - task: ":utils:cpp-lint:clang-format"
