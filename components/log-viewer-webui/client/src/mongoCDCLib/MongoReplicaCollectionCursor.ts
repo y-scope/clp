@@ -1,4 +1,5 @@
-import { Socket } from "socket.io-client";
+import {Socket} from "socket.io-client";
+
 
 interface CursorConstructorArgs {
     socket: Socket;
@@ -52,12 +53,14 @@ class MongoReplicaCollectionCursor {
             this.socket.emit("collection::find::toArray", {
                 query: this.findQuery,
                 options: this.findOptions,
-            }, (response: { error?: any; data?: any }) => {
+            }, (response: {error?: any; data?: Document[]}) => {
                 if (response.error) {
-                    return reject(response.error);
+                    reject(response.error);
+
+                    return;
                 }
 
-                return resolve(response.data);
+                resolve(response.data);
             });
         });
     }

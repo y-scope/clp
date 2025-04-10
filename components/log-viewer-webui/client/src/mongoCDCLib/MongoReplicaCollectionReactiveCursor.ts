@@ -1,13 +1,15 @@
+import {Socket} from "socket.io-client";
+
 import MongoReplicaCollectionCursor from "./MongoReplicaCollectionCursor.js";
-import { Socket } from "socket.io-client";
+
 
 interface Listener {
-    onData: (data: any) => void;
+    onData: (data: Document[]) => void;
     onError: (error: any) => void;
 }
 
 interface ReactiveArrayCallback {
-    onData: (data: any) => void;
+    onData: (data: Document[]) => void;
     onError: (error: any) => void;
 }
 
@@ -20,30 +22,32 @@ class MongoReplicaCollectionReactiveCursor extends MongoReplicaCollectionCursor 
     constructor (props: {socket: Socket; query: object; options: object}) {
         super(props);
 
-        this.socket.on("collection::find::update", (response: {error?: any; data?: any}) => {
+        this.socket.on("collection::find::update", (response: {error?: any; data?: Document[]}) => {
             if (response.error) {
                 return this.listener?.onError(response.error);
             }
 
-            return this.listener?.onData(response.data);
+            return this.listener?.onData(response.data ?? []);
         });
     }
 
     /**
      * Subscribe to the collection
      *
-     * @param {{onData: Function, onError: Function}} callback
-     * @return {function(): void} The cleanup function.
+     * @param callback
+     * @return The cleanup function.
      */
     toReactiveArray (callback: ReactiveArrayCallback): () => void {
-        console.log("toReactiveArrya");
+        console.log("toReactiveArray");
         let queryHash: string | undefined;
         this.socket.emit("collection::find::toReactiveArray", {
             query: this.findQuery,
             options: this.findOptions,
         }, (response: {error?: any; queryHash?: string}) => {
             if (response.error) {
-                return callback.onError(response.error);
+                callback.onError(response.error);
+
+                return;
             }
 
             ({queryHash} = response);

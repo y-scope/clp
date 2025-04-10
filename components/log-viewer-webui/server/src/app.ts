@@ -58,8 +58,9 @@ const app = async ({
     }
 
     await server.register(MongoReplicaServerPlugin, {
-        mongoUri: "mongodb://localhost:27017",
-        dbName: "clp-query-results",
+        host: settings.MongoDbHost,
+        port: settings.MongoDbPort,
+        database: settings.MongoDbName,
     });
 
     await server.register(staticRoutes);

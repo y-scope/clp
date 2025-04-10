@@ -1,17 +1,24 @@
-/* eslint-disable max-classes-per-file */
 import {FastifyInstance} from "fastify";
+import {Server as HttpServer} from "http";
 import {
+    Db,
     MongoClient,
-    MongoServerError
+    MongoServerError,
 } from "mongodb";
-import {Server} from "socket.io";
+import {
+    Server,
+    Socket,
+} from "socket.io";
+
+import MongoReplicaServerCollection from "./MongoReplicaServerCollection.js";
 
 
+// TODO: Move Initialization and delete from this file before merge
 /**
  * Initialize the MongoDB replica set.
  *
- * @param {FastifyInstance} fastify
- * @return {Promise<void>}
+ * @param fastify
+ * @return
  * @throws {Error} If the replica set initialization fails.
  */
 const initializeReplicaSet = async (fastify: FastifyInstance): Promise<void> => {
@@ -32,74 +39,8 @@ const initializeReplicaSet = async (fastify: FastifyInstance): Promise<void> => 
     }
 };
 
-
-/**
- * TODO: Improve this? Think about security (other queries should not be able to kick others
- *  offline; maybe add a ref count then), performance, and collision chances.
- *
- * @param {string} query
- * @param options
- * @return {string}
- */
-const getQueryHash = (query: object, options: object): string => JSON.stringify({query, options});
-
-
-class MongoReplicaServerCollection {
-    private count: number;
-
-    private collection: any;
-
-    private watchers: Map<string, any>;
-
-    constructor(mongoDb: any, collectionName: string) {
-        this.count = 0;
-        this.collection = mongoDb.collection(collectionName);
-        this.watchers = new Map();
-    }
-
-    /**
-     * Increment the reference count;
-     */
-    refAdd () {
-        this.count++;
-    }
-
-    /**
-     * Decrement the reference count;
-     */
-    refRemove () {
-        this.count--;
-    }
-
-    /**
-     * Check if the collection is being referenced.
-     *
-     * @return {boolean}
-     */
-    isReferenced (): boolean {
-        return 0 < this.count;
-    }
-
-    find (query: object, options: object) {
-        return this.collection.find(query, options);
-    }
-
-    getWatcher (query: object, options: object) {
-        const queryHash = getQueryHash(query, options);
-        let watcher = this.watchers.get(queryHash);
-        if ("undefined" === typeof watcher) {
-            watcher = this.collection.watch({ $match: query });
-            this.watchers.set(queryHash, watcher);
-        }
-        return { queryHash, watcher };
-    }
-
-    removeWatcher (queryHash: string) {
-        if (this.watchers.has(queryHash)) {
-            this.watchers.get(queryHash).close();
-            this.watchers.delete(queryHash);
-        }
-    }
+interface CollectionInitPayload {
+    collectionName: string;
 }
 
 class MongoReplicaServer {
@@ -107,166 +48,206 @@ class MongoReplicaServer {
 
     private collections: Map<string, MongoReplicaServerCollection>;
 
-    private mongoDb: any;
+    private mongoDb: Db;
 
 
-    constructor ({fastify, mongoDb}: {fastify: FastifyInstance; mongoDb: any}) {
-        console.log('hello world')
+    constructor ({fastify, mongoDb}: {fastify: FastifyInstance; mongoDb: Db}) {
         this.fastify = fastify;
         this.collections = new Map();
         this.mongoDb = mongoDb;
-        this.initializeSocketServer(fastify.server);
+        this.#initializeSocketServer(fastify.server);
     }
 
     static async create ({
         fastify,
-        dbName,
-        mongoUri,
+        database,
+        host,
+        port,
     }: {
         fastify: FastifyInstance;
-        dbName: string;
-        mongoUri: string;
+        database: string;
+        host: string;
+        port: string;
     }): Promise<MongoReplicaServer> {
-        const mongoDb = await MongoReplicaServer.initializeMongoClient({ mongoUri, dbName });
+        const mongoDb = await MongoReplicaServer.initializeMongoClient({database, host, port});
 
         return new MongoReplicaServer({fastify, mongoDb});
     }
 
     static async initializeMongoClient (
-        {mongoUri, dbName}: {mongoUri: string; dbName: string}
-    ): Promise<any> {
+        {database, host, port}: {database: string; host: string; port: string}
+    ): Promise<Db> {
+        const mongoUri = `mongodb://${host}:${port}`;
         const mongoClient = new MongoClient(mongoUri);
         try {
             await mongoClient.connect();
 
-            return mongoClient.db(dbName);
+            return mongoClient.db(database);
         } catch (e) {
             throw new Error("MongoDB connection error", {cause: e});
         }
     }
 
-    /* eslint-disable max-lines-per-function */
-    private initializeSocketServer(httpServer: any) {
-        const io = new Server(httpServer);
-        console.log(io)
+    #getCollectionInitListener (socket: Socket) {
+        return async (payload: CollectionInitPayload) => {
+            const {collectionName} = payload;
+            this.fastify.log.info(`Collection name ${collectionName} requested`);
 
-        io.on("connection", (socket) => {
-            this.fastify.log.info(`Socket connected: ${socket.id}`);
-            socket.on("disconnect", () => {
-                this.fastify.log.info(`Socket disconnected: ${socket.id}`);
-                const {collectionName} = socket.data;
-                const collection = this.collections.get(collectionName);
-                if ("undefined" !== typeof collection) {
-                    collection.refRemove();
-                    if (!collection.isReferenced()) {
-                        this.fastify.log.info(`Collection ${collectionName} removed`);
-                        this.collections.delete(collectionName);
-                    }
-                }
-            });
-
-            socket.on("collection::init", async ({collectionName}) => {
-                this.fastify.log.info(`Collection name ${collectionName} requested`);
-
-                let collection = this.collections.get(collectionName);
-                if ("undefined" === typeof collection) {
-                    collection = new MongoReplicaServerCollection(
-                        this.mongoDb,
-                        collectionName
-                    );
-                    this.collections.set(collectionName, collection);
-                }
-                collection.refAdd();
-
-                socket.data = { collectionName };
-            });
-
-            socket.on("collection::find::toArray", async ({ query, options }, callback) => {
-                const { collectionName } = socket.data;
-                const collection = this.collections.get(collectionName);
-
-                if ("undefined" === typeof collection) {
-                    return callback({
-                        error: "Collection not initialized",
-                    });
-                }
-
-                const documents = await collection.find(query, options).toArray();
-
-                return callback({ data: documents });
+            let collection = this.collections.get(collectionName);
+            if ("undefined" === typeof collection) {
+                collection = new MongoReplicaServerCollection(
+                    this.mongoDb,
+                    collectionName
+                );
+                this.collections.set(collectionName, collection);
             }
-            );
+            collection.refAdd();
 
-            socket.on("collection::find::toReactiveArray", async ({ query, options }, callback) => {
-                this.fastify.log.info(`Collection name ${socket.data.collectionName} requested subscription`);
-                const { collectionName } = socket.data;
-                const collection = this.collections.get(collectionName);
+            socket.data = {collectionName};
+        };
+    }
 
-                if ("undefined" === typeof collection) {
-                    return callback({
-                        error: "Collection not initialized",
-                    });
+    #getCollectionDisconnectListener (socket: Socket) {
+        return () => {
+            this.fastify.log.info(`Socket disconnected: ${socket.id}`);
+            const {collectionName} = socket.data as {collectionName: string};
+            const collection = this.collections.get(collectionName);
+            if ("undefined" !== typeof collection) {
+                collection.refRemove();
+                if (!collection.isReferenced()) {
+                    this.fastify.log.info(`Collection ${collectionName} removed`);
+                    this.collections.delete(collectionName);
                 }
+            }
+        };
+    }
 
-                const { queryHash, watcher } = collection.getWatcher(query, options);
-                callback({ queryHash });
-                watcher.on("change", async () => {
-                    // FIXME: this should be debounced
-                    socket.emit("collection::find::update", {
-                        data: await collection.find(query, options).toArray(),
-                    });
+    #getCollectionFindToArrayListener (socket: Socket) {
+        return async (
+            {query, options}: {query: object; options: object},
+            callback
+        ) => {
+            const {collectionName} = socket.data as {collectionName: string};
+            const collection = this.collections.get(collectionName);
+
+            if ("undefined" === typeof collection) {
+                return callback({
+                    error: "Collection not initialized",
                 });
+            }
 
+            const documents = await collection.find(query, options).toArray();
+
+            return callback({data: documents});
+        };
+    }
+
+    #getCollectionFindToReactiveArrayListener (socket: Socket) {
+        return async (
+            {query, options}: {query: object; options: object},
+            callback: any
+        ) => {
+            const {collectionName} = socket.data as {collectionName: string};
+            this.fastify.log.info(
+                `Collection name ${collectionName} requested subscription`
+            );
+            const collection = this.collections.get(collectionName);
+
+            if ("undefined" === typeof collection) {
+                return callback({
+                    error: "Collection not initialized",
+                });
+            }
+
+            const {queryHash, watcher} = collection.getWatcher(query, options);
+            callback({queryHash});
+            watcher.on("change", async () => {
+            // eslint-disable-next-line no-warning-comments
+            // FIXME: this should be debounced
                 socket.emit("collection::find::update", {
                     data: await collection.find(query, options).toArray(),
                 });
+            });
+
+            socket.emit("collection::find::update", {
+                data: await collection.find(query, options).toArray(),
+            });
+        };
+    }
+
+    #getCollectionFindUnsubscribeListener (socket: Socket) {
+        return ({queryHash}: {queryHash: string}) => {
+            const {collectionName} = socket.data as {collectionName: string};
+            this.fastify.log.info(`Collection name ${collectionName} requested unsubscription`);
+            const collection = this.collections.get(collectionName);
+
+            if ("undefined" === typeof collection) {
+                return;
             }
-            );
 
-            socket.on("collection::find::unsubscribe", ({ queryHash }) => {
-                this.fastify.log.info(`Collection name ${socket.data.collectionName} requested unsubscription`);
+            collection.removeWatcher(queryHash);
+        };
+    }
 
-                const { collectionName } = socket.data;
-                const collection = this.collections.get(collectionName);
+    #initializeSocketServer (httpServer: HttpServer) {
+        const io = new Server(httpServer);
 
-                if ("undefined" === typeof collection) {
-                    return;
-                }
-
-                collection.removeWatcher(queryHash);
-            }
-            );
+        io.on("connection", (socket) => {
+            this.fastify.log.info(`Socket connected: ${socket.id}`);
+            ([
+                {
+                    event: "collection::init",
+                    listener: this.#getCollectionInitListener(socket),
+                },
+                {
+                    event: "disconnect",
+                    listener: this.#getCollectionDisconnectListener(socket),
+                },
+                {
+                    event: "collection::find::toArray",
+                    listener: this.#getCollectionFindToArrayListener(socket),
+                },
+                {
+                    event: "collection::find::toReactiveArray",
+                    listener: this.#getCollectionFindToReactiveArrayListener(socket),
+                },
+                {
+                    event: "collection::find::unsubscribe",
+                    listener: this.#getCollectionFindUnsubscribeListener(socket),
+                },
+            ]).forEach(({event, listener}) => {
+                socket.on(event, listener);
+            });
         });
     }
 }
-
-/**
- * @typedef {object} MongoReplicaServerPluginOptions
- * @property {string} mongoUri MongoDB URI
- * @property {string} dbName Database name
- */
 
 /**
  * MongoDB replica set plugin for Fastify.
  *
  * @param app
  * @param options
- * @param options.mongoUri
- * @param options.dbName
+ * @param options.database
+ * @param options.host
+ * @param options.port
  */
-// eslint-disable-next-line @stylistic/max-len
-const MongoReplicaServerPlugin = async (app: FastifyInstance, options: {mongoUri: string; dbName: string}): Promise<void> => {
-    console.log("registering")
+const MongoReplicaServerPlugin = async (
+    app: FastifyInstance,
+    options: {host: string; port: number; database: string}
+) => {
+    // FIXME: remove below
     await initializeReplicaSet(app);
 
     app.decorate(
         "MongoReplicaServer",
         MongoReplicaServer.create({
             fastify: app,
-            mongoUri: options.mongoUri,
-            dbName: options.dbName,
+            host: options.host,
+            port: options.port.toString(),
+            database: options.database,
         })
     );
 };
+
 
 export default MongoReplicaServerPlugin;

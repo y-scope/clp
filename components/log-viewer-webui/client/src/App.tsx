@@ -13,6 +13,7 @@ const collection = new MongoReplicaCollection("results-1");
  * @return
  */
 const App = () => {
+    console.log("IN App");
     const results = useTracker(
         () => collection.find({}, {}),
         []
