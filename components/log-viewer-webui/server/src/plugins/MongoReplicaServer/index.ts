@@ -1,4 +1,5 @@
 import {FastifyInstance} from "fastify";
+import fastifyPlugin from "fastify-plugin";
 import {Server as HttpServer} from "http";
 import {
     Db,
@@ -208,16 +209,13 @@ const MongoReplicaServerPlugin = async (
     app: FastifyInstance,
     options: {host: string; port: number; database: string}
 ) => {
-    app.decorate(
-        "MongoReplicaServer",
-        MongoReplicaServer.create({
-            fastify: app,
-            host: options.host,
-            port: options.port.toString(),
-            database: options.database,
-        })
-    );
+    await MongoReplicaServer.create({
+        fastify: app,
+        host: options.host,
+        port: options.port.toString(),
+        database: options.database,
+    });
 };
 
 
-export default MongoReplicaServerPlugin;
+export default fastifyPlugin(MongoReplicaServerPlugin);
