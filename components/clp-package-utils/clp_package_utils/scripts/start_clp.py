@@ -84,7 +84,7 @@ def append_docker_mounts(cmd: List[str], mounts: List[DockerMount]):
 
 def append_docker_env_vars(cmd: List[str], env_vars: List[str]):
     for env_var in env_vars:
-        if env_var is not "":
+        if "" != env_var:
             cmd.append("-e")
             cmd.append(env_var)
 
