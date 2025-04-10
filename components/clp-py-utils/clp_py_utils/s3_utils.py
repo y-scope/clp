@@ -90,8 +90,8 @@ def get_container_authentication(
     
     :param clp_config: CLPConfig containing storage configurations
     :param type: Type of calling container (compression, log_viewer, or query)
-    :return: A list of Docker command-line options for authentication
-    :raises: ValueError if required environment variables are not set or if type is invalid
+    :return: Tuple of (whether aws config mount is needed, credential env_vars to set)
+    :raises: ValueError if environment variables are not set correctly or if type is invalid
     """
     if type not in ["compression", "log_viewer", "query"]:
         raise ValueError(f"Unsupported authentication type: {type}")
