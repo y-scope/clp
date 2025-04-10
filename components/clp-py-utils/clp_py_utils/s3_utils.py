@@ -98,7 +98,7 @@ def get_container_authentication(
     
     storages = {
         "compression": [clp_config.logs_input, clp_config.archive_output.storage],
-        "log_viewer": [clp_config.stream_output],
+        "log_viewer": [clp_config.stream_output.storage],
         "query": [
             clp_config.logs_input,
             clp_config.archive_output.storage,
