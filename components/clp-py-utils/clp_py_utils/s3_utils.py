@@ -70,12 +70,11 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
         return env_vars
 
     elif auth.type == "env_vars":
-        # Environment variables are already set in the process
-        return
+        return {}
 
     elif auth.type == "ec2":
         # EC2 instance role will be used automatically
-        return
+        return {}
 
     else:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
