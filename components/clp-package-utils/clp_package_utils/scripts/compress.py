@@ -104,7 +104,9 @@ def _validate_fs_input_args(
 
 
 def _validate_s3_input_args(
-    parsed_args: argparse.Namespace, args_parser: argparse.ArgumentParser, storage_engine: StorageEngine
+    parsed_args: argparse.Namespace,
+    args_parser: argparse.ArgumentParser,
+    storage_engine: StorageEngine,
 ) -> None:
     if StorageEngine.CLP_S != storage_engine:
         args_parser.error(
