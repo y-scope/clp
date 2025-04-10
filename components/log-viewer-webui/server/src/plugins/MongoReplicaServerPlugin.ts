@@ -3,7 +3,6 @@ import {Server as HttpServer} from "http";
 import {
     Db,
     MongoClient,
-    MongoServerError,
 } from "mongodb";
 import {
     Server,
@@ -99,7 +98,7 @@ class MongoReplicaServer {
     #getCollectionFindToArrayListener (socket: Socket) {
         return async (
             {query, options}: {query: object; options: object},
-            callback
+            callback: any
         ) => {
             const {collectionName} = socket.data as {collectionName: string};
             const collection = this.collections.get(collectionName);
