@@ -105,14 +105,16 @@ class MongoReplicaServer {
             const collection = this.collections.get(collectionName);
 
             if ("undefined" === typeof collection) {
-                return callback({
+                callback({
                     error: "Collection not initialized",
                 });
+
+                return;
             }
 
             const documents = await collection.find(query, options).toArray();
 
-            return callback({data: documents});
+            callback({data: documents});
         };
     }
 
@@ -128,9 +130,11 @@ class MongoReplicaServer {
             const collection = this.collections.get(collectionName);
 
             if ("undefined" === typeof collection) {
-                return callback({
+                callback({
                     error: "Collection not initialized",
                 });
+
+                return;
             }
 
             const {queryHash, watcher} = collection.getWatcher(query, options);
