@@ -103,7 +103,7 @@ jobs:
 
           # NOTE: We use a per-OS cache since different OSes may trigger different clang-tidy
           # violations.
-          key: "main-branch-${{matrix.os}}-lint:check-cpp-tidy-static-full"
+          key: "main-branch-${{matrix.os}}-lint:check-cpp-static-full"
 
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
       # - run: >-

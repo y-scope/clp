@@ -341,7 +341,7 @@ jobs:
 
           # NOTE: We use a per-OS cache since different OSes may trigger different clang-tidy
           # violations.
-          key: "main-branch-ubuntu-jammy-lint:check-cpp-tidy-static-full"
+          key: "main-branch-ubuntu-jammy-lint:check-cpp-static-full"
 
       - uses: "./.github/actions/run-on-image"
         env:
