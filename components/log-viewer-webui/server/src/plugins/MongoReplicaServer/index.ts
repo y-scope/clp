@@ -14,17 +14,17 @@ import MongoReplicaServerCollection from "./MongoReplicaServerCollection.js";
 
 
 class MongoReplicaServer {
-    private fastify: FastifyInstance;
+    #fastify: FastifyInstance;
 
-    private collections: Map<string, MongoReplicaServerCollection>;
+    #collections: Map<string, MongoReplicaServerCollection>;
 
-    private mongoDb: Db;
+    #mongoDb: Db;
 
 
     constructor ({fastify, mongoDb}: {fastify: FastifyInstance; mongoDb: Db}) {
-        this.fastify = fastify;
-        this.collections = new Map();
-        this.mongoDb = mongoDb;
+        this.#fastify = fastify;
+        this.#collections = new Map();
+        this.#mongoDb = mongoDb;
         this.#initializeSocketServer(fastify.server);
     }
 
@@ -61,15 +61,15 @@ class MongoReplicaServer {
     #getCollectionInitListener (socket: Socket) {
         return async (payload: {collectionName: string}) => {
             const {collectionName} = payload;
-            this.fastify.log.info(`Collection name ${collectionName} requested`);
+            this.#fastify.log.info(`Collection name ${collectionName} requested`);
 
-            let collection = this.collections.get(collectionName);
+            let collection = this.#collections.get(collectionName);
             if ("undefined" === typeof collection) {
                 collection = new MongoReplicaServerCollection(
-                    this.mongoDb,
+                    this.#mongoDb,
                     collectionName
                 );
-                this.collections.set(collectionName, collection);
+                this.#collections.set(collectionName, collection);
             }
             collection.refAdd();
 
@@ -79,14 +79,14 @@ class MongoReplicaServer {
 
     #getCollectionDisconnectListener (socket: Socket) {
         return () => {
-            this.fastify.log.info(`Socket disconnected: ${socket.id}`);
+            this.#fastify.log.info(`Socket disconnected: ${socket.id}`);
             const {collectionName} = socket.data as {collectionName: string};
-            const collection = this.collections.get(collectionName);
+            const collection = this.#collections.get(collectionName);
             if ("undefined" !== typeof collection) {
                 collection.refRemove();
                 if (!collection.isReferenced()) {
-                    this.fastify.log.info(`Collection ${collectionName} removed`);
-                    this.collections.delete(collectionName);
+                    this.#fastify.log.info(`Collection ${collectionName} removed`);
+                    this.#collections.delete(collectionName);
                 }
             }
         };
@@ -98,7 +98,7 @@ class MongoReplicaServer {
             callback: any
         ) => {
             const {collectionName} = socket.data as {collectionName: string};
-            const collection = this.collections.get(collectionName);
+            const collection = this.#collections.get(collectionName);
 
             if ("undefined" === typeof collection) {
                 callback({
@@ -120,10 +120,10 @@ class MongoReplicaServer {
             callback: any
         ) => {
             const {collectionName} = socket.data as {collectionName: string};
-            this.fastify.log.info(
+            this.#fastify.log.info(
                 `Collection name ${collectionName} requested subscription`
             );
-            const collection = this.collections.get(collectionName);
+            const collection = this.#collections.get(collectionName);
 
             if ("undefined" === typeof collection) {
                 callback({
@@ -152,8 +152,8 @@ class MongoReplicaServer {
     #getCollectionFindUnsubscribeListener (socket: Socket) {
         return ({queryHash}: {queryHash: string}) => {
             const {collectionName} = socket.data as {collectionName: string};
-            this.fastify.log.info(`Collection name ${collectionName} requested unsubscription`);
-            const collection = this.collections.get(collectionName);
+            this.#fastify.log.info(`Collection name ${collectionName} requested unsubscription`);
+            const collection = this.#collections.get(collectionName);
 
             if ("undefined" === typeof collection) {
                 return;
@@ -167,7 +167,7 @@ class MongoReplicaServer {
         const io = new Server(httpServer);
 
         io.on("connection", (socket) => {
-            this.fastify.log.info(`Socket connected: ${socket.id}`);
+            this.#fastify.log.info(`Socket connected: ${socket.id}`);
             ([
                 {
                     event: "collection::init",
