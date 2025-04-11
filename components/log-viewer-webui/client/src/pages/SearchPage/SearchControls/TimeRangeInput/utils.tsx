@@ -15,6 +15,8 @@ enum TIME_RANGE_OPTION {
     CUSTOM = "Custom",
 }
 
+const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.TODAY;
+
 /* eslint-disable no-magic-numbers */
 const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs.Dayjs]> = {
     [TIME_RANGE_OPTION.LAST_15_MINUTES]: [dayjs().subtract(15, "minute"),
@@ -58,9 +60,11 @@ const isValidDateRange = (
     return null !== dates && null !== dates[0] && null !== dates[1];
 };
 
+
 export {
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
+    DEFAULT_TIME_RANGE,
 };

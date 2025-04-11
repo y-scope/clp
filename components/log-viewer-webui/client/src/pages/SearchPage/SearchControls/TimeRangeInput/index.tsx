@@ -11,14 +11,10 @@ import styles from "./index.module.css";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
+    DEFAULT_TIME_RANGE,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
-
-
-// Note if you update default `SEARCH_STATE_DEFAULT.timeRange`, you should also update
-// default time range option here for select component.
-const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.TODAY;
 
 /**
  * Renders controls for selecting a time range for queries. By default, the component is
@@ -55,10 +51,11 @@ const TimeRangeInput = () => {
             <Select
                 defaultValue={DEFAULT_TIME_RANGE}
                 listHeight={300}
+                className={selectedOption === TIME_RANGE_OPTION.CUSTOM ? (styles["select-container"] || "") : ""}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                size={"large"}
                 variant={"filled"}
+                size={"large"}
                 onChange={handleSelectChange}/>
             {selectedOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
@@ -73,5 +70,6 @@ const TimeRangeInput = () => {
         </div>
     );
 };
+
 
 export default TimeRangeInput;

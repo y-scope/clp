@@ -2,6 +2,14 @@
     display: inline-flex;
 }
 
+/* Makes border flush with range picker */
+.select-container :global(.ant-select-selector) {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
 .rangePicker {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
     min-width: 200px;
 }

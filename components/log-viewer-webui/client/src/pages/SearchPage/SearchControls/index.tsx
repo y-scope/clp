@@ -30,4 +30,5 @@ const SearchControls = () => {
     );
 };
 
+
 export default SearchControls;

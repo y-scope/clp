@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import {create} from "zustand";
 
 import {
-    TIME_RANGE_OPTION,
+    DEFAULT_TIME_RANGE,
     TIME_RANGE_OPTION_DAYJS_MAP,
 } from "./SearchControls/TimeRangeInput/utils";
 
@@ -12,7 +12,7 @@ import {
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     queryString: "",
-    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[TIME_RANGE_OPTION.TODAY],
+    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
 });
 
 interface SearchState {
@@ -32,6 +32,7 @@ const useSearchStore = create<SearchState>((set) => ({
         set({timeRange: range});
     },
 }));
+
 
 export {SEARCH_STATE_DEFAULT};
 export default useSearchStore;
