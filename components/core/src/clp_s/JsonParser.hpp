@@ -17,7 +17,6 @@
 #include "../clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../clp/ffi/SchemaTree.hpp"
 #include "../clp/ffi/Value.hpp"
-#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "ArchiveWriter.hpp"
 #include "CommandLineArguments.hpp"
@@ -51,7 +50,6 @@ struct JsonParserOption {
     bool structurize_arrays{};
     bool record_log_order{true};
     bool single_file_archive{false};
-    std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db;
     NetworkAuthOption network_auth{};
 };
 
