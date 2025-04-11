@@ -20,12 +20,20 @@ class S3Manager {
     readonly #s3Client;
 
     /**
-     * @param region
+     * @param {string} region
+     * @param {string} [profile]
      */
-    constructor (region: string) {
-        this.#s3Client = new S3Client({
-            region: region,
-        });
+    constructor (region: string, profile: string) {
+        if (profile) {
+            this.#s3Client = new S3Client({
+                region: region,
+                profile: profile,
+            });
+        } else {
+            this.#s3Client = new S3Client({
+                region: region,
+            });
+        }
     }
 
     /**
@@ -63,14 +71,14 @@ class S3Manager {
  * Initializes a Fastify plugin, which decorates the application with an S3 manager at the
  * "s3Manager" property only when all plugin options are valid.
  */
-export default fastifyPlugin(async (app, options: {region: Nullable<string>}) => {
-    const {region} = options;
+export default fastifyPlugin(async (app, options: {region: Nullable<string>, profile: string}) => {
+    const {region, profile} = options;
     if (null === region) {
         return;
     }
 
-    console.log(`Initializing S3Manager with region="${region}"...`);
-    app.decorate("s3Manager", new S3Manager(region));
+    console.log(`Initializing S3Manager with region="${region}" and profile="${profile}"...`);
+    await app.decorate("s3Manager", new S3Manager(region, profile));
 });
 
 declare module "fastify" {
