@@ -58,6 +58,53 @@ class MongoReplicaServer {
         }
     }
 
+    #initializeSocketServer (httpServer: HttpServer) {
+        const io = new Server(httpServer);
+
+        io.on("connection", (socket) => {
+            this.#fastify.log.info(`Socket connected: ${socket.id}`);
+            ([
+                {
+                    event: "disconnect",
+                    listener: this.#getCollectionDisconnectListener(socket),
+                },
+                {
+                    event: "collection::init",
+                    listener: this.#getCollectionInitListener(socket),
+                },
+                {
+                    event: "collection::find::toArray",
+                    listener: this.#getCollectionFindToArrayListener(socket),
+                },
+                {
+                    event: "collection::find::toReactiveArray",
+                    listener: this.#getCollectionFindToReactiveArrayListener(socket),
+                },
+                {
+                    event: "collection::find::unsubscribe",
+                    listener: this.#getCollectionFindUnsubscribeListener(socket),
+                },
+            ]).forEach(({event, listener}) => {
+                socket.on(event, listener);
+            });
+        });
+    }
+
+    #getCollectionDisconnectListener (socket: Socket) {
+        return () => {
+            this.#fastify.log.info(`Socket disconnected: ${socket.id}`);
+            const {collectionName} = socket.data as {collectionName: string};
+            const collection = this.#collections.get(collectionName);
+            if ("undefined" !== typeof collection) {
+                collection.refRemove();
+                if (!collection.isReferenced()) {
+                    this.#fastify.log.info(`Collection ${collectionName} removed`);
+                    this.#collections.delete(collectionName);
+                }
+            }
+        };
+    }
+
     #getCollectionInitListener (socket: Socket) {
         return async (payload: {collectionName: string}) => {
             const {collectionName} = payload;
@@ -74,21 +121,6 @@ class MongoReplicaServer {
             collection.refAdd();
 
             socket.data = {collectionName};
-        };
-    }
-
-    #getCollectionDisconnectListener (socket: Socket) {
-        return () => {
-            this.#fastify.log.info(`Socket disconnected: ${socket.id}`);
-            const {collectionName} = socket.data as {collectionName: string};
-            const collection = this.#collections.get(collectionName);
-            if ("undefined" !== typeof collection) {
-                collection.refRemove();
-                if (!collection.isReferenced()) {
-                    this.#fastify.log.info(`Collection ${collectionName} removed`);
-                    this.#collections.delete(collectionName);
-                }
-            }
         };
     }
 
@@ -161,38 +193,6 @@ class MongoReplicaServer {
 
             collection.removeWatcher(queryHash);
         };
-    }
-
-    #initializeSocketServer (httpServer: HttpServer) {
-        const io = new Server(httpServer);
-
-        io.on("connection", (socket) => {
-            this.#fastify.log.info(`Socket connected: ${socket.id}`);
-            ([
-                {
-                    event: "collection::init",
-                    listener: this.#getCollectionInitListener(socket),
-                },
-                {
-                    event: "disconnect",
-                    listener: this.#getCollectionDisconnectListener(socket),
-                },
-                {
-                    event: "collection::find::toArray",
-                    listener: this.#getCollectionFindToArrayListener(socket),
-                },
-                {
-                    event: "collection::find::toReactiveArray",
-                    listener: this.#getCollectionFindToReactiveArrayListener(socket),
-                },
-                {
-                    event: "collection::find::unsubscribe",
-                    listener: this.#getCollectionFindUnsubscribeListener(socket),
-                },
-            ]).forEach(({event, listener}) => {
-                socket.on(event, listener);
-            });
-        });
     }
 }
 
