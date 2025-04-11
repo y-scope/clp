@@ -363,7 +363,8 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
-                    update_archive_metadata(db_cursor, last_archive_stats)
+                    if StorageEngine.CLP_S == clp_storage_engine:
+                        update_archive_metadata(db_cursor, last_archive_stats)
                     update_job_metadata_and_tags(
                         db_cursor,
                         job_id,
