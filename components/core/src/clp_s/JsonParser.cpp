@@ -127,7 +127,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.authoritative_timestamp = m_timestamp_column;
     m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
 
-    m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
+    m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
 }
 

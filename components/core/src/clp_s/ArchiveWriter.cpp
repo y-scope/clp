@@ -100,10 +100,6 @@ void ArchiveWriter::close() {
         header_and_metadata_writer.close();
     }
 
-    if (m_metadata_db) {
-        update_metadata_db();
-    }
-
     if (m_print_archive_stats) {
         print_archive_stats();
     }
@@ -430,27 +426,11 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-void ArchiveWriter::update_metadata_db() {
-    m_metadata_db->open();
-    clp::streaming_archive::ArchiveMetadata metadata(
-            cArchiveFormatDevelopmentVersionFlag,
-            "",
-            0ULL
-    );
-    metadata.increment_static_compressed_size(m_compressed_size);
-    metadata.increment_static_uncompressed_size(m_uncompressed_size);
-    metadata.expand_time_range(
-            m_timestamp_dict.get_begin_timestamp(),
-            m_timestamp_dict.get_end_timestamp()
-    );
-
-    m_metadata_db->add_archive(m_id, metadata);
-    m_metadata_db->close();
-}
-
 void ArchiveWriter::print_archive_stats() {
     nlohmann::json json_msg;
     json_msg["id"] = m_id;
+    json_msg["begin_timestamp"] = m_timestamp_dict.get_begin_timestamp();
+    json_msg["end_timestamp"] = m_timestamp_dict.get_end_timestamp();
     json_msg["uncompressed_size"] = m_uncompressed_size;
     json_msg["size"] = m_compressed_size;
     std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;

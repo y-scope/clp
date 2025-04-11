@@ -10,6 +10,7 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
+    ARCHIVES_TABLE_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -80,6 +81,21 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
             compressed_size=archive_stats["size"],
         ),
     )
+
+
+def update_archive_metadata(db_cursor, archive_stats):
+    archive_stats_defaults = {
+        "begin_timestamp": 0,
+        "end_timestamp": 0,
+        "creator_id": "",
+        "creation_ix": 0,
+    }
+    for k, v in archive_stats_defaults.items():
+        archive_stats.setdefault(k, v)
+    keys = ", ".join(archive_stats.keys())
+    values = ", ".join(f'"{v}"' if isinstance(v, str) else str(v) for v in archive_stats.values())
+    query = f"INSERT INTO clp_archives ({keys}) VALUES ({values})"
+    db_cursor.execute(query)
 
 
 def _generate_fs_logs_list(
@@ -347,6 +363,7 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
+                    update_archive_metadata(db_cursor, last_archive_stats)
                     update_job_metadata_and_tags(
                         db_cursor,
                         job_id,
