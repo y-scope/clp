@@ -45,8 +45,6 @@ set(
         ../clp/GlobalMetadataDB.hpp
         ../clp/GlobalMetadataDBConfig.cpp
         ../clp/GlobalMetadataDBConfig.hpp
-        ../clp/GlobalMySQLMetadataDB.cpp
-        ../clp/GlobalMySQLMetadataDB.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
         ../clp/ir/EncodedTextAst.cpp
