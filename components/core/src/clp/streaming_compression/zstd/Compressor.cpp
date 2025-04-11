@@ -11,7 +11,8 @@
 
 namespace clp::streaming_compression::zstd {
 Compressor::Compressor()
-        : m_compressed_stream_block{
+        : m_compressed_stream_block_buffer(ZSTD_CStreamOutSize()),
+          m_compressed_stream_block{
                   .dst = m_compressed_stream_block_buffer.data(),
                   .size = m_compressed_stream_block_buffer.size(),
                   .pos = 0
