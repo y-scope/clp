@@ -57,7 +57,7 @@ const TimeRangeInput = () => {
                 size={"large"}
                 variant={"filled"}
                 className={selectedOption === TIME_RANGE_OPTION.CUSTOM ?
-                    (styles["select-container"] || "") :
+                    (styles["customSelected"] || "") :
                     ""}
                 onChange={handleSelectChange}/>
             {selectedOption === TIME_RANGE_OPTION.CUSTOM && (
