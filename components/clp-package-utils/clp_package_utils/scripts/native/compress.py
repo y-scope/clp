@@ -83,6 +83,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
                 if job_last_uncompressed_size < job_uncompressed_size:
                     print_compression_job_status(job_row, current_time)
                 else:
+                    # No progress in the final iteration; repeat the last status update verbatim
                     print_compression_job_status(job_row, last_current_time)
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
