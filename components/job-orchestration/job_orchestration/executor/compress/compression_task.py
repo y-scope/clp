@@ -93,9 +93,9 @@ def update_archive_metadata(db_cursor, archive_stats):
     for k, v in archive_stats_defaults.items():
         archive_stats.setdefault(k, v)
     keys = ", ".join(archive_stats.keys())
-    values = ", ".join(f'"{v}"' if isinstance(v, str) else str(v) for v in archive_stats.values())
-    query = f"INSERT INTO clp_archives ({keys}) VALUES ({values})"
-    db_cursor.execute(query)
+    value_placeholders = ", ".join(["%s"] * len(archive_stats))
+    query = f"INSERT INTO {ARCHIVES_TABLE_NAME} ({keys}) VALUES ({value_placeholders})"
+    db_cursor.execute(query, list(archive_stats.values()))
 
 
 def _generate_fs_logs_list(
