@@ -62,9 +62,9 @@ const isValidDateRange = (
 
 
 export {
+    DEFAULT_TIME_RANGE,
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
-    DEFAULT_TIME_RANGE,
 };

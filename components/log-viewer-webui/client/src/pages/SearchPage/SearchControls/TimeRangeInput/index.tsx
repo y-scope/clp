@@ -9,12 +9,13 @@ import dayjs from "dayjs";
 import useSearchStore from "../../SearchState";
 import styles from "./index.module.css";
 import {
+    DEFAULT_TIME_RANGE,
     isValidDateRange,
     TIME_RANGE_OPTION,
-    DEFAULT_TIME_RANGE,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
+
 
 /**
  * Renders controls for selecting a time range for queries. By default, the component is
@@ -51,11 +52,13 @@ const TimeRangeInput = () => {
             <Select
                 defaultValue={DEFAULT_TIME_RANGE}
                 listHeight={300}
-                className={selectedOption === TIME_RANGE_OPTION.CUSTOM ? (styles["select-container"] || "") : ""}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                variant={"filled"}
                 size={"large"}
+                variant={"filled"}
+                className={selectedOption === TIME_RANGE_OPTION.CUSTOM ?
+                    (styles["select-container"] || "") :
+                    ""}
                 onChange={handleSelectChange}/>
             {selectedOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
