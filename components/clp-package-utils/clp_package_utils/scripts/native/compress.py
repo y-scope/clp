@@ -10,7 +10,7 @@ from typing import List
 
 import brotli
 import msgpack
-from clp_py_utils.clp_config import CLPConfig, COMPRESSION_JOBS_TABLE_NAME, S3Credentials
+from clp_py_utils.clp_config import CLPConfig, COMPRESSION_JOBS_TABLE_NAME
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import (
@@ -139,7 +139,7 @@ def _generate_clp_io_config(
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) != 1:
-            raise ValueError(f"Too many prefixes: {len(logs_to_compress)} > 1")
+            raise ValueError(f"Too many key prefixes: {len(logs_to_compress)} > 1")
 
         s3_config = clp_config.logs_input.s3_config
         return S3InputConfig(

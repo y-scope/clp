@@ -600,9 +600,9 @@ class CLPConfig(BaseModel):
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
             if not input_logs_dir.exists():
-                raise ValueError(f"input_logs_directory '{input_logs_dir}' doesn't exist.")
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
             if not input_logs_dir.is_dir():
-                raise ValueError(f"input_logs_directory '{input_logs_dir}' is not a directory.")
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
 
     def validate_archive_output_config(self):
         if (

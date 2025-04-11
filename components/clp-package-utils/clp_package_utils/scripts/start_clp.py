@@ -743,10 +743,10 @@ def generic_start_worker(
         mounts.data_dir,
         mounts.logs_dir,
     ]
-    if worker_specific_mount:
-        necessary_mounts.extend(worker_specific_mount)
     if StorageType.FS == clp_config.logs_input.type:
         necessary_mounts.append(mounts.input_logs_dir)
+    if worker_specific_mount:
+        necessary_mounts.extend(worker_specific_mount)
 
     for mount in necessary_mounts:
         if not mount:

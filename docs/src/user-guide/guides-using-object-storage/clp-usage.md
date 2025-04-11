@@ -5,8 +5,8 @@ should be able to use CLP as described in the [quick start](../quick-start-overv
 
 ## Compressing logs from S3
 
-To compress logs from S3, use the compress script as follows, replacing the fields in angle brackets
-(`<>`) with the appropriate values:
+To compress logs from S3, use the `sbin/compress.sh` script as follows, replacing the fields in
+angle brackets (`<>`) with the appropriate values:
 
 ```bash
 sbin/compress.sh \
@@ -14,8 +14,11 @@ sbin/compress.sh \
   <prefix>
 ```
 
-* `<prefix>` is the prefix of all logs you wish to compress and must be relative to the prefix
-  configured in the [logs-input s3_config][logs-input-s3-config].
+* `<prefix>` is the prefix of all logs you wish to compress and must be relative to
+  [logs-input.s3_config.key_prefix][logs-input-s3-config].
+  * E.g., if you want to compress the S3 object `/a/b/c.jsonl`, and
+    `logs-input.s3_config.key_prefix` is `/a/`, then you would replace `<prefix>` in the command
+    above with `b/c.jsonl`.
 
 :::{note}
 Compressing from S3 only supports a single prefix but will compress any logs that have the given

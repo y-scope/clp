@@ -30,7 +30,6 @@ def _generate_logs_list(
     parsed_args: argparse.Namespace,
     input_type: InputType,
 ) -> None:
-
     if InputType.FS == input_type:
         host_logs_list_path = parsed_args.path_list
         with open(container_logs_list_path, "w") as container_logs_list_file:
@@ -116,7 +115,7 @@ def _validate_s3_input_args(
     if len(parsed_args.paths) != 1:
         args_parser.error(f"Only one key prefix can be specified for input type {InputType.S3}.")
     if parsed_args.path_list is not None:
-        args_parser.error(f"Path list file is not supported for input type {InputType.S3}.")
+        args_parser.error(f"Path list file is unsupported for input type {InputType.S3}.")
 
 
 def main(argv):
