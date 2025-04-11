@@ -127,7 +127,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def _generate_clp_io_config(
-    logs_to_compress: List[str], parsed_args: argparse.Namespace, clp_config: CLPConfig
+    clp_config: CLPConfig, logs_to_compress: List[str], parsed_args: argparse.Namespace
 ) -> typing.Union[S3InputConfig, FsInputConfig]:
     input_type = clp_config.logs_input.type
 
@@ -216,7 +216,7 @@ def main(argv):
 
     logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
 
-    clp_input_config = _generate_clp_io_config(logs_to_compress, parsed_args, clp_config)
+    clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args)
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
     if parsed_args.tags:
         tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]

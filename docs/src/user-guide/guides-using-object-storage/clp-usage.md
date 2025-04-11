@@ -24,8 +24,9 @@ sbin/compress.sh \
 Compressing from S3 only supports a single prefix but will compress any logs that have the given
 prefix.
 
-If you wish to compress a single log file, specify the entire path to the log file. However, if that
-log file's path is a prefix of another log file's path, then both log files will be compressed
+If you wish to compress a single log file, specify the entire path to the log file
+(relative to `logs-input.s3_config.key_prefix`). However, if that log file's path is a
+prefix of another log file's path, then both log files will be compressed
 (e.g., with two files "logs/syslog" and "logs/syslog.1", a prefix like "logs/syslog" will cause
 both logs to be compressed). This limitation will be addressed in a future release.
 :::

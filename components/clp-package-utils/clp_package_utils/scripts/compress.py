@@ -26,9 +26,9 @@ logger = logging.getLogger(__file__)
 
 
 def _generate_logs_list(
+    input_type: InputType,
     container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
-    input_type: InputType,
 ) -> None:
     if InputType.FS == input_type:
         host_logs_list_path = parsed_args.path_list
@@ -190,7 +190,7 @@ def main(argv):
         if not container_logs_list_path.exists():
             break
 
-    _generate_logs_list(container_logs_list_path, parsed_args, clp_config.logs_input.type)
+    _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
 
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container
