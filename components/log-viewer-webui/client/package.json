@@ -22,7 +22,8 @@
     "axios": "^1.7.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router": "^7.4.1"
+    "react-router": "^7.4.1",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/react": "^19.0.10",
