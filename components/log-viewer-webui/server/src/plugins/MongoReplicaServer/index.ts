@@ -123,7 +123,6 @@ class MongoReplicaServer {
             this.#fastify.log.info(`Socket connected: ${socket.id}`);
             socket.on("disconnect", this.#getCollectionDisconnectListener(socket));
             socket.on("collection::init", this.#getCollectionInitListener(socket));
-            socket.on("collection::find::toArray", this.#getCollectionFindToArrayListener(socket));
             socket.on(
                 "collection::find::toReactiveArray",
                 this.#getCollectionFindToReactiveArrayListener(socket)
@@ -165,24 +164,6 @@ class MongoReplicaServer {
             collection.refAdd();
 
             socket.data.collectionName = collectionName;
-        };
-    }
-
-    #getCollectionFindToArrayListener (socket: CustomSocket)
-        : ClientToServerEvents["collection::find::toArray"] {
-        return async ({query, options}, callback) => {
-            const {collectionName} = socket.data as {collectionName: string};
-            const collection = this.#collections.get(collectionName);
-
-            if ("undefined" === typeof collection) {
-                callback({error: "Collection not initialized"});
-
-                return;
-            }
-
-            const documents = await collection.find(query, options).toArray();
-
-            callback({data: documents});
         };
     }
 
