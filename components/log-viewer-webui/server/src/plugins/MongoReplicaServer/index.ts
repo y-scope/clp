@@ -14,37 +14,58 @@ import {
 import MongoReplicaServerCollection from "./MongoReplicaServerCollection.js";
 
 
-interface EventHandlerTypes {
-    "collection::init": {
-        reqArgs: {collectionName: string};
-        respArgs: never;
-    };
-    "disconnect": {
-        reqArgs: never;
-        respArgs: never;
-    };
-    "collection::find::toArray": {
-        reqArgs: {query: object; options: object};
-        respArgs: {data: Document[]} | {error: string};
-    };
-    "collection::find::toReactiveArray": {
-        reqArgs: {query: object; options: object};
-        respArgs: {queryHash: string} | {error: string};
-    };
-    "collection::find::unsubscribe": {
-        reqArgs: {queryHash: string};
-        respArgs: never;
-    };
+type ClientToServerEvents = {
+    "disconnect": (reqArgs: never) => void;
+    "collection::init": (reqArgs: {
+        collectionName: string;
+    }) => void;
+    "collection::find::toArray": (
+        reqArgs: {
+            query: object;
+            options: object;
+        },
+        callback: (respArgs: {
+            data: Document[];
+        } | {
+            error: string;
+        }) => void
+    ) => Promise<void>;
+    "collection::find::toReactiveArray": (
+        reqArgs: {
+            query: object;
+            options: object;
+        },
+        callback: (respArgs: {
+            queryHash: string;
+        } | {
+            error: string;
+        }) => void
+    ) => Promise<void>;
+    "collection::find::unsubscribe": (
+        reqArgs: {
+            queryHash: string;
+        }
+    ) => void;
+};
+
+interface ServerToClientEvents {
+    "collection::find::update": (respArgs: {
+        data: Document[];
+    }) => void;
 }
 
-type EventListener<E extends keyof EventHandlerTypes> =
-  EventHandlerTypes[E]["respArgs"] extends never
-      ? (reqArgs: EventHandlerTypes[E]["reqArgs"]) => void | Promise<void>
-      : (
-          reqArgs: EventHandlerTypes[E]["reqArgs"],
-          callback: (respArgs: EventHandlerTypes[E]["respArgs"]) => void
-      ) => void | Promise<void>;
+type InterServerEvents = object;
 
+interface SocketData {
+    collectionName: string;
+}
+
+type CustomSocket = Socket<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    InterServerEvents,
+    SocketData
+>;
 
 class MongoReplicaServer {
     #fastify: FastifyInstance;
@@ -91,39 +112,30 @@ class MongoReplicaServer {
     }
 
     #initializeSocketServer (httpServer: HttpServer) {
-        const io = new Server(httpServer);
+        const io = new Server<
+            ClientToServerEvents,
+            ServerToClientEvents,
+            InterServerEvents,
+            SocketData
+        >(httpServer);
 
         io.on("connection", (socket) => {
             this.#fastify.log.info(`Socket connected: ${socket.id}`);
-            ([
-                {
-                    event: "disconnect",
-                    listener: this.#getCollectionDisconnectListener(socket),
-                },
-                {
-                    event: "collection::init",
-                    listener: this.#getCollectionInitListener(socket),
-                },
-                {
-                    event: "collection::find::toArray",
-                    listener: this.#getCollectionFindToArrayListener(socket),
-                },
-                {
-                    event: "collection::find::toReactiveArray",
-                    listener: this.#getCollectionFindToReactiveArrayListener(socket),
-                },
-                {
-                    event: "collection::find::unsubscribe",
-                    listener: this.#getCollectionFindUnsubscribeListener(socket),
-                },
-            ]).forEach(({event, listener}) => {
-                // @ts-expect-error listener type mismatch
-                socket.on(event, listener);
-            });
+            socket.on("disconnect", this.#getCollectionDisconnectListener(socket));
+            socket.on("collection::init", this.#getCollectionInitListener(socket));
+            socket.on("collection::find::toArray", this.#getCollectionFindToArrayListener(socket));
+            socket.on(
+                "collection::find::toReactiveArray",
+                this.#getCollectionFindToReactiveArrayListener(socket)
+            );
+            socket.on(
+                "collection::find::unsubscribe",
+                this.#getCollectionFindUnsubscribeListener(socket)
+            );
         });
     }
 
-    #getCollectionDisconnectListener (socket: Socket): EventListener<"disconnect"> {
+    #getCollectionDisconnectListener (socket: CustomSocket) {
         return () => {
             this.#fastify.log.info(`Socket disconnected: ${socket.id}`);
             const {collectionName} = socket.data as {collectionName: string};
@@ -138,7 +150,7 @@ class MongoReplicaServer {
         };
     }
 
-    #getCollectionInitListener (socket: Socket): EventListener<"collection::init"> {
+    #getCollectionInitListener (socket: CustomSocket): ClientToServerEvents["collection::init"] {
         return ({collectionName}) => {
             this.#fastify.log.info(`Collection name ${collectionName} requested`);
 
@@ -152,11 +164,12 @@ class MongoReplicaServer {
             }
             collection.refAdd();
 
-            socket.data = {collectionName};
+            socket.data.collectionName = collectionName;
         };
     }
 
-    #getCollectionFindToArrayListener (socket: Socket): EventListener<"collection::find::toArray"> {
+    #getCollectionFindToArrayListener (socket: CustomSocket)
+        : ClientToServerEvents["collection::find::toArray"] {
         return async ({query, options}, callback) => {
             const {collectionName} = socket.data as {collectionName: string};
             const collection = this.#collections.get(collectionName);
@@ -173,8 +186,8 @@ class MongoReplicaServer {
         };
     }
 
-    #getCollectionFindToReactiveArrayListener (socket: Socket)
-        : EventListener<"collection::find::toReactiveArray"> {
+    #getCollectionFindToReactiveArrayListener (socket: CustomSocket)
+        : ClientToServerEvents["collection::find::toReactiveArray"] {
         return async ({query, options}, callback) => {
             const {collectionName} = socket.data as {collectionName: string};
             this.#fastify.log.info(
@@ -205,8 +218,8 @@ class MongoReplicaServer {
         };
     }
 
-    #getCollectionFindUnsubscribeListener (socket: Socket)
-        : EventListener<"collection::find::unsubscribe"> {
+    #getCollectionFindUnsubscribeListener (socket: CustomSocket)
+        : ClientToServerEvents["collection::find::unsubscribe"] {
         return ({queryHash}) => {
             const {collectionName} = socket.data as {collectionName: string};
             this.#fastify.log.info(`Collection name ${collectionName} requested unsubscription`);
