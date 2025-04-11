@@ -13,10 +13,6 @@ import {
 import MongoReplicaServerCollection from "./MongoReplicaServerCollection.js";
 
 
-interface CollectionInitPayload {
-    collectionName: string;
-}
-
 class MongoReplicaServer {
     private fastify: FastifyInstance;
 
@@ -63,7 +59,7 @@ class MongoReplicaServer {
     }
 
     #getCollectionInitListener (socket: Socket) {
-        return async (payload: CollectionInitPayload) => {
+        return async (payload: {collectionName: string}) => {
             const {collectionName} = payload;
             this.fastify.log.info(`Collection name ${collectionName} requested`);
 
