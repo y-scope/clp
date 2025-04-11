@@ -596,8 +596,8 @@ class CLPConfig(BaseModel):
 
     def validate_logs_input_config(self):
         if StorageType.FS == self.logs_input.type:
-            # NOTE: This can't be a pydantic validator since input_logs_dir might be a package-relative
-            # path that will only be resolved after pydantic validation
+            # NOTE: This can't be a pydantic validator since input_logs_dir might be a
+            # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
             if not input_logs_dir.exists():
                 raise ValueError(f"input_logs_directory '{input_logs_dir}' doesn't exist.")
