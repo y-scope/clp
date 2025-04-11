@@ -198,7 +198,6 @@ def make_clp_s_command_and_env(
         "--target-encoded-size",
         str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
         "--compression-level", str(clp_config.output.compression_level),
-        "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
 
