@@ -13,41 +13,6 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
-    """
-    Parses the region_code, bucket, and key_prefix from the given S3 URL.
-    :param s3_url: A host-style URL or path-style URL.
-    :return: A tuple of (region_code, bucket, key_prefix).
-    :raise: ValueError if `s3_url` is not a valid host-style URL or path-style URL.
-    """
-
-    host_style_url_regex = re.compile(
-        r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z0-9-]+))?"
-        r"\.(?P<endpoint>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
-    )
-    match = host_style_url_regex.match(s3_url)
-
-    if match is None:
-        path_style_url_regex = re.compile(
-            r"https://s3(\.(?P<region_code>[a-z0-9-]+))?\.(?P<endpoint>[a-z0-9.-]+)/"
-            r"(?P<bucket_name>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
-        )
-        match = path_style_url_regex.match(s3_url)
-
-    if match is None:
-        raise ValueError(f"Unsupported URL format: {s3_url}")
-
-    region_code = match.group("region_code")
-    bucket_name = match.group("bucket_name")
-    endpoint = match.group("endpoint")
-    key_prefix = match.group("key_prefix")
-
-    if AWS_ENDPOINT != endpoint:
-        raise ValueError(f"Unsupported endpoint: {endpoint}")
-
-    return region_code, bucket_name, key_prefix
-
-
 def generate_s3_virtual_hosted_style_url(
     region_code: str, bucket_name: str, object_key: str
 ) -> str:
