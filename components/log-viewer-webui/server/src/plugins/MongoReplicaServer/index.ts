@@ -72,7 +72,7 @@ class MongoReplicaServer {
 
     #collections: Map<string, MongoReplicaServerCollection>;
 
-    #mongoDb: Db;
+    readonly #mongoDb: Db;
 
     constructor ({fastify, mongoDb}: {fastify: FastifyInstance; mongoDb: Db}) {
         this.#fastify = fastify;
