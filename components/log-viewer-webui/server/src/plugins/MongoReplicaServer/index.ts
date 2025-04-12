@@ -76,21 +76,22 @@ type CustomSocket = Socket<
  * This class manages socket connections and interactions with MongoDB collections.
  */
 class MongoReplicaServer {
-    #fastify: FastifyInstance; // Fastify instance for logging and handling requests
+    // Fastify instance for logging and handling requests
+    #fastify: FastifyInstance;
 
-    #collections: Map<string, MongoReplicaServerCollection>; // Map of collections being managed
+    // Map of collections being managed
+    #collections: Map<string, MongoReplicaServerCollection>;
 
-    readonly #mongoDb: Db; // MongoDB database instance
+    // MongoDB database instance
+    readonly #mongoDb: Db;
 
     /**
      * Creates an instance of MongoReplicaServer.
      *
-     * @param fastify.fastify
      * @param fastify The Fastify instance.
      * @param mongoDb The MongoDB database instance.
-     * @param fastify.mongoDb
      */
-    constructor ({fastify, mongoDb}: {fastify: FastifyInstance; mongoDb: Db}) {
+    constructor (fastify: FastifyInstance, mongoDb: Db) {
         this.#fastify = fastify;
         this.#collections = new Map();
         this.#mongoDb = mongoDb;
@@ -100,46 +101,32 @@ class MongoReplicaServer {
     /**
      * Creates a new instance of MongoReplicaServer by initializing the MongoDB client.
      *
-     * @param fastify.fastify
      * @param fastify The Fastify instance.
      * @param database The name of the database to connect to.
      * @param host The host of the MongoDB server.
      * @param port The port of the MongoDB server.
-     * @param fastify.database
-     * @param fastify.host
-     * @param fastify.port
      * @return A promise that resolves to a MongoReplicaServer instance.
      */
-    static async create ({
-        fastify,
-        database,
-        host,
-        port,
-    }: {
-        fastify: FastifyInstance;
-        database: string;
-        host: string;
-        port: string;
-    }): Promise<MongoReplicaServer> {
-        const mongoDb = await MongoReplicaServer.initializeMongoClient({database, host, port});
+    static async create (
+        fastify: FastifyInstance,
+        database: string,
+        host: string,
+        port: string
+    ): Promise<MongoReplicaServer> {
+        const mongoDb = await MongoReplicaServer.initializeMongoClient(database, host, port);
 
-        return new MongoReplicaServer({fastify, mongoDb});
+        return new MongoReplicaServer(fastify, mongoDb);
     }
 
     /**
      * Initializes the MongoDB client and connects to the specified database.
      *
-     * @param database.database
      * @param database The name of the database to connect to.
      * @param host The host of the MongoDB server.
      * @param port The port of the MongoDB server.
-     * @param database.host
-     * @param database.port
      * @return A promise that resolves to the MongoDB database instance.
      */
-    static async initializeMongoClient (
-        {database, host, port}: {database: string; host: string; port: string}
-    ): Promise<Db> {
+    static async initializeMongoClient (database: string, host: string, port: string): Promise<Db> {
         const mongoUri = `mongodb://${host}:${port}`;
         const mongoClient = new MongoClient(mongoUri);
         try {
@@ -302,12 +289,7 @@ const MongoReplicaServerPlugin = async (
     app: FastifyInstance,
     options: {host: string; port: number; database: string}
 ) => {
-    await MongoReplicaServer.create({
-        fastify: app,
-        host: options.host,
-        port: options.port.toString(),
-        database: options.database,
-    });
+    await MongoReplicaServer.create(app, options.database, options.host, options.port.toString());
 };
 
 // Export the plugin wrapped in fastify-plugin for use in Fastify applications
