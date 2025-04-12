@@ -1,8 +1,11 @@
-## A path containing any logs you which to compress. Must be reachable by all
+## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
-## - This path will be exposed inside the container, so symbolic links to files
-##   outside this path will be ignored.
-#input_logs_directory: "/"
+#logs_input:
+#  type: "fs"
+#
+#  # NOTE: This directory will be exposed inside the container, so symbolic links to files outside
+#  # this directory will be ignored.
+#  directory: "/"
 #
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"

@@ -381,8 +381,15 @@ class FsStorage(BaseModel):
 
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
-    staging_directory: pathlib.Path
     s3_config: S3Config
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        return d
+
+
+class OutputS3Storage(S3Storage):
+    staging_directory: pathlib.Path
 
     @validator("staging_directory")
     def validate_staging_directory(cls, field):
@@ -394,9 +401,13 @@ class S3Storage(BaseModel):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = super().dump_to_primitive_dict()
         d["staging_directory"] = str(d["staging_directory"])
         return d
+
+
+class InputFsStorage(FsStorage):
+    directory: pathlib.Path = pathlib.Path("/")
 
 
 class ArchiveFsStorage(FsStorage):
@@ -407,15 +418,17 @@ class StreamFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 
 
-class ArchiveS3Storage(S3Storage):
+class ArchiveS3Storage(OutputS3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
-class StreamS3Storage(S3Storage):
+class StreamS3Storage(OutputS3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
-def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:
+def _get_directory_from_storage_config(
+    storage_config: Union[FsStorage, OutputS3Storage],
+) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
@@ -426,7 +439,7 @@ def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storag
 
 
 def _set_directory_for_storage_config(
-    storage_config: Union[FsStorage, S3Storage], directory
+    storage_config: Union[FsStorage, OutputS3Storage], directory
 ) -> None:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
@@ -548,7 +561,7 @@ class LogViewerWebUi(BaseModel):
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
-    input_logs_directory: pathlib.Path = pathlib.Path("/")
+    logs_input: Union[InputFsStorage, S3Storage] = InputFsStorage()
 
     package: Package = Package()
     database: Database = Database()
@@ -572,7 +585,8 @@ class CLPConfig(BaseModel):
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
-        self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
+        if StorageType.FS == self.logs_input.type:
+            self.logs_input.make_config_paths_absolute(clp_home)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.storage.make_config_paths_absolute(clp_home)
         self.stream_output.storage.make_config_paths_absolute(clp_home)
@@ -580,14 +594,15 @@ class CLPConfig(BaseModel):
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
-    def validate_input_logs_dir(self):
-        # NOTE: This can't be a pydantic validator since input_logs_dir might be a package-relative
-        # path that will only be resolved after pydantic validation
-        input_logs_dir = self.input_logs_directory
-        if not input_logs_dir.exists():
-            raise ValueError(f"input_logs_directory '{input_logs_dir}' doesn't exist.")
-        if not input_logs_dir.is_dir():
-            raise ValueError(f"input_logs_directory '{input_logs_dir}' is not a directory.")
+    def validate_logs_input_config(self):
+        if StorageType.FS == self.logs_input.type:
+            # NOTE: This can't be a pydantic validator since input_logs_dir might be a
+            # package-relative path that will only be resolved after pydantic validation
+            input_logs_dir = self.logs_input.directory
+            if not input_logs_dir.exists():
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
+            if not input_logs_dir.is_dir():
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
 
     def validate_archive_output_config(self):
         if (
@@ -675,10 +690,10 @@ class CLPConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
+        d["logs_input"] = self.logs_input.dump_to_primitive_dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
-        d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
         d["logs_directory"] = str(self.logs_directory)
