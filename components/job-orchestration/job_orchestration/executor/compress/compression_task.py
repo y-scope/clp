@@ -177,7 +177,6 @@ def make_clp_s_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
-    db_config_file_path: pathlib.Path,
     use_single_file_archive: bool,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
@@ -185,7 +184,6 @@ def make_clp_s_command_and_env(
     :param clp_home:
     :param archive_output_dir:
     :param clp_config:
-    :param db_config_file_path:
     :param use_single_file_archive:
     :return: Tuple of (compression_command, compression_env_vars)
     """
