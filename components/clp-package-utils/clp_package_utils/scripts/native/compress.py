@@ -41,12 +41,12 @@ def print_compression_job_status(job_row):
     job_compressed_size = job_row["compressed_size"]
     compression_ratio = float(job_uncompressed_size) / job_compressed_size
     if CompressionJobStatus.SUCCEEDED == job_row["status"]:
+        compression_speed = job_uncompressed_size / job_row["duration"]
+    else:
         compression_speed = (
             job_uncompressed_size
             / (datetime.datetime.now() - job_row["start_time"]).total_seconds()
         )
-    else:
-        compression_speed = job_uncompressed_size / job_row["duration"]
     logger.info(
         f"Compressed {pretty_size(job_uncompressed_size)} into "
         f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}x). "
