@@ -8,17 +8,6 @@ ANTLR_TARGET(
 add_library(
         kql
         ../antlr_common/ErrorListener.hpp
-        ../AndExpr.hpp
-        ../BooleanLiteral.hpp
-        ../ColumnDescriptor.hpp
-        ../DateLiteral.hpp
-        ../EmptyExpr.hpp
-        ../Expression.hpp
-        ../FilterExpr.hpp
-        ../Integral.hpp
-        ../NullLiteral.hpp
-        ../OrExpr.hpp
-        ../StringLiteral.hpp
         ${ANTLR_KqlParser_CXX_OUTPUTS}
         kql.cpp
         kql.hpp
@@ -30,5 +19,6 @@ target_link_libraries(
 	PRIVATE
 	antlr4_static
 	clp::string_utils
+        clp_s::search::ast
 	spdlog::spdlog
 )

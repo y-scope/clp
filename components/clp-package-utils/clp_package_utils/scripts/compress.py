@@ -26,12 +26,10 @@ logger = logging.getLogger(__file__)
 
 
 def _generate_logs_list(
+    input_type: InputType,
     container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
-    clp_config: CLPConfig,
 ) -> None:
-    input_type = clp_config.logs_input.type
-
     if InputType.FS == input_type:
         host_logs_list_path = parsed_args.path_list
         with open(container_logs_list_path, "w") as container_logs_list_file:
@@ -67,9 +65,7 @@ def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
-    clp_config: CLPConfig,
 ) -> List[str]:
-    input_type = clp_config.logs_input.type
 
     # fmt: off
     compress_cmd = [
@@ -107,9 +103,11 @@ def _validate_fs_input_args(
 
 
 def _validate_s3_input_args(
-    parsed_args: argparse.Namespace, args_parser: argparse.ArgumentParser, clp_config: CLPConfig
+    parsed_args: argparse.Namespace,
+    args_parser: argparse.ArgumentParser,
+    storage_engine: StorageEngine,
 ) -> None:
-    if StorageEngine.CLP_S != clp_config.package.storage_engine:
+    if StorageEngine.CLP_S != storage_engine:
         args_parser.error(
             f"Input type {InputType.S3} is only supported for the storage engine"
             f" {StorageEngine.CLP_S}."
@@ -117,7 +115,7 @@ def _validate_s3_input_args(
     if len(parsed_args.paths) != 1:
         args_parser.error(f"Only one key prefix can be specified for input type {InputType.S3}.")
     if parsed_args.path_list is not None:
-        args_parser.error(f"Path list file is not supported for input type {InputType.S3}.")
+        args_parser.error(f"Path list file is unsupported for input type {InputType.S3}.")
 
 
 def main(argv):
@@ -166,7 +164,7 @@ def main(argv):
     if InputType.FS == input_type:
         _validate_fs_input_args(parsed_args, args_parser)
     elif InputType.S3 == input_type:
-        _validate_s3_input_args(parsed_args, args_parser, clp_config)
+        _validate_s3_input_args(parsed_args, args_parser, clp_config.package.storage_engine)
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 
@@ -177,11 +175,7 @@ def main(argv):
         container_clp_config, clp_config, container_name
     )
 
-    necessary_mounts = [
-        mounts.clp_home,
-        mounts.data_dir,
-        mounts.logs_dir,
-    ]
+    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
     if InputType.FS == input_type:
         necessary_mounts.append(mounts.input_logs_dir)
 
@@ -196,7 +190,7 @@ def main(argv):
         if not container_logs_list_path.exists():
             break
 
-    _generate_logs_list(container_logs_list_path, parsed_args, clp_config)
+    _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
 
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container

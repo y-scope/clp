@@ -44,6 +44,18 @@ const EslintConfig = [
             ],
         },
     },
+    {
+        // eslint-disable-next-line no-warning-comments
+        // TODO: Remove dot notation rule once part of eslint-config-yscope
+        files: [
+            "**/*.ts",
+            "**/*.tsx",
+        ],
+        rules: {
+            "dot-notation": "off",
+            "@typescript-eslint/dot-notation": "error",
+        },
+    },
 ];
 
 

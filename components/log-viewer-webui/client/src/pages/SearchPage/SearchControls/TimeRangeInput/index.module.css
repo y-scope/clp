@@ -1,0 +1,15 @@
+.timeRangeInputContainer {
+    display: inline-flex;
+}
+
+/* Makes border flush with range picker */
+.customSelected :global(.ant-select-selector) {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.rangePicker {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    min-width: 200px;
+}
