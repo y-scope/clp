@@ -286,7 +286,6 @@ def run_clp(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
-            db_config_file_path=db_config_file_path,
             use_single_file_archive=enable_s3_write,
         )
     else:
