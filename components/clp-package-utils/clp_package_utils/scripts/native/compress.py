@@ -61,7 +61,6 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         )
 
     job_last_uncompressed_size = 0
-    last_current_time = datetime.datetime.now()
 
     while True:
         db_cursor.execute(polling_query)
@@ -80,11 +79,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             # All tasks in the job is done
             if not no_progress_reporting:
                 logger.info("Compression finished.")
-                if job_last_uncompressed_size < job_uncompressed_size:
-                    print_compression_job_status(job_row, current_time)
-                else:
-                    # No progress in the final iteration; repeat the last status update verbatim
-                    print_compression_job_status(job_row, last_current_time)
+                print_compression_job_status(job_row, current_time)
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
@@ -103,7 +98,6 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             error_msg = f"Unhandled CompressionJobStatus: {job_status}"
             raise NotImplementedError(error_msg)
 
-        last_current_time = current_time
         time.sleep(0.5)
 
 
