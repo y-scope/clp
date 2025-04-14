@@ -1,0 +1,39 @@
+.card {
+    background-color: #1888fa;
+}
+
+.card :global(.ant-card-head) {
+    border: 0px;
+}
+
+.cardContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.title {
+    font-size: 24px;
+    color: white;
+    font-weight: 600;
+}
+
+.segmented {
+    background-color: transparent;
+    color:white;
+
+}
+
+.segmented :global(.ant-segmented-item-selected) {
+    color:rgba(0, 0, 0, 0.65)
+}
+
+.statistic {
+    font-size: 80px;
+    color: white;
+}
