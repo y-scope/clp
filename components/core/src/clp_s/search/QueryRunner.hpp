@@ -35,6 +35,9 @@ public:
               m_match(match),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
+              m_var_dict(m_archive_reader->get_variable_dictionary()),
+              m_log_dict(m_archive_reader->get_log_type_dictionary()),
+              m_array_dict(m_archive_reader->get_array_dictionary()),
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()) {}
 
