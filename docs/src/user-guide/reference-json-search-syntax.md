@@ -191,7 +191,13 @@ Keys containing the following literal characters must escape the characters usin
 * `"`
 * `.`
 * `*`
-* `@` (only when `@` is the first character of the key)
+
+Furthermore, keys _starting with_ the following literal characters must escape the characters using
+a `\` (backslash):
+* `@`
+* `$`
+* `!`
+* `#`
 
 Values containing the following literal characters must escape the characters using a `\`
 (backslash):
