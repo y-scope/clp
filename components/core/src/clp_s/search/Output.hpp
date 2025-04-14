@@ -41,18 +41,14 @@ public:
               m_should_marshal_records(m_output_handler->should_marshal_records()) {}
 
     /**
-     * Filters messages from all archives
-     * @return Whether the filter was performed successfully
+     * Filters messages within the archive and outputs the filtered messages to the configured
+     * OutputHandler.
+     *
+     * @return true if the filtering operation completed successfully; false otherwise.
      */
     bool filter();
 
 private:
-    enum class ExpressionType {
-        And,
-        Or,
-        Filter
-    };
-
     QueryRunner m_query_runner;
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<ast::Expression> m_expr;

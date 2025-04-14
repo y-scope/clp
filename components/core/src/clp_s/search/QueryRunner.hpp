@@ -51,8 +51,18 @@ public:
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()) {}
 
+    // Destructor
     virtual ~QueryRunner() = default;
 
+    /**
+     * Configures the query processing context for a given schema.
+     *
+     * This method initializes internal data structures required for query execution based on the
+     * provided schema ID. It clears any previous schema-specific data, retrieves the new schema's
+     * query expression, and resets wildcard handling.
+     *
+     * @param schema_id
+     */
     void setup_schema(int32_t schema_id) {
         m_expr_clp_query.clear();
         m_expr_var_match_map.clear();
@@ -63,19 +73,19 @@ public:
     }
 
     /**
-     * Populates searched wildcard columns
+     * Populates searched wildcard columns using the current expression
      */
     void populate_searched_wildcard_columns() { populate_searched_wildcard_columns(m_expr); }
 
     /**
-     * Constant propagates an expression
+     * Constant propagates the current expression
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise
      */
     auto constant_propagate() -> EvaluatedValue { return constant_propagate(m_expr); }
 
     /**
-     * Populates the string queries
+     * Populates the string queries for the current expression
      */
     void populate_string_queries() { populate_string_queries(m_expr); }
 
@@ -93,6 +103,9 @@ protected:
     // Methods inherited from FilterClass
     auto filter(uint64_t cur_message) -> bool override;
 
+    /**
+     * Clears all column readers.
+     */
     void clear_readers() {
         m_clp_string_readers.clear();
         m_var_string_readers.clear();
@@ -100,6 +113,12 @@ protected:
         m_basic_readers.clear();
     }
 
+    /**
+     * Initializes and registers a column reader for a given column ID.
+     *
+     * @param column_id
+     * @param column_reader
+     */
     void initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
         if (true == m_metadata_columns.contains(column_id)) {
             return;
@@ -135,7 +154,7 @@ private:
 
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<ast::Expression> m_expr;
-    std::shared_ptr<SchemaMatch>& m_match;
+    std::shared_ptr<SchemaMatch> m_match;
     bool m_ignore_case;
 
     // variables for the current schema being filtered
@@ -266,7 +285,7 @@ private:
             ast::FilterOperation op,
             Query* q,
             std::vector<ClpStringColumnReader*> const& readers
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * Evaluates a var string filter expression
@@ -279,7 +298,7 @@ private:
             ast::FilterOperation op,
             std::vector<VariableStringColumnReader*> const& readers,
             std::unordered_set<int64_t>* matching_vars
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * Evaluates a epoch date string filter expression
@@ -324,7 +343,7 @@ private:
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * Evaluates a filter expression on an array (top level or nested) for precise array search.
@@ -341,7 +360,7 @@ private:
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * Evaluates a filter expression on an object inside of an array for precise array search.
@@ -358,7 +377,7 @@ private:
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * Evaluates a wildcard array filter expression
@@ -371,7 +390,7 @@ private:
             ast::FilterOperation op,
             std::string& value,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * The implementation of evaluate_wildcard_array_filter
@@ -384,7 +403,7 @@ private:
             ondemand::array& array,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * The implementation of evaluate_wildcard_array_filter
@@ -397,7 +416,7 @@ private:
             ondemand::object& object,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
-    ) -> bool const;
+    ) const -> bool;
 
     /**
      * Evaluates a bool filter expression
