@@ -39,12 +39,12 @@ bool Output::filter() {
 
     m_archive_reader->read_metadata();
     for (auto schema_id : m_archive_reader->get_schema_ids()) {
-        if (m_match.schema_matched(schema_id)) {
+        if (m_match->schema_matched(schema_id)) {
             matched_schemas.push_back(schema_id);
-            if (m_match.has_array(schema_id)) {
+            if (m_match->has_array(schema_id)) {
                 has_array = true;
             }
-            if (m_match.has_array_search(schema_id)) {
+            if (m_match->has_array_search(schema_id)) {
                 has_array_search = true;
             }
         }

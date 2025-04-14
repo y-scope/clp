@@ -1,22 +1,32 @@
 #ifndef CLP_S_SEARCH_QUERYRUNNER_HPP
 #define CLP_S_SEARCH_QUERYRUNNER_HPP
 
+#include <cstdint>
 #include <map>
+#include <memory>
 #include <set>
 #include <stack>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-
-#include <simdjson.h>
+#include <vector>
 
 #include "../ArchiveReader.hpp"
+#include "../ColumnReader.hpp"
+#include "../DictionaryReader.hpp"
+#include "../ReaderUtils.hpp"
 #include "../SchemaReader.hpp"
+#include "../SchemaTree.hpp"
 #include "../Utils.hpp"
+#include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
+#include "ast/FilterExpr.hpp"
+#include "ast/Literal.hpp"
 #include "clp_search/Query.hpp"
 #include "SchemaMatch.hpp"
+
+#include <simdjson.h>
 
 using namespace simdjson;
 using namespace clp_s::search::clp_search;
@@ -25,7 +35,7 @@ namespace clp_s::search {
 class QueryRunner : public FilterClass {
 public:
     QueryRunner(
-            SchemaMatch& match,
+            std::shared_ptr<SchemaMatch> match,
             std::shared_ptr<ast::Expression> expr,
             std::shared_ptr<ArchiveReader> archive_reader,
             bool ignore_case
@@ -41,10 +51,12 @@ public:
               m_timestamp_dict(m_archive_reader->get_timestamp_dictionary()),
               m_schemas(m_archive_reader->get_schema_map()) {}
 
+    virtual ~QueryRunner() = default;
+
     void setup_schema(int32_t schema_id) {
         m_expr_clp_query.clear();
         m_expr_var_match_map.clear();
-        m_expr = m_match.get_query_for_schema(schema_id)->copy();
+        m_expr = m_match->get_query_for_schema(schema_id)->copy();
         m_wildcard_to_searched_basic_columns.clear();
         m_wildcard_columns.clear();
         m_schema = schema_id;
@@ -60,7 +72,7 @@ public:
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise
      */
-    EvaluatedValue constant_propagate() { return constant_propagate(m_expr); }
+    auto constant_propagate() -> EvaluatedValue { return constant_propagate(m_expr); }
 
     /**
      * Populates the string queries
@@ -79,7 +91,7 @@ public:
 
 protected:
     // Methods inherited from FilterClass
-    bool filter(uint64_t cur_message) override;
+    auto filter(uint64_t cur_message) -> bool override;
 
     void clear_readers() {
         m_clp_string_readers.clear();
@@ -89,19 +101,19 @@ protected:
     }
 
     void initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
-        if (0 != m_metadata_columns.contains(column_id)) {
+        if (true == m_metadata_columns.contains(column_id)) {
             return;
         }
 
         if ((0
              != (m_wildcard_type_mask
                  & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
-            || m_match.schema_searches_against_column(m_schema, column_id))
+            || m_match->schema_searches_against_column(m_schema, column_id))
         {
-            ClpStringColumnReader* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
-            VariableStringColumnReader* var_reader
+            auto* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
+            auto* var_reader
                     = dynamic_cast<VariableStringColumnReader*>(column_reader);
-            DateStringColumnReader* date_reader
+            auto* date_reader
                     = dynamic_cast<DateStringColumnReader*>(column_reader);
             if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
                 m_clp_string_readers[column_id].push_back(clp_reader);
@@ -117,7 +129,7 @@ protected:
     }
 
 private:
-    enum class ExpressionType {
+    enum class ExpressionType: uint8_t {
         And,
         Or,
         Filter
@@ -125,7 +137,7 @@ private:
 
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<ast::Expression> m_expr;
-    SchemaMatch& m_match;
+    std::shared_ptr<SchemaMatch>& m_match;
     bool m_ignore_case;
 
     // variables for the current schema being filtered
@@ -181,7 +193,7 @@ private:
      * @param schema
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate(ast::Expression* expr, int32_t schema);
+    auto evaluate(ast::Expression* expr, int32_t schema) -> bool;
 
     /**
      * Evaluates a filter expression
@@ -189,7 +201,7 @@ private:
      * @param schema
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_filter(ast::FilterExpr* expr, int32_t schema);
+    auto evaluate_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
 
     /**
      * Evaluates a wildcard filter expression
@@ -197,7 +209,7 @@ private:
      * @param schema
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_wildcard_filter(ast::FilterExpr* expr, int32_t schema);
+    auto evaluate_wildcard_filter(ast::FilterExpr* expr, int32_t schema) -> bool;
 
     /**
      * Evaluates a int filter expression
@@ -206,11 +218,11 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_int_filter(
+    auto evaluate_int_filter(
             ast::FilterOperation op,
             int32_t column_id,
             std::shared_ptr<ast::Literal> const& operand
-    );
+    ) -> bool;
 
     /**
      * Evaluates a int filter expression
@@ -219,7 +231,7 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static bool evaluate_int_filter_core(ast::FilterOperation op, int64_t value, int64_t operand);
+    static auto evaluate_int_filter_core(ast::FilterOperation op, int64_t value, int64_t operand) -> bool;
 
     /**
      * Evaluates a float filter expression
@@ -228,11 +240,11 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_float_filter(
+    auto evaluate_float_filter(
             ast::FilterOperation op,
             int32_t column_id,
             std::shared_ptr<ast::Literal> const& operand
-    );
+    ) -> bool;
 
     /**
      * Evaluates the core of a float filter expression
@@ -241,7 +253,7 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static bool evaluate_float_filter_core(ast::FilterOperation op, double value, double operand);
+    static auto evaluate_float_filter_core(ast::FilterOperation op, double value, double operand) -> bool;
 
     /**
      * Evaluates a clp string filter expression
@@ -250,11 +262,11 @@ private:
      * @param readers
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_clp_string_filter(
+    auto evaluate_clp_string_filter(
             ast::FilterOperation op,
             Query* q,
             std::vector<ClpStringColumnReader*> const& readers
-    ) const;
+    ) -> bool const;
 
     /**
      * Evaluates a var string filter expression
@@ -263,11 +275,11 @@ private:
      * @param matching_vars
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_var_string_filter(
+    auto evaluate_var_string_filter(
             ast::FilterOperation op,
             std::vector<VariableStringColumnReader*> const& readers,
             std::unordered_set<int64_t>* matching_vars
-    ) const;
+    ) -> bool const;
 
     /**
      * Evaluates a epoch date string filter expression
@@ -276,11 +288,11 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_epoch_date_filter(
+    auto evaluate_epoch_date_filter(
             ast::FilterOperation op,
             DateStringColumnReader* reader,
             std::shared_ptr<ast::Literal>& operand
-    );
+    ) -> bool;
 
     /**
      * Evaluates an array filter expression
@@ -290,12 +302,12 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_array_filter(
+    auto evaluate_array_filter(
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             std::string& value,
             std::shared_ptr<ast::Literal> const& operand
-    );
+    ) -> bool;
 
     /**
      * Evaluates a filter expression on a single value for precise array search.
@@ -306,13 +318,13 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    inline bool evaluate_array_filter_value(
+    inline auto evaluate_array_filter_value(
             ondemand::value& item,
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) const;
+    ) -> bool const;
 
     /**
      * Evaluates a filter expression on an array (top level or nested) for precise array search.
@@ -323,13 +335,13 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_array_filter_array(
+    auto evaluate_array_filter_array(
             ondemand::array& array,
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) const;
+    ) -> bool const;
 
     /**
      * Evaluates a filter expression on an object inside of an array for precise array search.
@@ -340,13 +352,13 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_array_filter_object(
+    auto evaluate_array_filter_object(
             ondemand::object& object,
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
             std::shared_ptr<ast::Literal> const& operand
-    ) const;
+    ) -> bool const;
 
     /**
      * Evaluates a wildcard array filter expression
@@ -355,11 +367,11 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_wildcard_array_filter(
+    auto evaluate_wildcard_array_filter(
             ast::FilterOperation op,
             std::string& value,
             std::shared_ptr<ast::Literal> const& operand
-    );
+    ) -> bool const;
 
     /**
      * The implementation of evaluate_wildcard_array_filter
@@ -368,11 +380,11 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_wildcard_array_filter(
+    auto evaluate_wildcard_array_filter(
             ondemand::array& array,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
-    ) const;
+    ) -> bool const;
 
     /**
      * The implementation of evaluate_wildcard_array_filter
@@ -381,11 +393,11 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_wildcard_array_filter(
+    auto evaluate_wildcard_array_filter(
             ondemand::object& object,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
-    ) const;
+    ) -> bool const;
 
     /**
      * Evaluates a bool filter expression
@@ -394,11 +406,11 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    bool evaluate_bool_filter(
+    auto evaluate_bool_filter(
             ast::FilterOperation op,
             int32_t column_id,
             std::shared_ptr<ast::Literal> const& operand
-    );
+    ) -> bool;
 
     /**
      * Populates the string queries
@@ -412,7 +424,7 @@ private:
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
      * if the expression evaluates to false, EvaluatedValue::Unknown otherwise
      */
-    EvaluatedValue constant_propagate(std::shared_ptr<ast::Expression> const& expr);
+    auto constant_propagate(std::shared_ptr<ast::Expression> const& expr) -> EvaluatedValue;
 
     /**
      * Populates searched wildcard columns
@@ -430,7 +442,7 @@ private:
      * @param column_id
      * @return the string representing the unstructured array stored in the column column_id
      */
-    std::string& get_cached_decompressed_unstructured_array(int32_t column_id);
+    auto get_cached_decompressed_unstructured_array(int32_t column_id) -> std::string&;
 };
 }  // namespace clp_s::search
 #endif

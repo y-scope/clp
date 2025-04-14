@@ -27,7 +27,7 @@ using namespace clp_s::search::clp_search;
 namespace clp_s::search {
 class Output {
 public:
-    Output(SchemaMatch& match,
+    Output(std::shared_ptr<SchemaMatch> match,
            std::shared_ptr<ast::Expression> expr,
            std::shared_ptr<ArchiveReader> archive_reader,
            std::shared_ptr<TimestampDictionaryReader> timestamp_dict,
@@ -56,7 +56,7 @@ private:
     QueryRunner m_query_runner;
     std::shared_ptr<ArchiveReader> m_archive_reader;
     std::shared_ptr<ast::Expression> m_expr;
-    SchemaMatch& m_match;
+    std::shared_ptr<SchemaMatch> m_match;
     std::unique_ptr<OutputHandler> m_output_handler;
     bool m_should_marshal_records{true};
 };
