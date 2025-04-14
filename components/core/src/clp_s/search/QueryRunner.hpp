@@ -1,9 +1,11 @@
 #ifndef CLP_S_SEARCH_QUERYRUNNER_HPP
 #define CLP_S_SEARCH_QUERYRUNNER_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <stack>
 #include <string>
@@ -12,7 +14,9 @@
 #include <utility>
 #include <vector>
 
-#include <simdjson.h>
+#include <simdjson/generic/ondemand/array.h>
+#include <simdjson/generic/ondemand/object.h>
+#include <simdjson/generic/ondemand/value.h>
 
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
@@ -20,10 +24,12 @@
 #include "../ReaderUtils.hpp"
 #include "../SchemaReader.hpp"
 #include "../SchemaTree.hpp"
+#include "../TimestampDictionaryReader.hpp"
 #include "../Utils.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
 #include "ast/FilterExpr.hpp"
+#include "ast/FilterOperation.hpp"
 #include "ast/Literal.hpp"
 #include "clp_search/Query.hpp"
 #include "SchemaMatch.hpp"
@@ -42,7 +48,7 @@ public:
     )
             : m_archive_reader(std::move(archive_reader)),
               m_expr(std::move(expr)),
-              m_match(match),
+              m_match(std::move(match)),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
               m_var_dict(m_archive_reader->get_variable_dictionary()),
@@ -53,6 +59,12 @@ public:
 
     // Destructor
     virtual ~QueryRunner() = default;
+
+    QueryRunner(QueryRunner const&) = delete;
+    QueryRunner& operator=(QueryRunner const&) = delete;
+
+    QueryRunner(QueryRunner&&) = delete;
+    QueryRunner& operator=(QueryRunner&&) = delete;
 
     /**
      * Configures the query processing context for a given schema.
