@@ -86,7 +86,7 @@ def get_container_authentication(
     """
     Generates Docker container authentication options for AWS S3 access based on the given type.
     Handles authentication methods that require extra configuration (profile, env_vars).
-    
+
     :param clp_config: CLPConfig containing storage configurations
     :param type: Type of calling container (compression, log_viewer, or query)
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set)
@@ -94,7 +94,7 @@ def get_container_authentication(
     """
     if type not in ["compression", "log_viewer", "query"]:
         raise ValueError(f"Unsupported authentication type: {type}")
-    
+
     storages = {
         "compression": [clp_config.logs_input, clp_config.archive_output.storage],
         "log_viewer": [clp_config.stream_output.storage],
