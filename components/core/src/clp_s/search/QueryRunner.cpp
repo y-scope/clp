@@ -33,6 +33,48 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
+void QueryRunner::setup_schema(int32_t schema_id) {
+    m_expr_clp_query.clear();
+    m_expr_var_match_map.clear();
+    m_expr = m_match->get_query_for_schema(schema_id)->copy();
+    m_wildcard_to_searched_basic_columns.clear();
+    m_wildcard_columns.clear();
+    m_schema = schema_id;
+}
+
+void QueryRunner::clear_readers() {
+    m_clp_string_readers.clear();
+    m_var_string_readers.clear();
+    m_datestring_readers.clear();
+    m_basic_readers.clear();
+}
+
+void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
+    if (true == m_metadata_columns.contains(column_id)) {
+        return;
+    }
+
+    if ((0
+         != (m_wildcard_type_mask
+             & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
+        || m_match->schema_searches_against_column(m_schema, column_id))
+    {
+        auto* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
+        auto* var_reader = dynamic_cast<VariableStringColumnReader*>(column_reader);
+        auto* date_reader = dynamic_cast<DateStringColumnReader*>(column_reader);
+        if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
+            m_clp_string_readers[column_id].push_back(clp_reader);
+        } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
+            m_var_string_readers[column_id].push_back(var_reader);
+        } else if (nullptr != date_reader) {
+            // Datestring readers with a given column ID are guaranteed not to repeat
+            m_datestring_readers.emplace(column_id, date_reader);
+        } else {
+            m_basic_readers[column_id].push_back(column_reader);
+        }
+    }
+}
+
 void QueryRunner::init(SchemaReader* reader, std::vector<BaseColumnReader*> const& column_readers) {
     m_reader = reader;
 
