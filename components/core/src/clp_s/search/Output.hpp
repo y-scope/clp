@@ -46,7 +46,7 @@ public:
      *
      * @return true if the filtering operation completed successfully; false otherwise.
      */
-    bool filter();
+    auto filter() -> bool;
 
 private:
     QueryRunner m_query_runner;

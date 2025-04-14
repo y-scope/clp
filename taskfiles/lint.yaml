@@ -486,8 +486,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/EvaluateTimestampIndex.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/kql.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/kql.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Output.cpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Output.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/OutputHandler.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/OutputHandler.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Projection.cpp"
