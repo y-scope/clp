@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "Utils.hpp"
+#include "search/ast/SearchUtils.hpp"
 
 namespace clp_s {
 ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
@@ -16,11 +16,18 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
     for (uint64_t i = 0; i < range_index_size; ++i) {
         TimestampEntry entry;
         std::vector<std::string> tokens;
+        std::string descriptor_namespace;
         if (auto rc = entry.try_read_from_file(decompressor); ErrorCodeSuccess != rc) {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
         }
 
-        if (false == StringUtils::tokenize_column_descriptor(entry.get_key_name(), tokens)) {
+        if (false
+            == clp_s::search::ast::tokenize_column_descriptor(
+                    entry.get_key_name(),
+                    tokens,
+                    descriptor_namespace
+            ))
+        {
             throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
         }
         m_entries.emplace_back(std::move(entry));
@@ -31,7 +38,7 @@ ErrorCode TimestampDictionaryReader::read(ZstdDecompressor& decompressor) {
         // corresponds to the "authoritative" timestamp column for the dataset.
         if (i == 0) {
             m_authoritative_timestamp_column_ids = m_entries.back().get_column_ids();
-            m_authoritative_timestamp_tokenized_column = tokens;
+            m_authoritative_timestamp_tokenized_column = {tokens, descriptor_namespace};
         }
 
         m_tokenized_column_to_range.emplace_back(std::move(tokens), &m_entries.back());
@@ -69,5 +76,4 @@ TimestampDictionaryReader::get_string_encoding(epochtime_t epoch, uint64_t forma
 
     return ret;
 }
-
 }  // namespace clp_s

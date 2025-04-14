@@ -1275,5 +1275,4 @@ size_t Grep::search_segment_optimized_and_output(
 
     return num_matches;
 }
-
 }  // namespace glt

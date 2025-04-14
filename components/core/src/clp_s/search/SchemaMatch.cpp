@@ -5,12 +5,31 @@
 #include <tuple>
 #include <utility>
 
-#include "AndExpr.hpp"
-#include "ConstantProp.hpp"
-#include "EmptyExpr.hpp"
-#include "OrExpr.hpp"
-#include "OrOfAndForm.hpp"
-#include "SearchUtils.hpp"
+#include "../SchemaTree.hpp"
+#include "ast/AndExpr.hpp"
+#include "ast/ColumnDescriptor.hpp"
+#include "ast/ConstantProp.hpp"
+#include "ast/EmptyExpr.hpp"
+#include "ast/Expression.hpp"
+#include "ast/FilterExpr.hpp"
+#include "ast/FilterOperation.hpp"
+#include "ast/Literal.hpp"
+#include "ast/OrExpr.hpp"
+#include "ast/OrOfAndForm.hpp"
+
+using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::ColumnDescriptor;
+using clp_s::search::ast::ConstantProp;
+using clp_s::search::ast::DescriptorList;
+using clp_s::search::ast::DescriptorToken;
+using clp_s::search::ast::EmptyExpr;
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::FilterExpr;
+using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::LiteralType;
+using clp_s::search::ast::LiteralTypeBitmask;
+using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
 // TODO: write proper iterators on the AST to make this code less awful.
@@ -76,7 +95,25 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                     auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
-                    while (node->get_id() != m_tree->get_object_subtree_node_id()) {
+                    // FIXME: this needs to be adjusted to handle more than JUST object subtrees
+                    // TODO: consider whether fully resolving descriptors in this way is actually
+                    // necessary. In principal the set of matching nodes is all that is really
+                    // required (and has already been determined) so the main utility of the
+                    // following code is for debugging and simply adds overhead in non-debugging
+                    // execution. It should be possible to both get rid of this code (only using it
+                    // for debugging) and change how this pass works to only run column resolution a
+                    // single time. Specifically there doesn't seem to be anything stopping us from
+                    // just doing `resolved_column->set_column_id(node_id)` and skipping populating
+                    // the descriptors/re-resolving the columns after normalization. Actually in
+                    // some contrived circumstances involving objects in arrays while the array
+                    // structurization feature is enabled it seems like the current flow where we
+                    // re-run column resolution after this can make these columns again match
+                    // multiple nodes.
+                    while (node->get_id()
+                           != m_tree->get_object_subtree_node_id_for_namespace(
+                                   column->get_namespace()
+                           ))
+                    {
                         descriptors.emplace_back(
                                 DescriptorToken::create_descriptor_from_literal_token(
                                         node->get_key_name()
@@ -85,7 +122,10 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                         node = &m_tree->get_node(node->get_parent_id());
                     }
                     std::reverse(descriptors.begin(), descriptors.end());
-                    auto resolved_column = ColumnDescriptor::create_from_descriptors(descriptors);
+                    auto resolved_column = ColumnDescriptor::create_from_descriptors(
+                            descriptors,
+                            column->get_namespace()
+                    );
                     resolved_column->set_matching_type(literal_type);
                     *it = resolved_column;
                     cur->copy_append(possibilities.get());
@@ -99,6 +139,8 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
 
 bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     bool matched = false;
+    // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
+    // namespaces.
     if (column->is_pure_wildcard()) {
         for (auto const& node : m_tree->get_nodes()) {
             if (column->matches_type(node_to_literal_type(node.get_type()))) {
@@ -116,7 +158,12 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
 
     // TODO: Once we start supporting mixing different types of logs we will have to match against
     // more than just the object subtree.
-    auto const& root = m_tree->get_node(m_tree->get_object_subtree_node_id());
+    auto const subtree_root_node_id
+            = m_tree->get_object_subtree_node_id_for_namespace(column->get_namespace());
+    if (-1 == subtree_root_node_id) {
+        return matched;
+    }
+    auto const& root = m_tree->get_node(subtree_root_node_id);
     for (int32_t child_node_id : root.get_children_ids()) {
         matched |= populate_column_mapping(column, child_node_id);
     }

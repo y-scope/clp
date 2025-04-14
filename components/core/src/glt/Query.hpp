@@ -265,7 +265,6 @@ private:
     logtype_dictionary_id_t m_logtype_id;
     std::vector<LogtypeQuery> m_queries;
 };
-
 }  // namespace glt
 
 #endif  // GLT_QUERY_HPP

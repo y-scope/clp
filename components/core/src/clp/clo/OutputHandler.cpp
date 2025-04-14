@@ -70,22 +70,26 @@ ErrorCode ResultsCacheOutputHandler::add_result(
     auto const timestamp = encoded_message.get_ts_in_milli();
     auto const log_event_ix = encoded_message.get_log_event_ix();
     if (m_latest_results.size() < m_max_num_results) {
-        m_latest_results.emplace(std::make_unique<QueryResult>(
-                orig_file_path,
-                orig_file_id,
-                log_event_ix,
-                timestamp,
-                decompressed_message
-        ));
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(
+                        orig_file_path,
+                        orig_file_id,
+                        log_event_ix,
+                        timestamp,
+                        decompressed_message
+                )
+        );
     } else if (m_latest_results.top()->timestamp < timestamp) {
         m_latest_results.pop();
-        m_latest_results.emplace(std::make_unique<QueryResult>(
-                orig_file_path,
-                orig_file_id,
-                log_event_ix,
-                timestamp,
-                decompressed_message
-        ));
+        m_latest_results.emplace(
+                std::make_unique<QueryResult>(
+                        orig_file_path,
+                        orig_file_id,
+                        log_event_ix,
+                        timestamp,
+                        decompressed_message
+                )
+        );
     }
 
     return ErrorCode_Success;
@@ -98,28 +102,32 @@ ErrorCode ResultsCacheOutputHandler::flush() {
         m_latest_results.pop();
 
         try {
-            m_results.emplace_back(std::move(bsoncxx::builder::basic::make_document(
-                    bsoncxx::builder::basic::kvp(
-                            cResultsCacheKeys::SearchOutput::OrigFileId,
-                            std::move(result.orig_file_id)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            cResultsCacheKeys::SearchOutput::OrigFilePath,
-                            std::move(result.orig_file_path)
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            cResultsCacheKeys::SearchOutput::LogEventIx,
-                            result.log_event_ix
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            cResultsCacheKeys::SearchOutput::Timestamp,
-                            result.timestamp
-                    ),
-                    bsoncxx::builder::basic::kvp(
-                            cResultsCacheKeys::SearchOutput::Message,
-                            std::move(result.decompressed_message)
+            m_results.emplace_back(
+                    std::move(
+                            bsoncxx::builder::basic::make_document(
+                                    bsoncxx::builder::basic::kvp(
+                                            cResultsCacheKeys::SearchOutput::OrigFileId,
+                                            std::move(result.orig_file_id)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            cResultsCacheKeys::SearchOutput::OrigFilePath,
+                                            std::move(result.orig_file_path)
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            cResultsCacheKeys::SearchOutput::LogEventIx,
+                                            result.log_event_ix
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            cResultsCacheKeys::SearchOutput::Timestamp,
+                                            result.timestamp
+                                    ),
+                                    bsoncxx::builder::basic::kvp(
+                                            cResultsCacheKeys::SearchOutput::Message,
+                                            std::move(result.decompressed_message)
+                                    )
+                            )
                     )
-            )));
+            );
             count++;
 
             if (count == m_batch_size) {

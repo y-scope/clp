@@ -9,11 +9,9 @@
 
 #include "Defs.hpp"
 #include "ErrorCode.hpp"
-#include "search/FilterOperation.hpp"
+#include "search/ast/FilterOperation.hpp"
 #include "Utils.hpp"
 #include "ZstdDecompressor.hpp"
-
-using clp_s::search::FilterOperation;
 
 namespace clp_s {
 class TimestampEntry {
@@ -91,8 +89,8 @@ public:
      * @param timestamp
      * @return
      */
-    EvaluatedValue evaluate_filter(FilterOperation op, double timestamp);
-    EvaluatedValue evaluate_filter(FilterOperation op, epochtime_t timestamp);
+    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, double timestamp);
+    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, epochtime_t timestamp);
 
     std::string get_key_name() const { return m_key_name; }
 

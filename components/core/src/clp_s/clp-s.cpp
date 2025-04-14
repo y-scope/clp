@@ -21,19 +21,19 @@
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
 #include "search/AddTimestampConditions.hpp"
-#include "search/ConvertToExists.hpp"
-#include "search/EmptyExpr.hpp"
+#include "search/ast/ConvertToExists.hpp"
+#include "search/ast/EmptyExpr.hpp"
+#include "search/ast/Expression.hpp"
+#include "search/ast/NarrowTypes.hpp"
+#include "search/ast/OrOfAndForm.hpp"
+#include "search/ast/SearchUtils.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
-#include "search/Expression.hpp"
 #include "search/kql/kql.hpp"
-#include "search/NarrowTypes.hpp"
-#include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
 #include "TimestampPattern.hpp"
-#include "TraceableException.hpp"
 #include "Utils.hpp"
 
 using namespace clp_s::search;
@@ -68,7 +68,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<Expression> expr,
+        std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 );
 
@@ -139,7 +139,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<Expression> expr,
+        std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 ) {
     auto const& query = command_line_arguments.get_query();
@@ -150,7 +150,8 @@ bool search_archive(
             command_line_arguments.get_search_begin_ts(),
             command_line_arguments.get_search_end_ts()
     );
-    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
+    {
         SPDLOG_ERROR(
                 "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
                 "timestamp column was found for this archive",
@@ -161,20 +162,20 @@ bool search_archive(
         return false;
     }
 
-    OrOfAndForm standardize_pass;
-    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::OrOfAndForm standardize_pass;
+    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
 
-    NarrowTypes narrow_pass;
-    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::NarrowTypes narrow_pass;
+    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
 
-    ConvertToExists convert_pass;
-    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::ConvertToExists convert_pass;
+    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
@@ -189,7 +190,7 @@ bool search_archive(
 
     // Narrow against schemas
     SchemaMatch match_pass(archive_reader->get_schema_tree(), archive_reader->get_schema_map());
-    if (expr = match_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    if (expr = match_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
@@ -203,13 +204,25 @@ bool search_archive(
     try {
         for (auto const& column : command_line_arguments.get_projection_columns()) {
             std::vector<std::string> descriptor_tokens;
-            if (false == StringUtils::tokenize_column_descriptor(column, descriptor_tokens)) {
+            std::string descriptor_namespace;
+            if (false
+                == clp_s::search::ast::tokenize_column_descriptor(
+                        column,
+                        descriptor_tokens,
+                        descriptor_namespace
+                ))
+            {
                 SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
                 return false;
             }
-            projection->add_column(ColumnDescriptor::create_from_escaped_tokens(descriptor_tokens));
+            projection->add_column(
+                    ast::ColumnDescriptor::create_from_escaped_tokens(
+                            descriptor_tokens,
+                            descriptor_namespace
+                    )
+            );
         }
-    } catch (clp_s::TraceableException& e) {
+    } catch (std::exception const& e) {
         SPDLOG_ERROR("{}", e.what());
         return false;
     }
@@ -253,7 +266,7 @@ bool search_archive(
                 SPDLOG_ERROR("Unhandled OutputHandlerType.");
                 return false;
         }
-    } catch (clp_s::TraceableException& e) {
+    } catch (std::exception const& e) {
         SPDLOG_ERROR("Failed to create output handler - {}", e.what());
         return false;
     }
@@ -324,8 +337,8 @@ int main(int argc, char const* argv[]) {
                 option.archive_path = archive_path;
                 decompress_archive(option);
             }
-        } catch (clp_s::TraceableException& e) {
-            SPDLOG_ERROR("{}", e.what());
+        } catch (std::exception const& e) {
+            SPDLOG_ERROR("Encountered error during decompression - {}", e.what());
             return 1;
         }
     } else {
@@ -336,7 +349,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        if (std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+        if (std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
             return 1;
         }

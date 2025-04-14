@@ -7,15 +7,19 @@
 namespace reducer {
 DeserializedRecordGroup::DeserializedRecordGroup(std::vector<uint8_t>& serialized_data)
         : m_record_group(nlohmann::json::from_msgpack(serialized_data)),
-          m_record_it(m_record_group[static_cast<char const*>(cRecordsKey)]
-                              .template get<nlohmann::json::array_t>()) {
+          m_record_it(
+                  m_record_group[static_cast<char const*>(cRecordsKey)]
+                          .template get<nlohmann::json::array_t>()
+          ) {
     init_tags_from_json();
 }
 
 DeserializedRecordGroup::DeserializedRecordGroup(char* buf, size_t len)
         : m_record_group(nlohmann::json::from_msgpack(buf, buf + len)),
-          m_record_it(m_record_group[static_cast<char const*>(cRecordsKey)]
-                              .template get<nlohmann::json::array_t>()) {
+          m_record_it(
+                  m_record_group[static_cast<char const*>(cRecordsKey)]
+                          .template get<nlohmann::json::array_t>()
+          ) {
     init_tags_from_json();
 }
 

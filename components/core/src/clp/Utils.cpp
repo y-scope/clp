@@ -167,11 +167,13 @@ void load_lexer_from_file(
 
     lexer.add_rule(
             lexer.m_symbol_id["newLine"],
-            std::move(std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
-                              log_surgeon::finite_automata::RegexNFAByteState>>(
-                    log_surgeon::finite_automata::RegexASTLiteral<
-                            log_surgeon::finite_automata::RegexNFAByteState>('\n')
-            ))
+            std::move(
+                    std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
+                            log_surgeon::finite_automata::RegexNFAByteState>>(
+                            log_surgeon::finite_automata::RegexASTLiteral<
+                                    log_surgeon::finite_automata::RegexNFAByteState>('\n')
+                    )
+            )
     );
 
     for (auto const& delimiters_ast : schema_ast->m_delimiters) {

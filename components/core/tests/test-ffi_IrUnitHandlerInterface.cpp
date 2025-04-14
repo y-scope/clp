@@ -40,7 +40,8 @@ public:
 
     [[nodiscard]] auto handle_schema_tree_node_insertion(
             [[maybe_unused]] bool is_auto_generated,
-            SchemaTree::NodeLocator schema_tree_node_locator
+            SchemaTree::NodeLocator schema_tree_node_locator,
+            [[maybe_unused]] std::shared_ptr<SchemaTree const> const& schema_tree
     ) -> IRErrorCode {
         m_schema_tree_node_locator.emplace(schema_tree_node_locator);
         return IRErrorCode::IRErrorCode_Success;
@@ -111,7 +112,8 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
             (IRErrorCode::IRErrorCode_Success
              == handler.handle_schema_tree_node_insertion(
                      true,
-                     {SchemaTree::cRootId, cTestSchemaTreeNodeKeyName, SchemaTree::Node::Type::Obj}
+                     {SchemaTree::cRootId, cTestSchemaTreeNodeKeyName, SchemaTree::Node::Type::Obj},
+                     nullptr
              ))
     );
     REQUIRE((IRErrorCode::IRErrorCode_Success == handler.handle_end_of_stream()));

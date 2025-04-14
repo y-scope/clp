@@ -2,9 +2,37 @@
 
 #include "archive_constants.hpp"
 #include "FileWriter.hpp"
+#include "search/ast/Literal.hpp"
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {
+auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
+    // TODO: properly support NodeType::Object once we add LiteralType::ObjectT when implementing
+    // type-per-token support.
+    switch (type) {
+        case NodeType::Integer:
+            return clp_s::search::ast::LiteralType::IntegerT;
+        case NodeType::Float:
+            return clp_s::search::ast::LiteralType::FloatT;
+        case NodeType::ClpString:
+            return clp_s::search::ast::LiteralType::ClpStringT;
+        case NodeType::VarString:
+            return clp_s::search::ast::LiteralType::VarStringT;
+        case NodeType::Boolean:
+            return clp_s::search::ast::LiteralType::BooleanT;
+        case NodeType::UnstructuredArray:
+            return clp_s::search::ast::LiteralType::ArrayT;
+        case NodeType::NullValue:
+            return clp_s::search::ast::LiteralType::NullT;
+        case NodeType::DateString:
+            return clp_s::search::ast::LiteralType::EpochDateT;
+        case NodeType::Metadata:
+        case NodeType::Unknown:
+        default:
+            return clp_s::search::ast::LiteralType::UnknownT;
+    }
+}
+
 int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_view const key) {
     auto node_it = m_node_map.find({parent_node_id, key, type});
     if (node_it != m_node_map.end()) {
@@ -18,7 +46,7 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
     node.increase_count();
     if (constants::cRootNodeId == parent_node_id) {
         if (NodeType::Object == type) {
-            m_object_subtree_id = node_id;
+            m_namespace_to_object_subtree_id.emplace(node.get_key_name(), node_id);
         } else if (NodeType::Metadata == type) {
             m_metadata_subtree_id = node_id;
         }
@@ -91,5 +119,4 @@ int32_t SchemaTree::find_matching_subtree_root_in_subtree(
     }
     return earliest_match;
 }
-
 }  // namespace clp_s
