@@ -1,8 +1,10 @@
 enum SIZE_OPTION {
-    SPACE_SAVINGS = 'Space Savings',
-    COMPRESSION_RATIO = 'Compression Ratio',
+    SPACE_SAVINGS = "Space Savings",
+    COMPRESSION_RATIO = "Compression Ratio",
 }
 
 const DEFAULT_SIZE_OPTION = SIZE_OPTION.SPACE_SAVINGS;
 
-export { SIZE_OPTION, DEFAULT_SIZE_OPTION };
+export {
+    DEFAULT_SIZE_OPTION, SIZE_OPTION,
+};

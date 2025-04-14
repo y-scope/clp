@@ -1,16 +1,16 @@
-import Size from './Size';
-import styles from './index.module.css';
+import styles from "./index.module.css";
+import Size from "./Size";
+
 
 /**
  * Presents compression statistics.
  *
  * @return
  */
-
 const IngestPage = () => {
     return (
         <div className={styles["ingestPageGrid"]}>
-            <Size />
+            <Size/>
         </div>
     );
 };
