@@ -45,7 +45,7 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
     env_vars: Dict[str, str] = None
     auth = config.aws_authentication
 
-    if auth.type == "profile":
+    if "profile" == auth.type:
         aws_credentials: S3Credentials = get_session_credentials(auth.profile)
         if aws_credentials is None:
             raise ValueError(f"Failed to authenticate with profile {auth.profile}")
@@ -59,7 +59,7 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
             env_vars["AWS_SESSION_TOKEN"] = aws_session_token
         return env_vars
 
-    elif auth.type == "credentials":
+    elif "credentials" == auth.type:
         credentials = auth.credentials
         env_vars = {
             "AWS_ACCESS_KEY_ID": credentials.access_key_id,
@@ -69,10 +69,10 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
             env_vars["AWS_SESSION_TOKEN"] = credentials.session_token
         return env_vars
 
-    elif auth.type == "env_vars":
+    elif "env_vars" == auth.type:
         # Environmental variables are already set
         return {}
-    elif auth.type == "ec2":
+    elif "ec2" == auth.type:
         # EC2 instance role will be used automatically
         return {}
 
@@ -140,12 +140,12 @@ def _create_s3_client(s3_config: S3Config) -> boto3.client:
     auth = s3_config.aws_authentication
     aws_session = None
 
-    if auth.type == "profile":
+    if "profile" == auth.type:
         aws_session = boto3.Session(
             profile_name=auth.profile,
             region_name=s3_config.region_code,
         )
-    elif auth.type == "credentials":
+    elif "credentials" == auth.type:
         credentials = auth.credentials
         aws_session = boto3.Session(
             aws_access_key_id=credentials.access_key_id,
@@ -153,7 +153,7 @@ def _create_s3_client(s3_config: S3Config) -> boto3.client:
             region_name=s3_config.region_code,
             aws_session_token=credentials.session_token,
         )
-    elif auth.type == "env_vars" or auth.type == "ec2":
+    elif "env_vars" == auth.type or "ec2" == auth.type:
         # Use default session which will use environment variables or instance role
         aws_session = boto3.Session(region_name=s3_config.region_code)
     else:

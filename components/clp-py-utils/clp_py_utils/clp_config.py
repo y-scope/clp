@@ -317,13 +317,13 @@ class S3Credentials(BaseModel):
 
     @validator("access_key_id")
     def validate_access_key_id(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("access_key_id cannot be empty")
         return field
 
     @validator("secret_access_key")
     def validate_secret_access_key(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("secret_access_key cannot be empty")
         return field
 
@@ -339,12 +339,12 @@ class AwsAuthentication(BaseModel):
         profile = values.get("profile")
         credentials = values.get("credentials")
 
-        if auth_type == "profile":
+        if "profile" == auth_type:
             if not profile:
                 raise ValueError("profile must be set when type is 'profile'")
             if credentials:
                 raise ValueError("credentials must not be set when type is 'profile'")
-        elif auth_type == "credentials":
+        elif "credentials" == auth_type:
             if not credentials:
                 raise ValueError("credentials must be set when type is 'credentials'")
             if profile:
@@ -362,19 +362,19 @@ class S3Config(BaseModel):
 
     @validator("region_code")
     def validate_region_code(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("region_code cannot be empty")
         return field
 
     @validator("bucket")
     def validate_bucket(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("bucket cannot be empty")
         return field
 
     @validator("key_prefix")
     def validate_key_prefix(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("key_prefix cannot be empty")
         if not field.endswith("/"):
             raise ValueError('key_prefix must end with "/"')

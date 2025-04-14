@@ -6,7 +6,7 @@ import sys
 import uuid
 from typing import List
 
-from clp_py_utils.clp_config import CLPConfig, StorageEngine, StorageType
+from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
@@ -196,7 +196,7 @@ def main(argv):
         container_name, necessary_mounts, clp_config.execution_container
     )
     compress_cmd = _generate_compress_cmd(
-        parsed_args, generated_config_path_on_container, logs_list_path_on_container, clp_config
+        parsed_args, generated_config_path_on_container, logs_list_path_on_container
     )
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)

@@ -994,7 +994,7 @@ def start_log_viewer_webui(
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
         auth = s3_config.aws_authentication
-        if auth.type == "profile":
+        if "profile" == auth.type:
             settings_json_updates["StreamFilesS3Profile"] = auth.profile
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
@@ -1027,7 +1027,7 @@ def start_log_viewer_webui(
     ]
     if StorageType.S3 == stream_storage.type:
         auth = stream_storage.s3_config.aws_authentication
-        if auth.type == "credentials":
+        if "credentials" == auth.type:
             credentials = auth.credentials
             necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
             necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
