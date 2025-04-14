@@ -1,4 +1,4 @@
-<img alt="CLP" src="https://yscope.com/img/clp-logo.png" width="300"/>
+<img alt="CLP" src="docs/src/clp-logo.png" width="300"/>
 
 [![Open bug reports](https://img.shields.io/github/issues/y-scope/clp/bug?label=bugs)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 [![Open feature requests](https://img.shields.io/github/issues/y-scope/clp/enhancement?label=feature-requests)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)

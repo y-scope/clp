@@ -55,6 +55,8 @@ set(
         ../SchemaReader.hpp
         ../SchemaTree.cpp
         ../SchemaTree.hpp
+        ../search/ast/SearchUtils.cpp
+        ../search/ast/SearchUtils.hpp
         ../TimestampDictionaryReader.cpp
         ../TimestampDictionaryReader.hpp
         ../TimestampEntry.cpp
@@ -92,6 +94,7 @@ target_link_libraries(indexer
         simdjson
         spdlog::spdlog
         yaml-cpp::yaml-cpp
+        ystdlib::containers
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory

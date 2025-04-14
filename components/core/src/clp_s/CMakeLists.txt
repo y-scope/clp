@@ -1,4 +1,5 @@
 add_subdirectory(indexer)
+add_subdirectory(search/ast)
 add_subdirectory(search/kql)
 add_subdirectory(search/sql)
 
@@ -142,8 +143,6 @@ set(
         TimestampDictionaryWriter.hpp
         TimestampEntry.cpp
         TimestampEntry.hpp
-        TimestampPattern.cpp
-        TimestampPattern.hpp
         TraceableException.hpp
         Utils.cpp
         Utils.hpp
@@ -161,44 +160,14 @@ set(
         CLP_S_SEARCH_SOURCES
         search/AddTimestampConditions.cpp
         search/AddTimestampConditions.hpp
-        search/AndExpr.cpp
-        search/AndExpr.hpp
-        search/BooleanLiteral.cpp
-        search/BooleanLiteral.hpp
         search/clp_search/EncodedVariableInterpreter.cpp
         search/clp_search/EncodedVariableInterpreter.hpp
         search/clp_search/Grep.cpp
         search/clp_search/Grep.hpp
         search/clp_search/Query.cpp
         search/clp_search/Query.hpp
-        search/ColumnDescriptor.cpp
-        search/ColumnDescriptor.hpp
-        search/ConstantProp.cpp
-        search/ConstantProp.hpp
-        search/ConvertToExists.cpp
-        search/ConvertToExists.hpp
-        search/DateLiteral.cpp
-        search/DateLiteral.hpp
-        search/EmptyExpr.cpp
-        search/EmptyExpr.hpp
         search/EvaluateTimestampIndex.cpp
         search/EvaluateTimestampIndex.hpp
-        search/Expression.cpp
-        search/Expression.hpp
-        search/FilterExpr.cpp
-        search/FilterExpr.hpp
-        search/FilterOperation.hpp
-        search/Integral.cpp
-        search/Integral.hpp
-        search/Literal.hpp
-        search/NarrowTypes.cpp
-        search/NarrowTypes.hpp
-        search/NullLiteral.cpp
-        search/NullLiteral.hpp
-        search/OrExpr.cpp
-        search/OrExpr.hpp
-        search/OrOfAndForm.cpp
-        search/OrOfAndForm.hpp
         search/Output.cpp
         search/Output.hpp
         search/OutputHandler.cpp
@@ -207,12 +176,6 @@ set(
         search/Projection.hpp
         search/SchemaMatch.cpp
         search/SchemaMatch.hpp
-        search/SearchUtils.cpp
-        search/SearchUtils.hpp
-        search/StringLiteral.cpp
-        search/StringLiteral.hpp
-        search/Transformation.hpp
-        search/Value.hpp
 )
 
 set(
@@ -238,6 +201,28 @@ set(
         ../reducer/types.hpp
 )
 
+set(
+        CLP_S_TIMESTAMP_PATTERN_SOURCES
+        Defs.hpp
+        ErrorCode.hpp
+        TimestampPattern.cpp
+        TimestampPattern.hpp
+        TraceableException.hpp
+)
+
+add_library(
+        clp_s_TimestampPattern
+        ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
+)
+add_library(clp_s::TimestampPattern ALIAS clp_s_TimestampPattern)
+target_include_directories(clp_s_TimestampPattern PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_compile_features(clp_s_TimestampPattern PRIVATE cxx_std_20)
+target_link_libraries(
+        clp_s_TimestampPattern
+        PRIVATE
+        clp::string_utils
+)
+
 add_executable(
         clp-s
         clp-s.cpp
@@ -254,6 +239,8 @@ target_link_libraries(
         Boost::iostreams Boost::program_options Boost::regex Boost::url
         ${CURL_LIBRARIES}
         clp::string_utils
+        clp_s::search::ast
+        clp_s::TimestampPattern
         kql
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
@@ -262,6 +249,7 @@ target_link_libraries(
         simdjson
         spdlog::spdlog
         yaml-cpp::yaml-cpp
+        ystdlib::containers
         ZStd::ZStd
 )
 target_include_directories(clp-s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")

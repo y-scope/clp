@@ -28,7 +28,8 @@
 #include "ErrorCode.hpp"
 #include "JsonFileIterator.hpp"
 #include "JsonParser.hpp"
-#include "search/ColumnDescriptor.hpp"
+#include "search/ast/ColumnDescriptor.hpp"
+#include "search/ast/SearchUtils.hpp"
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -91,7 +92,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
-            == clp_s::StringUtils::tokenize_column_descriptor(
+            == clp_s::search::ast::tokenize_column_descriptor(
                     m_timestamp_key,
                     m_timestamp_column,
                     m_timestamp_namespace
@@ -103,7 +104,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
 
         // Unescape individual tokens to match unescaped JSON and confirm there are no wildcards in
         // the timestamp column.
-        auto column = clp_s::search::ColumnDescriptor::create_from_escaped_tokens(
+        auto column = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
                 m_timestamp_column,
                 m_timestamp_namespace
         );
@@ -475,9 +476,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 hit_end = true;
             }
         } while (false == object_it_stack.empty() && hit_end);
-    }
-
-    while (false == object_stack.empty());
+    } while (false == object_stack.empty());
 }
 
 bool JsonParser::parse() {
@@ -900,7 +899,8 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t last_pos{};
         decompressor.open(*reader, cDecompressorReadBufferCapacity);
 
-        auto deserializer_result{Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
+        auto deserializer_result{
+                Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
         };
         if (deserializer_result.has_error()) {
             auto err = deserializer_result.error();
@@ -930,15 +930,21 @@ auto JsonParser::parse_from_ir() -> bool {
 
             if (kv_log_event_result.has_error()) {
                 auto err = kv_log_event_result.error();
-                SPDLOG_ERROR(
-                        "Encountered error while deserializing kv-ir log event: ({}) - {}",
+                SPDLOG_WARN(
+                        "Encountered error while deserializing kv-ir log event from stream \"{}\": "
+                        "({}) - {}",
+                        path.path,
                         err.value(),
                         err.message()
                 );
-                m_archive_writer->close();
-                decompressor.close();
-                check_and_log_curl_error(path, reader);
-                return false;
+                if (check_and_log_curl_error(path, reader)) {
+                    m_archive_writer->close();
+                    decompressor.close();
+                    return false;
+                } else {
+                    // Treat deserialization error as end of a truncated stream
+                    break;
+                }
             }
             if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
                 break;

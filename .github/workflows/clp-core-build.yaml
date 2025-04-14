@@ -37,13 +37,14 @@ concurrency: "${{github.workflow}}-${{github.ref}}"
 
 jobs:
   filter-relevant-changes:
+    name: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
@@ -52,7 +53,7 @@ jobs:
         shell: "bash"
 
       - name: "Filter relevant changes"
-        uses: "dorny/paths-filter@v3"
+        uses: "dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36"
         id: "filter"
         with:
           # Consider changes between the current commit and `main`
@@ -91,11 +92,12 @@ jobs:
               - "tools/scripts/deps-download/**"
 
   centos-stream-9-deps-image:
+    name: "centos-stream-9-deps-image"
     if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
     needs: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
@@ -116,11 +118,12 @@ jobs:
           token: "${{secrets.GITHUB_TOKEN}}"
 
   ubuntu-jammy-deps-image:
+    name: "ubuntu-jammy-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     needs: "filter-relevant-changes"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
@@ -155,7 +158,7 @@ jobs:
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
@@ -200,7 +203,7 @@ jobs:
     continue-on-error: true
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
@@ -234,13 +237,14 @@ jobs:
         shell: "bash"
 
       - if: "matrix.upload_binaries == true"
-        uses: "actions/upload-artifact@v4"
+        uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{steps.copy_binaries.outputs.output_dir}}"
           retention-days: 1
 
   ubuntu-jammy-binaries-image:
+    name: "ubuntu-jammy-binaries-image"
     # Run if the ancestor jobs were successful/skipped and building clp was successful.
     if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
@@ -249,7 +253,7 @@ jobs:
       OS_NAME: "ubuntu-jammy"
       TMP_OUTPUT_DIR: "/tmp"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
@@ -257,7 +261,7 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - uses: "actions/download-artifact@v4"
+      - uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
         with:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
@@ -269,7 +273,7 @@ jobs:
           tar xf clp.tar
           rm clp.tar
 
-      - uses: "docker/login-action@v3"
+      - uses: "docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772"
         with:
           registry: "ghcr.io"
           username: "${{github.actor}}"
@@ -285,7 +289,7 @@ jobs:
         shell: "bash"
 
       - id: "core_image_meta"
-        uses: "docker/metadata-action@v5"
+        uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
         with:
           images: >-
             ghcr.io/${{steps.sanitize_repo_name.outputs.repository}}/clp-core-x86-${{env.OS_NAME}}
@@ -294,10 +298,73 @@ jobs:
       # Only publish the image if this workflow was triggered by a push to `main`.
       # NOTE: We run the rest of the job to test that the binaries were uploaded correctly.
       - if: "github.event_name == 'push' && github.ref == 'refs/heads/main'"
-        uses: "docker/build-push-action@v5"
+        uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
         with:
           context: "${{env.TMP_OUTPUT_DIR}}/${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           file: "components/core/tools/docker-images/clp-core-${{env.OS_NAME}}/Dockerfile"
           push: true
           tags: "${{steps.core_image_meta.outputs.tags}}"
           labels: "${{steps.core_image_meta.outputs.labels}}"
+
+  ubuntu-jammy-lint:
+    name: "ubuntu-jammy-lint"
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "filter-relevant-changes"
+      - "ubuntu-jammy-deps-image"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          # Fetch history so that the `clang-tidy-diff` task can compare against the main branch.
+          fetch-depth: 0
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      # NOTE: We don't use the cache for scheduled runs so that they run lint:check-cpp-static-full
+      # on all files.
+      - if: "'schedule' != github.event_name"
+        name: "Restore lint:check-cpp-static-full cache"
+        id: "cache-restore-lint-check-cpp-static-full"
+        uses: "actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684"
+        with:
+          path: |
+            .task/checksum/lint-check-cpp-static-full
+            .task/checksum/utils-cpp-lint-clang-tidy-*
+            build/lint-clang-tidy
+
+          # NOTE: We use a per-OS cache since different OSes may trigger different clang-tidy
+          # violations.
+          key: "main-branch-ubuntu-jammy-lint:check-cpp-static-full"
+
+      - uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
+          # run_command: >-
+          #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+          run_command: "task lint:check-cpp-full"
+
+      # Cache the source file checksums and the generated files (logs) for the
+      # lint:check-cpp-static-full task, but only if it runs successfully on the main branch.
+      # NOTE: If we don't cache the generated files, the task will re-run to generate them.
+      - if: "'pull_request' != github.event_name && 'refs/heads/main' == github.ref"
+        name: "Update lint:check-cpp-static-full cache"
+        uses: "actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684"
+        with:
+          path: |
+            .task/checksum/lint-check-cpp-static-full
+            .task/checksum/utils-cpp-lint-clang-tidy-*
+            build/lint-clang-tidy
+          key: "${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"

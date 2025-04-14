@@ -420,13 +420,13 @@ void MetadataDB::open(string const& path) {
             .second
             = "TEXT";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .first
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .first
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .second
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
@@ -463,13 +463,13 @@ void MetadataDB::open(string const& path) {
                     .second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition
-                               )]
-            .first
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+                    .first
             = streaming_archive::cMetadataDB::File::SegmentOffsetPosition;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition
-                               )]
-            .second
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+                    .second
             = "INTEGER";
 
     create_tables(file_field_names_and_types, m_db);

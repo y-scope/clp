@@ -86,8 +86,9 @@ auto Compressor::encode_lzma() -> void {
             case LZMA_OK:
                 break;
             case LZMA_BUF_ERROR:
-                SPDLOG_ERROR("LZMA compressor input stream is corrupt. No encoding "
-                             "progress can be made.");
+                SPDLOG_ERROR(
+                        "LZMA compressor input stream is corrupt. No encoding progress can be made."
+                );
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             default:
                 SPDLOG_ERROR(
@@ -125,8 +126,9 @@ auto Compressor::flush_lzma(lzma_action flush_action) -> void {
             case LZMA_BUF_ERROR:
                 // NOTE: this can happen if we are using LZMA_FULL_FLUSH or LZMA_FULL_BARRIER. These
                 // two actions keeps encoding input data alongside flushing buffered encoded data.
-                SPDLOG_ERROR("LZMA compressor input stream is corrupt. No encoding "
-                             "progress can be made.");
+                SPDLOG_ERROR(
+                        "LZMA compressor input stream is corrupt. No encoding progress can be made."
+                );
                 throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);
             default:
                 SPDLOG_ERROR(

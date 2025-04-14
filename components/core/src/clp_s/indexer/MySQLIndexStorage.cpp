@@ -28,15 +28,17 @@ void MySQLIndexStorage::init(std::string const& table_name, bool should_create_t
     }
 
     if (should_create_table) {
-        m_db.execute_query(fmt::format(
-                "CREATE TABLE IF NOT EXISTS {}{} ("
-                "name VARCHAR(512) NOT NULL, "
-                "type TINYINT NOT NULL,"
-                "PRIMARY KEY (name, type)"
-                ")",
-                m_table_prefix,
-                table_name
-        ));
+        m_db.execute_query(
+                fmt::format(
+                        "CREATE TABLE IF NOT EXISTS {}{} ("
+                        "name VARCHAR(512) NOT NULL, "
+                        "type TINYINT NOT NULL,"
+                        "PRIMARY KEY (name, type)"
+                        ")",
+                        m_table_prefix,
+                        table_name
+                )
+        );
     }
 
     m_insert_field_statement.reset();
