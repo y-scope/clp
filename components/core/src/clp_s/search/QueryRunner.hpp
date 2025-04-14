@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include <simdjson.h>
+
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
 #include "../DictionaryReader.hpp"
@@ -25,8 +27,6 @@
 #include "ast/Literal.hpp"
 #include "clp_search/Query.hpp"
 #include "SchemaMatch.hpp"
-
-#include <simdjson.h>
 
 using namespace simdjson;
 using namespace clp_s::search::clp_search;
@@ -111,10 +111,8 @@ protected:
             || m_match->schema_searches_against_column(m_schema, column_id))
         {
             auto* clp_reader = dynamic_cast<ClpStringColumnReader*>(column_reader);
-            auto* var_reader
-                    = dynamic_cast<VariableStringColumnReader*>(column_reader);
-            auto* date_reader
-                    = dynamic_cast<DateStringColumnReader*>(column_reader);
+            auto* var_reader = dynamic_cast<VariableStringColumnReader*>(column_reader);
+            auto* date_reader = dynamic_cast<DateStringColumnReader*>(column_reader);
             if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
                 m_clp_string_readers[column_id].push_back(clp_reader);
             } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
@@ -129,7 +127,7 @@ protected:
     }
 
 private:
-    enum class ExpressionType: uint8_t {
+    enum class ExpressionType : uint8_t {
         And,
         Or,
         Filter
@@ -231,7 +229,8 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static auto evaluate_int_filter_core(ast::FilterOperation op, int64_t value, int64_t operand) -> bool;
+    static auto evaluate_int_filter_core(ast::FilterOperation op, int64_t value, int64_t operand)
+            -> bool;
 
     /**
      * Evaluates a float filter expression
@@ -253,7 +252,8 @@ private:
      * @param operand
      * @return true if the expression evaluates to true, false otherwise
      */
-    static auto evaluate_float_filter_core(ast::FilterOperation op, double value, double operand) -> bool;
+    static auto evaluate_float_filter_core(ast::FilterOperation op, double value, double operand)
+            -> bool;
 
     /**
      * Evaluates a clp string filter expression

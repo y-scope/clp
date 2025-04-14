@@ -175,7 +175,10 @@ bool search_archive(
     }
 
     // Narrow against schemas
-    auto match_pass = std::make_shared<SchemaMatch>(archive_reader->get_schema_tree(), archive_reader->get_schema_map());
+    auto match_pass = std::make_shared<SchemaMatch>(
+            archive_reader->get_schema_tree(),
+            archive_reader->get_schema_map()
+    );
     if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
