@@ -796,8 +796,6 @@ def generic_start_worker(
         necessary_mounts.append(mounts.input_logs_dir)
     if worker_specific_mount:
         necessary_mounts.extend(worker_specific_mount)
-    if StorageType.FS == clp_config.logs_input.type:
-        necessary_mounts.append(mounts.input_logs_dir)
 
     if worker_specific_env_vars:
         necessary_env_vars.extend(worker_specific_env_vars)
@@ -996,6 +994,10 @@ def start_log_viewer_webui(
         auth = s3_config.aws_authentication
         if "profile" == auth.type:
             settings_json_updates["StreamFilesS3Profile"] = auth.profile
+    elif StorageType.FS == stream_storage.type:
+        settings_json_updates["StreamFilesS3Region"] = None
+        settings_json_updates["StreamFilesS3PathPrefix"] = None
+        settings_json_updates["StreamFilesS3Profile"] = None
 
     settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
     with open(settings_json_path, "w") as settings_json_file:
