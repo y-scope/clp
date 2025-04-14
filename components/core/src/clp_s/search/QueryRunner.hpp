@@ -17,6 +17,7 @@
 #include <simdjson/generic/ondemand/array.h>
 #include <simdjson/generic/ondemand/object.h>
 #include <simdjson/generic/ondemand/value.h>
+#include <simdjson/ondemand.h>
 
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
@@ -61,10 +62,10 @@ public:
     virtual ~QueryRunner() = default;
 
     QueryRunner(QueryRunner const&) = delete;
-    QueryRunner& operator=(QueryRunner const&) = delete;
+    auto operator=(QueryRunner const&) -> QueryRunner& = delete;
 
     QueryRunner(QueryRunner&&) = delete;
-    QueryRunner& operator=(QueryRunner&&) = delete;
+    auto operator=(QueryRunner&&) -> QueryRunner& = delete;
 
     /**
      * Configures the query processing context for a given schema.
