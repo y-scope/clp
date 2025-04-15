@@ -212,7 +212,7 @@ private:
     /**
      * Prints the archive's statistics (id, uncompressed size, compressed size, etc.)
      */
-    void print_archive_stats();
+    auto print_archive_stats() const -> void;
 
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
