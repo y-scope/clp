@@ -18,8 +18,6 @@ set(
         ../clp/CurlStringList.hpp
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
-        ../clp/database_utils.cpp
-        ../clp/database_utils.hpp
         ../clp/Defs.h
         ../clp/ErrorCode.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
@@ -42,23 +40,12 @@ set(
         ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
-        ../clp/GlobalMetadataDB.hpp
-        ../clp/GlobalMetadataDBConfig.cpp
-        ../clp/GlobalMetadataDBConfig.hpp
-        ../clp/GlobalMySQLMetadataDB.cpp
-        ../clp/GlobalMySQLMetadataDB.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
-        ../clp/MySQLDB.cpp
-        ../clp/MySQLDB.hpp
-        ../clp/MySQLParamBindings.cpp
-        ../clp/MySQLParamBindings.hpp
-        ../clp/MySQLPreparedStatement.cpp
-        ../clp/MySQLPreparedStatement.hpp
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
@@ -70,6 +57,7 @@ set(
         ../clp/spdlog_with_specializations.hpp
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
+        ../clp/streaming_archive/Constants.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/Thread.cpp

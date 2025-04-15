@@ -10,6 +10,7 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
+    ARCHIVES_TABLE_SUFFIX,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -80,6 +81,23 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
             compressed_size=archive_stats["size"],
         ),
     )
+
+
+def update_archive_metadata(db_cursor, table_prefix, archive_stats):
+    archive_stats_defaults = {
+        "begin_timestamp": 0,
+        "end_timestamp": 0,
+        "creator_id": "",
+        "creation_ix": 0,
+    }
+    for k, v in archive_stats_defaults.items():
+        archive_stats.setdefault(k, v)
+    keys = ", ".join(archive_stats.keys())
+    value_placeholders = ", ".join(["%s"] * len(archive_stats))
+    query = (
+        f"INSERT INTO {table_prefix}{ARCHIVES_TABLE_SUFFIX} ({keys}) VALUES ({value_placeholders})"
+    )
+    db_cursor.execute(query, list(archive_stats.values()))
 
 
 def _generate_fs_logs_list(
@@ -161,7 +179,6 @@ def make_clp_s_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
-    db_config_file_path: pathlib.Path,
     use_single_file_archive: bool,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
@@ -169,7 +186,6 @@ def make_clp_s_command_and_env(
     :param clp_home:
     :param archive_output_dir:
     :param clp_config:
-    :param db_config_file_path:
     :param use_single_file_archive:
     :return: Tuple of (compression_command, compression_env_vars)
     """
@@ -182,7 +198,6 @@ def make_clp_s_command_and_env(
         "--target-encoded-size",
         str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
         "--compression-level", str(clp_config.output.compression_level),
-        "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
 
@@ -271,7 +286,6 @@ def run_clp(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
-            db_config_file_path=db_config_file_path,
             use_single_file_archive=enable_s3_write,
         )
     else:
@@ -347,10 +361,13 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
+                    table_prefix = clp_metadata_db_connection_config["table_prefix"]
+                    if StorageEngine.CLP_S == clp_storage_engine:
+                        update_archive_metadata(db_cursor, table_prefix, last_archive_stats)
                     update_job_metadata_and_tags(
                         db_cursor,
                         job_id,
-                        clp_metadata_db_connection_config["table_prefix"],
+                        table_prefix,
                         tag_ids,
                         last_archive_stats,
                     )
