@@ -364,7 +364,7 @@ private:
             ast::FilterOperation op,
             std::string& value,
             std::shared_ptr<ast::Literal> const& operand
-    ) const -> bool;
+    ) -> bool;
 
     /**
      * The implementation of evaluate_wildcard_array_filter
