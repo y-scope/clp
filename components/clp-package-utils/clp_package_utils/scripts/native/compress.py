@@ -35,12 +35,17 @@ from clp_package_utils.general import (
 logger = logging.getLogger(__file__)
 
 
-def print_compression_job_status(job_row, current_time):
+def print_compression_job_status(job_row):
     job_uncompressed_size = job_row["uncompressed_size"]
     job_compressed_size = job_row["compressed_size"]
-    job_start_time = job_row["start_time"]
     compression_ratio = float(job_uncompressed_size) / job_compressed_size
-    compression_speed = job_uncompressed_size / (current_time - job_start_time).total_seconds()
+    if CompressionJobStatus.SUCCEEDED == job_row["status"]:
+        compression_speed = job_uncompressed_size / job_row["duration"]
+    else:
+        compression_speed = (
+            job_uncompressed_size
+            / (datetime.datetime.now() - job_row["start_time"]).total_seconds()
+        )
     logger.info(
         f"Compressed {pretty_size(job_uncompressed_size)} into "
         f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}x). "
@@ -55,7 +60,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         )
     else:
         polling_query = (
-            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size "
+            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration "
             f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
         )
 
@@ -72,13 +77,12 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
 
         job_row = results[0]
         job_status = job_row["status"]
-        current_time = datetime.datetime.now()
 
         if CompressionJobStatus.SUCCEEDED == job_status:
             # All tasks in the job is done
             if not no_progress_reporting:
                 logger.info("Compression finished.")
-                print_compression_job_status(job_row, current_time)
+                print_compression_job_status(job_row)
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
@@ -89,7 +93,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             if not no_progress_reporting:
                 job_uncompressed_size = job_row["uncompressed_size"]
                 if job_last_uncompressed_size < job_uncompressed_size:
-                    print_compression_job_status(job_row, current_time)
+                    print_compression_job_status(job_row)
                     job_last_uncompressed_size = job_uncompressed_size
         elif CompressionJobStatus.PENDING == job_status:
             pass  # Simply wait another iteration

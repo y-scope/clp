@@ -277,8 +277,8 @@ tasks:
         vars:
           DEST: "{{.DEST}}"
           FLAGS: "--extract"
-          SRC_NAME: "log-surgeon-895f46489b1911ab3b3aac3202afd56c96e8cd98"
-          SRC_URL: "https://github.com/y-scope/log-surgeon/archive/895f464.zip"
+          SRC_NAME: "log-surgeon-f801a3f369bb14919d82a928d9a3812006245aa0"
+          SRC_URL: "https://github.com/y-scope/log-surgeon/archive/f801a3f.zip"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:

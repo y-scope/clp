@@ -3,8 +3,8 @@
 #include <sys/stat.h>
 
 #include <fmt/core.h>
+#include <ystdlib/containers/Array.hpp>
 
-#include "../Array.hpp"
 #include "../FileReader.hpp"
 
 namespace clp::streaming_archive {
@@ -26,7 +26,7 @@ auto ArchiveMetadata::create_from_file(std::string_view file_path) -> ArchiveMet
         throw OperationFailed(clp_rc, __FILENAME__, __LINE__);
     }
 
-    clp::Array<char> buf{static_cast<size_t>(file_stat.st_size)};
+    ystdlib::containers::Array<char> buf(static_cast<size_t>(file_stat.st_size));
     if (auto const clp_rc = file_reader.try_read_exact_length(buf.data(), buf.size());
         clp::ErrorCode::ErrorCode_Success != clp_rc)
     {

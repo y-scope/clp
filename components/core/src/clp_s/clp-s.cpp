@@ -13,7 +13,6 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/CurlGlobalInstance.hpp"
-#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -101,19 +100,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
-
-    auto const& db_config_container = command_line_arguments.get_metadata_db_config();
-    if (db_config_container.has_value()) {
-        auto const& db_config = db_config_container.value();
-        option.metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
-                db_config.get_metadata_db_host(),
-                db_config.get_metadata_db_port(),
-                db_config.get_metadata_db_username(),
-                db_config.get_metadata_db_password(),
-                db_config.get_metadata_db_name(),
-                db_config.get_metadata_table_prefix()
-        );
-    }
 
     clp_s::JsonParser parser(option);
     if (CommandLineArguments::FileType::KeyValueIr == option.input_file_type) {

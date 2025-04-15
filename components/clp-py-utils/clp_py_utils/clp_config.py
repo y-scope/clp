@@ -36,6 +36,7 @@ QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
+ARCHIVES_TABLE_SUFFIX = "archives"
 
 OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
