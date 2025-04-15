@@ -13,7 +13,7 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 
 
-def get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
+def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
     """
     Generates AWS credentials created by boto3 when starting a session with given profile.
     :param aws_profile: Name of profile configured in ~/.aws directory
@@ -46,7 +46,7 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
     auth = config.aws_authentication
 
     if "profile" == auth.type:
-        aws_credentials: S3Credentials = get_session_credentials(auth.profile)
+        aws_credentials: S3Credentials = _get_session_credentials(auth.profile)
         if aws_credentials is None:
             raise ValueError(f"Failed to authenticate with profile {auth.profile}")
 
@@ -73,7 +73,7 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
         # Environmental variables are already set
         return {}
     elif "ec2" == auth.type:
-        aws_credentials: S3Credentials = get_session_credentials()
+        aws_credentials: S3Credentials = _get_session_credentials()
         if aws_credentials is None:
             raise ValueError(f"Failed to authenticate with EC2 metadata.")
 
