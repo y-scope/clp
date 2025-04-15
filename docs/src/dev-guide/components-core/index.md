@@ -39,7 +39,7 @@ This will download:
 * [json](https://github.com/nlohmann/json.git) (v3.11.3)
 * [log-surgeon](https://github.com/y-scope/log-surgeon.git) (895f464)
 * [outcome](https://github.com/ned14/outcome) (v2.2.9)
-* [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
+* [simdjson](https://github.com/simdjson/simdjson) (v3.12.3)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
 * [uftcpp](https://github.com/nemtrif/utfcpp.git) (v4.0.6)
 * [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
