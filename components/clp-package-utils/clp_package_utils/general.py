@@ -270,12 +270,13 @@ def generate_container_config(
         )
 
     container_clp_config.aws_config_directory = pathlib.Path("/") / ".aws"
-    docker_mounts.aws_config_dir = DockerMount(
-        DockerMountType.BIND,
-        clp_config.aws_config_directory,
-        container_clp_config.aws_config_directory,
-    )
-
+    # Only create the mount if the directory exists
+    if clp_config.aws_config_directory.exists():
+        docker_mounts.aws_config_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.aws_config_directory,
+            container_clp_config.aws_config_directory,
+        )
     return container_clp_config, docker_mounts
 
 
