@@ -27,10 +27,9 @@ using namespace clp_s::search::clp_search;
 namespace clp_s::search {
 class Output {
 public:
-    Output(std::shared_ptr<SchemaMatch> match,
-           std::shared_ptr<ast::Expression> expr,
-           std::shared_ptr<ArchiveReader> archive_reader,
-           std::shared_ptr<TimestampDictionaryReader> timestamp_dict,
+    Output(std::shared_ptr<SchemaMatch> const& match,
+           std::shared_ptr<ast::Expression> const& expr,
+           std::shared_ptr<ArchiveReader> const& archive_reader,
            std::unique_ptr<OutputHandler> output_handler,
            bool ignore_case)
             : m_query_runner(match, expr, archive_reader, ignore_case),

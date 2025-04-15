@@ -39,14 +39,14 @@ namespace clp_s::search {
 class QueryRunner : public FilterClass {
 public:
     QueryRunner(
-            std::shared_ptr<SchemaMatch> match,
-            std::shared_ptr<ast::Expression> expr,
-            std::shared_ptr<ArchiveReader> archive_reader,
+            std::shared_ptr<SchemaMatch> const& match,
+            std::shared_ptr<ast::Expression> const& expr,
+            std::shared_ptr<ArchiveReader> const& archive_reader,
             bool ignore_case
     )
-            : m_archive_reader(std::move(archive_reader)),
-              m_expr(std::move(expr)),
-              m_match(std::move(match)),
+            : m_archive_reader(archive_reader),
+              m_expr(expr),
+              m_match(match),
               m_ignore_case(ignore_case),
               m_schema_tree(m_archive_reader->get_schema_tree()),
               m_var_dict(m_archive_reader->get_variable_dictionary()),

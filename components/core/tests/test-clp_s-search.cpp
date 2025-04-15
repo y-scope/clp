@@ -156,7 +156,6 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
                 match_pass,
                 archive_expr,
                 archive_reader,
-                timestamp_dict,
                 std::move(output_handler),
                 ignore_case
         );

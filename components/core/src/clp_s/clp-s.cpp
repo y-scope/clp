@@ -265,7 +265,6 @@ bool search_archive(
             match_pass,
             expr,
             archive_reader,
-            timestamp_dict,
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
     );
