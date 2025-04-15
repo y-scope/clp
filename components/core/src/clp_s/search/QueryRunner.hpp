@@ -14,10 +14,7 @@
 #include <utility>
 #include <vector>
 
-#include <simdjson/generic/ondemand/array.h>
-#include <simdjson/generic/ondemand/object.h>
-#include <simdjson/generic/ondemand/value.h>
-#include <simdjson/ondemand.h>
+#include <simdjson.h>
 
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
