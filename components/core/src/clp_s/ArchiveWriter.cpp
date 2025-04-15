@@ -428,7 +428,7 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
 }
 
 auto ArchiveWriter::print_archive_stats() const -> void {
-    using clp::streaming_archive::cMetadataDB::Archive;
+    namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
     nlohmann::json json_msg
             = {{Archive::Id, m_id},
                {Archive::BeginTimestamp, m_timestamp_dict.get_begin_timestamp()},
