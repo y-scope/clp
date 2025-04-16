@@ -1,8 +1,14 @@
 .card {
-    height: 100%; /* Ensure cards fill their container */
+    height: 100%;
 }
+
 .card :global(.ant-card-head) {
     border: 0px;
+}
+
+.cardContent {
+    display: flex;
+    flex-direction: column;
 }
 
 .title {
@@ -17,19 +23,13 @@
 }
 
 .detailsGrid {
-    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+    grid-template-rows: auto;
+    gap: 8px;
 }
 
-.row {
-    height: 100%; /* Full height for columns */
+.timeRange {
+    grid-column: span 2;
 }
 
-.title {
-    font-size: 24px;
-    font-weight: 600;
-}
-
-.cardContent {
-    display: flex;
-    flex-direction: column;
-}

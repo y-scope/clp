@@ -1,12 +1,7 @@
 .ingestPageGrid {
-    height: 40vh; /* Full viewport height */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     padding: 20px;
+    gap: 20px;
 }
 
-.row {
-    height: 100%;
-}
-
-.col {
-    height: 100%;
-}

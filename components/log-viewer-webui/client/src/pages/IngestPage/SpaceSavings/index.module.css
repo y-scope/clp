@@ -1,6 +1,7 @@
 .card {
     background-color: #1888fa;
     height: 100%;
+    min-width: 400px;
 }
 
 .card :global(.ant-card-head) {
