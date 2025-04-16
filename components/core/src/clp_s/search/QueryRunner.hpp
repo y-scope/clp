@@ -73,12 +73,12 @@ public:
     auto operator=(QueryRunner&&) -> QueryRunner& = delete;
 
     /**
-     * Initializes the query processing context for the first time.
+     * Initializes the query processing context that is common to all schemas.
      */
     void global_init();
 
     /**
-     * Prepares the query processing context for a given schema.
+     * Initializes the query processing context for a given schema.
      *
      * It clears any previous schema-specific data and initializes internal data structures required
      * for query execution based on the provided schema ID. Then it performs constant propagation on
