@@ -22,7 +22,7 @@ const SpaceSavings = () => {
     const compressedSize = DUMMY_COMPRESSED_SIZE as number;
     const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE as number;
 
-    const spaceSavingsPercent = (0 < compressedSize || 0 === uncompressedSize) ?
+    const spaceSavingsPercent = (0 === uncompressedSize) ?
         100 * (1 - (compressedSize / uncompressedSize)) :
         0;
 
