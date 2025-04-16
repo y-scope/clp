@@ -1,4 +1,5 @@
 import styles from "./index.module.css";
+import { Col, Row } from 'antd';
 import Size from "./Size";
 
 
@@ -10,7 +11,11 @@ import Size from "./Size";
 const IngestPage = () => {
     return (
         <div className={styles["ingestPageGrid"]}>
-            <Size/>
+            <Row>
+                <Col span={8}><Size/></Col>
+                <Col span={8}></Col>
+                <Col span={8}></Col>
+            </Row>
         </div>
     );
 };
