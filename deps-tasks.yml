@@ -337,8 +337,8 @@ tasks:
         vars:
           DEST: "{{.DEST}}"
           FLAGS: "--extract"
-          SRC_NAME: "simdjson-3.6.3"
-          SRC_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.zip"
+          SRC_NAME: "simdjson-3.12.3"
+          SRC_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.12.3.zip"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
