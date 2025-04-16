@@ -22,7 +22,7 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_DOCS_BUILD_DIR}}"
-    dir: "{{.TASKFILE_DIR}}"
+    dir: "{{.ROOT_DIR}}/docs"
     deps:
       - ":init"
       - task: ":utils:checksum:validate"
