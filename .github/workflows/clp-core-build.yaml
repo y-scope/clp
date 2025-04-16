@@ -9,7 +9,7 @@ on:
       - ".gitmodules"
       - "components/core/**"
       - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
       - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos/**"
   push:
@@ -20,7 +20,7 @@ on:
       - ".gitmodules"
       - "components/core/**"
       - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
       - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos/**"
   schedule:
@@ -88,7 +88,7 @@ jobs:
               - "components/core/tests/**"
               - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
               - "deps-tasks.yml"
-              - "Taskfile.yml"
+              - "taskfile.yaml"
               - "tools/scripts/deps-download/**"
 
   centos-stream-9-deps-image:

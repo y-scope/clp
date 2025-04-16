@@ -13,7 +13,7 @@ on:
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
       - "tools/scripts/deps-download/**"
   push:
     paths:
@@ -27,7 +27,7 @@ on:
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
       - "tools/scripts/deps-download/**"
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)

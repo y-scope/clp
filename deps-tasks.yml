@@ -112,7 +112,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -143,7 +143,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -173,7 +173,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -203,7 +203,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -233,7 +233,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -263,7 +263,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -293,7 +293,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -323,7 +323,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -355,7 +355,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -385,7 +385,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -415,7 +415,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -445,7 +445,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -475,7 +475,7 @@ tasks:
     sources:
       - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
       - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
