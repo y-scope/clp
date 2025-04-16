@@ -76,24 +76,15 @@ bool Output::filter() {
         }
     }
 
-    m_query_runner.populate_internal_columns();
-    m_query_runner.populate_string_queries();
-
+    m_query_runner.global_init();
     m_archive_reader->open_packed_streams();
 
     std::string message;
     auto const archive_id = m_archive_reader->get_archive_id();
     for (int32_t schema_id : matched_schemas) {
-        m_query_runner.setup_schema(schema_id);
-        m_query_runner.populate_searched_wildcard_columns();
-
-        if (auto expression_value = m_query_runner.constant_propagate();
-            EvaluatedValue::False == expression_value)
-        {
+        if (EvaluatedValue::False == m_query_runner.schema_init(schema_id)) {
             continue;
         }
-
-        m_query_runner.add_wildcard_columns_to_searched_columns();
 
         auto& reader = m_archive_reader->read_schema_table(
                 schema_id,

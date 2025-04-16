@@ -25,6 +25,11 @@ using namespace simdjson;
 using namespace clp_s::search::clp_search;
 
 namespace clp_s::search {
+/**
+ * This class orchestrates the process of searching through a CLP archive,
+ * filtering log messages according to a specified query, and then outputting the
+ * matching messages using a provided `OutputHandler`.
+ */
 class Output {
 public:
     Output(std::shared_ptr<SchemaMatch> const& match,
@@ -33,8 +38,8 @@ public:
            std::unique_ptr<OutputHandler> output_handler,
            bool ignore_case)
             : m_query_runner(match, expr, archive_reader, ignore_case),
-              m_archive_reader(std::move(archive_reader)),
-              m_expr(std::move(expr)),
+              m_archive_reader(archive_reader),
+              m_expr(expr),
               m_match(match),
               m_output_handler(std::move(output_handler)),
               m_should_marshal_records(m_output_handler->should_marshal_records()) {}

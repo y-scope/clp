@@ -36,6 +36,14 @@ using namespace simdjson;
 using namespace clp_s::search::clp_search;
 
 namespace clp_s::search {
+/**
+ * This class is a core component of the log search system responsible for executing parsed queries
+ * represented as abstract syntax trees (ASTs). It sets up the necessary context for each schema and
+ * evaluates filter expressions against log messages from various schemas. It optimizes query
+ * execution through techniques like constant propagation and pre-processing. It also leverages
+ * dictionary lookups for efficient handling of string-based queries and supports wildcard and
+ * array-based filtering.
+ */
 class QueryRunner : public FilterClass {
 public:
     QueryRunner(
@@ -65,42 +73,21 @@ public:
     auto operator=(QueryRunner&&) -> QueryRunner& = delete;
 
     /**
-     * Configures the query processing context for a given schema.
+     * Initializes the query processing context for the first time.
+     */
+    void global_init();
+
+    /**
+     * Prepares the query processing context for a given schema.
      *
-     * This method initializes internal data structures required for query execution based on the
-     * provided schema ID. It clears any previous schema-specific data, retrieves the new schema's
-     * query expression, and resets wildcard handling.
+     * It clears any previous schema-specific data and initializes internal data structures required
+     * for query execution based on the provided schema ID. Then it performs constant propagation on
+     * the expression. If the expression evaluates to false, it returns EvaluatedValue::False.
+     * Otherwise, it sets the wildcard matching type mask.
      *
      * @param schema_id
      */
-    void setup_schema(int32_t schema_id);
-
-    /**
-     * Populates searched wildcard columns using the current expression
-     */
-    void populate_searched_wildcard_columns() { populate_searched_wildcard_columns(m_expr); }
-
-    /**
-     * Constant propagates the current expression
-     * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
-     * if the expression evaluates to false, EvaluatedValue::Unknown otherwise
-     */
-    auto constant_propagate() -> EvaluatedValue { return constant_propagate(m_expr); }
-
-    /**
-     * Populates the string queries for the current expression
-     */
-    void populate_string_queries() { populate_string_queries(m_expr); }
-
-    /**
-     * Populates the set of internal columns that get ignored during dynamic wildcard expansion.
-     */
-    void populate_internal_columns();
-
-    /**
-     * Adds wildcard columns to searched columns
-     */
-    void add_wildcard_columns_to_searched_columns();
+    auto schema_init(int32_t schema_id) -> EvaluatedValue;
 
 protected:
     // Methods inherited from FilterClass
@@ -412,6 +399,11 @@ private:
     void populate_string_queries(std::shared_ptr<ast::Expression> const& expr);
 
     /**
+     * Populates the set of internal columns that get ignored during dynamic wildcard expansion.
+     */
+    void populate_internal_columns();
+
+    /**
      * Constant propagates an expression
      * @param expr
      * @return EvaluatedValue::True if the expression evaluates to true, EvaluatedValue::False
@@ -424,6 +416,11 @@ private:
      * @param expr
      */
     void populate_searched_wildcard_columns(std::shared_ptr<ast::Expression> const& expr);
+
+    /**
+     * Adds wildcard columns to searched columns
+     */
+    void add_wildcard_columns_to_searched_columns();
 
     /**
      * Gets the cached decompressed structured array for the current message stored in the column

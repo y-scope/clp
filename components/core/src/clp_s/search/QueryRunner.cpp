@@ -33,13 +33,27 @@ using clp_s::search::ast::OrExpr;
 #define eval(op, a, b) (((op) == FilterOperation::EQ) ? ((a) == (b)) : ((a) != (b)))
 
 namespace clp_s::search {
-void QueryRunner::setup_schema(int32_t schema_id) {
+void QueryRunner::global_init() {
+    populate_internal_columns();
+    populate_string_queries(m_expr);
+}
+
+auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
     m_expr_clp_query.clear();
     m_expr_var_match_map.clear();
-    m_expr = m_match->get_query_for_schema(schema_id)->copy();
     m_wildcard_to_searched_basic_columns.clear();
     m_wildcard_columns.clear();
+    m_expr = m_match->get_query_for_schema(schema_id)->copy();
     m_schema = schema_id;
+    populate_searched_wildcard_columns(m_expr);
+
+    auto result = constant_propagate(m_expr);
+    if (result == EvaluatedValue::False) {
+        return result;
+    }
+
+    add_wildcard_columns_to_searched_columns();
+    return result;
 }
 
 void QueryRunner::clear_readers() {
