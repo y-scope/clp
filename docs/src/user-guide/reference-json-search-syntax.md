@@ -192,7 +192,9 @@ Keys containing the following literal characters must escape the characters usin
 * `.`
 * `*`
 
-Furthermore, keys _starting with_ the following literal characters must escape the characters using
+Furthermore, keys that _start_ with the following literal characters must escape the characters
+using a `\` (backslash):
+
 a `\` (backslash):
 * `@`
 * `$`
