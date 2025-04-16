@@ -19,8 +19,6 @@ public:
     // Constructor
     SchemaMatch(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ReaderUtils::SchemaMap> schemas);
 
-    virtual ~SchemaMatch() = default;
-
     /**
      * Runs the transformation on an expression
      * @param expr
