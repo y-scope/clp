@@ -1,7 +1,7 @@
 version: "3"
 
 includes:
-  deps: "deps-tasks.yml"
+  deps: "deps-tasks.yaml"
   docs: "docs/tasks.yml"
   lint: "lint-tasks.yml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
