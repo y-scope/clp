@@ -1,11 +1,12 @@
 import {
     Col,
     Row,
+    Card,
 } from "antd";
 
 import styles from "./index.module.css";
 import SpaceSavings from "./SpaceSavings";
-
+import Details from "./Details"; // Added missing import
 
 /**
  * Presents compression statistics.
@@ -15,16 +16,16 @@ import SpaceSavings from "./SpaceSavings";
 const IngestPage = () => {
     return (
         <div className={styles["ingestPageGrid"]}>
-            <Row>
-                <Col span={8}>
-                    <SpaceSavings/>
+            <Row gutter={16} className={styles["row"]}>
+                <Col span={8} className={styles["col"]}>
+                    <SpaceSavings />
                 </Col>
-                <Col span={8}/>
-                <Col span={8}/>
+                <Col span={8} className={styles["col"]}>
+                    <Details />
+                </Col>
             </Row>
         </div>
     );
 };
-
 
 export default IngestPage;

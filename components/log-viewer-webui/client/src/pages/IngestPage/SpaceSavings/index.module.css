@@ -1,5 +1,6 @@
 .card {
     background-color: #1888fa;
+    height: 100%;
 }
 
 .card :global(.ant-card-head) {
@@ -18,6 +19,6 @@
 }
 
 .statistic {
-    font-size: 80px;
+    font-size: 100px;
     color: white;
 }

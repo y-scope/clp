@@ -1,0 +1,35 @@
+.card {
+    height: 100%; /* Ensure cards fill their container */
+}
+.card :global(.ant-card-head) {
+    border: 0px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.statistic {
+    font-size: 20px;
+    color: grey;
+    font-weight: 300;
+}
+
+.detailsGrid {
+    height: 100%;
+}
+
+.row {
+    height: 100%; /* Full height for columns */
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.cardContent {
+    display: flex;
+    flex-direction: column;
+}
