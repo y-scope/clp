@@ -19,11 +19,10 @@ const DUMMY_UNCOMPRESSED_SIZE = 110300010;
  * @return
  */
 const SpaceSavings = () => {
-    const compressedSize = DUMMY_COMPRESSED_SIZE;
-    const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE;
+    const compressedSize = DUMMY_COMPRESSED_SIZE as number;
+    const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE as number;
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    const spaceSavingsPercent = 0 < compressedSize ?
+    const spaceSavingsPercent = (0 < compressedSize || 0 === uncompressedSize) ?
         100 * (1 - (compressedSize / uncompressedSize)) :
         0;
 
