@@ -33,7 +33,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
-from clp_py_utils.s3_utils import get_container_authentication
+from clp_py_utils.s3_utils import ContainerType, get_container_authentication
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
 
@@ -532,7 +532,7 @@ def start_compression_scheduler(
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
     compression_scheduler_mount = None
     compression_scheduler_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, "compression")
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.compression)
     if aws_mount:
         compression_scheduler_mount = mounts.aws_config_dir
     if aws_env_vars:
@@ -558,7 +558,7 @@ def start_query_scheduler(
     module_name = "job_orchestration.scheduler.query.query_scheduler"
     query_scheduler_mount = None
     query_scheduler_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, "query")
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.query)
     if aws_mount:
         query_scheduler_mount = mounts.aws_config_dir
     if aws_env_vars:
@@ -666,7 +666,7 @@ def start_compression_worker(
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
     compression_worker_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, "compression")
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.compression)
     if aws_mount:
         compression_worker_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
@@ -699,7 +699,7 @@ def start_query_worker(
 
     query_worker_mounts = [mounts.stream_output_dir]
     query_worker_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, "query")
+    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.query)
     if aws_mount:
         query_worker_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
@@ -1034,7 +1034,7 @@ def start_log_viewer_webui(
             credentials = auth.credentials
             necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
             necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
-        aws_mount, aws_env_vars = get_container_authentication(clp_config, "log_viewer")
+        aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.log_viewer)
         if aws_mount:
             necessary_mounts.append(mounts.aws_config_dir)
         if aws_env_vars:

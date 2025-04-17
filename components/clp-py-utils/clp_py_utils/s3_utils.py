@@ -1,10 +1,12 @@
 import os
+from enum import auto
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
+from strenum import LowercaseStrEnum
 
 from clp_py_utils.clp_config import (
     AwsAuthType,
@@ -14,6 +16,13 @@ from clp_py_utils.clp_config import (
     StorageType,
 )
 from clp_py_utils.compression import FileMetadata
+
+
+class ContainerType(LowercaseStrEnum):
+    compression = auto()
+    log_viewer = auto()
+    query = auto()
+
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
@@ -96,24 +105,21 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
 
 
 def get_container_authentication(
-    clp_config: CLPConfig, type: Literal["compression", "log_viewer", "query"]
+    clp_config: CLPConfig, type: ContainerType
 ) -> Tuple[bool, List[str]]:
     """
     Generates Docker container authentication options for AWS S3 access based on the given type.
     Handles authentication methods that require extra configuration (profile, env_vars).
 
-    :param clp_config: CLPConfig containing storage configurations
-    :param type: Type of calling container (compression, log_viewer, or query)
-    :return: Tuple of (whether aws config mount is needed, credential env_vars to set)
-    :raises: ValueError if environment variables are not set correctly or if type is invalid
+    :param clp_config: CLPConfig containing storage configurations.
+    :param type: Type of calling container (compression, log_viewer, or query).
+    :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
+    :raises: ValueError if environment variables are not set correctly.
     """
-    if type not in ["compression", "log_viewer", "query"]:
-        raise ValueError(f"Unsupported authentication type: {type}")
-
     storages = {
-        "compression": [clp_config.logs_input, clp_config.archive_output.storage],
-        "log_viewer": [clp_config.stream_output.storage],
-        "query": [
+        ContainerType.compression: [clp_config.logs_input, clp_config.archive_output.storage],
+        ContainerType.log_viewer: [clp_config.stream_output.storage],
+        ContainerType.query: [
             clp_config.logs_input,
             clp_config.archive_output.storage,
             clp_config.stream_output.storage,
