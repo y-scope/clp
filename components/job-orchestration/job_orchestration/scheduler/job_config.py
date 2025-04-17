@@ -80,7 +80,6 @@ class ExtractJsonJobConfig(QueryJobConfig):
 class SearchJobConfig(QueryJobConfig):
     query_string: str
     max_num_results: int
-    dataset: str = "default"
     tags: typing.Optional[typing.List[str]] = None
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
