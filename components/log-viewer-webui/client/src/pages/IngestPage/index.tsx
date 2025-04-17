@@ -10,7 +10,7 @@ import SpaceSavings from "./SpaceSavings";
 const IngestPage = () => {
     return (
         <div className={styles["ingestPageGrid"]}>
-             <SpaceSavings/>
+            <SpaceSavings/>
         </div>
     );
 };
