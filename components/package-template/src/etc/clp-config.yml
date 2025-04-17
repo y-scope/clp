@@ -107,4 +107,4 @@
 #logs_directory: "var/log"
 #
 ## Location where the `.aws` directory should be read from
-#aws_config_directory: "$HOME/.aws"
+#aws_config_directory: None
