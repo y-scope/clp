@@ -134,7 +134,6 @@ based on how it decides to encode them. Table 2 lists clp-s' value types and the
 **Table 2**: clp-s value types.
 :::
 
-
 ### 2. Merge the event's schema with the archive's
 
 For each node in the event's schema tree, clp-s adds it to the archive's schema tree (if it doesn't
