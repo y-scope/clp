@@ -46,6 +46,8 @@ logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
 
+seen_datasets = set()
+
 
 def fetch_new_jobs(db_cursor):
     db_cursor.execute(
@@ -157,6 +159,7 @@ def search_and_schedule_new_tasks(
     For all jobs with PENDING status, split the job into tasks and schedule them.
     """
     global scheduled_jobs
+    global seen_datasets
 
     logger.debug("Search and schedule new tasks")
 
@@ -211,10 +214,13 @@ def search_and_schedule_new_tasks(
             db_conn.commit()
             continue
 
-        if StorageEngine.CLP_S == clp_storage_engine:
-            dataset = input_config.dataset
+        dataset = input_config.dataset
+        if StorageEngine.CLP_S == clp_storage_engine and dataset not in seen_datasets:
+            seen_datasets.add(dataset)
             query = f"INSERT INTO {table_prefix}{DATASETS_TABLE_SUFFIX} (name) VALUES ({dataset})"
             db_cursor.execute(query)
+            db_conn.commit()
+
             db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{table_prefix}{dataset}_{ARCHIVES_TABLE_SUFFIX}` (
@@ -232,7 +238,9 @@ def search_and_schedule_new_tasks(
                 )
                 """
             )
-            metadata_db_cursor.execute(
+            db_conn.commit()
+
+            db_cursor.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS `{table_prefix}{dataset}_{COLUMN_METADATA_TABLE_SUFFIX}` (
                     `name` VARCHAR(512) NOT NULL,
