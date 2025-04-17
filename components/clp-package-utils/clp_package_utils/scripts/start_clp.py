@@ -1006,7 +1006,9 @@ def start_log_viewer_webui(
             necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
             necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
         else:
-            aws_mount, aws_env_vars = generate_container_auth_options(clp_config, LOG_VIEWER_WEBUI_COMPONENT_NAME)
+            aws_mount, aws_env_vars = generate_container_auth_options(
+                clp_config, LOG_VIEWER_WEBUI_COMPONENT_NAME
+            )
             if aws_mount:
                 necessary_mounts.append(mounts.aws_config_dir)
             if aws_env_vars:
