@@ -337,7 +337,12 @@ class S3Credentials(BaseModel):
 
 
 class AwsAuthentication(BaseModel):
-    type: AwsAuthType
+    type: Literal[
+        AwsAuthType.credentials.value,
+        AwsAuthType.profile.value,
+        AwsAuthType.env_vars.value,
+        AwsAuthType.ec2.value,
+    ]
     profile: Optional[str] = None
     credentials: Optional[S3Credentials] = None
 
