@@ -1,7 +1,9 @@
 #ifndef CLP_S_ARCHIVEDEFS_HPP
 #define CLP_S_ARCHIVEDEFS_HPP
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
 #include "msgpack.hpp"
 

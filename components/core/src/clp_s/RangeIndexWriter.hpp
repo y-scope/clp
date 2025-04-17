@@ -1,7 +1,7 @@
 #ifndef CLP_S_RANGEINDEXWRITER_HPP
 #define CLP_S_RANGEINDEXWRITER_HPP
 
-#include <cstdint>
+#include <cstddef>
 #include <map>
 #include <optional>
 #include <string>

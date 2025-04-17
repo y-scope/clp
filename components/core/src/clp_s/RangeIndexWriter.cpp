@@ -1,6 +1,7 @@
 #include "RangeIndexWriter.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <string>
