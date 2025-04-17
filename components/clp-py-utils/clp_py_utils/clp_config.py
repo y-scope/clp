@@ -689,9 +689,7 @@ class CLPConfig(BaseModel):
                 break
 
         if profile_auth_used and self.aws_config_directory is None:
-            raise ValueError(
-                "aws_config_directory must be set when using profile authentication"
-            )
+            raise ValueError("aws_config_directory must be set when using profile authentication")
         elif not profile_auth_used and self.aws_config_directory is not None:
             raise ValueError(
                 "aws_config_directory should not be set when profile authentication is not used"

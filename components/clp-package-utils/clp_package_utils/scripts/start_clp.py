@@ -36,6 +36,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.s3_utils import ContainerType, get_container_authentication
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
+
 from clp_package_utils.general import (
     check_dependencies,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -75,10 +76,12 @@ def container_exists(container_name):
     return False
 
 
-def append_docker_options(cmd: List[str], mounts: Optional[List[DockerMount]] = None, env_vars: Optional[List[str]] = None):
+def append_docker_options(
+    cmd: List[str], mounts: Optional[List[DockerMount]] = None, env_vars: Optional[List[str]] = None
+):
     """
     Appends Docker mount and environment variable options to a command list.
-    
+
     :param cmd: The command list to append options to.
     :param mounts: Optional list of DockerMount objects to add as --mount options.
     :param env_vars: Optional list of environment variables to add as -e options.
@@ -88,7 +91,7 @@ def append_docker_options(cmd: List[str], mounts: Optional[List[DockerMount]] = 
             if mount:
                 cmd.append("--mount")
                 cmd.append(str(mount))
-    
+
     if env_vars:
         for env_var in env_vars:
             if "" != env_var:
