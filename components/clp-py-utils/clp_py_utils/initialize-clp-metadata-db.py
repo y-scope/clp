@@ -12,43 +12,17 @@ from clp_py_utils.clp_config import (
     Database,
     DATASETS_TABLE_SUFFIX,
 )
-from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
-logger = get_logger("initialize_clp_metadata_db")
-
-
-def create_archives_table(db_cursor, table_name: str) -> None:
-    db_cursor.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS `{table_name}` (
-            `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
-            `id` VARCHAR(64) NOT NULL,
-            `begin_timestamp` BIGINT NOT NULL,
-            `end_timestamp` BIGINT NOT NULL,
-            `uncompressed_size` BIGINT NOT NULL,
-            `size` BIGINT NOT NULL,
-            `creator_id` VARCHAR(64) NOT NULL,
-            `creation_ix` INT NOT NULL,
-            KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
-            UNIQUE KEY `archive_id` (`id`) USING BTREE,
-            PRIMARY KEY (`pagination_id`)
-        )
-        """
-    )
-
-
-def create_column_metadata_table(db_cursor, table_name: str) -> None:
-    db_cursor.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS `{table_name}` (
-            `name` VARCHAR(512) NOT NULL,
-            `type` TINYINT NOT NULL,
-            PRIMARY KEY (`name`, `type`)
-        )
-        """
-    )
+# Create logger
+logger = logging.getLogger(__file__)
+logger.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+logging_console_handler.setFormatter(logging_formatter)
+logger.addHandler(logging_console_handler)
 
 
 def main(argv):
@@ -66,7 +40,23 @@ def main(argv):
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
-            create_archives_table(metadata_db_cursor, f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}")
+            metadata_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}{ARCHIVES_TABLE_SUFFIX}` (
+                    `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
+                    `id` VARCHAR(64) NOT NULL,
+                    `begin_timestamp` BIGINT NOT NULL,
+                    `end_timestamp` BIGINT NOT NULL,
+                    `uncompressed_size` BIGINT NOT NULL,
+                    `size` BIGINT NOT NULL,
+                    `creator_id` VARCHAR(64) NOT NULL,
+                    `creation_ix` INT NOT NULL,
+                    KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
+                    UNIQUE KEY `archive_id` (`id`) USING BTREE,
+                    PRIMARY KEY (`pagination_id`)
+                )
+                """
+            )
 
             metadata_db_cursor.execute(
                 f"""
@@ -119,8 +109,14 @@ def main(argv):
                 """
             )
 
-            create_column_metadata_table(
-                metadata_db_cursor, f"{table_prefix}default_{COLUMN_METADATA_TABLE_SUFFIX}"
+            metadata_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}default_{COLUMN_METADATA_TABLE_SUFFIX}` (
+                    `name` VARCHAR(512) NOT NULL,
+                    `type` TINYINT NOT NULL,
+                    PRIMARY KEY (`name`, `type`)
+                )
+                """
             )
 
             metadata_db.commit()

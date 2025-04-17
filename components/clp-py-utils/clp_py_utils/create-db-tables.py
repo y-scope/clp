@@ -26,7 +26,7 @@ def main(argv):
 
     # fmt: off
     cmd = [
-        "python3", str(script_dir / "initialize_clp_metadata_db.py"),
+        "python3", str(script_dir / "initialize-clp-metadata-db.py"),
         "--config", str(config_file_path),
     ]
     # fmt: on
