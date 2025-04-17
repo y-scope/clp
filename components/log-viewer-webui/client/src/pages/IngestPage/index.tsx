@@ -1,8 +1,3 @@
-import {
-    Col,
-    Row,
-} from "antd";
-
 import styles from "./index.module.css";
 import SpaceSavings from "./SpaceSavings";
 
@@ -15,13 +10,7 @@ import SpaceSavings from "./SpaceSavings";
 const IngestPage = () => {
     return (
         <div className={styles["ingestPageGrid"]}>
-            <Row>
-                <Col span={8}>
-                    <SpaceSavings/>
-                </Col>
-                <Col span={8}/>
-                <Col span={8}/>
-            </Row>
+             <SpaceSavings/>
         </div>
     );
 };
