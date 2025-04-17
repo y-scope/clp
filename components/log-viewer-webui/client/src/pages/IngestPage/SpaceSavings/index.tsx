@@ -1,12 +1,7 @@
-import {
-    Card,
-    Typography,
-} from "antd";
+import {theme} from "antd";
 
-import styles from "./index.module.css";
+import StatCard from "../../../components/StatCard";
 
-
-const {Text} = Typography;
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace with values from database once api implemented.
@@ -19,6 +14,7 @@ const DUMMY_UNCOMPRESSED_SIZE = 110300010;
  * @return
  */
 const SpaceSavings = () => {
+    const {token} = theme.useToken();
     const compressedSize = DUMMY_COMPRESSED_SIZE as number;
     const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE as number;
 
@@ -26,21 +22,14 @@ const SpaceSavings = () => {
         100 * (1 - (compressedSize / uncompressedSize)) :
         0;
 
+    const spaceSavingsPercentText = `${spaceSavingsPercent.toFixed(2)}%`;
+
     return (
-        <Card
-            className={styles["card"] || ""}
-            hoverable={true}
-        >
-            <div className={styles["cardContent"]}>
-                <Text className={styles["title"] || ""}>
-                    Space Savings
-                </Text>
-                <Text className={styles["statistic"] || ""}>
-                    {spaceSavingsPercent.toFixed(2)}
-                    %
-                </Text>
-            </div>
-        </Card>
+        <StatCard
+            backgroundColor={token.colorPrimary}
+            stat={spaceSavingsPercentText}
+            textColor={token.colorWhite}
+            title={"Space Savings"}/>
     );
 };
 
