@@ -349,14 +349,14 @@ class AwsAuthentication(BaseModel):
 
         if AwsAuthType.profile == auth_type:
             if not profile:
-                raise ValueError("profile must be set when type is 'profile'")
+                raise ValueError(f"profile must be set when type is '{auth_type}'")
             if credentials:
-                raise ValueError("credentials must not be set when type is 'profile'")
+                raise ValueError(f"credentials must not be set when type is '{auth_type}'")
         elif AwsAuthType.credentials == auth_type:
             if not credentials:
-                raise ValueError("credentials must be set when type is 'credentials'")
+                raise ValueError(f"credentials must be set when type is '{auth_type}'")
             if profile:
-                raise ValueError("profile must not be set when type is 'credentials'")
+                raise ValueError(f"profile must not be set when type is '{auth_type}'")
         elif auth_type in [AwsAuthType.ec2, AwsAuthType.env] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_type}'")
         return values

@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from enum import auto
 
-from clp_py_utils.clp_config import AwsAuthentication, S3Config
+from clp_py_utils.clp_config import S3Config
 from pydantic import BaseModel, validator
 from strenum import LowercaseStrEnum
 

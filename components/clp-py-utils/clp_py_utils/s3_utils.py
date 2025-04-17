@@ -32,7 +32,7 @@ def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Cr
         aws_session = boto3.Session()
     credentials = aws_session.get_credentials()
     if credentials is None:
-        return None
+        return credentials
 
     return S3Credentials(
         access_key_id=credentials.access_key,
