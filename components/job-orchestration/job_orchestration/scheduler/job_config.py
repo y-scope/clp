@@ -25,11 +25,13 @@ class FsInputConfig(BaseModel):
     paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
     timestamp_key: typing.Optional[str] = None
+    dataset: str = "default"
 
 
 class S3InputConfig(BaseModel):
     type: typing.Literal[InputType.S3.value] = InputType.S3.value
     timestamp_key: typing.Optional[str] = None
+    dataset: str = "default"
 
     region_code: str
     bucket: str
@@ -78,6 +80,7 @@ class ExtractJsonJobConfig(QueryJobConfig):
 class SearchJobConfig(QueryJobConfig):
     query_string: str
     max_num_results: int
+    dataset: str = "default"
     tags: typing.Optional[typing.List[str]] = None
     begin_timestamp: typing.Optional[int] = None
     end_timestamp: typing.Optional[int] = None
