@@ -1,10 +1,10 @@
-import dayjs from "dayjs";
 import {create} from "zustand";
 
 import {
     DEFAULT_TIME_RANGE,
     TIME_RANGE_OPTION_DAYJS_MAP,
-} from "./SearchControls/TimeRangeInput/utils";
+} from "../../components/TimeRangeInputBase/utils";
+import {TimeRange} from "../../typings/time";
 
 
 /**
@@ -17,9 +17,9 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
 
 interface SearchState {
     queryString: string;
-    timeRange: [dayjs.Dayjs, dayjs.Dayjs];
+    timeRange: TimeRange;
     updateQueryString: (query: string) => void;
-    updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
+    updateTimeRange: (range: TimeRange) => void;
 }
 
 const useSearchStore = create<SearchState>((set) => ({
