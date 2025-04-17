@@ -33,7 +33,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
-from clp_py_utils.s3_utils import ContainerType, generate_container_auth_options
+from clp_py_utils.s3_utils import generate_container_auth_options
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
 
