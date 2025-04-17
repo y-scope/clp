@@ -12,6 +12,11 @@ We explain each below.
 
 The processing of encoding a log event can conceptually be broken down into the following steps.
 
+1. [Determine the log event's schema](#1-determine-the-log-events-schema)
+2. [Merge the event's schema with the archive's](#2-merge-the-events-schema-with-the-archives)
+3. [Create a table for the schema](#3-create-a-table-for-the-schema)
+4. [Encode and store the event](#4-encode-and-store-the-event)
+
 ### 1. Determine the log event's schema
 
 clp-s first examines the log event's schema--i.e., the key and value type for each kv-pair in the
