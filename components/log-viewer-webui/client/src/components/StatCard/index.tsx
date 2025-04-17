@@ -18,11 +18,11 @@ interface StatCardProps {
 /**
  * Renders a card that dislays a statistic.
  *
- * @param root0
- * @param root0.title
- * @param root0.stat
- * @param root0.textColor
- * @param root0.backgroundColor
+ * @param props
+ * @param props.title
+ * @param props.stat
+ * @param props.textColor
+ * @param props.backgroundColor
  * @return
  */
 const StatCard = ({title, stat, textColor, backgroundColor}: StatCardProps) => {
