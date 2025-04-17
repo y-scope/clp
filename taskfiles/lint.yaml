@@ -74,7 +74,7 @@ tasks:
       - "{{.G_WEBUI_SRC_DIR}}/server/**/*.jsx"
       - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.js"
       - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.jsx"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     cmds:
       - task: "js"
@@ -117,9 +117,9 @@ tasks:
           components/core/config \
           components/package-template/src/etc \
           docs \
-          deps-tasks.yml \
-          lint-tasks.yml \
-          Taskfile.yml
+          taskfile.yaml \
+          taskfiles/deps.yaml \
+          taskfiles/lint.yaml
 
   check-cpp-format:
     sources: &cpp_source_files
@@ -796,7 +796,7 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
       - "package.json"
       - "package-lock.json"
@@ -825,7 +825,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
       - "lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]
