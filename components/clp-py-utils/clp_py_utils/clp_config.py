@@ -55,6 +55,13 @@ class StorageType(LowercaseStrEnum):
     S3 = auto()
 
 
+class AwsAuthType(LowercaseStrEnum):
+    credentials = auto()
+    profile = auto()
+    env = auto()
+    ec2 = auto()
+
+
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
 
 
@@ -330,7 +337,7 @@ class S3Credentials(BaseModel):
 
 
 class AwsAuthentication(BaseModel):
-    type: Literal["ec2", "env_vars", "profile", "credentials"]
+    type: AwsAuthType
     profile: Optional[str] = None
     credentials: Optional[S3Credentials] = None
 
@@ -340,17 +347,17 @@ class AwsAuthentication(BaseModel):
         profile = values.get("profile")
         credentials = values.get("credentials")
 
-        if "profile" == auth_type:
+        if AwsAuthType.profile == auth_type:
             if not profile:
                 raise ValueError("profile must be set when type is 'profile'")
             if credentials:
                 raise ValueError("credentials must not be set when type is 'profile'")
-        elif "credentials" == auth_type:
+        elif AwsAuthType.credentials == auth_type:
             if not credentials:
                 raise ValueError("credentials must be set when type is 'credentials'")
             if profile:
                 raise ValueError("profile must not be set when type is 'credentials'")
-        elif auth_type in ["ec2", "env_vars"] and (profile or credentials):
+        elif auth_type in [AwsAuthType.ec2, AwsAuthType.env] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_type}'")
         return values
 

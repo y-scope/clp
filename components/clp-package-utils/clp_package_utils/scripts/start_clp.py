@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
+    AwsAuthType,
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
@@ -992,7 +993,7 @@ def start_log_viewer_webui(
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
         auth = s3_config.aws_authentication
-        if "profile" == auth.type:
+        if AwsAuthType.profile == auth.type:
             settings_json_updates["StreamFilesS3Profile"] = auth.profile
     elif StorageType.FS == stream_storage.type:
         settings_json_updates["StreamFilesS3Region"] = None
@@ -1029,7 +1030,7 @@ def start_log_viewer_webui(
     ]
     if StorageType.S3 == stream_storage.type:
         auth = stream_storage.s3_config.aws_authentication
-        if "credentials" == auth.type:
+        if AwsAuthType.credentials == auth.type:
             credentials = auth.credentials
             necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
             necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
