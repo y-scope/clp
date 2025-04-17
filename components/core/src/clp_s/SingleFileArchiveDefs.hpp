@@ -33,6 +33,7 @@ enum struct ArchiveMetadataPacketType : uint8_t {
     ArchiveInfo = 0,
     ArchiveFileInfo = 1,
     TimestampDictionary = 2,
+    RangeIndex = 3
 };
 
 struct ArchiveInfoPacket {
