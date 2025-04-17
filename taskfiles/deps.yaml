@@ -28,9 +28,9 @@ vars:
 
 tasks:
   default:
-    cmds:
-      - task: "core"
-      - task: "log-viewer"
+    deps:
+      - "core"
+      - "log-viewer"
 
   core:
     vars:
