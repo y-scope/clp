@@ -352,18 +352,16 @@ class AwsAuthentication(BaseModel):
         profile = values.get("profile")
         credentials = values.get("credentials")
 
+        if profile and credentials:
+            raise ValueError("profile and credentials cannot be set simultaneously.")
         if AwsAuthType.profile == auth_type:
             if not profile:
-                raise ValueError(f"profile must be set when type is '{auth_type}'")
-            if credentials:
-                raise ValueError(f"credentials must not be set when type is '{auth_type}'")
+                raise ValueError(f"profile must be set when type is '{auth_type}.'")
         elif AwsAuthType.credentials == auth_type:
             if not credentials:
-                raise ValueError(f"credentials must be set when type is '{auth_type}'")
-            if profile:
-                raise ValueError(f"profile must not be set when type is '{auth_type}'")
+                raise ValueError(f"credentials must be set when type is '{auth_type}.'")
         elif auth_type in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
-            raise ValueError(f"profile and credentials must not be set when type is '{auth_type}'")
+            raise ValueError(f"profile and credentials must not be set when type is '{auth_type}.'")
         return values
 
 
