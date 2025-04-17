@@ -120,7 +120,7 @@ def main(argv):
             )
 
             create_column_metadata_table(
-                db_cursor, f"{table_prefix}default_{COLUMN_METADATA_TABLE_SUFFIX}"
+                metadata_db_cursor, f"{table_prefix}default_{COLUMN_METADATA_TABLE_SUFFIX}"
             )
 
             metadata_db.commit()
