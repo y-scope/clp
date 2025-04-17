@@ -13,7 +13,7 @@ from clp_py_utils.clp_config import (
     DATASETS_TABLE_SUFFIX,
 )
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.sql_table_schema_utils import create_archives_table, create_column_metadata_table
+from clp_py_utils.sql_table_schema_utils import create_archives_table
 
 # Setup logging
 # Create logger
@@ -83,19 +83,6 @@ def main(argv):
                     PRIMARY KEY (`id`)
                 ) ROW_FORMAT=DYNAMIC
                 """
-            )
-
-            metadata_db_cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
-                    `name` VARCHAR(512) NOT NULL,
-                    PRIMARY KEY (`name`)
-                )
-                """
-            )
-
-            create_column_metadata_table(
-                metadata_db_cursor, f"{table_prefix}default_{COLUMN_METADATA_TABLE_SUFFIX}"
             )
 
             metadata_db.commit()
