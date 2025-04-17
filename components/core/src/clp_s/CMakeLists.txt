@@ -113,6 +113,8 @@ set(
         PackedStreamReader.cpp
         PackedStreamReader.hpp
         ParsedMessage.hpp
+        RangeIndexWriter.cpp
+        RangeIndexWriter.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
         Schema.cpp
