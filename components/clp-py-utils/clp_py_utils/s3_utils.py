@@ -1,28 +1,25 @@
 import os
 from enum import auto
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 import boto3
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
-from strenum import LowercaseStrEnum
 
 from clp_py_utils.clp_config import (
     AwsAuthType,
     CLPConfig,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+    LOG_VIEWER_WEBUI_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
     S3Config,
     S3Credentials,
     StorageType,
 )
 from clp_py_utils.compression import FileMetadata
-
-
-class ContainerType(LowercaseStrEnum):
-    compression = auto()
-    log_viewer = auto()
-    query = auto()
-
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
@@ -104,8 +101,8 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
 
-def get_container_authentication(
-    clp_config: CLPConfig, type: ContainerType
+def generate_container_auth_options(
+    clp_config: CLPConfig, component_type: str
 ) -> Tuple[bool, List[str]]:
     """
     Generates Docker container authentication options for AWS S3 access based on the given type.
@@ -116,13 +113,28 @@ def get_container_authentication(
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
-    storages = []
-    if ContainerType.compression == type:
-        storages = [clp_config.logs_input, clp_config.archive_output.storage]
-    elif ContainerType.log_viewer == type:
-        storages = [clp_config.stream_output.storage]
-    elif ContainerType.query == type:
-        storages = [
+    if component_type not in [
+        COMPRESSION_SCHEDULER_COMPONENT_NAME,
+        COMPRESSION_WORKER_COMPONENT_NAME,
+        LOG_VIEWER_WEBUI_COMPONENT_NAME,
+        QUERY_SCHEDULER_COMPONENT_NAME,
+        QUERY_WORKER_COMPONENT_NAME,
+    ]:
+        raise ValueError(f"Component type {component_type} is not valid.")
+
+    storages_by_component_type = []
+    if (
+        COMPRESSION_SCHEDULER_COMPONENT_NAME == component_type
+        or COMPRESSION_WORKER_COMPONENT_NAME == component_type
+    ):
+        storages_by_component_type = [clp_config.logs_input, clp_config.archive_output.storage]
+    elif LOG_VIEWER_WEBUI_COMPONENT_NAME == component_type:
+        storages_by_component_type = [clp_config.stream_output.storage]
+    elif (
+        QUERY_SCHEDULER_COMPONENT_NAME == component_type
+        or QUERY_WORKER_COMPONENT_NAME == component_type
+    ):
+        storages_by_component_type = [
             clp_config.logs_input,
             clp_config.archive_output.storage,
             clp_config.stream_output.storage,
@@ -131,7 +143,7 @@ def get_container_authentication(
     config_mount = False
     add_env_vars = False
 
-    for storage in storages:
+    for storage in storages_by_component_type:
         if StorageType.S3 == storage.type:
             auth = storage.s3_config.aws_authentication
             if AwsAuthType.profile == auth.type:

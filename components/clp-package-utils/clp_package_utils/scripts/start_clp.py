@@ -33,7 +33,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
-from clp_py_utils.s3_utils import ContainerType, get_container_authentication
+from clp_py_utils.s3_utils import ContainerType, generate_container_auth_options
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
 
@@ -535,13 +535,6 @@ def start_compression_scheduler(
     mounts: CLPDockerMounts,
 ):
     module_name = "job_orchestration.scheduler.compress.compression_scheduler"
-    compression_scheduler_mount = None
-    compression_scheduler_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.compression)
-    if aws_mount:
-        compression_scheduler_mount = mounts.aws_config_dir
-    if aws_env_vars:
-        compression_scheduler_env_vars.extend(aws_env_vars)
     generic_start_scheduler(
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -549,8 +542,6 @@ def start_compression_scheduler(
         clp_config,
         container_clp_config,
         mounts,
-        compression_scheduler_mount,
-        compression_scheduler_env_vars,
     )
 
 
@@ -561,13 +552,6 @@ def start_query_scheduler(
     mounts: CLPDockerMounts,
 ):
     module_name = "job_orchestration.scheduler.query.query_scheduler"
-    query_scheduler_mount = None
-    query_scheduler_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.query)
-    if aws_mount:
-        query_scheduler_mount = mounts.aws_config_dir
-    if aws_env_vars:
-        query_scheduler_env_vars.extend(aws_env_vars)
     generic_start_scheduler(
         QUERY_SCHEDULER_COMPONENT_NAME,
         module_name,
@@ -575,8 +559,6 @@ def start_query_scheduler(
         clp_config,
         container_clp_config,
         mounts,
-        query_scheduler_mount,
-        query_scheduler_env_vars,
     )
 
 
@@ -587,8 +569,6 @@ def generic_start_scheduler(
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
-    scheduler_specific_mount: Optional[DockerMount],
-    scheduler_specific_env_vars: Optional[List[str]],
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -634,10 +614,11 @@ def generic_start_scheduler(
         f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
     ]
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
-    if scheduler_specific_mount:
-        necessary_mounts.append(scheduler_specific_mount)
-    if scheduler_specific_env_vars:
-        necessary_env_vars.extend(scheduler_specific_env_vars)
+    aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
+    if aws_mount:
+        necessary_mounts.append(mounts.aws_config_dir)
+    if aws_env_vars:
+        necessary_env_vars.extend(aws_env_vars)
     if (
         COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name
         and StorageType.FS == clp_config.logs_input.type
@@ -669,12 +650,6 @@ def start_compression_worker(
     celery_method = "job_orchestration.executor.compress"
     celery_route = f"{QueueName.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
-    compression_worker_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.compression)
-    if aws_mount:
-        compression_worker_mounts.append(mounts.aws_config_dir)
-    if aws_env_vars:
-        compression_worker_env_vars.extend(aws_env_vars)
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
         instance_id,
@@ -687,7 +662,6 @@ def start_compression_worker(
         num_cpus,
         mounts,
         compression_worker_mounts,
-        compression_worker_env_vars,
     )
 
 
@@ -702,12 +676,6 @@ def start_query_worker(
     celery_route = f"{QueueName.QUERY}"
 
     query_worker_mounts = [mounts.stream_output_dir]
-    query_worker_env_vars = []
-    aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.query)
-    if aws_mount:
-        query_worker_mounts.append(mounts.aws_config_dir)
-    if aws_env_vars:
-        query_worker_env_vars.extend(aws_env_vars)
     if StorageType.FS == clp_config.archive_output.storage.type:
         query_worker_mounts.append(mounts.archives_output_dir)
 
@@ -723,7 +691,6 @@ def start_query_worker(
         num_cpus,
         mounts,
         query_worker_mounts,
-        query_worker_env_vars,
     )
 
 
@@ -738,8 +705,7 @@ def generic_start_worker(
     redis_database: int,
     num_cpus: int,
     mounts: CLPDockerMounts,
-    worker_specific_mount: Optional[List[Optional[DockerMount]]],
-    worker_specific_env_vars: Optional[List[str]],
+    worker_specific_mounts: Optional[List[Optional[DockerMount]]],
 ):
     logger.info(f"Starting {component_name}...")
 
@@ -799,11 +765,14 @@ def generic_start_worker(
     ]
     if StorageType.FS == clp_config.logs_input.type:
         necessary_mounts.append(mounts.input_logs_dir)
-    if worker_specific_mount:
-        necessary_mounts.extend(worker_specific_mount)
+    if worker_specific_mounts:
+        necessary_mounts.extend(worker_specific_mounts)
 
-    if worker_specific_env_vars:
-        necessary_env_vars.extend(worker_specific_env_vars)
+    aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
+    if aws_mount:
+        necessary_mounts.append(mounts.aws_config_dir)
+    if aws_env_vars:
+        necessary_env_vars.extend(aws_env_vars)
 
     append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
     container_start_cmd.append(clp_config.execution_container)
@@ -1036,11 +1005,12 @@ def start_log_viewer_webui(
             credentials = auth.credentials
             necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
             necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
-        aws_mount, aws_env_vars = get_container_authentication(clp_config, ContainerType.log_viewer)
-        if aws_mount:
-            necessary_mounts.append(mounts.aws_config_dir)
-        if aws_env_vars:
-            necessary_env_vars.extend(aws_env_vars)
+        else:
+            aws_mount, aws_env_vars = generate_container_auth_options(clp_config, LOG_VIEWER_WEBUI_COMPONENT_NAME)
+            if aws_mount:
+                necessary_mounts.append(mounts.aws_config_dir)
+            if aws_env_vars:
+                necessary_env_vars.extend(aws_env_vars)
     append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
     container_cmd.append(clp_config.execution_container)
 
