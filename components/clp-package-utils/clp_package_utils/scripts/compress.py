@@ -149,7 +149,7 @@ def main(argv):
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
     args_parser.add_argument(
-        "--dataset", default="default" help="The name of the log category to compress into."
+        "--dataset", default="default", help="The name of the log category to compress into."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
