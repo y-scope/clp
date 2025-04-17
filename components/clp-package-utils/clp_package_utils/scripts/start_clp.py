@@ -241,9 +241,9 @@ def create_db_tables(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    necessary_env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
+    env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
@@ -287,9 +287,9 @@ def create_results_cache_indices(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    necessary_env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
+    env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
@@ -888,7 +888,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    necessary_env_vars = [
+    env_vars = [
         f"NODE_PATH={node_path}",
         f"MONGO_URL={clp_config.results_cache.get_uri()}",
         f"PORT={clp_config.webui.port}",
@@ -902,7 +902,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         mounts.clp_home,
         DockerMount(DockerMountType.BIND, webui_logs_dir, container_webui_logs_dir),
     ]
-    append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_cmd, necessary_mounts, env_vars)
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
@@ -1061,7 +1061,7 @@ def start_reducer(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    necessary_env_vars = [
+    env_vars = [
         f"PYTHONPATH={clp_site_packages_dir}",
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
@@ -1071,7 +1071,7 @@ def start_reducer(
         mounts.clp_home,
         mounts.logs_dir,
     ]
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
