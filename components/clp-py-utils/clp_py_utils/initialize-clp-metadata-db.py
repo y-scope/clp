@@ -6,7 +6,12 @@ from contextlib import closing
 
 from sql_adapter import SQL_Adapter
 
-from clp_py_utils.clp_config import Database
+from clp_py_utils.clp_config import (
+    ARCHIVES_TABLE_SUFFIX,
+    COLUMN_METADATA_TABLE_SUFFIX,
+    Database,
+    DATASETS_TABLE_SUFFIX,
+)
 from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
@@ -37,7 +42,7 @@ def main(argv):
         ) as metadata_db_cursor:
             metadata_db_cursor.execute(
                 f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
+                CREATE TABLE IF NOT EXISTS `{table_prefix}{ARCHIVES_TABLE_SUFFIX}` (
                     `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
                     `id` VARCHAR(64) NOT NULL,
                     `begin_timestamp` BIGINT NOT NULL,
@@ -97,7 +102,16 @@ def main(argv):
 
             metadata_db_cursor.execute(
                 f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}column_metadata_default` (
+                CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
+                    `name` VARCHAR(512) NOT NULL,
+                    PRIMARY KEY (`name`)
+                )
+                """
+            )
+
+            metadata_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}default_{COLUMN_METADATA_TABLE_SUFFIX}` (
                     `name` VARCHAR(512) NOT NULL,
                     `type` TINYINT NOT NULL,
                     PRIMARY KEY (`name`, `type`)

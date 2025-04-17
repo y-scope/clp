@@ -12,10 +12,14 @@ import celery
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
+    ARCHIVES_TABLE_SUFFIX,
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
+    COLUMN_METADATA_TABLE_SUFFIX,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
+    DATASETS_TABLE_SUFFIX,
+    StorageEngine,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
@@ -146,13 +150,17 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
+def search_and_schedule_new_tasks(
+    db_conn, db_cursor, clp_metadata_db_connection_config, clp_storage_engine: StorageEngine
+):
     """
     For all jobs with PENDING status, split the job into tasks and schedule them.
     """
     global scheduled_jobs
 
     logger.debug("Search and schedule new tasks")
+
+    table_prefix = clp_metadata_db_connection_config["table_prefix"]
 
     # Poll for new compression jobs
     jobs = fetch_new_jobs(db_cursor)
@@ -202,6 +210,38 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             )
             db_conn.commit()
             continue
+
+        if StorageEngine.CLP_S == clp_storage_engine:
+            dataset = input_config.dataset
+            query = f"INSERT INTO {table_prefix}{DATASETS_TABLE_SUFFIX} (name) VALUES ({dataset})"
+            db_cursor.execute(query)
+            db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}{dataset}_{ARCHIVES_TABLE_SUFFIX}` (
+                    `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
+                    `id` VARCHAR(64) NOT NULL,
+                    `begin_timestamp` BIGINT NOT NULL,
+                    `end_timestamp` BIGINT NOT NULL,
+                    `uncompressed_size` BIGINT NOT NULL,
+                    `size` BIGINT NOT NULL,
+                    `creator_id` VARCHAR(64) NOT NULL,
+                    `creation_ix` INT NOT NULL,
+                    KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
+                    UNIQUE KEY `archive_id` (`id`) USING BTREE,
+                    PRIMARY KEY (`pagination_id`)
+                )
+                """
+            )
+            metadata_db_cursor.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS `{table_prefix}{dataset}_{COLUMN_METADATA_TABLE_SUFFIX}` (
+                    `name` VARCHAR(512) NOT NULL,
+                    `type` TINYINT NOT NULL,
+                    PRIMARY KEY (`name`, `type`)
+                )
+                """
+            )
+            db_conn.commit()
 
         paths_to_compress_buffer.flush()
         tasks = paths_to_compress_buffer.get_tasks()
@@ -385,12 +425,14 @@ def main(argv):
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
         # Start Job Processing Loop
+        clp_storage_engine = clp_config.package.storage_engine
         while True:
             try:
                 search_and_schedule_new_tasks(
                     db_conn,
                     db_cursor,
                     sql_adapter.database_config.get_clp_connection_params_and_type(True),
+                    clp_storage_engine,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
