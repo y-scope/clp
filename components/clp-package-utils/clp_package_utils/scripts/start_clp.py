@@ -36,7 +36,6 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.s3_utils import ContainerType, get_container_authentication
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
-
 from clp_package_utils.general import (
     check_dependencies,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -76,18 +75,25 @@ def container_exists(container_name):
     return False
 
 
-def append_docker_mounts(cmd: List[str], mounts: List[DockerMount]):
-    for mount in mounts:
-        if mount:
-            cmd.append("--mount")
-            cmd.append(str(mount))
-
-
-def append_docker_env_vars(cmd: List[str], env_vars: List[str]):
-    for env_var in env_vars:
-        if "" != env_var:
-            cmd.append("-e")
-            cmd.append(env_var)
+def append_docker_options(cmd: List[str], mounts: Optional[List[DockerMount]] = None, env_vars: Optional[List[str]] = None):
+    """
+    Appends Docker mount and environment variable options to a command list.
+    
+    :param cmd: The command list to append options to.
+    :param mounts: Optional list of DockerMount objects to add as --mount options.
+    :param env_vars: Optional list of environment variables to add as -e options.
+    """
+    if mounts:
+        for mount in mounts:
+            if mount:
+                cmd.append("--mount")
+                cmd.append(str(mount))
+    
+    if env_vars:
+        for env_var in env_vars:
+            if "" != env_var:
+                cmd.append("-e")
+                cmd.append(env_var)
 
 
 def append_docker_port_settings_for_host_ips(
@@ -177,8 +183,7 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    append_docker_env_vars(cmd, env_vars)
-    append_docker_mounts(cmd, mounts)
+    append_docker_options(cmd, mounts, env_vars)
     append_docker_port_settings_for_host_ips(
         clp_config.database.host, clp_config.database.port, 3306, cmd
     )
@@ -235,8 +240,7 @@ def create_db_tables(
     # fmt: on
     necessary_env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
-    append_docker_env_vars(container_start_cmd, necessary_env_vars)
-    append_docker_mounts(container_start_cmd, necessary_mounts)
+    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
@@ -282,8 +286,7 @@ def create_results_cache_indices(
     # fmt: on
     necessary_env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
-    append_docker_env_vars(container_start_cmd, necessary_env_vars)
-    append_docker_mounts(container_start_cmd, necessary_mounts)
+    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
@@ -366,8 +369,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         f"RABBITMQ_PID_FILE={rabbitmq_pid_file_path}",
     ]
     # fmt: on
-    append_docker_env_vars(cmd, env_vars)
-    append_docker_mounts(cmd, mounts)
+    append_docker_options(cmd, mounts, env_vars)
     append_docker_port_settings_for_host_ips(
         clp_config.queue.host, clp_config.queue.port, 5672, cmd
     )
@@ -438,7 +440,7 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
         "-u", container_user,
     ]
     # fmt: on
-    append_docker_mounts(cmd, mounts)
+    append_docker_options(cmd, mounts)
     append_docker_port_settings_for_host_ips(
         clp_config.redis.host, clp_config.redis.port, 6379, cmd
     )
@@ -510,7 +512,7 @@ def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathl
         "-u", container_user,
     ]
     # fmt: on
-    append_docker_mounts(cmd, mounts)
+    append_docker_options(cmd, mounts)
     cmd.append("mongo:7.0.1")
     cmd.append("--config")
     cmd.append(str(pathlib.Path("/") / "etc" / "mongo" / "mongod.conf"))
@@ -638,8 +640,7 @@ def generic_start_scheduler(
         and StorageType.FS == clp_config.logs_input.type
     ):
         necessary_mounts.append(mounts.input_logs_dir)
-    append_docker_env_vars(container_start_cmd, necessary_env_vars)
-    append_docker_mounts(container_start_cmd, necessary_mounts)
+    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
@@ -801,8 +802,7 @@ def generic_start_worker(
     if worker_specific_env_vars:
         necessary_env_vars.extend(worker_specific_env_vars)
 
-    append_docker_env_vars(container_start_cmd, necessary_env_vars)
-    append_docker_mounts(container_start_cmd, necessary_mounts)
+    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
@@ -930,8 +930,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         mounts.clp_home,
         DockerMount(DockerMountType.BIND, webui_logs_dir, container_webui_logs_dir),
     ]
-    append_docker_env_vars(container_cmd, necessary_env_vars)
-    append_docker_mounts(container_cmd, necessary_mounts)
+    append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
@@ -1039,8 +1038,7 @@ def start_log_viewer_webui(
             necessary_mounts.append(mounts.aws_config_dir)
         if aws_env_vars:
             necessary_env_vars.extend(aws_env_vars)
-    append_docker_env_vars(container_cmd, necessary_env_vars)
-    append_docker_mounts(container_cmd, necessary_mounts)
+    append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
@@ -1100,8 +1098,7 @@ def start_reducer(
         mounts.clp_home,
         mounts.logs_dir,
     ]
-    append_docker_env_vars(container_start_cmd, necessary_env_vars)
-    append_docker_mounts(container_start_cmd, necessary_mounts)
+    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
