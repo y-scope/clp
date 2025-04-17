@@ -195,7 +195,7 @@ Keys containing the following literal characters must escape the characters usin
 Furthermore, keys that _start_ with the following literal characters must escape the characters
 using a `\` (backslash):
 
-a `\` (backslash):
+* `\` (backslash):
 * `@`
 * `$`
 * `!`
