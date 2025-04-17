@@ -26,6 +26,7 @@ from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_table_schema_utils import create_archives_table, create_column_metadata_table
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
@@ -217,37 +218,11 @@ def search_and_schedule_new_tasks(
         dataset = input_config.dataset
         if StorageEngine.CLP_S == clp_storage_engine and dataset not in seen_datasets:
             seen_datasets.add(dataset)
-            query = f"INSERT INTO {table_prefix}{DATASETS_TABLE_SUFFIX} (name) VALUES ({dataset})"
+            query = f'INSERT INTO {table_prefix}{DATASETS_TABLE_SUFFIX} (name) VALUES ("{dataset}")'
             db_cursor.execute(query)
-            db_conn.commit()
-
-            db_cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}{dataset}_{ARCHIVES_TABLE_SUFFIX}` (
-                    `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
-                    `id` VARCHAR(64) NOT NULL,
-                    `begin_timestamp` BIGINT NOT NULL,
-                    `end_timestamp` BIGINT NOT NULL,
-                    `uncompressed_size` BIGINT NOT NULL,
-                    `size` BIGINT NOT NULL,
-                    `creator_id` VARCHAR(64) NOT NULL,
-                    `creation_ix` INT NOT NULL,
-                    KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
-                    UNIQUE KEY `archive_id` (`id`) USING BTREE,
-                    PRIMARY KEY (`pagination_id`)
-                )
-                """
-            )
-            db_conn.commit()
-
-            db_cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}{dataset}_{COLUMN_METADATA_TABLE_SUFFIX}` (
-                    `name` VARCHAR(512) NOT NULL,
-                    `type` TINYINT NOT NULL,
-                    PRIMARY KEY (`name`, `type`)
-                )
-                """
+            create_archives_table(db_cursor, f"{table_prefix}{dataset}_{ARCHIVES_TABLE_SUFFIX}")
+            create_column_metadata_table(
+                db_cursor, f"{table_prefix}{dataset}_{COLUMN_METADATA_TABLE_SUFFIX}"
             )
             db_conn.commit()
 
