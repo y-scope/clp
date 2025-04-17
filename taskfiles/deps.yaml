@@ -104,7 +104,6 @@ tasks:
       - task: "sqlite3"
       - task: "utfcpp"
       - task: "yaml-cpp"
-      - task: "yscope-log-viewer"
       - task: "ystdlib-cpp"
 
   abseil-cpp:
