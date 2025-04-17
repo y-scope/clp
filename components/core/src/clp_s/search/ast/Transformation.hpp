@@ -9,6 +9,9 @@ namespace clp_s::search::ast {
  */
 class Transformation {
 public:
+    // Default virtual destructor
+    virtual ~Transformation() = default;
+
     /**
      * Runs the pass. The expression passed as input may be mutated by the pass.
      * @param expr the expression that the pass will run on

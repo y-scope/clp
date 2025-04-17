@@ -492,6 +492,8 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/OutputHandler.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Projection.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Projection.hpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/QueryRunner.cpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/QueryRunner.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/SchemaMatch.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/SchemaMatch.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/sql.cpp"
