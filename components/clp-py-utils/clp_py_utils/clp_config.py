@@ -58,7 +58,7 @@ class StorageType(LowercaseStrEnum):
 class AwsAuthType(LowercaseStrEnum):
     credentials = auto()
     profile = auto()
-    env = auto()
+    env_vars = auto()
     ec2 = auto()
 
 
@@ -357,7 +357,7 @@ class AwsAuthentication(BaseModel):
                 raise ValueError(f"credentials must be set when type is '{auth_type}'")
             if profile:
                 raise ValueError(f"profile must not be set when type is '{auth_type}'")
-        elif auth_type in [AwsAuthType.ec2, AwsAuthType.env] and (profile or credentials):
+        elif auth_type in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_type}'")
         return values
 

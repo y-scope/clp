@@ -84,7 +84,7 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
             env_vars["AWS_SESSION_TOKEN"] = credentials.session_token
         return env_vars
 
-    elif AwsAuthType.env == auth.type:
+    elif AwsAuthType.env_vars == auth.type:
         # Environmental variables are already set
         return {}
     elif AwsAuthType.ec2 == auth.type:
@@ -134,7 +134,7 @@ def get_container_authentication(
             auth = storage.s3_config.aws_authentication
             if AwsAuthType.profile == auth.type and not config_mount:
                 config_mount = True
-            elif AwsAuthType.env == auth.type and 0 == len(credentials_env_vars):
+            elif AwsAuthType.env_vars == auth.type and 0 == len(credentials_env_vars):
                 access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
                 secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
                 if access_key_id and secret_access_key:
@@ -174,7 +174,7 @@ def _create_s3_client(s3_config: S3Config) -> boto3.client:
             region_name=s3_config.region_code,
             aws_session_token=credentials.session_token,
         )
-    elif AwsAuthType.env == auth.type or AwsAuthType.ec2 == auth.type:
+    elif AwsAuthType.env_vars == auth.type or AwsAuthType.ec2 == auth.type:
         # Use default session which will use environment variables or instance role
         aws_session = boto3.Session(region_name=s3_config.region_code)
     else:
