@@ -9,6 +9,12 @@ currently consists of a [React] client and a [Fastify] server.
 
 ## Setup
 
+Download the log-viewer's source code:
+
+```bash
+task deps:log-viewer
+```
+
 Install the app's dependencies:
 
 ```shell
