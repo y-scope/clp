@@ -1212,6 +1212,7 @@ def main(argv):
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
+        clp_config.validate_aws_config_dir()
     except:
         logger.exception("Failed to load config.")
         return -1

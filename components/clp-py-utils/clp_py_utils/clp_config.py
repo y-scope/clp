@@ -615,7 +615,7 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
-    aws_config_directory: pathlib.Path = pathlib.Path.home() / ".aws"
+    aws_config_directory: Optional[pathlib.Path] = None
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
@@ -670,6 +670,32 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.logs_directory)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
+
+    def validate_aws_config_dir(self):
+        profile_auth_used = False
+        storage_configs = []
+
+        if StorageType.S3 == self.logs_input.type:
+            storage_configs.append(self.logs_input)
+        if StorageType.S3 == self.archive_output.storage.type:
+            storage_configs.append(self.archive_output.storage)
+        if StorageType.S3 == self.stream_output.storage.type:
+            storage_configs.append(self.stream_output.storage)
+
+        for storage in storage_configs:
+            auth = storage.s3_config.aws_authentication
+            if AwsAuthType.profile == auth.type:
+                profile_auth_used = True
+                break
+
+        if profile_auth_used and self.aws_config_directory is None:
+            raise ValueError(
+                "aws_config_directory must be set when using profile authentication"
+            )
+        elif not profile_auth_used and self.aws_config_directory is not None:
+            raise ValueError(
+                "aws_config_directory should not be set when profile authentication is not used"
+            )
 
     def load_execution_container_name(self):
         if self.execution_container is not None:
