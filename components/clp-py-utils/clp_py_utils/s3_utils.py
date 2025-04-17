@@ -116,42 +116,49 @@ def get_container_authentication(
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
-    storages = {
-        ContainerType.compression: [clp_config.logs_input, clp_config.archive_output.storage],
-        ContainerType.log_viewer: [clp_config.stream_output.storage],
-        ContainerType.query: [
+    storages = []
+    if ContainerType.compression == type:
+        storages = [clp_config.logs_input, clp_config.archive_output.storage]
+    elif ContainerType.log_viewer == type:
+        storages = [clp_config.stream_output.storage]
+    elif ContainerType.query == type:
+        storages = [
             clp_config.logs_input,
             clp_config.archive_output.storage,
             clp_config.stream_output.storage,
-        ],
-    }
+        ]
 
     config_mount = False
-    credentials_env_vars = []
+    add_env_vars = False
 
-    for storage in storages[type]:
+    for storage in storages:
         if StorageType.S3 == storage.type:
             auth = storage.s3_config.aws_authentication
-            if AwsAuthType.profile == auth.type and not config_mount:
+            if AwsAuthType.profile == auth.type:
                 config_mount = True
-            elif AwsAuthType.env_vars == auth.type and 0 == len(credentials_env_vars):
-                access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-                secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-                if access_key_id and secret_access_key:
-                    credentials_env_vars.extend(
-                        (
-                            f"AWS_ACCESS_KEY_ID={access_key_id}",
-                            f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
-                        )
-                    )
-                else:
-                    raise ValueError(
-                        "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables not set"
-                    )
-                if os.getenv("AWS_SESSION_TOKEN"):
-                    raise ValueError(
-                        "AWS_SESSION_TOKEN not supported for environmental variable credentials."
-                    )
+            elif AwsAuthType.env_vars == auth.type:
+                add_env_vars = True
+
+    credentials_env_vars = []
+
+    if add_env_vars:
+        access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+        secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        if access_key_id and secret_access_key:
+            credentials_env_vars.extend(
+                (
+                    f"AWS_ACCESS_KEY_ID={access_key_id}",
+                    f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+                )
+            )
+        else:
+            raise ValueError(
+                "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables not set"
+            )
+        if os.getenv("AWS_SESSION_TOKEN"):
+            raise ValueError(
+                "AWS_SESSION_TOKEN not supported for environmental variable credentials."
+            )
 
     return (config_mount, credentials_env_vars)
 
