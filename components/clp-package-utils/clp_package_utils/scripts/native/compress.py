@@ -140,7 +140,6 @@ def _generate_clp_io_config(
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
-            dataset=parsed_args.dataset,
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) != 1:
@@ -153,7 +152,6 @@ def _generate_clp_io_config(
             key_prefix=s3_config.key_prefix + logs_to_compress[0],
             credentials=s3_config.credentials,
             timestamp_key=parsed_args.timestamp_key,
-            dataset=parsed_args.dataset,
         )
     else:
         raise ValueError(f"Unsupported input type: {input_type}")
@@ -204,9 +202,6 @@ def main(argv):
     )
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
-    )
-    args_parser.add_argument(
-        "--dataset", default="default", help="The name of the log category to compress into."
     )
     parsed_args = args_parser.parse_args(argv[1:])
 

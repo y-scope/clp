@@ -82,9 +82,6 @@ def _generate_compress_cmd(
         compress_cmd.append(parsed_args.tags)
     if parsed_args.no_progress_reporting is True:
         compress_cmd.append("--no-progress-reporting")
-    if parsed_args.dataset is not None:
-        compress_cmd.append("--dataset")
-        compress_cmd.append(parsed_args.dataset)
 
     compress_cmd.append("--logs-list")
     compress_cmd.append(str(logs_list_path))
@@ -147,9 +144,6 @@ def main(argv):
     args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     args_parser.add_argument(
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
-    )
-    args_parser.add_argument(
-        "--dataset", default="default", help="The name of the log category to compress into."
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
