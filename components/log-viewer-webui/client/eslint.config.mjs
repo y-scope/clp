@@ -21,7 +21,11 @@ const EslintConfig = [
         "./tsconfig/tsconfig.app.json"
     ),
     createTsConfigOverride(
-        ["vite.config.ts"],
+        [
+            ".storybook/**/*.ts",
+            "vite.config.ts",
+            "vitest.workspace.ts",
+        ],
         "./tsconfig/tsconfig.node.json"
     ),
     ...StylisticConfigArray,
