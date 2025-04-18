@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from enum import auto
 
-from clp_py_utils.clp_config import S3Credentials
+from clp_py_utils.clp_config import S3Config
 from pydantic import BaseModel, validator
 from strenum import LowercaseStrEnum
 
@@ -27,15 +27,9 @@ class FsInputConfig(BaseModel):
     timestamp_key: typing.Optional[str] = None
 
 
-class S3InputConfig(BaseModel):
+class S3InputConfig(S3Config):
     type: typing.Literal[InputType.S3.value] = InputType.S3.value
     timestamp_key: typing.Optional[str] = None
-
-    region_code: str
-    bucket: str
-    key_prefix: str
-
-    credentials: S3Credentials
 
 
 class OutputConfig(BaseModel):

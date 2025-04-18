@@ -6,7 +6,7 @@ import sys
 import uuid
 from typing import List
 
-from clp_py_utils.clp_config import CLPConfig, StorageEngine
+from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
