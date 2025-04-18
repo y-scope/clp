@@ -1,4 +1,8 @@
 version: "3"
+
+includes:
+  yscope-dev-utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
 vars:
   # Utility script path
   G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/deps-download/download-dep.py"
@@ -24,9 +28,9 @@ vars:
 
 tasks:
   default:
-    cmds:
-      - task: "core"
-      - task: "log-viewer"
+    deps:
+      - "core"
+      - "log-viewer"
 
   core:
     vars:
@@ -63,15 +67,14 @@ tasks:
         >> "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
 
   log-viewer:
-    sources:
-      - "{{.G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE}}"
-    generates: ["{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"]
-    deps: ["all-internal-deps"]
     cmds:
-      - >-
-        cat
-        "{{.G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE}}"
-        >> "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
+          FILE_SHA256: "de0600b505545f1bceb7ff5725941035f7c1dc875d08249d9b6d679e3ba77f26"
+          OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
+          TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.tar.gz"
 
   # NOTE: `git submodule update` doesn't support parallel invocations, so we can't use it to
   # download submodules in parallel. This means:
@@ -101,7 +104,6 @@ tasks:
       - task: "sqlite3"
       - task: "utfcpp"
       - task: "yaml-cpp"
-      - task: "yscope-log-viewer"
       - task: "ystdlib-cpp"
 
   abseil-cpp:
@@ -431,36 +433,6 @@ tasks:
           FLAGS: "--extract"
           SRC_NAME: "yaml-cpp-yaml-cpp-0.7.0"
           SRC_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
-
-  yscope-log-viewer:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_YSCOPE_LOG_VIEWER_CHECKSUM_FILE}}"
-      DEST: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - ":init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
-    cmds:
-      - task: "download-dependency"
-        vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract"
-          SRC_NAME: "yscope-log-viewer-969ff35b2387bcdc3580b441907e3656640ce16d"
-          SRC_URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.zip"
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
