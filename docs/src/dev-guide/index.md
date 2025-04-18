@@ -81,4 +81,6 @@ tooling-gh-workflows
 
 design-project-structure
 design-parsing-wildcard-queries
+design-key-value-pair-ir-stream.md
+kv-ir/index
 :::
