@@ -70,7 +70,8 @@ def create_datasets_table(db_cursor, table_name: str) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_name}` (
-            `name` VARCHAR(512) NOT NULL,
+            `name` VARCHAR(255) NOT NULL,
+            `archive_storage_directory` VARCHAR(4096) NOT NULL,
             PRIMARY KEY (`name`)
         )
         """
