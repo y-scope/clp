@@ -154,8 +154,7 @@ def generate_container_auth_options(
     return (config_mount, credentials_env_vars)
 
 
-def _create_s3_client(s3_config: S3Config) -> boto3.client:
-    config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
+def _create_s3_client(s3_config: S3Config, boto3_config: Optional[Config]) -> boto3.client:
     auth = s3_config.aws_authentication
     aws_session = None
 
@@ -178,7 +177,7 @@ def _create_s3_client(s3_config: S3Config) -> boto3.client:
     else:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
-    s3_client = aws_session.client("s3", config=config)
+    s3_client = aws_session.client("s3", config=boto3_config)
     return s3_client
 
 
@@ -249,7 +248,8 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
             f"{src_file} is larger than the limit (5GiB) for a single PutObject operation."
         )
 
-    s3_client = _create_s3_client(s3_config)
+    boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
+    s3_client = _create_s3_client(s3_config, boto3_config)
 
     with open(src_file, "rb") as file_data:
         s3_client.put_object(
