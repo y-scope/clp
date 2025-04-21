@@ -108,7 +108,7 @@ def create_datasets_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: 
 
 
 def create_metadata_db_tables(
-    db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str, dataset: typing.Optional[str] = None
+    db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str, dataset: str | None = None
 ) -> None:
     if dataset is not None:
         table_prefix = f"{table_prefix}{dataset}_"
