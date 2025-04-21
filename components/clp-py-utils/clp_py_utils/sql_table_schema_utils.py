@@ -3,6 +3,7 @@ import typing
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
+    COLUMN_METADATA_TABLE_SUFFIX,
     FILES_TABLE_SUFFIX,
     TAGS_TABLE_SUFFIX,
 )
