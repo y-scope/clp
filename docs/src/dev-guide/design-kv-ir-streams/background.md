@@ -10,7 +10,7 @@ We explain each below.
 
 ## Encoding & storing structured log events in an archive
 
-The processing of encoding a log event can conceptually be broken down into the following steps.
+Conceptually, clp-s encodes a log event through the following steps:
 
 1. [Determine the log event's schema](#1-determine-the-log-events-schema)
 2. [Merge the event's schema with the archive's](#2-merge-the-events-schema-with-the-archives)
@@ -20,11 +20,16 @@ The processing of encoding a log event can conceptually be broken down into the 
 ### 1. Determine the log event's schema
 
 clp-s first examines the log event's schema--i.e., the key and value type for each kv-pair in the
-log event. For example, Figure 1 shows two log events, while Tables 1 & 2 show the schemas for these
-log events. clp-s represents this schema as a tree, where each node under the root represents a
-unique key and value-type pair. Leaf nodes have primitive types (int, float, boolean, string, null)
-and non-leaf nodes are either objects or arrays. The tree for the schema in Table 1 is shown in
-Figure 2.
+log event. For example, Figure 1 shows two log events and Tables 1 & 2 show the schemas for these
+log events. clp-s represents this schema as a tree, where:
+
+* each node under the root represents a unique key and value-type pair;
+* leaf nodes have primitive types (int, float, boolean, string, null); and
+* non-leaf nodes are either objects or arrays.
+
+The tree for the schema in Table 1 is shown in Figure 2. Notice that although both `level` and
+`mesage` are strings, clp-s assigns them more specific types based on how it decides to encode them.
+Table 2 lists clp-s' value types and their meaning.
 
 :::{card}
 ```json lines
@@ -113,9 +118,6 @@ flowchart LR
 **Figure 2**: The schema tree for log event #1 in Figure 1. Each node's label is of the form
 "<key>: <type>" and each arrow is from a parent to a child node.
 ::::
-
-Notice that although both `level` and `mesage` are strings, clp-s assigns them more specific types
-based on how it decides to encode them. Table 2 lists clp-s' value types and their meaning.
 
 :::{card}
 | Type              | Description                                                                                                                      |

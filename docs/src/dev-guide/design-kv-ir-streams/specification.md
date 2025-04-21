@@ -1,20 +1,20 @@
 # Specification
 
-KV-IR streams are structured as shown in [Figure 1](#figure-1). It begins with a magic number,
-followed by some metadata, the encoded log events, and finally an end-of-stream marker. Except for
-the magic number, the stream is a series of *packets*, where each packet contains:
+KV-IR streams are structured as shown in [Figure 1](#figure-1). Each stream begins with a magic
+number, followed by some metadata, the log events, and finally an end-of-stream marker. Except for
+the magic number, each stream is composed of a series of *packets*, where each packet contains:
 
 * a header byte indicating the packet type; and
 * an optional payload, potentially containing other packets.
 
-The rest of this page explains the individual components of the stream, highlighting any nontrivial
+The rest of this page explains the individual components of a stream, highlighting any nontrivial
 design choices.
 
 (figure-1)=
 ::::{card}
 :::{mermaid}
 block-beta
-  columns 1
+  columns 4
   
   magicNumber["Magic number"]
   metadata["Metadata"]
@@ -22,27 +22,27 @@ block-beta
   endOfStream["End of stream"]
 :::
 +++
-**Figure 1:** The high-level structure of a kv-ir stream, with the start of the stream at the top of
+**Figure 1:** The high-level structure of a KV-IR stream, with the start of the stream at the top of
 the diagram.
 ::::
 
 ## Magic number
 
-The magic number appears first in the stream and is used to identify a file as a kv-ir stream.
+The magic number appears first in the stream and is used to identify a file as a KV-IR stream.
 There are two possible magic numbers:
 
-* `0xFD2FB529` indicating the stream uses a four-byte encoding for encoded-text AST variables.
-* `0xFD2FB530` indicating the stream uses an eight-byte encoding for encoded-text AST variables.
-    
+* `0xFD2FB529` for streams that use a four-byte encoding for encoded-text AST variables.
+* `0xFD2FB530` for streams that use an eight-byte encoding for encoded-text AST variables.
+
 :::{warning}
 The eight-byte encoding is being deprecated and will be removed in a future release.
 :::
 
 ## Metadata
 
-The metadata section contains a single [JsonMetadata](#jsonmetadata-packet) packet containing
-kv-pairs that describe the contents of the stream. Although JSON can hold values of different types,
-the format requires that each key and value must be a string. The kv-pairs in [Table 1](#table-1)
+The metadata consists of a single [JsonMetadata](#jsonmetadata-packet) packet which includes kv-pairs
+describing the contents of the stream. Although JSON can hold values of different types, the
+format requires that each key and value must be a string. The kv-pairs in [Table 1](#table-1)
 are required while others may be added by applications as necessary.
     
 (table-1)=
