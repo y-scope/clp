@@ -27,21 +27,30 @@ will be added in a future release.
 2. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
 3. An S3 bucket and key prefix where you wish to store compressed archives.
 4. An S3 bucket and key prefix where you wish to cache stream files.
-5. An AWS IAM user with the necessary permissions to access the S3 bucket(s) and prefixes mentioned
-   above.
-    * To create a user, follow [this guide][aws-create-iam-user].
+5. An AWS authentication method configured with the necessary permissions to access the
+  S3 bucket(s) and prefixes mentioned above. Authentication methods include:
+    * Long-term IAM user credentials.
+      * To create a user, follow [this guide][aws-create-iam-user].
+      * To generate the credentials, follow [this guide][aws-create-access-keys].
+      * Choose the "Other" use case to generate long-term credentials.
       * You don't need to assign any groups or policies to the user at this stage since we will
         attach policies in later steps, depending on which object storage use cases you require.
-    * You may use a single IAM user for all use cases, or a separate one for each.
-    * For brevity, we'll refer to this user as the "CLP IAM user" in the rest of this guide.
-6. IAM user (long-term) credentials for the IAM user(s) created in step (4) above.
-    * To create these credentials, follow [this guide][aws-create-access-keys].
-      * Choose the "Other" use case to generate long-term credentials.
+    * A named profile configured by the AWS CLI in your AWS config directory (typically `~/.aws`).
+      * Profiles may make use of a variety of AWS authentication mechanisms, including:
+        * IAM Identity Center.
+        * Assuming an IAM role.
+        * Long-term IAM user credentials.
+      * Follow [this guide][aws-configure-profiles] for more information on
+        configuring profiles with the AWS CLI.
+    * Long-term AWS credentials set as environmental variables.
+      * Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environmental variables
+        with the corresponding credential keys.
+    * An IAM role attached to an EC2 instance (that CLP is hosted on).
 
+    
     :::{note}
-    CLP currently requires IAM user (long-term) credentials to access the relevant S3 buckets.
-    Support for other authentication methods (e.g., temporary credentials) will be added in a future
-    release.
+    You may use a single authentication method for all use cases, or a separate one for each.
+    Short-term STS credentials (that include a Session Token) are unsupported for all methods.
     :::
 
 ## Configuration
@@ -55,7 +64,7 @@ The subsections below explain how to configure your object storage bucket and CL
 :link: object-storage-config
 Configuring object storage
 ^^^
-Configuring your object storage bucket for each use case.
+Configuring your object storage bucket and IAM permissions for each use case.
 :::
 
 :::{grid-item-card}
@@ -89,6 +98,7 @@ clp-config
 clp-usage
 :::
 
+[aws-configure-profiles]: https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html
 [aws-create-access-keys]: https://docs.aws.amazon.com/keyspaces/latest/devguide/create.keypair.html
 [aws-create-iam-user]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html
 [aws-key-prefixes]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html

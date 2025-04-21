@@ -1,12 +1,13 @@
 # Configuring object storage
 
-To use object storage with CLP, follow the steps below to configure the CLP IAM user and your object
-storage bucket(s) for each use case you require.
+To use object storage with CLP, follow the steps below to configure the necessary IAM permissions
+and your object storage bucket(s) for each use case you require.
 
 ## Configuration for compression
 
-[Attach the inline policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
-replacing the fields in angle brackets (`<>`) with the appropriate values:
+[Attach the policy][add-iam-policy] (managed or inline) below to the IAM user, role, or permission
+set that CLP will use (you can use the JSON editor), replacing the fields in angle brackets (`<>`)
+with the appropriate values:
 
 ```json
 {
@@ -48,8 +49,9 @@ replacing the fields in angle brackets (`<>`) with the appropriate values:
 
 ## Configuration for archive storage
 
-[Attach the inline policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
-replacing the fields in angle brackets (`<>`) with the appropriate values:
+[Attach the policy][add-iam-policy] (managed or inline) below to the IAM user, role, or permission
+set that CLP will use (you can use the JSON editor), replacing the fields in angle brackets (`<>`)
+with the appropriate values:
 
 ```json
 {
@@ -89,8 +91,9 @@ resource sharing (CORS) policy for the S3 bucket.
 
 ### IAM user configuration
 
-[Attach the inline policy][add-iam-policy] below to the CLP IAM user (you can use the JSON editor),
-replacing the fields in angle brackets (`<>`) with the appropriate values:
+[Attach the policy][add-iam-policy] (managed or inline) below to the IAM user, role, or permission
+set that CLP will use (you can use the JSON editor), replacing the fields in angle brackets (`<>`)
+with the appropriate values:
 
 ```json
 {

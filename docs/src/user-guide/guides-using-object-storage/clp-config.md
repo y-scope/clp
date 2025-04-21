@@ -19,9 +19,13 @@ logs_input:
     region_code: "<region-code>"
     bucket: "<bucket-name>"
     key_prefix: "<key-prefix>"
-    credentials:
-      access_key_id: "<aws-access-key-id>"
-      secret_access_key: "<aws-secret-access-key>"
+    aws_authentication:
+      type: "<authentication-type>"
+      profile: "<aws-config-profile>" # Only for type "profile"
+      credentials: # Only for type "credentials"
+        access_key_id: "<aws-access-key-id>"
+        secret_access_key: "<aws-secret-access-key>"
+
 ```
 * `s3_config` configures both the S3 bucket where logs are to be retrieved from and the credentials
   for accessing it.
@@ -29,7 +33,13 @@ logs_input:
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the prefix of all logs you wish to compress and should be the same as the
     `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
-  * `credentials` contains the CLP IAM user's credentials.
+  * `aws_authentication` configures the type of authentication used and additional information if
+    needed.
+    * `type` must be one of `credentials`, `profile`, `env_vars`, and `ec2`.
+    * If using long-term IAM credentials, they should be provided under the `credentials` field.
+    * If using a named profile, the name should be provided under the `profile` field.
+    * If using credentials set as environmental variables or running CLP on an EC2 instance with
+      IAM role attached, no other information is needed.
 
 ## Configuration for archive storage
 
@@ -46,9 +56,12 @@ archive_output:
       region_code: "<region-code>"
       bucket: "<bucket-name>"
       key_prefix: "<key-prefix>"
-      credentials:
-        access_key_id: "<aws-access-key-id>"
-        secret_access_key: "<aws-secret-access-key>"
+      aws_authentication:
+        type: "<authentication-type>"
+        profile: "<aws-config-profile>" # Only for type "profile"
+        credentials: # Only for type "credentials"
+          access_key_id: "<aws-access-key-id>"
+          secret_access_key: "<aws-secret-access-key>"
 
   # archive_output's other config keys
 ```
@@ -61,7 +74,13 @@ archive_output:
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all archives will be stored within the bucket and
     must end with a trailing forward slash (e.g., `archives/`).
-  * `credentials` contains the CLP IAM user's credentials.
+  * `aws_authentication` configures the type of authentication used and additional information if
+    needed.
+    * `type` must be one of `credentials`, `profile`, `env_vars`, and `ec2`.
+    * If using long-term IAM credentials, they should be provided under the `credentials` field.
+    * If using a named profile, the name should be provided under the `profile` field.
+    * If using credentials set as environmental variables or running CLP on an EC2 instance with
+      IAM role attached, no other information is needed.
 
 ## Configuration for stream storage
 
@@ -78,9 +97,12 @@ stream_output:
       region_code: "<region-code>"
       bucket: "<bucket-name>"
       key_prefix: "<key-prefix>"
-      credentials:
-        access_key_id: "<aws-access-key-id>"
-        secret_access_key: "<aws-secret-access-key>"
+      aws_authentication:
+        type: "<authentication-type>"
+        profile: "<aws-config-profile>" # Only for type "profile"
+        credentials: # Only for type "credentials"
+          access_key_id: "<aws-access-key-id>"
+          secret_access_key: "<aws-secret-access-key>"
 
   # stream_output's other config keys
 ```
@@ -93,7 +115,13 @@ stream_output:
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all streams will be stored within the bucket and
     must end with a trailing forward slash (e.g., `streams/`).
-  * `credentials` contains the CLP IAM user's credentials.
+  * `aws_authentication` configures the type of authentication used and additional information if
+    needed.
+    * `type` must be one of `credentials`, `profile`, `env_vars`, and `ec2`.
+    * If using long-term IAM credentials, they should be provided under the `credentials` field.
+    * If using a named profile, the name should be provided under the `profile` field.
+    * If using credentials set as environmental variables or running CLP on an EC2 instance with
+      IAM role attached, no other information is needed.
 
 :::{note}
 CLP currently doesn't explicitly delete the cached streams. This limitation will be addressed in a
