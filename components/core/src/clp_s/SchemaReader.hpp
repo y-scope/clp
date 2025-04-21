@@ -23,27 +23,19 @@ public:
     /**
      * Initializes the filter
      * @param reader
-     * @param schema_id
      * @param column_readers
      */
-    virtual void init(
-            SchemaReader* reader,
-            int32_t schema_id,
-            std::vector<BaseColumnReader*> const& column_readers
-    ) = 0;
+    virtual void init(SchemaReader* reader, std::vector<BaseColumnReader*> const& column_readers)
+            = 0;
 
     /**
      * Initializes the filter with a column map.
      * Note: the column map only contains the ordered columns in a schema.
      * @param reader
-     * @param schema_id
      * @param column_map
      */
-    virtual void init(
-            SchemaReader* reader,
-            int32_t schema_id,
-            std::unordered_map<int32_t, BaseColumnReader*> const& column_map
-    ) {}
+    virtual void
+    init(SchemaReader* reader, std::unordered_map<int32_t, BaseColumnReader*> const& column_map) {}
 
     /**
      * Filters the message
@@ -70,7 +62,7 @@ public:
     };
 
     // Constructor
-    SchemaReader() {}
+    SchemaReader() = default;
 
     // Destructor
     ~SchemaReader() { delete_columns(); }

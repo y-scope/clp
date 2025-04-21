@@ -144,11 +144,11 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
         clp_s::search::EvaluateTimestampIndex timestamp_index_pass(timestamp_dict);
         REQUIRE(clp_s::EvaluatedValue::False != timestamp_index_pass.run(archive_expr));
 
-        clp_s::search::SchemaMatch match_pass(
+        auto match_pass = std::make_shared<clp_s::search::SchemaMatch>(
                 archive_reader->get_schema_tree(),
                 archive_reader->get_schema_map()
         );
-        archive_expr = match_pass.run(archive_expr);
+        archive_expr = match_pass->run(archive_expr);
         REQUIRE(nullptr != archive_expr);
 
         auto output_handler = std::make_unique<clp_s::search::VectorOutputHandler>(results);
@@ -156,7 +156,6 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
                 match_pass,
                 archive_expr,
                 archive_reader,
-                timestamp_dict,
                 std::move(output_handler),
                 ignore_case
         );
