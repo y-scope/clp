@@ -1,6 +1,4 @@
-import {theme} from "antd";
-
-import StatCard from "../../../components/StatCard";
+import DetailsCard from "./DetailsCard";
 
 
 // eslint-disable-next-line no-warning-comments
@@ -13,12 +11,9 @@ const DUMMY_FILES = 124;
  * @return
  */
 const Files = () => {
-    const {token} = theme.useToken();
     return (
-        <StatCard
+        <DetailsCard
             stat={DUMMY_FILES.toString()}
-            statColor={token.colorTextSecondary}
-            statSize={"1.3rem"}
             title={"Files"}/>
     );
 };

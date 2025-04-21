@@ -1,7 +1,6 @@
-import {theme} from "antd";
 import dayjs from "dayjs";
 
-import StatCard from "../../../components/StatCard";
+import DetailsCard from "./DetailsCard";
 
 
 // eslint-disable-next-line no-warning-comments
@@ -17,14 +16,13 @@ const DATE_FORMAT = "MMMM D, YYYY";
  * @return
  */
 const TimeRange = () => {
-    const {token} = theme.useToken();
+    const formattedStat = `${dayjs(DUMMY_START_DATE).format(DATE_FORMAT)} -
+        ${dayjs(DUMMY_END_DATE).format(DATE_FORMAT)}`;
+
     return (
-        <StatCard
-            statColor={token.colorTextSecondary}
-            statSize={"1.3rem"}
-            title={"Time Range"}
-            stat={`${dayjs(DUMMY_START_DATE).format(DATE_FORMAT)} -
-             ${dayjs(DUMMY_END_DATE).format(DATE_FORMAT)}`}/>
+        <DetailsCard
+            stat={formattedStat}
+            title={"Time Range"}/>
     );
 };
 

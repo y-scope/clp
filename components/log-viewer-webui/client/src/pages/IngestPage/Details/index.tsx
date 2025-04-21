@@ -5,7 +5,7 @@ import TimeRange from "./TimeRange";
 
 
 /**
- * Presents details from the given statistics.
+ * Renders grid with compression details.
  *
  * @return
  */

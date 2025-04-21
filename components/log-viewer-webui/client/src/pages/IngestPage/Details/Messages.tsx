@@ -1,6 +1,4 @@
-import {theme} from "antd";
-
-import StatCard from "../../../components/StatCard";
+import DetailsCard from "./DetailsCard";
 
 
 // eslint-disable-next-line no-warning-comments
@@ -13,12 +11,9 @@ const DUMMY_MESSAGES = 1235844;
  * @return
  */
 const Messages = () => {
-    const {token} = theme.useToken();
     return (
-        <StatCard
+        <DetailsCard
             stat={DUMMY_MESSAGES.toString()}
-            statColor={token.colorTextSecondary}
-            statSize={"1.3rem"}
             title={"Messages"}/>
     );
 };
