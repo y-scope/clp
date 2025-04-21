@@ -1,12 +1,6 @@
-import {
-    Card,
-    Typography,
-} from "antd";
-
+import StatCard from "../../../components/StatCard";
 import styles from "./index.module.css";
-
-
-const {Text} = Typography;
+import {theme} from "antd";
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace with values from database once api implemented.
@@ -18,17 +12,14 @@ const DUMMY_FILES = 124;
  * @return
  */
 const Files = () => {
+    const {token} = theme.useToken();
     return (
-        <Card className={styles["card"] || ""}>
-            <div className={styles["cardContent"]}>
-                <Text className={styles["title"] || ""}>
-                    Files
-                </Text>
-                <Text className={styles["statistic"] || ""}>
-                    {DUMMY_FILES}
-                </Text>
-            </div>
-        </Card>
+        <StatCard
+            title="Files"
+            stat={DUMMY_FILES.toString()}
+            statSize="1.3rem"
+            statColor={token.colorTextSecondary}
+        />
     );
 };
 

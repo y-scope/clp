@@ -1,27 +1,3 @@
-.card {
-    height: 100%;
-}
-
-.card :global(.ant-card-head) {
-    border: 0px;
-}
-
-.cardContent {
-    display: flex;
-    flex-direction: column;
-}
-
-.title {
-    font-size: 24px;
-    font-weight: 600;
-}
-
-.statistic {
-    font-size: 20px;
-    color: grey;
-    font-weight: 300;
-}
-
 .detailsGrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(200px, 1fr));
