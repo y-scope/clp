@@ -58,7 +58,7 @@ def create_archive_tags_table(
 
 
 def create_files_table(db_cursor, table_name: str) -> None:
-    metadata_db_cursor.execute(
+    db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_name}` (
             `id` VARCHAR(64) NOT NULL,
