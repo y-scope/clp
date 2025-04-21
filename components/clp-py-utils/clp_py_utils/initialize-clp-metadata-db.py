@@ -7,10 +7,12 @@ from contextlib import closing
 from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import (
+    ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
-    COLUMN_METADATA_TABLE_SUFFIX,
     Database,
     DATASETS_TABLE_SUFFIX,
+    FILES_TABLE_SUFFIX,
+    TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.sql_table_schema_utils import create_archives_table
@@ -42,49 +44,11 @@ def main(argv):
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
             create_archives_table(metadata_db_cursor, f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}")
-
-            metadata_db_cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}tags` (
-                    `tag_id` INT unsigned NOT NULL AUTO_INCREMENT,
-                    `tag_name` VARCHAR(255) NOT NULL,
-                    UNIQUE KEY (`tag_name`) USING BTREE,
-                    PRIMARY KEY (`tag_id`)
-                )
-                """
+            create_tags_table(metadata_db_cursor, f"{table_prefix}{TAGS_TABLE_SUFFIX}")
+            create_archive_tags_table(
+                metadata_db_cursor, f"{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}"
             )
-
-            metadata_db_cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}archive_tags` (
-                    `archive_id` VARCHAR(64) NOT NULL,
-                    `tag_id` INT unsigned NOT NULL,
-                    PRIMARY KEY (`archive_id`,`tag_id`),
-                    FOREIGN KEY (`archive_id`) REFERENCES `{table_prefix}archives` (`id`),
-                    FOREIGN KEY (`tag_id`) REFERENCES `{table_prefix}tags` (`tag_id`)
-                )
-                """
-            )
-
-            metadata_db_cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
-                    `id` VARCHAR(64) NOT NULL,
-                    `orig_file_id` VARCHAR(64) NOT NULL,
-                    `path` VARCHAR(12288) NOT NULL,
-                    `begin_timestamp` BIGINT NOT NULL,
-                    `end_timestamp` BIGINT NOT NULL,
-                    `num_uncompressed_bytes` BIGINT NOT NULL,
-                    `begin_message_ix` BIGINT NOT NULL,
-                    `num_messages` BIGINT NOT NULL,
-                    `archive_id` VARCHAR(64) NOT NULL,
-                    KEY `files_path` (path(768)) USING BTREE,
-                    KEY `files_archive_id` (`archive_id`) USING BTREE,
-                    PRIMARY KEY (`id`)
-                ) ROW_FORMAT=DYNAMIC
-                """
-            )
-
+            create_files_table(metadata_db_cursor, f"{table_prefix}{FILES_TABLE_SUFFIX}")
             metadata_db.commit()
     except:
         logger.exception("Failed to create clp metadata tables.")
