@@ -15,7 +15,12 @@ from clp_py_utils.clp_config import (
     TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.sql_table_schema_utils import create_archives_table
+from clp_py_utils.sql_table_schema_utils import (
+    create_archive_tags_table,
+    create_archives_table,
+    create_files_table,
+    create_tags_table,
+)
 
 # Setup logging
 # Create logger

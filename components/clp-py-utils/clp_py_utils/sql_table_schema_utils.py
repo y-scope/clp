@@ -32,7 +32,7 @@ def create_tags_table(db_cursor, table_name: str) -> None:
 
 
 def create_archive_tags_table(db_cursor, table_name: str) -> None:
-    metadata_db_cursor.execute(
+    db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_name}` (
             `archive_id` VARCHAR(64) NOT NULL,
