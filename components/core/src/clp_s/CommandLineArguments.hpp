@@ -9,7 +9,6 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include "../clp/GlobalMetadataDBConfig.hpp"
 #include "../reducer/types.hpp"
 #include "Defs.hpp"
 #include "InputConfig.hpp"
@@ -93,10 +92,6 @@ public:
     std::optional<epochtime_t> get_search_end_ts() const { return m_search_end_ts; }
 
     bool get_ignore_case() const { return m_ignore_case; }
-
-    std::optional<clp::GlobalMetadataDBConfig> const& get_metadata_db_config() const {
-        return m_metadata_db_config;
-    }
 
     std::string const& get_reducer_host() const { return m_reducer_host; }
 
@@ -199,9 +194,6 @@ private:
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
     FileType m_file_type{FileType::Json};
-
-    // Metadata db variables
-    std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
 
     // MongoDB configuration variables
     std::string m_mongodb_uri;

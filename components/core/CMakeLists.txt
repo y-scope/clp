@@ -327,6 +327,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/OutputHandler.hpp
     src/clp_s/search/Projection.cpp
     src/clp_s/search/Projection.hpp
+    src/clp_s/search/QueryRunner.cpp
+    src/clp_s/search/QueryRunner.hpp
     src/clp_s/search/SchemaMatch.cpp
     src/clp_s/search/SchemaMatch.hpp
     src/clp_s/TimestampDictionaryReader.cpp
@@ -370,7 +372,6 @@ set(SOURCE_FILES_reducer_unitTest
     )
 
 set(SOURCE_FILES_unitTest
-        src/clp/Array.hpp
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
@@ -598,7 +599,6 @@ set(SOURCE_FILES_unitTest
         submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
-        tests/test-Array.cpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-clp_s-end_to_end.cpp
@@ -663,6 +663,7 @@ target_link_libraries(unitTest
         clp::regex_utils
         clp::string_utils
         yaml-cpp::yaml-cpp
+        ystdlib::containers
         ystdlib::error_handling
         ${LIBLZMA_LIBRARIES}
         ZStd::ZStd

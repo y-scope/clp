@@ -6,6 +6,7 @@
 
 #include <json/single_include/nlohmann/json.hpp>
 
+#include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
 #include "Defs.hpp"
 #include "SchemaTree.hpp"
@@ -98,10 +99,6 @@ void ArchiveWriter::close() {
 
         write_archive_header(header_and_metadata_writer, metadata_size);
         header_and_metadata_writer.close();
-    }
-
-    if (m_metadata_db) {
-        update_metadata_db();
     }
 
     if (m_print_archive_stats) {
@@ -430,29 +427,14 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-void ArchiveWriter::update_metadata_db() {
-    m_metadata_db->open();
-    clp::streaming_archive::ArchiveMetadata metadata(
-            cArchiveFormatDevelopmentVersionFlag,
-            "",
-            0ULL
-    );
-    metadata.increment_static_compressed_size(m_compressed_size);
-    metadata.increment_static_uncompressed_size(m_uncompressed_size);
-    metadata.expand_time_range(
-            m_timestamp_dict.get_begin_timestamp(),
-            m_timestamp_dict.get_end_timestamp()
-    );
-
-    m_metadata_db->add_archive(m_id, metadata);
-    m_metadata_db->close();
-}
-
-void ArchiveWriter::print_archive_stats() {
-    nlohmann::json json_msg;
-    json_msg["id"] = m_id;
-    json_msg["uncompressed_size"] = m_uncompressed_size;
-    json_msg["size"] = m_compressed_size;
+auto ArchiveWriter::print_archive_stats() const -> void {
+    namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
+    nlohmann::json json_msg
+            = {{Archive::Id, m_id},
+               {Archive::BeginTimestamp, m_timestamp_dict.get_begin_timestamp()},
+               {Archive::EndTimestamp, m_timestamp_dict.get_end_timestamp()},
+               {Archive::UncompressedSize, m_uncompressed_size},
+               {Archive::Size, m_compressed_size}};
     std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
 }
 }  // namespace clp_s

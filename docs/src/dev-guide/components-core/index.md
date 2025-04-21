@@ -37,7 +37,7 @@ This will download:
 * [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
 * [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
 * [json](https://github.com/nlohmann/json.git) (v3.11.3)
-* [log-surgeon](https://github.com/y-scope/log-surgeon.git) (895f464)
+* [log-surgeon](https://github.com/y-scope/log-surgeon) (f801a3f)
 * [outcome](https://github.com/ned14/outcome) (v2.2.9)
 * [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
 * [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
