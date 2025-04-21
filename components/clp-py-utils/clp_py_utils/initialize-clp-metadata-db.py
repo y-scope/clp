@@ -6,21 +6,9 @@ from contextlib import closing
 
 from sql_adapter import SQL_Adapter
 
-from clp_py_utils.clp_config import (
-    ARCHIVE_TAGS_TABLE_SUFFIX,
-    ARCHIVES_TABLE_SUFFIX,
-    Database,
-    DATASETS_TABLE_SUFFIX,
-    FILES_TABLE_SUFFIX,
-    TAGS_TABLE_SUFFIX,
-)
+from clp_py_utils.clp_config import Database, DATASETS_TABLE_SUFFIX
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.sql_table_schema_utils import (
-    create_archive_tags_table,
-    create_archives_table,
-    create_files_table,
-    create_tags_table,
-)
+from clp_py_utils.sql_table_schema_utils import create_metadata_db_tables
 
 # Setup logging
 # Create logger
@@ -42,18 +30,14 @@ def main(argv):
         database_config = Database.parse_obj(read_yaml_config_file(parsed_args.config))
         if database_config is None:
             raise ValueError(f"Database configuration file '{parsed_args.config}' is empty.")
+        logger.info(database_config)
         sql_adapter = SQL_Adapter(database_config)
         clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
-            create_archives_table(metadata_db_cursor, f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}")
-            create_tags_table(metadata_db_cursor, f"{table_prefix}{TAGS_TABLE_SUFFIX}")
-            create_archive_tags_table(
-                metadata_db_cursor, f"{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}"
-            )
-            create_files_table(metadata_db_cursor, f"{table_prefix}{FILES_TABLE_SUFFIX}")
+            create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
     except:
         logger.exception("Failed to create clp metadata tables.")
