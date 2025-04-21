@@ -8,7 +8,7 @@ const DUMMY_COMPRESSED_SIZE = 1004023;
 const DUMMY_UNCOMPRESSED_SIZE = 110300010;
 
 /**
- * Presents space savings or compression ratio from the given statistics.
+ * Renders space savings card.
  *
  * @return
  */

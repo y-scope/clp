@@ -16,7 +16,7 @@ interface DashboardCardProps {
 }
 
 /**
- * Renders a card.
+ * Renders a card for dashboard.
  *
  * @param props
  * @param props.title
@@ -45,4 +45,6 @@ const DashboardCard = ({title, titleColor, backgroundColor, children}: Dashboard
     );
 };
 
-export default DashboardCard;
+export {DashboardCard};
+
+export type {DashboardCardProps};
