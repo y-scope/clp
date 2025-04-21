@@ -79,8 +79,8 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
     env_vars = {
-            "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
+        "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
+        "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
     }
     aws_session_token = aws_credentials.session_token
     if aws_session_token is not None:
@@ -102,15 +102,15 @@ def generate_container_auth_options(
     """
     storages_by_component_type = []
     if component_type in (
-        COMPRESSION_SCHEDULER_COMPONENT_NAME, 
-        COMPRESSION_WORKER_COMPONENT_NAME
+        COMPRESSION_SCHEDULER_COMPONENT_NAME,
+        COMPRESSION_WORKER_COMPONENT_NAME,
     ):
         storages_by_component_type = [clp_config.logs_input, clp_config.archive_output.storage]
-    elif component_type in (LOG_VIEWER_WEBUI_COMPONENT_NAME):
+    elif component_type in (LOG_VIEWER_WEBUI_COMPONENT_NAME,):
         storages_by_component_type = [clp_config.stream_output.storage]
     elif component_type in (
         QUERY_SCHEDULER_COMPONENT_NAME,
-        QUERY_WORKER_COMPONENT_NAME
+        QUERY_WORKER_COMPONENT_NAME,
     ):
         storages_by_component_type = [
             clp_config.logs_input,

@@ -77,7 +77,9 @@ def container_exists(container_name):
 
 
 def append_docker_options(
-    cmd: List[str], mounts: Optional[List[DockerMount]] = None, env_vars: Optional[List[str]] = None
+    cmd: List[str],
+    mounts: Optional[List[Optional[DockerMount]]] = None,
+    env_vars: Optional[List[str]] = None,
 ):
     """
     Appends Docker mount and environment variable options to a command list.

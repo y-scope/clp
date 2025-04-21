@@ -352,16 +352,19 @@ class AwsAuthentication(BaseModel):
         profile = values.get("profile")
         credentials = values.get("credentials")
 
+        try:
+            auth_enum = AwsAuthType(auth_type)
+        except ValueError:
+            raise ValueError(f"Unsupported authentication type '{auth_type}'.")
+
         if profile and credentials:
             raise ValueError("profile and credentials cannot be set simultaneously.")
-        if AwsAuthType.profile == auth_type and not profile:
-            raise ValueError(f"profile must be set when type is '{auth_type}.'")
-        elif AwsAuthType.credentials == auth_type and not credentials:
-            raise ValueError(f"credentials must be set when type is '{auth_type}.'")
-        elif auth_type in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
-            raise ValueError(f"profile and credentials must not be set when type is '{auth_type}.'")
-        else:
-            raise ValueError(f"Unsupported authentication type '{auth_type}.'")
+        if AwsAuthType.profile == auth_enum and not profile:
+            raise ValueError(f"profile must be set when type is '{auth_enum}.'")
+        if AwsAuthType.credentials == auth_enum and not credentials:
+            raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
+        if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
+            raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return values
 
 
@@ -682,13 +685,13 @@ class CLPConfig(BaseModel):
 
         for storage in storage_configs:
             auth = storage.s3_config.aws_authentication
-            if AwsAuthType.profile == auth.type:
+            if AwsAuthType.profile.value == auth.type:
                 profile_auth_used = True
                 break
 
         if profile_auth_used and self.aws_config_directory is None:
             raise ValueError("aws_config_directory must be set when using profile authentication")
-        elif not profile_auth_used and self.aws_config_directory is not None:
+        if not profile_auth_used and self.aws_config_directory is not None:
             raise ValueError(
                 "aws_config_directory should not be set when profile authentication is not used"
             )
