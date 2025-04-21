@@ -96,7 +96,7 @@ def generate_container_auth_options(
     Handles authentication methods that require extra configuration (profile, env_vars).
 
     :param clp_config: CLPConfig containing storage configurations.
-    :param type: Type of calling container (compression, log_viewer, or query).
+    :param component_type: Type of calling container (compression, log_viewer, or query).
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
@@ -154,7 +154,7 @@ def generate_container_auth_options(
     return (config_mount, credentials_env_vars)
 
 
-def _create_s3_client(s3_config: S3Config, boto3_config: Optional[Config]) -> boto3.client:
+def _create_s3_client(s3_config: S3Config, boto3_config: Optional[Config] = None) -> boto3.client:
     auth = s3_config.aws_authentication
     aws_session = None
 
