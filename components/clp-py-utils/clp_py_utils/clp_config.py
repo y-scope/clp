@@ -354,14 +354,14 @@ class AwsAuthentication(BaseModel):
 
         if profile and credentials:
             raise ValueError("profile and credentials cannot be set simultaneously.")
-        if AwsAuthType.profile == auth_type:
-            if not profile:
-                raise ValueError(f"profile must be set when type is '{auth_type}.'")
-        elif AwsAuthType.credentials == auth_type:
-            if not credentials:
-                raise ValueError(f"credentials must be set when type is '{auth_type}.'")
+        if AwsAuthType.profile == auth_type and not profile:
+            raise ValueError(f"profile must be set when type is '{auth_type}.'")
+        elif AwsAuthType.credentials == auth_type and not credentials:
+            raise ValueError(f"credentials must be set when type is '{auth_type}.'")
         elif auth_type in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_type}.'")
+        else:
+            raise ValueError(f"Unsupported authentication type '{auth_type}.'")
         return values
 
 
@@ -754,7 +754,10 @@ class CLPConfig(BaseModel):
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
         d["logs_directory"] = str(self.logs_directory)
-        d["aws_config_directory"] = str(self.aws_config_directory)
+        if self.aws_config_directory is not None:
+            d["aws_config_directory"] = str(self.aws_config_directory)
+        else:
+            d["aws_config_directory"] = None
         return d
 
 

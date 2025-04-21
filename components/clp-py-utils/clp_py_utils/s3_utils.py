@@ -113,33 +113,25 @@ def generate_container_auth_options(
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
-    if component_type not in [
-        COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        COMPRESSION_WORKER_COMPONENT_NAME,
-        LOG_VIEWER_WEBUI_COMPONENT_NAME,
-        QUERY_SCHEDULER_COMPONENT_NAME,
-        QUERY_WORKER_COMPONENT_NAME,
-    ]:
-        raise ValueError(f"Component type {component_type} is not valid.")
-
     storages_by_component_type = []
-    if (
-        COMPRESSION_SCHEDULER_COMPONENT_NAME == component_type
-        or COMPRESSION_WORKER_COMPONENT_NAME == component_type
+    if component_type in (
+        COMPRESSION_SCHEDULER_COMPONENT_NAME, 
+        COMPRESSION_WORKER_COMPONENT_NAME
     ):
         storages_by_component_type = [clp_config.logs_input, clp_config.archive_output.storage]
-    elif LOG_VIEWER_WEBUI_COMPONENT_NAME == component_type:
+    elif component_type in (LOG_VIEWER_WEBUI_COMPONENT_NAME):
         storages_by_component_type = [clp_config.stream_output.storage]
-    elif (
-        QUERY_SCHEDULER_COMPONENT_NAME == component_type
-        or QUERY_WORKER_COMPONENT_NAME == component_type
+    elif component_type in (
+        QUERY_SCHEDULER_COMPONENT_NAME,
+        QUERY_WORKER_COMPONENT_NAME
     ):
         storages_by_component_type = [
             clp_config.logs_input,
             clp_config.archive_output.storage,
             clp_config.stream_output.storage,
         ]
-
+    else:
+        raise ValueError(f"Component type {component_type} is not valid.")
     config_mount = False
     add_env_vars = False
 
