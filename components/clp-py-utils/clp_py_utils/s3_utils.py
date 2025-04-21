@@ -57,48 +57,35 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
     env_vars: Dict[str, str] = None
     auth = config.aws_authentication
 
-    if AwsAuthType.profile == auth.type:
-        aws_credentials: S3Credentials = _get_session_credentials(auth.profile)
+    aws_credentials: S3Credentials = None
+
+    if AwsAuthType.env_vars == auth.type:
+        # Environmental variables are already set
+        return {}
+
+    elif AwsAuthType.credentials == auth.type:
+        aws_credentials = auth.credentials
+
+    elif AwsAuthType.profile == auth.type:
+        aws_credentials = _get_session_credentials(auth.profile)
         if aws_credentials is None:
             raise ValueError(f"Failed to authenticate with profile {auth.profile}")
 
-        env_vars = {
-            "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
-        }
-        aws_session_token = aws_credentials.session_token
-        if aws_session_token is not None:
-            env_vars["AWS_SESSION_TOKEN"] = aws_session_token
-        return env_vars
-
-    elif AwsAuthType.credentials == auth.type:
-        credentials = auth.credentials
-        env_vars = {
-            "AWS_ACCESS_KEY_ID": credentials.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": credentials.secret_access_key,
-        }
-        if credentials.session_token:
-            env_vars["AWS_SESSION_TOKEN"] = credentials.session_token
-        return env_vars
-
-    elif AwsAuthType.env_vars == auth.type:
-        # Environmental variables are already set
-        return {}
     elif AwsAuthType.ec2 == auth.type:
-        aws_credentials: S3Credentials = _get_session_credentials()
+        aws_credentials = _get_session_credentials()
         if aws_credentials is None:
             raise ValueError(f"Failed to authenticate with EC2 metadata.")
-
-        env_vars = {
-            "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
-        }
-        if aws_credentials.session_token:
-            env_vars["AWS_SESSION_TOKEN"] = aws_credentials.session_token
-        return env_vars
-
     else:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
+
+    env_vars = {
+            "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
+            "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
+    }
+    aws_session_token = aws_credentials.session_token
+    if aws_session_token is not None:
+        env_vars["AWS_SESSION_TOKEN"] = aws_session_token
+    return env_vars
 
 
 def generate_container_auth_options(
