@@ -11,9 +11,9 @@
 #include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 
-#include "../clp/WriterInterface.hpp"
 #include "ErrorCode.hpp"
 #include "SingleFileArchiveDefs.hpp"
+#include "ZstdCompressor.hpp"
 
 namespace clp_s {
 auto RangeIndexWriter::open_range(size_t start_index)
@@ -28,27 +28,6 @@ auto RangeIndexWriter::open_range(size_t start_index)
     handle_t handle{m_ranges.size()};
     m_ranges.emplace_back(start_index);
     return handle;
-}
-
-template <typename T>
-auto RangeIndexWriter::add_value_to_range(handle_t handle, std::string const& key, T const& value)
-        -> ErrorCode {
-    if (handle >= m_ranges.size()) {
-        return ErrorCodeOutOfBounds;
-    }
-
-    auto& range = m_ranges.at(handle);
-    if (range.end_index.has_value()) {
-        return ErrorCodeNotReady;
-    }
-
-    auto& fields = range.fields;
-    if (auto it = fields.find(key); fields.end() != it) {
-        return ErrorCodeBadParam;
-    }
-
-    fields.emplace(key, value);
-    return ErrorCodeSuccess;
 }
 
 auto RangeIndexWriter::close_range(handle_t handle, size_t end_index) -> ErrorCode {
@@ -69,12 +48,12 @@ auto RangeIndexWriter::close_range(handle_t handle, size_t end_index) -> ErrorCo
     return ErrorCodeSuccess;
 }
 
-auto RangeIndexWriter::write(clp::WriterInterface& writer) -> ErrorCode {
+auto RangeIndexWriter::write(ZstdCompressor& writer) -> ErrorCode {
     if (m_ranges.empty()) {
         return ErrorCodeSuccess;
     }
 
-    nlohmann::json ranges_array{nlohmann::json::array()};
+    nlohmann::json ranges_array;
     for (auto it = m_ranges.begin(); m_ranges.end() != it; ++it) {
         if (false == it->end_index.has_value()) {
             return ErrorCodeNotReady;

@@ -10,8 +10,8 @@
 #include <json/single_include/nlohmann/json.hpp>
 #include <outcome/single-header/outcome.hpp>
 
-#include "../clp/WriterInterface.hpp"
 #include "ErrorCode.hpp"
+#include "ZstdCompressor.hpp"
 
 namespace clp_s {
 /**
@@ -49,7 +49,24 @@ public:
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     template <typename T>
-    auto add_value_to_range(handle_t handle, std::string const& key, T const& value) -> ErrorCode;
+    auto add_value_to_range(handle_t handle, std::string const& key, T const& value) -> ErrorCode {
+        if (handle >= m_ranges.size()) {
+            return ErrorCodeOutOfBounds;
+        }
+
+        auto& range = m_ranges.at(handle);
+        if (range.end_index.has_value()) {
+            return ErrorCodeNotReady;
+        }
+
+        auto& fields = range.fields;
+        if (auto it = fields.find(key); fields.end() != it) {
+            return ErrorCodeBadParam;
+        }
+
+        fields.emplace(key, value);
+        return ErrorCodeSuccess;
+    }
 
     /**
      * Closes the open range indicated by `handle`.
@@ -60,11 +77,16 @@ public:
     auto close_range(handle_t handle, size_t end_index) -> ErrorCode;
 
     /**
-     * Writes ranges to a `clp::WriterInterface` then clears internal state.
+     * Writes ranges to a `ZstdCompressor` then clears internal state.
      * @param writer
      * @return ErrorCodeSuccess on success or the relvant error code on failure.
      */
-    auto write(clp::WriterInterface& writer) -> ErrorCode;
+    auto write(ZstdCompressor& writer) -> ErrorCode;
+
+    /**
+     * Checks whether this range index is empty or not.
+     */
+    auto empty() const -> bool { return m_ranges.empty(); }
 
 private:
     // Types
