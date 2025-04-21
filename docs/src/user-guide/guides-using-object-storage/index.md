@@ -50,7 +50,7 @@ will be added in a future release.
     
     :::{note}
     You may use a single authentication method for all use cases, or a separate one for each.
-    Short-term STS credentials (that include a Session Token) are unsupported for all methods.
+    Short-term STS credentials (that include a Session Token) are not supported for any method.
     :::
 
 ## Configuration
