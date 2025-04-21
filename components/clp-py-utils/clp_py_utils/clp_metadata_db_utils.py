@@ -1,6 +1,6 @@
 import typing
 
-from mariadb import Cursor as MariaDBCursor
+from mariadb import Cursor as MariaDbCursor
 from mysql.connector.cursor import MySQLCursor
 
 from clp_py_utils.clp_config import (
