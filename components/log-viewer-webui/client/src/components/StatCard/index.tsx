@@ -1,5 +1,10 @@
-import {DashboardCard, DashboardCardProps} from "../DashboardCard/index";
 import {Typography} from "antd";
+
+import {
+    DashboardCard,
+    DashboardCardProps,
+} from "../DashboardCard/index";
+
 
 const {Text} = Typography;
 
@@ -24,12 +29,24 @@ interface StatCardProps {
  * @param props.statColor
  * @return
  */
-const StatCard = ({title, stat, titleColor, backgroundColor, statSize, statColor}: StatCardProps) => {
+const StatCard = ({
+    title,
+    stat,
+    titleColor,
+    backgroundColor,
+    statSize,
+    statColor,
+}: StatCardProps) => {
     const props: DashboardCardProps = {
         title,
-        ...(titleColor ? { titleColor } : {}),
-        ...(backgroundColor ? { backgroundColor } : {}),
+        ...(titleColor ?
+            {titleColor} :
+            {}),
+        ...(backgroundColor ?
+            {backgroundColor} :
+            {}),
     };
+
     return (
         <DashboardCard {...props}>
             <Text style={{color: statColor, fontSize: statSize}}>

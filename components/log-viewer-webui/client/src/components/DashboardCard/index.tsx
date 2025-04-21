@@ -39,7 +39,7 @@ const DashboardCard = ({title, titleColor, backgroundColor, children}: Dashboard
                 >
                     {title}
                 </Text>
-                    {children}
+                {children}
             </div>
         </Card>
     );

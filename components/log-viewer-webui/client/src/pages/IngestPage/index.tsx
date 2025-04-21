@@ -17,4 +17,5 @@ const IngestPage = () => {
     );
 };
 
+
 export default IngestPage;

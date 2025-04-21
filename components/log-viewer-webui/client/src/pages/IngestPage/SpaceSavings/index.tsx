@@ -2,6 +2,7 @@ import {theme} from "antd";
 
 import StatCard from "../../../components/StatCard";
 
+
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace with values from database once api implemented.
 const DUMMY_COMPRESSED_SIZE = 1004023;
@@ -26,12 +27,11 @@ const SpaceSavings = () => {
     return (
         <StatCard
             backgroundColor={token.colorPrimary}
-            titleColor={token.colorWhite}
-            title={"Space Savings"}
             stat={spaceSavingsPercentText}
-            statSize="6rem"
             statColor={token.colorWhite}
-        />
+            statSize={"6rem"}
+            title={"Space Savings"}
+            titleColor={token.colorWhite}/>
     );
 };
 
