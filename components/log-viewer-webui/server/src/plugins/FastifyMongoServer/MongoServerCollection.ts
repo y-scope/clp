@@ -2,6 +2,9 @@ import {
     ChangeStream,
     Collection,
     Db,
+    Document,
+    type Filter,
+    type FindOptions,
 } from "mongodb";
 
 
@@ -31,7 +34,7 @@ interface Watcher {
  * Class representing a MongoDB collection with support for change streams.
  * This class manages subscriptions to real-time updates for specific queries.
  */
-class MongoReplicaServerCollection {
+class MongoServerCollection {
     // Reference count for active subscriptions
     private count: number;
 
@@ -39,7 +42,7 @@ class MongoReplicaServerCollection {
     private collection: Collection;
 
     // Map of active change streams keyed by query hash
-    private watchers: Map<string, Watcher>;
+    private watchers: Map<string, Watcher> = new Map();
 
     /**
      * Creates an instance of MongoReplicaServerCollection.
@@ -50,7 +53,6 @@ class MongoReplicaServerCollection {
     constructor (mongoDb: Db, collectionName: string) {
         this.count = 0;
         this.collection = mongoDb.collection(collectionName);
-        this.watchers = new Map();
     }
 
     /**
@@ -64,7 +66,11 @@ class MongoReplicaServerCollection {
      * Decrement the reference count;
      */
     refRemove () {
-        this.count--;
+        if (0 < this.count) {
+            this.count--;
+        } else {
+            console.warn("Attempted to remove reference when count is already 0");
+        }
     }
 
     /**
@@ -83,7 +89,7 @@ class MongoReplicaServerCollection {
      * @param options The options for the find operation.
      * @return A cursor for the documents matching the query.
      */
-    find (query: object, options: object) {
+    find (query: Filter<Document>, options: FindOptions) {
         return this.collection.find(query, options);
     }
 
@@ -96,7 +102,7 @@ class MongoReplicaServerCollection {
      * @param connectionId The socket.id of the connection requesting the watcher.
      * @return An object containing the query hash and the change stream watcher.
      */
-    getWatcher (query: object, options: object, connectionId: string) {
+    getWatcher (query: object, options: Document, connectionId: string) {
         const queryHash = getQueryHash(query, options);
 
         let watcher = this.watchers.get(queryHash);
@@ -117,14 +123,18 @@ class MongoReplicaServerCollection {
      *
      * @param queryHash The hash of the query for which to remove the watcher.
      * @param connectionId The socket.id of the connection requesting to remove the watcher.
+     * @return True if the watcher was removed, false otherwise.
      */
-    removeWatcher (queryHash: string, connectionId: string) {
+    removeWatcher (queryHash: string, connectionId: string): boolean {
         const watcher = this.watchers.get(queryHash);
 
+        let removed = true;
         if (watcher) {
             if (1 < watcher.subscribers.length) {
                 // Remove the connectionId from the subscribers list
                 watcher.subscribers = watcher.subscribers.filter((id) => id !== connectionId);
+
+                removed = false;
             } else {
                 // Close the change stream and handle any potential errors
                 watcher.changeStream.close().catch((err: unknown) => {
@@ -135,7 +145,9 @@ class MongoReplicaServerCollection {
         } else {
             console.warn(`No watcher found for queryHash ${queryHash}`);
         }
+
+        return removed;
     }
 }
 
-export default MongoReplicaServerCollection;
+export default MongoServerCollection;
