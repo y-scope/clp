@@ -277,8 +277,13 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(literal == translated_pair.second);
     }
 
-    SECTION("Column in @ namespace") {
-        auto namespaced_query = GENERATE("@column : *", "\"@column\": *");
+    SECTION("Namespaced column") {
+        auto namespace_name = GENERATE("@", "$", "!", "#");
+        auto namespaced_query_fmt_string = GENERATE("{}column : *", "\"{}column\": *");
+        auto namespaced_query = fmt::vformat(
+            namespaced_query_fmt_string,
+            fmt::make_format_args(namespace_name)
+        );
         stringstream query{namespaced_query};
         auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query));
         REQUIRE(nullptr != filter);
@@ -287,15 +292,21 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(false == filter->has_only_expression_operands());
         REQUIRE(false == filter->is_inverted());
         REQUIRE(FilterOperation::EQ == filter->get_operation());
-        REQUIRE("@" == filter->get_column()->get_namespace());
+        REQUIRE(namespace_name == filter->get_column()->get_namespace());
         REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
         auto it = filter->get_column()->descriptor_begin();
         auto const column_token = DescriptorToken::create_descriptor_from_escaped_token("column");
         REQUIRE(column_token == *it);
     }
 
-    SECTION("Escaped @ namespace in column") {
-        auto escaped_namespace_query = GENERATE("\\@column : *", "\"\\@column\": *");
+    SECTION("Escaped namespace in column") {
+        auto namespace_name = GENERATE("@", "$", "!", "#");
+        auto escaped_namespace_query_fmt_string = GENERATE("\\{}column : *", "\"\\{}column\": *");
+        auto column = fmt::vformat("{}column", fmt::make_format_args(namespace_name));
+        auto escaped_namespace_query = fmt::vformat(
+            escaped_namespace_query_fmt_string,
+            fmt::make_format_args(namespace_name)
+        );
         stringstream query{escaped_namespace_query};
         auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query));
         REQUIRE(nullptr != filter);
@@ -307,7 +318,7 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         REQUIRE(filter->get_column()->get_namespace().empty());
         REQUIRE(1 == filter->get_column()->get_descriptor_list().size());
         auto it = filter->get_column()->descriptor_begin();
-        auto const column_token = DescriptorToken::create_descriptor_from_escaped_token("@column");
+        auto const column_token = DescriptorToken::create_descriptor_from_escaped_token(column);
         REQUIRE(column_token == *it);
     }
 }

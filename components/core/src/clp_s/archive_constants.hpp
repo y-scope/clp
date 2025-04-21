@@ -31,6 +31,9 @@ constexpr char cMetadataSubtreeName[] = "";
 constexpr char cLogEventIdxName[] = "log_event_idx";
 constexpr std::string_view cAutogenNamespace{"@"};
 constexpr std::string_view cDefaultNamespace{""};
+constexpr std::string_view cRangeIndexNamespace{"$"};
+constexpr std::string_view cReservedNamespace1{"!"};
+constexpr std::string_view cReservedNamespace2{"#"};
 
 namespace results_cache::decompression {
 constexpr char cPath[]{"path"};
