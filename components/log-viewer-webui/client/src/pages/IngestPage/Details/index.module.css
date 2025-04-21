@@ -1,7 +1,6 @@
 .detailsGrid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(200px, 1fr));
-    grid-template-rows: auto;
+    grid-template-columns: repeat(2, 200px);
     gap: 8px;
 }
 
