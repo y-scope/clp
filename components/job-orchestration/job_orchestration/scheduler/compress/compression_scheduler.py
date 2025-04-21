@@ -6,32 +6,22 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Set
 
 import brotli
 import celery
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
-    ARCHIVES_TABLE_SUFFIX,
     CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
-    COLUMN_METADATA_TABLE_SUFFIX,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    DATASETS_TABLE_SUFFIX,
-    StorageEngine,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
-from clp_py_utils.sql_table_schema_utils import (
-    create_archives_table,
-    create_column_metadata_table,
-    create_datasets_table,
-)
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
@@ -156,34 +146,13 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def init_datasets_table(db_conn, db_cursor, clp_metadata_db_connection_config) -> Set[str]:
-    table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    table_name = f"{table_prefix}{DATASETS_TABLE_SUFFIX}"
-
-    create_datasets_table(db_cursor, table_name)
-    db_conn.commit()
-
-    db_cursor.execute(f"SELECT name FROM {table_name}")
-    rows = cursor.fetchall()
-    db_conn.commit()
-    return {str(row[0]) for row in rows}
-
-
-def search_and_schedule_new_tasks(
-    db_conn,
-    db_cursor,
-    clp_metadata_db_connection_config,
-    clp_storage_engine: StorageEngine,
-    seen_datasets: Set[str],
-) -> None:
+def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
     """
     For all jobs with PENDING status, split the job into tasks and schedule them.
     """
     global scheduled_jobs
 
     logger.debug("Search and schedule new tasks")
-
-    table_prefix = clp_metadata_db_connection_config["table_prefix"]
 
     # Poll for new compression jobs
     jobs = fetch_new_jobs(db_cursor)
@@ -233,18 +202,6 @@ def search_and_schedule_new_tasks(
             )
             db_conn.commit()
             continue
-
-        dataset = input_config.dataset
-        if StorageEngine.CLP_S == clp_storage_engine and dataset not in seen_datasets:
-            seen_datasets.add(dataset)
-            # TODO: ensure that the dataset string doesn't violate SQL table naming rules
-            query = f'INSERT INTO {table_prefix}{DATASETS_TABLE_SUFFIX} (name) VALUES ("{dataset}")'
-            db_cursor.execute(query)
-            create_archives_table(db_cursor, f"{table_prefix}{dataset}_{ARCHIVES_TABLE_SUFFIX}")
-            create_column_metadata_table(
-                db_cursor, f"{table_prefix}{dataset}_{COLUMN_METADATA_TABLE_SUFFIX}"
-            )
-            db_conn.commit()
 
         paths_to_compress_buffer.flush()
         tasks = paths_to_compress_buffer.get_tasks()
@@ -427,24 +384,13 @@ def main(argv):
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        clp_metadata_db_connection_config = (
-            sql_adapter.database_config.get_clp_connection_params_and_type(True)
-        )
-        clp_storage_engine = clp_config.package.storage_engine
-        if StorageEngine.CLP_S == clp_storage_engine:
-            seen_datasets = init_datasets_table(
-                db_conn, db_cursor, clp_metadata_db_connection_config
-            )
-
         # Start Job Processing Loop
         while True:
             try:
                 search_and_schedule_new_tasks(
                     db_conn,
                     db_cursor,
-                    clp_metadata_db_connection_config,
-                    clp_storage_engine,
-                    seen_datasets,
+                    sql_adapter.database_config.get_clp_connection_params_and_type(True),
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
