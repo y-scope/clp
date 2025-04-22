@@ -8,7 +8,6 @@ import {
 
 import settings from "../settings.json" with {type: "json"};
 import DbManager from "./plugins/DbManager.js";
-import MongoReplicaServerPlugin from "./plugins/MongoReplicaServerPlugin.js";
 import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
@@ -56,12 +55,6 @@ const app = async ({
         });
         await server.register(S3Manager, {region: settings.StreamFilesS3Region});
     }
-
-    await server.register(MongoReplicaServerPlugin, {
-        host: settings.MongoDbHost,
-        port: settings.MongoDbPort,
-        database: settings.MongoDbName,
-    });
 
     await server.register(staticRoutes);
     await server.register(exampleRoutes);
