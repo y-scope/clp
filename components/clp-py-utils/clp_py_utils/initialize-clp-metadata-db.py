@@ -12,7 +12,10 @@ from clp_py_utils.clp_config import (
     Database,
     StorageEngine,
 )
-from clp_py_utils.clp_metadata_db_utils import create_metadata_db_tables
+from clp_py_utils.clp_metadata_db_utils import (
+    create_datasets_table,
+    create_metadata_db_tables,
+)
 from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
@@ -55,6 +58,7 @@ def main(argv):
                 create_metadata_db_tables(
                     metadata_db_cursor, table_prefix, dataset=CLP_DEFAULT_DATASET_NAME
                 )
+                create_datasets_table(metadata_db_cursor, table_prefix)
             # TODO: Remove the default db tables for CLP_S after the dataset feature is implemented.
             create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
