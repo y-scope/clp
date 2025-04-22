@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import pathlib
 import sys
 from contextlib import closing
 
 from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import Database, StorageEngine
-from clp_py_utils.clp_metadata_db_utils.py import create_metadata_db_tables
+from clp_py_utils.clp_metadata_db_utils import create_metadata_db_tables
 from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
