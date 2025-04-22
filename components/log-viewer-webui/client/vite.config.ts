@@ -7,7 +7,7 @@ export default defineConfig({
     plugins: [react()],
     server: {
         host: "0.0.0.0",
-	port: 8081,
+        port: 8081,
         proxy: {
             "/query/": {
                 // Below target should match the server's configuration in
