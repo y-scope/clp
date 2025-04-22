@@ -91,6 +91,11 @@ def _create_column_metadata_table(db_cursor, table_prefix: str) -> None:
 
 
 def create_datasets_table(db_cursor, table_prefix: str) -> None:
+    """
+    Creates the table to store the datasets information (for clp-s only).
+    :param db_cursor: The database cursor to execute the table creation.
+    :param table_prefix: A string prefix applied to the dataset table name.
+    """
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
@@ -103,6 +108,13 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
 
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
+    """
+    Creates the standard set of SQL tables in the metadata database for recording compression tasks'
+    results.
+    :param db_cursor: The database cursor to execute the table creations.
+    :param table_prefix: A string prefix applied to all table names.
+    :param dataset: If provided, dataset-specific set of tables are created (for clp-s only).
+    """
     if dataset is not None:
         table_prefix = f"{table_prefix}{dataset}_"
         _create_column_metadata_table(db_cursor, table_prefix)
