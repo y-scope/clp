@@ -2,7 +2,7 @@
 
 To understand the format, it's necessary to briefly understand:
 
-* how clp-s encodes dynamically-structured log events and serializes them into an archive;
+* how clp-s encodes dynamically structured log events and serializes them into an archive;
 * how clp-s parses and encodes unstructured text values.
 * auto-generated kv-pairs and how they differ from user-generated kv-pairs.
 
@@ -19,9 +19,9 @@ Conceptually, clp-s encodes a log event through the following steps:
 
 ### 1. Determine the log event's schema
 
-clp-s first examines the log event's schema--i.e., the key and value type for each kv-pair in the
-log event. For example, Figure 1 shows two log events and Tables 1 & 2 show the schemas for these
-log events. clp-s represents this schema as a tree, where:
+To encode a log event, clp-s first examines its schema--i.e., the key and value type for
+each kv-pair in the log event. For example, Figure 1 shows two log events and Tables 1 & 2 show the
+schemas for these log events. clp-s represents this schema as a tree, where:
 
 * each node under the root represents a unique key and value-type pair;
 * leaf nodes have primitive types (int, float, boolean, string, null); and
@@ -138,6 +138,7 @@ flowchart LR
 
 ### 2. Merge the event's schema with the archive's
 
+Once clp-s determines an event's schema, it then conceptually encodes a log event as follows.
 For each node in the event's schema tree, clp-s adds it to the archive's schema tree (if it doesn't
 already exist) and assigns it a unique ID. In effect, the archive's schema tree is the result of
 merging all log events' schemas. Figure 3 shows the archive's schema tree after encoding log event
