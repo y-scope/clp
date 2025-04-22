@@ -231,6 +231,7 @@ def create_db_tables(
         "python3",
         str(clp_py_utils_dir / "create-db-tables.py"),
         "--config", str(container_clp_config.logs_directory / db_config_filename),
+        "--storage-engine", str(container_clp_config.package.storage_engine),
     ]
     # fmt: on
 

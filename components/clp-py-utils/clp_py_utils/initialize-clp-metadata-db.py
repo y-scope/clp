@@ -6,9 +6,9 @@ from contextlib import closing
 
 from sql_adapter import SQL_Adapter
 
-from clp_py_utils.clp_config import Database
-from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.clp_config import Database, StorageEngine
 from clp_py_utils.clp_metadata_db_utils.py import create_metadata_db_tables
+from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
 # Create logger
@@ -24,19 +24,32 @@ logger.addHandler(logging_console_handler)
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Sets up CLP's metadata tables.")
     args_parser.add_argument("--config", required=True, help="Database config file.")
+    args_parser.add_argument(
+        "--storage-engine",
+        type=str,
+        choices=[engine.value for engine in StorageEngine],
+        required=True,
+        help="Compression storage engine to use.",
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
+    config_file_path = pathlib.Path(parsed_args.config)
+    storage_engine = StorageEngine(parsed_args.storage_engine)
+
     try:
-        database_config = Database.parse_obj(read_yaml_config_file(parsed_args.config))
+        database_config = Database.parse_obj(read_yaml_config_file(config_file_path))
         if database_config is None:
-            raise ValueError(f"Database configuration file '{parsed_args.config}' is empty.")
+            raise ValueError(f"Database configuration file '{config_file_path}' is empty.")
         sql_adapter = SQL_Adapter(database_config)
         clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
-            create_metadata_db_tables(metadata_db_cursor, table_prefix)
+            if StorageEngine.CLP_S == storage_engine:
+                create_metadata_db_tables(metadata_db_cursor, table_prefix, dataset="default")
+            else:
+                create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
     except:
         logger.exception("Failed to create clp metadata tables.")

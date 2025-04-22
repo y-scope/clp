@@ -1,8 +1,5 @@
 import typing
 
-from mariadb import Cursor as MariaDbCursor
-from mysql.connector.cursor import MySQLCursor
-
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
@@ -13,7 +10,7 @@ from clp_py_utils.clp_config import (
 )
 
 
-def _create_archives_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str) -> None:
+def _create_archives_table(db_cursor, table_prefix: str) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{ARCHIVES_TABLE_SUFFIX}` (
@@ -33,7 +30,7 @@ def _create_archives_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix:
     )
 
 
-def _create_tags_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str) -> None:
+def _create_tags_table(db_cursor, table_prefix: str) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{TAGS_TABLE_SUFFIX}` (
@@ -46,7 +43,7 @@ def _create_tags_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str
     )
 
 
-def _create_archive_tags_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str) -> None:
+def _create_archive_tags_table(db_cursor, table_prefix: str) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}` (
@@ -60,7 +57,7 @@ def _create_archive_tags_table(db_cursor: MariaDbCursor | MySQLCursor, table_pre
     )
 
 
-def _create_files_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str) -> None:
+def _create_files_table(db_cursor, table_prefix: str) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{FILES_TABLE_SUFFIX}` (
@@ -81,9 +78,7 @@ def _create_files_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: st
     )
 
 
-def _create_column_metadata_table(
-    db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str
-) -> None:
+def _create_column_metadata_table(db_cursor, table_prefix: str) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{COLUMN_METADATA_TABLE_SUFFIX}` (
@@ -95,7 +90,7 @@ def _create_column_metadata_table(
     )
 
 
-def create_datasets_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str) -> None:
+def create_datasets_table(db_cursor, table_prefix: str) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
@@ -107,9 +102,7 @@ def create_datasets_table(db_cursor: MariaDbCursor | MySQLCursor, table_prefix: 
     )
 
 
-def create_metadata_db_tables(
-    db_cursor: MariaDbCursor | MySQLCursor, table_prefix: str, dataset: str | None = None
-) -> None:
+def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
     if dataset is not None:
         table_prefix = f"{table_prefix}{dataset}_"
         _create_column_metadata_table(db_cursor, table_prefix)
