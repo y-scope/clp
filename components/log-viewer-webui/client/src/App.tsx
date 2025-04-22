@@ -1,11 +1,15 @@
+/* eslint-disable react/jsx-key */
+
 // import { CssVarsProvider } from "@mui/joy";
 // import { LOCAL_STORAGE_KEY } from "./typings/config";
 // import QueryStatus from "./ui/QueryStatus";
-import MongoReplicaCollection from "./mongoCDCLib/MongoReplicaCollection";
+import MongoCollection from "./mongoCDCLib/MongoCollection";
 import {useTracker} from "./mongoCDCLib/useTracker";
 
 
-const collection = new MongoReplicaCollection("results-1");
+const collection = new MongoCollection("compression-jobs");
+
+// const collection2 = new MongoReplicaCollection("compression-jobs");
 
 /**
  * Renders the main application.
@@ -13,23 +17,42 @@ const collection = new MongoReplicaCollection("results-1");
  * @return
  */
 const App = () => {
-    console.log("IN App");
     const results = useTracker(
-        () => collection.find({}, {}),
+        () => collection.find({
+            _id: {
+                $gte: 1,
+                $lte: 10,
+            },
+        }, {sort: {start_time: -1}}),
         []
     );
 
-    console.log("results len:", results.length);
-    for (let i = 0; i < results.length; i++) {
+    const results2 = useTracker(
+        () => collection.find({
+            _id: {
+                $gte: 1,
+                $lte: 5,
+            },
+        }, {sort: {start_time: -1}}),
+        []
+    );
+
+    /* for (let i = 0; i < results.length; i++) {
         console.log(results[i]);
     }
 
-    // const results = ['123'];
-    // results = ["123"];
+    for (let i = 0; i < results2.length; i++) {
+        console.log(results2[i]);
+    } */
 
     return (
         <div>
             {results.map((r) => (
+                <div>
+                    {JSON.stringify(r)}
+                </div>
+            ))}
+            {results2.map((r) => (
                 <div>
                     {JSON.stringify(r)}
                 </div>

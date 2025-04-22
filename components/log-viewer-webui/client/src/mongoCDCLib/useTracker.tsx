@@ -3,6 +3,8 @@ import {
     useState,
 } from "react";
 
+import MongoCollectionReactiveCursor from "./MongoCollectionReactiveCursor.js";
+
 
 /**
  * Custom hook to track a MongoDB cursor and return its data as an array.
@@ -12,21 +14,21 @@ import {
  * @return The data from the cursor as an array.
  */
 const useTracker = (
-    getCursor: Function,
+    getCursor: () => MongoCollectionReactiveCursor,
     dependencies: object[] = []
-): any[] => {
-    const [data, setData] = useState<any[]>([]);
+): unknown[] => {
+    const [data, setData] = useState<unknown[]>([]);
 
     useEffect(() => {
         const cursor = getCursor();
 
-        const handleData = (newData: any[]) => {
+        const handleData = (newData: unknown[]) => {
             setData(newData);
         };
 
         const unsubscribe = cursor.toReactiveArray({
             onData: handleData,
-            onError: (error: any) => {
+            onError: (error: unknown) => {
                 console.error("Error fetching data:", error);
             },
         });
