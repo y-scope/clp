@@ -7,7 +7,11 @@ from contextlib import closing
 
 from sql_adapter import SQL_Adapter
 
-from clp_py_utils.clp_config import Database, StorageEngine
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    Database,
+    StorageEngine,
+)
 from clp_py_utils.clp_metadata_db_utils import create_metadata_db_tables
 from clp_py_utils.core import read_yaml_config_file
 
@@ -48,9 +52,11 @@ def main(argv):
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
             if StorageEngine.CLP_S == storage_engine:
-                create_metadata_db_tables(metadata_db_cursor, table_prefix, dataset="default")
-            else:
-                create_metadata_db_tables(metadata_db_cursor, table_prefix)
+                create_metadata_db_tables(
+                    metadata_db_cursor, table_prefix, dataset=CLP_DEFAULT_DATASET_NAME
+                )
+            # TODO: Remove the default db tables for CLP_S after the dataset feature is implemented.
+            create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
     except:
         logger.exception("Failed to create clp metadata tables.")
