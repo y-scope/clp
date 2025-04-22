@@ -58,6 +58,7 @@ def main(argv):
                 create_metadata_db_tables(
                     metadata_db_cursor, table_prefix, dataset=CLP_DEFAULT_DATASET_NAME
                 )
+                # TODO: populate the dataset table with proper default name and default path.
                 create_datasets_table(metadata_db_cursor, table_prefix)
             # TODO: Remove the default db tables for CLP_S after the dataset feature is implemented.
             create_metadata_db_tables(metadata_db_cursor, table_prefix)
