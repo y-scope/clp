@@ -126,6 +126,7 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
     archives_table_name = f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}"
     tags_table_name = f"{table_prefix}{TAGS_TABLE_SUFFIX}"
     archive_tags_table_name = f"{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}"
+    # TODO: Update the default column metadata table name after updating the indexer.
     column_metadata_table_name = (
         f"{table_prefix}{COLUMN_METADATA_TABLE_SUFFIX}_{CLP_DEFAULT_DATASET_NAME}"
     )
