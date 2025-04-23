@@ -77,11 +77,7 @@ export default fastifyPlugin(
             return;
         }
 
-        const logMessage = null === profile ?
-            `Initializing S3Manager with region="${region}"` :
-            `Initializing S3Manager with region="${region}" and profile="${profile}"...`;
-
-        console.log(logMessage);
+        console.log(`Initializing S3Manager with region="${region}" and profile="${profile}"...`);
         app.decorate("s3Manager", new S3Manager(region, profile));
     }
 );
