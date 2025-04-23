@@ -25,7 +25,6 @@ logs_input:
       credentials: # Only for type "credentials"
         access_key_id: "<aws-access-key-id>"
         secret_access_key: "<aws-secret-access-key>"
-
 ```
 * `s3_config` configures both the S3 bucket where logs are to be retrieved from and the credentials
   for accessing it.
@@ -127,6 +126,18 @@ stream_output:
 CLP currently doesn't explicitly delete the cached streams. This limitation will be addressed in a
 future release.
 :::
+
+## Configuration for AWS config directory
+
+If using the authentication type "profile" in any of the components above, CLP must be configured
+with the directory in which AWS configuration are found. Typically, this should be the `.aws`
+folder in the user's home directory.
+
+```yaml
+aws_config_directory: "/home/<clp-user>/.aws"
+```
+
+If profiles are not used for AWS authentication, the field should be left empty.
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
