@@ -37,7 +37,7 @@ def main(argv):
         type=str,
         choices=[engine.value for engine in StorageEngine],
         required=True,
-        help="Compression storage engine to use.",
+        help="Storage engine to create tables for.",
     )
     parsed_args = args_parser.parse_args(argv[1:])
 

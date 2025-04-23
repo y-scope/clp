@@ -1,4 +1,3 @@
-import typing
 
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
@@ -92,9 +91,10 @@ def _create_column_metadata_table(db_cursor, table_prefix: str) -> None:
 
 def create_datasets_table(db_cursor, table_prefix: str) -> None:
     """
-    Creates the table to store the datasets information (for clp-s only).
+    Creates the dataset information table.
+
     :param db_cursor: The database cursor to execute the table creation.
-    :param table_prefix: A string prefix applied to the dataset table name.
+    :param table_prefix: A string to prepend to the table name.
     """
     db_cursor.execute(
         f"""
@@ -109,11 +109,12 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
     """
-    Creates the standard set of SQL tables in the metadata database for recording compression tasks'
-    results.
+    Creates the standard set of tables for CLP's metadata.
+
     :param db_cursor: The database cursor to execute the table creations.
-    :param table_prefix: A string prefix applied to all table names.
-    :param dataset: If provided, dataset-specific set of tables are created (for clp-s only).
+    :param table_prefix: A string to prepend to all table names.
+    :param dataset: If set, all tables will be named in a dataset-specific manner and the
+    column-metadata table will be created.
     """
     if dataset is not None:
         table_prefix = f"{table_prefix}{dataset}_"
