@@ -9,7 +9,7 @@ const DUMMY_COMPRESSED_SIZE = 1004023;
 const DUMMY_UNCOMPRESSED_SIZE = 110300010;
 
 /**
- * Presents space savings or compression ratio from the given statistics.
+ * Renders space savings card.
  *
  * @return
  */
@@ -18,7 +18,7 @@ const SpaceSavings = () => {
     const compressedSize = DUMMY_COMPRESSED_SIZE as number;
     const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE as number;
 
-    const spaceSavingsPercent = (0 === uncompressedSize) ?
+    const spaceSavingsPercent = (0 !== uncompressedSize) ?
         100 * (1 - (compressedSize / uncompressedSize)) :
         0;
 
@@ -28,10 +28,11 @@ const SpaceSavings = () => {
         <StatCard
             backgroundColor={token.colorPrimary}
             stat={spaceSavingsPercentText}
-            textColor={token.colorWhite}
-            title={"Space Savings"}/>
+            statColor={token.colorWhite}
+            statSize={"6rem"}
+            title={"Space Savings"}
+            titleColor={token.colorWhite}/>
     );
 };
-
 
 export default SpaceSavings;
