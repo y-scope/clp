@@ -899,6 +899,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
         f"CLP_DB_USER={clp_config.database.username}",
         f"CLP_DB_PASS={clp_config.database.password}",
         f"WEBUI_LOGS_DIR={container_webui_logs_dir}",
+        f"WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}",
     ]
     necessary_mounts = [
         mounts.clp_home,
