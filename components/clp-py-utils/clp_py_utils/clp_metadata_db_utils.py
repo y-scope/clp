@@ -117,8 +117,7 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
 
     :param db_cursor: The database cursor to execute the table creations.
     :param table_prefix: A string to prepend to all table names.
-    :param dataset: If set, all tables will be named in a dataset-specific manner and the
-    column-metadata table will be created.
+    :param dataset: If set, all tables will be named in a dataset-specific manner.
     """
     if dataset is not None:
         table_prefix = f"{table_prefix}{dataset}_"
@@ -126,7 +125,10 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
     archives_table_name = f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}"
     tags_table_name = f"{table_prefix}{TAGS_TABLE_SUFFIX}"
     archive_tags_table_name = f"{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}"
-    # TODO: Update the default column metadata table name after updating the indexer.
+
+    # TODO: Update this to
+    # {table_prefix}{CLP_DEFAULT_DATASET_NAME}_{COLUMN_METADATA_TABLE_SUFFIX} when we can also
+    # change the indexer to match.
     column_metadata_table_name = (
         f"{table_prefix}{COLUMN_METADATA_TABLE_SUFFIX}_{CLP_DEFAULT_DATASET_NAME}"
     )
