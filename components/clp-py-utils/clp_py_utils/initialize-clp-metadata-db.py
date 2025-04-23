@@ -8,7 +8,6 @@ from pathlib import Path
 from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     Database,
     StorageEngine,
 )
@@ -54,13 +53,13 @@ def main(argv):
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
+            # TODO: After the dataset feature is implemented:
+            #       1. Populate the `clp-datasets` table with the name and path for the `default`
+            #          dataset.
+            #       2. Create a set of metadata tables for the `default` dataset.
+            #       3. Remove the default db tables for CLP_S.
             if StorageEngine.CLP_S == storage_engine:
-                create_metadata_db_tables(
-                    metadata_db_cursor, table_prefix, dataset=CLP_DEFAULT_DATASET_NAME
-                )
-                # TODO: populate the dataset table with proper default name and default path.
                 create_datasets_table(metadata_db_cursor, table_prefix)
-            # TODO: Remove the default db tables for CLP_S after the dataset feature is implemented.
             create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
     except:
