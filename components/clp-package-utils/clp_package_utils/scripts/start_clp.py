@@ -968,6 +968,8 @@ def start_log_viewer_webui(
         auth = s3_config.aws_authentication
         if AwsAuthType.profile == auth.type:
             settings_json_updates["StreamFilesS3Profile"] = auth.profile
+        else:
+            settings_json_updates["StreamFilesS3Profile"] = None
     elif StorageType.FS == stream_storage.type:
         settings_json_updates["StreamFilesS3Region"] = None
         settings_json_updates["StreamFilesS3PathPrefix"] = None
