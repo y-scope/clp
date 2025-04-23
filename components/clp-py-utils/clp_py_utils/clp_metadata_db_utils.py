@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
@@ -42,15 +43,17 @@ def _create_tags_table(db_cursor, table_prefix: str) -> None:
     )
 
 
-def _create_archive_tags_table(db_cursor, table_prefix: str) -> None:
+def _create_archive_tags_table(
+    db_cursor, table_prefix: str, archives_table_name: str, tags_table_name: str
+) -> None:
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}` (
             `archive_id` VARCHAR(64) NOT NULL,
             `tag_id` INT unsigned NOT NULL,
             PRIMARY KEY (`archive_id`,`tag_id`),
-            FOREIGN KEY (`archive_id`) REFERENCES `{table_prefix}{ARCHIVES_TABLE_SUFFIX}` (`id`),
-            FOREIGN KEY (`tag_id`) REFERENCES `{table_prefix}{TAGS_TABLE_SUFFIX}` (`tag_id`)
+            FOREIGN KEY (`archive_id`) REFERENCES `{archives_table_name}` (`id`),
+            FOREIGN KEY (`tag_id`) REFERENCES `{tags_table_name}` (`tag_id`)
         )
         """
     )
@@ -122,5 +125,10 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
 
     _create_archives_table(db_cursor, table_prefix)
     _create_tags_table(db_cursor, table_prefix)
-    _create_archive_tags_table(db_cursor, table_prefix)
+    _create_archive_tags_table(
+        db_cursor,
+        table_prefix,
+        f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
+        f"{table_prefix}{TAGS_TABLE_SUFFIX}",
+    )
     _create_files_table(db_cursor, table_prefix)

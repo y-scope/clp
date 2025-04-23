@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 import logging
-import pathlib
 import sys
 from contextlib import closing
+from pathlib import Path
 
 from sql_adapter import SQL_Adapter
 
@@ -41,7 +41,7 @@ def main(argv):
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
-    config_file_path = pathlib.Path(parsed_args.config)
+    config_file_path = Path(parsed_args.config)
     storage_engine = StorageEngine(parsed_args.storage_engine)
 
     try:
