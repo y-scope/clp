@@ -24,15 +24,10 @@ class S3Manager {
      * @param [profile]
      */
     constructor (region: string, profile: Nullable<string>) {
-        const s3ClientArgs: {region: string; profile?: string} = {
-            region: region,
-        };
-
-        if (profile) {
-            s3ClientArgs.profile = profile;
-        }
-
-        this.#s3Client = new S3Client(s3ClientArgs);
+        this.#s3Client = new S3Client({
+            region,
+            ...((null !== profile) && {profile}),
+        });
     }
 
     /**
