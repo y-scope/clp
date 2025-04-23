@@ -129,7 +129,7 @@ future release.
 
 ## Configuration for AWS config directory
 
-If using the authentication type "profile" in any of the components above, CLP must be configured
+If using the authentication type `profile` in any of the components above, CLP must be configured
 with the directory in which AWS configuration are found. Typically, this should be the `.aws`
 folder in the user's home directory.
 
