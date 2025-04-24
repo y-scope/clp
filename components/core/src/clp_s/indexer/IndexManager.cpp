@@ -5,48 +5,40 @@
 #include <string>
 
 #include "../archive_constants.hpp"
+#include "../ArchiveReader.hpp"
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
         std::optional<clp::GlobalMetadataDBConfig> const& db_config,
-        bool should_create_table
+        std::string const& dataset_name,
+        bool should_create_table,
+        Path const& archive_path
 ) {
-    if (db_config.has_value()) {
-        m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
-                db_config->get_metadata_db_host(),
-                db_config->get_metadata_db_port(),
-                db_config->get_metadata_db_username(),
-                db_config->get_metadata_db_password(),
-                db_config->get_metadata_db_name(),
-                db_config->get_metadata_table_prefix()
-        );
-        m_mysql_index_storage->open();
-        m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
-            m_mysql_index_storage->add_field(field_name, field_type);
-        };
-        m_should_create_table = should_create_table;
-        m_output_type = OutputType::Database;
-    } else {
+    if (false == db_config.has_value()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
-}
 
-IndexManager::~IndexManager() {
-    if (m_output_type == OutputType::Database) {
-        m_mysql_index_storage->close();
-    }
-}
-
-void IndexManager::update_metadata(std::string const& table_name, Path const& archive_path) {
-    m_mysql_index_storage->init(table_name, m_should_create_table);
+    m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
+            db_config->get_metadata_db_host(),
+            db_config->get_metadata_db_port(),
+            db_config->get_metadata_db_username(),
+            db_config->get_metadata_db_password(),
+            db_config->get_metadata_db_name(),
+            db_config->get_metadata_table_prefix(),
+            dataset_name,
+            should_create_table
+    );
+    m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
+        m_mysql_index_storage->add_field(field_name, field_type);
+    };
+    m_output_type = OutputType::Database;
 
     ArchiveReader archive_reader;
     archive_reader.open(archive_path, NetworkAuthOption{});
-
     traverse_schema_tree_and_update_metadata(archive_reader.get_schema_tree());
 }
 
-std::string IndexManager::escape_key_name(std::string_view const key_name) {
+auto IndexManager::escape_key_name(std::string_view key_name) -> std::string {
     std::string escaped_key_name;
     escaped_key_name.reserve(key_name.size());
     for (auto c : key_name) {
@@ -93,9 +85,9 @@ std::string IndexManager::escape_key_name(std::string_view const key_name) {
     return escaped_key_name;
 }
 
-void IndexManager::traverse_schema_tree_and_update_metadata(
+auto IndexManager::traverse_schema_tree_and_update_metadata(
         std::shared_ptr<SchemaTree> const& schema_tree
-) {
+) -> void {
     if (nullptr == schema_tree) {
         return;
     }
