@@ -1,18 +1,11 @@
 #ifndef CLP_S_INDEXER_INDEXMANAGER_HPP
 #define CLP_S_INDEXER_INDEXMANAGER_HPP
 
-#include <cstdint>
 #include <functional>
-#include <memory>
 #include <optional>
-#include <string>
-#include <string_view>
 
 #include "../../clp/GlobalMetadataDBConfig.hpp"
-#include "../ErrorCode.hpp"
-#include "../InputConfig.hpp"
-#include "../SchemaTree.hpp"
-#include "../TraceableException.hpp"
+#include "../ArchiveReader.hpp"
 #include "MySQLIndexStorage.hpp"
 
 namespace clp_s::indexer {
@@ -43,24 +36,22 @@ public:
         Database
     };
 
-    // Constructor
+    // Constructors
     IndexManager(
-            std::optional<clp::GlobalMetadataDBConfig> const& db_config,
-            std::string const& dataset_name,
-            bool should_create_table,
-            Path const& archive_path
+            std::optional<clp::GlobalMetadataDBConfig> const& db_config = std::nullopt,
+            bool should_create_table = false
     );
 
-    // Delete copy constructor and assignment operator
-    IndexManager(IndexManager const&) = delete;
-    auto operator=(IndexManager const&) -> IndexManager& = delete;
-
-    // Default move constructor and assignment operator
-    IndexManager(IndexManager&&) noexcept = default;
-    auto operator=(IndexManager&&) noexcept -> IndexManager& = default;
-
     // Destructor
-    ~IndexManager() = default;
+    ~IndexManager();
+
+    // Methods
+    /**
+     * Updates the metadata for a given archive
+     * @param table_name
+     * @param archive_path
+     */
+    void update_metadata(std::string const& table_name, Path const& archive_path);
 
 private:
     /**
@@ -68,17 +59,17 @@ private:
      * @param key_name
      * @return the escaped key name
      */
-    [[nodiscard]] static auto escape_key_name(std::string_view key_name) -> std::string;
+    static std::string escape_key_name(std::string_view const key_name);
 
     /**
      * Traverses the schema tree and updates the metadata
      * @param schema_tree
      */
-    auto traverse_schema_tree_and_update_metadata(std::shared_ptr<SchemaTree> const& schema_tree)
-            -> void;
+    void traverse_schema_tree_and_update_metadata(std::shared_ptr<SchemaTree> const& schema_tree);
 
     OutputType m_output_type{OutputType::Database};
     std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
+    bool m_should_create_table{false};
     std::function<void(std::string&, NodeType)> m_field_update_callback;
 };
 }  // namespace clp_s::indexer
