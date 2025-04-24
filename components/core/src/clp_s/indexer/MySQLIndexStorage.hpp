@@ -12,7 +12,7 @@ namespace clp_s::indexer {
  */
 class MySQLIndexStorage {
 public:
-    static constexpr char cColumnMetadataPrefix[] = "column_metadata";
+    static constexpr char cColumnMetadataSuffix[] = "column_metadata";
 
     // Types
     class OperationFailed : public TraceableException {
