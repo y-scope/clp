@@ -1,6 +1,8 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -9,6 +11,7 @@
 
 #include "archive_constants.hpp"
 #include "DictionaryWriter.hpp"
+#include "RangeIndexWriter.hpp"
 #include "Schema.hpp"
 #include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
@@ -165,6 +168,33 @@ public:
      */
     size_t get_data_size();
 
+    /**
+     * TODO
+     */
+    template <typename T>
+    auto add_field_to_current_range(std::string const& key, T const& value) {
+        if (false == m_range_handle.has_value()) {
+            auto const ret{m_range_index_writer.open_range(m_next_log_event_id)};
+            if (ret.has_error()) {
+                return ErrorCodeFailure;
+            }
+            m_range_handle = ret.value();
+        }
+        return m_range_index_writer.add_value_to_range(m_range_handle.value(), key, value);
+    }
+
+    /**
+     * TODO
+     */
+    auto close_current_range() -> ErrorCode {
+        if (false == m_range_handle.has_value()) {
+            return ErrorCodeFailure;
+        }
+        auto rc = m_range_index_writer.close_range(m_range_handle.value(), m_next_log_event_id);
+        m_range_handle.reset();
+        return rc;
+    }
+
 private:
     /**
      * Initializes the schema writer
@@ -250,6 +280,9 @@ private:
     FileWriter m_table_metadata_file_writer;
     ZstdCompressor m_tables_compressor;
     ZstdCompressor m_table_metadata_compressor;
+
+    std::optional<RangeIndexWriter::handle_t> m_range_handle{std::nullopt};
+    RangeIndexWriter m_range_index_writer;
 };
 }  // namespace clp_s
 
