@@ -25,9 +25,8 @@ MySQLIndexStorage::MySQLIndexStorage(
 ) {
     m_db.open(host, port, username, password, database_name);
 
-    auto const table_name{
-            fmt::format("{}{}_{}", table_prefix, , dataset_name, cColumnMetadataSuffix)
-    };
+    auto const table_name
+            = fmt::format("{}{}_{}", table_prefix, dataset_name, cColumnMetadataSuffix);
     if (should_create_table) {
         m_db.execute_query(
                 fmt::format(
@@ -50,7 +49,7 @@ MySQLIndexStorage::MySQLIndexStorage(
             = "name";
     table_metadata_field_names[clp::enum_to_underlying_type(TableMetadataFieldIndexes::Type)]
             = "type";
-    fmt::memory_buffer statement_buffer;
+    fmt::memory_buffer const statement_buffer;
     auto statement_buffer_ix = std::back_inserter(statement_buffer);
 
     fmt::format_to(
@@ -71,7 +70,7 @@ void MySQLIndexStorage::~MySQLIndexStorage() {
     m_db.close();
 }
 
-void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_type) {
+auto MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_type) -> void {
     auto& statement_bindings = m_insert_field_statement->get_statement_bindings();
     statement_bindings.bind_varchar(
             clp::enum_to_underlying_type(TableMetadataFieldIndexes::Name),

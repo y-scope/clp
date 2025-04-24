@@ -1,11 +1,18 @@
 #ifndef CLP_S_INDEXER_INDEXMANAGER_HPP
 #define CLP_S_INDEXER_INDEXMANAGER_HPP
 
+#include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 
 #include "../../clp/GlobalMetadataDBConfig.hpp"
-#include "../ArchiveReader.hpp"
+#include "../ErrorCode.hpp"
+#include "../InputConfig.hpp"
+#include "../SchemaTree.hpp"
+#include "../TraceableException.hpp"
 #include "MySQLIndexStorage.hpp"
 
 namespace clp_s::indexer {
@@ -44,8 +51,16 @@ public:
             Path const& archive_path
     );
 
+    // Delete copy constructor and assignment operator
+    IndexManager(IndexManager const&) = delete;
+    auto operator=(IndexManager const&) -> IndexManager& = delete;
+
+    // Default move constructor and assignment operator
+    IndexManager(IndexManager&&) noexcept = default;
+    auto operator=(IndexManager&&) noexcept -> IndexManager& = default;
+
     // Destructor
-    ~IndexManager();
+    ~IndexManager() = default;
 
 private:
     /**
@@ -53,13 +68,14 @@ private:
      * @param key_name
      * @return the escaped key name
      */
-    static std::string escape_key_name(std::string_view const key_name);
+    [[nodiscard]] static auto escape_key_name(std::string_view key_name) -> std::string;
 
     /**
      * Traverses the schema tree and updates the metadata
      * @param schema_tree
      */
-    void traverse_schema_tree_and_update_metadata(std::shared_ptr<SchemaTree> const& schema_tree);
+    auto traverse_schema_tree_and_update_metadata(std::shared_ptr<SchemaTree> const& schema_tree)
+            -> void;
 
     OutputType m_output_type{OutputType::Database};
     std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
