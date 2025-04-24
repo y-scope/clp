@@ -556,6 +556,7 @@ bool JsonParser::parse() {
             return true;
         };
         if (false == initialize_fields_for_archive()) {
+            m_archive_writer->close();
             return false;
         }
         auto update_fields_after_archive_split = [&]() { ++file_split_number; };
@@ -620,6 +621,7 @@ bool JsonParser::parse() {
                 split_archive();
                 update_fields_after_archive_split();
                 if (false == initialize_fields_for_archive()) {
+                    m_archive_writer->close();
                     return false;
                 }
             }

@@ -64,6 +64,7 @@ void ArchiveWriter::close() {
         {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
         }
+        m_range_handle.reset();
     }
     auto var_dict_compressed_size = m_var_dict->close();
     auto log_dict_compressed_size = m_log_dict->close();

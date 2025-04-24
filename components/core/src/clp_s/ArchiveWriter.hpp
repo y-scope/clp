@@ -188,7 +188,7 @@ public:
      */
     auto close_current_range() -> ErrorCode {
         if (false == m_range_handle.has_value()) {
-            return ErrorCodeFailure;
+            return ErrorCodeNotReady;
         }
         auto rc = m_range_index_writer.close_range(m_range_handle.value(), m_next_log_event_id);
         m_range_handle.reset();

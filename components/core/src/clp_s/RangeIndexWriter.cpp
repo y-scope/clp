@@ -18,7 +18,7 @@ namespace clp_s {
 auto RangeIndexWriter::open_range(size_t start_index)
         -> OUTCOME_V2_NAMESPACE::std_result<handle_t> {
     for (auto it = m_ranges.begin(); m_ranges.end() != it; ++it) {
-        if (start_index <= it->start_index || false == it->end_index.has_value()
+        if (start_index < it->start_index || false == it->end_index.has_value()
             || start_index < it->end_index.value())
         {
             return std::errc::invalid_argument;
