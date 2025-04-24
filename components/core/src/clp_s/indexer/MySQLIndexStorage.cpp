@@ -65,7 +65,7 @@ MySQLIndexStorage::MySQLIndexStorage(
     );
 }
 
-void MySQLIndexStorage::~MySQLIndexStorage() {
+MySQLIndexStorage::~MySQLIndexStorage() {
     m_insert_field_statement.reset();
     m_db.close();
 }
