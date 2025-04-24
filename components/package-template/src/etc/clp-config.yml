@@ -106,5 +106,5 @@
 ## Location where logs are stored. It will be created if it doesn't exist.
 #logs_directory: "var/log"
 #
-## Location where the `.aws` directory should be read from
+## Location of the AWS tools' config files (e.g., `~/.aws`)
 #aws_config_directory: None

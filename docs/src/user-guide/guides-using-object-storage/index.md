@@ -40,14 +40,13 @@ will be added in a future release.
         * IAM Identity Center.
         * Assuming an IAM role.
         * Long-term IAM user credentials.
-      * Follow [this guide][aws-configure-profiles] for more information on
-        configuring profiles with the AWS CLI.
-    * Long-term AWS credentials set as environmental variables.
+      * Follow [this guide][aws-configure-profiles] for more information on configuring profiles
+        with the AWS CLI.
+    * Long-term AWS credentials set as environment variables.
       * Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environmental variables
         with the corresponding credential keys.
     * An IAM role attached to an EC2 instance (that CLP is hosted on).
 
-    
     :::{note}
     You may use a single authentication method for all use cases, or a separate one for each.
     Short-term STS credentials (that include a Session Token) are not supported directly. To use
