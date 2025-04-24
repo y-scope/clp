@@ -7,6 +7,9 @@ import {
 
 type PresetStatusColor = NonNullable<BadgeProps["status"]>;
 
+/**
+ * Structure of job data displayed in the table.
+ */
 interface JobData {
     key: string;
     status: PresetStatusColor;
@@ -16,6 +19,10 @@ interface JobData {
     compressedSize: string;
 }
 
+
+/**
+ * Columns configuration for the job table.
+ */
 const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
     {
         title: "Job ID",
