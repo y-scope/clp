@@ -1,6 +1,6 @@
 .detailsGrid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(200px,1fr));
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
     gap: 8px;
 }
 

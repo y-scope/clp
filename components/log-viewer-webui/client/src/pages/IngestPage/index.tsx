@@ -3,6 +3,7 @@ import styles from "./index.module.css";
 import Jobs from "./Jobs";
 import SpaceSavings from "./SpaceSavings";
 
+
 /**
  * Presents compression statistics.
  *
@@ -11,10 +12,10 @@ import SpaceSavings from "./SpaceSavings";
 const IngestPage = () => {
     return (
         <div className={styles["ingestPageGrid"]}>
-            <SpaceSavings />
-            <Details />
+            <SpaceSavings/>
+            <Details/>
             <div className={styles["jobs"]}>
-                <Jobs />
+                <Jobs/>
             </div>
         </div>
     );
