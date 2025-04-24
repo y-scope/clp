@@ -22,20 +22,22 @@ void MySQLIndexStorage::open() {
     m_is_open = true;
 }
 
-void MySQLIndexStorage::init(std::string const& table_name, bool should_create_table) {
+void MySQLIndexStorage::init(std::string const& dataset_name, bool should_create_table) {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
     }
 
+    auto const table_name{
+            fmt::format("{}{}_{}", m_table_prefix, dataset_name, cColumnMetadataSuffix)
+    };
     if (should_create_table) {
         m_db.execute_query(
                 fmt::format(
-                        "CREATE TABLE IF NOT EXISTS {}{} ("
+                        "CREATE TABLE IF NOT EXISTS {} ("
                         "name VARCHAR(512) NOT NULL, "
                         "type TINYINT NOT NULL,"
                         "PRIMARY KEY (name, type)"
                         ")",
-                        m_table_prefix,
                         table_name
                 )
         );
@@ -55,14 +57,13 @@ void MySQLIndexStorage::init(std::string const& table_name, bool should_create_t
 
     fmt::format_to(
             statement_buffer_ix,
-            "INSERT IGNORE INTO {}{} ({}) VALUES ({})",
-            m_table_prefix,
+            "INSERT IGNORE INTO {} ({}) VALUES ({})",
             table_name,
             clp::get_field_names_sql(table_metadata_field_names),
             clp::get_placeholders_sql(table_metadata_field_names.size())
     );
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
-    m_insert_field_statement = std::make_unique<MySQLPreparedStatement>(
+    m_insert_field_statement = std::make_unique<clp::MySQLPreparedStatement>(
             m_db.prepare_statement(statement_buffer.data(), statement_buffer.size())
     );
 
