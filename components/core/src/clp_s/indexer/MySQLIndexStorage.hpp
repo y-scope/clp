@@ -15,7 +15,7 @@ namespace clp_s::indexer {
  */
 class MySQLIndexStorage {
 public:
-    static constexpr char cColumnMetadataPrefix[] = "column_metadata_";
+    static constexpr char cColumnMetadataSuffix[] = "column_metadata";
 
     // Types
     class OperationFailed : public TraceableException {
@@ -25,42 +25,22 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructors
+    // Constructor
     MySQLIndexStorage(
             std::string const& host,
             int port,
             std::string const& username,
             std::string const& password,
             std::string const& database_name,
-            std::string const& table_prefix
-    )
-            : m_is_open(false),
-              m_is_init(false),
-              m_host(host),
-              m_port(port),
-              m_username(username),
-              m_password(password),
-              m_database_name(database_name),
-              m_table_prefix(table_prefix + cColumnMetadataPrefix) {}
+            std::string const& table_prefix,
+            std::string const& dataset_name,
+            bool should_create_table
+    );
+
+    // Destructor
+    ~MySQLIndexStorage();
 
     // Methods
-    /**
-     * Opens the database connection
-     */
-    void open();
-
-    /**
-     * Creates the table if it is required and prepares the insert statement
-     * @param table_name
-     * @param should_create_table
-     */
-    void init(std::string const& table_name, bool should_create_table);
-
-    /**
-     * Closes the database connection
-     */
-    void close();
-
     /**
      * Adds a field (column) to the table
      * @param field_name
@@ -70,17 +50,7 @@ public:
 
 private:
     // Variables
-    bool m_is_open{};
-    bool m_is_init{};
-    std::string m_host;
-    int m_port{};
-    std::string m_username;
-    std::string m_password;
-    std::string m_database_name;
-    std::string m_table_prefix;
-
     MySQLDB m_db;
-
     std::unique_ptr<MySQLPreparedStatement> m_insert_field_statement;
 };
 }  // namespace clp_s::indexer

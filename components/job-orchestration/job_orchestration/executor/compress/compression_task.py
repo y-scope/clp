@@ -11,6 +11,7 @@ from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     ARCHIVES_TABLE_SUFFIX,
+    CLP_DEFAULT_DATASET_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -374,14 +375,11 @@ def run_clp(
                     db_conn.commit()
 
                 if StorageEngine.CLP_S == clp_storage_engine:
-                    # TODO: Since CLP doesn't currently support datasets but users of the index
-                    # require a dataset name, we hardcode a name for now.
-                    dataset_name = "default"
                     indexer_cmd = [
                         str(clp_home / "bin" / "indexer"),
                         "--db-config-file",
                         str(db_config_file_path),
-                        dataset_name,
+                        CLP_DEFAULT_DATASET_NAME,
                         archive_path,
                     ]
                     try:

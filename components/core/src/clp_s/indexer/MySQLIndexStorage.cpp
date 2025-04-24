@@ -13,29 +13,29 @@ enum class TableMetadataFieldIndexes : uint16_t {
 };
 
 namespace clp_s::indexer {
-void MySQLIndexStorage::open() {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
+MySQLIndexStorage::MySQLIndexStorage(
+        std::string const& host,
+        int port,
+        std::string const& username,
+        std::string const& password,
+        std::string const& database_name,
+        std::string const& table_prefix,
+        std::string const& dataset_name,
+        bool should_create_table
+) {
+    m_db.open(host, port, username, password, database_name);
 
-    m_db.open(m_host, m_port, m_username, m_password, m_database_name);
-    m_is_open = true;
-}
-
-void MySQLIndexStorage::init(std::string const& table_name, bool should_create_table) {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-
+    auto const table_name{
+            fmt::format("{}{}_{}", table_prefix, , dataset_name, cColumnMetadataSuffix)
+    };
     if (should_create_table) {
         m_db.execute_query(
                 fmt::format(
-                        "CREATE TABLE IF NOT EXISTS {}{} ("
+                        "CREATE TABLE IF NOT EXISTS {} ("
                         "name VARCHAR(512) NOT NULL, "
                         "type TINYINT NOT NULL,"
                         "PRIMARY KEY (name, type)"
                         ")",
-                        m_table_prefix,
                         table_name
                 )
         );
@@ -55,8 +55,7 @@ void MySQLIndexStorage::init(std::string const& table_name, bool should_create_t
 
     fmt::format_to(
             statement_buffer_ix,
-            "INSERT IGNORE INTO {}{} ({}) VALUES ({})",
-            m_table_prefix,
+            "INSERT IGNORE INTO {} ({}) VALUES ({})",
             table_name,
             clp::get_field_names_sql(table_metadata_field_names),
             clp::get_placeholders_sql(table_metadata_field_names.size())
@@ -65,15 +64,14 @@ void MySQLIndexStorage::init(std::string const& table_name, bool should_create_t
     m_insert_field_statement = std::make_unique<MySQLPreparedStatement>(
             m_db.prepare_statement(statement_buffer.data(), statement_buffer.size())
     );
+}
 
-    m_is_init = true;
+void MySQLIndexStorage::~MySQLIndexStorage() {
+    m_insert_field_statement.reset();
+    m_db.close();
 }
 
 void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_type) {
-    if (false == m_is_init) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-
     auto& statement_bindings = m_insert_field_statement->get_statement_bindings();
     statement_bindings.bind_varchar(
             clp::enum_to_underlying_type(TableMetadataFieldIndexes::Name),
@@ -90,12 +88,5 @@ void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_
     if (false == m_insert_field_statement->execute()) {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
-}
-
-void MySQLIndexStorage::close() {
-    m_insert_field_statement.reset();
-    m_db.close();
-    m_is_open = false;
-    m_is_init = false;
 }
 }  // namespace clp_s::indexer

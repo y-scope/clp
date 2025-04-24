@@ -45,8 +45,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     po::options_description positional_options;
     // clang-format off
     positional_options.add_options()(
-            "table-name",
-            po::value<std::string>(&m_table_name),
+            "dataset-name",
+            po::value<std::string>(&m_dataset_name),
             "Name of the table where fields from the archive will be indexed and stored"
     )(
             "archive-path",
@@ -89,8 +89,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
         }
 
         // Validate required parameters
-        if (m_table_name.empty()) {
-            throw std::invalid_argument("Table name not specified or empty.");
+        if (m_dataset_name.empty()) {
+            throw std::invalid_argument("Dataset name not specified or empty.");
         }
         if (archive_path.empty()) {
             throw std::invalid_argument("Archive path not specified or empty.");
@@ -127,7 +127,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    std::cerr << "Usage: " << get_program_name() << " [OPTIONS] TABLE_NAME ARCHIVE_PATH"
+    std::cerr << "Usage: " << get_program_name() << " [OPTIONS] DATASET_NAME ARCHIVE_PATH"
               << std::endl;
 }
 }  // namespace clp_s::indexer

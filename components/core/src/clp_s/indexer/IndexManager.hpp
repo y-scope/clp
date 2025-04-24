@@ -36,22 +36,16 @@ public:
         Database
     };
 
-    // Constructors
+    // Constructor
     IndexManager(
-            std::optional<clp::GlobalMetadataDBConfig> const& db_config = std::nullopt,
-            bool should_create_table = false
+            std::optional<clp::GlobalMetadataDBConfig> const& db_config,
+            std::string const& dataset_name,
+            bool should_create_table,
+            Path const& archive_path
     );
 
     // Destructor
     ~IndexManager();
-
-    // Methods
-    /**
-     * Updates the metadata for a given archive
-     * @param table_name
-     * @param archive_path
-     */
-    void update_metadata(std::string const& table_name, Path const& archive_path);
 
 private:
     /**
@@ -69,7 +63,6 @@ private:
 
     OutputType m_output_type{OutputType::Database};
     std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;
-    bool m_should_create_table{false};
     std::function<void(std::string&, NodeType)> m_field_update_callback;
 };
 }  // namespace clp_s::indexer
