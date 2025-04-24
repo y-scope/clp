@@ -114,7 +114,7 @@ Settings for each type are described below:
 * [credentials](#credentials)
 * [profile](#profile)
 * [env_vars](#env_vars)
-* [ec_2](#ec_2)
+* [ec2](#ec2)
 
 ### credentials
 
@@ -139,7 +139,7 @@ values:
 
 ```yaml
 aws_authentication:
-  type: "credentials"
+  type: "profile"
   profile: "<profile-name>"
 ```
 
@@ -169,13 +169,13 @@ aws_authentication:
 The environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` should be used to specify
 a set of [long-term IAM user credentials](index.md#long-term-iam-user-credentials).
 
-### ec_2
+### ec2
 
 Settings for this type are shown below.
 
 ```yaml
 aws_authentication:
-  type: "ec_2"
+  type: "ec2"
 ```
 
 This authentication method will only work on an EC2 instance with a
