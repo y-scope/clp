@@ -1,10 +1,10 @@
 #include "RangeIndexWriter.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
@@ -17,9 +17,9 @@
 namespace clp_s {
 auto RangeIndexWriter::open_range(size_t start_index)
         -> OUTCOME_V2_NAMESPACE::std_result<handle_t> {
-    for (auto it = m_ranges.begin(); m_ranges.end() != it; ++it) {
-        if (start_index < it->start_index || false == it->end_index.has_value()
-            || start_index < it->end_index.value())
+    for (auto const& range : m_ranges) {
+        if (start_index < range.start_index || false == range.end_index.has_value()
+            || start_index < range.end_index.value())
         {
             return std::errc::invalid_argument;
         }
@@ -53,17 +53,17 @@ auto RangeIndexWriter::write(ZstdCompressor& writer) -> ErrorCode {
     }
 
     nlohmann::json ranges_array;
-    for (auto it = m_ranges.begin(); m_ranges.end() != it; ++it) {
-        if (false == it->end_index.has_value()) {
+    for (auto const& range : m_ranges) {
+        if (false == range.end_index.has_value()) {
             return ErrorCodeNotReady;
         }
 
         nlohmann::json obj;
-        obj["s"] = it->start_index;
-        obj["e"] = it->end_index.value();
+        obj["s"] = range.start_index;
+        obj["e"] = range.end_index.value();
 
         nlohmann::json fields_obj;
-        for (auto field_it = it->fields.begin(); it->fields.end() != field_it; ++field_it) {
+        for (auto field_it = range.fields.begin(); range.fields.end() != field_it; ++field_it) {
             fields_obj[field_it->first] = std::move(field_it->second);
         }
         obj["f"] = std::move(fields_obj);
