@@ -169,7 +169,11 @@ public:
     size_t get_data_size();
 
     /**
-     * TODO
+     * Adds a metadata key value pair to the current range in the range index, opening a range if no
+     * range currently exists.
+     * @param key
+     * @param value
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     template <typename T>
     auto add_field_to_current_range(std::string const& key, T const& value) {
@@ -184,7 +188,8 @@ public:
     }
 
     /**
-     * TODO
+     * Closes the currently open range in the range index.
+     * @return ErrorCodeSuccess on success or ErrorCodeNotReady if no range is currently open.
      */
     auto close_current_range() -> ErrorCode {
         if (false == m_range_handle.has_value()) {
