@@ -299,6 +299,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/JsonParser.hpp
     src/clp_s/PackedStreamReader.cpp
     src/clp_s/PackedStreamReader.hpp
+    src/clp_s/RangeIndexWriter.cpp
+    src/clp_s/RangeIndexWriter.hpp
     src/clp_s/ReaderUtils.cpp
     src/clp_s/ReaderUtils.hpp
     src/clp_s/Schema.cpp
