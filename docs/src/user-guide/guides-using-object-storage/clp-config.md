@@ -6,6 +6,37 @@ To use object storage with CLP, follow the steps below to configure each use cas
 If CLP is already running, shut it down, update its configuration, and then start it again.
 :::
 
+## Configuration for AWS Authentication
+
+Methods for AWS authentication are configured in the `aws_authentication` class for each relevant
+component. It includes the type of authentication used and additional information required for
+certain types.
+
+```yaml
+aws_authentication:
+  type: "<authentication-type>"
+  profile: "<aws-config-profile>" # Only for type "profile"
+  credentials: # Only for type "credentials"
+    access_key_id: "<aws-access-key-id>"
+    secret_access_key: "<aws-secret-access-key>"
+```
+
+* `type` must be one of `credentials`, `profile`, `env_vars`, and `ec2`.
+* If using long-term IAM credentials, they should be provided under the `credentials` field.
+* If using a named profile, the name should be provided under the `profile` field.
+* If using credentials set as environmental variables or running CLP on an EC2 instance with
+  IAM role attached, no information other than the type is needed.
+
+If using the authentication type `profile` in any of the components above, CLP must be configured
+with the directory in which AWS configuration are found. Typically, this should be the `.aws`
+folder in the user's home directory.
+
+```yaml
+aws_config_directory: "/home/<clp-user>/.aws"
+```
+
+If profiles are not used for AWS authentication, the field should be left empty.
+
 ## Configuration for input logs
 
 To configure CLP to compress logs from S3, update the `logs_input` key in
@@ -32,13 +63,8 @@ logs_input:
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the prefix of all logs you wish to compress and should be the same as the
     `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
-  * `aws_authentication` configures the type of authentication used and additional information if
-    needed.
-    * `type` must be one of `credentials`, `profile`, `env_vars`, and `ec2`.
-    * If using long-term IAM credentials, they should be provided under the `credentials` field.
-    * If using a named profile, the name should be provided under the `profile` field.
-    * If using credentials set as environmental variables or running CLP on an EC2 instance with
-      IAM role attached, no other information is needed.
+  * Refer to the section on [configuring AWS authentication][aws-authentication] to configure
+    authentication options.
 
 ## Configuration for archive storage
 
@@ -73,13 +99,8 @@ archive_output:
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all archives will be stored within the bucket and
     must end with a trailing forward slash (e.g., `archives/`).
-  * `aws_authentication` configures the type of authentication used and additional information if
-    needed.
-    * `type` must be one of `credentials`, `profile`, `env_vars`, and `ec2`.
-    * If using long-term IAM credentials, they should be provided under the `credentials` field.
-    * If using a named profile, the name should be provided under the `profile` field.
-    * If using credentials set as environmental variables or running CLP on an EC2 instance with
-      IAM role attached, no other information is needed.
+  * Refer to the section on [configuring AWS authentication][aws-authentication] to configure
+    authentication options.
 
 ## Configuration for stream storage
 
@@ -114,30 +135,14 @@ stream_output:
   * `<bucket-name>` is the bucket's name.
   * `<key-prefix>` is the "directory" where all streams will be stored within the bucket and
     must end with a trailing forward slash (e.g., `streams/`).
-  * `aws_authentication` configures the type of authentication used and additional information if
-    needed.
-    * `type` must be one of `credentials`, `profile`, `env_vars`, and `ec2`.
-    * If using long-term IAM credentials, they should be provided under the `credentials` field.
-    * If using a named profile, the name should be provided under the `profile` field.
-    * If using credentials set as environmental variables or running CLP on an EC2 instance with
-      IAM role attached, no other information is needed.
+  * Refer to the section on [configuring AWS authentication][aws-authentication] to configure
+    authentication options.
 
 :::{note}
 CLP currently doesn't explicitly delete the cached streams. This limitation will be addressed in a
 future release.
 :::
 
-## Configuration for AWS config directory
-
-If using the authentication type `profile` in any of the components above, CLP must be configured
-with the directory in which AWS configuration are found. Typically, this should be the `.aws`
-folder in the user's home directory.
-
-```yaml
-aws_config_directory: "/home/<clp-user>/.aws"
-```
-
-If profiles are not used for AWS authentication, the field should be left empty.
-
+[aws-authentication]: #configuration-for-aws-authentication
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
