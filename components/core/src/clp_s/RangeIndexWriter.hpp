@@ -39,7 +39,7 @@ public:
      * @param start_index
      * @return A handle to the newly opened range on success or the relevant error code on failure.
      */
-    auto open_range(size_t start_index) -> OUTCOME_V2_NAMESPACE::std_result<handle_t>;
+    [[nodiscard]] auto open_range(size_t start_index) -> OUTCOME_V2_NAMESPACE::std_result<handle_t>;
 
     /**
      * Adds a key value pair to the open range indicated by `handle`.
@@ -49,7 +49,8 @@ public:
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     template <typename T>
-    auto add_value_to_range(handle_t handle, std::string const& key, T const& value) -> ErrorCode {
+    [[nodiscard]] auto add_value_to_range(handle_t handle, std::string const& key, T const& value)
+            -> ErrorCode {
         if (handle >= m_ranges.size()) {
             return ErrorCodeOutOfBounds;
         }
@@ -74,19 +75,19 @@ public:
      * @param end_index
      * @return ErrorCodeSuccess on success or the relvant error code on failure.
      */
-    auto close_range(handle_t handle, size_t end_index) -> ErrorCode;
+    [[nodiscard]] auto close_range(handle_t handle, size_t end_index) -> ErrorCode;
 
     /**
      * Writes ranges to a `ZstdCompressor` then clears internal state.
      * @param writer
      * @return ErrorCodeSuccess on success or the relvant error code on failure.
      */
-    auto write(ZstdCompressor& writer) -> ErrorCode;
+    [[nodiscard]] auto write(ZstdCompressor& writer) -> ErrorCode;
 
     /**
      * Checks whether this range index is empty or not.
      */
-    auto empty() const -> bool { return m_ranges.empty(); }
+    [[nodiscard]] auto empty() const -> bool { return m_ranges.empty(); }
 
 private:
     // Types
