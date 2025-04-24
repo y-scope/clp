@@ -43,7 +43,7 @@ will be added in a future release.
       * Follow [this guide][aws-configure-profiles] for more information on configuring profiles
         with the AWS CLI.
     * Long-term AWS credentials set as environment variables.
-      * Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environmental variables
+      * Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables
         with the corresponding credential keys.
     * An IAM role attached to an EC2 instance (that CLP is hosted on).
 
