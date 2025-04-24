@@ -49,7 +49,7 @@ MySQLIndexStorage::MySQLIndexStorage(
             = "name";
     table_metadata_field_names[clp::enum_to_underlying_type(TableMetadataFieldIndexes::Type)]
             = "type";
-    fmt::memory_buffer const statement_buffer;
+    fmt::memory_buffer statement_buffer;
     auto statement_buffer_ix = std::back_inserter(statement_buffer);
 
     fmt::format_to(
@@ -60,7 +60,7 @@ MySQLIndexStorage::MySQLIndexStorage(
             clp::get_placeholders_sql(table_metadata_field_names.size())
     );
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
-    m_insert_field_statement = std::make_unique<MySQLPreparedStatement>(
+    m_insert_field_statement = std::make_unique<clp::MySQLPreparedStatement>(
             m_db.prepare_statement(statement_buffer.data(), statement_buffer.size())
     );
 }
