@@ -118,7 +118,7 @@ tasks:
           components/package-template/src/etc \
           docs \
           taskfile.yaml \
-          taskfiles/deps.yaml \
+          taskfiles/deps/main.yaml \
           taskfiles/lint.yaml
 
   check-cpp-format:
