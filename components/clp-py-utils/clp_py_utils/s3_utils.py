@@ -205,7 +205,7 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     """
 
     host_style_url_regex = re.compile(
-        r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z0-9-]+))?"
+        r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z]+-[a-z]+-[0-9]))?"
         r"\.(?P<endpoint>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
     )
     match = host_style_url_regex.match(s3_url)
