@@ -412,8 +412,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/indexer/indexer.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/indexer/IndexManager.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/indexer/IndexManager.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/indexer/MySQLIndexStorage.cpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/indexer/MySQLIndexStorage.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/InputConfig.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/InputConfig.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/JsonConstructor.cpp"
