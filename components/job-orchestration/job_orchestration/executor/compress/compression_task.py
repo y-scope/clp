@@ -207,7 +207,7 @@ def _make_clp_s_command_and_env(
 
     if InputType.S3 == clp_config.input.type:
         compression_env_vars = dict(os.environ)
-        compression_env_vars.update(get_credential_env_vars(clp_config.input))
+        compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
     else:

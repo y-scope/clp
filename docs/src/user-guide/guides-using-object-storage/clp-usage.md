@@ -11,22 +11,21 @@ angle brackets (`<>`) with the appropriate values:
 ```bash
 sbin/compress.sh \
   --timestamp-key <timestamp-key> \
-  <prefix>
+  https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>
 ```
 
-* `<prefix>` is the prefix of all logs you wish to compress and must be relative to
-  [logs-input.s3_config.key_prefix][logs-input-s3-config].
-  * E.g., if you want to compress the S3 object `/a/b/c.jsonl`, and
-    `logs-input.s3_config.key_prefix` is `/a/`, then you would replace `<prefix>` in the command
-    above with `b/c.jsonl`.
+* `<timestamp-key>` is the field path of the kv-pair that contains the timestamp in each log event.
+* `<bucket-name>` is the name of the S3 bucket containing your logs.
+* `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
+* `<prefix>` is the prefix of all logs you wish to compress and must begin with the
+  `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
 
 :::{note}
-Compressing from S3 only supports a single prefix but will compress any logs that have the given
+Compressing from S3 only supports a single URL but will compress any logs that have the given
 prefix.
 
-If you wish to compress a single log file, specify the entire path to the log file
-(relative to `logs-input.s3_config.key_prefix`). However, if that log file's path is a
-prefix of another log file's path, then both log files will be compressed
+If you wish to compress a single log file, specify the entire path to the log file. However, if
+that log file's path is a prefix of another log file's path, then both log files will be compressed
 (e.g., with two files "logs/syslog" and "logs/syslog.1", a prefix like "logs/syslog" will cause
 both logs to be compressed). This limitation will be addressed in a future release.
 :::

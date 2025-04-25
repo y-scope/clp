@@ -113,7 +113,7 @@ def _validate_s3_input_args(
             f" {StorageEngine.CLP_S}."
         )
     if len(parsed_args.paths) != 1:
-        args_parser.error(f"Only one key prefix can be specified for input type {InputType.S3}.")
+        args_parser.error(f"Only URL can be specified for input type {InputType.S3}.")
     if parsed_args.path_list is not None:
         args_parser.error(f"Path list file is unsupported for input type {InputType.S3}.")
 
@@ -141,7 +141,9 @@ def main(argv):
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
-    args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
+    args_parser.add_argument(
+        "paths", metavar="PATH", nargs="*", help="Paths or S3 URL to compress."
+    )
     args_parser.add_argument(
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )

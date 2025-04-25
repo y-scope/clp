@@ -15,22 +15,12 @@ angle brackets (`<>`) with the appropriate values:
 ```yaml
 logs_input:
   type: "s3"
-  s3_config:
-    region_code: "<region-code>"
-    bucket: "<bucket-name>"
-    key_prefix: "<key-prefix>"
-    aws_authentication:
-      type: "<type>"
-      # type-specific settings
+  aws_authentication:
+    type: "<type>"
+    # type-specific settings
 ```
-* `s3_config` configures both the S3 bucket where logs are to be retrieved from and the credentials
-  for accessing it.
-  * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
-  * `<bucket-name>` is the bucket's name.
-  * `<key-prefix>` is the prefix of all logs you wish to compress and should be the same as the
-    `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
-  * `<type>` and the type-specific settings are described in the
-    [configuring AWS authentication](#configuring-aws-authentication) section.
+* `<type>` and the type-specific settings are described in the
+  [configuring AWS authentication](#configuring-aws-authentication) section.
 
 ## Configuration for archive storage
 
