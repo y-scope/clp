@@ -107,4 +107,4 @@
 #logs_directory: "var/log"
 #
 ## Location of the AWS tools' config files (e.g., `~/.aws`)
-#aws_config_directory: None
+#aws_config_directory: null
