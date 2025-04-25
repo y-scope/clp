@@ -456,8 +456,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/EmptyExpr.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Expression.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Expression.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterExpr.cpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterExpr.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterOperation.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Integral.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Integral.hpp"
