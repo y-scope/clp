@@ -1,6 +1,7 @@
 #ifndef CLP_S_INDEXER_MYSQLINDEXSTORAGE_HPP
 #define CLP_S_INDEXER_MYSQLINDEXSTORAGE_HPP
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>

@@ -73,14 +73,14 @@ MySQLIndexStorage::~MySQLIndexStorage() {
 }
 
 void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_type) {
-    auto& statement_bindings = m_insert_field_statement->get_statement_bindings();
+    auto& statement_bindings{m_insert_field_statement->get_statement_bindings()};
     statement_bindings.bind_varchar(
             enum_to_underlying_type(TableMetadataFieldIndexes::Name),
             field_name.c_str(),
             field_name.length()
     );
 
-    auto field_type_value = static_cast<uint8_t>(field_type);
+    auto field_type_value{static_cast<uint8_t>(field_type)};
     statement_bindings.bind_uint8(
             enum_to_underlying_type(TableMetadataFieldIndexes::Type),
             field_type_value
