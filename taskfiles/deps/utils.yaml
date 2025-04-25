@@ -1,0 +1,37 @@
+version: "3"
+
+includes:
+  yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+tasks:
+  # Cleans up the core checksum files any time the taskfiles change. This is to ensure that if any
+  # of core's dependencies are removed from the taskfiles, then the checksum files for the removed
+  # dependencies will also be removed. Since we can't easily remove just the checksum files for the
+  # removed dependencies, we remove all of them.
+  clean-old-core-checksum-files:
+    internal: true
+    run: "once"
+    sources:
+      - "{{.ROOT_DIR}}/Taskfile.yaml"
+      - "{{.ROOT_DIR}}/taskfiles/**/*.yaml"
+      - "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/**/*.yaml"
+    cmd: "rm -f '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'/*"
+
+  combine-core-checksum-files:
+    internal: true
+    cmds:
+      - "rm -f '{{.G_DEPS_CORE_CHECKSUM_FILE}}'"
+      - |-
+        for file in "{{.G_DEPS_CORE_CHECKSUMS_DIR}}"/*.md5; do
+          if [[ "$file" != "{{.G_DEPS_CORE_CHECKSUM_FILE}}" ]]; then
+            cat "$file" >> "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
+          fi
+        done
+
+  init:
+    internal: true
+    run: "once"
+    cmds:
+      - "mkdir -p '{{.G_DEPS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'"
