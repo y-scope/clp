@@ -47,7 +47,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     positional_options.add_options()(
             "dataset-name",
             po::value<std::string>(&m_dataset_name),
-            "Name of the table where fields from the archive will be indexed and stored"
+            "Name of the dataset for which the column metadata table should be populated"
     )(
             "archive-path",
             po::value<std::string>(&archive_path),

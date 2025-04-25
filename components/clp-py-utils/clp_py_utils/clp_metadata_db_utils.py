@@ -133,5 +133,6 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
     )
     _create_files_table(db_cursor, table_prefix)
 
-    # TODO: Create this table only for `CLP_S` after the dataset feature is implemented.
+    # TODO: Create this table only for the `CLP_S` storage-engine after the dataset feature is
+    # fully implemented.
     _create_column_metadata_table(db_cursor, f"{table_prefix}{CLP_DEFAULT_DATASET_NAME}_")
