@@ -32,11 +32,11 @@ int main(int argc, char const* argv[]) {
     }
 
     try {
-        clp_s::indexer::IndexManager index_manager(command_line_arguments.get_db_config());
-        index_manager.update_metadata(
+        clp_s::indexer::IndexManager index_manager(
                 command_line_arguments.get_dataset_name(),
-                command_line_arguments.get_archive_path()
+                command_line_arguments.get_db_config()
         );
+        index_manager.update_metadata(command_line_arguments.get_archive_path());
     } catch (std::exception& e) {
         SPDLOG_ERROR("Failed to update metadata: {}", e.what());
         return 1;

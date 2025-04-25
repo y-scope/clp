@@ -8,6 +8,7 @@
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
+        std::string const& dataset_name,
         std::optional<clp::GlobalMetadataDBConfig> const& db_config,
         bool should_create_table
 ) {
@@ -18,31 +19,22 @@ IndexManager::IndexManager(
                 db_config->get_metadata_db_username(),
                 db_config->get_metadata_db_password(),
                 db_config->get_metadata_db_name(),
-                db_config->get_metadata_table_prefix()
+                db_config->get_metadata_table_prefix(),
+                dataset_name,
+                should_create_table
         );
-        m_mysql_index_storage->open();
         m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
             m_mysql_index_storage->add_field(field_name, field_type);
         };
-        m_should_create_table = should_create_table;
         m_output_type = OutputType::Database;
     } else {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
 }
 
-IndexManager::~IndexManager() {
-    if (m_output_type == OutputType::Database) {
-        m_mysql_index_storage->close();
-    }
-}
-
-void IndexManager::update_metadata(std::string const& dataset_name, Path const& archive_path) {
-    m_mysql_index_storage->init(dataset_name, m_should_create_table);
-
+void IndexManager::update_metadata(Path const& archive_path) {
     ArchiveReader archive_reader;
     archive_reader.open(archive_path, NetworkAuthOption{});
-
     traverse_schema_tree_and_update_metadata(archive_reader.get_schema_tree());
 }
 
