@@ -1,5 +1,6 @@
 import SearchControls from "./SearchControls";
-
+import SearchResults from "./SearchResults";
+import styles from "./index.module.css";
 
 /**
  * Provides a search interface that allows users to query archives and visualize search results.
@@ -8,9 +9,11 @@ import SearchControls from "./SearchControls";
  */
 const SearchPage = () => {
     return (
-        <SearchControls/>
+        <div className={styles['searchPageContainer']}>
+            <SearchControls />
+            <SearchResults />
+        </div>
     );
 };
-
 
 export default SearchPage;
