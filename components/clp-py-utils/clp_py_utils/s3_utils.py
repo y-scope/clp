@@ -26,6 +26,7 @@ from clp_py_utils.compression import FileMetadata
 AWS_ENDPOINT = "amazonaws.com"
 AWS_ENV_VAR_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
 AWS_ENV_VAR_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
+AWS_ENV_VAR_SESSION_TOKEN = "AWS_SESSION_TOKEN"
 
 
 def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
@@ -87,7 +88,7 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
     }
     aws_session_token = aws_credentials.session_token
     if aws_session_token is not None:
-        env_vars["AWS_SESSION_TOKEN"] = aws_session_token
+        env_vars[f"{AWS_ENV_VAR_SESSION_TOKEN}"] = aws_session_token
     return env_vars
 
 
@@ -147,11 +148,12 @@ def generate_container_auth_options(
             )
         else:
             raise ValueError(
-                "AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables not set"
+                f"{AWS_ENV_VAR_ACCESS_KEY_ID} and {AWS_ENV_VAR_SECRET_ACCESS_KEY} "
+                "environment variables not set"
             )
-        if os.getenv("AWS_SESSION_TOKEN"):
+        if os.getenv(f"{AWS_ENV_VAR_SESSION_TOKEN}"):
             raise ValueError(
-                "AWS_SESSION_TOKEN not supported for environmental variable credentials."
+                f"{AWS_ENV_VAR_SESSION_TOKEN} not supported for environmental variable credentials."
             )
 
     return (config_mount, credentials_env_vars)
