@@ -14,7 +14,6 @@ sbin/compress.sh \
   https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>
 ```
 
-* `<timestamp-key>` is the field path of the kv-pair that contains the timestamp in each log event.
 * `<bucket-name>` is the name of the S3 bucket containing your logs.
 * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
 * `<prefix>` is the prefix of all logs you wish to compress and must begin with the
