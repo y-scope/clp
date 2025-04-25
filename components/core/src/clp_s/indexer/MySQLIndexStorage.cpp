@@ -28,7 +28,7 @@ void MySQLIndexStorage::init(std::string const& dataset_name, bool should_create
     }
 
     auto const table_name{
-            fmt::format("{}{}_{}", m_table_prefix, dataset_name, cColumnMetadataSuffix)
+            fmt::format("{}{}_{}", m_table_prefix, dataset_name, cColumnMetadataTableSuffix)
     };
     if (should_create_table) {
         m_db.execute_query(
