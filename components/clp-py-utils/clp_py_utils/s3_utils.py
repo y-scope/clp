@@ -212,7 +212,7 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
 
     if match is None:
         path_style_url_regex = re.compile(
-            r"https://s3(\.(?P<region_code>[a-z0-9-]+))?\.(?P<endpoint>[a-z0-9.-]+)/"
+            r"https://s3(\.(?P<region_code>[a-z]+-[a-z]+-[0-9]))?\.(?P<endpoint>[a-z0-9.-]+)/"
             r"(?P<bucket_name>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
         )
         match = path_style_url_regex.match(s3_url)
