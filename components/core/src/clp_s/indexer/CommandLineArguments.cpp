@@ -32,7 +32,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     )(
             "create-table",
             po::bool_switch(&m_should_create_table),
-            "Create the table if it doesn't exist"
+            "Create the column metadata table if it doesn't exist"
     );
     // clang-format on
 
@@ -55,7 +55,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     );
     // clang-format on
     po::positional_options_description positional_options_description;
-    positional_options_description.add("table-name", 1);
+    positional_options_description.add("dataset-name", 1);
     positional_options_description.add("archive-path", 1);
 
     // Aggregate all options
