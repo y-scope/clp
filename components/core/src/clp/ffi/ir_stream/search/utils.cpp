@@ -26,7 +26,7 @@ using clp_s::search::ast::LiteralTypeBitmask;
  * Evaluates a numerical filter operation by applying the specified `FilterOperation` to two
  * operands.
  * @tparam OperandType The type of the operands, must be either `value_int_t` or `value_float_t`.
- * @param operation
+ * @param op
  * @param filter_operand The operand associated with the filter.
  * @param value_operand The value operand to evaluate.
  * @return true if the filter condition is satisfied; false otherwise.
@@ -42,7 +42,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
 /**
  * Evaluates a string filter operation by applying the specified `FilterOperation` to two string
  * operands.
- * @param operation
+ * @param op
  * @param filter_operand The operand associated with the filter.
  * @param value_operand The value operand to evaluate.
  * @return true if the filter condition is satisfied; false otherwise.
@@ -332,8 +332,8 @@ auto schema_tree_node_type_value_pair_to_literal_type(
 }
 
 auto evaluate_filter_against_literal_type_value_pair(
-        clp_s::search::ast::FilterExpr* filter,
-        clp_s::search::ast::LiteralType literal_type,
+        clp_s::search::ast::FilterExpr const* filter,
+        LiteralType literal_type,
         std::optional<Value> const& value,
         bool case_sensitive_match
 ) -> bool {

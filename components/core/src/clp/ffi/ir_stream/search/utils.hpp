@@ -31,11 +31,11 @@ namespace clp::ffi::ir_stream::search {
  * @param filter
  * @param literal_type
  * @param value
- * @param case_sensitive_match Whether the comparison should be case-sensitive for string types.
+ * @param case_sensitive_match Whether the string comparison should be case-sensitive.
  * @return true if the value satisfies the filter expression, false otherwise.
  */
 [[nodiscard]] auto evaluate_filter_against_literal_type_value_pair(
-        clp_s::search::ast::FilterExpr* filter,
+        clp_s::search::ast::FilterExpr const* filter,
         clp_s::search::ast::LiteralType literal_type,
         std::optional<Value> const& value,
         bool case_sensitive_match
