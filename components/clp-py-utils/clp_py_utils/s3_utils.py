@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import boto3
 from botocore.config import Config
@@ -11,17 +11,21 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
+    FsStorage,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     S3Config,
     S3Credentials,
+    S3Storage,
     StorageType,
 )
 from clp_py_utils.compression import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
+AWS_ENV_VAR_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
+AWS_ENV_VAR_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
 
 
 def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
@@ -78,8 +82,8 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
         raise ValueError(f"Unsupported authentication type: {auth.type}")
 
     env_vars = {
-        "AWS_ACCESS_KEY_ID": aws_credentials.access_key_id,
-        "AWS_SECRET_ACCESS_KEY": aws_credentials.secret_access_key,
+        AWS_ENV_VAR_ACCESS_KEY_ID: aws_credentials.access_key_id,
+        AWS_ENV_VAR_SECRET_ACCESS_KEY: aws_credentials.secret_access_key,
     }
     aws_session_token = aws_credentials.session_token
     if aws_session_token is not None:
@@ -99,7 +103,7 @@ def generate_container_auth_options(
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
-    storages_by_component_type = []
+    storages_by_component_type: List[Union[S3Storage, FsStorage]] = []
     if component_type in (
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         COMPRESSION_WORKER_COMPONENT_NAME,
@@ -132,8 +136,8 @@ def generate_container_auth_options(
     credentials_env_vars = []
 
     if add_env_vars:
-        access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-        secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        access_key_id = os.getenv(AWS_ENV_VAR_ACCESS_KEY_ID)
+        secret_access_key = os.getenv(AWS_ENV_VAR_SECRET_ACCESS_KEY)
         if access_key_id and secret_access_key:
             credentials_env_vars.extend(
                 (
