@@ -58,11 +58,14 @@ public:
      */
     [[nodiscard]] static auto op_type_str(FilterOperation op) -> std::string;
 
+    // Delete copy assignment operator
     auto operator=(FilterExpr const&) -> FilterExpr& = delete;
 
+    // Delete move constructor and assignment operator
     FilterExpr(FilterExpr&&) = delete;
     auto operator=(FilterExpr&&) -> FilterExpr& = delete;
 
+    // Destructor
     ~FilterExpr() override = default;
 
     // Methods inherited from Value
@@ -100,6 +103,7 @@ private:
             Expression* parent = nullptr
     );
 
+    // Default copy constructor
     FilterExpr(FilterExpr const&) = default;
 
     // Variables
