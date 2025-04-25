@@ -109,6 +109,12 @@ For each use case above, you can configure its AWS authentication method through
 `aws_authentication` config object, which includes the authentication method type to use and any
 additional settings necessary for the chosen authentication type.
 
+:::{note}
+The code blocks below show `aws_authentication` as a top-level key, but it should be nested under
+`logs_input.s3_config`, `archive_output.storage.s3_config`, or `stream_output.storage.s3_config`
+depending on the use case.
+:::
+
 Settings for each type are described below:
 
 * [credentials](#credentials)
@@ -145,8 +151,8 @@ aws_authentication:
 
 * `<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
 
-In addition, `aws_config_directory` must be set to the directory containing the profile
-configurations (typically `~/.aws`):
+In addition, the _top-level_ config `aws_config_directory` must be set to the directory containing
+the profile configurations (typically `~/.aws`):
 
 ```yaml
 aws_config_directory: "<aws-config-dir>"
