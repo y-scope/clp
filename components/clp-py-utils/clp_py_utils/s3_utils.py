@@ -1,7 +1,6 @@
 import os
-from enum import auto
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import boto3
 from botocore.config import Config
@@ -31,7 +30,7 @@ def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Cr
     :param aws_profile: Name of profile configured in ~/.aws directory
     :return: An S3Credentials object with access key pair and session token if applicable.
     """
-    aws_session = None
+    aws_session: Optional[boto3.Session] = None
     if aws_profile is not None:
         aws_session = boto3.Session(profile_name=aws_profile)
     else:
@@ -54,10 +53,10 @@ def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
     :return: A [str, str] Dict which access key pair and session token if applicable.
     :raise: ValueError if auth type is not supported
     """
-    env_vars: Dict[str, str] = None
+    env_vars: Optional[Dict[str, str]] = None
     auth = config.aws_authentication
 
-    aws_credentials: S3Credentials = None
+    aws_credentials: Optional[S3Credentials] = None
 
     if AwsAuthType.env_vars == auth.type:
         # Environmental variables are already set
@@ -156,7 +155,7 @@ def generate_container_auth_options(
 
 def _create_s3_client(s3_config: S3Config, boto3_config: Optional[Config] = None) -> boto3.client:
     auth = s3_config.aws_authentication
-    aws_session = None
+    aws_session: Optional[boto3.Session] = None
 
     if AwsAuthType.profile == auth.type:
         aws_session = boto3.Session(
