@@ -222,7 +222,7 @@ def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
 
     region_code = match.group("region_code")
     if region_code is None:
-        region_code = 'us-east-1'
+        region_code = "us-east-1"
     bucket_name = match.group("bucket_name")
     endpoint = match.group("endpoint")
     key_prefix = match.group("key_prefix")
