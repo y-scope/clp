@@ -75,19 +75,19 @@ public:
 
     // Methods
     /**
-     * @return FilterOperation this Filter performs
+     * @return The FilterOperation performed by this Filter.
      */
     [[nodiscard]] auto get_operation() const -> FilterOperation { return m_op; }
 
     /**
-     * @return The Column this Filter acts on
+     * @return The ColumnDescriptor that this Filter acts on.
      */
     [[nodiscard]] auto get_column() -> std::shared_ptr<ColumnDescriptor> {
         return std::static_pointer_cast<ColumnDescriptor>(*op_begin());
     }
 
     /**
-     * @return This Filter's Literal or nullptr if there is no Literal
+     * @return This Filter's Literal or nullptr if there is no Literal.
      */
     [[nodiscard]] auto get_operand() const -> std::shared_ptr<Literal>;
 
