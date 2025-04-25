@@ -150,7 +150,7 @@ def _generate_clp_io_config(
             region_code=s3_config.region_code,
             bucket=s3_config.bucket,
             key_prefix=s3_config.key_prefix + logs_to_compress[0],
-            credentials=s3_config.credentials,
+            aws_authentication=s3_config.aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
         )
     else:
