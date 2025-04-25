@@ -37,8 +37,8 @@ IndexManager::~IndexManager() {
     }
 }
 
-void IndexManager::update_metadata(std::string const& table_name, Path const& archive_path) {
-    m_mysql_index_storage->init(table_name, m_should_create_table);
+void IndexManager::update_metadata(std::string const& dataset_name, Path const& archive_path) {
+    m_mysql_index_storage->init(dataset_name, m_should_create_table);
 
     ArchiveReader archive_reader;
     archive_reader.open(archive_path, NetworkAuthOption{});

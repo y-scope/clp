@@ -6,16 +6,13 @@
 #include "../SchemaTree.hpp"
 #include "../TraceableException.hpp"
 
-using clp::MySQLDB;
-using clp::MySQLPreparedStatement;
-
 namespace clp_s::indexer {
 /**
  * Class representing a MySQL storage for column metadata (column names and types)
  */
 class MySQLIndexStorage {
 public:
-    static constexpr char cColumnMetadataPrefix[] = "column_metadata_";
+    static constexpr char cColumnMetadataTableSuffix[] = "column_metadata";
 
     // Types
     class OperationFailed : public TraceableException {
@@ -41,7 +38,7 @@ public:
               m_username(username),
               m_password(password),
               m_database_name(database_name),
-              m_table_prefix(table_prefix + cColumnMetadataPrefix) {}
+              m_table_prefix(table_prefix) {}
 
     // Methods
     /**
@@ -51,10 +48,10 @@ public:
 
     /**
      * Creates the table if it is required and prepares the insert statement
-     * @param table_name
+     * @param dataset_name
      * @param should_create_table
      */
-    void init(std::string const& table_name, bool should_create_table);
+    void init(std::string const& dataset_name, bool should_create_table);
 
     /**
      * Closes the database connection
@@ -79,9 +76,9 @@ private:
     std::string m_database_name;
     std::string m_table_prefix;
 
-    MySQLDB m_db;
+    clp::MySQLDB m_db;
 
-    std::unique_ptr<MySQLPreparedStatement> m_insert_field_statement;
+    std::unique_ptr<clp::MySQLPreparedStatement> m_insert_field_statement;
 };
 }  // namespace clp_s::indexer
 
