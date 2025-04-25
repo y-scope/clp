@@ -46,6 +46,9 @@ using clp_s::search::ast::Literal;
 using clp_s::search::ast::LiteralType;
 using clp_s::search::ast::StringLiteral;
 
+using ValueToMatchedFilterOpsPair
+        = std::pair<std::optional<Value>, std::unordered_set<FilterOperation>>;
+
 constexpr std::string_view cRefTestString{"test"};
 
 /**
@@ -61,11 +64,26 @@ requires std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
         -> clp::ir::EncodedTextAst<encoded_variable_t>;
 
 /**
+ * Asserts the filter evaluation results match the expectation on the given values.
+ * @param filter_to_test
+ * @param filter_operand_literal_type
+ * @param value_to_matched_filter_ops_pairs A vector of pairs, where each pair consists of:
+ *   - A value to test against the filter.
+ *   - A set of filter operations that are expected to evaluate to `true` for this value.
+ * @return Whether all evaluations match their expected results.
+ */
+[[nodiscard]] auto assert_filter_evaluation_results_on_values(
+        FilterExpr const* filter_to_test,
+        LiteralType filter_operand_literal_type,
+        std::vector<ValueToMatchedFilterOpsPair> const& value_to_matched_filter_ops_pairs
+) -> bool;
+
+/**
  * Checks filter evaluation against integral values.
  * @tparam IntegralValueType
  * @param filter_to_test
  * @param filter_operand_literal_type
- * @return Whether the filter evaluation results match expectation.
+ * @return Whether all evaluations match their expected results.
  */
 template <typename IntegralValueType>
 requires std::same_as<IntegralValueType, value_int_t>
@@ -79,7 +97,7 @@ requires std::same_as<IntegralValueType, value_int_t>
  * Checks filter evaluation against bool values.
  * @param filter_to_test
  * @param filter_operand_literal_type
- * @return Whether the filter evaluation results match expectation.
+ * @return Whether all evaluations match their expected results.
  */
 [[nodiscard]] auto check_filter_evaluation_against_bool_values(
         FilterExpr const* filter_to_test,
@@ -90,7 +108,7 @@ requires std::same_as<IntegralValueType, value_int_t>
  * Checks filter evaluation against and variable strings.
  * @param filter_to_test
  * @param filter_operand_literal_type
- * @return Whether the filter evaluation results match expectation.
+ * @return Whether all evaluations match their expected results.
  */
 [[nodiscard]] auto check_filter_evaluation_against_var_strings(
         FilterExpr const* filter_to_test,
@@ -116,7 +134,7 @@ requires std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
  * Checks filter evaluation against different types of values.
  * @param filter_to_test
  * @param filter_operand_literal_type
- * @return Whether the filter evaluation results match expectation.
+ * @return Whether all evaluations match their expected results.
  */
 [[nodiscard]] auto
 check_filter_evaluation(FilterExpr const* filter_to_test, LiteralType filter_operand_literal_type)
@@ -140,6 +158,29 @@ auto get_encoded_text_ast(std::string_view text) -> clp::ir::EncodedTextAst<enco
     }
 
     return clp::ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars};
+}
+
+auto assert_filter_evaluation_results_on_values(
+        FilterExpr const* filter_to_test,
+        LiteralType filter_operand_literal_type,
+        std::vector<ValueToMatchedFilterOpsPair> const& value_to_matched_filter_ops_pairs
+) -> bool {
+    return std::ranges::all_of(
+            value_to_matched_filter_ops_pairs,
+            [&](auto const& value_and_matched_filter_ops_pair) {
+                auto const& [value_to_test, matched_filter_ops]{value_and_matched_filter_ops_pair};
+                bool const expected_match_result{
+                        matched_filter_ops.contains(filter_to_test->get_operation())
+                };
+                return expected_match_result
+                       == evaluate_filter_against_literal_type_value_pair(
+                               filter_to_test,
+                               filter_operand_literal_type,
+                               value_to_test,
+                               false
+                       );
+            }
+    );
 }
 
 template <typename IntegralValueType>
@@ -172,29 +213,19 @@ auto check_filter_evaluation_against_integral_values(
         REQUIRE(filter_to_test->get_operand()->as_float(filter_operand, op));
     }
 
-    std::vector<std::pair<std::optional<Value>, std::unordered_set<FilterOperation>>> const
-            value_and_matched_filter_ops_pairs{
-                    {Value{filter_operand},
-                     {FilterOperation::EQ, FilterOperation::GTE, FilterOperation::LTE}},
-                    {Value{filter_operand + static_cast<IntegralValueType>(1)},
-                     {FilterOperation::NEQ, FilterOperation::GT, FilterOperation::GTE}},
-                    {Value{filter_operand - static_cast<IntegralValueType>(1)},
-                     {FilterOperation::NEQ, FilterOperation::LT, FilterOperation::LTE}},
-            };
+    std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
+            {Value{filter_operand},
+             {FilterOperation::EQ, FilterOperation::GTE, FilterOperation::LTE}},
+            {Value{filter_operand + static_cast<IntegralValueType>(1)},
+             {FilterOperation::NEQ, FilterOperation::GT, FilterOperation::GTE}},
+            {Value{filter_operand - static_cast<IntegralValueType>(1)},
+             {FilterOperation::NEQ, FilterOperation::LT, FilterOperation::LTE}},
+    };
 
-    return std::ranges::all_of(
-            value_and_matched_filter_ops_pairs,
-            [&](auto const& value_and_matched_filter_ops_pair) {
-                auto const& [value_to_test, matched_filter_ops]{value_and_matched_filter_ops_pair};
-                bool const expected_match_result{matched_filter_ops.contains(op)};
-                return expected_match_result
-                       == evaluate_filter_against_literal_type_value_pair(
-                               filter_to_test,
-                               cValueLiteralType,
-                               value_to_test,
-                               false
-                       );
-            }
+    return assert_filter_evaluation_results_on_values(
+            filter_to_test,
+            filter_operand_literal_type,
+            value_to_matched_filter_ops_pairs
     );
 }
 
@@ -217,25 +248,15 @@ auto check_filter_evaluation_against_bool_values(
     bool filter_operand{};
     REQUIRE(filter_to_test->get_operand()->as_bool(filter_operand, op));
 
-    std::vector<std::pair<std::optional<Value>, FilterOperation>> const
-            value_and_matched_filter_op_pairs{
-                    {Value{filter_operand}, {FilterOperation::EQ}},
-                    {Value{false == filter_operand}, {FilterOperation::NEQ}}
-            };
+    std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
+            {Value{filter_operand}, {FilterOperation::EQ}},
+            {Value{false == filter_operand}, {FilterOperation::NEQ}}
+    };
 
-    return std::ranges::all_of(
-            value_and_matched_filter_op_pairs,
-            [&](auto const& value_and_matched_filter_op_pair) {
-                auto const& [value_to_test, matched_filter_op]{value_and_matched_filter_op_pair};
-                bool const expected_match_result{op == matched_filter_op ? true : false};
-                return expected_match_result
-                       == evaluate_filter_against_literal_type_value_pair(
-                               filter_to_test,
-                               LiteralType::BooleanT,
-                               value_to_test,
-                               false
-                       );
-            }
+    return assert_filter_evaluation_results_on_values(
+            filter_to_test,
+            filter_operand_literal_type,
+            value_to_matched_filter_ops_pairs
     );
 }
 
@@ -254,30 +275,18 @@ auto check_filter_evaluation_against_var_strings(
                );
     }
 
-    std::vector<std::pair<std::optional<Value>, FilterOperation>> const
-            value_and_matched_filter_op_pairs{
-                    {Value{std::string{cRefTestString}}, {FilterOperation::EQ}},
-                    {Value{std::string{cRefTestString} + std::string{cRefTestString}},
-                     {FilterOperation::EQ}},
-                    {Value{std::string{cRefTestString.data(), cRefTestString.size() / 2}},
-                     {FilterOperation::NEQ}}
-            };
+    std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
+            {Value{std::string{cRefTestString}}, {FilterOperation::EQ}},
+            {Value{std::string{cRefTestString} + std::string{cRefTestString}},
+             {FilterOperation::EQ}},
+            {Value{std::string{cRefTestString.data(), cRefTestString.size() / 2}},
+             {FilterOperation::NEQ}}
+    };
 
-    return std::ranges::all_of(
-            value_and_matched_filter_op_pairs,
-            [&](auto const& value_and_matched_filter_op_pair) {
-                auto const& [value_to_test, matched_filter_op]{value_and_matched_filter_op_pair};
-                bool const expected_match_result{
-                        filter_to_test->get_operation() == matched_filter_op ? true : false
-                };
-                return expected_match_result
-                       == evaluate_filter_against_literal_type_value_pair(
-                               filter_to_test,
-                               LiteralType::VarStringT,
-                               value_to_test,
-                               false
-                       );
-            }
+    return assert_filter_evaluation_results_on_values(
+            filter_to_test,
+            filter_operand_literal_type,
+            value_to_matched_filter_ops_pairs
     );
 }
 
@@ -301,29 +310,15 @@ auto check_filter_evaluation_against_encoded_text_asts(
 
     std::string const matched{"The test ID=" + std::string{cRefTestString}};
     std::string const unmatched{"This is an unmatched string."};
-    std::vector<std::pair<std::optional<Value>, FilterOperation>> const
-            value_and_matched_filter_op_pairs{
-                    {Value{get_encoded_text_ast<encoded_variable_t>(matched)},
-                     {FilterOperation::EQ}},
-                    {Value{get_encoded_text_ast<encoded_variable_t>(unmatched)},
-                     {FilterOperation::NEQ}},
-            };
+    std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
+            {Value{get_encoded_text_ast<encoded_variable_t>(matched)}, {FilterOperation::EQ}},
+            {Value{get_encoded_text_ast<encoded_variable_t>(unmatched)}, {FilterOperation::NEQ}},
+    };
 
-    return std::ranges::all_of(
-            value_and_matched_filter_op_pairs,
-            [&](auto const& value_and_matched_filter_op_pair) {
-                auto const& [value_to_test, matched_filter_op]{value_and_matched_filter_op_pair};
-                bool const expected_match_result{
-                        filter_to_test->get_operation() == matched_filter_op ? true : false
-                };
-                return expected_match_result
-                       == evaluate_filter_against_literal_type_value_pair(
-                               filter_to_test,
-                               LiteralType::ClpStringT,
-                               value_to_test,
-                               false
-                       );
-            }
+    return assert_filter_evaluation_results_on_values(
+            filter_to_test,
+            filter_operand_literal_type,
+            value_to_matched_filter_ops_pairs
     );
 }
 
