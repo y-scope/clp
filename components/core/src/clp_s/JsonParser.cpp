@@ -523,7 +523,7 @@ bool JsonParser::parse() {
                 SPDLOG_ERROR(
                         "Failed to add metadata field \"{}\" ({})",
                         constants::range_index::cFilename,
-                        rc
+                        static_cast<int64_t>(rc)
                 );
                 return false;
             }
@@ -536,7 +536,7 @@ bool JsonParser::parse() {
                 SPDLOG_ERROR(
                         "Failed to add metadata field \"{}\" ({})",
                         constants::range_index::cFileSplitNumber,
-                        rc
+                        static_cast<int64_t>(rc)
                 );
                 return false;
             }
@@ -549,7 +549,7 @@ bool JsonParser::parse() {
                 SPDLOG_ERROR(
                         "Failed to add metadata field \"{}\" ({})",
                         constants::range_index::cArchiveCreatorId,
-                        rc
+                        static_cast<int64_t>(rc)
                 );
                 return false;
             }
@@ -991,20 +991,20 @@ auto JsonParser::parse_from_ir() -> bool {
                 SPDLOG_ERROR(
                         "Failed to add metadata field \"{}\" ({})",
                         constants::range_index::cFilename,
-                        rc
+                        static_cast<int64_t>(rc)
                 );
                 return false;
             }
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFileSplitNumber},
-                        file_split_number
+                        static_cast<int64_t>(file_split_number)
                 );
                 ErrorCodeSuccess != rc)
             {
                 SPDLOG_ERROR(
                         "Failed to add metadata field \"{}\" ({})",
                         constants::range_index::cFileSplitNumber,
-                        rc
+                        static_cast<int64_t>(rc)
                 );
                 return false;
             }
@@ -1017,7 +1017,7 @@ auto JsonParser::parse_from_ir() -> bool {
                 SPDLOG_ERROR(
                         "Failed to add metadata field \"{}\" ({})",
                         constants::range_index::cArchiveCreatorId,
-                        rc
+                        static_cast<int64_t>(rc)
                 );
                 return false;
             }
@@ -1034,7 +1034,11 @@ auto JsonParser::parse_from_ir() -> bool {
                         );
                         ErrorCodeSuccess != rc)
                     {
-                        SPDLOG_ERROR("Failed to add metadata field \"{}\" ({})", metadata_key, rc);
+                        SPDLOG_ERROR(
+                                "Failed to add metadata field \"{}\" ({})",
+                                metadata_key,
+                                static_cast<int64_t>(rc)
+                        );
                         return false;
                     }
                 }
