@@ -135,8 +135,8 @@ aws_authentication:
     secret_access_key: "<aws-secret-access-key>"
 ```
 
-* `<aws-access-key-id>` and `<aws-secret-access-key>` should be replaced with
-  [long-term credentials](index.md#long-term-iam-user-credentials) for an IAM user.
+`<aws-access-key-id>` and `<aws-secret-access-key>` should be replaced with
+[long-term credentials](index.md#long-term-iam-user-credentials) for an IAM user.
 
 ### profile
 
@@ -149,7 +149,7 @@ aws_authentication:
   profile: "<profile-name>"
 ```
 
-* `<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
+`<profile-name>` should be the name of an existing [AWS CLI profile](index.md#named-profiles).
 
 In addition, the _top-level_ config `aws_config_directory` must be set to the directory containing
 the profile configurations (typically `~/.aws`):
