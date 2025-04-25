@@ -141,8 +141,8 @@ def generate_container_auth_options(
         if access_key_id and secret_access_key:
             credentials_env_vars.extend(
                 (
-                    f"AWS_ACCESS_KEY_ID={access_key_id}",
-                    f"AWS_SECRET_ACCESS_KEY={secret_access_key}",
+                    f"{AWS_ENV_VAR_ACCESS_KEY_ID}={access_key_id}",
+                    f"{AWS_ENV_VAR_SECRET_ACCESS_KEY}={secret_access_key}",
                 )
             )
         else:
