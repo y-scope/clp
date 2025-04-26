@@ -6,21 +6,12 @@ import {
     type Filter,
     type FindOptions,
 } from "mongodb";
+import {Server} from "socket.io";
+
+import {convertFindToChangeStreamQuery} from "./utils.js";
 
 
-/**
- * // eslint-disable-next-line no-warning-comments
- * TODO: Improve this? Think about security (other queries should not be able to kick others
- *  offline; maybe add a ref count then), performance, and collision chances.
- *
- * Generates a unique hash for a given query and options.
- * This hash is used to identify and manage change streams for specific queries.
- *
- * @param query The query object to be hashed.
- * @param options The options object to be hashed.
- * @return A string representing the unique hash for the query and options.
- */
-const getQueryHash = (query: object, options: object): string => JSON.stringify({query, options});
+const updateTimeout = 500;
 
 interface Watcher {
     // The change stream for the query
@@ -41,18 +32,22 @@ class MongoServerCollection {
     // MongoDB collection instance
     private collection: Collection;
 
-    // Map of active change streams keyed by query hash
-    private watchers: Map<string, Watcher> = new Map();
+    private io: Server;
+
+    // Map of active change streams keyed by queryId
+    private watchers: Map<number, Watcher> = new Map();
 
     /**
      * Creates an instance of MongoReplicaServerCollection.
      *
-     * @param mongoDb The MongoDB database instance.
      * @param collectionName The name of the collection to manage.
+     * @param io The Socket.IO server instance.
+     * @param mongoDb The MongoDB database instance.
      */
-    constructor (mongoDb: Db, collectionName: string) {
+    constructor (collectionName: string, io: Server, mongoDb: Db) {
         this.count = 0;
         this.collection = mongoDb.collection(collectionName);
+        this.io = io;
     }
 
     /**
@@ -99,34 +94,79 @@ class MongoServerCollection {
      *
      * @param query The query object to watch for changes.
      * @param options The options for the change stream.
+     * @param queryId The unique identifier for the query.
      * @param connectionId The socket.id of the connection requesting the watcher.
      * @return An object containing the query hash and the change stream watcher.
      */
-    getWatcher (query: object, options: Document, connectionId: string) {
-        const queryHash = getQueryHash(query, options);
-
-        let watcher = this.watchers.get(queryHash);
+    getWatcher (
+        query: Record<string, unknown>,
+        options: Document,
+        queryId: number,
+        connectionId: string
+    ) {
+        let watcher = this.watchers.get(queryId);
         if ("undefined" === typeof watcher) {
-            const mongoWatcher = this.collection.watch([{$match: query}], options);
+            const watcherQuery = convertFindToChangeStreamQuery(query);
+            const mongoWatcher = this.collection.watch([{
+                $match: watcherQuery,
+            }]);
+
             watcher = {changeStream: mongoWatcher, subscribers: [connectionId]};
-            this.watchers.set(queryHash, watcher);
+            this.watchers.set(queryId, watcher);
+            let lastEmitTime = 0;
+            let pendingUpdate = false;
+
+            const emitUpdate = async () => {
+                const currentTime = Date.now();
+
+                if (updateTimeout <= currentTime - lastEmitTime) {
+                    lastEmitTime = currentTime;
+                    this.io.to(`${queryId}`).emit("collection::find::update", {
+                        queryId: queryId,
+                        data: await this.collection.find(query, options).toArray(),
+                    });
+
+                    return;
+                }
+
+                if (!pendingUpdate) {
+                    pendingUpdate = true;
+                    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+                    setTimeout(async () => {
+                        try {
+                            const data = await this.collection.find(query, options).toArray();
+                            this.io.to(`${queryId}`).emit("collection::find::update", {
+                                queryId: queryId,
+                                data: data,
+                            });
+                        } catch (error) {
+                            console.error("Error fetching data for final update:", error);
+                        } finally {
+                            pendingUpdate = false;
+                        }
+                    }, updateTimeout);
+                }
+            };
+
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+            watcher.changeStream.on("change", emitUpdate);
         } else {
             watcher.subscribers.push(connectionId);
         }
 
-        return {queryHash, watcher};
+        return watcher;
     }
 
     /**
      * Closes and removes a change stream (watcher) for a specific query hash.
      * Handles potential errors when closing the watcher.
      *
-     * @param queryHash The hash of the query for which to remove the watcher.
+     * @param queryId The id of the query for which to remove the watcher.
      * @param connectionId The socket.id of the connection requesting to remove the watcher.
      * @return True if the watcher was removed, false otherwise.
      */
-    removeWatcher (queryHash: string, connectionId: string): boolean {
-        const watcher = this.watchers.get(queryHash);
+    removeWatcher (queryId: number, connectionId: string): boolean {
+        const watcher = this.watchers.get(queryId);
 
         let removed = true;
         if (watcher) {
@@ -138,12 +178,12 @@ class MongoServerCollection {
             } else {
                 // Close the change stream and handle any potential errors
                 watcher.changeStream.close().catch((err: unknown) => {
-                    console.error(`Error closing watcher for queryHash ${queryHash}:`, err);
+                    console.error(`Error closing watcher for queryId ${queryId}:`, err);
                 });
-                this.watchers.delete(queryHash);
+                this.watchers.delete(queryId);
             }
         } else {
-            console.warn(`No watcher found for queryHash ${queryHash}`);
+            console.warn(`No watcher found for queryId ${queryId}`);
         }
 
         return removed;
