@@ -34,7 +34,7 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
-          DEP_TASK: "all-internal-deps"
+          DEP_TASK: "core-all-parallel"
       - task: "utils:combine-core-checksum-files"
 
   log-viewer:
@@ -49,23 +49,10 @@ tasks:
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
           URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.tar.gz"
 
-  # NOTE: `git submodule update` doesn't support parallel invocations, so we can't use it to
-  # download submodules in parallel. This means:
-  # 1. the submodule tasks cannot be specified as a list of `deps`, because `task` always runs
-  #   `deps` tasks in parallel.
-  # 2. we need to force higher level tasks, like `core` and `log-viewer`, to run their submodule
-  #    download tasks serially.
-  #
-  # As a solution, the `all-internal-deps` task below:
-  # 1. uses `cmds` to sequentially download `ALL` submodules required by the clp-package.
-  # 2. uses `run: once`, so it executes once even if multiple higher level targets depend on it.
-  #
-  # All higher level tasks must depend on this task instead of depending on the individual
-  # submodule tasks in this file.
-  all-internal-deps:
+  core-all-parallel:
     internal: true
     run: "once"
-    cmds:
+    deps:
       - task: "absl"
       - task: "antlr"
       - task: "catch2"
