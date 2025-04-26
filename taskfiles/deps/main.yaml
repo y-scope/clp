@@ -227,33 +227,16 @@ tasks:
 
   simdjson:
     internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/simdjson.md5"
-      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/simdjson"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    run: "once"
     cmds:
-      - task: "download-dependency"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract"
-          SRC_NAME: "simdjson-3.6.3"
-          SRC_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "simdjson"
+          TARBALL_SHA256: "afd8201cfb1abe927737d876441bb1f21730a9ee6078a1b8c6174e6463981fa3"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.tar.gz"
 
   sqlite3:
     internal: true

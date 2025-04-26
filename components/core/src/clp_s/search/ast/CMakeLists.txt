@@ -62,5 +62,5 @@ target_link_libraries(
     PUBLIC
     clp_s::TimestampPattern
     PRIVATE
-    simdjson
+    simdjson::simdjson
 )

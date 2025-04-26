@@ -164,6 +164,11 @@ if(nlohmann_json_FOUND)
     message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
 endif()
 
+find_package(simdjson REQUIRED)
+if(simdjson_FOUND)
+    message(STATUS "Found simdjson ${simdjson_VERSION}")
+endif()
+
 # Find and setup spdlog
 if(CLP_USE_STATIC_LIBS)
     # NOTE: On some Linux distributions (e.g. Ubuntu), the spdlog package only contains a dynamic
@@ -248,9 +253,6 @@ if(msgpack-cxx_FOUND)
 else()
     message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
-
-# Add simdjson
-add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
 
 find_package(Threads REQUIRED)
 
@@ -692,7 +694,7 @@ target_link_libraries(unitTest
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
         nlohmann_json::nlohmann_json
-        simdjson
+        simdjson::simdjson
         spdlog::spdlog
         sql
         OpenSSL::Crypto

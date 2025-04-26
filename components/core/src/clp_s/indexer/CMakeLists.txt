@@ -92,7 +92,7 @@ target_link_libraries(indexer
         date::date
         MariaDBClient::MariaDBClient
         OpenSSL::Crypto
-        simdjson
+        simdjson::simdjson
         spdlog::spdlog
         yaml-cpp::yaml-cpp
         ystdlib::containers
