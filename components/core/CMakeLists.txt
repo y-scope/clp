@@ -113,6 +113,11 @@ if(PROJECT_IS_TOP_LEVEL)
     endif()
 endif()
 
+find_package(absl REQUIRED)
+if (absl_FOUND)
+    message(STATUS "Found absl ${absl_VERSION}")
+endif()
+
 # Find and setup ANTLR Library
 # We build and link to the static library
 find_package(ANTLR REQUIRED)
@@ -228,10 +233,6 @@ if(msgpack-cxx_FOUND)
 else()
     message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
-
-# Add abseil-cpp
-set(ABSL_PROPAGATE_CXX_STD ON)
-add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
 
 # Add simdjson
 add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)

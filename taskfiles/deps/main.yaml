@@ -69,7 +69,7 @@ tasks:
     internal: true
     run: "once"
     cmds:
-      - task: "abseil-cpp"
+      - task: "absl"
       - task: "antlr"
       - task: "Catch2"
       - task: "date"
@@ -82,35 +82,19 @@ tasks:
       - task: "yaml-cpp"
       - task: "ystdlib-cpp"
 
-  abseil-cpp:
+  absl:
     internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/abseil-cpp.md5"
-      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/abseil-cpp"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    run: "once"
     cmds:
-      - task: "download-dependency"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract"
-          SRC_NAME: "abseil-cpp-20230802.1"
-          SRC_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_CXX_STANDARD=20"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "absl"
+          TARBALL_SHA256: "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed"
+          TARBALL_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz"
 
   antlr:
     internal: true

@@ -36,3 +36,42 @@ tasks:
       - "mkdir -p '{{.G_DEPS_CORE_DIR}}'"
       - "mkdir -p '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'"
       - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
+
+  # Installs a CMake-based library from a remote tarball, generates a settings file for it, and
+  # computes a checksum for the installation directory.
+  #
+  # @param {string} LIB_NAME
+  # @param {string} TARBALL_SHA256
+  # @param {string} TARBALL_URL
+  # @param {string[]} [CMAKE_GEN_ARGS] Any additional arguments to pass to the CMake generate
+  # command.
+  install-remote-cmake-lib:
+    internal: true
+    vars:
+      CMAKE_GEN_ARGS:
+        ref: "default (list) .CMAKE_GEN_ARGS"
+      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
+      INSTALL_DIR_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+    deps:
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.INSTALL_DIR_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.INSTALL_PREFIX}}"
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          FILE_SHA256: "{{.TARBALL_SHA256}}"
+          GEN_ARGS:
+            ref: ".CMAKE_GEN_ARGS"
+          NAME: "{{.LIB_NAME}}"
+          URL: "{{.TARBALL_URL}}"
+          WORK_DIR: "{{.G_DEPS_CORE_DIR}}"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.INSTALL_DIR_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.INSTALL_PREFIX}}"
