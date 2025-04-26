@@ -53,6 +53,7 @@ tasks:
       INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
       INSTALL_DIR_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
     deps:
+      - task: "init"
       - task: "yscope-dev-utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.INSTALL_DIR_CHECKSUM_FILE}}"
