@@ -154,6 +154,8 @@ tasks:
     cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
 
   check-cpp-static-diff:
+    # Alias for fix until we determine which clang-tidy fixes can applied safely.
+    aliases: ["fix-cpp-static-diff"]
     sources: *cpp_source_files
     deps:
       - ":core-generate"
@@ -169,6 +171,8 @@ tasks:
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   check-cpp-static-full:
+    # Alias for fix until we determine which clang-tidy fixes can applied safely.
+    aliases: ["fix-cpp-static-full"]
     sources: *cpp_source_files
     deps:
       - ":core-generate"
