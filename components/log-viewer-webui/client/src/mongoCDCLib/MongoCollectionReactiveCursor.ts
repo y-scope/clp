@@ -3,6 +3,18 @@ import {Socket} from "socket.io-client";
 import MongoCollectionCursor from "./MongoCollectionCursor.js";
 
 
+interface ServerError {
+    collectionName?: string;
+    error: string;
+    queryId?: number;
+}
+
+interface Success<T> {
+    data: T;
+}
+
+type Response<T> = ServerError | Success<T>;
+
 interface Listener {
     onData: (data: Document[]) => void;
     onError: (error: Error) => void;
@@ -66,16 +78,16 @@ class MongoCollectionReactiveCursor extends MongoCollectionCursor {
         this.socket.emit("collection::find::toReactiveArray", {
             query: this.findQuery,
             options: this.findOptions,
-        }, (response: {error?: Error; queryId?: number}) => {
-            if (response.error) {
-                callback.onError(response.error);
+        }, (response: Response<{queryId: number}>) => {
+            if ("error" in response) {
+                callback.onError(new Error(response.error));
 
                 return;
             }
 
-            if ("undefined" !== typeof response.queryId) {
-                unsubscribedInfo.queryId = response.queryId;
-                this.queryId = response.queryId;
+            if ("undefined" !== typeof response.data.queryId) {
+                unsubscribedInfo.queryId = response.data.queryId;
+                this.queryId = response.data.queryId;
             }
 
             this.listener = callback;
@@ -94,4 +106,5 @@ class MongoCollectionReactiveCursor extends MongoCollectionCursor {
     }
 }
 
-export default MongoCollectionReactiveCursor;
+export {MongoCollectionReactiveCursor};
+export {type ServerError};

@@ -1,7 +1,6 @@
 /* eslint-disable max-lines */
 import {FastifyInstance} from "fastify";
 import fastifyPlugin from "fastify-plugin";
-import {Server as HttpServer} from "http";
 import {
     Db,
     Document,
@@ -14,39 +13,45 @@ import {
 } from "socket.io";
 
 import MongoServerCollection from "./MongoServerCollection.js";
-import {initializeMongoClient} from "./utils.js";
+import {
+    getQueryHash,
+    initializeMongoClient,
+} from "./utils.js";
 
 
-const updateTimeout = 500;
+interface Error {
+    collectionName?: string;
+    error: string;
+    queryId?: number;
+}
+
+interface Success<T> {
+    data: T;
+}
+
+type Response<T> = Error | Success<T>;
 
 // Define the events that the client can emit to the server
 type ClientToServerEvents = {
     "disconnect": () => void;
-    "collection::init": (reqArgs: {
-        collectionName: string;
-    }) => void;
+    "collection::init": (
+        reqArgs: {
+            collectionName: string;
+        },
+        callback: (res: Error) => void
+    ) => void;
     "collection::find::toArray": (
         reqArgs: {
             query: Filter<Document>;
             options: FindOptions;
         },
-        callback: (respArgs: {
-            data: Document[];
-        } | {
-            error: string;
-        }) => void
-    ) => Promise<void>;
+        callback: (res: Response<{data: Document[]}>) => void) => Promise<void>;
     "collection::find::toReactiveArray": (
         reqArgs: {
             query: Filter<Document>;
             options: FindOptions;
         },
-        callback: (respArgs: {
-            queryId: number;
-        } | {
-            error: string;
-        }) => void
-    ) => Promise<void>;
+        callback: (res: Response<{queryId: number}>) => void) => Promise<void>;
     "collection::find::unsubscribe": (
         reqArgs: {
             queryId: number;
@@ -60,17 +65,7 @@ interface ServerToClientEvents {
         queryId: number;
         data: Document[];
     }) => void;
-    "error::query": (respArgs: {
-        queryId: number;
-        message: string;
-    }) => void;
-    "error::collection": (respArgs: {
-        collectionName: string;
-        message: string;
-    }) => void;
 }
-
-type InterServerEvents = object;
 
 // Define the data structure associated with each socket connection
 interface SocketData {
@@ -81,7 +76,6 @@ interface SocketData {
 type CustomSocket = Socket<
     ClientToServerEvents,
     ServerToClientEvents,
-    InterServerEvents,
     SocketData
 >;
 
@@ -89,18 +83,26 @@ type CustomSocket = Socket<
  * Class representing a MongoDB replica server with real-time capabilities.
  * This class manages socket connections and interactions with MongoDB collections.
  */
-class FastifyMongoServer {
+class MongoSocketIoServer {
     // Fastify instance for logging and handling requests
     #fastify: FastifyInstance;
+
+    #io: Server<ClientToServerEvents, ServerToClientEvents, SocketData>;
 
     // Map of collections being managed
     #collections: Map<string, MongoServerCollection> = new Map();
 
-    // Map of unique queries being managed
-    #queryMap: Map<number, {collectionName: string; queryHash: string}> = new Map();
+    // Map of unique queries being managed (ie. queryId to queryHash)
+    #queryMap: Map<number, string> = new Map();
 
     // Map of active socket connections and the collections they are subscribed to
-    #connections: Map<string, string[]> = new Map();
+    #connectionsToCollectionMap: Map<string, string[]> = new Map();
+
+    // Map of active socket connections and the queryIds they are subscribed to
+    #connectionsToQueryIdMap: Map<string, number[]> = new Map();
+
+    // Map of queryIds and collection they are too
+    #queryIdToCollectionNameMap: Map<number, string> = new Map();
 
     // MongoDB database instance
     readonly #mongoDb: Db;
@@ -114,7 +116,13 @@ class FastifyMongoServer {
     constructor (fastify: FastifyInstance, mongoDb: Db) {
         this.#fastify = fastify;
         this.#mongoDb = mongoDb;
-        this.#initializeSocketServer(fastify.server);
+        this.#io = new Server<
+            ClientToServerEvents,
+            ServerToClientEvents,
+            SocketData
+        >(fastify.server);
+
+        this.#startSocketListeners();
     }
 
     /**
@@ -131,30 +139,21 @@ class FastifyMongoServer {
         database: string,
         host: string,
         port: number
-    ): Promise<FastifyMongoServer> {
+    ): Promise<MongoSocketIoServer> {
         const mongoDb = await initializeMongoClient(
             database,
             host,
             port.toString()
         );
 
-        return new FastifyMongoServer(fastify, mongoDb);
+        return new MongoSocketIoServer(fastify, mongoDb);
     }
 
     /**
-     * Initializes the Socket.IO server and sets up event listeners for socket connections.
-     *
-     * @param httpServer The HTTP server instance to attach the Socket.IO server to.
+     * Sets up event listeners for socket connections.
      */
-    #initializeSocketServer (httpServer: HttpServer) {
-        const io = new Server<
-            ClientToServerEvents,
-            ServerToClientEvents,
-            InterServerEvents,
-            SocketData
-        >(httpServer);
-
-        io.on("connection", (socket) => {
+    #startSocketListeners () {
+        this.#io.on("connection", (socket) => {
             this.#fastify.log.info(`Socket connected: ${socket.id}`);
             socket.on("disconnect", this.#collectionDisconnectListener.bind(this, socket));
             socket.on("collection::init", this.#collectionInitListener.bind(this, socket));
@@ -177,14 +176,21 @@ class FastifyMongoServer {
      */
     async #collectionDisconnectListener (socket: CustomSocket) {
         this.#fastify.log.info(`Socket disconnected: ${socket.id}`);
-        const connections = this.#connections.get(socket.id);
-        if ("undefined" !== typeof connections) {
-            for (const collectionName of connections) {
-                for (const [key, value] of this.#queryMap.entries()) {
-                    if (collectionName === value.collectionName) {
-                        await this.#unsubscribe(collectionName, key, socket);
-                    }
+        const queryConnections = this.#connectionsToQueryIdMap.get(socket.id);
+        const collectionConnections = this.#connectionsToCollectionMap.get(socket.id);
+        if ("undefined" !== typeof queryConnections) {
+            for (const queryId of queryConnections) {
+                const collectionName = this.#queryIdToCollectionNameMap.get(queryId);
+                if ("undefined" === typeof collectionName) {
+                    this.#fastify.log.error(`QueryId ${queryId} not found`);
+                    continue;
                 }
+                this.#fastify.log.info(`QueryId ${queryId} requested unsubscription`);
+                await this.#unsubscribe(collectionName, queryId, socket);
+            }
+        }
+        if ("undefined" !== typeof collectionConnections) {
+            for (const collectionName of collectionConnections) {
                 const collection = this.#collections.get(collectionName);
                 if ("undefined" !== typeof collection) {
                     collection.refRemove();
@@ -209,14 +215,14 @@ class FastifyMongoServer {
      * @param socketId The ID of the socket connection.
      * @param collectionName The name of the collection being subscribed to.
      */
-    #addConnection (socketId: string, collectionName: string) {
-        if (this.#connections.has(socketId)) {
-            const collections = this.#connections.get(socketId);
+    #addCollectionConnection (socketId: string, collectionName: string) {
+        if (this.#connectionsToCollectionMap.has(socketId)) {
+            const collections = this.#connectionsToCollectionMap.get(socketId);
             if (false === collections?.includes(collectionName)) {
                 collections.push(collectionName);
             }
         } else {
-            this.#connections.set(socketId, [collectionName]);
+            this.#connectionsToCollectionMap.set(socketId, [collectionName]);
         }
     }
 
@@ -227,8 +233,13 @@ class FastifyMongoServer {
      * @param socket The socket instance that is requesting the collection.
      * @param reqArgs
      * @param reqArgs.collectionName
+     * @param callback
      */
-    #collectionInitListener (socket: CustomSocket, reqArgs: {collectionName: string}): void {
+    #collectionInitListener (
+        socket: CustomSocket,
+        reqArgs: {collectionName: string},
+        callback:(res: Error) => void
+    ): void {
         const {collectionName} = reqArgs;
         this.#fastify.log.info(`Collection name ${collectionName} requested`);
 
@@ -236,39 +247,57 @@ class FastifyMongoServer {
         this.#collectionExists(collectionName).then((exists) => {
             if (!exists) {
                 this.#fastify.log.error(`Collection ${collectionName} does not exist`);
-                socket.emit(
-                    "error::collection",
-                    {
-                        collectionName: collectionName,
-                        message: `Collection ${collectionName} does not exist`,
-                    }
-                );
+                callback({
+                    collectionName: collectionName,
+                    error: `Collection ${collectionName} does not exist`,
+                });
 
                 return;
             }
 
             let collection = this.#collections.get(collectionName);
             if ("undefined" === typeof collection) {
-                collection = new MongoServerCollection(this.#mongoDb, collectionName);
+                collection = new MongoServerCollection(collectionName, this.#io, this.#mongoDb);
                 this.#collections.set(collectionName, collection);
             }
 
-            this.#addConnection(socket.id, collectionName);
+            this.#addCollectionConnection(socket.id, collectionName);
             collection.refAdd();
+
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             socket.data.collectionName = collectionName;
         })
             .catch((error: unknown) => {
                 this.#fastify.log
                     .error(`Error checking collection existence: 
-                        ${collectionName} - ${(error as Error).message}`);
-                socket.emit(
-                    "error::collection",
-                    {
-                        collectionName: collectionName,
-                        message: "An error occurred while checking the collection.",
-                    }
-                );
+                        ${collectionName} - ${(error as Error).error}`);
+                callback({
+                    collectionName: collectionName,
+                    error: "An error occurred while checking the collection.",
+                });
             });
+    }
+
+
+    /**
+     * Add a connection for a specific socket ID and queryId.
+     *
+     * @param collectionName The name of the collection being subscribed to.
+     * @param queryId The queryID of the query being subscribed to.
+     * @param socketId The ID of the socket connection.
+     */
+    #addQueryConnection (collectionName: string, queryId: number, socketId: string) {
+        if (this.#connectionsToQueryIdMap.has(socketId)) {
+            const queries = this.#connectionsToQueryIdMap.get(socketId);
+            if (false === queries?.includes(queryId)) {
+                queries.push(queryId);
+            }
+        } else {
+            this.#connectionsToQueryIdMap.set(socketId, [queryId]);
+        }
+        if (false === this.#queryIdToCollectionNameMap.has(queryId)) {
+            this.#queryIdToCollectionNameMap.set(queryId, collectionName);
+        }
     }
 
     /**
@@ -276,23 +305,25 @@ class FastifyMongoServer {
      * from the queryMap. If not found, it creates a new entry in the map.
      *
      * @param collectionName
-     * @param queryHash
-     * @return The key associated with the collectionName and queryHash.
+     * @param query
+     * @param options
+     * @return The key associated with the collectionName, query, and options.
      */
-    #getQueryId (collectionName: string, queryHash: string): number {
-        for (const [key, value] of this.#queryMap.entries()) {
-            if (value.collectionName === collectionName && value.queryHash === queryHash) {
-                return key;
+    #getQueryId (collectionName: string, query: Filter<Document>, options: FindOptions): number {
+        const queryHash = getQueryHash(collectionName, query, options);
+        for (const [id, hash] of this.#queryMap.entries()) {
+            if (hash === queryHash) {
+                return id;
             }
         }
 
         let queryId = 0;
         if (0 === this.#queryMap.size) {
-            this.#queryMap.set(0, {collectionName, queryHash});
+            this.#queryMap.set(0, queryHash);
         } else {
             const maxKey = Math.max(...Array.from(this.#queryMap.keys()));
             queryId = maxKey + 1;
-            this.#queryMap.set(queryId, {collectionName, queryHash});
+            this.#queryMap.set(queryId, queryHash);
         }
 
         return queryId;
@@ -311,7 +342,7 @@ class FastifyMongoServer {
     async #collectionFindToReactiveArrayListener (
         socket: CustomSocket,
         reqArgs: {query: Filter<Document>; options: FindOptions},
-        callback: (respArgs: {queryId: number} | {error: string}) => void
+        callback: (res: Response<{queryId: number}>) => void
     ): Promise<void> {
         const {query, options} = reqArgs;
         const {collectionName} = socket.data as {collectionName: string};
@@ -326,42 +357,27 @@ class FastifyMongoServer {
             return;
         }
 
-        const {queryHash, watcher} = collection.getWatcher(query, options, socket.id);
-        const queryId = this.#getQueryId(collectionName, queryHash);
-        callback({queryId});
+        const queryId = this.#getQueryId(collectionName, query, options);
+
+        collection.getWatcher(query, options, queryId, socket.id);
+
+        callback({data: {queryId}});
 
         // Join the room corresponding to the query hash
         try {
             await socket.join(`${queryId}`);
         } catch (error) {
             this.#fastify.log
-                .error(`Error joining room ${queryId}: ${(error as Error).message}`);
-            socket.emit(
-                "error::query",
-                {
-                    queryId: queryId,
-                    message: "An error occurred while joining the socket.io room.",
-                }
-            );
+                .error(`Error joining room ${queryId}: ${(error as Error).error}`);
+            callback({
+                error: "An error occurred while joining the socket.io room.",
+                queryId: queryId,
+            });
 
             return;
         }
 
-        let lastEmitTime = 0;
-
-        const emitUpdate = async () => {
-            const currentTime = Date.now();
-            if (updateTimeout <= currentTime - lastEmitTime) {
-                lastEmitTime = currentTime;
-                socket.to(`${queryId}`).emit("collection::find::update", {
-                    queryId: queryId,
-                    data: await collection.find(query, options).toArray(),
-                });
-            }
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
-        watcher.changeStream.on("change", emitUpdate);
+        this.#addQueryConnection(collectionName, queryId, socket.id);
 
         socket.emit("collection::find::update", {
             queryId: queryId,
@@ -369,30 +385,39 @@ class FastifyMongoServer {
         });
     }
 
+    /**
+     * Unsubscribes from a reactive array of documents.
+     * Removes the watcher for the specified query hash.
+     *
+     * @param collectionName The name of the collection being unsubscribed from.
+     * @param queryId The queryID of the query being unsubscribed from.
+     * @param socket The socket instance that is requesting the unsubscription.
+     */
     async #unsubscribe (collectionName: string, queryId: number, socket: CustomSocket) {
-        this.#fastify.log.info(`Collection name ${collectionName} requested unsubscription`);
-        const collection = this.#collections.get(collectionName);
+        this.#fastify.log.info(`QueryId ${queryId} requested unsubscription`);
+        const queryIds = this.#connectionsToQueryIdMap.get(socket.id);
+        if ("undefined" === typeof queryIds) {
+            return;
+        }
 
+        if (false === queryIds.includes(queryId)) {
+            return;
+        }
+
+        const collection = this.#collections.get(collectionName);
         if ("undefined" === typeof collection) {
             return;
         }
 
         await socket.leave(`${queryId}`);
 
-        const queryHash = this.#queryMap.get(queryId)?.queryHash;
+        const queryHash = this.#queryMap.get(queryId);
         if ("undefined" === typeof queryHash) {
             this.#fastify.log.error(`QueryId ${queryId} not found in queryMap`);
-            socket.emit(
-                "error::query",
-                {
-                    queryId: queryId,
-                    message: `QueryId ${queryId} not found in queryMap`,
-                }
-            );
 
             return;
         }
-        const watcherRemoved = collection.removeWatcher(queryHash, socket.id);
+        const watcherRemoved = collection.removeWatcher(queryId, socket.id);
 
         if (watcherRemoved) {
             this.#queryMap.delete(queryId);
@@ -431,7 +456,7 @@ const MongoServerPlugin = async (
     app: FastifyInstance,
     options: {host: string; port: number; database: string}
 ) => {
-    await FastifyMongoServer.create(app, options.database, options.host, options.port);
+    await MongoSocketIoServer.create(app, options.database, options.host, options.port);
 };
 
 // Export the plugin wrapped in fastify-plugin for use in Fastify applications
