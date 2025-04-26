@@ -159,6 +159,11 @@ else()
     message(FATAL_ERROR "Could not find static libraries for fmt")
 endif()
 
+find_package(log_surgeon REQUIRED)
+if(log_surgeon_FOUND)
+    message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+endif()
+
 find_package(nlohmann_json REQUIRED)
 if(nlohmann_json_FOUND)
     message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
@@ -216,9 +221,6 @@ if (OPENSSL_FOUND)
 else ()
     message(FATAL_ERROR "OpenSSL not found")
 endif ()
-
-# Add log surgeon
-add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
 
 # Find and setup MariaDBClient library
 if(CLP_USE_STATIC_LIBS)

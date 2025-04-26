@@ -159,33 +159,16 @@ tasks:
 
   log-surgeon:
     internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/log-surgeon.md5"
-      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/log-surgeon"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    run: "once"
     cmds:
-      - task: "download-dependency"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract"
-          SRC_NAME: "log-surgeon-f801a3f369bb14919d82a928d9a3812006245aa0"
-          SRC_URL: "https://github.com/y-scope/log-surgeon/archive/f801a3f.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "log_surgeon"
+          TARBALL_SHA256: "169b56714b620c3f8f07bf7975aba8573b9bd25e423e5c4f0cc9b52450a2403d"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/f801a3f.tar.gz"
 
   nlohmann_json:
     internal: true

@@ -1,6 +1,3 @@
-[submodule "components/core/submodules/log-surgeon"]
-	path = components/core/submodules/log-surgeon
-	url = https://github.com/y-scope/log-surgeon.git
 [submodule "tools/yscope-dev-utils"]
 	path = tools/yscope-dev-utils
 	url = https://github.com/y-scope/yscope-dev-utils.git
