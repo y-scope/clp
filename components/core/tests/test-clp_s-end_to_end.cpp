@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <fmt/format.h>
 
 #include "../src/clp_s/InputConfig.hpp"

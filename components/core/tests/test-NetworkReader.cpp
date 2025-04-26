@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <curl/curl.h>
 #include <fmt/core.h>
 #include <json/single_include/nlohmann/json.hpp>

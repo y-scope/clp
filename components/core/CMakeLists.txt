@@ -138,6 +138,11 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
 endif()
 
+find_package(Catch2 REQUIRED)
+if (Catch2_FOUND)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
+endif()
+
 # Find and setup fmt
 # NOTE:
 # - We only try to link to the static library
@@ -665,6 +670,7 @@ target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
+        Catch2::Catch2
         ${CURL_LIBRARIES}
         clp_s::search::ast
         clp_s::TimestampPattern

@@ -71,7 +71,7 @@ tasks:
     cmds:
       - task: "absl"
       - task: "antlr"
-      - task: "Catch2"
+      - task: "catch2"
       - task: "date"
       - task: "json"
       - task: "log-surgeon"
@@ -130,35 +130,19 @@ tasks:
           INCLUDE_PATTERNS:
             - "{{.OUTPUT_FILE}}"
 
-  Catch2:
+  catch2:
     internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/Catch2.md5"
-      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/Catch2"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+    run: "once"
     cmds:
-      - task: "download-dependency"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract"
-          SRC_NAME: "Catch2-2.13.7"
-          SRC_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.7.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "Catch2"
+          TARBALL_SHA256: "3cdb4138a072e4c0290034fe22d9f0a80d3bcfb8d7a8a5c49ad75d3a5da24fae"
+          TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.7.tar.gz"
 
   date:
     internal: true

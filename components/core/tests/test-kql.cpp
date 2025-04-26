@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
