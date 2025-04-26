@@ -11,8 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <outcome.hpp>
 
 #include "../../ir/types.hpp"

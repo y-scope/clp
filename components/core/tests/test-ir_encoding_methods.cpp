@@ -13,8 +13,8 @@
 #include <vector>
 
 #include <catch2/catch.hpp>
-#include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../src/clp/BufferReader.hpp"
 #include "../src/clp/ErrorCode.hpp"

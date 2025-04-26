@@ -73,8 +73,8 @@ tasks:
       - task: "antlr"
       - task: "catch2"
       - task: "date"
-      - task: "json"
       - task: "log-surgeon"
+      - task: "nlohmann_json"
       - task: "outcome"
       - task: "simdjson"
       - task: "sqlite3"
@@ -174,36 +174,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.DEST}}"]
 
-  json:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/json.md5"
-      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/json"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
-    cmds:
-      - task: "download-dependency"
-        vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract"
-          SRC_NAME: "json-3.11.3"
-          SRC_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
-
   log-surgeon:
     internal: true
     vars:
@@ -233,6 +203,20 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.DEST}}"]
+
+  nlohmann_json:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DJSON_BuildTests=OFF"
+          LIB_NAME: "nlohmann_json"
+          TARBALL_SHA256: "d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d"
+          TARBALL_URL: "https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz"
 
   outcome:
     internal: true

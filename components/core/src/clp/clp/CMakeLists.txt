@@ -183,6 +183,7 @@ target_link_libraries(clp
         ${sqlite_LIBRARY_DEPENDENCIES}
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
+        nlohmann_json::nlohmann_json
         ${STD_FS_LIBS}
         clp::string_utils
         yaml-cpp::yaml-cpp

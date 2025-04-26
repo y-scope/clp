@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <outcome.hpp>
 
 #include "../../time_types.hpp"

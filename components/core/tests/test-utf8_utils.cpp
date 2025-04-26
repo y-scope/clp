@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <catch2/catch.hpp>
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../src/clp/ffi/utils.hpp"
 #include "../src/clp/utf8_utils.hpp"

@@ -11,7 +11,8 @@
 #include <vector>
 
 #include <catch2/catch.hpp>
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"

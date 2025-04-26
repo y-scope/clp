@@ -234,6 +234,7 @@ target_link_libraries(
         kql
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
+        nlohmann_json::nlohmann_json
         msgpack-cxx
         OpenSSL::Crypto
         simdjson

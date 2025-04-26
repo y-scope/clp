@@ -49,6 +49,7 @@ target_link_libraries(reducer-server
         fmt::fmt
         ${MONGOCXX_TARGET}
         msgpack-cxx
+        nlohmann_json::nlohmann_json
         spdlog::spdlog
 )
 # Put the built executable at the root of the build directory
