@@ -73,7 +73,6 @@ set(
 
 set(
         CLP_S_SOURCES
-        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         archive_constants.hpp
         ArchiveReader.cpp
         ArchiveReader.hpp
@@ -211,6 +210,7 @@ target_link_libraries(
         clp_s_TimestampPattern
         PRIVATE
         clp::string_utils
+        date::date
 )
 
 add_executable(

@@ -183,6 +183,7 @@ target_include_directories(glt
 target_link_libraries(glt
         PRIVATE
         Boost::filesystem Boost::iostreams Boost::program_options
+        date::date
         fmt::fmt
         spdlog::spdlog
         ${sqlite_LIBRARY_DEPENDENCIES}

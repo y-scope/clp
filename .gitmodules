@@ -1,6 +1,3 @@
-[submodule "components/core/submodules/date"]
-	path = components/core/submodules/date
-	url = https://github.com/HowardHinnant/date.git
 [submodule "components/core/submodules/yaml-cpp"]
 	path = components/core/submodules/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git

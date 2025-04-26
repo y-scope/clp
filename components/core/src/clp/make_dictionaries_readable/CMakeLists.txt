@@ -34,7 +34,6 @@ set(
         ../VariableDictionaryReader.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         make-dictionaries-readable.cpp
