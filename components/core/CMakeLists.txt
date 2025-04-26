@@ -433,6 +433,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/ir_stream/Serializer.cpp
         src/clp/ffi/ir_stream/Serializer.hpp
+        src/clp/ffi/ir_stream/search/ProjectionResolutionCallbackReq.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/KeyValuePairLogEvent.cpp
