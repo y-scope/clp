@@ -389,6 +389,9 @@ set(SOURCE_FILES_reducer_unitTest
     )
 
 set(SOURCE_FILES_unitTest
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.h"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3ext.h"
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
@@ -611,9 +614,6 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
-        submodules/sqlite3/sqlite3.c
-        submodules/sqlite3/sqlite3.h
-        submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
@@ -657,6 +657,7 @@ add_executable(unitTest
 target_include_directories(unitTest
         PRIVATE
         ${CLP_OUTCOME_SOURCE_DIRECTORY}
+        ${CLP_SQLITE3_SOURCE_DIRECTORY}
         ${CMAKE_SOURCE_DIR}/submodules
         )
 target_link_libraries(unitTest

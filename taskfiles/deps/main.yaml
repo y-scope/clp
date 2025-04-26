@@ -320,37 +320,27 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.DEST}}"]
 
-  # We don't use a git submodule for sqlite3 since that would require building the sqlite
-  # amalgamation
   sqlite3:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/sqlite3.md5"
-      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/sqlite3"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+      LIB_NAME: "sqlite3"
+
+      # Paths
+      EXTRACTION_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
+      SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
+    run: "once"
     cmds:
-      - task: "download-dependency"
+      - task: "yscope-dev-utils:remote:download-and-extract-zip"
         vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract --no-submodule"
-          SRC_NAME: "sqlite-amalgamation-3360000"
-          SRC_URL: "https://www.sqlite.org/2021/sqlite-amalgamation-3360000.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
+          OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
+          URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
+      - >-
+        echo "set(
+        CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\"
+        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   utfcpp:
     internal: true

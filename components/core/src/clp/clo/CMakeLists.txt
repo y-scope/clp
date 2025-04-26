@@ -119,9 +119,9 @@ set(
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.h"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3ext.h"
         clo.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
@@ -158,6 +158,7 @@ target_compile_features(clo PRIVATE cxx_std_20)
 target_include_directories(clo
         PRIVATE
         "${CLP_OUTCOME_SOURCE_DIRECTORY}"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}"
         "${PROJECT_SOURCE_DIR}/submodules"
 )
 target_link_libraries(clo
