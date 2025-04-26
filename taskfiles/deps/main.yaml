@@ -18,9 +18,6 @@ vars:
   G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
   G_DEPS_CORE_CMAKE_SETTINGS_FILE: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/all.cmake"
 
-  # Utility script path
-  G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/deps-download/download-dep.py"
-
 tasks:
   default:
     deps:
@@ -294,19 +291,3 @@ tasks:
         echo "set(
         CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
-
-
-  download-dependency:
-    internal: true
-    label: "{{.TASK}}-{{.SRC_NAME}}"
-    requires:
-      vars: ["DEST", "FLAGS", "SRC_NAME", "SRC_URL"]
-    deps:
-      - "utils:init"
-    cmds:
-      - >-
-        python3 "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-        "{{.SRC_URL}}"
-        {{.SRC_NAME}}
-        "{{.DEST}}"
-        {{.FLAGS}}
