@@ -345,32 +345,20 @@ tasks:
   utfcpp:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/utfcpp.md5"
-      DEST: "{{.G_CORE_COMPONENT_SUBMODULES_DIR}}/utfcpp"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+      LIB_NAME: "utfcpp"
+      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+    run: "once"
     cmds:
-      - task: "download-dependency"
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--extract"
-          SRC_NAME: "utfcpp-4.0.6"
-          SRC_URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.zip"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST}}"]
+          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
+          OUTPUT_DIR: "{{.UTFCPP_OUTPUT_DIR}}"
+          URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
+      - >-
+        echo "set(
+        CLP_UTFCPP_SOURCE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
+        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   yaml-cpp:
     internal: true
