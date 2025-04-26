@@ -256,8 +256,10 @@ endif()
 
 find_package(Threads REQUIRED)
 
-# Add yaml-cpp
-add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
+find_package(yaml-cpp REQUIRED)
+if(yaml-cpp_FOUND)
+    message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
+endif()
 
 # Add ystdlib-cpp
 set(YSTDLIB_CPP_BUILD_TESTING OFF)
@@ -702,7 +704,7 @@ target_link_libraries(unitTest
         ${STD_FS_LIBS}
         clp::regex_utils
         clp::string_utils
-        yaml-cpp::yaml-cpp
+        yaml-cpp
         ystdlib::containers
         ystdlib::error_handling
         ${LIBLZMA_LIBRARIES}

@@ -145,7 +145,7 @@ target_link_libraries(clg
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}
         clp::string_utils
-        yaml-cpp::yaml-cpp
+        yaml-cpp
         ystdlib::containers
         ZStd::ZStd
 )

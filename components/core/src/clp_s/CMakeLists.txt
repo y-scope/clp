@@ -239,7 +239,7 @@ target_link_libraries(
         OpenSSL::Crypto
         simdjson::simdjson
         spdlog::spdlog
-        yaml-cpp::yaml-cpp
+        yaml-cpp
         ystdlib::containers
         ZStd::ZStd
 )
