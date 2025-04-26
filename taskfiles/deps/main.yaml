@@ -14,6 +14,10 @@ vars:
   G_DEPS_CORE_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/all.md5"
   G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 
+  # NOTE: These must be kept in-sync with their usage in components/core/CMakeLists.txt
+  G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
+  G_DEPS_CORE_CMAKE_SETTINGS_FILE: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/all.cmake"
+
   # Utility script path
   G_DEP_DOWNLOAD_SCRIPT: "{{.ROOT_DIR}}/tools/scripts/deps-download/download-dep.py"
 
@@ -28,7 +32,12 @@ tasks:
       - "utils:clean-old-core-checksum-files"
       - "utils:init"
     cmds:
-      - task: "all-internal-deps"
+      - "rm -rf '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
+      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          DEP_TASK: "all-internal-deps"
       - task: "utils:combine-core-checksum-files"
 
   log-viewer:
@@ -61,7 +70,7 @@ tasks:
     run: "once"
     cmds:
       - task: "abseil-cpp"
-      - task: "antlr4"
+      - task: "antlr"
       - task: "Catch2"
       - task: "date"
       - task: "json"
@@ -103,36 +112,39 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.DEST}}"]
 
-  antlr4:
+  antlr:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/antlr4.md5"
-      DEST_DIR: "{{.G_CORE_COMPONENT_DIR}}/third-party/antlr"
-      DEST: "{{.DEST_DIR}}/antlr-4.13.1-complete.jar"
-    sources:
-      - "{{.G_DEP_DOWNLOAD_SCRIPT}}"
-      - "{{.G_UTILS_TASKFILE}}"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
+      DEP_NAME: "antlr"
+
+      # Paths
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.DEP_NAME}}.md5"
+      OUTPUT_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-4.13.1-complete.jar"
+    run: "once"
     deps:
-      - "utils:init"
-      - task: ":utils:checksum:validate"
+      - task: "yscope-dev-utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST_DIR}}"]
+          INCLUDE_PATTERNS:
+            - "{{.OUTPUT_FILE}}"
+      - task: "utils:init"
     cmds:
-      - task: "download-dependency"
+      - task: "yscope-dev-utils:remote:curl"
         vars:
-          DEST: "{{.DEST}}"
-          FLAGS: "--no-submodule"
-          SRC_NAME: "antlr-4.13.1-complete.jar"
-          SRC_URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
+          FILE_SHA256: "bc13a9c57a8dd7d5196888211e5ede657cb64a3ce968608697e4f668251a8487"
+          OUTPUT_FILE: "{{.OUTPUT_FILE}}"
+          URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
+      - >-
+        echo "set(
+        ANTLR_EXECUTABLE \"{{.OUTPUT_FILE}}\"
+        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.DEP_NAME}}.cmake"
+
       # This command must be last
-      - task: ":utils:checksum:compute"
+      - task: "yscope-dev-utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.DEST_DIR}}"]
+          INCLUDE_PATTERNS:
+            - "{{.OUTPUT_FILE}}"
 
   Catch2:
     internal: true

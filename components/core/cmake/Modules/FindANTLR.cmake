@@ -10,7 +10,6 @@ endif ()
 
 set(ANTLR4_TAG 4.13.1)
 add_definitions(-DANTLR4CPP_STATIC)
-set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/third-party/antlr/antlr-${ANTLR4_TAG}-complete.jar)
 include(ExternalAntlr4Cpp)
 
 find_package(Java 11 REQUIRED COMPONENTS Runtime)

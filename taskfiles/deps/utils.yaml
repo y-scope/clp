@@ -35,3 +35,4 @@ tasks:
       - "mkdir -p '{{.G_DEPS_DIR}}'"
       - "mkdir -p '{{.G_DEPS_CORE_DIR}}'"
       - "mkdir -p '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"

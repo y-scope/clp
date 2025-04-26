@@ -96,6 +96,23 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+if(PROJECT_IS_TOP_LEVEL)
+    # Include dependency settings if the project isn't being included as a subproject.
+    # NOTE: We mark the file optional because if the user happens to have the dependencies
+    # installed, this file isn't necessary.
+    include("${CMAKE_SOURCE_DIR}/../../build/deps/core/cmake-settings/all.cmake"
+            OPTIONAL
+            RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
+    )
+
+    if(NOT CLP_DEPS_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
+        # Set CMP0144 since our minimum required CMake version is less than 3.27.
+        if(POLICY "CMP0144")
+            cmake_policy(SET "CMP0144" "NEW")
+        endif()
+    endif()
+endif()
+
 # Find and setup ANTLR Library
 # We build and link to the static library
 find_package(ANTLR REQUIRED)
