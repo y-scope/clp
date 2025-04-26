@@ -3,7 +3,7 @@ import {
     useState,
 } from "react";
 
-import MongoCollectionReactiveCursor from "./MongoCollectionReactiveCursor.js";
+import {MongoCollectionReactiveCursor} from "./MongoCollectionReactiveCursor.js";
 
 
 /**

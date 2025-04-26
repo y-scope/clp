@@ -3,7 +3,10 @@ import {
     Socket,
 } from "socket.io-client";
 
-import MongoCollectionReactiveCursor from "./MongoCollectionReactiveCursor.js";
+import {
+    MongoCollectionReactiveCursor,
+    type ServerError,
+} from "./MongoCollectionReactiveCursor.js";
 
 
 let sharedSocket: Socket | null = null;
@@ -42,6 +45,12 @@ class MongoCollection {
 
         this.socket.emit("collection::init", {
             collectionName: collectionName,
+        }, (response: ServerError) => {
+            if ("error" in response && "collectionName" in response) {
+                if (collectionName === response.collectionName) {
+                    console.error("Error initializing collection:", response.error);
+                }
+            }
         });
     }
 
@@ -62,5 +71,6 @@ class MongoCollection {
         });
     }
 }
+
 
 export default MongoCollection;
