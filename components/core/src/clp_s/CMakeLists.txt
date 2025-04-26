@@ -242,7 +242,11 @@ target_link_libraries(
         ystdlib::containers
         ZStd::ZStd
 )
-target_include_directories(clp-s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_include_directories(clp-s
+        PRIVATE
+        "${CLP_OUTCOME_SOURCE_DIRECTORY}"
+        "${PROJECT_SOURCE_DIR}/submodules"
+)
 set_target_properties(
         clp-s
         PROPERTIES

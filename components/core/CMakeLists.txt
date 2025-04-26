@@ -656,6 +656,7 @@ add_executable(unitTest
         )
 target_include_directories(unitTest
         PRIVATE
+        ${CLP_OUTCOME_SOURCE_DIRECTORY}
         ${CMAKE_SOURCE_DIR}/submodules
         )
 target_link_libraries(unitTest

@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <json/single_include/nlohmann/json.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <outcome.hpp>
 
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"

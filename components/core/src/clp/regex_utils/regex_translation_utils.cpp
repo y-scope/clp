@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include <outcome/single-header/outcome.hpp>
+#include <outcome.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "constants.hpp"

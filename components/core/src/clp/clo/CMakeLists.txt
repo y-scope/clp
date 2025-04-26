@@ -155,7 +155,11 @@ set(
 
 add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
 target_compile_features(clo PRIVATE cxx_std_20)
-target_include_directories(clo PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_include_directories(clo
+        PRIVATE
+        "${CLP_OUTCOME_SOURCE_DIRECTORY}"
+        "${PROJECT_SOURCE_DIR}/submodules"
+)
 target_link_libraries(clo
         PRIVATE
         Boost::filesystem Boost::program_options

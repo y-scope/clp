@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-#include <outcome/single-header/outcome.hpp>
+#include <outcome.hpp>
 
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
