@@ -1,6 +1,3 @@
 [submodule "tools/yscope-dev-utils"]
 	path = tools/yscope-dev-utils
 	url = https://github.com/y-scope/yscope-dev-utils.git
-[submodule "components/core/submodules/ystdlib-cpp"]
-	path = components/core/submodules/ystdlib-cpp
-	url = https://github.com/y-scope/ystdlib-cpp.git
