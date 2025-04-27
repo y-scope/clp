@@ -17,8 +17,7 @@ tasks:
       - "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/**/*.yaml"
     cmd: "rm -f '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'/*"
 
-  # Generates the combined checksum file `G_DEPS_CORE_CHECKSUM_FILE` by concatenating all the core
-  # checksum files.
+  # Combines all of core's checksum files into `G_DEPS_CORE_CHECKSUM_FILE`.
   combine-core-checksum-files:
     internal: true
     cmds:

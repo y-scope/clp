@@ -98,8 +98,8 @@ endif ()
 
 if(PROJECT_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
-    # NOTE: We mark the file optional because this file is not required if the user happens to have
-    # the dependencies installed already.
+    # NOTE: We mark the file optional since it's not required if the user happens to have the
+    # dependencies installed already.
     include("${CMAKE_SOURCE_DIR}/../../build/deps/core/cmake-settings/all.cmake"
             OPTIONAL
             RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
