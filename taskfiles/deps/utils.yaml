@@ -8,7 +8,7 @@ tasks:
   # of core's dependencies are removed from the taskfiles, then the checksum files for the removed
   # dependencies will also be removed. Since we can't easily remove just the checksum files for the
   # removed dependencies, we remove all of them.
-  clean-old-core-checksum-files:
+  clean-outdated-core-checksum-files:
     internal: true
     run: "once"
     sources:

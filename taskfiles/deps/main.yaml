@@ -26,7 +26,7 @@ tasks:
 
   core:
     deps:
-      - "utils:clean-old-core-checksum-files"
+      - "utils:clean-outdated-core-checksum-files"
       - "utils:init"
     cmds:
       - "rm -rf '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
