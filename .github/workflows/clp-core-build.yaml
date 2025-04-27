@@ -32,8 +32,12 @@ env:
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
 
-# Currency group to prevent multiple workflow instances from trying to publish container images
-concurrency: "${{github.workflow}}-${{github.ref}}"
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+
+  # Cancel in-progress jobs for efficiency, except for pushes to `main`, where we want to prevent
+  # multiple workflow instances from trying to publish container images.
+  cancel-in-progress: "${{github.ref != 'refs/heads/main'}}"
 
 jobs:
   filter-relevant-changes:
