@@ -15,7 +15,7 @@ add_library(clp::regex_utils ALIAS regex_utils)
 target_include_directories(regex_utils
         PUBLIC
         ../
-        "${CLP_OUTCOME_INCLUDES_DIRECTORY}"
+        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
 )
 target_link_libraries(regex_utils
         PUBLIC

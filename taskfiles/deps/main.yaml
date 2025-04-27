@@ -173,8 +173,8 @@ tasks:
       LIB_NAME: "outcome"
 
       # Paths
-      INSTALL_INCLUDES_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/includes"
-      INSTALL_SYMLINK: "{{.INSTALL_INCLUDES_DIR}}/{{.LIB_NAME}}"
+      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/include"
+      INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
       SRC_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
     deps:
@@ -188,12 +188,12 @@ tasks:
             - "*/single-header"
           OUTPUT_DIR: "{{.SRC_DIR}}"
           URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.9.tar.gz"
-      - "mkdir -p '{{.INSTALL_INCLUDES_DIR}}'"
+      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
       - "rm -f '{{.INSTALL_SYMLINK}}'"
       - "ln -s '{{.SRC_DIR}}/single-header' '{{.INSTALL_SYMLINK}}'"
       - >-
         echo "set(
-        CLP_OUTCOME_INCLUDES_DIRECTORY \"{{.INSTALL_INCLUDES_DIR}}\"
+        CLP_OUTCOME_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\"
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   simdjson:
@@ -216,8 +216,8 @@ tasks:
 
       # Paths
       EXTRACTION_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
-      INSTALL_INCLUDES_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/includes"
-      INSTALL_SYMLINK: "{{.INSTALL_INCLUDES_DIR}}/{{.LIB_NAME}}"
+      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/include"
+      INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
     run: "once"
@@ -230,13 +230,13 @@ tasks:
           FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
           URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
-      - "mkdir -p '{{.INSTALL_INCLUDES_DIR}}'"
+      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
       - "rm -f '{{.INSTALL_SYMLINK}}'"
       - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
       - |-
         echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
         > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
-        echo "set(CLP_SQLITE3_INCLUDES_DIRECTORY \"{{.INSTALL_INCLUDES_DIR}}\")" \
+        echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
         >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   utfcpp:
@@ -256,7 +256,7 @@ tasks:
           URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
       - >-
         echo "set(
-        CLP_UTFCPP_INCLUDES_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
+        CLP_UTFCPP_INCLUDE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   yaml-cpp:
