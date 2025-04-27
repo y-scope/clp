@@ -168,7 +168,7 @@ tasks:
 
           # NOTE: We use the GitHub-generated source tarball for this version rather than the
           # release tarball, since the latter is served from githubusercontent.com which is blocked
-          # by some developer's firewalls. The contents of the former are a superset of the latter.
+          # by some developers' firewalls. The contents of the former are a superset of the latter.
           TARBALL_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz"
 
   outcome:
@@ -194,7 +194,7 @@ tasks:
 
           # NOTE: We use the GitHub-generated source tarball for this version rather than the
           # release tarball, since the latter is served from githubusercontent.com which is blocked
-          # by some developer's firewalls. The source files we use are identical between the two
+          # by some developers' firewalls. The source files we use are identical between the two
           # tarballs.
           URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.9.tar.gz"
       - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
