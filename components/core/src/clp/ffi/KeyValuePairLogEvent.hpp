@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <nlohmann/json_fwd.hpp>
-#include <outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../time_types.hpp"
 #include "SchemaTree.hpp"

@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include <outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../../ErrorCode.hpp"
 #include "../../ir/EncodedTextAst.hpp"

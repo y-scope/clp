@@ -13,7 +13,7 @@
 
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
-#include <outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../../ir/types.hpp"
 #include "../../time_types.hpp"

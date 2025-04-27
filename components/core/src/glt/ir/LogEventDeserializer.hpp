@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include <outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../ReaderInterface.hpp"
 #include "../TimestampPattern.hpp"

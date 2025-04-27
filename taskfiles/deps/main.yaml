@@ -171,7 +171,11 @@ tasks:
     internal: true
     vars:
       LIB_NAME: "outcome"
-      OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+
+      # Paths
+      INSTALL_INCLUDES_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/includes"
+      INSTALL_SYMLINK: "{{.INSTALL_INCLUDES_DIR}}/{{.LIB_NAME}}"
+      SRC_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
     deps:
       - task: "utils:init"
@@ -182,13 +186,15 @@ tasks:
           FILE_SHA256: "9588c01465b287296ab647b2caf50d5137e3eeaf662e3105b858d5c5c7579428"
           INCLUDE_PATTERNS:
             - "outcome/single-header"
-          NUM_COMPONENTS_TO_STRIP: 2
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          OUTPUT_DIR: "{{.SRC_DIR}}"
           URL: "https://github.com/ned14/outcome/releases/download/v2.2.9\
           /outcome-v2-all-sources-571f9c930e672950e99d5d30f743603aaaf8014c.tar.xz"
+      - "mkdir -p '{{.INSTALL_INCLUDES_DIR}}'"
+      - "rm -f '{{.INSTALL_SYMLINK}}'"
+      - "ln -s '{{.SRC_DIR}}/single-header' '{{.INSTALL_SYMLINK}}'"
       - >-
         echo "set(
-        CLP_OUTCOME_INCLUDES_DIRECTORY \"{{.OUTPUT_DIR}}\"
+        CLP_OUTCOME_INCLUDES_DIRECTORY \"{{.INSTALL_INCLUDES_DIR}}\"
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   simdjson:

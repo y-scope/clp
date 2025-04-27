@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#include <outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
 

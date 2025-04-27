@@ -9,7 +9,7 @@
 
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
-#include <outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"

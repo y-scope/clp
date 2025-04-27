@@ -13,7 +13,7 @@
 
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../ir/EncodedTextAst.hpp"
 #include "../time_types.hpp"
