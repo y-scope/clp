@@ -176,7 +176,7 @@ add_executable(glt ${GLT_SOURCES})
 target_compile_features(glt PRIVATE cxx_std_20)
 target_include_directories(glt
         PRIVATE
-        "${CLP_OUTCOME_SOURCE_DIRECTORY}"
+        "${CLP_OUTCOME_INCLUDES_DIRECTORY}"
         "${CLP_SQLITE3_SOURCE_DIRECTORY}"
 )
 target_link_libraries(glt

@@ -244,7 +244,7 @@ target_link_libraries(
 )
 target_include_directories(clp-s
         PRIVATE
-        "${CLP_OUTCOME_SOURCE_DIRECTORY}"
+        "${CLP_OUTCOME_INCLUDES_DIRECTORY}"
 )
 set_target_properties(
         clp-s

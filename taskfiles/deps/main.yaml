@@ -188,7 +188,7 @@ tasks:
           /outcome-v2-all-sources-571f9c930e672950e99d5d30f743603aaaf8014c.tar.xz"
       - >-
         echo "set(
-        CLP_OUTCOME_SOURCE_DIRECTORY \"{{.OUTPUT_DIR}}\"
+        CLP_OUTCOME_INCLUDES_DIRECTORY \"{{.OUTPUT_DIR}}\"
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   simdjson:
@@ -241,7 +241,7 @@ tasks:
           URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
       - >-
         echo "set(
-        CLP_UTFCPP_SOURCE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
+        CLP_UTFCPP_INCLUDES_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   yaml-cpp:

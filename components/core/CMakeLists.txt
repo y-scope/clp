@@ -677,7 +677,7 @@ add_executable(unitTest
         )
 target_include_directories(unitTest
         PRIVATE
-        ${CLP_OUTCOME_SOURCE_DIRECTORY}
+        ${CLP_OUTCOME_INCLUDES_DIRECTORY}
         ${CLP_SQLITE3_SOURCE_DIRECTORY}
         )
 target_link_libraries(unitTest
