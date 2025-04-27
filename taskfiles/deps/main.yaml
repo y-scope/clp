@@ -14,9 +14,8 @@ vars:
   G_DEPS_CORE_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/all.md5"
   G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 
-  # NOTE: These must be kept in-sync with their usage in components/core/CMakeLists.txt
+  # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
   G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
-  G_DEPS_CORE_CMAKE_SETTINGS_FILE: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/all.cmake"
 
 tasks:
   default:
