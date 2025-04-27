@@ -17,6 +17,8 @@ tasks:
       - "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/**/*.yaml"
     cmd: "rm -f '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'/*"
 
+  # Generates the combined checksum file `G_DEPS_CORE_CHECKSUM_FILE` by concatenating all the core
+  # checksum files.
   combine-core-checksum-files:
     internal: true
     cmds:
@@ -37,8 +39,8 @@ tasks:
       - "mkdir -p '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'"
       - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
 
-  # Installs a CMake-based library from a remote tarball, generates a settings file for it, and
-  # computes a checksum for the installation directory.
+    # Installs a CMake-based library from a remote tarball, generates a corresponding settings file,
+  # and computes a checksum for the installation directory.
   #
   # @param {string} LIB_NAME
   # @param {string} TARBALL_SHA256

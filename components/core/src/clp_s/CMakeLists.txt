@@ -234,8 +234,8 @@ target_link_libraries(
         kql
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
-        nlohmann_json::nlohmann_json
         msgpack-cxx
+        nlohmann_json::nlohmann_json
         OpenSSL::Crypto
         simdjson::simdjson
         spdlog::spdlog
