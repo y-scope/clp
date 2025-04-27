@@ -222,6 +222,8 @@ tasks:
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
     run: "once"
+    deps:
+      - task: "utils:init"
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-zip"
         vars:
@@ -244,6 +246,8 @@ tasks:
       LIB_NAME: "utfcpp"
       UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
+    deps:
+      - task: "utils:init"
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
