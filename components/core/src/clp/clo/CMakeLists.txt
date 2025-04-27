@@ -159,7 +159,6 @@ target_include_directories(clo
         PRIVATE
         "${CLP_OUTCOME_SOURCE_DIRECTORY}"
         "${CLP_SQLITE3_SOURCE_DIRECTORY}"
-        "${PROJECT_SOURCE_DIR}/submodules"
 )
 target_link_libraries(clo
         PRIVATE

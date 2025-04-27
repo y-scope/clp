@@ -680,7 +680,6 @@ target_include_directories(unitTest
         PRIVATE
         ${CLP_OUTCOME_SOURCE_DIRECTORY}
         ${CLP_SQLITE3_SOURCE_DIRECTORY}
-        ${CMAKE_SOURCE_DIR}/submodules
         )
 target_link_libraries(unitTest
         PRIVATE

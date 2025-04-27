@@ -82,7 +82,6 @@ set(
 
 add_executable(indexer ${INDEXER_SOURCES})
 target_compile_features(indexer PRIVATE cxx_std_20)
-target_include_directories(indexer PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(indexer
         PRIVATE
         absl::flat_hash_map

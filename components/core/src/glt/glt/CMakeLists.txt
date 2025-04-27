@@ -178,7 +178,6 @@ target_include_directories(glt
         PRIVATE
         "${CLP_OUTCOME_SOURCE_DIRECTORY}"
         "${CLP_SQLITE3_SOURCE_DIRECTORY}"
-        "${PROJECT_SOURCE_DIR}/submodules"
 )
 target_link_libraries(glt
         PRIVATE
