@@ -88,6 +88,7 @@ class CLPDockerMounts:
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
         self.stream_output_dir: typing.Optional[DockerMount] = None
+        self.aws_config_dir: typing.Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -268,6 +269,14 @@ def generate_container_config(
             container_clp_config.stream_output.get_directory(),
         )
 
+    # Only create the mount if the directory exists
+    if clp_config.aws_config_directory is not None:
+        container_clp_config.aws_config_directory = pathlib.Path("/") / ".aws"
+        docker_mounts.aws_config_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.aws_config_directory,
+            container_clp_config.aws_config_directory,
+        )
     return container_clp_config, docker_mounts
 
 

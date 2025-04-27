@@ -28,7 +28,7 @@ public:
 
     std::string const& get_program_name() const { return m_program_name; }
 
-    std::string const& get_table_name() const { return m_table_name; }
+    std::string const& get_dataset_name() const { return m_dataset_name; }
 
     Path const& get_archive_path() const { return m_archive_path; }
 
@@ -44,7 +44,7 @@ private:
 
     // Variables
     std::string m_program_name;
-    std::string m_table_name;
+    std::string m_dataset_name;
     Path m_archive_path;
 
     std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;

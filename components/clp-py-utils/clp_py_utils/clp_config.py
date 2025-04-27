@@ -1,9 +1,9 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Union
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, PrivateAttr, validator
+from pydantic import BaseModel, PrivateAttr, root_validator, validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -60,6 +60,13 @@ class StorageEngine(KebabCaseStrEnum):
 class StorageType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
+
+
+class AwsAuthType(LowercaseStrEnum):
+    credentials = auto()
+    profile = auto()
+    env_vars = auto()
+    ec2 = auto()
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
@@ -321,51 +328,78 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: str
     secret_access_key: str
+    session_token: Optional[str]
 
     @validator("access_key_id")
     def validate_access_key_id(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("access_key_id cannot be empty")
         return field
 
     @validator("secret_access_key")
     def validate_secret_access_key(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("secret_access_key cannot be empty")
         return field
+
+
+class AwsAuthentication(BaseModel):
+    type: Literal[
+        AwsAuthType.credentials.value,
+        AwsAuthType.profile.value,
+        AwsAuthType.env_vars.value,
+        AwsAuthType.ec2.value,
+    ]
+    profile: Optional[str] = None
+    credentials: Optional[S3Credentials] = None
+
+    @root_validator(pre=True)
+    def validate_authentication(cls, values):
+        auth_type = values.get("type")
+        profile = values.get("profile")
+        credentials = values.get("credentials")
+
+        try:
+            auth_enum = AwsAuthType(auth_type)
+        except ValueError:
+            raise ValueError(f"Unsupported authentication type '{auth_type}'.")
+
+        if profile and credentials:
+            raise ValueError("profile and credentials cannot be set simultaneously.")
+        if AwsAuthType.profile == auth_enum and not profile:
+            raise ValueError(f"profile must be set when type is '{auth_enum}.'")
+        if AwsAuthType.credentials == auth_enum and not credentials:
+            raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
+        if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
+            raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
+        return values
 
 
 class S3Config(BaseModel):
     region_code: str
     bucket: str
     key_prefix: str
-
-    credentials: S3Credentials
+    aws_authentication: AwsAuthentication
 
     @validator("region_code")
     def validate_region_code(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("region_code cannot be empty")
         return field
 
     @validator("bucket")
     def validate_bucket(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("bucket cannot be empty")
         return field
 
     @validator("key_prefix")
     def validate_key_prefix(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("key_prefix cannot be empty")
         if not field.endswith("/"):
             raise ValueError('key_prefix must end with "/"')
         return field
-
-    # TODO: When we support empty credentials, this method should be used to return a tuple that's
-    # either (None, None) if empty, or the credentials otherwise.
-    def get_credentials(self) -> Tuple[str, str]:
-        return self.credentials.access_key_id, self.credentials.secret_access_key
 
 
 class FsStorage(BaseModel):
@@ -589,6 +623,7 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
+    aws_config_directory: Optional[pathlib.Path] = None
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
@@ -643,6 +678,35 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.logs_directory)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
+
+    def validate_aws_config_dir(self):
+        profile_auth_used = False
+        storage_configs = []
+
+        if StorageType.S3 == self.logs_input.type:
+            storage_configs.append(self.logs_input)
+        if StorageType.S3 == self.archive_output.storage.type:
+            storage_configs.append(self.archive_output.storage)
+        if StorageType.S3 == self.stream_output.storage.type:
+            storage_configs.append(self.stream_output.storage)
+
+        for storage in storage_configs:
+            auth = storage.s3_config.aws_authentication
+            if AwsAuthType.profile.value == auth.type:
+                profile_auth_used = True
+                break
+
+        if profile_auth_used:
+            if self.aws_config_directory is None:
+                raise ValueError(
+                    "aws_config_directory must be set when using profile authentication"
+                )
+            if not self.aws_config_directory.exists():
+                raise ValueError("aws_config_directory does not exist")
+        if not profile_auth_used and self.aws_config_directory is not None:
+            raise ValueError(
+                "aws_config_directory should not be set when profile authentication is not used"
+            )
 
     def load_execution_container_name(self):
         if self.execution_container is not None:
@@ -705,6 +769,10 @@ class CLPConfig(BaseModel):
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
         d["logs_directory"] = str(self.logs_directory)
+        if self.aws_config_directory is not None:
+            d["aws_config_directory"] = str(self.aws_config_directory)
+        else:
+            d["aws_config_directory"] = None
         return d
 
 

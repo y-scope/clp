@@ -153,6 +153,8 @@ tasks:
     cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
 
   check-cpp-static-diff:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-diff"]
     sources: *cpp_source_files
     deps:
       - ":core-generate"
@@ -168,6 +170,8 @@ tasks:
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   check-cpp-static-full:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-full"]
     sources: *cpp_source_files
     deps:
       - ":core-generate"
@@ -455,8 +459,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/EmptyExpr.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Expression.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Expression.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterExpr.cpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterExpr.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterOperation.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Integral.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Integral.hpp"
