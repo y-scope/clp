@@ -10,17 +10,16 @@
 
 namespace clp::ffi::ir_stream::search {
 /**
- * Concept that defines the callback function signature for projection resolution.
+ * Requirements for a callback that's called whenever:
+ *
+ * 1. a new schema-tree node is read from the IR stream; and
+ * 2. that node corresponds to one of the projected key paths in the query.
+ *
  * @tparam ProjectionResolutionCallbackType
- *
- * Callback parameters:
- * - `bool is_auto_generated`: Whether the schema tree node is auto-generated.
- * - `SchemaTree::Node::id_t schema_tree_node_id`: The ID of the resolved schema tree node.
- * - `std::string_view key_path`: The key path of the resolved projection.
- *
- * Callback return values:
- * - A void result on success.
- * - A user-defined error code indicating the failure.
+ * @param arg_0 Whether the schema-tree node is for an auto-generated kv-pair.
+ * @param arg_1 The ID of the schema-tree node.
+ * @param arg_2 The projected key path.
+ * @return A void result on success or a user-defined error code indicating the failure.
  */
 template <typename ProjectionResolutionCallbackType>
 concept ProjectionResolutionCallbackReq = std::is_invocable_r_v<
