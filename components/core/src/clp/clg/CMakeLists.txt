@@ -119,7 +119,6 @@ set(
         ../WriterInterface.hpp
         "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.h"
-        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3ext.h"
         clg.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp

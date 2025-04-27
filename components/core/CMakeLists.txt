@@ -413,7 +413,6 @@ set(SOURCE_FILES_reducer_unitTest
 set(SOURCE_FILES_unitTest
         "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.h"
-        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3ext.h"
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
