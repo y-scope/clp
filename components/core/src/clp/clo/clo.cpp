@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../../reducer/network_utils.hpp"

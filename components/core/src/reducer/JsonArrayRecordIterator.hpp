@@ -1,7 +1,7 @@
 #ifndef REDUCER_JSONARRAYRECORDITERATOR_HPP
 #define REDUCER_JSONARRAYRECORDITERATOR_HPP
 
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "ConstRecordIterator.hpp"
 #include "JsonRecord.hpp"

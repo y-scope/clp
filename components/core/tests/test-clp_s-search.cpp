@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <fmt/format.h>
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/InputConfig.hpp"
