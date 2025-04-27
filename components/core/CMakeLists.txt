@@ -412,7 +412,6 @@ set(SOURCE_FILES_reducer_unitTest
 
 set(SOURCE_FILES_unitTest
         "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
-        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.h"
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
@@ -678,7 +677,7 @@ add_executable(unitTest
 target_include_directories(unitTest
         PRIVATE
         ${CLP_OUTCOME_INCLUDES_DIRECTORY}
-        ${CLP_SQLITE3_SOURCE_DIRECTORY}
+        ${CLP_SQLITE3_INCLUDES_DIRECTORY}
         )
 target_link_libraries(unitTest
         PRIVATE

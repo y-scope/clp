@@ -217,6 +217,8 @@ tasks:
 
       # Paths
       EXTRACTION_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      INSTALL_INCLUDES_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/includes"
+      INSTALL_SYMLINK: "{{.INSTALL_INCLUDES_DIR}}/{{.LIB_NAME}}"
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
     run: "once"
@@ -227,10 +229,14 @@ tasks:
           FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
           URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
-      - >-
-        echo "set(
-        CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+      - "mkdir -p '{{.INSTALL_INCLUDES_DIR}}'"
+      - "rm -f '{{.INSTALL_SYMLINK}}'"
+      - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
+      - |-
+        echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
+        > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        echo "set(CLP_SQLITE3_INCLUDES_DIRECTORY \"{{.INSTALL_INCLUDES_DIR}}\")" \
+        >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   utfcpp:
     internal: true

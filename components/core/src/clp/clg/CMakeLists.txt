@@ -118,7 +118,6 @@ set(
         ../WriterInterface.cpp
         ../WriterInterface.hpp
         "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
-        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.h"
         clg.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
@@ -129,7 +128,7 @@ target_compile_features(clg PRIVATE cxx_std_20)
 target_include_directories(clg
         PRIVATE
         "${CLP_OUTCOME_INCLUDES_DIRECTORY}"
-        "${CLP_SQLITE3_SOURCE_DIRECTORY}"
+        "${CLP_SQLITE3_INCLUDES_DIRECTORY}"
 )
 target_link_libraries(clg
         PRIVATE
