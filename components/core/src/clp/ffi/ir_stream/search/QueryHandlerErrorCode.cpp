@@ -1,5 +1,7 @@
 #include "QueryHandlerErrorCode.hpp"
 
+#include <string>
+
 #include <ystdlib/error_handling/ErrorCode.hpp>
 
 using clp::ffi::ir_stream::search::QueryHandlerErrorCodeEnum;

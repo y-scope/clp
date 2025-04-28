@@ -11,7 +11,7 @@
 
 namespace clp::ffi::ir_stream::search {
 /**
- * Class for handle KV-pair IR stream search queries.
+ * Class for handing KV-pair IR stream search queries.
  *
  * Each query handler stores a KQL query represented as an AST. The handler is responsible for:
  * - resolving column descriptors to concrete schema tree nodes within the stream.
