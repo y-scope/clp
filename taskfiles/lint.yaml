@@ -118,8 +118,7 @@ tasks:
           components/package-template/src/etc \
           docs \
           taskfile.yaml \
-          taskfiles/deps.yaml \
-          taskfiles/lint.yaml
+          taskfiles
 
   check-cpp-format:
     sources: &cpp_source_files

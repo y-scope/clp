@@ -40,7 +40,6 @@ set(
 
 add_executable(reducer-server ${REDUCER_SOURCES})
 target_compile_features(reducer-server PRIVATE cxx_std_20)
-target_include_directories(reducer-server PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(reducer-server
         PRIVATE
         Boost::program_options
@@ -49,6 +48,7 @@ target_link_libraries(reducer-server
         fmt::fmt
         ${MONGOCXX_TARGET}
         msgpack-cxx
+        nlohmann_json::nlohmann_json
         spdlog::spdlog
 )
 # Put the built executable at the root of the build directory

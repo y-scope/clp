@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <boost/filesystem/operations.hpp>
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <ystdlib/containers/Array.hpp>
 #include <zstd.h>
 

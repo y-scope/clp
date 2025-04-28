@@ -4,7 +4,7 @@
 #include <cstring>
 #include <vector>
 
-#include <date/include/date/date.h>
+#include <date/date.h>
 
 #include "spdlog_with_specializations.hpp"
 
