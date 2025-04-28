@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_SEARCH_QUERYHANDLERERRORCODE_HPP
-#define CLP_FFI_IR_STREAM_SEARCH_QUERYHANDLERERRORCODE_HPP
+#ifndef CLP_FFI_IR_STREAM_SEARCH_ERRORCODE_HPP
+#define CLP_FFI_IR_STREAM_SEARCH_ERRORCODE_HPP
 
 #include <cstdint>
 
@@ -7,7 +7,7 @@
 
 namespace clp::ffi::ir_stream::search {
 /**
- * This enum class represents all possible error codes related to query handler.
+ * This enum class represents all possible error codes related to KV-pair IR stream search.
  */
 enum class ErrorCodeEnum : uint8_t {
     MethodNotImplemented,
@@ -18,4 +18,4 @@ using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;
 
 YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp::ffi::ir_stream::search::ErrorCodeEnum);
 
-#endif  // CLP_FFI_IR_STREAM_SEARCH_QUERYHANDLERERRORCODE_HPP
+#endif  // CLP_FFI_IR_STREAM_SEARCH_ERRORCODE_HPP
