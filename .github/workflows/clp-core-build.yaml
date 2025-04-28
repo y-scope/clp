@@ -35,7 +35,7 @@ env:
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
 
-  # Cancel in-progress jobs for efficiency, except for pushes to `main`, where we want to prevent
+  # Cancel in-progress jobs for efficiency, except for runs on `main`, where we want to prevent
   # multiple workflow instances from trying to publish container images.
   cancel-in-progress: "${{github.ref != 'refs/heads/main'}}"
 
