@@ -8,10 +8,8 @@ namespace clp::ffi::ir_stream::search {
  * Enum representing the result of evaluating a search AST.
  */
 enum class AstEvaluationResult : uint8_t {
-    // The AST evaluates to `true`
     True,
 
-    // The AST evaluates to `false`
     False,
 
     // The AST evaluation is intentionally skipped because it belongs to a pruned branch of the
