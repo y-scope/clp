@@ -11,14 +11,14 @@
 
 namespace clp::ffi::ir_stream::search {
 /**
- * Class for handing KV-pair IR stream search queries.
+ * Handler for KV-pair IR stream search queries.
  *
  * Each query handler stores a KQL query represented as an AST. The handler is responsible for:
- * - resolving column descriptors to concrete schema tree nodes within the stream.
+ * - resolving column descriptors for schema-tree nodes within the stream.
  * - evaluating the query against deserialized node-ID-value pairs.
  *
  * @tparam NewProjectedSchemaTreeNodeCallbackType Type of the callback to handle new projected
- * schema tree nodes.
+ * schema-tree nodes.
  */
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
 class QueryHandler {
@@ -46,7 +46,7 @@ public:
     ~QueryHandler() = default;
 
     /**
-     * Processes a newly inserted schema tree node to update the partially-resolved columns.
+     * Processes a newly inserted schema-tree node to update the partially-resolved columns.
      * @param is_auto_generated
      * @param node_locator
      * @param node_id
