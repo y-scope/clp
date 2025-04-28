@@ -6,8 +6,8 @@
 #include "../../KeyValuePairLogEvent.hpp"
 #include "../../SchemaTree.hpp"
 #include "AstEvaluationResult.hpp"
+#include "ErrorCode.hpp"
 #include "NewProjectedSchemaTreeNodeCallbackReq.hpp"
-#include "QueryHandlerErrorCode.hpp"
 
 namespace clp::ffi::ir_stream::search {
 /**
@@ -87,7 +87,7 @@ auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::create(
         [[maybe_unused]] NewProjectedSchemaTreeNodeCallbackType
                 new_projected_schema_tree_node_callback
 ) -> outcome_v2::std_result<QueryHandler<NewProjectedSchemaTreeNodeCallbackType>> {
-    return QueryHandlerErrorCode{QueryHandlerErrorCodeEnum::MethodNotImplemented};
+    return ErrorCode{ErrorCodeEnum::MethodNotImplemented};
 }
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
@@ -96,7 +96,7 @@ auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::step_column_resolutio
         [[maybe_unused]] SchemaTree::NodeLocator const& node_locator,
         [[maybe_unused]] SchemaTree::Node::id_t node_id
 ) -> outcome_v2::std_result<void> {
-    return QueryHandlerErrorCode{QueryHandlerErrorCodeEnum::MethodNotImplemented};
+    return ErrorCode{ErrorCodeEnum::MethodNotImplemented};
 }
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
@@ -104,7 +104,7 @@ auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::evaluate_node_id_valu
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
 ) -> outcome_v2::std_result<AstEvaluationResult> {
-    return QueryHandlerErrorCode{QueryHandlerErrorCodeEnum::MethodNotImplemented};
+    return ErrorCode{ErrorCodeEnum::MethodNotImplemented};
 }
 }  // namespace clp::ffi::ir_stream::search
 
