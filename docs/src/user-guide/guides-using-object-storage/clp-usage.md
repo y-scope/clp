@@ -14,6 +14,12 @@ sbin/compress.sh \
   https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>
 ```
 
+Currently, CLP supports the following two types of URLs:
+
+* ```https://s3.<region-code>.amazonaws.com/<bucket-name>/<prefix>``` 
+* ```https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>```
+
+Where:
 * `<bucket-name>` is the name of the S3 bucket containing your logs.
 * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
 * `<prefix>` is the prefix of all logs you wish to compress and must begin with the
