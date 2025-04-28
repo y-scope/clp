@@ -102,8 +102,8 @@ additional settings necessary for the chosen authentication type.
 
 :::{note}
 The code blocks below show `aws_authentication` as a top-level key, but it should be nested under
-`logs_input.s3_config`, `archive_output.storage.s3_config`, or `stream_output.storage.s3_config`
-depending on the use case.
+`logs_input`, `archive_output.storage.s3_config`, or `stream_output.storage.s3_config` depending on
+the use case.
 :::
 
 Settings for each type are described below:
