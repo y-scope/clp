@@ -137,6 +137,8 @@ def _generate_clp_io_config(
     input_type = clp_config.logs_input.type
 
     if InputType.FS == input_type:
+        if len(logs_to_compress) == 0:
+            raise ValueError(f"No input logs found.")
         return FsInputConfig(
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,

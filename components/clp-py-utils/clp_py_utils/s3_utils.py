@@ -56,9 +56,11 @@ def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Cr
 def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
     """
     Generates AWS credential environment variables for tasks.
-    :param config: S3Config or S3InputConfig from which to retrieve credentials.
-    :return: A [str, str] Dict which access key pair and session token if applicable.
-    :raise: ValueError if auth type is not supported
+    :param auth: AwsAuthentication
+    :return: A [str, str] Dict containing access key pair and session token, or an empty dictionary
+    if the AWS credential environment variables are supposed to be already set.
+    :raise: ValueError if `auth.type` is not a supported type or fails to authenticate with the
+    given `auth`.
     """
     env_vars: Optional[Dict[str, str]] = None
     aws_credentials: Optional[S3Credentials] = None
@@ -123,7 +125,6 @@ def generate_container_auth_options(
             clp_config.archive_output.storage,
             clp_config.stream_output.storage,
         ]
-        input_storage_needed = True
     else:
         raise ValueError(f"Component type {component_type} is not valid.")
     config_mount = False
