@@ -1,4 +1,4 @@
-FROM ubuntu:jammy AS BASE
+FROM ubuntu:jammy AS base
 
 WORKDIR /root
 
@@ -19,4 +19,4 @@ RUN apt-get clean \
 
 # Flatten the image
 FROM scratch
-COPY --from=BASE / /
+COPY --from=base / /

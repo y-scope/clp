@@ -73,7 +73,6 @@ set(
 
 set(
         CLP_S_SOURCES
-        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         archive_constants.hpp
         ArchiveReader.cpp
         ArchiveReader.hpp
@@ -207,12 +206,12 @@ add_library(
         ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
 )
 add_library(clp_s::TimestampPattern ALIAS clp_s_TimestampPattern)
-target_include_directories(clp_s_TimestampPattern PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_compile_features(clp_s_TimestampPattern PRIVATE cxx_std_20)
 target_link_libraries(
         clp_s_TimestampPattern
         PRIVATE
         clp::string_utils
+        date::date
 )
 
 add_executable(
@@ -237,14 +236,18 @@ target_link_libraries(
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
         msgpack-cxx
+        nlohmann_json::nlohmann_json
         OpenSSL::Crypto
-        simdjson
+        simdjson::simdjson
         spdlog::spdlog
-        yaml-cpp::yaml-cpp
+        yaml-cpp
         ystdlib::containers
         ZStd::ZStd
 )
-target_include_directories(clp-s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_include_directories(clp-s
+        PRIVATE
+        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
+)
 set_target_properties(
         clp-s
         PROPERTIES
