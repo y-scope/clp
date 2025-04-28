@@ -5,25 +5,25 @@ interface SearchResult {
     id: number;
     timestamp: string;
     message: string;
-    originalFilePath: string;
+    filePath: string;
 }
 
-const jobColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
+const searchResultsColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
         title: "Timestamp",
         dataIndex: "timestamp",
         key: "timestamp",
         sorter: true,
-        width: "20%",
+        width: "15%",
     },
     {
         title: "Message",
         dataIndex: "message",
         key: "message",
-        width: "80%",
-        render: (_, record) => <Message message={record.message} filePath={record.originalFilePath} />,
+        width: "85%",
+        render: (_, record) => <Message message={record.message} filePath={record.filePath} />,
     },
 ];
 
 export type { SearchResult };
-export { jobColumns };
+export { searchResultsColumns };
