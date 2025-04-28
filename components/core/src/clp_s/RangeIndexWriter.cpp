@@ -63,8 +63,8 @@ auto RangeIndexWriter::write(ZstdCompressor& writer) -> ErrorCode {
         obj["e"] = range.end_index.value();
 
         nlohmann::json fields_obj;
-        for (auto field_it = range.fields.begin(); range.fields.end() != field_it; ++field_it) {
-            fields_obj[field_it->first] = std::move(field_it->second);
+        for (auto const& [key, value] : range.fields) {
+            fields_obj[key] = value;
         }
         obj["f"] = std::move(fields_obj);
 
