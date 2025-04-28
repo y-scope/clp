@@ -53,7 +53,7 @@ public:
      * @return A void result on success, or an error code indicating the failure:
      * - TODO
      */
-    [[nodiscard]] auto step_column_resolution(
+    [[nodiscard]] auto update_partially_resolved_columns(
             bool is_auto_generated,
             SchemaTree::NodeLocator const& node_locator,
             SchemaTree::Node::id_t node_id
@@ -91,7 +91,7 @@ auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::create(
 }
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
-auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::step_column_resolution(
+auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::update_partially_resolved_columns(
         [[maybe_unused]] bool is_auto_generated,
         [[maybe_unused]] SchemaTree::NodeLocator const& node_locator,
         [[maybe_unused]] SchemaTree::Node::id_t node_id
