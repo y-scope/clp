@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/ReaderInterface.hpp"

@@ -1,6 +1,6 @@
 #include "encoding_methods.hpp"
 
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../../ir/parsing.hpp"
 #include "../../ir/types.hpp"

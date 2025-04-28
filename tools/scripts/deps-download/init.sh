@@ -11,7 +11,7 @@ project_root_dir="$script_dir/../../../"
 download_dep_script="$script_dir/download-dep.py"
 
 python3 "${download_dep_script}" \
-    https://github.com/y-scope/yscope-dev-utils/archive/30640b0.zip \
-    yscope-dev-utils-30640b0af5a8d344ae57afe02e8ae88a79233809 \
+    https://github.com/y-scope/yscope-dev-utils/archive/e300d1b.zip \
+    yscope-dev-utils-e300d1bab4c2f33cbf9ddf9f0c08185faf035070 \
     "${project_root_dir}/tools/yscope-dev-utils" \
     --extract
