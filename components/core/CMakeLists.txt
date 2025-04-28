@@ -476,6 +476,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/search/AstEvaluationResult.hpp
         src/clp/ffi/ir_stream/search/NewProjectedSchemaTreeNodeCallbackReq.hpp
         src/clp/ffi/ir_stream/search/QueryHandler.hpp
+        src/clp/ffi/ir_stream/search/QueryHandlerErrorCode.cpp
+        src/clp/ffi/ir_stream/search/QueryHandlerErrorCode.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/KeyValuePairLogEvent.cpp

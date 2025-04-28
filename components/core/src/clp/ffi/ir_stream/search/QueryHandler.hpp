@@ -3,13 +3,37 @@
 
 #include <outcome/outcome.hpp>
 
+#include "../../KeyValuePairLogEvent.hpp"
 #include "../../SchemaTree.hpp"
+#include "AstEvaluationResult.hpp"
 #include "NewProjectedSchemaTreeNodeCallbackReq.hpp"
+#include "QueryHandlerErrorCode.hpp"
 
 namespace clp::ffi::ir_stream::search {
+/**
+ * Class for handle KV-pair IR stream search queries.
+ *
+ * Each query handler stores a KQL query represented as an AST. The handler is responsible for:
+ * - resolving column descriptors to concrete schema tree nodes within the stream.
+ * - evaluating the query against deserialized node-ID-value pairs.
+ *
+ * @tparam NewProjectedSchemaTreeNodeCallbackType Type of the callback to handle new projected
+ * schema tree nodes.
+ */
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
 class QueryHandler {
 public:
+    // Factory function
+    /**
+     * @param new_projected_schema_tree_node_callback
+     * @return A result containing the newly constructed `QueryHandler` on success, or an error code
+     * indicating the failure:
+     * - TODO
+     */
+    [[nodiscard]] static auto create(
+            NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
+    ) -> outcome_v2::std_result<QueryHandler>;
+
     // Delete copy constructor and assignment operator
     QueryHandler(QueryHandler const&) = delete;
     auto operator=(QueryHandler const&) -> QueryHandler& = delete;
@@ -22,28 +46,66 @@ public:
     ~QueryHandler() = default;
 
     /**
-     * Handles a schema tree node insertion to update the underlying column resolution.
+     * Processes a newly inserted schema tree node to update the partially-resolved columns.
      * @param is_auto_generated
      * @param node_locator
      * @param node_id
      * @return A void result on success, or an error code indicating the failure:
      * - TODO
      */
-    [[nodiscard]] auto handle_schema_tree_node_insertion(
+    [[nodiscard]] auto step_column_resolution(
             bool is_auto_generated,
             SchemaTree::NodeLocator const& node_locator,
             SchemaTree::Node::id_t node_id
     ) -> outcome_v2::std_result<void>;
 
-    [[nodiscard]] auto evaluate_node_id_value_pairs() -> outcome_v2::std_result<void>;
+    /**
+     * Evaluates the given node-ID-value pairs against the underlying query.
+     * @param auto_gen_node_id_value_pairs
+     * @param user_gen_node_id_value_pairs
+     * @return A result containing the evaluation result on success, or an error code indicating
+     * the failure:
+     * - TODO
+     */
+    [[nodiscard]] auto evaluate_node_id_value_pairs(
+            KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
+            KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
+    ) -> outcome_v2::std_result<AstEvaluationResult>;
 
 private:
     // Constructor
-    QueryHandler(NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback)
+    explicit QueryHandler(
+            NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
+    )
             : m_new_projected_schema_tree_node_callback{new_projected_schema_tree_node_callback} {}
 
     NewProjectedSchemaTreeNodeCallbackType m_new_projected_schema_tree_node_callback;
 };
+
+template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
+auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::create(
+        [[maybe_unused]] NewProjectedSchemaTreeNodeCallbackType
+                new_projected_schema_tree_node_callback
+) -> outcome_v2::std_result<QueryHandler<NewProjectedSchemaTreeNodeCallbackType>> {
+    return QueryHandlerErrorCode{QueryHandlerErrorCodeEnum::MethodNotImplemented};
+}
+
+template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
+auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::step_column_resolution(
+        [[maybe_unused]] bool is_auto_generated,
+        [[maybe_unused]] SchemaTree::NodeLocator const& node_locator,
+        [[maybe_unused]] SchemaTree::Node::id_t node_id
+) -> outcome_v2::std_result<void> {
+    return QueryHandlerErrorCode{QueryHandlerErrorCodeEnum::MethodNotImplemented};
+}
+
+template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
+auto QueryHandler<NewProjectedSchemaTreeNodeCallbackType>::evaluate_node_id_value_pairs(
+        [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
+        [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
+) -> outcome_v2::std_result<AstEvaluationResult> {
+    return QueryHandlerErrorCode{QueryHandlerErrorCodeEnum::MethodNotImplemented};
+}
 }  // namespace clp::ffi::ir_stream::search
 
 #endif  // CLP_FFI_IR_STREAM_SEARCH_QUERYHANDLER_HPP
