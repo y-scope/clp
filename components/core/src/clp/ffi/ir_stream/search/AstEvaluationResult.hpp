@@ -9,7 +9,6 @@ namespace clp::ffi::ir_stream::search {
  */
 enum class AstEvaluationResult : uint8_t {
     True,
-
     False,
 
     // The AST evaluation is intentionally skipped because it belongs to a pruned branch of the
