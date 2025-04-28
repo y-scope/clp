@@ -6,16 +6,13 @@
 namespace clp::ffi::ir_stream::search {
 /**
  * Enum representing the result of evaluating a search AST.
- *
- * Possible values:
- * - True:   The AST evaluates to `true`.
- * - False:  The AST evaluates to `false`.
- * - Pruned: The AST evaluation is intentionally skipped because it belongs to a pruned branch of
- *           the parent tree.
  */
 enum class AstEvaluationResult : uint8_t {
     True,
     False,
+
+    // The AST evaluation is intentionally skipped because it belongs to a pruned branch of the
+    // parent tree.
     Pruned,
 };
 }  // namespace clp::ffi::ir_stream::search
