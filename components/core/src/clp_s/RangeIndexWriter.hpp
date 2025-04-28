@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <outcome/outcome.hpp>
 
 #include "ErrorCode.hpp"
