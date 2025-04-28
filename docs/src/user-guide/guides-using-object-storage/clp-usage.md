@@ -11,7 +11,7 @@ angle brackets (`<>`) with the appropriate values:
 ```bash
 sbin/compress.sh \
   --timestamp-key <timestamp-key> \
-  https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>
+  <URL>
 ```
 
 Currently, CLP supports the following two types of URLs:
