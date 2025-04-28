@@ -11,7 +11,7 @@ using ErrorCategory = ystdlib::error_handling::ErrorCategory<ErrorCodeEnum>;
 
 template <>
 auto ErrorCategory::name() const noexcept -> char const* {
-    return "clp::ffi::ir_stream::search::QueryHandlerError";
+    return "clp::ffi::ir_stream::search::Error";
 }
 
 template <>
