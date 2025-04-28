@@ -18,6 +18,6 @@ enum class AstEvaluationResult : uint8_t {
     False,
     Pruned,
 };
-}
+}  // namespace clp::ffi::ir_stream::search
 
-#endif // CLP_FFI_IR_STREAM_SEARCH_ASTEVALUATIONRESULT_HPP
+#endif  // CLP_FFI_IR_STREAM_SEARCH_ASTEVALUATIONRESULT_HPP
