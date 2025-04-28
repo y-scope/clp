@@ -7,7 +7,7 @@
 
 namespace clp::ffi::ir_stream::search {
 /**
- * This enum class represents all possible error codes related to KV-pair IR stream search.
+ * Represents all possible error codes related to KV-pair IR stream search.
  */
 enum class ErrorCodeEnum : uint8_t {
     MethodNotImplemented,
