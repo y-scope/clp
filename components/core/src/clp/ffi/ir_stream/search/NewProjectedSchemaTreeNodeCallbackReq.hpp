@@ -4,7 +4,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include <outcome/single-header/outcome.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../../SchemaTree.hpp"
 

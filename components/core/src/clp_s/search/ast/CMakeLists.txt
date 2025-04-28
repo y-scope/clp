@@ -55,12 +55,11 @@ add_library(
     ${CLP_S_CORE_SOURCES}
 )
 add_library(clp_s::search::ast ALIAS clp_s_search_ast)
-target_include_directories(clp_s_search_ast PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_compile_features(clp_s_search_ast PRIVATE cxx_std_20)
 target_link_libraries(
     clp_s_search_ast
     PUBLIC
     clp_s::TimestampPattern
     PRIVATE
-    simdjson
+    simdjson::simdjson
 )
