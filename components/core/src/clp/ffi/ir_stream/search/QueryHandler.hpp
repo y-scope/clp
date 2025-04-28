@@ -46,7 +46,8 @@ public:
     ~QueryHandler() = default;
 
     /**
-     * Processes a newly inserted schema-tree node to update any partially-resolved columns.
+     * Updates any partially-resolved column descriptors by processing a newly inserted schema-tree
+     * node.
      * @param is_auto_generated
      * @param node_locator
      * @param node_id
