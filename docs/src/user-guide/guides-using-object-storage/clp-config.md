@@ -179,4 +179,3 @@ This authentication method will only work on an EC2 instance with a
 [role attached](index.md#ec2-instance-iam-roles).
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
-[compression-iam-policy]: ./object-storage-config.md#configuration-for-compression

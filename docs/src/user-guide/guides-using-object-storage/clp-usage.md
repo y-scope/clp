@@ -37,4 +37,3 @@ both logs to be compressed). This limitation will be addressed in a future relea
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
-[logs-input-s3-config]: ./clp-config.md#configuration-for-input-logs
