@@ -57,8 +57,8 @@ def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
     """
     Generates AWS credential environment variables for tasks.
     :param auth: AwsAuthentication
-    :return: A [str, str] Dict containing access key pair and session token, or an empty dictionary
-    if the AWS credential environment variables are supposed to be already set.
+    :return: A dictionary containing an access key-pair and optionally, a session token; or an empty
+    dictionary if the AWS-credential environment-variables should've been set already.
     :raise: ValueError if `auth.type` is not a supported type or fails to authenticate with the
     given `auth`.
     """
