@@ -11,19 +11,18 @@ angle brackets (`<>`) with the appropriate values:
 ```bash
 sbin/compress.sh \
   --timestamp-key <timestamp-key> \
-  <URL>
+  <url>
 ```
 
-Currently, CLP supports the following two types of URLs:
-
-* ```https://s3.<region-code>.amazonaws.com/<bucket-name>/<prefix>``` 
-* ```https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>```
-
-Where:
-* `<bucket-name>` is the name of the S3 bucket containing your logs.
-* `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your logs.
-* `<prefix>` is the prefix of all logs you wish to compress and must begin with the
-  `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
+* `<url>` is a URL identifying the logs to compress. It can have one of two formats:
+  * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<prefix>`
+  * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<prefix>`
+* The fields in `<url>` are as follows:
+  * `<bucket-name>` is the name of the S3 bucket containing your logs.
+  * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
+    logs.
+  * `<prefix>` is the prefix of all logs you wish to compress and must begin with the
+    `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
 
 :::{note}
 Compressing from S3 only supports a single URL but will compress any logs that have the given

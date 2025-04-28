@@ -19,8 +19,9 @@ logs_input:
     type: "<type>"
     # type-specific settings
 ```
-* `<type>` and the type-specific settings are described in the
-  [configuring AWS authentication](#configuring-aws-authentication) section.
+
+`<type>` and the type-specific settings are described in the
+[configuring AWS authentication](#configuring-aws-authentication) section.
 
 ## Configuration for archive storage
 
