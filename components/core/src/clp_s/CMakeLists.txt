@@ -162,6 +162,8 @@ set(
         search/OutputHandler.hpp
         search/Projection.cpp
         search/Projection.hpp
+        search/QueryRunner.cpp
+        search/QueryRunner.hpp
         search/SchemaMatch.cpp
         search/SchemaMatch.hpp
 )
