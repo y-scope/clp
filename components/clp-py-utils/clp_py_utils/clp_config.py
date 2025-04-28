@@ -440,9 +440,9 @@ class S3Storage(BaseModel):
             raise ValueError("s3_config must have field key_prefix")
         key_prefix = s3_config.key_prefix
         if "" == key_prefix:
-            raise ValueError("key_prefix cannot be empty")
+            raise ValueError("s3_config.key_prefix cannot be empty")
         if not key_prefix.endswith("/"):
-            raise ValueError('key_prefix must end with "/"')
+            raise ValueError('s3_config.key_prefix must end with "/"')
         return values
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
