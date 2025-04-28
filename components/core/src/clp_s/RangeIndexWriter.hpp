@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <nlohmann/json.hpp>
+#include <outcome/outcome.hpp>
 
 #include "ErrorCode.hpp"
 #include "ZstdCompressor.hpp"
