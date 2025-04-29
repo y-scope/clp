@@ -54,7 +54,7 @@ def _make_core_clp_s_command_and_env_vars(
     archive_id: str,
     search_config: SearchJobConfig,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
-    archives_dir = worker_config.archive_output.get_directory()
+    archives_dir = worker_config.archive_output.get_directory() / search_config.dataset
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",

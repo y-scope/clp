@@ -257,6 +257,13 @@ def run_clp(
     clp_storage_engine = worker_config.package.storage_engine
     data_dir = worker_config.data_directory
     archive_output_dir = worker_config.archive_output.get_directory()
+    table_prefix = clp_metadata_db_connection_config["table_prefix"]
+    dataset = clp_config.input.dataset
+
+    # Modify variables associated with CLP_S dataset
+    if StorageEngine.CLP_S == clp_storage_engine:
+        archive_output_dir = archive_output_dir / dataset
+        table_prefix = f"{table_prefix}{dataset}_"
 
     # Generate database config file for clp
     db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
@@ -364,7 +371,6 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
-                    table_prefix = clp_metadata_db_connection_config["table_prefix"]
                     if StorageEngine.CLP_S == clp_storage_engine:
                         update_archive_metadata(db_cursor, table_prefix, last_archive_stats)
                     update_job_metadata_and_tags(
@@ -381,7 +387,7 @@ def run_clp(
                         str(clp_home / "bin" / "indexer"),
                         "--db-config-file",
                         str(db_config_file_path),
-                        CLP_DEFAULT_DATASET_NAME,
+                        dataset,
                         archive_path,
                     ]
                     try:

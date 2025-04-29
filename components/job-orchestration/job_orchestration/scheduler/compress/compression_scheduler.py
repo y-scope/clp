@@ -6,6 +6,7 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
+from typing import Any, Dict
 
 import brotli
 import celery
@@ -15,6 +16,7 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
+    StorageEngine,
     TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
@@ -146,7 +148,12 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection_config):
+def search_and_schedule_new_tasks(
+    db_conn,
+    db_cursor,
+    clp_metadata_db_connection_config: Dict[str, Any],
+    clp_storage_engine: StorageEngine,
+):
     """
     For all jobs with PENDING status, split the job into tasks and schedule them.
     """
@@ -162,6 +169,12 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
         clp_io_config = ClpIoConfig.parse_obj(
             msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
         )
+        input_config = clp_io_config.input
+
+        table_prefix = clp_metadata_db_connection_config["table_prefix"]
+        if StorageEngine.CLP_S == clp_storage_engine:
+            dataset = input_config.dataset
+            table_prefix = f"{table_prefix}{dataset}_"
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
@@ -171,7 +184,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
             clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
 
-        input_config = clp_io_config.input
         input_type = input_config.type
         if input_type == InputType.FS.value:
             _process_fs_input_paths(input_config, paths_to_compress_buffer)
@@ -235,7 +247,6 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
 
         tag_ids = None
         if clp_io_config.output.tags:
-            table_prefix = clp_metadata_db_connection_config["table_prefix"]
             db_cursor.executemany(
                 f"INSERT IGNORE INTO {table_prefix}{TAGS_TABLE_SUFFIX} (tag_name) VALUES (%s)",
                 [(tag,) for tag in clp_io_config.output.tags],
@@ -385,13 +396,18 @@ def main(argv):
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
+        clp_metadata_db_connection_config = (
+            sql_adapter.database_config.get_clp_connection_params_and_type(True)
+        )
+        clp_storage_engine = clp_config.package.storage_engine
         # Start Job Processing Loop
         while True:
             try:
                 search_and_schedule_new_tasks(
                     db_conn,
                     db_cursor,
-                    sql_adapter.database_config.get_clp_connection_params_and_type(True),
+                    clp_metadata_db_connection_config,
+                    clp_storage_engine,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
