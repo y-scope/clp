@@ -20,19 +20,19 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
     {
         dataIndex: "timestamp",
         key: "timestamp",
-        title: "Timestamp",
         sorter: true,
+        title: "Timestamp",
         width: 15,
     },
     {
         dataIndex: "message",
         key: "message",
-        title: "Message",
         render: (_, record) => (
             <Message
                 filePath={record.filePath}
                 message={record.message}/>
         ),
+        title: "Message",
         width: 85,
     },
 ];
