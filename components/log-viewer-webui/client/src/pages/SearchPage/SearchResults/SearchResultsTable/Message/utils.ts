@@ -4,8 +4,8 @@
  */
 export const highlighterCustomStyles: React.CSSProperties = {
     background: "none",
-    padding: "0",
-    margin: "0",
-    fontFamily: "inherit",
     border: "none",
+    fontFamily: "inherit",
+    margin: "0",
+    padding: "0",
 };

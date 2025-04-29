@@ -1,5 +1,7 @@
-import { TableProps } from "antd";
+import {TableProps} from "antd";
+
 import Message from "./Message";
+
 
 /**
  * Structure of search results data displayed in the table.
@@ -14,26 +16,26 @@ interface SearchResult {
 /**
  * Columns configuration for the seach results table.
  */
-const searchResultsColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
+const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
-        title: "Timestamp",
         dataIndex: "timestamp",
         key: "timestamp",
+        title: "Timestamp",
         sorter: true,
         width: 15,
     },
     {
-        title: "Message",
         dataIndex: "message",
         key: "message",
-        width: 85,
-        render: (_, record) =>
+        title: "Message",
+        render: (_, record) => (
             <Message
-                message={record.message}
                 filePath={record.filePath}
-            />,
+                message={record.message}/>
+        ),
+        width: 85,
     },
 ];
 
-export type { SearchResult };
-export { searchResultsColumns };
+export type {SearchResult};
+export {searchResultsTableColumns};

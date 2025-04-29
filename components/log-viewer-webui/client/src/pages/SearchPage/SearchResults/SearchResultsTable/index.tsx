@@ -1,5 +1,10 @@
-import { Table } from "antd";
-import { searchResultsColumns, SearchResult } from "./typings";
+import {Table} from "antd";
+
+import {
+    SearchResult,
+    searchResultsTableColumns,
+} from "./typings";
+
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace with values from database once api implemented.
@@ -31,20 +36,19 @@ const DUMMY_RESULTS: SearchResult[] = [
 ];
 
 /**
- * Renders search results.
+ * Renders search results in a table.
  *
  * @return
  */
-const SearchResults = () => {
+const SearchResultsTable = () => {
     return (
         <Table<SearchResult>
-            columns={searchResultsColumns}
+            columns={searchResultsTableColumns}
             dataSource={DUMMY_RESULTS}
-            rowKey={(record) => record.id.toString()}
-            virtual
             pagination={false}
-        />
+            rowKey={(record) => record.id.toString()}
+            virtual={true}/>
     );
 };
 
-export default SearchResults;
+export default SearchResultsTable;
