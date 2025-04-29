@@ -112,12 +112,12 @@ class IrExtractionHandle(StreamExtractionHandle):
         job_id: str,
         job_config: Dict[str, Any],
         db_conn,
-        clp_metadata_db_conn_params: Dict[str, Any],
+        table_prefix: str,
     ):
         super().__init__(job_id)
         self.__job_config = ExtractIrJobConfig.parse_obj(job_config)
         self._archive_id, self.__file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
-            db_conn, clp_metadata_db_conn_params, self.__job_config
+            db_conn, table_prefix, self.__job_config
         )
         if self._archive_id is None:
             raise ValueError("Job parameters don't resolve to an existing archive")
@@ -159,12 +159,12 @@ class JsonExtractionHandle(StreamExtractionHandle):
         job_id: str,
         job_config: Dict[str, Any],
         db_conn,
-        clp_metadata_db_conn_params: Dict[str, Any],
+        table_prefix: str,
     ):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.parse_obj(job_config)
         self._archive_id = self.__job_config.archive_id
-        if not archive_exists(db_conn, clp_metadata_db_conn_params, self._archive_id):
+        if not archive_exists(db_conn, table_prefix, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
 
     def get_stream_id(self) -> str:
@@ -383,10 +383,9 @@ def insert_query_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[
 @exception_default_value(default=[])
 def get_archives_for_search(
     db_conn,
-    clp_metadata_db_conn_params: Dict[str, any],
+    table_prefix: str,
     search_config: SearchJobConfig,
 ):
-    table_prefix = clp_metadata_db_conn_params["table_prefix"]
     query = f"""SELECT id as archive_id, end_timestamp
             FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX}
             """
@@ -416,15 +415,13 @@ def get_archives_for_search(
 
 def get_archive_and_file_split_ids_for_ir_extraction(
     db_conn,
-    clp_metadata_db_conn_params: Dict[str, any],
+    table_prefix: str,
     extract_ir_config: ExtractIrJobConfig,
 ) -> Tuple[Optional[str], Optional[str]]:
     orig_file_id = extract_ir_config.orig_file_id
     msg_ix = extract_ir_config.msg_ix
 
-    results = get_archive_and_file_split_ids(
-        db_conn, clp_metadata_db_conn_params, orig_file_id, msg_ix
-    )
+    results = get_archive_and_file_split_ids(db_conn, table_prefix, orig_file_id, msg_ix)
     if len(results) == 0:
         logger.error(f"No matching file splits for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         return None, None
@@ -440,7 +437,7 @@ def get_archive_and_file_split_ids_for_ir_extraction(
 @exception_default_value(default=[])
 def get_archive_and_file_split_ids(
     db_conn,
-    clp_metadata_db_conn_params: Dict[str, any],
+    table_prefix: str,
     orig_file_id: str,
     msg_ix: int,
 ):
@@ -456,7 +453,6 @@ def get_archive_and_file_split_ids(
     an exception occurs while interacting with the database.
     """
 
-    table_prefix = clp_metadata_db_conn_params["table_prefix"]
     query = f"""SELECT archive_id, id as file_split_id
             FROM {table_prefix}{FILES_TABLE_SUFFIX} WHERE
             orig_file_id = '{orig_file_id}' AND
@@ -473,10 +469,9 @@ def get_archive_and_file_split_ids(
 @exception_default_value(default=False)
 def archive_exists(
     db_conn,
-    clp_metadata_db_conn_params: Dict[str, any],
+    table_prefix: str,
     archive_id: str,
 ) -> bool:
-    table_prefix = clp_metadata_db_conn_params["table_prefix"]
     query = f"""SELECT 1
                 FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX} WHERE
                 id = %s
@@ -635,6 +630,8 @@ def handle_pending_query_jobs(
         and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
 
+    table_prefix = clp_metadata_db_conn_params["table_prefix"]
+
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         for job in fetch_new_query_jobs(db_conn):
             job_id = str(job["job_id"])
@@ -647,9 +644,7 @@ def handle_pending_query_jobs(
                     continue
 
                 search_config = SearchJobConfig.parse_obj(job_config)
-                archives_for_search = get_archives_for_search(
-                    db_conn, clp_metadata_db_conn_params, search_config
-                )
+                archives_for_search = get_archives_for_search(db_conn, table_prefix, search_config)
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
                         db_conn,
@@ -688,13 +683,9 @@ def handle_pending_query_jobs(
                 job_handle: StreamExtractionHandle
                 try:
                     if QueryJobType.EXTRACT_IR == job_type:
-                        job_handle = IrExtractionHandle(
-                            job_id, job_config, db_conn, clp_metadata_db_conn_params
-                        )
+                        job_handle = IrExtractionHandle(job_id, job_config, db_conn, table_prefix)
                     else:
-                        job_handle = JsonExtractionHandle(
-                            job_id, job_config, db_conn, clp_metadata_db_conn_params
-                        )
+                        job_handle = JsonExtractionHandle(job_id, job_config, db_conn, table_prefix)
                 except ValueError:
                     logger.exception("Failed to initialize extraction job handle")
                     if not set_job_or_task_status(
