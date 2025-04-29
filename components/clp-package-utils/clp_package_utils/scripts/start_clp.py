@@ -866,9 +866,9 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     table_prefix = clp_db_connection_params["table_prefix"]
     meteor_settings_updates = {
         "private": {
-            "SqlDbHost": database_config.host,
-            "SqlDbPort": database_config.port,
-            "SqlDbName": database_config.name,
+            "SqlDbHost": clp_config.database.host,
+            "SqlDbPort": clp_config.database.port,
+            "SqlDbName": clp_config.database.name,
             "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
             "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
