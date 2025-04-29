@@ -21,7 +21,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
-    Database,
     DB_COMPONENT_NAME,
     FILES_TABLE_SUFFIX,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
@@ -863,8 +862,7 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
 
     # Read and update settings.json
-    database_config = Database.parse_obj(clp_config.database)
-    clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
+    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
     meteor_settings_updates = {
         "private": {
