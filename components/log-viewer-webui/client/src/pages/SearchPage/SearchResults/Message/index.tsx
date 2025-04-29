@@ -2,7 +2,7 @@ import { Typography } from "antd";
 import FilePath from "./FilePath";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import "highlight.js/styles/intellij-light.css";
-import { syntaxHighlighterStyle } from "./utils"; 
+import { highlighterCustomStyles } from "./utils";
 
 const { Text } = Typography;
 
@@ -22,11 +22,11 @@ interface MessageProps {
 const Message = ({ message, filePath }: MessageProps) => {
     return (
         <>
-            {/* Parent `Text` component allows syntax highlighter to inherit antd fonts. */}
+            {/* Parent `Text` component allows syntax highlighter to inherit AntD fonts. */}
             <Text>
                 <SyntaxHighlighter
                     language="armasm"
-                    customStyle={syntaxHighlighterStyle} // Use the imported style
+                    customStyle={highlighterCustomStyles}
                     useInlineStyles={false}
                 >
                     {message}

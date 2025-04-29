@@ -1,13 +1,13 @@
 import { Tooltip, Typography } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-import styles from "./index.module.css"; // Import the CSS module
+import styles from "./index.module.css";
 
 const { Link } = Typography;
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Fix link to connect when log viewer setup with new webui. Also pass
 // proper args to log viewer.
-const LOG_VIEWER_URL = "https://yscope.com/";
+const LOG_VIEWER_URL = "https://y-scope.github.io/yscope-log-viewer/";
 
 interface FilePathProps {
     filePath: string;
