@@ -71,7 +71,10 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
 
 def update_tags(db_cursor, table_prefix, archive_id, tag_ids):
     db_cursor.executemany(
-        f"INSERT INTO {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} (archive_id, tag_id) VALUES (%s, %s)",
+        f"""
+        INSERT INTO {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} (archive_id, tag_id)
+        VALUES (%s, %s)
+        """,
         [(archive_id, tag_id) for tag_id in tag_ids],
     )
 

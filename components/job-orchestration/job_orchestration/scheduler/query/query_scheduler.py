@@ -472,10 +472,7 @@ def archive_exists(
     table_prefix: str,
     archive_id: str,
 ) -> bool:
-    query = f"""SELECT 1
-                FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX} WHERE
-                id = %s
-                """
+    query = f"SELECT 1 FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX} WHERE id = %s"
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         cursor.execute(query, (archive_id,))
         if cursor.fetchone():
