@@ -652,10 +652,7 @@ class CLPConfig(BaseModel):
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
             if not input_logs_dir.is_dir():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
-        if (
-            StorageType.S3 == logs_input_type
-            and StorageEngine.CLP_S != self.package.storage_engine
-        ):
+        if StorageType.S3 == logs_input_type and StorageEngine.CLP_S != self.package.storage_engine:
             raise ValueError(
                 f"logs_input.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
