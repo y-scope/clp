@@ -1,4 +1,7 @@
 /* eslint-disable max-lines */
+/* eslint-disable no-warning-comments */
+// TODO: Move listeners to a seperate file to reduce lines
+// Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
 import {
     FastifyInstance,
