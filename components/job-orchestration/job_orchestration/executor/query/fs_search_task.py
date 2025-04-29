@@ -77,7 +77,7 @@ def _make_core_clp_s_command_and_env_vars(
         ))
         # fmt: on
         env_vars = dict(os.environ)
-        env_vars.update(get_credential_env_vars(s3_config))
+        env_vars.update(get_credential_env_vars(s3_config.aws_authentication))
     else:
         # fmt: off
         command.extend((

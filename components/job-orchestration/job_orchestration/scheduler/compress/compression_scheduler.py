@@ -134,13 +134,13 @@ def _process_s3_input(
     and adds their metadata to paths_to_compress_buffer.
     :param s3_input_config:
     :param paths_to_compress_buffer:
-    :raises: RuntimeError if input prefix doesn't resolve to any objects.
+    :raises: RuntimeError if input URL doesn't resolve to any objects.
     :raises: Propagates `s3_get_object_metadata`'s exceptions.
     """
 
     object_metadata_list = s3_get_object_metadata(s3_input_config)
     if len(object_metadata_list) == 0:
-        raise RuntimeError("Input prefix doesn't resolve to any object")
+        raise RuntimeError("Input URL doesn't resolve to any object")
 
     for object_metadata in object_metadata_list:
         paths_to_compress_buffer.add_file(object_metadata)
