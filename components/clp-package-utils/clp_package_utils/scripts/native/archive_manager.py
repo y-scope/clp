@@ -7,7 +7,12 @@ from abc import ABC, abstractmethod
 from contextlib import closing
 from pathlib import Path
 
-from clp_py_utils.clp_config import Database
+from clp_py_utils.clp_config import (
+    ARCHIVE_TAGS_TABLE_SUFFIX,
+    ARCHIVES_TABLE_SUFFIX,
+    Database,
+    FILES_TABLE_SUFFIX,
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 
 from clp_package_utils.general import (
@@ -245,7 +250,9 @@ def _find_archives(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
             query_params: typing.List[int] = [begin_ts]
-            query: str = f"SELECT id FROM `{table_prefix}archives` WHERE begin_timestamp >= %s"
+            query: str = (
+                f"SELECT id FROM `{table_prefix}{ARCHIVES_TABLE_SUFFIX}` WHERE begin_timestamp >= %s"
+            )
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
                 query_params.append(end_ts)
@@ -308,7 +315,7 @@ def _delete_archives(
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{table_prefix}archives`
+                DELETE FROM `{table_prefix}{ARCHIVES_TABLE_SUFFIX}`
                 WHERE {query_criteria}
                 RETURNING id
                 """,
@@ -327,14 +334,14 @@ def _delete_archives(
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{table_prefix}files`
+                DELETE FROM `{table_prefix}{FILES_TABLE_SUFFIX}`
                 WHERE archive_id in ({ids_list_string})
                 """
             )
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{table_prefix}archive_tags`
+                DELETE FROM `{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}`
                 WHERE archive_id in ({ids_list_string})
                 """
             )
