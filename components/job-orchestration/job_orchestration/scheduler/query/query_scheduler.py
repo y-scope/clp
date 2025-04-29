@@ -447,6 +447,7 @@ def get_archive_and_file_split_ids(
     1. The file split's original file id = `orig_file_id`
     2. The file split includes the message with index = `msg_ix`
     :param db_conn:
+    :param table_prefix:
     :param orig_file_id: Original file id of the split
     :param msg_ix: Index of the message that the file split must include
     :return: A list of (archive id, file split id) on success. An empty list if
