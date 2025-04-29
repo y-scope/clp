@@ -138,7 +138,7 @@ def _generate_clp_io_config(
 
     if InputType.FS == input_type:
         if len(logs_to_compress) == 0:
-            raise ValueError(f"No input logs found.")
+            raise ValueError(f"No input paths given.")
         return FsInputConfig(
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
@@ -146,7 +146,7 @@ def _generate_clp_io_config(
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) == 0:
-            raise ValueError(f"No URLs found.")
+            raise ValueError(f"No URLs given.")
         elif len(logs_to_compress) != 1:
             raise ValueError(f"Too many URLs: {len(logs_to_compress)} > 1")
 

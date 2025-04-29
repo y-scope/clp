@@ -399,8 +399,7 @@ class S3IngestionConfig(BaseModel):
     aws_authentication: AwsAuthentication
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
-        return d
+        return self.dict()
 
 
 class FsStorage(BaseModel):
