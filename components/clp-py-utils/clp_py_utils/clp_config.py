@@ -644,7 +644,8 @@ class CLPConfig(BaseModel):
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
     def validate_logs_input_config(self):
-        if StorageType.FS == self.logs_input.type:
+        logs_input_type = self.logs_input.type
+        if StorageType.FS == logs_input_type:
             # NOTE: This can't be a pydantic validator since input_logs_dir might be a
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
@@ -652,6 +653,14 @@ class CLPConfig(BaseModel):
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
             if not input_logs_dir.is_dir():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
+        if (
+            StorageType.S3 == logs_input_type
+            and StorageEngine.CLP_S != self.package.storage_engine
+        ):
+            raise ValueError(
+                f"logs_input.type = 's3' is only supported with package.storage_engine"
+                f" = '{StorageEngine.CLP_S}'"
+            )
 
     def validate_archive_output_config(self):
         if (
@@ -667,7 +676,15 @@ class CLPConfig(BaseModel):
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
-    def validate_stream_output_dir(self):
+    def validate_stream_output_config(self):
+        if (
+            StorageType.S3 == self.stream_output.storage.type
+            and StorageEngine.CLP_S != self.package.storage_engine
+        ):
+            raise ValueError(
+                f"stream_output.storage.type = 's3' is only supported with package.storage_engine"
+                f" = '{StorageEngine.CLP_S}'"
+            )
         try:
             validate_path_could_be_dir(self.stream_output.get_directory())
         except ValueError as ex:
