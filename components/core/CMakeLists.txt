@@ -96,6 +96,28 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+if(PROJECT_IS_TOP_LEVEL)
+    # Include dependency settings if the project isn't being included as a subproject.
+    # NOTE: We mark the file optional since it's not required if the user happens to have the
+    # dependencies installed already.
+    include("${CMAKE_SOURCE_DIR}/../../build/deps/core/cmake-settings/all.cmake"
+            OPTIONAL
+            RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
+    )
+
+    if(NOT CLP_DEPS_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
+        # Set CMP0144 since our minimum required CMake version is less than 3.27.
+        if(POLICY "CMP0144")
+            cmake_policy(SET "CMP0144" "NEW")
+        endif()
+    endif()
+endif()
+
+find_package(absl REQUIRED)
+if (absl_FOUND)
+    message(STATUS "Found absl ${absl_VERSION}")
+endif()
+
 # Find and setup ANTLR Library
 # We build and link to the static library
 find_package(ANTLR REQUIRED)
@@ -116,6 +138,16 @@ else()
     message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
 endif()
 
+find_package(Catch2 REQUIRED)
+if (Catch2_FOUND)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
+endif()
+
+find_package(date REQUIRED)
+if (date_FOUND)
+    message(STATUS "Found date ${date_VERSION}")
+endif()
+
 # Find and setup fmt
 # NOTE:
 # - We only try to link to the static library
@@ -125,6 +157,21 @@ if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}")
 else()
     message(FATAL_ERROR "Could not find static libraries for fmt")
+endif()
+
+find_package(log_surgeon REQUIRED)
+if(log_surgeon_FOUND)
+    message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+endif()
+
+find_package(nlohmann_json REQUIRED)
+if(nlohmann_json_FOUND)
+    message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
+endif()
+
+find_package(simdjson REQUIRED)
+if(simdjson_FOUND)
+    message(STATUS "Found simdjson ${simdjson_VERSION}")
 endif()
 
 # Find and setup spdlog
@@ -175,9 +222,6 @@ else ()
     message(FATAL_ERROR "OpenSSL not found")
 endif ()
 
-# Add log surgeon
-add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
-
 # Find and setup MariaDBClient library
 if(CLP_USE_STATIC_LIBS)
     # NOTE: We can't statically link to MariaDBClient since it's GPL
@@ -212,21 +256,16 @@ else()
     message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
 
-# Add abseil-cpp
-set(ABSL_PROPAGATE_CXX_STD ON)
-add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
-
-# Add simdjson
-add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
-
 find_package(Threads REQUIRED)
 
-# Add yaml-cpp
-add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
+find_package(yaml-cpp REQUIRED)
+if(yaml-cpp_FOUND)
+    message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
+endif()
 
-# Add ystdlib-cpp
+# Add ystdlib
 set(YSTDLIB_CPP_BUILD_TESTING OFF)
-add_subdirectory(submodules/ystdlib-cpp EXCLUDE_FROM_ALL)
+add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 
 # Find and setup ZStd Library
 if(CLP_USE_STATIC_LIBS)
@@ -372,6 +411,7 @@ set(SOURCE_FILES_reducer_unitTest
     )
 
 set(SOURCE_FILES_unitTest
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
@@ -433,6 +473,11 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/ir_stream/Serializer.cpp
         src/clp/ffi/ir_stream/Serializer.hpp
+        src/clp/ffi/ir_stream/search/AstEvaluationResult.hpp
+        src/clp/ffi/ir_stream/search/ErrorCode.cpp
+        src/clp/ffi/ir_stream/search/ErrorCode.hpp
+        src/clp/ffi/ir_stream/search/NewProjectedSchemaTreeNodeCallbackReq.hpp
+        src/clp/ffi/ir_stream/search/QueryHandler.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/KeyValuePairLogEvent.cpp
@@ -594,9 +639,6 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
-        submodules/sqlite3/sqlite3.c
-        submodules/sqlite3/sqlite3.h
-        submodules/sqlite3/sqlite3ext.h
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
@@ -639,22 +681,26 @@ add_executable(unitTest
         )
 target_include_directories(unitTest
         PRIVATE
-        ${CMAKE_SOURCE_DIR}/submodules
+        ${CLP_OUTCOME_INCLUDE_DIRECTORY}
+        ${CLP_SQLITE3_INCLUDE_DIRECTORY}
         )
 target_link_libraries(unitTest
         PRIVATE
         absl::flat_hash_map
         Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
+        Catch2::Catch2
         ${CURL_LIBRARIES}
         clp_s::search::ast
         clp_s::TimestampPattern
+        date::date
         fmt::fmt
         kql
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
-        simdjson
+        nlohmann_json::nlohmann_json
+        simdjson::simdjson
         spdlog::spdlog
         sql
         OpenSSL::Crypto
@@ -662,7 +708,7 @@ target_link_libraries(unitTest
         ${STD_FS_LIBS}
         clp::regex_utils
         clp::string_utils
-        yaml-cpp::yaml-cpp
+        yaml-cpp
         ystdlib::containers
         ystdlib::error_handling
         ${LIBLZMA_LIBRARIES}
