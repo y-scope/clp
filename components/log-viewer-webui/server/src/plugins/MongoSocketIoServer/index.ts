@@ -25,6 +25,7 @@ import {
     QueryId,
     QueryParameters,
     Response,
+    InterServerEvents,
     ServerToClientEvents,
     SocketData,
 } from "./typings.js";
@@ -44,7 +45,7 @@ import {
 class MongoSocketIoServer {
     #fastify: FastifyInstance;
 
-    #io: Server<ClientToServerEvents, ServerToClientEvents, SocketData>;
+    #io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
     // Collections with active queries
     #collections: Map<string, MongoWatcherCollection> = new Map();
@@ -70,6 +71,7 @@ class MongoSocketIoServer {
         this.#io = new Server<
             ClientToServerEvents,
             ServerToClientEvents,
+            InterServerEvents,
             SocketData
         >(fastify.server);
         this.#registerEventListeners();
@@ -125,6 +127,8 @@ class MongoSocketIoServer {
         for (const queryId of subscribedQueryIds) {
             this.#unsubscribe(socket, queryId);
         }
+
+        this.#subscribedQueryIdsMap.delete(socket.id);
     }
 
     /**
@@ -166,8 +170,7 @@ class MongoSocketIoServer {
             return;
         }
 
-
-        (socket.data as SocketData).collectionName = collectionName;
+        socket.data.collectionName = collectionName;
     }
 
 
@@ -232,7 +235,7 @@ class MongoSocketIoServer {
         callback: (res: Response<{queryId: number}>) => void
     ): Promise<void> {
         const {query, options} = requestArgs;
-        const {collectionName} = socket.data as SocketData;
+        const {collectionName} = socket.data;
         if (!collectionName) {
             this.#fastify.log.error("Collection name is undefined");
 
@@ -285,7 +288,7 @@ class MongoSocketIoServer {
             return;
         }
 
-        const lastSubscriber = collection.unsubcribeFromWatcher(queryId, socket.id);
+        const lastSubscriber = collection.unsubscribeFromWatcher(queryId, socket.id);
         this.#fastify.log.error(`Socket ${socket.id} unsubscribed from query ${queryId}`);
 
         if (lastSubscriber) {
@@ -320,12 +323,16 @@ class MongoSocketIoServer {
             false === subscribedQueryIds.includes(queryId)
         ) {
             this.#fastify.log.error(`Socket ${socket.id} is not subscribed to ${queryId}`);
-
             return;
         }
 
         this.#unsubscribe(socket, queryId);
         await socket.leave(queryId.toString());
+
+        this.#subscribedQueryIdsMap.set(
+            socket.id,
+            subscribedQueryIds.filter(id => id !== queryId)
+        );
     }
 }
 

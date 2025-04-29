@@ -41,7 +41,7 @@ class MongoWatcherCollection {
      * @return True if the collection is referenced, false otherwise.
      */
     isReferenced (): boolean {
-        return 0 === this.queryIdtoWatcherMap.size;
+        return 0 !== this.queryIdtoWatcherMap.size;
     }
 
     /**
@@ -77,7 +77,7 @@ class MongoWatcherCollection {
      * @param connectionId
      * @return True if connection is last subcriber, false otherwise.
      */
-    unsubcribeFromWatcher (queryId: number, connectionId: string): boolean {
+    unsubscribeFromWatcher (queryId: number, connectionId: string): boolean {
         const watcher = this.queryIdtoWatcherMap.get(queryId);
 
         if ("undefined" === typeof watcher) {
@@ -166,7 +166,7 @@ class MongoWatcherCollection {
             if (CLIENT_UPDATE_TIMEOUT_MS <= currentTime - lastEmitTime) {
                 lastEmitTime = currentTime;
                 await this.#emitDataUpdate(queryParameters, queryId);
-            } else if (emitTimeout) {
+            } else if (!emitTimeout) {
                 const delay = CLIENT_UPDATE_TIMEOUT_MS - (currentTime - lastEmitTime);
                 emitTimeout = setTimeout(() => {
                     emitTimeout = null;

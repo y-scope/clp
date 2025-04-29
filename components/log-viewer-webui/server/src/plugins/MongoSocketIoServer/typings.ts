@@ -10,7 +10,7 @@ import {Socket} from "socket.io";
 /**
  * Error response to event.
  */
-interface Error {
+interface Err {
     error: string;
     queryId?: number;
 }
@@ -25,7 +25,7 @@ interface Success<T> {
 /**
  * Event response.
  */
-type Response<T> = Error | Success<T>;
+type Response<T> = Err | Success<T>;
 
 /**
  * Events that the client can emit to the server.
@@ -75,11 +75,18 @@ interface SocketData {
 }
 
 /**
+ * Empty but required by Socket IO.
+ */
+interface InterServerEvents {
+}
+
+/**
  * Custom socket type for Mongo Socket IO server.
  */
 type MongoCustomSocket = Socket<
     ClientToServerEvents,
     ServerToClientEvents,
+    InterServerEvents,
     SocketData
 >;
 
@@ -137,6 +144,7 @@ export {
     QueryParameters,
     Response,
     ServerToClientEvents,
+    InterServerEvents,
     SocketData,
     Watcher,
 };
