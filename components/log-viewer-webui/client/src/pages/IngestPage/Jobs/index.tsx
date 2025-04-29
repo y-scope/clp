@@ -69,21 +69,26 @@ const DUMMY_DATA: JobData[] = [
     },
 ];
 
+interface JobsProps {
+    className?: string;
+}
 
 /**
  * Renders table with ingestion jobs inside a card.
  *
  * @return
  */
-const Jobs = () => {
+const Jobs = ({className}: JobsProps) => {
     return (
-        <DashboardCard title={"Ingestion Jobs"}>
-            <Table<JobData>
-                className={styles["jobs"] || ""}
-                columns={jobColumns}
-                dataSource={DUMMY_DATA}
-                pagination={false}/>
-        </DashboardCard>
+        <div className={className}>
+            <DashboardCard title={"Ingestion Jobs"}>
+                <Table<JobData>
+                    className={styles["jobs"] || ""}
+                    columns={jobColumns}
+                    dataSource={DUMMY_DATA}
+                    pagination={false}/>
+            </DashboardCard>
+        </div>
     );
 };
 
