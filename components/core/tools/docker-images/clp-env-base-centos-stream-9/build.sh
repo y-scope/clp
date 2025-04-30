@@ -20,8 +20,7 @@ if command -v git >/dev/null && git -C "$script_dir" rev-parse --is-inside-work-
 then
     build_cmd+=(
         --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD)"
-        --label
-        "org.opencontainers.image.source=$(git -C "$script_dir" config --get remote.origin.url)"
+        --label "org.opencontainers.image.source=$(git -C "$script_dir" remote get-url origin)"
     )
 fi
 
