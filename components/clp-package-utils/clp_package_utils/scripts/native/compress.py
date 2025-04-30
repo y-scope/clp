@@ -140,9 +140,10 @@ def _generate_clp_io_config(
         if len(logs_to_compress) == 0:
             raise ValueError(f"No input paths given.")
         return FsInputConfig(
+            dataset=parsed_args.dataset,
             paths_to_compress=logs_to_compress,
-            timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
+            timestamp_key=parsed_args.timestamp_key,
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) == 0:
@@ -154,11 +155,12 @@ def _generate_clp_io_config(
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
         aws_authentication = clp_config.logs_input.aws_authentication
         return S3InputConfig(
+            dataset=parsed_args.dataset,
+            timestamp_key=parsed_args.timestamp_key,
             region_code=region_code,
             bucket=bucket_name,
             key_prefix=key_prefix,
             aws_authentication=aws_authentication,
-            timestamp_key=parsed_args.timestamp_key,
         )
     else:
         raise ValueError(f"Unsupported input type: {input_type}")
@@ -206,6 +208,9 @@ def main(argv):
     )
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
+    )
+    args_parser.add_argument(
+        "--dataset", default="default", help="The name of the log category to compress into."
     )
     parsed_args = args_parser.parse_args(argv[1:])
 

@@ -64,6 +64,9 @@ def main(argv):
     args_parser.add_argument(
         "--raw", action="store_true", help="Output the search results as raw logs."
     )
+    args_parser.add_argument(
+        "--dataset", default="default", help="The name of the log category to search from."
+    )
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
@@ -128,6 +131,10 @@ def main(argv):
         search_cmd.append(str(parsed_args.count_by_time))
     if parsed_args.raw:
         search_cmd.append("--raw")
+
+    search_cmd.append("--dataset")
+    search_cmd.append(parsed_args.dataset)
+
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 
