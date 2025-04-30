@@ -247,6 +247,7 @@ def search_and_schedule_new_tasks(
 
         tag_ids = None
         if clp_io_config.output.tags:
+            table_prefix = clp_metadata_db_connection_config["table_prefix"]
             db_cursor.executemany(
                 f"INSERT IGNORE INTO {table_prefix}{TAGS_TABLE_SUFFIX} (tag_name) VALUES (%s)",
                 [(tag,) for tag in clp_io_config.output.tags],

@@ -448,6 +448,7 @@ def get_archive_and_file_split_ids(
     1. The file split's original file id = `orig_file_id`
     2. The file split includes the message with index = `msg_ix`
     :param db_conn:
+    :param table_prefix:
     :param orig_file_id: Original file id of the split
     :param msg_ix: Index of the message that the file split must include
     :return: A list of (archive id, file split id) on success. An empty list if
@@ -473,10 +474,7 @@ def archive_exists(
     table_prefix: str,
     archive_id: str,
 ) -> bool:
-    query = f"""SELECT 1
-                FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX} WHERE
-                id = %s
-                """
+    query = f"SELECT 1 FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX} WHERE id = %s"
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         cursor.execute(query, (archive_id,))
         if cursor.fetchone():
@@ -631,6 +629,8 @@ def handle_pending_query_jobs(
         if InternalJobState.WAITING_FOR_DISPATCH == job.state
         and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
+
+    table_prefix = clp_metadata_db_conn_params["table_prefix"]
 
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         for job in fetch_new_query_jobs(db_conn):

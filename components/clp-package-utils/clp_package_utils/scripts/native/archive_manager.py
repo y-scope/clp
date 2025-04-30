@@ -251,7 +251,10 @@ def _find_archives(
         ) as db_cursor:
             query_params: typing.List[int] = [begin_ts]
             query: str = (
-                f"SELECT id FROM `{table_prefix}{ARCHIVES_TABLE_SUFFIX}` WHERE begin_timestamp >= %s"
+                f"""
+                SELECT id FROM `{table_prefix}{ARCHIVES_TABLE_SUFFIX}`
+                WHERE begin_timestamp >= %s
+                """
             )
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
