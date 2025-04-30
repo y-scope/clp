@@ -10,11 +10,13 @@ build_cmd=(
     --file "${script_dir}/Dockerfile"
 )
 
-if command -v git ; then
+pushd "$script_dir"
+if command -v git && git rev-parse --is-inside-work-tree >/dev/null ; then
     build_cmd+=(
         --label "org.opencontainers.image.revision=$(git rev-parse HEAD)"
         --label "org.opencontainers.image.source=$(git config --get remote.origin.url)"
     )
 fi
+popd
 
 "${build_cmd[@]}"
