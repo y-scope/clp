@@ -16,6 +16,7 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
+    DATASETS_TABLE_SUFFIX,
     StorageEngine,
     TAGS_TABLE_SUFFIX,
 )
@@ -157,7 +158,7 @@ def _fetch_existing_datasets(
 ) -> Set[str]:
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
     db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
-    rows = cursor.fetchall()
+    rows = db_cursor.fetchall()
     db_conn.commit()
     return {str(row[0]) for row in rows}
 
