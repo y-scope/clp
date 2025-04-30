@@ -28,6 +28,5 @@ if command -v git && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/
         "org.opencontainers.image.source=$(git -C "$script_dir" config --get remote.origin.url)"
     )
 fi
-popd
 
 "${build_cmd[@]}"
