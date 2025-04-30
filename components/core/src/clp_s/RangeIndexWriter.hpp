@@ -40,9 +40,9 @@ public:
     using handle_t = size_t;
 
     // Constants
-    constexpr std::string_view cStartIndexName{"s"};
-    constexpr std::string_view cEndIndexName{"e"};
-    constexpr std::string_view cMetadataFieldsName{"f"};
+    static constexpr std::string_view cStartIndexName{"s"};
+    static constexpr std::string_view cEndIndexName{"e"};
+    static constexpr std::string_view cMetadataFieldsName{"f"};
 
     /**
      * Opens a new range starting at start_index.
