@@ -8,6 +8,7 @@ from pathlib import Path
 from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
     Database,
     StorageEngine,
 )
@@ -53,12 +54,13 @@ def main(argv):
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
-            # TODO: After the dataset feature is fully implemented, for clp-json:
-            # 1. Populate the datasets table with the name and path for the "default" dataset.
-            # 2. Change the metadata tables to be specific to the "default" dataset.
             if StorageEngine.CLP_S == storage_engine:
                 create_datasets_table(metadata_db_cursor, table_prefix)
-            create_metadata_db_tables(metadata_db_cursor, table_prefix)
+                create_metadata_db_tables(
+                    metadata_db_cursor, table_prefix, CLP_DEFAULT_DATASET_NAME
+                )
+            else:
+                create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
     except:
         logger.exception("Failed to create clp metadata tables.")
