@@ -66,7 +66,6 @@ class MongoWatcherCollection {
 
         watcher = this.#createNewWatcher(queryParameters, queryId, socket);
         this.queryIdtoWatcherMap.set(queryId, watcher);
-        this.#setupWatcherListener(watcher, queryParameters, queryId);
     }
 
     /**

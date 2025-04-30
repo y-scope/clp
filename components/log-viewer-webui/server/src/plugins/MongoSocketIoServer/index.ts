@@ -293,10 +293,10 @@ class MongoSocketIoServer {
         }
 
         const lastSubscriber = collection.unsubscribeFromWatcher(queryId, socket.id);
-        this.#fastify.log.error(`Socket ${socket.id} unsubscribed from query ${queryId}`);
+        this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query ${queryId}`);
 
         if (lastSubscriber) {
-            this.#fastify.log.error(`Query ${queryId} removed from map`);
+            this.#fastify.log.info(`Query ${queryId} removed from map`);
             this.#queryIdtoQueryHashMap.delete(queryId);
         }
 
