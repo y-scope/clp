@@ -35,18 +35,24 @@ using clp_s::search::ast::LiteralTypeBitmask;
         -> outcome_v2::std_result<std::shared_ptr<Expression>>;
 
 /**
- * Creates a column-descriptor-to-original-key map from the given projections.
+ * Creates projected columns and column-to-original-key map from the given projections.
  * @param projections
- * @return A result containing the constructed map on success, or an error code indicating the
- * failure:
- * - ErrorCodeEnum::DuplicateProjectedColumn if `projections` contains duplicated keys.
- * - ErrorCodeEnum::ColumnTokenizationFailure if failed to tokenize a projection key.
- * - ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure if failed to create a column
- *   descriptor for the projected key.
+ * @return A result containing a pair or an error code indicating the failure:
+ * - The pair:
+ *   - A vector of projected columns.
+ *   - A projected-column-to-original-key map.
+ * - The possible error codes:
+ *   - ErrorCodeEnum::DuplicateProjectedColumn if `projections` contains duplicated keys.
+ *   - ErrorCodeEnum::ColumnTokenizationFailure if failed to tokenize a projection key.
+ *   - ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure if failed to create a column
+ *     descriptor for the projected key.
  */
-[[nodiscard]] auto create_projection_map(
+[[nodiscard]] auto create_projected_columns_and_projection_map(
         std::vector<std::pair<std::string, LiteralTypeBitmask>> const& projections
-) -> outcome_v2::std_result<QueryHandlerImpl::ProjectionMap>;
+)
+        -> outcome_v2::std_result<std::pair<
+                std::vector<std::shared_ptr<ColumnDescriptor>>,
+                QueryHandlerImpl::ProjectionMap>>;
 
 /**
  * Creates initial partial resolutions for the given query and projections.
@@ -58,6 +64,7 @@ using clp_s::search::ast::LiteralTypeBitmask;
  *   - The partial resolution for user-generated keys.
  * - The possible error codes:
  *   - Forwards `is_auto_generated`'s return values.
+ *   - Forwards `initialize_partial_resolution_from_search_ast`'s return values.
  *   - Forwards `QueryHandlerImpl::ColumnDescriptorTokenIterator::create`'s return values.
  *   - Forwards `QueryHandlerImpl::ColumnDescriptorTokenIterator::next`'s return values.
  */
@@ -68,6 +75,22 @@ using clp_s::search::ast::LiteralTypeBitmask;
         -> outcome_v2::std_result<std::pair<
                 QueryHandlerImpl::PartialResolutionMap,
                 QueryHandlerImpl::PartialResolutionMap>>;
+
+/**
+ * Initializes partial resolutions from a search AST.
+ * @param root The root of the search AST.
+ * @param auto_gen_namespace_partial_resolutions Returns initialized auto-gen partial resolutions.
+ * @param user_gen_namespace_partial_resolutions Returns initialized user-gen partial resolutions.
+ * @return A void result on success, or an error code indicating the failure:
+ * - ErrorCodeEnum::AstDynamicCastFailure if failed to dynamically cast an AST node to a target
+ *   type.
+ * - Forwards `is_auto_generated`'s return values.
+ */
+[[nodiscard]] auto initialize_partial_resolution_from_search_ast(
+        std::shared_ptr<Expression> const& root,
+        QueryHandlerImpl::PartialResolutionMap& auto_gen_namespace_partial_resolutions,
+        QueryHandlerImpl::PartialResolutionMap& user_gen_namespace_partial_resolutions
+) -> outcome_v2::std_result<void>;
 
 /**
  * @param key_namespace
@@ -103,10 +126,14 @@ auto preprocess_query(std::shared_ptr<Expression> query)
     }
 }
 
-auto create_projection_map(
+auto create_projected_columns_and_projection_map(
         std::vector<std::pair<std::string, LiteralTypeBitmask>> const& projections
-) -> outcome_v2::std_result<QueryHandlerImpl::ProjectionMap> {
+)
+        -> outcome_v2::std_result<std::pair<
+                std::vector<std::shared_ptr<ColumnDescriptor>>,
+                QueryHandlerImpl::ProjectionMap>> {
     std::unordered_set<std::string_view> unique_projected_columns;
+    std::vector<std::shared_ptr<ColumnDescriptor>> projected_columns;
     QueryHandlerImpl::ProjectionMap projected_column_to_original_key;
 
     for (auto const& [key, types] : projections) {
@@ -128,24 +155,24 @@ auto create_projection_map(
         }
 
         try {
-            auto column_descriptor
-                    = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
-                            descriptor_tokens,
-                            descriptor_namespace
-                    );
+            auto column_descriptor{clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
+                    descriptor_tokens,
+                    descriptor_namespace
+            )};
             column_descriptor->set_matching_types(types);
             if (column_descriptor->is_unresolved_descriptor()
                 || column_descriptor->get_descriptor_list().empty())
             {
                 return ErrorCode{ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure};
             }
-            projected_column_to_original_key.emplace(std::move(column_descriptor), key);
+            projected_column_to_original_key.emplace(column_descriptor.get(), key);
+            projected_columns.emplace_back(std::move(column_descriptor));
         } catch (std::exception const& e) {
             return ErrorCode{ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure};
         }
     }
 
-    return std::move(projected_column_to_original_key);
+    return {std::move(projected_columns), std::move(projected_column_to_original_key)};
 }
 
 auto create_initial_partial_resolutions(
@@ -171,19 +198,38 @@ auto create_initial_partial_resolutions(
         }
 
         partial_resolutions.at(SchemaTree::cRootId)
-                .emplace_back(OUTCOME_TRYX(
-                        QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col.get())
-                ));
+                .emplace_back(
+                        OUTCOME_TRYX(QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col))
+                );
     }
 
+    OUTCOME_TRYV(initialize_partial_resolution_from_search_ast(
+            query,
+            auto_gen_namespace_partial_resolutions,
+            user_gen_namespace_partial_resolutions
+    ));
+
+    return {std::move(auto_gen_namespace_partial_resolutions),
+            std::move(user_gen_namespace_partial_resolutions)};
+}
+
+auto initialize_partial_resolution_from_search_ast(
+        std::shared_ptr<Expression> const& root,
+        QueryHandlerImpl::PartialResolutionMap& auto_gen_namespace_partial_resolutions,
+        QueryHandlerImpl::PartialResolutionMap& user_gen_namespace_partial_resolutions
+) -> outcome_v2::std_result<void> {
     std::vector<Expression*> ast_dfs_stack;
-    ast_dfs_stack.emplace_back(query.get());
+    ast_dfs_stack.emplace_back(root.get());
     while (false == ast_dfs_stack.empty()) {
         auto* expr{ast_dfs_stack.back()};
         ast_dfs_stack.pop_back();
         if (expr->has_only_expression_operands()) {
             for (auto it{expr->op_begin()}; it != expr->op_end(); ++it) {
-                ast_dfs_stack.emplace_back(static_cast<Expression*>(it->get()));
+                auto* expr{dynamic_cast<Expression*>(it->get())};
+                if (nullptr == expr) {
+                    return ErrorCode{ErrorCodeEnum::AstDynamicCastFailure};
+                }
+                ast_dfs_stack.emplace_back(expr);
             }
             continue;
         }
@@ -222,8 +268,7 @@ auto create_initial_partial_resolutions(
         }
     }
 
-    return {std::move(auto_gen_namespace_partial_resolutions),
-            std::move(user_gen_namespace_partial_resolutions)};
+    return outcome_v2::success();
 }
 
 auto is_auto_generated(std::string_view key_namespace) -> outcome_v2::std_result<bool> {
@@ -243,7 +288,9 @@ auto QueryHandlerImpl::create(
         bool case_sensitive_match
 ) -> outcome_v2::std_result<QueryHandlerImpl> {
     query = OUTCOME_TRYX(preprocess_query(query));
-    auto projected_column_to_original_key{OUTCOME_TRYX(create_projection_map(projections))};
+    auto [projected_columns, projected_column_to_original_key]{
+            OUTCOME_TRYX(create_projected_columns_and_projection_map(projections))
+    };
     auto [auto_gen_namespace_partial_resolutions, user_gen_namespace_partial_resolutions]{
             OUTCOME_TRYX(create_initial_partial_resolutions(query, projected_column_to_original_key)
             )
@@ -253,6 +300,7 @@ auto QueryHandlerImpl::create(
             std::move(query),
             std::move(auto_gen_namespace_partial_resolutions),
             std::move(user_gen_namespace_partial_resolutions),
+            std::move(projected_columns),
             std::move(projected_column_to_original_key),
             case_sensitive_match
     };

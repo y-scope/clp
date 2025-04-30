@@ -72,7 +72,7 @@ public:
 
         [[nodiscard]] auto is_wildcard() const -> bool { return m_curr_token_it->wildcard(); }
 
-        [[nodiscard]] auto get_curr_token() const -> std::string_view {
+        [[nodiscard]] auto get_token() const -> std::string_view {
             return m_curr_token_it->get_token();
         }
 
@@ -82,7 +82,7 @@ public:
 
         /**
          * @param type
-         * @return Whether the underlying column can match the given schema tree node type.
+         * @return Whether the underlying column can match the given schema-tree node type.
          */
         // TODO: Fix clang-tidy
         // NOLINTNEXTLINE(*)
@@ -106,8 +106,7 @@ public:
         clp_s::search::ast::DescriptorList::iterator m_next_token_it;
     };
 
-    using ProjectionMap = std::
-            unordered_map<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>, std::string>;
+    using ProjectionMap = std::unordered_map<clp_s::search::ast::ColumnDescriptor*, std::string>;
 
     using PartialResolutionMap = std::
             unordered_map<SchemaTree::Node::id_t, std::vector<ColumnDescriptorTokenIterator>>;
@@ -120,7 +119,7 @@ public:
      * @return A result containing the newly constructed `QueryHandler` on success, or an error code
      * indicating the failure:
      * - Forwards `preprocess_query`'s return values.
-     * - Forwards `create_projection_map`'s return values.
+     * - Forwards `create_projected_columns_and_projection_map`'s return values.
      * - Forwards `create_initial_partial_resolutions`'s return values.
      */
     [[nodiscard]] static auto create(
@@ -163,7 +162,8 @@ public:
      * @param new_projected_schema_tree_node_callback
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
-     * - TODO
+     * - Forwards `ColumnDescriptorTokenIterator::next`'s return values.
+     * - Forwards `handle_column_resolution_on_leaf_node`'s return values.
      */
     template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
     [[nodiscard]] auto update_partially_resolved_columns(
@@ -179,6 +179,7 @@ private:
             std::shared_ptr<clp_s::search::ast::Expression> query,
             PartialResolutionMap auto_gen_namespace_partial_resolutions,
             PartialResolutionMap user_gen_namespace_partial_resolutions,
+            std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> projected_columns,
             ProjectionMap projected_column_to_original_key,
             bool case_sensitive_match
     )
@@ -189,8 +190,31 @@ private:
               m_user_gen_namespace_partial_resolutions{
                       std::move(user_gen_namespace_partial_resolutions)
               },
+              m_projected_columns{std::move(projected_columns)},
               m_projected_column_to_original_key{std::move(projected_column_to_original_key)},
               m_case_sensitive_search{case_sensitive_match} {}
+
+    // Methods
+    /**
+     * Handles column resolution on the given schema-tree leaf node and the token in the column.
+     * @tparam NewProjectedSchemaTreeNodeCallbackType
+     * @param is_auto_generated
+     * @param leaf_node_id
+     * @param leaf_node_locator
+     * @param token_it The current resolved token in the column.
+     * @param new_projected_schema_tree_node_callback
+     * @return A void result on success, or an error code indicating the failure:
+     * - Forwards `ColumnDescriptorTokenIterator::next`'s return values.
+     * - Forwards `new_projected_schema_tree_node_callback`'s return values.
+     */
+    template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
+    [[nodiscard]] auto handle_column_resolution_on_leaf_node(
+            bool is_auto_generated,
+            SchemaTree::Node::id_t leaf_node_id,
+            SchemaTree::NodeLocator const& leaf_node_locator,
+            ColumnDescriptorTokenIterator const& token_it,
+            NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
+    ) -> outcome_v2::std_result<void>;
 
     // Variables
     std::shared_ptr<clp_s::search::ast::Expression> m_query;
@@ -198,6 +222,7 @@ private:
     PartialResolutionMap m_user_gen_namespace_partial_resolutions;
     std::unordered_map<clp_s::search::ast::ColumnDescriptor*, std::vector<SchemaTree::Node::id_t>>
             m_resolved_column_to_schema_tree_node_ids;
+    std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> m_projected_columns;
     ProjectionMap m_projected_column_to_original_key;
     bool m_case_sensitive_search;
 };
@@ -209,7 +234,106 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
         SchemaTree::Node::id_t node_id,
         NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
 ) -> outcome_v2::std_result<void> {
-    return ErrorCode{ErrorCodeEnum::MethodNotImplemented};
+    auto const parent_node_id{node_locator.get_parent_id()};
+    auto& partial_resolutions_to_update{
+            is_auto_generated ? m_auto_gen_namespace_partial_resolutions
+                              : m_user_gen_namespace_partial_resolutions
+    };
+    if (false == partial_resolutions_to_update.contains(parent_node_id)) {
+        return outcome_v2::success();
+    }
+
+    for (auto const& token_it : partial_resolutions_to_update.at(parent_node_id)) {
+        auto const next_token_it_result{token_it.next()};
+        if (SchemaTree::Node::Type::Obj == node_locator.get_type()) {
+            // Handle schema-tree non-leaf nodes.
+            if (token_it.is_last()) {
+                // TODO: Handle object search when supported.
+                continue;
+            }
+
+            if (token_it.is_wildcard()) {
+                auto [it, inserted] = partial_resolutions_to_update.try_emplace(
+                        node_id,
+                        std::vector<ColumnDescriptorTokenIterator>{}
+                );
+                it->second.emplace_back(token_it);
+                it->second.emplace_back(OUTCOME_TRYX(token_it.next()));
+                continue;
+            }
+
+            if (token_it.get_token() != node_locator.get_key_name()) {
+                continue;
+            }
+
+            auto const next_token_it{OUTCOME_TRYX(token_it.next())};
+            auto [it, inserted] = partial_resolutions_to_update.try_emplace(
+                    node_id,
+                    std::vector<ColumnDescriptorTokenIterator>{}
+            );
+            it->second.emplace_back(next_token_it);
+            if (false == next_token_it.is_last() && next_token_it.is_wildcard()) {
+                // Handle the case where the wildcard matches nothing
+                it->second.emplace_back(OUTCOME_TRYX(next_token_it.next()));
+            }
+            continue;
+        }
+
+        OUTCOME_TRYV(handle_column_resolution_on_leaf_node(
+                is_auto_generated,
+                node_id,
+                node_locator,
+                token_it,
+                new_projected_schema_tree_node_callback
+        ));
+    }
+
+    return outcome_v2::success();
+}
+
+template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
+auto QueryHandlerImpl::handle_column_resolution_on_leaf_node(
+        bool is_auto_generated,
+        SchemaTree::Node::id_t leaf_node_id,
+        SchemaTree::NodeLocator const& leaf_node_locator,
+        QueryHandlerImpl::ColumnDescriptorTokenIterator const& token_it,
+        NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
+) -> outcome_v2::std_result<void> {
+    // Handle schema-tree leaf nodes.
+    if (false == token_it.is_last()) {
+        // Treat the trailing wildcard as reaching the last token
+        auto const next_token_it{OUTCOME_TRYX(token_it.next())};
+        if (false == next_token_it.is_last() || false == next_token_it.is_wildcard()) {
+            return outcome_v2::success();
+        }
+    }
+
+    // Reaching the last token.
+    if (false == token_it.match(leaf_node_locator.get_type())
+        || (false == token_it.is_wildcard()
+            && token_it.get_token() != leaf_node_locator.get_key_name()))
+    {
+        // If the token can't match the new node, or the token is not a wildcard, and it doesn't
+        // match the key of the new node, then this token cannot be resolved on this node.
+        return outcome_v2::success();
+    }
+
+    auto* col{token_it.get_column_descriptor()};
+    if (m_projected_column_to_original_key.contains(col)) {
+        OUTCOME_TRYV(new_projected_schema_tree_node_callback(
+                is_auto_generated,
+                leaf_node_id,
+                m_projected_column_to_original_key.at(col)
+        ));
+        return outcome_v2::success();
+    }
+
+    auto [it, inserted] = m_resolved_column_to_schema_tree_node_ids.try_emplace(
+            col,
+            std::vector<SchemaTree::Node::id_t>{}
+    );
+    it->second.emplace_back(leaf_node_id);
+    return outcome_v2::success();
 }
 }  // namespace clp::ffi::ir_stream::search
 
