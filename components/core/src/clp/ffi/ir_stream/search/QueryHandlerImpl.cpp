@@ -2,18 +2,27 @@
 
 #include <exception>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include <outcome/outcome.hpp>
 
 #include "../../../../clp_s/archive_constants.hpp"
+#include "../../../../clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../../../../clp_s/search/ast/ConvertToExists.hpp"
 #include "../../../../clp_s/search/ast/EmptyExpr.hpp"
 #include "../../../../clp_s/search/ast/Expression.hpp"
 #include "../../../../clp_s/search/ast/FilterExpr.hpp"
+#include "../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../clp_s/search/ast/NarrowTypes.hpp"
 #include "../../../../clp_s/search/ast/OrOfAndForm.hpp"
 #include "../../../../clp_s/search/ast/SearchUtils.hpp"
+#include "../../KeyValuePairLogEvent.hpp"
+#include "../../SchemaTree.hpp"
+#include "AstEvaluationResult.hpp"
 #include "ErrorCode.hpp"
 
 namespace clp::ffi::ir_stream::search {
@@ -250,21 +259,18 @@ auto initialize_partial_resolution_from_search_ast(
                             : user_gen_namespace_partial_resolutions
         };
 
-        if (false == partial_resolutions.contains(SchemaTree::cRootId)) {
-            partial_resolutions.emplace(
-                    SchemaTree::cRootId,
-                    std::vector<QueryHandlerImpl::ColumnDescriptorTokenIterator>{}
-            );
-        }
+        auto [it, inserted] = partial_resolutions.try_emplace(
+                SchemaTree::cRootId,
+                std::vector<QueryHandlerImpl::ColumnDescriptorTokenIterator>{}
+        );
 
         auto const begin_token_it{
                 OUTCOME_TRYX(QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col))
         };
-        partial_resolutions.at(SchemaTree::cRootId).emplace_back(begin_token_it);
+        it->second.emplace_back(begin_token_it);
         if (begin_token_it.is_wildcard()) {
             // To handle the case where the prefix wildcard matches nothing
-            partial_resolutions.at(SchemaTree::cRootId)
-                    .emplace_back(OUTCOME_TRYX(begin_token_it.next()));
+            it->second.emplace_back(OUTCOME_TRYX(begin_token_it.next()));
         }
     }
 

@@ -148,7 +148,7 @@ public:
      * the failure:
      * - TODO
      */
-    [[nodiscard]] auto evaluate_node_id_value_pairs(
+    [[nodiscard]] static auto evaluate_node_id_value_pairs(
             KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
             KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
     ) -> outcome_v2::std_result<AstEvaluationResult>;
