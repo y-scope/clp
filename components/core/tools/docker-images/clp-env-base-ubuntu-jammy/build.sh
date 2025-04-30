@@ -10,7 +10,8 @@ build_cmd=(
     --file "${script_dir}/Dockerfile"
 )
 
-if command -v git && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null ; then
+if command -v git >/dev/null && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null ;
+then
     build_cmd+=(
         --label "org.opencontainers.image.revision=$(git -C "$script_dir" rev-parse HEAD)"
         --label
