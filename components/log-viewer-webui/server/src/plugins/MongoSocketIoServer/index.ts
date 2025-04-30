@@ -171,6 +171,9 @@ class MongoSocketIoServer {
         }
 
 
+        if (socket.disconnected) {
+            return;
+        }
         socket.data.collectionName = collectionName;
     }
 
