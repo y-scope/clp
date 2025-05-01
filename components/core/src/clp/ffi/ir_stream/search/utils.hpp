@@ -33,9 +33,9 @@ namespace clp::ffi::ir_stream::search {
  * @param filter
  * @param literal_type
  * @param value
- * @param case_sensitive_match Whether the string comparison should be case-sensitive.
- * @return A result containing a boolean indicate whether the value satisfies the filter expression
- * on success, or an error code indicating the failure:
+ * @param case_sensitive_match Whether a string comparison filter should be case-sensitive.
+ * @return A result containing a boolean indicating whether the value satisfies the filter
+ * expression on success, or an error code indicating the failure:
  * - ErrorCodeEnum::LiteralTypeUnexpected if `literal_type` is one of the following:
  *   - LiteralType::NullT
  *   - LiteralType::UnknownT

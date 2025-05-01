@@ -20,9 +20,9 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
         case ErrorCodeEnum::EncodedTextAstDecodingFailure:
             return "Failed to decode the given encoded text AST.";
         case ErrorCodeEnum::LiteralTypeUnexpected:
-            return "An unexpected literal type is reached.";
+            return "Unexpected literal type.";
         case ErrorCodeEnum::LiteralTypeUnsupported:
-            return "The given literal type is not supported.";
+            return "Unsupported literal type.";
         case ErrorCodeEnum::MethodNotImplemented:
             return "The requested method is not implemented.";
         default:
