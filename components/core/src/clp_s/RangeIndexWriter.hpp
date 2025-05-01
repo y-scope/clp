@@ -5,6 +5,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // We use NOLINTNEXTLINE to satisfy clang-tidy here because while we don't use any symbols from
