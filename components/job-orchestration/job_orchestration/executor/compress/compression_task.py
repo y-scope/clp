@@ -10,6 +10,7 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
+    ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
     CLP_DEFAULT_DATASET_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
@@ -70,7 +71,10 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
 
 def update_tags(db_cursor, table_prefix, archive_id, tag_ids):
     db_cursor.executemany(
-        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES (%s, %s)",
+        f"""
+        INSERT INTO {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} (archive_id, tag_id)
+        VALUES (%s, %s)
+        """,
         [(archive_id, tag_id) for tag_id in tag_ids],
     )
 
@@ -208,7 +212,7 @@ def _make_clp_s_command_and_env(
 
     if InputType.S3 == clp_config.input.type:
         compression_env_vars = dict(os.environ)
-        compression_env_vars.update(get_credential_env_vars(clp_config.input))
+        compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
     else:

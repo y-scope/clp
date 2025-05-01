@@ -12,10 +12,10 @@ import celery
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
-    CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
+    TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.compression import validate_path_and_get_info
@@ -134,13 +134,13 @@ def _process_s3_input(
     and adds their metadata to paths_to_compress_buffer.
     :param s3_input_config:
     :param paths_to_compress_buffer:
-    :raises: RuntimeError if input prefix doesn't resolve to any objects.
+    :raises: RuntimeError if input URL doesn't resolve to any objects.
     :raises: Propagates `s3_get_object_metadata`'s exceptions.
     """
 
     object_metadata_list = s3_get_object_metadata(s3_input_config)
     if len(object_metadata_list) == 0:
-        raise RuntimeError("Input prefix doesn't resolve to any object")
+        raise RuntimeError("Input URL doesn't resolve to any object")
 
     for object_metadata in object_metadata_list:
         paths_to_compress_buffer.add_file(object_metadata)
@@ -235,13 +235,14 @@ def search_and_schedule_new_tasks(db_conn, db_cursor, clp_metadata_db_connection
 
         tag_ids = None
         if clp_io_config.output.tags:
+            table_prefix = clp_metadata_db_connection_config["table_prefix"]
             db_cursor.executemany(
-                f"INSERT IGNORE INTO {CLP_METADATA_TABLE_PREFIX}tags (tag_name) VALUES (%s)",
+                f"INSERT IGNORE INTO {table_prefix}{TAGS_TABLE_SUFFIX} (tag_name) VALUES (%s)",
                 [(tag,) for tag in clp_io_config.output.tags],
             )
             db_conn.commit()
             db_cursor.execute(
-                f"SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN (%s)"
+                f"SELECT tag_id FROM {table_prefix}{TAGS_TABLE_SUFFIX} WHERE tag_name IN (%s)"
                 % ", ".join(["%s"] * len(clp_io_config.output.tags)),
                 clp_io_config.output.tags,
             )
