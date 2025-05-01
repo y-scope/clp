@@ -459,7 +459,10 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/search/QueryHandler.hpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.cpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.hpp
+        src/clp/ffi/ir_stream/search/test/test_QueryHandlerImpl.cpp
         src/clp/ffi/ir_stream/search/test/test_utilis.cpp
+        src/clp/ffi/ir_stream/search/test/util.cpp
+        src/clp/ffi/ir_stream/search/test/util.hpp
         src/clp/ffi/ir_stream/search/utils.cpp
         src/clp/ffi/ir_stream/search/utils.hpp
         src/clp/ffi/ir_stream/utils.cpp
