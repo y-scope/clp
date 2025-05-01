@@ -54,6 +54,7 @@ object itself, and has no key.
 
 (figure-1)=
 :::{card}
+
 ```json lines
 {
   "timestamp": 1744618344394,
@@ -75,6 +76,7 @@ object itself, and has no key.
   }
 }
 ```
+
 +++
 **Figure 1**: Two JSON log events.
 :::
@@ -90,6 +92,7 @@ object itself, and has no key.
 | timers         | Object     |
 | timers.stage_1 | Float      |
 | timers.stage_2 | NullValue  |
+
 +++
 **Table 1**: The schema for log event #1 in [Figure 1](#figure-1). Nested keys are represented with
 dot notation. The value types are described in [Table 3](#table-3).
@@ -106,6 +109,7 @@ dot notation. The value types are described in [Table 3](#table-3).
 | timers         | Object     |
 | timers.stage_1 | Float      |
 | timers.stage_2 | Float      |
+
 +++
  **Table 2**: The schema for log event #2 in [Figure 1](#figure-1).
 :::
@@ -125,6 +129,7 @@ dot notation. The value types are described in [Table 3](#table-3).
 | NullValue         | A null value                                                   | Leaf      |
 | Object            | An object                                                      | Internal  |
 | StructuredArray   | An array                                                       | Internal  |
+
 +++
 **Table 3**: clp-s value types.
 :::
@@ -153,7 +158,7 @@ flowchart LR
   timersObj("timers: <span style='color: orange'>Object</span>")
   timersStage1Float("stage_1: <span style='color: orange'>Float</span>")
   timersStage2Null("stage_2: <span style='color: orange'>NullValue</span>")
-  
+
   rootObj --> timestampInt
   rootObj --> levelVarStr
   rootObj --> messageClpStr
@@ -206,7 +211,7 @@ flowchart LR
   timersStage1Float("<span style='color: cyan'>5</span> stage_1: <span style='color: orange'>Float</span>")
   timersStage2Null("<span style='color: cyan'>6</span> stage_2: <span style='color: orange'>NullValue</span>")
   timersStage2Float("<span style='color: cyan'>7</span> stage_2: <span style='color: orange'>Float</span>")
-  
+
   rootObj --> timestampInt
   rootObj --> levelVarStr
   rootObj --> messageClpStr
