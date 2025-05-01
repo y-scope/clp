@@ -13,20 +13,21 @@
 
 #include <catch2/catch.hpp>
 
-#include "../src/clp/ffi/encoding_methods.hpp"
-#include "../src/clp/ffi/ir_stream/search/utils.hpp"
-#include "../src/clp/ffi/Value.hpp"
-#include "../src/clp/ir/EncodedTextAst.hpp"
-#include "../src/clp/ir/types.hpp"
-#include "../src/clp_s/search/ast/BooleanLiteral.hpp"
-#include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
-#include "../src/clp_s/search/ast/Expression.hpp"
-#include "../src/clp_s/search/ast/FilterExpr.hpp"
-#include "../src/clp_s/search/ast/FilterOperation.hpp"
-#include "../src/clp_s/search/ast/Integral.hpp"
-#include "../src/clp_s/search/ast/Literal.hpp"
-#include "../src/clp_s/search/ast/StringLiteral.hpp"
+#include "../../../../../clp_s/search/ast/BooleanLiteral.hpp"
+#include "../../../../../clp_s/search/ast/ColumnDescriptor.hpp"
+#include "../../../../../clp_s/search/ast/Expression.hpp"
+#include "../../../../../clp_s/search/ast/FilterExpr.hpp"
+#include "../../../../../clp_s/search/ast/FilterOperation.hpp"
+#include "../../../../../clp_s/search/ast/Integral.hpp"
+#include "../../../../../clp_s/search/ast/Literal.hpp"
+#include "../../../../../clp_s/search/ast/StringLiteral.hpp"
+#include "../../../../ir/EncodedTextAst.hpp"
+#include "../../../../ir/types.hpp"
+#include "../../../encoding_methods.hpp"
+#include "../../../Value.hpp"
+#include "../utils.hpp"
 
+namespace clp::ffi::ir_stream::search::test {
 namespace {
 using clp::ffi::ir_stream::search::evaluate_filter_against_literal_type_value_pair;
 using clp::ffi::Value;
@@ -174,11 +175,11 @@ auto assert_filter_evaluation_results_on_values(
                         matched_filter_ops.contains(filter_to_test->get_operation())
                 };
                 auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
-                               filter_to_test,
-                               filter_operand_literal_type,
-                               value_to_test,
-                               false
-                       )};
+                        filter_to_test,
+                        filter_operand_literal_type,
+                        value_to_test,
+                        false
+                )};
                 REQUIRE_FALSE(actual_match_result.has_error());
                 return expected_match_result == actual_match_result.value();
             }
@@ -199,17 +200,14 @@ auto check_filter_evaluation_against_integral_values(
     };
     if (cValueLiteralType != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
-        auto const actual_match_result{
-            evaluate_filter_against_literal_type_value_pair(
-                       filter_to_test,
-                       filter_operand_literal_type,
-                       empty_value_to_evaluate,
-                       false
-               )
-        };
+        auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
+                filter_to_test,
+                filter_operand_literal_type,
+                empty_value_to_evaluate,
+                false
+        )};
         REQUIRE_FALSE(actual_match_result.has_error());
-        return false
-               == actual_match_result.value();
+        return false == actual_match_result.value();
     }
 
     IntegralValueType filter_operand{};
@@ -242,14 +240,13 @@ auto check_filter_evaluation_against_bool_values(
     if (LiteralType::BooleanT != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
         auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
-                       filter_to_test,
-                       filter_operand_literal_type,
-                       empty_value_to_evaluate,
-                       false
-               )};
+                filter_to_test,
+                filter_operand_literal_type,
+                empty_value_to_evaluate,
+                false
+        )};
         REQUIRE_FALSE(actual_match_result.has_error());
-        return false
-               == actual_match_result.value();
+        return false == actual_match_result.value();
     }
 
     auto const op{filter_to_test->get_operation()};
@@ -275,14 +272,13 @@ auto check_filter_evaluation_against_var_strings(
     if (LiteralType::VarStringT != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
         auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
-                       filter_to_test,
-                       filter_operand_literal_type,
-                       empty_value_to_evaluate,
-                       false
-               )};
+                filter_to_test,
+                filter_operand_literal_type,
+                empty_value_to_evaluate,
+                false
+        )};
         REQUIRE_FALSE(actual_match_result.has_error());
-        return false
-               == actual_match_result.value();
+        return false == actual_match_result.value();
     }
 
     std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
@@ -316,8 +312,7 @@ auto check_filter_evaluation_against_encoded_text_asts(
                 false
         )};
         REQUIRE_FALSE(actual_match_result.has_error());
-        return false
-               == actual_match_result.value();
+        return false == actual_match_result.value();
     }
 
     std::string const matched{"The test ID=" + std::string{cRefTestString}};
@@ -355,11 +350,11 @@ check_filter_evaluation(FilterExpr const* filter_to_test, LiteralType filter_ope
     }
     if (FilterOperation::NEXISTS == op) {
         auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
-                       filter_to_test,
-                       filter_operand_literal_type,
-                       empty_value_to_evaluate,
-                       false
-               )};
+                filter_to_test,
+                filter_operand_literal_type,
+                empty_value_to_evaluate,
+                false
+        )};
         REQUIRE_FALSE(actual_match_result.has_error());
         return false == actual_match_result.value();
     }
@@ -503,3 +498,4 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
     REQUIRE_FALSE((nullptr == filter_to_test));
     REQUIRE(check_filter_evaluation(filter_to_test.get(), filer_operand_literal_type));
 }
+}  // namespace clp::ffi::ir_stream::search::test

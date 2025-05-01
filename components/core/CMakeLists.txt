@@ -459,6 +459,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/search/QueryHandler.hpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.cpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.hpp
+        src/clp/ffi/ir_stream/search/test/test_utilis.cpp
         src/clp/ffi/ir_stream/search/utils.cpp
         src/clp/ffi/ir_stream/search/utils.hpp
         src/clp/ffi/ir_stream/utils.cpp
@@ -630,7 +631,6 @@ set(SOURCE_FILES_unitTest
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-ffi_ir_stream_search_utils.cpp
         tests/test-ffi_IrUnitHandlerInterface.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
