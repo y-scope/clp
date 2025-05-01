@@ -43,6 +43,7 @@ namespace clp::ffi::ir_stream::search {
  * - ErrorCodeEnum::LiteralTypeUnsupported if `literal_type` is one of the following:
  *   - LiteralType::EpochDateT since the current IR format doesn't support this type.
  *   - LiteralType::ArrayT since array search hasn't been implemented.
+ * - Forwards `evaluate_clp_string_filter_op`'s return values.
  */
 [[nodiscard]] auto evaluate_filter_against_literal_type_value_pair(
         clp_s::search::ast::FilterExpr const* filter,

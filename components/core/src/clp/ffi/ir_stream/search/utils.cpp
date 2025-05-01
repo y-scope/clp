@@ -31,7 +31,7 @@ using clp_s::search::ast::LiteralTypeBitmask;
  * @param op
  * @param filter_operand The operand associated with the filter.
  * @param value_operand The value operand to evaluate.
- * @return true if the filter condition is satisfied; false otherwise.
+ * @return Whether the filter condition is satisfied.
  */
 template <typename OperandType>
 requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, value_float_t>
@@ -47,7 +47,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param op
  * @param filter_operand The operand associated with the filter.
  * @param value_operand The value operand to evaluate.
- * @return true if the filter condition is satisfied; false otherwise.
+ * @return Whether the filter condition is satisfied.
  */
 [[nodiscard]] auto evaluate_string_filter_op(
         FilterOperation op,
@@ -62,7 +62,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param op
  * @param operand
  * @param value
- * @return true if the filter condition is satisfied; false otherwise.
+ * @return Whether the filter condition is satisfied.
  */
 [[nodiscard]] auto evaluate_int_filter_op(
         FilterOperation op,
@@ -76,7 +76,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param op
  * @param operand
  * @param value
- * @return true if the filter condition is satisfied; false otherwise.
+ * @return Whether the filter condition is satisfied.
  */
 [[nodiscard]] auto evaluate_float_filter_op(
         FilterOperation op,
@@ -90,7 +90,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param op
  * @param operand
  * @param value
- * @return true if the filter condition is satisfied; false otherwise.
+ * @return Whether the filter condition is satisfied.
  */
 [[nodiscard]] auto evaluate_bool_filter_op(
         FilterOperation op,
@@ -104,7 +104,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param op
  * @param operand
  * @param value
- * @return true if the filter condition is satisfied; false otherwise.
+ * @return Whether the filter condition is satisfied.
  */
 [[nodiscard]] auto evaluate_var_string_filter_op(
         FilterOperation op,
@@ -119,14 +119,16 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param op
  * @param operand
  * @param value
- * @return true if the filter condition is satisfied; false otherwise.
+ * @return A result containing a boolean indicating whether the filter condition is satisfied on
+ * success, or an error code indicating the failure:
+ * - ErrorCodeEnum::EncodedTextAstDecodingFailure if failed to decode the given encoded text AST.
  */
 [[nodiscard]] auto evaluate_clp_string_filter_op(
         FilterOperation op,
         std::shared_ptr<Literal> const& operand,
         Value const& value,
         bool case_sensitive_match
-) -> bool;
+) -> outcome_v2::std_result<bool>;
 
 template <typename OperandType>
 requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, value_float_t>
@@ -251,7 +253,7 @@ auto evaluate_clp_string_filter_op(
         std::shared_ptr<Literal> const& operand,
         Value const& value,
         bool case_sensitive_match
-) -> bool {
+) -> outcome_v2::std_result<bool> {
     std::string filter_operand;
     if (false == operand->as_clp_string(filter_operand, op)) {
         return false;
@@ -265,8 +267,7 @@ auto evaluate_clp_string_filter_op(
                               .decode_and_unparse()
     };
     if (false == optional_value_operand.has_value()) {
-        // TODO: We should return an error.
-        return false;
+        return ErrorCode{ErrorCodeEnum::EncodedTextAstDecodingFailure};
     }
 
     return evaluate_string_filter_op(
@@ -363,13 +364,15 @@ auto evaluate_filter_against_literal_type_value_pair(
                            case_sensitive_match
                    );
         case LiteralType::ClpStringT:
-            return value.has_value()
-                   && evaluate_clp_string_filter_op(
-                           op,
-                           filter->get_operand(),
-                           *value,
-                           case_sensitive_match
-                   );
+            if (false == value.has_value()) {
+                return false;
+            }
+            return evaluate_clp_string_filter_op(
+                    op,
+                    filter->get_operand(),
+                    *value,
+                    case_sensitive_match
+            );
         case LiteralType::EpochDateT:
         case LiteralType::ArrayT:
             return ErrorCode{ErrorCodeEnum::LiteralTypeUnsupported};
