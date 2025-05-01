@@ -490,11 +490,10 @@ TEST_CASE("ffi_ir_stream_search_filter_evaluation", "[ffi][ir_stream][search]") 
              LiteralType::ClpStringT},
     };
 
-    auto const [filter_expr, filer_operand_literal_type]{
-            GENERATE_COPY(from_range(filter_and_type_pairs))
-    };
+    auto const [filter_expr, filter_operand_literal_type]
+            = GENERATE_COPY(from_range(filter_and_type_pairs));
     auto const filter_to_test{std::dynamic_pointer_cast<FilterExpr>(filter_expr)};
     REQUIRE_FALSE((nullptr == filter_to_test));
-    REQUIRE(check_filter_evaluation(filter_to_test.get(), filer_operand_literal_type));
+    REQUIRE(check_filter_evaluation(filter_to_test.get(), filter_operand_literal_type));
 }
 }  // namespace clp::ffi::ir_stream::search::test
