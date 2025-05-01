@@ -212,6 +212,7 @@ target_link_libraries(
         PRIVATE
         clp::string_utils
         date::date
+        spdlog::spdlog
 )
 
 add_executable(

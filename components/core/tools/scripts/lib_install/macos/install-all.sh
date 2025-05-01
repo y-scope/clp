@@ -19,7 +19,6 @@ brew install --formula "${cmake_formula_path}"
 brew install \
   boost \
   coreutils \
-  fmt \
   gcc \
   go-task \
   java11 \
@@ -29,7 +28,6 @@ brew install \
   mariadb-connector-c \
   mongo-cxx-driver \
   msgpack-cxx \
-  spdlog \
   xz \
   zstd
 
