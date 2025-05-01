@@ -18,6 +18,7 @@
 #include "AstEvaluationResult.hpp"
 #include "ErrorCode.hpp"
 #include "NewProjectedSchemaTreeNodeCallbackReq.hpp"
+#include "utils.hpp"
 
 namespace clp::ffi::ir_stream::search {
 /**
@@ -84,11 +85,8 @@ public:
          * @param type
          * @return Whether the underlying column can match the given schema-tree node type.
          */
-        // TODO: Fix clang-tidy
-        // NOLINTNEXTLINE(*)
         [[nodiscard]] auto match(SchemaTree::Node::Type type) const -> bool {
-            // TODO: Implement this method after #856 is merged.
-            return false;
+            return m_column_descriptor->matches_any(schema_tree_node_type_to_literal_types(type));
         }
 
     private:

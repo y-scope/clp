@@ -25,6 +25,12 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
             return "Failed to tokenize the column descriptor.";
         case ErrorCodeEnum::DuplicateProjectedColumn:
             return "The projected column is not unique.";
+        case ErrorCodeEnum::EncodedTextAstDecodingFailure:
+            return "Failed to decode the given encoded text AST.";
+        case ErrorCodeEnum::LiteralTypeUnexpected:
+            return "An unexpected literal type is reached.";
+        case ErrorCodeEnum::LiteralTypeUnsupported:
+            return "The given literal type is not supported.";
         case ErrorCodeEnum::MethodNotImplemented:
             return "The requested method is not implemented.";
         case ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure:
