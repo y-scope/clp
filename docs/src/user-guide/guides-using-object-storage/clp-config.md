@@ -15,22 +15,13 @@ angle brackets (`<>`) with the appropriate values:
 ```yaml
 logs_input:
   type: "s3"
-  s3_config:
-    region_code: "<region-code>"
-    bucket: "<bucket-name>"
-    key_prefix: "<key-prefix>"
-    aws_authentication:
-      type: "<type>"
-      # type-specific settings
+  aws_authentication:
+    type: "<type>"
+    # type-specific settings
 ```
-* `s3_config` configures both the S3 bucket where logs are to be retrieved from and the credentials
-  for accessing it.
-  * `<region-code>` is the AWS region [code][aws-region-codes] for the bucket.
-  * `<bucket-name>` is the bucket's name.
-  * `<key-prefix>` is the prefix of all logs you wish to compress and should be the same as the
-    `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
-  * `<type>` and the type-specific settings are described in the
-    [configuring AWS authentication](#configuring-aws-authentication) section.
+
+`<type>` and the type-specific settings are described in the
+[configuring AWS authentication](#configuring-aws-authentication) section.
 
 ## Configuration for archive storage
 
@@ -111,8 +102,8 @@ additional settings necessary for the chosen authentication type.
 
 :::{note}
 The code blocks below show `aws_authentication` as a top-level key, but it should be nested under
-`logs_input.s3_config`, `archive_output.storage.s3_config`, or `stream_output.storage.s3_config`
-depending on the use case.
+`logs_input`, `archive_output.storage.s3_config`, or `stream_output.storage.s3_config` depending on
+the use case.
 :::
 
 Settings for each type are described below:
@@ -188,4 +179,3 @@ This authentication method will only work on an EC2 instance with a
 [role attached](index.md#ec2-instance-iam-roles).
 
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
-[compression-iam-policy]: ./object-storage-config.md#configuration-for-compression

@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -7,6 +8,7 @@ from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
 from clp_py_utils.clp_config import (
+    AwsAuthentication,
     AwsAuthType,
     CLPConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -51,16 +53,16 @@ def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Cr
     )
 
 
-def get_credential_env_vars(config: S3Config) -> Dict[str, str]:
+def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
     """
     Generates AWS credential environment variables for tasks.
-    :param config: S3Config or S3InputConfig from which to retrieve credentials.
-    :return: A [str, str] Dict which access key pair and session token if applicable.
-    :raise: ValueError if auth type is not supported
+    :param auth: AwsAuthentication
+    :return: A dictionary containing an access key-pair and optionally, a session token; or an empty
+    dictionary if the AWS-credential environment-variables should've been set already.
+    :raise: ValueError if `auth.type` is not a supported type or fails to authenticate with the
+    given `auth`.
     """
     env_vars: Optional[Dict[str, str]] = None
-    auth = config.aws_authentication
-
     aws_credentials: Optional[S3Credentials] = None
 
     if AwsAuthType.env_vars == auth.type:
@@ -104,20 +106,22 @@ def generate_container_auth_options(
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
-    storages_by_component_type: List[Union[S3Storage, FsStorage]] = []
+    output_storages_by_component_type: List[Union[S3Storage, FsStorage]] = []
+    input_storage_needed = False
+
     if component_type in (
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         COMPRESSION_WORKER_COMPONENT_NAME,
     ):
-        storages_by_component_type = [clp_config.logs_input, clp_config.archive_output.storage]
+        output_storages_by_component_type = [clp_config.archive_output.storage]
+        input_storage_needed = True
     elif component_type in (LOG_VIEWER_WEBUI_COMPONENT_NAME,):
-        storages_by_component_type = [clp_config.stream_output.storage]
+        output_storages_by_component_type = [clp_config.stream_output.storage]
     elif component_type in (
         QUERY_SCHEDULER_COMPONENT_NAME,
         QUERY_WORKER_COMPONENT_NAME,
     ):
-        storages_by_component_type = [
-            clp_config.logs_input,
+        output_storages_by_component_type = [
             clp_config.archive_output.storage,
             clp_config.stream_output.storage,
         ]
@@ -126,13 +130,20 @@ def generate_container_auth_options(
     config_mount = False
     add_env_vars = False
 
-    for storage in storages_by_component_type:
+    for storage in output_storages_by_component_type:
         if StorageType.S3 == storage.type:
             auth = storage.s3_config.aws_authentication
             if AwsAuthType.profile == auth.type:
                 config_mount = True
             elif AwsAuthType.env_vars == auth.type:
                 add_env_vars = True
+
+    if input_storage_needed and StorageType.S3 == clp_config.logs_input.type:
+        auth = clp_config.logs_input.aws_authentication
+        if AwsAuthType.profile == auth.type:
+            config_mount = True
+        elif AwsAuthType.env_vars == auth.type:
+            add_env_vars = True
 
     credentials_env_vars = []
 
@@ -184,6 +195,41 @@ def _create_s3_client(s3_config: S3Config, boto3_config: Optional[Config] = None
 
     s3_client = aws_session.client("s3", config=boto3_config)
     return s3_client
+
+
+def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
+    """
+    Parses the region_code, bucket, and key_prefix from the given S3 URL.
+    :param s3_url: A host-style URL or path-style URL.
+    :return: A tuple of (region_code, bucket, key_prefix).
+    :raise: ValueError if `s3_url` is not a valid host-style URL or path-style URL.
+    """
+
+    host_style_url_regex = re.compile(
+        r"https://(?P<bucket_name>[a-z0-9.-]+)\.s3(\.(?P<region_code>[a-z]+-[a-z]+-[0-9]))"
+        r"\.(?P<endpoint>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
+    )
+    match = host_style_url_regex.match(s3_url)
+
+    if match is None:
+        path_style_url_regex = re.compile(
+            r"https://s3(\.(?P<region_code>[a-z]+-[a-z]+-[0-9]))\.(?P<endpoint>[a-z0-9.-]+)/"
+            r"(?P<bucket_name>[a-z0-9.-]+)/(?P<key_prefix>[^?]+).*"
+        )
+        match = path_style_url_regex.match(s3_url)
+
+    if match is None:
+        raise ValueError(f"Unsupported URL format: {s3_url}")
+
+    region_code = match.group("region_code")
+    bucket_name = match.group("bucket_name")
+    endpoint = match.group("endpoint")
+    key_prefix = match.group("key_prefix")
+
+    if AWS_ENDPOINT != endpoint:
+        raise ValueError(f"Unsupported endpoint: {endpoint}")
+
+    return region_code, bucket_name, key_prefix
 
 
 def generate_s3_virtual_hosted_style_url(

@@ -1,4 +1,4 @@
-FROM ubuntu:jammy AS BASE
+FROM ubuntu:jammy AS base
 
 # Install runtime dependencies
 # TODO: Investigate why libssl-dev is a hidden dependency of clp-s
@@ -22,7 +22,7 @@ ADD ./make-dictionaries-readable ./
 
 # Flatten the image
 FROM scratch
-COPY --from=BASE / /
+COPY --from=base / /
 
 WORKDIR /clp
 

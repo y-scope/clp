@@ -28,6 +28,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   pkg-config \
   python3 \
   python3-pip \
+  unzip \
   zlib1g-dev
 
 # Add alternatives for cpp-10, gcc-10, and g++-10

@@ -4,9 +4,9 @@
 #include <utility>
 
 #include <boost/asio.hpp>
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 
 #include "../clp/spdlog_with_specializations.hpp"
