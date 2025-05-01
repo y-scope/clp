@@ -146,7 +146,7 @@ public:
      * the failure:
      * - TODO
      */
-    [[nodiscard]] static auto evaluate_node_id_value_pairs(
+    [[nodiscard]] auto evaluate_node_id_value_pairs(
             KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
             KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
     ) -> outcome_v2::std_result<AstEvaluationResult>;
@@ -170,6 +170,12 @@ public:
             SchemaTree::Node::id_t node_id,
             NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
     ) -> outcome_v2::std_result<void>;
+
+    [[nodiscard]] auto get_resolved_column_to_schema_tree_node_ids() const -> std::unordered_map<
+            clp_s::search::ast::ColumnDescriptor*,
+            std::vector<SchemaTree::Node::id_t>> {
+        return m_resolved_column_to_schema_tree_node_ids;
+    }
 
 private:
     // Constructor

@@ -294,13 +294,12 @@ auto QueryHandlerImpl::create(
         bool case_sensitive_match
 ) -> outcome_v2::std_result<QueryHandlerImpl> {
     query = OUTCOME_TRYX(preprocess_query(query));
-    auto [projected_columns, projected_column_to_original_key]{
-            OUTCOME_TRYX(create_projected_columns_and_projection_map(projections))
-    };
-    auto [auto_gen_namespace_partial_resolutions, user_gen_namespace_partial_resolutions]{
-            OUTCOME_TRYX(create_initial_partial_resolutions(query, projected_column_to_original_key)
-            )
-    };
+    auto [projected_columns, projected_column_to_original_key]
+            = OUTCOME_TRYX(create_projected_columns_and_projection_map(projections));
+    auto [auto_gen_namespace_partial_resolutions, user_gen_namespace_partial_resolutions]
+            = OUTCOME_TRYX(
+                    create_initial_partial_resolutions(query, projected_column_to_original_key)
+            );
 
     return QueryHandlerImpl{
             std::move(query),
@@ -312,6 +311,8 @@ auto QueryHandlerImpl::create(
     };
 }
 
+// TODO: Fix clang-tidy
+// NOLINTNEXTLINE(*)
 auto QueryHandlerImpl::evaluate_node_id_value_pairs(
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
