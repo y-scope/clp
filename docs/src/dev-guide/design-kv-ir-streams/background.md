@@ -1,36 +1,58 @@
 # Background
 
-To understand the format, it's necessary to briefly understand:
+To understand the KV-IR stream format, we first need to review the following:
 
-* how clp-s encodes dynamically structured log events and serializes them into an archive;
-* how clp-s parses and encodes unstructured text values.
-* auto-generated kv-pairs and how they differ from user-generated kv-pairs.
+* How clp-s compresses log events, since the process for KV-IR streams is similar but makes a
+  different trade-off between resource usage, compression ratio, and search performance.
+* How clp-s parses and encodes unstructured text values.
 
-We explain each below.
+We discuss each below.
 
-## Encoding & storing structured log events in an archive
+## How clp-s compresses log events
 
-Conceptually, clp-s encodes a log event through the following steps:
+At a high-level, clp-s compresses log events into what we call archives. Depending on the configured
+size-threshold for each archive, a set of log events may be compressed into one or more archives.
+In addition, the format of an archive is designed so that each archive is independent of other
+archives, meaning that different archives can be searched concurrently.
 
-1. [Determine the log event's schema](#1-determine-the-log-events-schema)
-2. [Merge the event's schema with the archive's](#2-merge-the-events-schema-with-the-archives)
-3. [Create a table for the schema](#3-create-a-table-for-the-schema)
-4. [Encode and store the event](#4-encode-and-store-the-event)
+To compress a log event into an archive, clp-s needs to do the following:
 
-### 1. Determine the log event's schema
+1. [Compute the event's schema](#computing-an-events-schema)
+2. [Encode the event's schema](#encoding-event-schemas)
+3. [Encode and store the event's values](#encoding--storing-event-values)
+4. [Serialize and write the archive's data structures](#writing-archives-to-disk)
 
-To encode a log event, clp-s first examines its schema--i.e., the key and value type for
-each kv-pair in the log event. For example, Figure 1 shows two log events and Tables 1 & 2 show the
-schemas for these log events. clp-s represents this schema as a tree, where:
+The goal of this process is to deduplicate information that repeats within and between log events,
+and then represent this information in a form that's more compact to store and faster to search.
 
-* each node under the root represents a unique key and value-type pair;
-* leaf nodes have primitive types (int, float, boolean, string, null); and
-* non-leaf nodes are either objects or arrays.
+### Computing an event's schema
 
-The tree for the schema in Table 1 is shown in Figure 2. Notice that although both `level` and
-`mesage` are strings, clp-s assigns them more specific types based on how it decides to encode them.
-Table 2 lists clp-s' value types and their meaning.
+An event's schema is the set of key and value-type pairs for each KV pair in the log event. To
+compute an event's schema, clp-s iterates over every key and value-type pair in the log event to:
 
+* determine the clp-s value-type that should be used to encode each value; and
+* build a tree representation of the schema---what we call a schema tree.
+
+Consider the example log events in [Figure 1](#figure-1), and their schemas in [Table 1](#table-1)
+and [Table 2](#table-2). The value types used in the schemas are listed in [Table 3](#table-3).
+
+As we'll see in [Encoding & storing event values](#encoding--storing-event-values), for certain
+value types, clp-s only has one way of encoding the value, so it assigns it the corresponding
+type---e.g., the integer corresponding to the `timestamp` key. For other value types, clp-s can
+encode the value in multiple ways, so it chooses the type where the encoded value will result in a
+good trade-off between compactness and efficient searches---e.g., the strings corresponding to the
+`level` and `message` keys.
+
+Once clp-s assigns a type to a value, it can add it to the log event's schema tree. Except for the
+root, each node in a schema tree represents a unique key and value-type pair from the schema. For
+instance, the tree for the schema in [Table 1](#table-1) is shown in [Figure 2](#figure-2). Since
+the tree represents the structure of a structured log event, the internal (non-leaf) nodes will
+always correspond to `Object`s or `StructuredArray`s, while the leaf nodes will correspond to values
+with primitive types (since `UnstructuredArray`-typed values are encoded as JSON strings, they are
+primitives from the perspective of a schema tree) . Accordingly, the root node represents the event
+object itself, and has no key.
+
+(figure-1)=
 :::{card}
 ```json lines
 {
@@ -57,32 +79,57 @@ Table 2 lists clp-s' value types and their meaning.
 **Figure 1**: Two JSON log events.
 :::
 
+(table-1)=
 :::{card}
-| Key       | Value type |
-|-----------|------------|
-| timestamp | Integer    |
-| level     | VarString  |
-| message   | ClpString  |
-| timers    | Object     |
-| - stage_1 | Float      |
-| - stage_2 | NullValue  |
+
+| Key            | Value type |
+|----------------|------------|
+| timestamp      | Integer    |
+| level          | VarString  |
+| message        | ClpString  |
+| timers         | Object     |
+| timers.stage_1 | Float      |
+| timers.stage_2 | NullValue  |
 +++
-**Table 1**: The schema for log event #1 in Figure 1.
+**Table 1**: The schema for log event #1 in [Figure 1](#figure-1). Nested keys are represented with
+dot notation. The value types are described in [Table 3](#table-3).
 :::
 
+(table-2)=
 :::{card}
-| Key       | Value type |
-|-----------|------------|
-| timestamp | Integer    |
-| level     | VarString  |
-| message   | ClpString  |
-| timers    | Object     |
-| - stage_1 | Float      |
-| - stage_2 | Float      |
+
+| Key            | Value type |
+|----------------|------------|
+| timestamp      | Integer    |
+| level          | VarString  |
+| message        | ClpString  |
+| timers         | Object     |
+| timers.stage_1 | Float      |
+| timers.stage_2 | Float      |
 +++
- **Table 2**: The schema for log event #2 in Figure 1.
+ **Table 2**: The schema for log event #2 in [Figure 1](#figure-1).
 :::
 
+(table-3)=
+:::{card}
+
+| Type              | Description                                                    | Node type |
+|-------------------|----------------------------------------------------------------|-----------|
+| Integer           | A 64-bit integer                                               | Leaf      |
+| Float             | A floating-point number                                        | Leaf      |
+| Boolean           | A boolean                                                      | Leaf      |
+| VarString         | A string without whitespace                                    | Leaf      |
+| DateString        | A string representing a timestamp                              | Leaf      |
+| ClpString         | A string containing whitespace, parsed into an EncodedTextAst. | Leaf      |
+| UnstructuredArray | An array that’s encoded as a JSON string                       | Leaf      |
+| NullValue         | A null value                                                   | Leaf      |
+| Object            | An object                                                      | Internal  |
+| StructuredArray   | An array                                                       | Internal  |
++++
+**Table 3**: clp-s value types.
+:::
+
+(figure-2)=
 ::::{card}
 :::{mermaid}
 %%{
@@ -116,103 +163,26 @@ flowchart LR
 :::
 +++
 **Figure 2**: The schema tree for log event #1 in Figure 1. Each node's label is of the form
-"<key>: <type>" and each arrow is from a parent to a child node.
+"`<key>`: `<type>`", and each arrow is from a parent to a child node.
 ::::
 
-:::{card}
-| Type              | Description                                                                                                                      |
-|-------------------|----------------------------------------------------------------------------------------------------------------------------------|
-| Integer           | A 64-bit integer                                                                                                                 |
-| Float             | An IEEE-754 double-precision floating-point number                                                                               |
-| Boolean           | A boolean                                                                                                                        |
-| ClpString         | A string that's parsed and encoded using CLP's unstructured-text encoding algorithm                                              |
-| DateString        | A string that's parsed and encoded as a timestamp                                                                                |
-| VarString         | A string that's encoded using a dictionary                                                                                       |
-| UnstructuredArray | An array that's encoded as a JSON string that's been further parsed and encoded using CLP's unstructured-text encoding algorithm |
-| StructuredArray   | An array that's encoded natively                                                                                                 |
-| Object            | An object                                                                                                                        |
-| NullValue         | A null value                                                                                                                     |
-+++
-**Table 2**: clp-s value types.
-:::
+### Encoding event schemas
 
-### 2. Merge the event's schema with the archive's
+To compactly encode the schemas of the events in an archive, clp-s maintains an archive-level schema
+tree that merges all events' schema trees; each event's schema can then be uniquely encoded as
+an array of identifiers for the relevant leaf nodes of the archive's tree. (The leaf node IDs are
+sufficient since we can determine the predecessor nodes by traversing to the root from the leaves.)
+For instance, [Figure 3](#figure-3) shows the schema tree after adding the example logs (from
+[Figure 1](#figure-1)) to the tree. Referencing the IDs for the leaf nodes, the schema for event #1
+can be encoded as `[1, 2, 3, 5, 7]`. To merge an event's schema tree with the archive's tree, clp-s
+considers each pair of nodes, with one node from each tree:
 
-Once clp-s determines an event's schema, it then conceptually encodes a log event as follows.
-For each node in the event's schema tree, clp-s adds it to the archive's schema tree (if it doesn't
-already exist) and assigns it a unique ID. In effect, the archive's schema tree is the result of
-merging all log events' schemas. Figure 3 shows the archive's schema tree after encoding log event
-#1 in Figure 1.
+* If the nodes have the same key and value-type, and all of their predecessor nodes have matching
+  key and value-type pairs, clp-s merges the nodes in the resulting tree.
+* Otherwise, both nodes are added to the resulting tree, and each is assigned a unique integer ID.
 
+(figure-3)=
 ::::{card}
-:::{mermaid}
-%%{
-  init: {
-    "theme": "base",
-    "themeVariables": {
-      "primaryColor": "#5d00cc",
-      "primaryTextColor": "#fff",
-      "primaryBorderColor": "transparent",
-      "lineColor": "#9580ff",
-      "secondaryColor": "#9580ff",
-      "tertiaryColor": "#fff"
-    }
-  }
-}%%
-flowchart LR
-  rootObj("<span style='color: cyan'>0</span> root: <span style='color: orange'>Object</span>")
-  timestampInt("<span style='color: cyan'>1</span> timestamp: <span style='color: orange'>Integer</span>")
-  levelVarStr("<span style='color: cyan'>2</span> level: <span style='color: orange'>VarString</span>")
-  messageClpStr("<span style='color: cyan'>3</span> message: <span style='color: orange'>ClpString</span>")
-  timersObj("<span style='color: cyan'>4</span> timers: <span style='color: orange'>Object</span>")
-  timersStage1Float("<span style='color: cyan'>5</span> stage_1: <span style='color: orange'>Float</span>")
-  timersStage2Null("<span style='color: cyan'>6</span> stage_2: <span style='color: orange'>NullValue</span>")
-
-  rootObj --> timestampInt
-  rootObj --> levelVarStr
-  rootObj --> messageClpStr
-  rootObj --> timersObj
-  timersObj --> timersStage1Float
-  timersObj --> timersStage2Null
-:::
-+++
-**Figure 3**: The archive schema tree after adding log event #1 in Figure 1. Each node's label is of
-the form "<ID> <key>: <type>".
-::::
-
-### 3. Create a table for the schema
-
-clp-s encodes the log event's schema as a series of node IDs for the leaves of the event's schema
-tree. We refer to this set of schema node IDs as the log event's encoded schema. For the log event
-in Figure 1, the encoded schema is: `[1, 2, 3, 5, 6]`. Notice that the encoded schema doesn't
-include the node IDs of the internal nodes (e.g., `4`) since we can determine those nodes by
-traversing upwards from each leaf node; in other words, a leaf node uniquely identifies the complete
-hierarchy (JSON path) from the event's root node to the leaf node.
-
-### 4. Encode and store the event
-
-clp-s creates a table for this encoded schema (if one doesn't already exist), where each column
-corresponds to a leaf schema node. We refer to these tables as encoded record tables (ERTs). For
-each leaf kv-pair in the log event, clp-s encodes it (e.g., using dictionary encoding) and stores
-the encoded value in the corresponding ERT column. After encoding the log event in Figure 1, the
-corresponding ERT is shown in Table 3.
-
-:::{card}          
-| 1             | 2  | 3       | 5     | 6    |
-|---------------|----|---------|-------|------|
-| 1744618344394 | V0 | L0,V1,2 | 0.753 | null |
-+++
-**Table 3**: The ERT generated by encoding log event #1 in Figure 1. The value in each column is for
-illustration purposes rather than showing the actual value stored. The `info` (ID 2) column contains
-a dictionary ID for the variable value. The `message` (ID 3) column contains a dictionary ID for the
-log type, followed by variable-dictionary IDs and encoded variable values.
-:::
-
-For the second log event, clp-s performs the same procedure resulting in the archive schema tree and
-ERT shown in Figure 4 and Table 4. Notice that because log event #2 has a different schema, it adds
-a new node to the schema tree and its values are stored in a different ERT.
-
-::::{card}     
 :::{mermaid}
 %%{
   init: {
@@ -246,114 +216,52 @@ flowchart LR
   timersObj --> timersStage2Float
 :::
 +++
-**Figure 4**: The archive schema tree after adding log event #2 in Figure 1.
+**Figure 3**: The archive's schema tree after adding the log events from [Figure 1](#figure-1). Each
+node's label is of the form "`<ID>` `<key>`: `<type>`".
 ::::
 
-:::{card}
-| 1             | 2  | 3       | 5     | 7     |
-|---------------|----|---------|-------|-------|
-| 1744618344499 | V0 | L0,V2,1 | 0.945 | 0.222 |
-+++
-**Table 4**: The ERT generated by encoding log event #2 in Figure 1.
-:::
+### Encoding & storing event values
 
-## Parsing & encoding unstructured text
+clp-s uses a variety of encoding methods to compactly encode an event's values before storing them
+in a table corresponding to the event's schema---what we call an encoded record table (ERT). As
+we'll see below, clp-s uses a different encoding method for each of its value types, with the goal
+of each encoding method being to deduplicate any repetitive information (e.g., deduplicating
+repeated `VarString`s with a dictionary) and then represent the value with a 64-bit integer. For
+each encoded value, clp-s stores it in its corresponding ERT column. This table is efficient to
+search since all the values are integers; and by grouping events with the same schema into a table,
+clp-s essentially deduplicates the event's schema.
 
-CLP's algorithm for parsing and encoding unstructured text decomposes a string into:
+clp-s encodes each leaf-node value type as follows:
 
-* the static text of the string, called its log type; and
-* variable values.
+* `Integer`s are encoded natively.
+* `Float`s are encoded using the IEEE-754 double-precision format.
+* `Boolean`s are encoded as an integer.
+* `VarString`s are encoded using dictionary-encoding---i.e., a dictionary that maps strings to
+  unique integer IDs, and the encoded value for a string is its corresponding dictionary ID.
+* `DateString`s are encoded as an epoch timestamp and a dictionary-encoded format string.
+* `ClpString`s are encoded as follows:
+  * the format string is dictionary-encoded.
+  * the encoded variable values are encoded natively.
+  * the string variable values are dictionary-encoded.
+* `UnstructuredArray`s are converted to EncodedTextAsts are then encoded similar to `ClpString`s.
+* `NullValue`s are encoded as the integer `0`.
 
-For example, log event #1's `message` field would be decomposed as shown in Figure 5. Variables in
-the log type are replaced with placeholders.
+`VarString`s share a dictionary with the string variable values from `ClpString`s and
+`UnstructuredArray`s, while the format strings from `ClpString`s and `UnstructuredArray`s use
+separate dictionaries, each.
 
-::::{card}
-:::{mermaid}
-%%{
-  init: {
-    "theme": "base",
-    "themeVariables": {
-      "primaryColor": "#5d00cc",
-      "primaryTextColor": "#fff",
-      "primaryBorderColor": "transparent",
-      "lineColor": "#9580ff",
-      "secondaryColor": "#9580ff",
-      "tertiaryColor": "#fff"
-    }
-  }
-}%%
-flowchart TD
-    message("<span style='color: cyan'>task_1</span> completed successfully. <span style='color: orange'>2</span> tasks remain.")
-    logtype("[] completed successfully. [] 2 tasks remain.")
-    var1("<span style='color: cyan'>task_1</span>")
-    var2("<span style='color: orange'>2<span>")
-    
-    message --> logtype
-    message --> var1
-    message --> var2
-:::
-+++
-Figure 5: How CLP's unstructured-text parsing algorithm decomposes a string. Placeholders in the log
-type are represented with `[]`.
-::::
-    
-The algorithm uses a schema file (this "schema" has no relation to the log event's "schema")
-containing various regular expressions for parsing and extracting the variable values from the
-string. For each variable value, the algorithm encodes it specially to improve compression and/or
-query performance. For instance, a string variable may be dictionary-encoded, or a floating-point
-value may be encoded using CLP's custom floating-point encoding.
+clp-s' two array types are used to encode arrays with different characteristics. `StructuredArray`
+values are similar to `Object` values in that all of their elements will be added to the schema
+tree. Accordingly, this type is more appropriate for arrays whose elements don't change types
+significantly between log events; otherwise, the schema tree would be significantly larger. For
+other arrays, the `UnstructuredArray` is more appropriate---since it's encoded as a JSON string, its
+elements won't be added to the tree. Nonetheless, values within these arrays can still be searched.
 
-## Autogenerated key-value pairs
+### Writing archives to disk
 
-The kv-pairs in a log event can typically be divided into two types:
-
-1. *auto-generated* kv-pairs - those inserted automatically by the logging framework.
-2. *user-generated* kv-pairs - user-defined kv-pairs inserted explicitly by the user.
-
-For instance, consider the structured Go log printing statement (LPS) in Figure 6 (that uses the
-[Zap](https://github.com/uber-go/zap) logging library) and its output in Figure 7.
-
-:::{card}   
-```go
-logger.Info("failed to fetch URL",
-  zap.String("url", url),
-  zap.Int("attempt", 3),
-  zap.Duration("backoff", time.Second),
-)
-```
-+++
-**Figure 6**: An example structured LPS.
-:::
-    
-:::{card} 
-```json
-{
-  "ts":1708161000.123456,
-  "level": "info",
-  "message": "failed to fetch URL",
-  "url": "https://example.com",
-  "attempt": 3,
-  "backoff": 1000
-}
-```
-+++
-**Figure 7**: The output of the LPS in Figure 6.
-:::
-
-Comparing the user-defined kv-pairs in Figure 6 and the output in Figure 7, we can see that the
-timestamp and level were added automatically by the logging library (Zap). (The key for the
-timestamp and log level are Zap configuration options.) In this case, we categorize the user-defined
-kv-pairs as user-generated and the log event's timestamp and level as auto-generated. (Even though
-the user's logging statement determines the value of the log-level kv-pair, the user doesn't
-explicitly insert it into the log event as a kv-pair.)
-
-Differentiating auto-generated and user-generated kv-pairs has a few advantages. First, if we store
-auto-generated and user-generated kv-pairs separately, structured logging libraries that generate
-KV-IR streams don't need to worry about user-generated keys conflicting with the keys used by the
-library. In contrast, a library like Zap doesn't allow a user to specify a kv-pair with a key that's
-used for one of the auto-generated kv-pairs. In turn, this means applications that use KV-IR streams
-generated by our logging libraries can expect that important auto-generated keys will use consistent
-names (e.g., "timestamp" for the log event's timestamp). Second, support for auto-generated kv-pairs
-allows us to support more advanced queries on unstructured log events, since unstructured log events
-are essentially a set of key-less auto-generated and user-generated values, formatted into a single
-string.
+To write an archive's data structures to disk, clp-s serializes them and writes them to one or more
+general-purpose compression streams. Applying general-purpose compression allows us to mitigate some
+of the inefficient encodings (e.g., encoding `Boolean`s as integers) used to maintain efficient
+search performance. For some data structures, like dictionaries, clp-s writes them to disk as they
+are built; yet for other data structures, like the ERTs, clp-s needs to buffer them in memory until
+the archive is complete.
