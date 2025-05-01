@@ -70,7 +70,7 @@ requires std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
  * @param filter_operand_literal_type
  * @param value_to_matched_filter_ops_pairs A vector of pairs, where each pair consists of:
  *   - A value to test against the filter.
- *   - A set of filter operations that are expected to evaluate to `true` for this value.
+ *   - All of the filter operations that are expected to evaluate to `true` for this value.
  * @return Whether all evaluations match their expected results.
  */
 [[nodiscard]] auto assert_filter_evaluation_results_on_values(
@@ -132,7 +132,7 @@ requires std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
 ) -> bool;
 
 /**
- * Checks filter evaluation against different types of values.
+ * Checks filter evaluation against all supported values.
  * @param filter_to_test
  * @param filter_operand_literal_type
  * @return Whether all evaluations match their expected results.
