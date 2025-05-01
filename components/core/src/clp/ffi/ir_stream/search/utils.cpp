@@ -121,7 +121,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
  * @param value
  * @return A result containing a boolean indicating whether the filter condition is satisfied on
  * success, or an error code indicating the failure:
- * - ErrorCodeEnum::EncodedTextAstDecodingFailure if failed to decode the given encoded text AST.
+ * - ErrorCodeEnum::EncodedTextAstDecodingFailure on failure to decode the given encoded text AST.
  */
 [[nodiscard]] auto evaluate_clp_string_filter_op(
         FilterOperation op,
@@ -221,7 +221,7 @@ auto evaluate_bool_filter_op(
     if (false == operand->as_bool(filter_operand, op)) {
         return false;
     }
-    auto const value_operand{value.get_immutable_view<clp::ffi::value_bool_t>()};
+    auto const value_operand{value.get_immutable_view<value_bool_t>()};
 
     switch (op) {
         case FilterOperation::EQ:
@@ -310,20 +310,20 @@ auto schema_tree_node_type_value_pair_to_literal_type(
     }
 
     switch (node_type) {
-        case clp::ffi::SchemaTree::Node::Type::Int:
+        case SchemaTree::Node::Type::Int:
             return LiteralType::IntegerT;
-        case clp::ffi::SchemaTree::Node::Type::Float:
+        case SchemaTree::Node::Type::Float:
             return LiteralType::FloatT;
-        case clp::ffi::SchemaTree::Node::Type::Bool:
+        case SchemaTree::Node::Type::Bool:
             return LiteralType::BooleanT;
-        case clp::ffi::SchemaTree::Node::Type::UnstructuredArray:
+        case SchemaTree::Node::Type::UnstructuredArray:
             return LiteralType::ArrayT;
-        case clp::ffi::SchemaTree::Node::Type::Str:
+        case SchemaTree::Node::Type::Str:
             if (value.value().is<std::string>()) {
                 return LiteralType::VarStringT;
             }
             return LiteralType::ClpStringT;
-        case clp::ffi::SchemaTree::Node::Type::Obj:
+        case SchemaTree::Node::Type::Obj:
             if (value.value().is_null()) {
                 return LiteralType::NullT;
             }

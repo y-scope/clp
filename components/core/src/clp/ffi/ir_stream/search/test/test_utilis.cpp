@@ -29,7 +29,6 @@
 
 namespace clp::ffi::ir_stream::search::test {
 namespace {
-using clp::ffi::ir_stream::search::evaluate_filter_against_literal_type_value_pair;
 using clp::ffi::Value;
 using clp::ffi::value_bool_t;
 using clp::ffi::value_float_t;
