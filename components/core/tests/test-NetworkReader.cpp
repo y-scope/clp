@@ -9,10 +9,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <curl/curl.h>
 #include <fmt/core.h>
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 #include <ystdlib/containers/Array.hpp>
 
 #include "../src/clp/CurlDownloadHandler.hpp"
@@ -22,9 +22,11 @@
 #include "../src/clp/NetworkReader.hpp"
 #include "../src/clp/Platform.hpp"
 #include "../src/clp/ReaderInterface.hpp"
+#include "../src/clp/string_utils/string_utils.hpp"
 
 namespace {
 constexpr size_t cDefaultReaderBufferSize{1024};
+constexpr std::string_view cHttpHeadersEchoServerUrl{"https://mockhttp.org/headers"};
 
 [[nodiscard]] auto get_test_input_local_path() -> std::string;
 
@@ -192,10 +194,12 @@ TEST_CASE("network_reader_illegal_offset", "[NetworkReader]") {
     REQUIRE((clp::ErrorCode_Failure == reader.try_get_pos(pos)));
 }
 
+/**
+ * Sends some headers to an HTTP header echo server and validates that they're returned correctly in
+ * a JSON object under the "headers" key.
+ */
 TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
     std::unordered_map<std::string, std::string> valid_http_header_kv_pairs;
-    // We use httpbin (https://httpbin.org/) to test the user-specified headers. On success, it is
-    // supposed to respond all the user-specified headers as key-value pairs in JSON form.
     constexpr size_t cNumHttpHeaderKeyValuePairs{10};
     for (size_t i{0}; i < cNumHttpHeaderKeyValuePairs; ++i) {
         valid_http_header_kv_pairs.emplace(
@@ -204,12 +208,13 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
         );
     }
     std::optional<std::vector<char>> optional_content;
+
     // Retry the unit test a limited number of times to handle transient server-side HTTP errors.
     // This ensures the test is not marked as failed due to temporary issues beyond our control.
     constexpr size_t cNumMaxTrials{10};
     for (size_t i{0}; i < cNumMaxTrials; ++i) {
         clp::NetworkReader reader{
-                "https://httpbin.org/headers",
+                cHttpHeadersEchoServerUrl,
                 0,
                 false,
                 clp::CurlDownloadHandler::cDefaultOverallTimeout,
@@ -228,7 +233,11 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
     auto const parsed_content = nlohmann::json::parse(optional_content.value());
     auto const& headers{parsed_content.at("headers")};
     for (auto const& [key, value] : valid_http_header_kv_pairs) {
-        REQUIRE((value == headers.at(key).get<std::string_view>()));
+        // The echo server we're using returns the HTTP header names as lowercase (under the spec,
+        // they're case insensitive).
+        std::string key_lowercase{key};
+        clp::string_utils::to_lower(key_lowercase);
+        REQUIRE((value == headers.at(key_lowercase).get<std::string_view>()));
     }
 }
 
@@ -244,7 +253,7 @@ TEST_CASE("network_reader_with_illegal_http_header_kv_pairs", "[NetworkReader]")
             std::unordered_map<std::string, std::string>{{"Legal-Name", "CRLF\r\n"}}
     );
     clp::NetworkReader reader{
-            "https://httpbin.org/headers",
+            cHttpHeadersEchoServerUrl,
             0,
             false,
             clp::CurlDownloadHandler::cDefaultOverallTimeout,

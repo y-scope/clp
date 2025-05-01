@@ -1,7 +1,7 @@
 #include <memory>
 #include <sstream>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "../src/clp_s/search/ast/EmptyExpr.hpp"
 #include "../src/clp_s/search/sql/sql.hpp"

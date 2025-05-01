@@ -48,10 +48,10 @@ public:
     // Methods
     /**
      * Updates the metadata for a given archive
-     * @param table_name
+     * @param dataset_name
      * @param archive_path
      */
-    void update_metadata(std::string const& table_name, Path const& archive_path);
+    void update_metadata(std::string const& dataset_name, Path const& archive_path);
 
 private:
     /**

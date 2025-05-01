@@ -1,6 +1,6 @@
 #include <string>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
