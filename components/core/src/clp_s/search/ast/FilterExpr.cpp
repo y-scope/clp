@@ -1,22 +1,41 @@
 #include "FilterExpr.hpp"
 
+#include <memory>
+#include <ostream>
+#include <string>
+
+#include "ColumnDescriptor.hpp"
+#include "Expression.hpp"
+#include "FilterOperation.hpp"
+#include "Literal.hpp"
+
 namespace clp_s::search::ast {
-FilterExpr::FilterExpr(
-        std::shared_ptr<ColumnDescriptor> const& column,
+auto FilterExpr::create(
+        std::shared_ptr<ColumnDescriptor>& column,
         FilterOperation op,
         bool inverted,
         Expression* parent
-)
-        : Expression(inverted, parent) {
-    m_op = op;
-    add_operand(std::static_pointer_cast<Literal>(column));
+) -> std::shared_ptr<Expression> {
+    return std::shared_ptr<Expression>{
+            static_cast<Expression*>(new FilterExpr{column->copy(), op, inverted, parent})
+    };
 }
 
-FilterExpr::FilterExpr(FilterExpr const& expr) : Expression(expr) {
-    m_op = expr.m_op;
+auto FilterExpr::create(
+        std::shared_ptr<ColumnDescriptor>& column,
+        FilterOperation op,
+        std::shared_ptr<Literal>& operand,
+        bool inverted,
+        Expression* parent
+) -> std::shared_ptr<Expression> {
+    std::shared_ptr<Expression> expr{
+            static_cast<Expression*>(new FilterExpr{column->copy(), op, inverted, parent})
+    };
+    expr->add_operand(operand);
+    return expr;
 }
 
-std::string FilterExpr::op_type_str(FilterOperation op) {
+auto FilterExpr::op_type_str(FilterOperation op) -> std::string {
     switch (op) {
         case FilterOperation::EXISTS:
             return "EXISTS";
@@ -39,7 +58,7 @@ std::string FilterExpr::op_type_str(FilterOperation op) {
     }
 }
 
-void FilterExpr::print() const {
+auto FilterExpr::print() const -> void {
     auto& os = get_print_stream();
     if (is_inverted()) {
         os << "!";
@@ -54,40 +73,14 @@ void FilterExpr::print() const {
     os << ")";
 
     if (get_parent() == nullptr) {
-        os << std::endl;
-    } else {
-        os << std::flush;
+        os << "\n";
     }
+    os << std::flush;
 }
 
-std::shared_ptr<Expression> FilterExpr::create(
-        std::shared_ptr<ColumnDescriptor>& column,
-        FilterOperation op,
-        bool inverted,
-        Expression* parent
-) {
-    return std::shared_ptr<Expression>(
-            static_cast<Expression*>(new FilterExpr(column->copy(), op, inverted, parent))
-    );
-}
-
-std::shared_ptr<Expression> FilterExpr::create(
-        std::shared_ptr<ColumnDescriptor>& column,
-        FilterOperation op,
-        std::shared_ptr<Literal>& operand,
-        bool inverted,
-        Expression* parent
-) {
-    std::shared_ptr<Expression> expr(
-            static_cast<Expression*>(new FilterExpr(column->copy(), op, inverted, parent))
-    );
-    expr->add_operand(operand);
-    return expr;
-}
-
-std::shared_ptr<Expression> FilterExpr::copy() const {
+auto FilterExpr::copy() const -> std::shared_ptr<Expression> {
     // Only deep copy column descriptors
-    auto new_filter = std::shared_ptr<Expression>(static_cast<Expression*>(new FilterExpr(*this)));
+    auto new_filter = std::shared_ptr<Expression>{static_cast<Expression*>(new FilterExpr{*this})};
     for (auto it = new_filter->op_begin(); it != new_filter->op_end(); it++) {
         if (auto descriptor = std::dynamic_pointer_cast<ColumnDescriptor>(*it)) {
             *it = descriptor->copy();
@@ -96,13 +89,23 @@ std::shared_ptr<Expression> FilterExpr::copy() const {
     return new_filter;
 }
 
-std::shared_ptr<Literal> FilterExpr::get_operand() {
+auto FilterExpr::get_operand() const -> std::shared_ptr<Literal> {
     auto it = op_begin();
     it++;
     if (it == op_end()) {
         return nullptr;
-    } else {
-        return std::static_pointer_cast<Literal>(*it);
     }
+    return std::static_pointer_cast<Literal>(*it);
+}
+
+FilterExpr::FilterExpr(
+        std::shared_ptr<ColumnDescriptor> const& column,
+        FilterOperation op,
+        bool inverted,
+        Expression* parent
+)
+        : Expression{inverted, parent},
+          m_op{op} {
+    add_operand(std::static_pointer_cast<Literal>(column));
 }
 }  // namespace clp_s::search::ast

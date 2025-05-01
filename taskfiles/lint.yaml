@@ -74,7 +74,7 @@ tasks:
       - "{{.G_WEBUI_SRC_DIR}}/server/**/*.jsx"
       - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.js"
       - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.jsx"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     cmds:
       - task: "js"
@@ -117,9 +117,8 @@ tasks:
           components/core/config \
           components/package-template/src/etc \
           docs \
-          deps-tasks.yml \
-          lint-tasks.yml \
-          Taskfile.yml
+          taskfile.yaml \
+          taskfiles
 
   check-cpp-format:
     sources: &cpp_source_files
@@ -154,6 +153,8 @@ tasks:
     cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
 
   check-cpp-static-diff:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-diff"]
     sources: *cpp_source_files
     deps:
       - ":core-generate"
@@ -169,6 +170,8 @@ tasks:
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
   check-cpp-static-full:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-full"]
     sources: *cpp_source_files
     deps:
       - ":core-generate"
@@ -456,8 +459,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/EmptyExpr.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Expression.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Expression.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterExpr.cpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterExpr.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/FilterOperation.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Integral.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/ast/Integral.hpp"
@@ -492,6 +493,8 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/OutputHandler.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Projection.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Projection.hpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/QueryRunner.cpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/QueryRunner.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/SchemaMatch.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/SchemaMatch.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/sql.cpp"
@@ -796,7 +799,7 @@ tasks:
     sources:
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
       - "package.json"
       - "package-lock.json"
@@ -825,7 +828,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
     sources:
-      - "{{.ROOT_DIR}}/Taskfile.yml"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
       - "lint-requirements.txt"
     generates: ["{{.CHECKSUM_FILE}}"]

@@ -70,16 +70,20 @@ auto tokenize_column_descriptor(
     bool escaped{false};
     descriptor_namespace.clear();
     size_t start_index = 0;
-    if (descriptor.size() > 0
-        && std::string_view{descriptor.data(), 1} == constants::cAutogenNamespace)
-    {
-        descriptor_namespace = constants::cAutogenNamespace;
-        start_index += 1;
-
-        if (descriptor.size() <= descriptor_namespace.size()) {
-            return false;
+    if (descriptor.size() > 0) {
+        switch (descriptor.at(0)) {
+            case constants::cAutogenNamespace.at(0):
+            case constants::cRangeIndexNamespace.at(0):
+            case constants::cReservedNamespace1.at(0):
+            case constants::cReservedNamespace2.at(0):
+                descriptor_namespace = descriptor.at(0);
+                start_index += 1;
+                break;
+            default:
+                break;
         }
     }
+
     for (size_t i = start_index; i < descriptor.size(); ++i) {
         if (false == escaped) {
             if ('\\' == descriptor[i]) {
@@ -267,6 +271,15 @@ auto unescape_kql_internal(std::string const& value, std::string& unescaped, boo
                 break;
             case '@':
                 unescaped.push_back('@');
+                break;
+            case '$':
+                unescaped.push_back('$');
+                break;
+            case '!':
+                unescaped.push_back('!');
+                break;
+            case '#':
+                unescaped.push_back('#');
                 break;
             default:
                 return false;

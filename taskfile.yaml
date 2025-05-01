@@ -1,9 +1,9 @@
 version: "3"
 
 includes:
-  deps: "deps-tasks.yml"
-  docs: "docs/tasks.yml"
-  lint: "lint-tasks.yml"
+  deps: "taskfiles/deps/main.yaml"
+  docs: "taskfiles/docs.yaml"
+  lint: "taskfiles/lint.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
@@ -27,7 +27,7 @@ vars:
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
-  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils.yaml"
+  G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"

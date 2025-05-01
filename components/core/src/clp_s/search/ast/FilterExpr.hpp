@@ -1,6 +1,7 @@
 #ifndef CLP_S_SEARCH_FILTEREXPR_HPP
 #define CLP_S_SEARCH_FILTEREXPR_HPP
 
+#include <memory>
 #include <string>
 
 #include "ColumnDescriptor.hpp"
@@ -19,23 +20,6 @@ namespace clp_s::search::ast {
 class FilterExpr : public Expression {
 public:
     /**
-     * @return FilterOperation this Filter performs
-     */
-    FilterOperation get_operation() { return m_op; }
-
-    /**
-     * @return The Column this Filter acts on
-     */
-    std::shared_ptr<ColumnDescriptor> get_column() {
-        return std::static_pointer_cast<ColumnDescriptor>(*op_begin());
-    }
-
-    /**
-     * @return This Filter's Literal or nullptr if there is no Literal
-     */
-    std::shared_ptr<Literal> get_operand();
-
-    /**
      * Create a Filter expression with a Column and FilterOperation but no Literal
      * Literal can be added later using mutators provided by the Expression parent class
      * @param column the Column this Filter acts on
@@ -44,12 +28,12 @@ public:
      * @param parent parent this expression is attached to
      * @return Newly created Or expression
      */
-    static std::shared_ptr<Expression> create(
+    [[nodiscard]] static auto create(
             std::shared_ptr<ColumnDescriptor>& column,
             FilterOperation op,
             bool inverted = false,
             Expression* parent = nullptr
-    );
+    ) -> std::shared_ptr<Expression>;
 
     /**
      * Create a Filter expression with a Column, FilterOperation and Literal
@@ -59,32 +43,58 @@ public:
      * @param parent parent this expression is attached to
      * @return newly created Or expression
      */
-    static std::shared_ptr<Expression> create(
+    [[nodiscard]] static auto create(
             std::shared_ptr<ColumnDescriptor>& column,
             FilterOperation op,
             std::shared_ptr<Literal>& operand,
             bool inverted = false,
             Expression* parent = nullptr
-    );
+    ) -> std::shared_ptr<Expression>;
 
     /**
      * Helper function to turn FilterOperation into string for printing
      * @param op the operation we want to convert to string
      * @return a string representing the operation
      */
-    static std::string op_type_str(FilterOperation op);
+    [[nodiscard]] static auto op_type_str(FilterOperation op) -> std::string;
+
+    // Delete copy assignment operator
+    auto operator=(FilterExpr const&) -> FilterExpr& = delete;
+
+    // Delete move constructor and assignment operator
+    FilterExpr(FilterExpr&&) = delete;
+    auto operator=(FilterExpr&&) -> FilterExpr& = delete;
+
+    // Destructor
+    ~FilterExpr() override = default;
 
     // Methods inherited from Value
-    void print() const override;
+    auto print() const -> void override;
 
     // Methods inherited from Expression
-    bool has_only_expression_operands() override { return false; }
+    [[nodiscard]] auto has_only_expression_operands() -> bool override { return false; }
 
-    std::shared_ptr<Expression> copy() const override;
+    [[nodiscard]] auto copy() const -> std::shared_ptr<Expression> override;
+
+    // Methods
+    /**
+     * @return The FilterOperation performed by this Filter.
+     */
+    [[nodiscard]] auto get_operation() const -> FilterOperation { return m_op; }
+
+    /**
+     * @return The ColumnDescriptor that this Filter acts on.
+     */
+    [[nodiscard]] auto get_column() -> std::shared_ptr<ColumnDescriptor> {
+        return std::static_pointer_cast<ColumnDescriptor>(*op_begin());
+    }
+
+    /**
+     * @return This Filter's Literal or nullptr if there is no Literal.
+     */
+    [[nodiscard]] auto get_operand() const -> std::shared_ptr<Literal>;
 
 private:
-    FilterOperation m_op;
-
     // Constructor
     FilterExpr(
             std::shared_ptr<ColumnDescriptor> const& column,
@@ -93,7 +103,11 @@ private:
             Expression* parent = nullptr
     );
 
-    FilterExpr(FilterExpr const&);
+    // Default copy constructor
+    FilterExpr(FilterExpr const&) = default;
+
+    // Variables
+    FilterOperation m_op;
 };
 }  // namespace clp_s::search::ast
 

@@ -11,9 +11,9 @@
 #include <utility>
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <nlohmann/json.hpp>
+#include <outcome/outcome.hpp>
 
 #include "../../ir/types.hpp"
 #include "../../time_types.hpp"

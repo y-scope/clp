@@ -8,8 +8,8 @@ on:
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
-      - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
+      - "taskfiles/**"
       - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos/**"
   push:
@@ -19,8 +19,8 @@ on:
       - ".github/workflows/clp-core-build.yaml"
       - ".gitmodules"
       - "components/core/**"
-      - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
+      - "taskfiles/**"
       - "tools/scripts/deps-download/**"
       - "!components/core/tools/scripts/lib_install/macos/**"
   schedule:
@@ -32,8 +32,12 @@ env:
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
   DEPS_IMAGE_NAME_PREFIX: "clp-core-dependencies-x86-"
 
-# Currency group to prevent multiple workflow instances from trying to publish container images
-concurrency: "${{github.workflow}}-${{github.ref}}"
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+
+  # Cancel in-progress jobs for efficiency. Exclude the `main` branch to allow uninterrupted
+  # publishing of container images.
+  cancel-in-progress: "${{github.ref != 'refs/heads/main'}}"
 
 jobs:
   filter-relevant-changes:
@@ -87,8 +91,8 @@ jobs:
               - "components/core/src/**"
               - "components/core/tests/**"
               - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
-              - "deps-tasks.yml"
-              - "Taskfile.yml"
+              - "taskfile.yaml"
+              - "taskfiles/**"
               - "tools/scripts/deps-download/**"
 
   centos-stream-9-deps-image:

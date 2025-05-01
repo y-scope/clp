@@ -1,0 +1,10 @@
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 200px);
+    gap: 8px;
+}
+
+.timeRange {
+    grid-column: span 2;
+}
+
