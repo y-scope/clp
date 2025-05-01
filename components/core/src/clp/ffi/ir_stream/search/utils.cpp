@@ -310,20 +310,20 @@ auto schema_tree_node_type_value_pair_to_literal_type(
     }
 
     switch (node_type) {
-        case clp::ffi::SchemaTree::Node::Type::Int:
+        case SchemaTree::Node::Type::Int:
             return LiteralType::IntegerT;
-        case clp::ffi::SchemaTree::Node::Type::Float:
+        case SchemaTree::Node::Type::Float:
             return LiteralType::FloatT;
-        case clp::ffi::SchemaTree::Node::Type::Bool:
+        case SchemaTree::Node::Type::Bool:
             return LiteralType::BooleanT;
-        case clp::ffi::SchemaTree::Node::Type::UnstructuredArray:
+        case SchemaTree::Node::Type::UnstructuredArray:
             return LiteralType::ArrayT;
-        case clp::ffi::SchemaTree::Node::Type::Str:
+        case SchemaTree::Node::Type::Str:
             if (value.value().is<std::string>()) {
                 return LiteralType::VarStringT;
             }
             return LiteralType::ClpStringT;
-        case clp::ffi::SchemaTree::Node::Type::Obj:
+        case SchemaTree::Node::Type::Obj:
             if (value.value().is_null()) {
                 return LiteralType::NullT;
             }
