@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/search/utils.hpp"
@@ -173,13 +173,14 @@ auto assert_filter_evaluation_results_on_values(
                 bool const expected_match_result{
                         matched_filter_ops.contains(filter_to_test->get_operation())
                 };
-                return expected_match_result
-                       == evaluate_filter_against_literal_type_value_pair(
+                auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
                                filter_to_test,
                                filter_operand_literal_type,
                                value_to_test,
                                false
-                       );
+                       )};
+                REQUIRE_FALSE(actual_match_result.has_error());
+                return expected_match_result == actual_match_result.value();
             }
     );
 }
@@ -198,13 +199,17 @@ auto check_filter_evaluation_against_integral_values(
     };
     if (cValueLiteralType != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
-        return false
-               == evaluate_filter_against_literal_type_value_pair(
+        auto const actual_match_result{
+            evaluate_filter_against_literal_type_value_pair(
                        filter_to_test,
                        filter_operand_literal_type,
                        empty_value_to_evaluate,
                        false
-               );
+               )
+        };
+        REQUIRE_FALSE(actual_match_result.has_error());
+        return false
+               == actual_match_result.value();
     }
 
     IntegralValueType filter_operand{};
@@ -236,13 +241,15 @@ auto check_filter_evaluation_against_bool_values(
 ) -> bool {
     if (LiteralType::BooleanT != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
-        return false
-               == evaluate_filter_against_literal_type_value_pair(
+        auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
                        filter_to_test,
                        filter_operand_literal_type,
                        empty_value_to_evaluate,
                        false
-               );
+               )};
+        REQUIRE_FALSE(actual_match_result.has_error());
+        return false
+               == actual_match_result.value();
     }
 
     auto const op{filter_to_test->get_operation()};
@@ -267,13 +274,15 @@ auto check_filter_evaluation_against_var_strings(
 ) -> bool {
     if (LiteralType::VarStringT != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
-        return false
-               == evaluate_filter_against_literal_type_value_pair(
+        auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
                        filter_to_test,
                        filter_operand_literal_type,
                        empty_value_to_evaluate,
                        false
-               );
+               )};
+        REQUIRE_FALSE(actual_match_result.has_error());
+        return false
+               == actual_match_result.value();
     }
 
     std::vector<ValueToMatchedFilterOpsPair> const value_to_matched_filter_ops_pairs{
@@ -300,13 +309,15 @@ auto check_filter_evaluation_against_encoded_text_asts(
 ) -> bool {
     if (LiteralType::ClpStringT != filter_operand_literal_type) {
         std::optional<Value> const empty_value_to_evaluate;
+        auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
+                filter_to_test,
+                filter_operand_literal_type,
+                empty_value_to_evaluate,
+                false
+        )};
+        REQUIRE_FALSE(actual_match_result.has_error());
         return false
-               == evaluate_filter_against_literal_type_value_pair(
-                       filter_to_test,
-                       filter_operand_literal_type,
-                       empty_value_to_evaluate,
-                       false
-               );
+               == actual_match_result.value();
     }
 
     std::string const matched{"The test ID=" + std::string{cRefTestString}};
@@ -333,21 +344,24 @@ check_filter_evaluation(FilterExpr const* filter_to_test, LiteralType filter_ope
 
     std::optional<Value> const empty_value_to_evaluate;
     if (FilterOperation::EXISTS == op) {
-        return evaluate_filter_against_literal_type_value_pair(
+        auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
                 filter_to_test,
                 filter_operand_literal_type,
                 empty_value_to_evaluate,
                 false
-        );
+        )};
+        REQUIRE_FALSE(actual_match_result.has_error());
+        return actual_match_result.value();
     }
     if (FilterOperation::NEXISTS == op) {
-        return false
-               == evaluate_filter_against_literal_type_value_pair(
+        auto const actual_match_result{evaluate_filter_against_literal_type_value_pair(
                        filter_to_test,
                        filter_operand_literal_type,
                        empty_value_to_evaluate,
                        false
-               );
+               )};
+        REQUIRE_FALSE(actual_match_result.has_error());
+        return false == actual_match_result.value();
     }
 
     if (false

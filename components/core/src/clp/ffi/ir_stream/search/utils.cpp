@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 
+#include <outcome/outcome.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "../../../../clp_s/search/ast/FilterExpr.hpp"
@@ -14,6 +15,7 @@
 #include "../../../ir/EncodedTextAst.hpp"
 #include "../../SchemaTree.hpp"
 #include "../../Value.hpp"
+#include "ErrorCode.hpp"
 
 namespace clp::ffi::ir_stream::search {
 namespace {
@@ -336,7 +338,7 @@ auto evaluate_filter_against_literal_type_value_pair(
         LiteralType literal_type,
         std::optional<Value> const& value,
         bool case_sensitive_match
-) -> bool {
+) -> outcome_v2::std_result<bool> {
     auto const op{filter->get_operation()};
     if (FilterOperation::EXISTS == op) {
         return true;
@@ -345,37 +347,36 @@ auto evaluate_filter_against_literal_type_value_pair(
         return false;
     }
 
-    if (false == value.has_value()) {
-        return false;
-    }
-
     switch (literal_type) {
         case LiteralType::IntegerT:
-            return evaluate_int_filter_op(op, filter->get_operand(), *value);
+            return value.has_value() && evaluate_int_filter_op(op, filter->get_operand(), *value);
         case LiteralType::FloatT:
-            return evaluate_float_filter_op(op, filter->get_operand(), *value);
+            return value.has_value() && evaluate_float_filter_op(op, filter->get_operand(), *value);
         case LiteralType::BooleanT:
-            return evaluate_bool_filter_op(op, filter->get_operand(), *value);
+            return value.has_value() && evaluate_bool_filter_op(op, filter->get_operand(), *value);
         case LiteralType::VarStringT:
-            return evaluate_var_string_filter_op(
-                    op,
-                    filter->get_operand(),
-                    *value,
-                    case_sensitive_match
-            );
+            return value.has_value()
+                   && evaluate_var_string_filter_op(
+                           op,
+                           filter->get_operand(),
+                           *value,
+                           case_sensitive_match
+                   );
         case LiteralType::ClpStringT:
-            return evaluate_clp_string_filter_op(
-                    op,
-                    filter->get_operand(),
-                    *value,
-                    case_sensitive_match
-            );
-        case LiteralType::ArrayT:
-        case LiteralType::NullT:
+            return value.has_value()
+                   && evaluate_clp_string_filter_op(
+                           op,
+                           filter->get_operand(),
+                           *value,
+                           case_sensitive_match
+                   );
         case LiteralType::EpochDateT:
+        case LiteralType::ArrayT:
+            return ErrorCode{ErrorCodeEnum::LiteralTypeUnsupported};
+        case LiteralType::NullT:
         case LiteralType::UnknownT:
         default:
-            return false;
+            return ErrorCode{ErrorCodeEnum::LiteralTypeUnexpected};
     }
 }
 }  // namespace clp::ffi::ir_stream::search

@@ -17,6 +17,10 @@ auto ErrorCategory::name() const noexcept -> char const* {
 template <>
 auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
+        case ErrorCodeEnum::LiteralTypeUnexpected:
+            return "An unexpected literal type is reached.";
+        case ErrorCodeEnum::LiteralTypeUnsupported:
+            return "The given literal type is not supported.";
         case ErrorCodeEnum::MethodNotImplemented:
             return "The requested method is not implemented.";
         default:
