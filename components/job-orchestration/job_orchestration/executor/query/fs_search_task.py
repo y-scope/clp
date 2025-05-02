@@ -19,7 +19,7 @@ from job_orchestration.executor.query.utils import (
     report_task_failure,
     run_query_task,
 )
-from job_orchestration.executor.utils import load_worker_config
+from job_orchestration.executor.utils import load_worker_config, update_s3_config_with_dataset
 from job_orchestration.scheduler.job_config import SearchJobConfig
 
 # Setup logging
@@ -54,7 +54,8 @@ def _make_core_clp_s_command_and_env_vars(
     archive_id: str,
     search_config: SearchJobConfig,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
-    archives_dir = worker_config.archive_output.get_directory() / search_config.dataset
+    dataset = search_config.dataset
+    archives_dir = worker_config.archive_output.get_directory() / dataset
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
@@ -62,6 +63,7 @@ def _make_core_clp_s_command_and_env_vars(
 
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
+	s3_config.key_prefix = f"{s3_config.key_prefix}{dataset}/"
         try:
             s3_url = generate_s3_virtual_hosted_style_url(
                 s3_config.region_code, s3_config.bucket, f"{s3_config.key_prefix}{archive_id}"

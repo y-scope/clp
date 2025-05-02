@@ -261,12 +261,6 @@ def run_clp(
     data_dir = worker_config.data_directory
     archive_output_dir = worker_config.archive_output.get_directory()
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    dataset = clp_config.input.dataset
-
-    # Modify variables associated with CLP_S dataset
-    if StorageEngine.CLP_S == clp_storage_engine:
-        archive_output_dir = archive_output_dir / dataset
-        table_prefix = f"{table_prefix}{dataset}_"
 
     # Generate database config file for clp
     db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
@@ -286,6 +280,15 @@ def run_clp(
 
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
+
+    # Modify variables associated with CLP_S dataset
+    input_dataset: str
+    if StorageEngine.CLP_S == clp_storage_engine:
+        input_dataset = clp_config.input.dataset
+        table_prefix = f"{table_prefix}{input_dataset}_"
+        archive_output_dir = archive_output_dir / input_dataset
+        if StorageType.S3 == storage_type:
+            s3_config.key_prefix = f"{s3_config.key_prefix}{input_dataset}/"
 
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd, compression_env = _make_clp_command_and_env(
@@ -390,7 +393,7 @@ def run_clp(
                         str(clp_home / "bin" / "indexer"),
                         "--db-config-file",
                         str(db_config_file_path),
-                        dataset,
+                        input_dataset,
                         archive_path,
                     ]
                     try:
