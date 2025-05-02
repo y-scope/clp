@@ -250,8 +250,9 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
         return outcome_v2::success();
     }
 
+    std::vector<std::pair<SchemaTree::Node::id_t, ColumnDescriptorTokenIterator>>
+            new_partial_resolutions;
     for (auto const& token_it : partial_resolutions_to_update.at(parent_node_id)) {
-        auto const next_token_it_result{token_it.next()};
         if (SchemaTree::Node::Type::Obj == node_locator.get_type()) {
             // Handle schema-tree non-leaf nodes.
             if (token_it.is_last() && false == token_it.is_wildcard()) {
@@ -260,13 +261,9 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
             }
 
             if (token_it.is_wildcard()) {
-                auto [it, inserted] = partial_resolutions_to_update.try_emplace(
-                        node_id,
-                        std::vector<ColumnDescriptorTokenIterator>{}
-                );
-                it->second.emplace_back(token_it);
+                new_partial_resolutions.emplace_back(node_id, token_it);
                 if (false == token_it.is_last()) {
-                    it->second.emplace_back(OUTCOME_TRYX(token_it.next()));
+                    new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(token_it.next()));
                 }
                 continue;
             }
@@ -276,14 +273,10 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
             }
 
             auto const next_token_it{OUTCOME_TRYX(token_it.next())};
-            auto [it, inserted] = partial_resolutions_to_update.try_emplace(
-                    node_id,
-                    std::vector<ColumnDescriptorTokenIterator>{}
-            );
-            it->second.emplace_back(next_token_it);
+            new_partial_resolutions.emplace_back(node_id, next_token_it);
             if (false == next_token_it.is_last() && next_token_it.is_wildcard()) {
                 // Handle the case where the wildcard matches nothing
-                it->second.emplace_back(OUTCOME_TRYX(next_token_it.next()));
+                new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(next_token_it.next()));
             }
             continue;
         }
@@ -295,6 +288,14 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
                 token_it,
                 new_projected_schema_tree_node_callback
         ));
+    }
+
+    for (auto const [node_id, token_it] : new_partial_resolutions) {
+        auto [it, inserted] = partial_resolutions_to_update.try_emplace(
+                node_id,
+                std::vector<ColumnDescriptorTokenIterator>{}
+        );
+        it->second.emplace_back(token_it);
     }
 
     return outcome_v2::success();
