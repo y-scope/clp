@@ -234,11 +234,11 @@ auto initialize_partial_resolution_from_search_ast(
         ast_dfs_stack.pop_back();
         if (expr->has_only_expression_operands()) {
             for (auto it{expr->op_begin()}; it != expr->op_end(); ++it) {
-                auto* expr{dynamic_cast<Expression*>(it->get())};
-                if (nullptr == expr) {
+                auto* child_expr{dynamic_cast<Expression*>(it->get())};
+                if (nullptr == child_expr) {
                     return ErrorCode{ErrorCodeEnum::AstDynamicCastFailure};
                 }
-                ast_dfs_stack.emplace_back(expr);
+                ast_dfs_stack.emplace_back(child_expr);
             }
             continue;
         }
