@@ -13,8 +13,14 @@ as well as the key design decisions behind it.
 :::{grid-item-card}
 :link: background
 Background
+^^^
+Any necessary information to understand the stream's format.
 :::
 ::::
+
+:::{warning}
+🚧 This section is still under construction.
+:::
 
 :::{toctree}
 :hidden:
