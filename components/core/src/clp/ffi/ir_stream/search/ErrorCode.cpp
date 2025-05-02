@@ -17,6 +17,12 @@ auto ErrorCategory::name() const noexcept -> char const* {
 template <>
 auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
+        case ErrorCodeEnum::EncodedTextAstDecodingFailure:
+            return "Failed to decode the given encoded text AST.";
+        case ErrorCodeEnum::LiteralTypeUnexpected:
+            return "Unexpected literal type.";
+        case ErrorCodeEnum::LiteralTypeUnsupported:
+            return "Unsupported literal type.";
         case ErrorCodeEnum::MethodNotImplemented:
             return "The requested method is not implemented.";
         default:

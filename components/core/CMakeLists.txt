@@ -148,15 +148,9 @@ if (date_FOUND)
     message(STATUS "Found date ${date_VERSION}")
 endif()
 
-# Find and setup fmt
-# NOTE:
-# - We only try to link to the static library
-# - spdlog uses fmt, so their versions need to be kept in-sync
-find_package(fmt 8.0.1 REQUIRED)
+find_package(fmt REQUIRED)
 if(fmt_FOUND)
     message(STATUS "Found fmt ${fmt_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find static libraries for fmt")
 endif()
 
 find_package(log_surgeon REQUIRED)
@@ -174,24 +168,9 @@ if(simdjson_FOUND)
     message(STATUS "Found simdjson ${simdjson_VERSION}")
 endif()
 
-# Find and setup spdlog
-if(CLP_USE_STATIC_LIBS)
-    # NOTE: On some Linux distributions (e.g. Ubuntu), the spdlog package only contains a dynamic
-    # library. If the `find_package(spdlog)` call below fails, re-run
-    # `tools/scripts/lib_install/<dist_name>/install-packages-from-source.sh` to build spdlog from
-    # source.
-    set(spdlog_USE_STATIC_LIBS ON)
-endif()
-find_package(spdlog 1.9.2 REQUIRED)
+find_package(spdlog REQUIRED)
 if(spdlog_FOUND)
     message(STATUS "Found spdlog ${spdlog_VERSION}")
-else()
-    if (CLP_USE_STATIC_LIBS)
-        message(FATAL_ERROR "Could not find static libraries for spdlog. You may want to re-run
-            `components/core/tools/scripts/lib_install/<dist>/install-packages-from-source.sh`")
-    else()
-        message(FATAL_ERROR "Could not find libraries for spdlog.")
-    endif()
 endif()
 
 # Find and setup libarchive
@@ -478,6 +457,9 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/search/ErrorCode.hpp
         src/clp/ffi/ir_stream/search/NewProjectedSchemaTreeNodeCallbackReq.hpp
         src/clp/ffi/ir_stream/search/QueryHandler.hpp
+        src/clp/ffi/ir_stream/search/test/test_utils.cpp
+        src/clp/ffi/ir_stream/search/utils.cpp
+        src/clp/ffi/ir_stream/search/utils.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/KeyValuePairLogEvent.cpp
