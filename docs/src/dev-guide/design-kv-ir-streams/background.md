@@ -141,23 +141,23 @@ dot notation. The value types are described in [Table 3](#table-3).
   init: {
     "theme": "base",
     "themeVariables": {
-      "primaryColor": "#5d00cc",
+      "primaryColor": "#0066cc",
       "primaryTextColor": "#fff",
       "primaryBorderColor": "transparent",
-      "lineColor": "#9580ff",
-      "secondaryColor": "#9580ff",
+      "lineColor": "#007fff",
+      "secondaryColor": "#007fff",
       "tertiaryColor": "#fff"
     }
   }
 }%%
 flowchart LR
-  rootObj("root: <span style='color: orange'>Object</span>")
-  timestampInt("timestamp: <span style='color: orange'>Integer</span>")
-  levelVarStr("level: <span style='color: orange'>VarString</span>")
-  messageClpStr("message: <span style='color: orange'>ClpString</span>")
-  timersObj("timers: <span style='color: orange'>Object</span>")
-  timersStage1Float("stage_1: <span style='color: orange'>Float</span>")
-  timersStage2Null("stage_2: <span style='color: orange'>NullValue</span>")
+  rootObj("root: <span style='color: #97ff00'>Object</span>")
+  timestampInt("timestamp: <span style='color: #97ff00'>Integer</span>")
+  levelVarStr("level: <span style='color: #97ff00'>VarString</span>")
+  messageClpStr("message: <span style='color: #97ff00'>ClpString</span>")
+  timersObj("timers: <span style='color: #97ff00'>Object</span>")
+  timersStage1Float("stage_1: <span style='color: #97ff00'>Float</span>")
+  timersStage2Null("stage_2: <span style='color: #97ff00'>NullValue</span>")
 
   rootObj --> timestampInt
   rootObj --> levelVarStr
@@ -168,7 +168,7 @@ flowchart LR
 :::
 +++
 **Figure 2**: The schema tree for log event #1 in Figure 1. Each node's label is of the form
-"`<key>`: `<type>`", and each arrow is from a parent to a child node.
+`<key>: <type>`, and each arrow is from a parent to a child node.
 ::::
 
 ### Encoding event schemas
@@ -193,24 +193,24 @@ considers each pair of nodes, with one node from each tree:
   init: {
     "theme": "base",
     "themeVariables": {
-      "primaryColor": "#5d00cc",
+      "primaryColor": "#0066cc",
       "primaryTextColor": "#fff",
       "primaryBorderColor": "transparent",
-      "lineColor": "#9580ff",
-      "secondaryColor": "#9580ff",
+      "lineColor": "#007fff",
+      "secondaryColor": "#007fff",
       "tertiaryColor": "#fff"
     }
   }
 }%%
 flowchart LR
-  rootObj("<span style='color: cyan'>0</span> root: <span style='color: orange'>Object</span>")
-  timestampInt("<span style='color: cyan'>1</span> timestamp: <span style='color: orange'>Integer</span>")
-  levelVarStr("<span style='color: cyan'>2</span> level: <span style='color: orange'>VarString</span>")
-  messageClpStr("<span style='color: cyan'>3</span> message: <span style='color: orange'>ClpString</span>")
-  timersObj("<span style='color: cyan'>4</span> timers: <span style='color: orange'>Object</span>")
-  timersStage1Float("<span style='color: cyan'>5</span> stage_1: <span style='color: orange'>Float</span>")
-  timersStage2Null("<span style='color: cyan'>6</span> stage_2: <span style='color: orange'>NullValue</span>")
-  timersStage2Float("<span style='color: cyan'>7</span> stage_2: <span style='color: orange'>Float</span>")
+  rootObj("<span style='color: #ffbe00'>0</span> root: <span style='color: #97ff00'>Object</span>")
+  timestampInt("<span style='color: #ffbe00'>1</span> timestamp: <span style='color: #97ff00'>Integer</span>")
+  levelVarStr("<span style='color: #ffbe00'>2</span> level: <span style='color: #97ff00'>VarString</span>")
+  messageClpStr("<span style='color: #ffbe00'>3</span> message: <span style='color: #97ff00'>ClpString</span>")
+  timersObj("<span style='color: #ffbe00'>4</span> timers: <span style='color: #97ff00'>Object</span>")
+  timersStage1Float("<span style='color: #ffbe00'>5</span> stage_1: <span style='color: #97ff00'>Float</span>")
+  timersStage2Null("<span style='color: #ffbe00'>6</span> stage_2: <span style='color: #97ff00'>NullValue</span>")
+  timersStage2Float("<span style='color: #ffbe00'>7</span> stage_2: <span style='color: #97ff00'>Float</span>")
 
   rootObj --> timestampInt
   rootObj --> levelVarStr
@@ -222,7 +222,7 @@ flowchart LR
 :::
 +++
 **Figure 3**: The archive's schema tree after adding the log events from [Figure 1](#figure-1). Each
-node's label is of the form "`<ID>` `<key>`: `<type>`".
+node's label is of the form `<ID> <key>: <type>`.
 ::::
 
 ### Encoding & storing event values
