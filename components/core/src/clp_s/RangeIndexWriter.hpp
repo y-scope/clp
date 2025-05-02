@@ -49,8 +49,7 @@ public:
     [[nodiscard]] auto open_range(size_t start_index) -> ErrorCode;
 
     /**
-     * Adds a key value pair to the open range indicated by `handle`.
-     * @param handle
+     * Adds a key value pair to the currently-open range.
      * @param key
      * @param value
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
@@ -73,8 +72,7 @@ public:
     }
 
     /**
-     * Closes the open range indicated by `handle`.
-     * @param handle
+     * Closes the currently-open range.
      * @param end_index
      * @return ErrorCodeSuccess on success or the relvant error code on failure.
      */

@@ -997,7 +997,7 @@ auto JsonParser::parse_from_ir() -> bool {
             }
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFileSplitNumber},
-                        static_cast<int64_t>(file_split_number)
+                        file_split_number
                 );
                 ErrorCodeSuccess != rc)
             {

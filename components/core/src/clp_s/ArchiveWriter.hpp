@@ -194,7 +194,9 @@ public:
      */
     auto close_current_range() -> ErrorCode {
         auto const rc = m_range_index_writer.close_range(m_next_log_event_id);
-        m_range_open = false;
+        if (ErrorCodeSuccess == rc) {
+            m_range_open = false;
+        }
         return rc;
     }
 
