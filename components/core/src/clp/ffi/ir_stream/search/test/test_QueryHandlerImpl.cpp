@@ -156,9 +156,15 @@ constexpr value_bool_t cRefTestBool{false};
         }
     }
 
-    if (expected_column_resolutions.contains("*")) {
+    auto const single_wildcard{fmt::format(
+            "{}{}",
+            is_auto_generated ? clp_s::constants::cAutogenNamespace
+                              : clp_s::constants::cDefaultNamespace,
+            "*"
+    )};
+    if (expected_column_resolutions.contains(single_wildcard)) {
         // NOTE: The current implementation doesn't resolve single wildcard.
-        expected_column_resolutions.erase("*");
+        expected_column_resolutions.erase(single_wildcard);
     }
     return {std::move(matchable_kql_expressions), std::move(expected_column_resolutions)};
 }
@@ -263,7 +269,26 @@ TEST_CASE(
                     column_query_to_possible_matches
             );
 
-    auto const kql_query_str{fmt::format("{}", fmt::join(matchable_kql_expressions, " OR "))};
+    constexpr std::string_view cUnmatchableNodeName{"unknown"};
+    for (auto const& locator : locators) {
+        REQUIRE((locator.get_key_name() != cUnmatchableNodeName));
+    }
+    std::vector<std::string> unmatchable_kql_expressions;
+    for (auto const& [matchable_column, resolved_node_ids] : expected_column_resolutions) {
+        unmatchable_kql_expressions.emplace_back(
+                fmt::format("{}.{}: {}", matchable_column, cUnmatchableNodeName, cRefTestInt)
+        );
+    }
+
+    auto const matchable_kql_query_str{
+            fmt::format("{}", fmt::join(matchable_kql_expressions, " OR "))
+    };
+    auto const unmatchable_kql_query_str{
+            fmt::format("{}", fmt::join(unmatchable_kql_expressions, " OR "))
+    };
+    auto const kql_query_str{
+            fmt::format("{} OR {}", matchable_kql_query_str, unmatchable_kql_query_str)
+    };
     CAPTURE(kql_query_str);
 
     auto query_stream{std::istringstream{kql_query_str}};
@@ -385,7 +410,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
             = [&](bool is_auto_gen, SchemaTree::Node::id_t node_id, std::string_view key
               ) -> outcome_v2::std_result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
-                auto const column_with_namespace{fmt::format(
+        auto const column_with_namespace{fmt::format(
                 "{}{}",
                 is_auto_generated ? clp_s::constants::cAutogenNamespace
                                   : clp_s::constants::cDefaultNamespace,

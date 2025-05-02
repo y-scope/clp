@@ -1,6 +1,7 @@
 #include "utils.hpp"
 
 #include <bitset>
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -8,7 +9,6 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-#include <cstddef>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
