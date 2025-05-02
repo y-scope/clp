@@ -74,19 +74,19 @@ public:
     /**
      * Closes the currently-open range.
      * @param end_index
-     * @return ErrorCodeSuccess on success or the relvant error code on failure.
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     [[nodiscard]] auto close_range(size_t end_index) -> ErrorCode;
 
     /**
      * Writes ranges to a `ZstdCompressor` then clears internal state.
      * @param writer
-     * @return ErrorCodeSuccess on success or the relvant error code on failure.
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     [[nodiscard]] auto write(ZstdCompressor& writer) -> ErrorCode;
 
     /**
-     * Checks whether this range index is empty or not.
+     * @return true if there are no ranges, false otherwise.
      */
     [[nodiscard]] auto empty() const -> bool { return m_ranges.empty(); }
 

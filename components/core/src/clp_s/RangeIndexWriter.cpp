@@ -15,7 +15,8 @@
 
 namespace clp_s {
 auto RangeIndexWriter::open_range(size_t start_index) -> ErrorCode {
-    for (auto const& range : m_ranges) {
+    if (false == m_ranges.empty()) {
+        auto const& range = m_ranges.back();
         if (false == range.end_index.has_value()) {
             return ErrorCodeNotReady;
         }

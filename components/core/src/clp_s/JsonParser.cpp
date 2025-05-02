@@ -656,7 +656,8 @@ bool JsonParser::parse() {
             return false;
         }
 
-        if (ErrorCodeSuccess != m_archive_writer->close_current_range()) {
+        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
             m_archive_writer->close();
             return false;
         }
@@ -1136,7 +1137,8 @@ auto JsonParser::parse_from_ir() -> bool {
         curr_pos = decompressor.get_pos();
         m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
         decompressor.close();
-        if (ErrorCodeSuccess != m_archive_writer->close_current_range()) {
+        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
             m_archive_writer->close();
             return false;
         }

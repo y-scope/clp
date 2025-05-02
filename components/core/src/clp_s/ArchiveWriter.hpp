@@ -176,7 +176,8 @@ public:
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     template <typename T>
-    auto add_field_to_current_range(std::string const& key, T const& value) {
+    [[nodiscard]] auto add_field_to_current_range(std::string const& key, T const& value)
+            -> ErrorCode {
         if (false == m_range_open) {
             if (auto const rc = m_range_index_writer.open_range(m_next_log_event_id);
                 ErrorCodeSuccess != rc)
@@ -192,7 +193,7 @@ public:
      * Closes the currently open range in the range index.
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
-    auto close_current_range() -> ErrorCode {
+    [[nodiscard]] auto close_current_range() -> ErrorCode {
         auto const rc = m_range_index_writer.close_range(m_next_log_event_id);
         if (ErrorCodeSuccess == rc) {
             m_range_open = false;
