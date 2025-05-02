@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <catch2/catch.hpp>
+#include <fmt/core.h>
 #include <fmt/format.h>
 #include <outcome/outcome.hpp>
 
@@ -269,6 +270,9 @@ TEST_CASE(
     auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
 
     auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
+    // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
+    // Related issues: https://github.com/ned14/outcome/issues/311
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 
@@ -367,7 +371,11 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     auto const [projections, expected_resolved_projections]
             = generate_projections(is_auto_generated, column_query_to_possible_matches);
     auto empty_query = clp_s::search::ast::EmptyExpr::create();
+
     auto query_handler_impl_result{QueryHandlerImpl::create(empty_query, projections, true)};
+    // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
+    // Related issues: https://github.com/ned14/outcome/issues/311
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 
@@ -377,7 +385,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
             = [&](bool is_auto_gen, SchemaTree::Node::id_t node_id, std::string_view key
               ) -> outcome_v2::std_result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
-        auto const column_with_namespace{fmt::format(
+                auto const column_with_namespace{fmt::format(
                 "{}{}",
                 is_auto_generated ? clp_s::constants::cAutogenNamespace
                                   : clp_s::constants::cDefaultNamespace,

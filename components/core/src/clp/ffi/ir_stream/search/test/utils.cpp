@@ -8,7 +8,9 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <cstddef>
 
+#include <fmt/core.h>
 #include <fmt/format.h>
 #include <outcome/outcome.hpp>
 
@@ -65,9 +67,10 @@ auto ColumnQueryPossibleMatches::get_projectable_node_ids() const
 }
 
 auto ColumnQueryPossibleMatches::serialize() const -> std::string {
+    constexpr size_t cBitsetSize{sizeof(m_matchable_types) * 8};
     return fmt::format(
             "Types: {}; Node IDs: {{{}}}",
-            std::bitset<sizeof(m_matchable_types) * 8>(m_matchable_types).to_string(),
+            std::bitset<cBitsetSize>(m_matchable_types).to_string(),
             fmt::join(m_matchable_node_ids, ",")
     );
 }
