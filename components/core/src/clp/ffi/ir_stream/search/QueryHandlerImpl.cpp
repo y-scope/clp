@@ -116,6 +116,10 @@ auto preprocess_query(std::shared_ptr<Expression> query)
         return ErrorCode{ErrorCodeEnum::QueryExpressionIsNull};
     }
 
+    if (nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
+        return query;
+    }
+
     try {
         if (query = clp_s::search::ast::OrOfAndForm{}.run(query);
             nullptr != std::dynamic_pointer_cast<EmptyExpr>(query))
@@ -199,17 +203,13 @@ auto create_initial_partial_resolutions(
                 is_auto_gen ? auto_gen_namespace_partial_resolutions
                             : user_gen_namespace_partial_resolutions
         };
-        if (false == partial_resolutions.contains(SchemaTree::cRootId)) {
-            partial_resolutions.emplace(
-                    SchemaTree::cRootId,
-                    std::vector<QueryHandlerImpl::ColumnDescriptorTokenIterator>{}
-            );
-        }
-
-        partial_resolutions.at(SchemaTree::cRootId)
-                .emplace_back(
-                        OUTCOME_TRYX(QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col))
-                );
+        auto [it, inserted] = partial_resolutions.try_emplace(
+                SchemaTree::cRootId,
+                std::vector<QueryHandlerImpl::ColumnDescriptorTokenIterator>{}
+        );
+        it->second.emplace_back(
+                OUTCOME_TRYX(QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col))
+        );
     }
 
     OUTCOME_TRYV(initialize_partial_resolution_from_search_ast(
@@ -250,6 +250,8 @@ auto initialize_partial_resolution_from_search_ast(
 
         auto* col{filter->get_column().get()};
         if (col->is_pure_wildcard() || col->get_descriptor_list().empty()) {
+            // If the column is a single wildcard, we will resolve it dynamically during the AST
+            // evaluation.
             continue;
         }
 
@@ -268,7 +270,7 @@ auto initialize_partial_resolution_from_search_ast(
                 OUTCOME_TRYX(QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col))
         };
         it->second.emplace_back(begin_token_it);
-        if (begin_token_it.is_wildcard()) {
+        if (false == begin_token_it.is_last() && begin_token_it.is_wildcard()) {
             // To handle the case where the prefix wildcard matches nothing
             it->second.emplace_back(OUTCOME_TRYX(begin_token_it.next()));
         }

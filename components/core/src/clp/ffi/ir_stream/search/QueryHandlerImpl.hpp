@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -173,7 +174,7 @@ public:
 
     [[nodiscard]] auto get_resolved_column_to_schema_tree_node_ids() const -> std::unordered_map<
             clp_s::search::ast::ColumnDescriptor*,
-            std::vector<SchemaTree::Node::id_t>> {
+            std::unordered_set<SchemaTree::Node::id_t>> {
         return m_resolved_column_to_schema_tree_node_ids;
     }
 
@@ -224,7 +225,9 @@ private:
     std::shared_ptr<clp_s::search::ast::Expression> m_query;
     PartialResolutionMap m_auto_gen_namespace_partial_resolutions;
     PartialResolutionMap m_user_gen_namespace_partial_resolutions;
-    std::unordered_map<clp_s::search::ast::ColumnDescriptor*, std::vector<SchemaTree::Node::id_t>>
+    std::unordered_map<
+            clp_s::search::ast::ColumnDescriptor*,
+            std::unordered_set<SchemaTree::Node::id_t>>
             m_resolved_column_to_schema_tree_node_ids;
     std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> m_projected_columns;
     ProjectionMap m_projected_column_to_original_key;
@@ -251,7 +254,7 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
         auto const next_token_it_result{token_it.next()};
         if (SchemaTree::Node::Type::Obj == node_locator.get_type()) {
             // Handle schema-tree non-leaf nodes.
-            if (token_it.is_last()) {
+            if (token_it.is_last() && false == token_it.is_wildcard()) {
                 // TODO: Handle object search when supported.
                 continue;
             }
@@ -262,7 +265,9 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
                         std::vector<ColumnDescriptorTokenIterator>{}
                 );
                 it->second.emplace_back(token_it);
-                it->second.emplace_back(OUTCOME_TRYX(token_it.next()));
+                if (false == token_it.is_last()) {
+                    it->second.emplace_back(OUTCOME_TRYX(token_it.next()));
+                }
                 continue;
             }
 
@@ -334,9 +339,9 @@ auto QueryHandlerImpl::handle_column_resolution_on_leaf_node(
 
     auto [it, inserted] = m_resolved_column_to_schema_tree_node_ids.try_emplace(
             col,
-            std::vector<SchemaTree::Node::id_t>{}
+            std::unordered_set<SchemaTree::Node::id_t>{}
     );
-    it->second.emplace_back(leaf_node_id);
+    it->second.emplace(leaf_node_id);
     return outcome_v2::success();
 }
 }  // namespace clp::ffi::ir_stream::search

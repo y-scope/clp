@@ -2,51 +2,82 @@
 #define CLP_FFI_IR_STREAM_SEARCH_TEST_UTILS_HPP
 
 #include <map>
+#include <memory>
 #include <ostream>
 #include <set>
 #include <string>
-#include <tuple>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <outcome/outcome.hpp>
 
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../SchemaTree.hpp"
 #include "../utils.hpp"
 
 namespace clp::ffi::ir_stream::search::test {
-class PossibleMatches {
+class ColumnQueryPossibleMatches {
 public:
-    [[nodiscard]] auto get_possible_types() const -> clp_s::search::ast::LiteralTypeBitmask {
-        return m_possible_types;
+    ColumnQueryPossibleMatches(std::shared_ptr<SchemaTree> schema_tree)
+            : m_schema_tree{std::move(schema_tree)} {}
+
+    [[nodiscard]] auto get_matchable_types() const -> clp_s::search::ast::LiteralTypeBitmask {
+        return m_matchable_types;
     }
 
-    [[nodiscard]] auto get_possible_ids() const -> std::set<SchemaTree::Node::id_t> const& {
-        return m_possible_node_ids;
+    [[nodiscard]] auto get_matchable_node_ids() const -> std::set<SchemaTree::Node::id_t> const& {
+        return m_matchable_node_ids;
     }
 
-    auto set_possible_node(SchemaTree::Node::id_t node_id, SchemaTree::Node::Type type) -> void {
-        m_possible_node_ids.emplace(node_id);
-        m_possible_types |= schema_tree_node_type_to_literal_types(type);
+    [[nodiscard]] auto get_matchable_node_ids_from_literal_type(
+            clp_s::search::ast::LiteralType type
+    ) const -> std::vector<SchemaTree::Node::id_t>;
+
+    [[nodiscard]] auto get_matchable_node_ids_from_schema_tree_type(
+            SchemaTree::Node::Type type
+    ) const -> std::vector<SchemaTree::Node::id_t>;
+
+    [[nodiscard]] auto get_projectable_node_ids() const -> std::vector<SchemaTree::Node::id_t>;
+
+    auto set_matchable_node(SchemaTree::Node::id_t node_id, SchemaTree::Node::Type type) -> void {
+        m_matchable_node_ids.emplace(node_id);
+        m_matchable_types |= schema_tree_node_type_to_literal_types(type);
     }
 
     [[nodiscard]] auto serialize() const -> std::string;
 
 private:
-    clp_s::search::ast::LiteralTypeBitmask m_possible_types;
-    std::set<SchemaTree::Node::id_t> m_possible_node_ids;
+    std::shared_ptr<SchemaTree> m_schema_tree;
+    clp_s::search::ast::LiteralTypeBitmask m_matchable_types{};
+    std::set<SchemaTree::Node::id_t> m_matchable_node_ids;
 };
 
 /**
- * Gets all possible queries to every single node in the schema tree with a bitmask indicating all
- * the potentially matched types.
+ * Trivial implementation of `NewProjectedSchemaTreeNodeCallback` that always return success without
+ * doing anything.
+ * @param is_auto_generated
+ * @param
+ */
+[[nodiscard]] auto trivial_new_projected_schema_tree_node_callback(
+        bool is_auto_generated,
+        SchemaTree::Node::id_t node_id,
+        std::string_view projected_key_path
+) -> outcome_v2::std_result<void>;
+
+/**
+ * Gets all possible column queries to every single node in the schema tree with a bitmask
+ * indicating all the potentially matched types.
  * NOTE: It is assume that all the keys in the schema tree to test don't contain escaped characters.
  * @param schema_tree
- * @return A query-to-possible-matches map.
+ * @return A column-query-to-possible-matches map.
  */
-[[nodiscard]] auto get_schema_tree_node_queries(SchemaTree const& schema_tree)
-        -> std::map<std::string, PossibleMatches>;
+[[nodiscard]] auto get_schema_tree_column_queries(std::shared_ptr<SchemaTree> const& schema_tree)
+        -> std::map<std::string, ColumnQueryPossibleMatches>;
 
-[[nodiscard]] auto operator<<(
+[[maybe_unused]] auto operator<<(
         std::ostream& os,
-        std::map<std::string, PossibleMatches> const& query_to_possible_matches_map
+        std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
 ) -> std::ostream&;
 }  // namespace clp::ffi::ir_stream::search::test
 
