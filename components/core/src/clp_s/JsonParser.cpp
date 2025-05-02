@@ -633,11 +633,6 @@ bool JsonParser::parse() {
                 json_file_iterator.get_num_bytes_read() - bytes_consumed_up_to_prev_archive
         );
 
-        if (ErrorCodeSuccess != m_archive_writer->close_current_range()) {
-            m_archive_writer->close();
-            return false;
-        }
-
         if (simdjson::error_code::SUCCESS != json_file_iterator.get_error()) {
             SPDLOG_ERROR(
                     "Encountered error - {} - while trying to parse {} after parsing {} bytes",
@@ -657,6 +652,11 @@ bool JsonParser::parse() {
         }
 
         if (check_and_log_curl_error(path, reader)) {
+            m_archive_writer->close();
+            return false;
+        }
+
+        if (ErrorCodeSuccess != m_archive_writer->close_current_range()) {
             m_archive_writer->close();
             return false;
         }

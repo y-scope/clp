@@ -58,13 +58,10 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 }
 
 void ArchiveWriter::close() {
-    if (m_range_handle.has_value()) {
-        if (auto rc = m_range_index_writer.close_range(m_range_handle.value(), m_next_log_event_id);
-            ErrorCodeSuccess != rc)
-        {
+    if (m_range_open) {
+        if (auto const rc = close_current_range(); ErrorCodeSuccess != rc) {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
         }
-        m_range_handle.reset();
     }
     auto var_dict_compressed_size = m_var_dict->close();
     auto log_dict_compressed_size = m_log_dict->close();

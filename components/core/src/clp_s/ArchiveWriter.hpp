@@ -177,26 +177,24 @@ public:
      */
     template <typename T>
     auto add_field_to_current_range(std::string const& key, T const& value) {
-        if (false == m_range_handle.has_value()) {
-            auto const ret{m_range_index_writer.open_range(m_next_log_event_id)};
-            if (ret.has_error()) {
-                return ErrorCodeFailure;
+        if (false == m_range_open) {
+            if (auto const rc = m_range_index_writer.open_range(m_next_log_event_id);
+                ErrorCodeSuccess != rc)
+            {
+                return rc;
             }
-            m_range_handle = ret.value();
+            m_range_open = true;
         }
-        return m_range_index_writer.add_value_to_range(m_range_handle.value(), key, value);
+        return m_range_index_writer.add_value_to_range(key, value);
     }
 
     /**
      * Closes the currently open range in the range index.
-     * @return ErrorCodeSuccess on success or ErrorCodeNotReady if no range is currently open.
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     auto close_current_range() -> ErrorCode {
-        if (false == m_range_handle.has_value()) {
-            return ErrorCodeNotReady;
-        }
-        auto rc = m_range_index_writer.close_range(m_range_handle.value(), m_next_log_event_id);
-        m_range_handle.reset();
+        auto const rc = m_range_index_writer.close_range(m_next_log_event_id);
+        m_range_open = false;
         return rc;
     }
 
@@ -286,7 +284,7 @@ private:
     ZstdCompressor m_tables_compressor;
     ZstdCompressor m_table_metadata_compressor;
 
-    std::optional<RangeIndexWriter::handle_t> m_range_handle{std::nullopt};
+    bool m_range_open{false};
     RangeIndexWriter m_range_index_writer;
 };
 }  // namespace clp_s

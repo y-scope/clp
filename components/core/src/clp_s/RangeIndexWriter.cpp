@@ -9,41 +9,36 @@
 
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <outcome/outcome.hpp>
 
 #include "ErrorCode.hpp"
 #include "SingleFileArchiveDefs.hpp"
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {
-auto RangeIndexWriter::open_range(size_t start_index)
-        -> OUTCOME_V2_NAMESPACE::std_result<handle_t> {
+auto RangeIndexWriter::open_range(size_t start_index) -> ErrorCode {
     for (auto const& range : m_ranges) {
-        if (start_index < range.start_index || false == range.end_index.has_value()
-            || start_index < range.end_index.value())
-        {
-            return std::errc::invalid_argument;
+        if (false == range.end_index.has_value()) {
+            return ErrorCodeNotReady;
+        }
+        if (start_index < range.start_index || start_index < range.end_index.value()) {
+            return ErrorCodeBadParam;
         }
     }
-    handle_t handle{m_ranges.size()};
     m_ranges.emplace_back(start_index);
-    return handle;
+    return ErrorCodeSuccess;
 }
 
-auto RangeIndexWriter::close_range(handle_t handle, size_t end_index) -> ErrorCode {
-    if (handle >= m_ranges.size()) {
-        return ErrorCodeOutOfBounds;
+auto RangeIndexWriter::close_range(size_t end_index) -> ErrorCode {
+    if (m_ranges.empty()) {
+        return ErrorCodeNotReady;
     }
-
-    auto& range = m_ranges.at(handle);
+    auto& range = m_ranges.back();
     if (range.end_index.has_value()) {
         return ErrorCodeNotReady;
     }
-
     if (end_index < range.start_index) {
         return ErrorCodeBadParam;
     }
-
     range.end_index = end_index;
     return ErrorCodeSuccess;
 }

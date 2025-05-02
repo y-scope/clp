@@ -14,7 +14,6 @@
 // NOLINTNEXTLINE(misc-include-cleaner)
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <outcome/outcome.hpp>
 
 #include "ErrorCode.hpp"
 #include "ZstdCompressor.hpp"
@@ -37,9 +36,6 @@ namespace clp_s {
  */
 class RangeIndexWriter {
 public:
-    // Types
-    using handle_t = size_t;
-
     // Constants
     static constexpr std::string_view cStartIndexName{"s"};
     static constexpr std::string_view cEndIndexName{"e"};
@@ -48,9 +44,9 @@ public:
     /**
      * Opens a new range starting at start_index.
      * @param start_index
-     * @return A handle to the newly opened range on success or the relevant error code on failure.
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
-    [[nodiscard]] auto open_range(size_t start_index) -> OUTCOME_V2_NAMESPACE::std_result<handle_t>;
+    [[nodiscard]] auto open_range(size_t start_index) -> ErrorCode;
 
     /**
      * Adds a key value pair to the open range indicated by `handle`.
@@ -60,22 +56,18 @@ public:
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     template <typename T>
-    [[nodiscard]] auto add_value_to_range(handle_t handle, std::string const& key, T const& value)
-            -> ErrorCode {
-        if (handle >= m_ranges.size()) {
-            return ErrorCodeOutOfBounds;
+    [[nodiscard]] auto add_value_to_range(std::string const& key, T const& value) -> ErrorCode {
+        if (m_ranges.empty()) {
+            return ErrorCodeNotReady;
         }
-
-        auto& range = m_ranges.at(handle);
+        auto& range = m_ranges.back();
         if (range.end_index.has_value()) {
             return ErrorCodeNotReady;
         }
-
         auto& fields = range.fields;
         if (auto it = fields.find(key); fields.end() != it) {
             return ErrorCodeBadParam;
         }
-
         fields.emplace(key, value);
         return ErrorCodeSuccess;
     }
@@ -86,7 +78,7 @@ public:
      * @param end_index
      * @return ErrorCodeSuccess on success or the relvant error code on failure.
      */
-    [[nodiscard]] auto close_range(handle_t handle, size_t end_index) -> ErrorCode;
+    [[nodiscard]] auto close_range(size_t end_index) -> ErrorCode;
 
     /**
      * Writes ranges to a `ZstdCompressor` then clears internal state.
