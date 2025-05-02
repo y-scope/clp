@@ -14,16 +14,10 @@ as well as the key design decisions behind it.
 :link: background
 Background
 :::
-
-:::{grid-item-card}
-:link: specification
-Specificationz
-:::
 ::::
 
 :::{toctree}
 :hidden:
 
 background
-specification
 :::
