@@ -183,7 +183,7 @@ auto generate_projections(
             continue;
         }
         auto const projectable_node_ids{possible_matches.get_projectable_node_ids()};
-        if (projections.empty()) {
+        if (projectable_node_ids.empty()) {
             continue;
         }
         auto const column_query_with_namespace{fmt::format(
@@ -410,14 +410,8 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
             = [&](bool is_auto_gen, SchemaTree::Node::id_t node_id, std::string_view key
               ) -> outcome_v2::std_result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
-        auto const column_with_namespace{fmt::format(
-                "{}{}",
-                is_auto_generated ? clp_s::constants::cAutogenNamespace
-                                  : clp_s::constants::cDefaultNamespace,
-                key
-        )};
         auto [column_it, column_inserted] = actual_resolved_projections.try_emplace(
-                column_with_namespace,
+                std::string{key},
                 std::set<SchemaTree::Node::id_t>{}
         );
         auto [node_id_it, node_id_inserted] = column_it->second.emplace(node_id);
