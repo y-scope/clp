@@ -102,8 +102,8 @@ object itself, and has no key.
 | timers.stage_2 | NullValue        |
 
 +++
-**Table 1**: The schema for log event #1 in [Figure 1](#figure-1). Nested keys are represented with
-dot notation. The value types are described in [Table 3](#table-3).
+**Table 1**: The schema for log event &#35;1 in [Figure 1](#figure-1). Nested keys are represented
+with dot notation. The value types are described in [Table 3](#table-3).
 :::
 
 (table-2)=
@@ -119,7 +119,7 @@ dot notation. The value types are described in [Table 3](#table-3).
 | timers.stage_2 | Float            |
 
 +++
- **Table 2**: The schema for log event #2 in [Figure 1](#figure-1).
+ **Table 2**: The schema for log event &#35;2 in [Figure 1](#figure-1).
 :::
 
 (table-3)=
@@ -175,8 +175,8 @@ flowchart LR
   timersObj --> timersStage2Null
 :::
 +++
-**Figure 2**: The schema tree for log event #1 in [Figure 1](#figure-1). Each node's label is of the
-form `<key>: <type>`, and each arrow is from a parent to a child node.
+**Figure 2**: The schema tree for log event &#35;1 in [Figure 1](#figure-1). Each node's label is of
+the form `<key>: <type>`, and each arrow is from a parent to a child node.
 ::::
 
 ### Encoding log event schemas
@@ -186,8 +186,8 @@ tree that merges all events' schema trees; each event's schema can then be uniqu
 an array of identifiers for the relevant leaf nodes of the archive's tree. (The leaf node IDs are
 sufficient since we can determine the predecessor nodes by traversing to the root from the leaves.)
 For instance, [Figure 3](#figure-3) shows the schema tree after adding the example logs
-([Figure 1](#figure-1)) to the tree. Referencing the leaf node IDs, the schema for event #1 can be
-encoded as `[1, 2, 3, 5, 7]`. To merge an event's schema tree with the archive's tree, clp-s
+([Figure 1](#figure-1)) to the tree. Referencing the leaf node IDs, the schema for event &#35;1 can
+be encoded as `[1, 2, 3, 5, 7]`. To merge an event's schema tree with the archive's tree, clp-s
 iterates over each pair of nodes---one from each tree:
 
 * If the nodes have the same key and value-type, and all of their predecessor nodes have matching
@@ -284,8 +284,8 @@ archive is complete.
 
 clp-s uses [clp](../../user-guide/core-unstructured/clp.md)'s algorithm to parse and encode
 unstructured text. Unstructured text is a string that contains zero or more variable values
-interspersed with non-variable (static) text. For example, in [Figure 1](#figure-1), log event #1's
-`message` value is unstructured text containing the variable values `task_1` and `2`. At a
+interspersed with non-variable (static) text. For example, in [Figure 1](#figure-1), log event
+&#35;1's `message` value is unstructured text containing the variable values `task_1` and `2`. At a
 high-level, the clp algorithm uses a set of user-defined regular expressions to match each variable
 value in the unstructured text, decomposing the text into:
 
@@ -293,8 +293,8 @@ value in the unstructured text, decomposing the text into:
 * string variable values; and
 * encoded variable values---i.e., variable values which have been encoded as 64-bit integers.
 
-Collectively, we refer to these three components as an _encoded text AST_. For instance, log event
-#1's `message` value would be decomposed into the following encoded text AST:
+Collectively, we refer to these three components as an *encoded text AST*. For instance, log event
+&#35;1's `message` value would be decomposed into the following encoded text AST:
 
 * Format string: `\x12 completed successfully. \x11 task(s) remain.`
 * `\x12` and `\x11` are variable placeholders representing string and integer variables,
