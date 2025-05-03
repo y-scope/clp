@@ -11,10 +11,11 @@ We discuss each below.
 
 ## clp-s compression
 
-At a high-level, clp-s compresses log events into what we call archives. Depending on the configured
-size-threshold for each archive, a set of log events may be compressed into one or more archives.
-In addition, the format of an archive is designed so that each archive is independent of other
-archives, meaning that different archives can be searched concurrently.
+At a high-level, [clp-s](../../user-guide/core-clp-s.md) compresses log events into what we call
+archives. Depending on the configured size-threshold for each archive, a set of log events may be
+compressed into one or more archives. In addition, the format of an archive is designed so that each
+archive is independent of other archives, meaning that different archives can be searched
+concurrently.
 
 To compress a log event into an archive, clp-s needs to do the following:
 
@@ -25,6 +26,10 @@ To compress a log event into an archive, clp-s needs to do the following:
 
 The goal of this process is to transform the log events into a form that's more compact to store and
 faster to search.
+
+:::{tip}
+To learn more about clp-s, check out the original [research paper][clp-s-paper].
+:::
 
 ### Computing a log event's schema
 
@@ -277,11 +282,12 @@ archive is complete.
 
 ## Parsing & encoding unstructured text
 
-clp-s uses clp's algorithm to parse and encode unstructured text. Unstructured text is a string that
-contains zero or more variable values interspersed with non-variable (static) text. For example, in
-[Figure 1](#figure-1), log event #1's `message` value is unstructured text containing the variable
-values `task_1` and `2`. At a high-level, the clp algorithm uses a set of user-defined regular
-expressions to match each variable value in the unstructured text, decomposing the text into:
+clp-s uses [clp](../../user-guide/core-unstructured/clp.md)'s algorithm to parse and encode
+unstructured text. Unstructured text is a string that contains zero or more variable values
+interspersed with non-variable (static) text. For example, in [Figure 1](#figure-1), log event #1's
+`message` value is unstructured text containing the variable values `task_1` and `2`. At a
+high-level, the clp algorithm uses a set of user-defined regular expressions to match each variable
+value in the unstructured text, decomposing the text into:
 
 * a format string---i.e., the unstructured text with variable values replaced with placeholders;
 * string variable values; and
@@ -300,3 +306,10 @@ Collectively, we refer to these three components as an _encoded text AST_. For i
 The clp codebase refers to an encoded text AST's string variable values as "dictionary variables,"
 since they're typically stored in a dictionary. This may change as we update the codebase.
 :::
+
+:::{tip}
+To learn more about clp, check out the original [research paper][clp-paper].
+:::
+
+[clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
+[clp-s-paper]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf
