@@ -260,7 +260,6 @@ def run_clp(
     clp_storage_engine = worker_config.package.storage_engine
     data_dir = worker_config.data_directory
     archive_output_dir = worker_config.archive_output.get_directory()
-    table_prefix = clp_metadata_db_connection_config["table_prefix"]
 
     # Generate database config file for clp
     db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
@@ -282,6 +281,7 @@ def run_clp(
         enable_s3_write = True
 
     # Modify variables associated with CLP_S dataset
+    table_prefix = clp_metadata_db_connection_config["table_prefix"]
     input_dataset: str
     if StorageEngine.CLP_S == clp_storage_engine:
         input_dataset = clp_config.input.dataset
