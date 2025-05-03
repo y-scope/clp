@@ -125,18 +125,18 @@ with dot notation. The value types are described in [Table 3](#table-3).
 (table-3)=
 :::{card}
 
-| clp-s value-type  | Description                                                                                            | Node type |
-|-------------------|--------------------------------------------------------------------------------------------------------|-----------|
-| Integer           | A 64-bit integer                                                                                       | Leaf      |
-| Float             | A floating-point number                                                                                | Leaf      |
-| Boolean           | A boolean                                                                                              | Leaf      |
-| VarString         | A string without whitespace                                                                            | Leaf      |
-| DateString        | A string representing a timestamp                                                                      | Leaf      |
+| clp-s value-type  | Description                                                                                             | Node type |
+|-------------------|---------------------------------------------------------------------------------------------------------|-----------|
+| Integer           | A 64-bit integer                                                                                        | Leaf      |
+| Float             | A floating-point number                                                                                 | Leaf      |
+| Boolean           | A boolean                                                                                               | Leaf      |
+| VarString         | A string without whitespace                                                                             | Leaf      |
+| DateString        | A string representing a timestamp                                                                       | Leaf      |
 | ClpString         | A string containing whitespace, parsed into an [encoded text AST](#parsing--encoding-unstructured-text) | Leaf      |
+| NullValue         | A null value                                                                                            | Leaf      |
 | UnstructuredArray | An array that's serialized as a JSON string                                                             | Leaf      |
-| NullValue         | A null value                                                                                           | Leaf      |
-| Object            | An object                                                                                              | Internal  |
-| StructuredArray   | An array                                                                                               | Internal  |
+| Object            | An object                                                                                               | Internal  |
+| StructuredArray   | An array                                                                                                | Internal  |
 
 +++
 **Table 3**: clp-s value types.
@@ -256,7 +256,8 @@ clp-s encodes each leaf-node value type as follows:
   * the format string is dictionary-encoded.
   * the encoded variable values are encoded natively.
   * the string variable values are dictionary-encoded.
-* `UnstructuredArray`s are converted to encoded text ASTs, and then encoded similar to `ClpString`s.
+* `UnstructuredArray`s are converted to [encoded text ASTs](#parsing--encoding-unstructured-text),
+  and then encoded similar to `ClpString`s.
 * `NullValue`s are encoded as the integer `0`.
 
 `VarString`s share a dictionary with the string variable values from `ClpString`s and
