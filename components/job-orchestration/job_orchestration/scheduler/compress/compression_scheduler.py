@@ -13,6 +13,7 @@ import celery
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
+    ArchiveOutput,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -168,6 +169,7 @@ def search_and_schedule_new_tasks(
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
     clp_storage_engine: StorageEngine,
+    clp_archive_output: ArchiveOutput,
     datasets_cache: Set[str],
 ):
     """
@@ -176,6 +178,7 @@ def search_and_schedule_new_tasks(
     :param db_cursor:
     :param clp_metadata_db_connection_config:
     :param clp_storage_engine:
+    :param clp_archive_output:
     :param datasets_cache:
     """
     global scheduled_jobs
@@ -196,10 +199,19 @@ def search_and_schedule_new_tasks(
         if StorageEngine.CLP_S == clp_storage_engine:
             dataset_name = input_config.dataset
             if dataset_name not in datasets_cache:
-                datasets_cache.add(dataset_name)
-                insert_new_datasets_table_entry(db_cursor, table_prefix, dataset_name, Path("/"))
+                archive_storage_directory: Path
+                if StorageType.S3 == clp_archive_output.storage.type:
+                    s3_config = clp_archive_output.storage.s3_config
+                    archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
+                else:
+                    archive_storage_directory = clp_archive_output.get_directory() / dataset_name
+                insert_new_datasets_table_entry(
+                    db_cursor, table_prefix, dataset_name, f"{archive_storage_directory}/"
+                )
                 create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
                 db_conn.commit()
+                datasets_cache.add(dataset_name)
+
             table_prefix = f"{table_prefix}{dataset_name}_"
 
         paths_to_compress_buffer = PathsToCompressBuffer(
@@ -439,6 +451,7 @@ def main(argv):
                     db_cursor,
                     clp_metadata_db_connection_config,
                     clp_storage_engine,
+                    clp_config.archive_output,
                     datasets_cache,
                 )
                 poll_running_jobs(db_conn, db_cursor)
