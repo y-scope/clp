@@ -19,7 +19,7 @@ archives, meaning that different archives can be searched concurrently.
 To compress a log event into an archive, clp-s needs to do the following:
 
 1. [Compute the event's schema](#computing-a-log-events-schema)
-2. [Encode the event's schema](#encoding-event-schemas)
+2. [Encode the event's schema](#encoding-log-event-schemas)
 3. [Encode and store the event's values](#encoding--storing-event-values)
 4. [Serialize and write the archive's data structures](#writing-archives-to-disk)
 
@@ -277,6 +277,26 @@ archive is complete.
 
 ## Parsing & encoding unstructured text
 
-:::{warning}
-🚧 This section is still under construction.
+clp-s uses clp's algorithm to parse and encode unstructured text. Unstructured text is a string that
+contains zero or more variable values interspersed with non-variable (static) text. For example, in
+[Figure 1](#figure-1), log event #1's `message` value is unstructured text containing the variable
+values `task_1` and `2`. At a high-level, the clp algorithm uses a set of user-defined regular
+expressions to match each variable value in the unstructured text, decomposing the text into:
+
+* a format string---i.e., the unstructured text with variable values replaced with placeholders;
+* string variable values; and
+* encoded variable values---i.e., variable values which have been encoded as 64-bit integers.
+
+Collectively, we refer to these three components as an _encoded text AST_. For instance, log event
+#1's `message` value would be decomposed into the following encoded text AST:
+
+* Format string: `\x12 completed successfully. \x11 task(s) remain.`
+* `\x12` and `\x11` are variable placeholders representing string and integer variables,
+  respectively.
+* String variable values: `["task_1"]`
+* Encoded variable values: `[1]`
+
+:::{note}
+The clp codebase refers to an encoded text AST's string variable values as "dictionary variables,"
+since they're typically stored in a dictionary. This may change as we update the codebase.
 :::
