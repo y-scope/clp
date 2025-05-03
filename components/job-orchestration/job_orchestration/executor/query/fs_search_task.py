@@ -19,7 +19,7 @@ from job_orchestration.executor.query.utils import (
     report_task_failure,
     run_query_task,
 )
-from job_orchestration.executor.utils import load_worker_config, update_s3_config_with_dataset
+from job_orchestration.executor.utils import load_worker_config
 from job_orchestration.scheduler.job_config import SearchJobConfig
 
 # Setup logging
