@@ -630,8 +630,6 @@ def handle_pending_query_jobs(
         and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
 
-    table_prefix = clp_metadata_db_conn_params["table_prefix"]
-
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         for job in fetch_new_query_jobs(db_conn):
             job_id = str(job["job_id"])
