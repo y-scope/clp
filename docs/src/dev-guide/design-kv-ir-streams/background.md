@@ -57,7 +57,7 @@ instance, the tree for the schema in [Table 1](#table-1) is shown in [Figure 2](
 the tree represents the structure of a structured log event, the internal (non-leaf) nodes will
 always correspond to `Object`s or `StructuredArray`s, while the leaf nodes will correspond to values
 with primitive types (since `UnstructuredArray` values are encoded as JSON strings, they are
-primitives from the perspective of a schema tree) . Accordingly, the root node represents the event
+primitives from the perspective of a schema tree). Accordingly, the root node represents the event
 object itself, and has no key.
 
 (figure-1)=
@@ -194,6 +194,7 @@ iterates over each pair of nodes---one from each tree:
   key and value-type pairs, clp-s merges the nodes in the resulting tree.
 * Otherwise, both nodes are added to the resulting tree, and each is assigned a unique integer ID.
 
+<!-- markdownlint-disable MD013 -->
 (figure-3)=
 ::::{card}
 :::{mermaid}
@@ -232,6 +233,7 @@ flowchart LR
 **Figure 3**: The archive's schema tree after adding the log events from [Figure 1](#figure-1). Each
 node's label is of the form `<ID> <key>: <type>`.
 ::::
+<!-- markdownlint-enable MD013 -->
 
 ### Encoding & storing event values
 
@@ -257,7 +259,7 @@ clp-s encodes each leaf-node value type as follows:
   * the encoded variable values are encoded natively.
   * the string variable values are dictionary-encoded.
 * `UnstructuredArray`s are converted to [encoded text ASTs](#parsing--encoding-unstructured-text),
-  and then encoded similar to `ClpString`s.
+  and then encoded similarly to `ClpString`s.
 * `NullValue`s are encoded as the integer `0`.
 
 `VarString`s share a dictionary with the string variable values from `ClpString`s and
