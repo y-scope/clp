@@ -256,7 +256,7 @@ clp-s encodes each leaf-node value type as follows:
   * the format string is dictionary-encoded.
   * the encoded variable values are encoded natively.
   * the string variable values are dictionary-encoded.
-* `UnstructuredArray`s are converted to EncodedTextAsts are then encoded similar to `ClpString`s.
+* `UnstructuredArray`s are converted to encoded text ASTs, and then encoded similar to `ClpString`s.
 * `NullValue`s are encoded as the integer `0`.
 
 `VarString`s share a dictionary with the string variable values from `ClpString`s and
