@@ -19,7 +19,7 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
         case ErrorCodeEnum::AstDynamicCastFailure:
             return "Failed to dynamically cast an AST node to the expected type.";
-        case ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBound:
+        case ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds:
             return "Attempted to access a token beyond the end of the column descriptor.";
         case ErrorCodeEnum::ColumnTokenizationFailure:
             return "Failed to tokenize the column descriptor.";

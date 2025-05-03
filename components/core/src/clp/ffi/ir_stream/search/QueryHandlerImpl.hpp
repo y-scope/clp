@@ -46,7 +46,7 @@ public:
                 -> outcome_v2::std_result<ColumnDescriptorTokenIterator> {
             auto const token_begin_it{colum_descriptor->descriptor_begin()};
             if (colum_descriptor->descriptor_end() == token_begin_it) {
-                return ErrorCode{ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBound};
+                return ErrorCode{ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds};
             }
             return ColumnDescriptorTokenIterator{colum_descriptor, token_begin_it};
         }
@@ -67,7 +67,7 @@ public:
          */
         [[nodiscard]] auto next() const -> outcome_v2::std_result<ColumnDescriptorTokenIterator> {
             if (is_last()) {
-                return ErrorCode{ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBound};
+                return ErrorCode{ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds};
             }
             return ColumnDescriptorTokenIterator{m_column_descriptor, m_next_token_it};
         }
