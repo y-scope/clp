@@ -19,6 +19,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_TASKS_TABLE_NAME,
     DATASETS_TABLE_SUFFIX,
     StorageEngine,
+    StorageType,
     TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
