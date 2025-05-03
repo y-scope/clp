@@ -263,7 +263,7 @@ corresponding column of the ERT is null.
 | Boolean                     | 1 B integer                                             |
 | VarString                   | 8 B dictionary ID                                       |
 | DateString                  | 8 B epoch timestamp and 8 B format string dictionary ID |
-| ClpString                   | _See below_                                             |
+| ClpString                   | *See below*                                             |
 | --> Format string           | 8 B dictionary ID                                       |
 | --> Encoded variable values | Collection of 8 B integers                              |
 | --> String variable values  | Collection of 8 B dictionary IDs                        |
