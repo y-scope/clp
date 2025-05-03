@@ -162,7 +162,7 @@ def _fetch_existing_datasets(
     db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
     rows = db_cursor.fetchall()
     db_conn.commit()
-    return {str(row[0]) for row in rows}
+    return {str(row["name"]) for row in rows}
 
 
 def search_and_schedule_new_tasks(
