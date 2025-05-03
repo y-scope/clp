@@ -246,25 +246,33 @@ integer. For each encoded value, clp-s stores it in the value's corresponding ER
 efficient to search since all the values are integers; and by grouping events with the same schema
 into an ERT, clp-s essentially deduplicates the event's schema.
 
-clp-s encodes each leaf-node value type as follows:
+[Table 4](#table-4) lists how clp-s encodes each leaf-node value type. Most value types are encoded
+conventionally, but a few require further explanation. For the values encoded as dictionary IDs,
+clp-s simply stores the value in a dictionary and maps it to a unique integer ID. For `ClpString`s,
+clp-s encodes each component separately. Finally, `NullValue`s don't need to be encoded since they
+don't need to be stored explicitly---a `NullValue` leaf node already indicates that the
+corresponding column of the ERT is null.
 
-* `Integer`s are encoded natively.
-* `Float`s are encoded using the IEEE-754 double-precision format.
-* `Boolean`s are encoded as an integer.
-* `VarString`s are encoded using dictionary-encoding---i.e., a dictionary that maps string values to
-  unique integer IDs, and the encoded value for a string value is its corresponding dictionary ID.
-* `DateString`s are encoded as an epoch timestamp and a dictionary-encoded format string.
-* `ClpString`s are encoded as follows:
-  * the format string is dictionary-encoded.
-  * the encoded variable values are encoded natively.
-  * the string variable values are dictionary-encoded.
-* `UnstructuredArray`s are converted to [encoded text ASTs](#parsing--encoding-unstructured-text),
-  and then encoded similarly to `ClpString`s.
-* `NullValue`s are encoded as the integer `0`.
+(table-4)=
+:::{card}
 
-`VarString`s share a dictionary with the string variable values from `ClpString`s and
-`UnstructuredArray`s, while the format strings from `DateString`s, `ClpString`s, and
-`UnstructuredArray`s use separate dictionaries, each.
+| clp-s value-type            | Encoding                                                |
+|-----------------------------|---------------------------------------------------------|
+| Integer                     | 8 B integer                                             |
+| Float                       | 8 B IEEE-754 double-precision float                     |
+| Boolean                     | 1 B integer                                             |
+| VarString                   | 8 B dictionary ID                                       |
+| DateString                  | 8 B epoch timestamp and 8 B format string dictionary ID |
+| ClpString                   | _See below_                                             |
+| --> Format string           | 8 B dictionary ID                                       |
+| --> Encoded variable values | Collection of 8 B integers                              |
+| --> String variable values  | Collection of 8 B dictionary IDs                        |
+| UnstructuredArray           | Same as ClpString                                       |
+| NullValue                   | N/A                                                     |
+
++++
+**Table 4**: How clp-s encodes each of its leaf node value types.
+:::
 
 clp-s' two array types are used to encode arrays with different characteristics. `StructuredArray`
 values are similar to `Object` values in that all of their elements will be added to the schema
