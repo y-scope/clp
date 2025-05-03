@@ -10,7 +10,7 @@ namespace clp::ffi::ir_stream::search {
  * Represents all possible error codes related to KV-pair IR stream search.
  */
 enum class ErrorCodeEnum : uint8_t {
-    AstDynamicCastFailure,
+    AstDynamicCastFailure = 1,
     ColumnDescriptorTokenIteratorOutOfBound,
     ColumnTokenizationFailure,
     DuplicateProjectedColumn,
