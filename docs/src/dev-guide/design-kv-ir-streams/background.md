@@ -13,9 +13,8 @@ We discuss each below.
 
 At a high-level, [clp-s](../../user-guide/core-clp-s.md) compresses log events into what we call
 archives. Depending on the configured size-threshold for each archive, a set of log events may be
-compressed into one or more archives. In addition, the format of an archive is designed so that each
-archive is independent of other archives, meaning that different archives can be searched
-concurrently.
+compressed into one or more archives. The archive format is designed so that each archive is
+self-contained and independent, allowing archives to be searched concurrently.
 
 To compress a log event into an archive, clp-s needs to do the following:
 
