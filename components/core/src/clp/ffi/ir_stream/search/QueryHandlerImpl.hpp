@@ -36,19 +36,19 @@ public:
         // Factory function
         /**
          * Creates an iterator that points to the first token in the given column descriptor.
-         * @param colum_descriptor
+         * @param column_descriptor
          * @return A result containing the constructed token iterator on success, or an error code
          * indicating the failure:
          * - ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBound if the column doesn't have any
          *   token.
          */
-        [[nodiscard]] static auto create(clp_s::search::ast::ColumnDescriptor* colum_descriptor)
+        [[nodiscard]] static auto create(clp_s::search::ast::ColumnDescriptor* column_descriptor)
                 -> outcome_v2::std_result<ColumnDescriptorTokenIterator> {
-            auto const token_begin_it{colum_descriptor->descriptor_begin()};
-            if (colum_descriptor->descriptor_end() == token_begin_it) {
+            auto const token_begin_it{column_descriptor->descriptor_begin()};
+            if (column_descriptor->descriptor_end() == token_begin_it) {
                 return ErrorCode{ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds};
             }
-            return ColumnDescriptorTokenIterator{colum_descriptor, token_begin_it};
+            return ColumnDescriptorTokenIterator{column_descriptor, token_begin_it};
         }
 
         // Methods
@@ -93,10 +93,10 @@ public:
     private:
         // Constructor
         ColumnDescriptorTokenIterator(
-                clp_s::search::ast::ColumnDescriptor* colum_descriptor,
+                clp_s::search::ast::ColumnDescriptor* column_descriptor,
                 clp_s::search::ast::DescriptorList::iterator curr_token_it
         )
-                : m_column_descriptor{colum_descriptor},
+                : m_column_descriptor{column_descriptor},
                   m_curr_token_it{curr_token_it},
                   m_next_token_it{curr_token_it + 1} {}
 
