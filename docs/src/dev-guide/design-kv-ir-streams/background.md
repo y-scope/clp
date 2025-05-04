@@ -258,19 +258,19 @@ conventionally with the following exceptions:
 (table-4)=
 :::{card}
 
-| clp-s value-type            | Encoding                                                |
-|-----------------------------|---------------------------------------------------------|
-| Integer                     | 8 B integer                                             |
-| Float                       | 8 B IEEE-754 double-precision float                     |
-| Boolean                     | 1 B integer                                             |
-| VarString                   | 8 B dictionary ID                                       |
-| DateString                  | 8 B epoch timestamp and 8 B format string dictionary ID |
-| ClpString                   | *See below*                                             |
-| --> Format string           | 8 B dictionary ID                                       |
-| --> Encoded variable values | Collection of 8 B integers                              |
-| --> String variable values  | Collection of 8 B dictionary IDs                        |
-| UnstructuredArray           | Same as ClpString                                       |
-| NullValue                   | N/A                                                     |
+| clp-s value-type            | Encoding                                                    |
+|-----------------------------|-------------------------------------------------------------|
+| Integer                     | 8-byte integer                                              |
+| Float                       | 8-byte IEEE-754 double-precision float                      |
+| Boolean                     | 1-byte integer                                              |
+| VarString                   | 8-byte dictionary ID                                        |
+| DateString                  | 8-byte epoch timestamp & 8-byte format string dictionary ID |
+| ClpString                   | *See below*                                                 |
+| --> Format string           | 8-byte dictionary ID                                        |
+| --> Encoded variable values | Collection of 8-byte integers                               |
+| --> String variable values  | Collection of 8-byte dictionary IDs                         |
+| UnstructuredArray           | Same as ClpString                                           |
+| NullValue                   | N/A                                                         |
 
 +++
 **Table 4**: How clp-s encodes each of its leaf node value types.
