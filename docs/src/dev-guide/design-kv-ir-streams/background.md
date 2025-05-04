@@ -22,10 +22,10 @@ To compress a log event into an archive, clp-s needs to do the following:
 2. [Encode the event's schema](#encoding-log-event-schemas)
 3. [Encode the event's values](#encoding-log-event-values)
 4. [Store the event's encoded values](#storing-encoded-values)
-5. [Serialize and write the archive's data structures](#writing-archives-to-disk)
 
-The goal of this process is to transform the log events into a form that's more compact to store and
-faster to search.
+Finally, when all events for an archive have been processed, clp-s needs to serialize and
+[write the archive's data structures](#writing-archives-to-disk). The goal of this process is to
+transform the log events into a form that's more compact to store and faster to search.
 
 :::{tip}
 To learn more about clp-s, check out the original [research paper][clp-s-paper].
