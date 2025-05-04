@@ -66,9 +66,9 @@ private:
 ) -> outcome_v2::std_result<void>;
 
 /**
- * Gets all possible column queries to every single node in the schema tree with a bitmask
+ * Gets all possible column queries to every single node in the schema-tree with a bitmask
  * indicating all the potentially matched types.
- * NOTE: It is assume that all the keys in the schema tree to test don't contain escaped characters.
+ * NOTE: It is assume that all the keys in the schema-tree to test don't contain escaped characters.
  * @param schema_tree
  * @return A column-query-to-possible-matches map.
  */

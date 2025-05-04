@@ -86,7 +86,7 @@ public:
          * @param type
          * @return Whether the underlying column can match the given schema-tree node type.
          */
-        [[nodiscard]] auto match(SchemaTree::Node::Type type) const -> bool {
+        [[nodiscard]] auto match_schema_tree_node_type(SchemaTree::Node::Type type) const -> bool {
             return m_column_descriptor->matches_any(schema_tree_node_type_to_literal_types(type));
         }
 
@@ -319,7 +319,7 @@ auto QueryHandlerImpl::handle_column_resolution_on_leaf_node(
     }
 
     // Reaching the last token.
-    if (false == token_it.match(leaf_node_locator.get_type())
+    if (false == token_it.match_schema_tree_node_type(leaf_node_locator.get_type())
         || (false == token_it.is_wildcard()
             && token_it.get_token() != leaf_node_locator.get_key_name()))
     {
