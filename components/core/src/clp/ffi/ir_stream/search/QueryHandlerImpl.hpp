@@ -39,8 +39,8 @@ public:
          * @param column_descriptor
          * @return A result containing the constructed token iterator on success, or an error code
          * indicating the failure:
-         * - ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBound if the column doesn't have any
-         *   token.
+         * - ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds if the column doesn't have any
+         *   tokens.
          */
         [[nodiscard]] static auto create(clp_s::search::ast::ColumnDescriptor* column_descriptor)
                 -> outcome_v2::std_result<ColumnDescriptorTokenIterator> {
@@ -62,7 +62,7 @@ public:
         /**
          * @return A result containing a newly constructor iterator pointing to the next token on
          * success, or an error code indicating the failure:
-         * - ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBound if the current token is already
+         * - ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds if the current token is already
          *   the last one.
          */
         [[nodiscard]] auto next() const -> outcome_v2::std_result<ColumnDescriptorTokenIterator> {
