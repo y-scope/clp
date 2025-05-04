@@ -180,14 +180,15 @@ the form `<key>: <type>`, and each arrow is from a parent to a child node.
 
 ### Encoding log event schemas
 
-To compactly encode the schemas of the events in an archive, clp-s maintains an archive-level schema
-tree that merges all events' schema trees; each event's schema can then be uniquely encoded as
-an array of identifiers for the relevant leaf nodes of the archive's tree. (The leaf node IDs are
-sufficient since we can determine the predecessor nodes by traversing to the root from the leaves.)
-For instance, [Figure 3](#figure-3) shows the schema tree after adding the example logs
-([Figure 1](#figure-1)) to the tree. Referencing the leaf node IDs, the schema for event &#35;1 can
-be encoded as `[1, 2, 3, 5, 7]`. To merge an event's schema tree with the archive's tree, clp-s
-iterates over each pair of nodes---one from each tree:
+To compactly encode each event's schema in an archive, clp-s represents each schema with a set of
+integer IDs corresponding to nodes of an archive-level schema tree. This archive-level schema tree
+is built by merging all events' schema trees and assigning a unique ID to each node. An event's
+schema can then be encoded as the IDs of its *leaf* nodes within the tree, since the leaf nodes are
+sufficient to rebuild the event's tree by traversing from the leaves to the root. For instance,
+[Figure 3](#figure-3) shows the schema tree after adding the example logs ([Figure 1](#figure-1)) to
+the tree. Referencing the leaf node IDs, the schema for event &#35;1 can be encoded as
+`[1, 2, 3, 5, 7]`. To merge an event's schema tree with the archive's tree, clp-s iterates over each
+pair of nodes---one from each tree:
 
 * If the nodes have the same key and value-type, and all of their predecessor nodes have matching
   key and value-type pairs, clp-s merges the nodes in the resulting tree.
