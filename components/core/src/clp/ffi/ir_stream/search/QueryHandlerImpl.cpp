@@ -302,9 +302,8 @@ auto QueryHandlerImpl::create(
 ) -> outcome_v2::std_result<QueryHandlerImpl> {
     // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
     // Related issues: https://github.com/ned14/outcome/issues/311
-    // NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     query = OUTCOME_TRYX(preprocess_query(query));
-    // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
     auto [projected_columns, projected_column_to_original_key]
             = OUTCOME_TRYX(create_projected_columns_and_projection_map(projections));
     auto [auto_gen_namespace_partial_resolutions, user_gen_namespace_partial_resolutions]
