@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -72,7 +73,6 @@ using clp_s::search::ast::LiteralTypeBitmask;
  *   - The partial resolution for auto-generated keys.
  *   - The partial resolution for user-generated keys.
  * - The possible error codes:
- *   - Forwards `is_auto_generated`'s return values.
  *   - Forwards `initialize_partial_resolution_from_search_ast`'s return values.
  *   - Forwards `QueryHandlerImpl::ColumnDescriptorTokenIterator::create`'s return values.
  *   - Forwards `QueryHandlerImpl::ColumnDescriptorTokenIterator::next`'s return values.
@@ -93,7 +93,6 @@ using clp_s::search::ast::LiteralTypeBitmask;
  * @return A void result on success, or an error code indicating the failure:
  * - ErrorCodeEnum::AstDynamicCastFailure if failed to dynamically cast an AST node to a target
  *   type.
- * - Forwards `is_auto_generated`'s return values.
  */
 [[nodiscard]] auto initialize_partial_resolution_from_search_ast(
         std::shared_ptr<Expression> const& root,
@@ -103,12 +102,10 @@ using clp_s::search::ast::LiteralTypeBitmask;
 
 /**
  * @param key_namespace
- * @return A result containing a boolean indicating whether `key_namespace` is auto-generated or
- * user-generated on success, or an error code indicating the failure:
- * - ErrorCodeEnum::UnsupportedNamespace if the namespace is not supported.
+ * @return Whether `key_namespace` is auto-generated or user-generated, or std::nullopt if the
+ * namespace is unrecognized.
  */
-[[nodiscard]] auto is_auto_generated(std::string_view key_namespace)
-        -> outcome_v2::std_result<bool>;
+[[nodiscard]] auto is_auto_generated(std::string_view key_namespace) -> std::optional<bool>;
 
 auto preprocess_query(std::shared_ptr<Expression> query)
         -> outcome_v2::std_result<std::shared_ptr<Expression>> {
@@ -198,10 +195,14 @@ auto create_initial_partial_resolutions(
     QueryHandlerImpl::PartialResolutionMap auto_gen_namespace_partial_resolutions;
     QueryHandlerImpl::PartialResolutionMap user_gen_namespace_partial_resolutions;
     for (auto const& [col, key] : projected_column_to_original_key) {
-        bool const is_auto_gen{OUTCOME_TRYX(is_auto_generated(col->get_namespace()))};
+        auto const optional_is_auto_gen{is_auto_generated(col->get_namespace())};
+        if (false == optional_is_auto_gen.has_value()) {
+            // Ignore unrecognized namespace
+            continue;
+        }
         auto& partial_resolutions{
-                is_auto_gen ? auto_gen_namespace_partial_resolutions
-                            : user_gen_namespace_partial_resolutions
+                optional_is_auto_gen.value() ? auto_gen_namespace_partial_resolutions
+                                             : user_gen_namespace_partial_resolutions
         };
         auto [it, inserted] = partial_resolutions.try_emplace(
                 SchemaTree::cRootId,
@@ -255,10 +256,14 @@ auto initialize_partial_resolution_from_search_ast(
             continue;
         }
 
-        bool const is_auto_gen{OUTCOME_TRYX(is_auto_generated(col->get_namespace()))};
+        auto const optional_is_auto_gen{is_auto_generated(col->get_namespace())};
+        if (false == optional_is_auto_gen.has_value()) {
+            // Ignore unrecognized namespace
+            continue;
+        }
         auto& partial_resolutions{
-                is_auto_gen ? auto_gen_namespace_partial_resolutions
-                            : user_gen_namespace_partial_resolutions
+                optional_is_auto_gen.value() ? auto_gen_namespace_partial_resolutions
+                                             : user_gen_namespace_partial_resolutions
         };
 
         auto [it, inserted] = partial_resolutions.try_emplace(
@@ -279,14 +284,14 @@ auto initialize_partial_resolution_from_search_ast(
     return outcome_v2::success();
 }
 
-auto is_auto_generated(std::string_view key_namespace) -> outcome_v2::std_result<bool> {
+auto is_auto_generated(std::string_view key_namespace) -> std::optional<bool> {
     if (clp_s::constants::cAutogenNamespace == key_namespace) {
         return true;
     }
     if (clp_s::constants::cDefaultNamespace == key_namespace) {
         return false;
     }
-    return ErrorCode{ErrorCodeEnum::UnsupportedNamespace};
+    return std::nullopt;
 }
 }  // namespace
 

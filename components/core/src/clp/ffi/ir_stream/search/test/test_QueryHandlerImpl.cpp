@@ -34,19 +34,19 @@ constexpr value_bool_t cRefTestBool{false};
  * Generates all the matchable KQL expressions based on the column queries and their matchable
  * types. For each column query `C` matched type `T`, we generate an expression of `C: cRefTestT`,
  * where `cRefTestT` is any of the constants defined above.
- * @param is_auto_generated Whether the query is in auto-generated namespace.
+ * @param column_namespace The namespace of the column.
  * @param column_query_to_possible_matches
  * @return A pair that consists of:
  * - A vector of matchable KQL expressions.
  * - A map of expected column resolutions.
  */
 [[nodiscard]] auto generate_matchable_kql_expressions(
-        bool is_auto_generated,
+        std::string_view column_namespace,
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
 ) -> std::pair<std::vector<std::string>, std::map<std::string, std::set<SchemaTree::Node::id_t>>>;
 
 /**
- * @param is_auto_generated Whether the query is in auto-generated namespace.
+ * @param column_namespace The namespace of the column.
  * @param column_query_to_possible_matches
  * @return A pair that consists of:
  * - Generated projections as pairs, where each pair consists of:
@@ -55,7 +55,7 @@ constexpr value_bool_t cRefTestBool{false};
  * - A map of expected resolved projections.
  */
 [[nodiscard]] auto generate_projections(
-        bool is_auto_generated,
+        std::string_view column_namespace,
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
 )
         -> std::pair<
@@ -71,18 +71,13 @@ constexpr value_bool_t cRefTestBool{false};
 ) -> std::string;
 
 [[nodiscard]] auto generate_matchable_kql_expressions(
-        bool is_auto_generated,
+        std::string_view column_namespace,
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
 ) -> std::pair<std::vector<std::string>, std::map<std::string, std::set<SchemaTree::Node::id_t>>> {
     std::vector<std::string> matchable_kql_expressions;
     std::map<std::string, std::set<SchemaTree::Node::id_t>> expected_column_resolutions;
     for (auto const& [column_query, possible_matches] : column_query_to_possible_matches) {
-        auto const column_query_with_namespace{fmt::format(
-                "{}{}",
-                is_auto_generated ? clp_s::constants::cAutogenNamespace
-                                  : clp_s::constants::cDefaultNamespace,
-                column_query
-        )};
+        auto const column_query_with_namespace{fmt::format("{}{}", column_namespace, column_query)};
         if (auto const matchable_node_ids{
                     possible_matches.get_matchable_node_ids_from_schema_tree_type(
                             SchemaTree::Node::Type::Int
@@ -156,12 +151,7 @@ constexpr value_bool_t cRefTestBool{false};
         }
     }
 
-    auto const single_wildcard{fmt::format(
-            "{}{}",
-            is_auto_generated ? clp_s::constants::cAutogenNamespace
-                              : clp_s::constants::cDefaultNamespace,
-            "*"
-    )};
+    auto const single_wildcard{fmt::format("{}{}", column_namespace, "*")};
     if (expected_column_resolutions.contains(single_wildcard)) {
         // NOTE: The current implementation doesn't resolve single wildcard.
         expected_column_resolutions.erase(single_wildcard);
@@ -170,7 +160,7 @@ constexpr value_bool_t cRefTestBool{false};
 }
 
 auto generate_projections(
-        bool is_auto_generated,
+        std::string_view column_namespace,
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
 )
         -> std::pair<
@@ -186,12 +176,7 @@ auto generate_projections(
         if (projectable_node_ids.empty()) {
             continue;
         }
-        auto const column_query_with_namespace{fmt::format(
-                "{}{}",
-                is_auto_generated ? clp_s::constants::cAutogenNamespace
-                                  : clp_s::constants::cDefaultNamespace,
-                column_query
-        )};
+        auto const column_query_with_namespace{fmt::format("{}{}", column_namespace, column_query)};
         projections.emplace_back(
                 column_query_with_namespace,
                 possible_matches.get_matchable_types()
@@ -265,9 +250,17 @@ TEST_CASE(
     auto const is_auto_generated = GENERATE(true, false);
     auto const [matchable_kql_expressions, expected_column_resolutions]
             = generate_matchable_kql_expressions(
-                    is_auto_generated,
+                    is_auto_generated ? clp_s::constants::cAutogenNamespace
+                                      : clp_s::constants::cDefaultNamespace,
                     column_query_to_possible_matches
             );
+    auto const matchable_kql_expressions_with_unrecognized_namespace{
+            generate_matchable_kql_expressions(
+                    clp_s::constants::cReservedNamespace1,
+                    column_query_to_possible_matches
+            )
+                    .first
+    };
 
     constexpr std::string_view cUnmatchableNodeName{"unknown"};
     for (auto const& locator : locators) {
@@ -286,9 +279,16 @@ TEST_CASE(
     auto const unmatchable_kql_query_str{
             fmt::format("{}", fmt::join(unmatchable_kql_expressions, " OR "))
     };
-    auto const kql_query_str{
-            fmt::format("{} OR {}", matchable_kql_query_str, unmatchable_kql_query_str)
-    };
+    auto const unrecognized_namespace_kql_query_str{fmt::format(
+            "{}",
+            fmt::join(matchable_kql_expressions_with_unrecognized_namespace, " OR ")
+    )};
+    auto const kql_query_str{fmt::format(
+            "{} OR {} OR {}",
+            matchable_kql_query_str,
+            unmatchable_kql_query_str,
+            unrecognized_namespace_kql_query_str
+    )};
     CAPTURE(kql_query_str);
 
     auto query_stream{std::istringstream{kql_query_str}};
@@ -393,9 +393,26 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     CAPTURE(column_query_to_possible_matches);
 
     auto const is_auto_generated = GENERATE(true, false);
-    auto const [projections, expected_resolved_projections]
-            = generate_projections(is_auto_generated, column_query_to_possible_matches);
+    auto const [resolvable_projections, expected_resolved_projections] = generate_projections(
+            is_auto_generated ? clp_s::constants::cAutogenNamespace
+                              : clp_s::constants::cDefaultNamespace,
+            column_query_to_possible_matches
+    );
+    auto const unresolvable_projections_from_unrecognized_namespaces{
+            generate_projections(
+                    clp_s::constants::cReservedNamespace1,
+                    column_query_to_possible_matches
+            )
+                    .first
+    };
     auto empty_query = clp_s::search::ast::EmptyExpr::create();
+
+    auto projections{resolvable_projections};
+    projections.insert(
+            projections.end(),
+            unresolvable_projections_from_unrecognized_namespaces.cbegin(),
+            unresolvable_projections_from_unrecognized_namespaces.cend()
+    );
 
     auto query_handler_impl_result{QueryHandlerImpl::create(empty_query, projections, true)};
     // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.

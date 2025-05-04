@@ -21,7 +21,6 @@ enum class ErrorCodeEnum : uint8_t {
     ProjectionColumnDescriptorCreationFailure,
     QueryTransformationPassFailed,
     QueryExpressionIsNull,
-    UnsupportedNamespace,
 };
 
 using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;

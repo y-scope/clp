@@ -39,8 +39,6 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
             return "The query expression is NULL.";
         case ErrorCodeEnum::QueryTransformationPassFailed:
             return "Failed to execute transformation passes on the query expression.";
-        case ErrorCodeEnum::UnsupportedNamespace:
-            return "The queried namespace is unsupported.";
         default:
             return "Unknown error code enum.";
     }
