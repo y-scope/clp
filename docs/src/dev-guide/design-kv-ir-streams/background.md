@@ -215,16 +215,16 @@ flowchart LR
   rootObj("<span style='color: #ffbe00'>0</span> root: <span style='color: #97ff00'>Object</span>")
   timestampInt("<span style='color: #ffbe00'>1</span> timestamp: <span style='color: #97ff00'>Integer</span>")
   levelVarStr("<span style='color: #ffbe00'>2</span> level: <span style='color: #97ff00'>VarString</span>")
-  messageClpStr("<span style='color: #ffbe00'>3</span> message: <span style='color: #97ff00'>ClpString</span>")
   timersObj("<span style='color: #ffbe00'>4</span> timers: <span style='color: #97ff00'>Object</span>")
+  messageClpStr("<span style='color: #ffbe00'>3</span> message: <span style='color: #97ff00'>ClpString</span>")
   timersStage1Float("<span style='color: #ffbe00'>5</span> stage_1: <span style='color: #97ff00'>Float</span>")
   timersStage2Null("<span style='color: #ffbe00'>6</span> stage_2: <span style='color: #97ff00'>NullValue</span>")
   timersStage2Float("<span style='color: #ffbe00'>7</span> stage_2: <span style='color: #97ff00'>Float</span>")
 
   rootObj --> timestampInt
   rootObj --> levelVarStr
-  rootObj --> messageClpStr
   rootObj --> timersObj
+  rootObj --> messageClpStr
   timersObj --> timersStage1Float
   timersObj --> timersStage2Null
   timersObj --> timersStage2Float
@@ -247,11 +247,13 @@ efficient to search since all the values are integers; and by grouping events wi
 into an ERT, clp-s essentially deduplicates the event's schema.
 
 [Table 4](#table-4) lists how clp-s encodes each leaf-node value type. Most value types are encoded
-conventionally, but a few require further explanation. For the values encoded as dictionary IDs,
-clp-s simply stores the value in a dictionary and maps it to a unique integer ID. For `ClpString`s,
-clp-s encodes each component separately. Finally, `NullValue`s don't need to be encoded since they
-don't need to be stored explicitly---a `NullValue` leaf node already indicates that the
-corresponding column of the ERT is null.
+conventionally with the following exceptions:
+- For the values encoded as dictionary IDs, clp-s simply stores the value in a dictionary and maps
+  it to a unique integer ID.
+- For `ClpString`s, clp-s encodes each component separately.
+- For `NullValue`s, clp-s doesn't need to encode anything since they don't need to be stored
+  explicitly---a `NullValue` leaf node already indicates that the corresponding column of the ERT is
+  null.
 
 (table-4)=
 :::{card}
@@ -297,7 +299,7 @@ clp-s uses [clp](../../user-guide/core-unstructured/clp.md)'s algorithm to parse
 unstructured text. Unstructured text is a string that contains zero or more variable values
 interspersed with non-variable (static) text. For example, in [Figure 1](#figure-1), log event
 &#35;1's `message` value is unstructured text containing the variable values `task_1` and `2`. At a
-high-level, the clp algorithm uses a set of user-defined regular expressions to match each variable
+high-level, clp's algorithm uses a set of user-defined regular expressions to match each variable
 value in the unstructured text, decomposing the text into:
 
 * a format string---i.e., the unstructured text with variable values replaced with placeholders;
@@ -308,8 +310,8 @@ Collectively, we refer to these three components as an *encoded text AST*. For i
 &#35;1's `message` value would be decomposed into the following encoded text AST:
 
 * Format string: `\x12 completed successfully. \x11 task(s) remain.`
-* `\x12` and `\x11` are variable placeholders representing string and integer variables,
-  respectively.
+  * `\x12` and `\x11` are variable placeholders representing string and integer variables,
+    respectively.
 * String variable values: `["task_1"]`
 * Encoded variable values: `[1]`
 
