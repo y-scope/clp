@@ -54,9 +54,9 @@ the `level` and `message` keys use different clp-s types.
 Once clp-s assigns a type to a value, it can add it to the log event's schema tree. Except for the
 root, each node in a schema tree represents a unique key and value-type pair from the schema. For
 instance, the tree for the schema in [Table 1](#table-1) is shown in [Figure 2](#figure-2). Since
-the tree represents the structure of a structured log event, the internal (non-leaf) nodes will
-always correspond to `Object`s or `StructuredArray`s, while the leaf nodes will correspond to values
-with primitive types (since `UnstructuredArray` values are encoded as JSON strings, they are
+the tree represents the structure of a structured log event, each internal (non-leaf) node will
+always correspond to an `Object` or `StructuredArray`, while the leaf nodes will correspond to
+values with primitive types (since `UnstructuredArray` values are encoded as JSON strings, they are
 primitives from the perspective of a schema tree). Accordingly, the root node represents the event
 object itself, and has no key.
 
@@ -240,14 +240,14 @@ node's label is of the form `<ID> <key>: <type>`.
 
 For each log event, clp-s encodes each value using an encoding method for the value's specific type.
 The goal of each method is to deduplicate any repetitive information (e.g., deduplicating repeated
-`VarString`s with a dictionary) and then represent the value with a 64-bit integer.
+`VarString` values with a dictionary) and then represent the value with a 64-bit integer.
 [Table 4](#table-4) lists how clp-s encodes each value type. Most value types are encoded
 conventionally with the following exceptions:
 
 - For the values encoded as dictionary IDs, clp-s simply stores the value in a dictionary and maps
   it to a unique integer ID.
-- For `ClpString`s, clp-s encodes each component separately.
-- For `NullValue`s, clp-s doesn't need to encode anything since they don't need to be stored
+- For `ClpString` values, clp-s encodes each component separately.
+- For `NullValue` values, clp-s doesn't need to encode anything since they don't need to be stored
   explicitly---a `NullValue` leaf node already indicates that the corresponding column of the ERT is
   null.
 
@@ -292,10 +292,10 @@ integers.
 
 To write an archive's data structures to disk, clp-s serializes them and writes them to one or more
 general-purpose compression streams. Applying general-purpose compression allows us to mitigate some
-of the inefficient encodings (e.g., encoding `Boolean`s as integers) used to maintain efficient
-search performance. For some data structures, like dictionaries, clp-s writes them to disk as they
-are built; yet for other data structures, like the ERTs, clp-s buffers them in memory until the
-archive is complete.
+of the inefficient encodings (e.g., encoding `Boolean` values as integers) used to maintain
+efficient search performance. For some data structures, like dictionaries, clp-s writes them to disk
+as they are built; yet for other data structures, like the ERTs, clp-s buffers them in memory until
+the archive is complete.
 
 ## Parsing & encoding unstructured text
 
