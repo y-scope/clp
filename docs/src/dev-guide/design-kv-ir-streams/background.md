@@ -306,8 +306,8 @@ interspersed with non-variable (static) text. For example, in [Figure 1](#figure
 high-level, clp's algorithm uses a set of user-defined regular expressions to match each variable
 value in the unstructured text, decomposing the text into:
 
-* a format string---i.e., the unstructured text with variable values replaced with placeholders;
-* string variable values; and
+* a format string---i.e., the unstructured text with variable values replaced with placeholders.
+* string variable values.
 * encoded variable values---i.e., variable values which have been encoded as 64-bit integers.
 
 Collectively, we refer to these three components as an *encoded text AST*. For instance, log event
