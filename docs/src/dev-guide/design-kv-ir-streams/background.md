@@ -20,8 +20,9 @@ To compress a log event into an archive, clp-s needs to do the following:
 
 1. [Compute the event's schema](#computing-a-log-events-schema)
 2. [Encode the event's schema](#encoding-log-event-schemas)
-3. [Encode and store the event's values](#encoding--storing-event-values)
-4. [Serialize and write the archive's data structures](#writing-archives-to-disk)
+3. [Encode the event's values](#encoding-log-event-values)
+4. [Store the event's encoded values](#storing-encoded-values)
+5. [Serialize and write the archive's data structures](#writing-archives-to-disk)
 
 The goal of this process is to transform the log events into a form that's more compact to store and
 faster to search.
@@ -235,19 +236,14 @@ node's label is of the form `<ID> <key>: <type>`.
 ::::
 <!-- markdownlint-enable MD013 -->
 
-### Encoding & storing event values
+### Encoding log event values
 
-For each log event, clp-s uses a variety of encoding methods to compactly encode its values before
-storing them in a table corresponding to its schema. We refer to this table as an encoded record
-table (ERT). As we'll see below, clp-s uses a different encoding method for each of its value types,
-with the goal of each encoding method being to deduplicate any repetitive information (e.g.,
-deduplicating repeated `VarString`s with a dictionary) and then represent the value with a 64-bit
-integer. For each encoded value, clp-s stores it in the value's corresponding ERT column. ERTs are
-efficient to search since all the values are integers; and by grouping events with the same schema
-into an ERT, clp-s essentially deduplicates the event's schema.
-
-[Table 4](#table-4) lists how clp-s encodes each leaf-node value type. Most value types are encoded
+For each log event, clp-s encodes each value using an encoding method for the value's specific type.
+The goal of each method is to deduplicate any repetitive information (e.g., deduplicating repeated
+`VarString`s with a dictionary) and then represent the value with a 64-bit integer.
+[Table 4](#table-4) lists how clp-s encodes each value type. Most value types are encoded
 conventionally with the following exceptions:
+
 - For the values encoded as dictionary IDs, clp-s simply stores the value in a dictionary and maps
   it to a unique integer ID.
 - For `ClpString`s, clp-s encodes each component separately.
@@ -283,6 +279,14 @@ types significantly between log events; otherwise, the schema tree would be sign
 For other arrays, the `UnstructuredArray` type is more appropriate---since it's encoded as a JSON
 string, its elements won't be added to the tree. Nonetheless, values within these arrays can still
 be searched.
+
+### Storing encoded values
+
+clp-s stores a log event's encoded values in a table corresponding to its schema, with one column
+for each node in the schema. We refer to this table as an encoded record table (ERT). By grouping
+events with the same schema into an ERT, clp-s avoids redundantly storing the schema per event
+(unlike, for example, JSON). In addition, ERTs are efficient to search since all columns store
+integers.
 
 ### Writing archives to disk
 
