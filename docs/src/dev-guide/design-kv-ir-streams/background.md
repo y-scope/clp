@@ -244,10 +244,10 @@ The goal of each method is to deduplicate any repetitive information (e.g., dedu
 [Table 4](#table-4) lists how clp-s encodes each value type. Most value types are encoded
 conventionally with the following exceptions:
 
-- For the values encoded as dictionary IDs, clp-s simply stores the value in a dictionary and maps
+* For the values encoded as dictionary IDs, clp-s simply stores the value in a dictionary and maps
   it to a unique integer ID.
-- For `ClpString` values, clp-s encodes each component separately.
-- For `NullValue` values, clp-s doesn't need to encode anything since they don't need to be stored
+* For `ClpString` values, clp-s encodes each component separately.
+* For `NullValue` values, clp-s doesn't need to encode anything since they don't need to be stored
   explicitly---a `NullValue` leaf node already indicates that the corresponding column of the ERT is
   null.
 
