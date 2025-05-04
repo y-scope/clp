@@ -23,6 +23,9 @@
 
 namespace clp::ffi::ir_stream::search::test {
 namespace {
+using clp_s::constants::cAutogenNamespace;
+using clp_s::constants::cDefaultNamespace;
+using clp_s::constants::cReservedNamespace1;
 using clp_s::search::ast::LiteralTypeBitmask;
 
 constexpr std::string_view cRefTestStr{"*test*"};
@@ -250,13 +253,12 @@ TEST_CASE(
     auto const is_auto_generated = GENERATE(true, false);
     auto const [matchable_kql_expressions, expected_column_resolutions]
             = generate_matchable_kql_expressions(
-                    is_auto_generated ? clp_s::constants::cAutogenNamespace
-                                      : clp_s::constants::cDefaultNamespace,
+                    is_auto_generated ? cAutogenNamespace : cDefaultNamespace,
                     column_query_to_possible_matches
             );
     auto const matchable_kql_expressions_with_unrecognized_namespace{
             generate_matchable_kql_expressions(
-                    clp_s::constants::cReservedNamespace1,
+                    cReservedNamespace1,
                     column_query_to_possible_matches
             )
                     .first
@@ -327,8 +329,8 @@ TEST_CASE(
          query_handler_impl.get_resolved_column_to_schema_tree_node_ids())
     {
         REQUIRE(
-                (column_descriptor->get_namespace() == clp_s::constants::cDefaultNamespace
-                 || column_descriptor->get_namespace() == clp_s::constants::cAutogenNamespace)
+                (column_descriptor->get_namespace() == cDefaultNamespace
+                 || column_descriptor->get_namespace() == cAutogenNamespace)
         );
         std::vector<std::string_view> tokens;
         for (auto const& token : column_descriptor->get_descriptor_list()) {
@@ -393,17 +395,14 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     CAPTURE(column_query_to_possible_matches);
 
     auto const is_auto_generated = GENERATE(true, false);
-    auto const [resolvable_projections, expected_resolved_projections] = generate_projections(
-            is_auto_generated ? clp_s::constants::cAutogenNamespace
-                              : clp_s::constants::cDefaultNamespace,
-            column_query_to_possible_matches
-    );
+    // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
+    // Related issues: https://github.com/ned14/outcome/issues/311
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+    auto const column_namespace{is_auto_generated ? cAutogenNamespace : cDefaultNamespace};
+    auto const [resolvable_projections, expected_resolved_projections]
+            = generate_projections(column_namespace, column_query_to_possible_matches);
     auto const unresolvable_projections_from_unrecognized_namespaces{
-            generate_projections(
-                    clp_s::constants::cReservedNamespace1,
-                    column_query_to_possible_matches
-            )
-                    .first
+            generate_projections(cReservedNamespace1, column_query_to_possible_matches).first
     };
     auto empty_query = clp_s::search::ast::EmptyExpr::create();
 
