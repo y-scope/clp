@@ -161,17 +161,17 @@ flowchart LR
   rootObj("root: <span style='color: #97ff00'>Object</span>")
   timestampInt("timestamp: <span style='color: #97ff00'>Integer</span>")
   levelVarStr("level: <span style='color: #97ff00'>VarString</span>")
-  messageClpStr("message: <span style='color: #97ff00'>ClpString</span>")
   timersObj("timers: <span style='color: #97ff00'>Object</span>")
   timersStage1Float("stage_1: <span style='color: #97ff00'>Float</span>")
   timersStage2Null("stage_2: <span style='color: #97ff00'>NullValue</span>")
+  messageClpStr("message: <span style='color: #97ff00'>ClpString</span>")
 
   rootObj --> timestampInt
   rootObj --> levelVarStr
-  rootObj --> messageClpStr
   rootObj --> timersObj
   timersObj --> timersStage1Float
   timersObj --> timersStage2Null
+  rootObj --> messageClpStr
 :::
 +++
 **Figure 2**: The schema tree for log event &#35;1 in [Figure 1](#figure-1). Each node's label is of
@@ -216,18 +216,18 @@ flowchart LR
   timestampInt("<span style='color: #ffbe00'>1</span> timestamp: <span style='color: #97ff00'>Integer</span>")
   levelVarStr("<span style='color: #ffbe00'>2</span> level: <span style='color: #97ff00'>VarString</span>")
   timersObj("<span style='color: #ffbe00'>4</span> timers: <span style='color: #97ff00'>Object</span>")
-  messageClpStr("<span style='color: #ffbe00'>3</span> message: <span style='color: #97ff00'>ClpString</span>")
   timersStage1Float("<span style='color: #ffbe00'>5</span> stage_1: <span style='color: #97ff00'>Float</span>")
   timersStage2Null("<span style='color: #ffbe00'>6</span> stage_2: <span style='color: #97ff00'>NullValue</span>")
   timersStage2Float("<span style='color: #ffbe00'>7</span> stage_2: <span style='color: #97ff00'>Float</span>")
+  messageClpStr("<span style='color: #ffbe00'>3</span> message: <span style='color: #97ff00'>ClpString</span>")
 
   rootObj --> timestampInt
   rootObj --> levelVarStr
   rootObj --> timersObj
-  rootObj --> messageClpStr
   timersObj --> timersStage1Float
   timersObj --> timersStage2Null
   timersObj --> timersStage2Float
+  rootObj --> messageClpStr
 :::
 +++
 **Figure 3**: The archive's schema tree after adding the log events from [Figure 1](#figure-1). Each
