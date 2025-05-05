@@ -205,11 +205,17 @@ def search_and_schedule_new_tasks(
                     archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
                 else:
                     archive_storage_directory = clp_archive_output.get_directory() / dataset_name
-                insert_new_datasets_table_entry(
-                    db_cursor, table_prefix, dataset_name, f"{archive_storage_directory}/"
-                )
-                create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
-                db_conn.commit()
+
+                try:
+                    insert_new_datasets_table_entry(
+                        db_cursor, table_prefix, dataset_name, f"{archive_storage_directory}/"
+                    )
+                    create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
+                    db_conn.commit()
+                except:
+                    # The current dataset is already registered in the metadata database.
+                    pass
+
                 datasets_cache.add(dataset_name)
 
             table_prefix = f"{table_prefix}{dataset_name}_"
