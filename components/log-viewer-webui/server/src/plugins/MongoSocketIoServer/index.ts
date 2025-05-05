@@ -102,7 +102,7 @@ class MongoSocketIoServer {
             socket.on("collection::init", this.#collectionInitListener.bind(this, socket));
             socket.on(
                 "collection::find::subscribe",
-                this.#collectionFindSuscribeListener.bind(this, socket)
+                this.#collectionFindSubscribeListener.bind(this, socket)
             );
             socket.on(
                 "collection::find::unsubscribe",
@@ -232,7 +232,7 @@ class MongoSocketIoServer {
      * @param requestArgs.options
      * @param callback
      */
-    async #collectionFindSuscribeListener (
+    async #collectionFindSubscribeListener (
         socket: MongoCustomSocket,
         requestArgs: {query: object; options: object},
         callback: (res: Response<{queryId: number; initialDocuments: object[]}>) => void
