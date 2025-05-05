@@ -159,13 +159,13 @@ with dot notation. The value types are described in [Table 3](#table-3).
   }
 }%%
 flowchart LR
-  rootObj("root: <span style='color: #97ff00'>Object</span>")
-  timestampInt("timestamp: <span style='color: #97ff00'>Integer</span>")
-  levelVarStr("level: <span style='color: #97ff00'>VarString</span>")
-  timersObj("timers: <span style='color: #97ff00'>Object</span>")
-  timersStage1Float("stage_1: <span style='color: #97ff00'>Float</span>")
-  timersStage2Null("stage_2: <span style='color: #97ff00'>NullValue</span>")
-  messageClpStr("message: <span style='color: #97ff00'>ClpString</span>")
+  rootObj("&lt;Root&gt;: <span style='color: #97ff00'>Object</span>")
+  messageClpStr("&quot;message&quot;: <span style='color: #97ff00'>ClpString</span>")
+  levelVarStr("&quot;level&quot;: <span style='color: #97ff00'>VarString</span>")
+  timersObj("&quot;timers&quot;: <span style='color: #97ff00'>Object</span>")
+  timersStage1Float("&quot;stage_1&quot;: <span style='color: #97ff00'>Float</span>")
+  timersStage2Null("&quot;stage_2&quot;: <span style='color: #97ff00'>NullValue</span>")
+  timestampInt("&quot;timestamp&quot;: <span style='color: #97ff00'>Integer</span>")
 
   rootObj --> timestampInt
   rootObj --> levelVarStr
@@ -176,20 +176,31 @@ flowchart LR
 :::
 +++
 **Figure 2**: The schema tree for log event &#35;1 in [Figure 1](#figure-1). Each node's label is of
-the form `<key>: <type>`, and each arrow is from a parent to a child node.
+the form `"<key>": <type>`, except for the root which doesn't have an explicit name. Each arrow is
+from a parent to a child node.
 ::::
 
 ### Encoding log event schemas
 
 To compactly encode each event's schema in an archive, clp-s represents each schema with a set of
 integer IDs corresponding to nodes of an archive-level schema tree. This archive-level schema tree
-is built by merging all events' schema trees and assigning a unique ID to each node. An event's
-schema can then be encoded as the IDs of its *leaf* nodes within the tree, since the leaf nodes are
-sufficient to rebuild the event's tree by traversing from the leaves to the root. For instance,
-[Figure 3](#figure-3) shows the schema tree after adding the example logs ([Figure 1](#figure-1)) to
-the tree. Referencing the leaf node IDs, the schema for event &#35;1 can be encoded as
-`[1, 2, 3, 5, 7]`. To merge an event's schema tree with the archive's tree, clp-s iterates over each
-pair of nodes---one from each tree:
+is built, in part, by merging all events' schema trees and assigning a unique ID to each node. An
+event's schema can then be encoded as the IDs of its *leaf* nodes within the tree, since the leaf
+nodes are sufficient to rebuild the event's tree by traversing from the leaves to the root. For
+instance, [Figure 3](#figure-3) shows the schema tree after adding the example logs
+([Figure 1](#figure-1)) to the tree. The events' schema trees have been merged under the
+`<Default namespace>` node. Referencing the leaf node IDs, the schema for event &#35;1 can be
+encoded as `[3, 4, 6, 7, 9]`, corresponding to the schema's leaf nodes.
+
+As [Figure 3](#figure-3) shows, the archive-level schema tree uses different *namespaces* to store
+more than just the KV pairs that appear *in* the event. For instance, the `Metadata` namespace
+contains metadata KV pairs like the log event's index in the archive. The `Default` namespace
+contains the KV pairs that aren't specific to a special namespace, which in the case of Figure 3,
+are the KV pairs that appear in the example log events. As we'll see in future docs, namespaces
+also allow clp-s to compress log events that contain namespaces themselves.
+
+To merge an event's schema tree with the archive-level schema tree, clp-s iterates over each pair of
+nodes---one from each tree:
 
 * If the nodes have the same key and value-type, and all of their predecessor nodes have matching
   key and value-type pairs, clp-s merges the nodes in the resulting tree.
@@ -213,26 +224,33 @@ pair of nodes---one from each tree:
   }
 }%%
 flowchart LR
-  rootObj("<span style='color: #ffbe00'>0</span> root: <span style='color: #97ff00'>Object</span>")
-  timestampInt("<span style='color: #ffbe00'>1</span> timestamp: <span style='color: #97ff00'>Integer</span>")
-  levelVarStr("<span style='color: #ffbe00'>2</span> level: <span style='color: #97ff00'>VarString</span>")
-  timersObj("<span style='color: #ffbe00'>4</span> timers: <span style='color: #97ff00'>Object</span>")
-  timersStage1Float("<span style='color: #ffbe00'>5</span> stage_1: <span style='color: #97ff00'>Float</span>")
-  timersStage2Null("<span style='color: #ffbe00'>6</span> stage_2: <span style='color: #97ff00'>NullValue</span>")
-  timersStage2Float("<span style='color: #ffbe00'>7</span> stage_2: <span style='color: #97ff00'>Float</span>")
-  messageClpStr("<span style='color: #ffbe00'>3</span> message: <span style='color: #97ff00'>ClpString</span>")
+  root("<span style='color: #ffbe00'>-1</span> &lt;Root&gt;")
+  metadataNamespaceRoot("<span style='color: #ffbe00'>0</span> &lt;Metadata namespace&gt;: <span style='color: #97ff00'>Metadata</span>")
+  logEventIdxInt("<span style='color: #ffbe00'>1</span> &quot;log_event_idx&quot;: <span style='color: #97ff00'>Integer</span>")
+  defaultNamespaceRootObj("<span style='color: #ffbe00'>2</span> &lt;Default namespace&gt;: <span style='color: #97ff00'>Object</span>")
+  messageClpStr("<span style='color: #ffbe00'>3</span> &quot;message&quot;: <span style='color: #97ff00'>ClpString</span>")
+  levelVarStr("<span style='color: #ffbe00'>4</span> &quot;level&quot;: <span style='color: #97ff00'>VarString</span>")
+  timersObj("<span style='color: #ffbe00'>5</span> &quot;timers&quot;: <span style='color: #97ff00'>Object</span>")
+  timersStage1Float("<span style='color: #ffbe00'>6</span> &quot;stage_1&quot;: <span style='color: #97ff00'>Float</span>")
+  timersStage2Null("<span style='color: #ffbe00'>7</span> &quot;stage_2&quot;: <span style='color: #97ff00'>NullValue</span>")
+  timersStage2Float("<span style='color: #ffbe00'>8</span> &quot;stage_2&quot;: <span style='color: #97ff00'>Float</span>")
+  timestampInt("<span style='color: #ffbe00'>9</span> &quot;timestamp&quot;: <span style='color: #97ff00'>Integer</span>")
 
-  rootObj --> timestampInt
-  rootObj --> levelVarStr
-  rootObj --> timersObj
+  root --> metadataNamespaceRoot
+  metadataNamespaceRoot --> logEventIdxInt
+  root --> defaultNamespaceRootObj
+  defaultNamespaceRootObj --> timestampInt
+  defaultNamespaceRootObj --> levelVarStr
+  defaultNamespaceRootObj --> timersObj
   timersObj --> timersStage1Float
   timersObj --> timersStage2Null
   timersObj --> timersStage2Float
-  rootObj --> messageClpStr
+  defaultNamespaceRootObj --> messageClpStr
 :::
 +++
 **Figure 3**: The archive's schema tree after adding the log events from [Figure 1](#figure-1). Each
-node's label is of the form `<ID> <key>: <type>`.
+node's label is of the form `<ID> <key>: <type>` except for the namespace nodes which don't have an
+explicit name, and the root which has neither an explicit name nor type.
 ::::
 <!-- markdownlint-enable MD013 -->
 
