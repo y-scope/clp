@@ -17,9 +17,13 @@
 #include "../utils.hpp"
 
 namespace clp::ffi::ir_stream::search::test {
+/**
+ * Represent all the matchable clp-s literal types and the matchable schema-tree node IDs of a
+ * column query.
+ */
 class ColumnQueryPossibleMatches {
 public:
-    ColumnQueryPossibleMatches(std::shared_ptr<SchemaTree> schema_tree)
+    explicit ColumnQueryPossibleMatches(std::shared_ptr<SchemaTree> schema_tree)
             : m_schema_tree{std::move(schema_tree)} {}
 
     [[nodiscard]] auto get_matchable_types() const -> clp_s::search::ast::LiteralTypeBitmask {
@@ -43,6 +47,11 @@ public:
         m_matchable_types |= schema_tree_node_type_to_literal_types(type);
     }
 
+    /**
+     * Serializes the underlying matchable types and matchable node IDs in human-readable form for
+     * debugging purposes.
+     * @return The serialized possible matches.
+     */
     [[nodiscard]] auto serialize() const -> std::string;
 
 private:
