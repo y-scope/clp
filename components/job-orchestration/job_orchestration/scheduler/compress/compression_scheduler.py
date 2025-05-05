@@ -161,7 +161,6 @@ def _fetch_existing_datasets(
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
     db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
     rows = db_cursor.fetchall()
-    db_conn.commit()
     return {str(row["name"]) for row in rows}
 
 
