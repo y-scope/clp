@@ -123,7 +123,7 @@ def insert_new_datasets_table_entry(
     :param dataset_name: Name of the dataset to register.
     :param dataset_archive_storage_directory: Path to the storage directory for this dataset's archives.
     """
-    query = f"""INSERT INTO {table_prefix}{DATASETS_TABLE_SUFFIX}
+    query = f"""INSERT INTO `{table_prefix}{DATASETS_TABLE_SUFFIX}`
                 (name, archive_storage_directory)
                 VALUES (%s, %s)
                 """

@@ -212,8 +212,10 @@ def search_and_schedule_new_tasks(
                     )
                     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
                     db_conn.commit()
-                except:
+                except Exception as e:
                     # The current dataset is already registered in the metadata database.
+                    logger.warn(f"Failed to register dataset `{dataset_name}`: {e}")
+                    db_conn.rollback()
                     pass
 
                 datasets_cache.add(dataset_name)
