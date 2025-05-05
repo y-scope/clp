@@ -295,9 +295,6 @@ TEST_CASE(
     auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
 
     auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
-    // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
-    // Related issues: https://github.com/ned14/outcome/issues/311
-    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 
@@ -393,9 +390,6 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     CAPTURE(column_query_to_possible_matches);
 
     auto const is_auto_generated = GENERATE(true, false);
-    // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
-    // Related issues: https://github.com/ned14/outcome/issues/311
-    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     auto const column_namespace{is_auto_generated ? cAutogenNamespace : cDefaultNamespace};
     auto const [resolvable_projections, expected_resolved_projections]
             = generate_projections(column_namespace, column_query_to_possible_matches);
@@ -412,9 +406,6 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     );
 
     auto query_handler_impl_result{QueryHandlerImpl::create(empty_query, projections, true)};
-    // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
-    // Related issues: https://github.com/ned14/outcome/issues/311
-    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 

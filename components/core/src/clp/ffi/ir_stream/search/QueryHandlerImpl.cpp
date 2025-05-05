@@ -300,9 +300,6 @@ auto QueryHandlerImpl::create(
         std::vector<std::pair<std::string, LiteralTypeBitmask>> const& projections,
         bool case_sensitive_match
 ) -> outcome_v2::std_result<QueryHandlerImpl> {
-    // We disabled the check to silent clang-tidy warnings on `outcome`'s source files.
-    // Related issues: https://github.com/ned14/outcome/issues/311
-    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     query = OUTCOME_TRYX(preprocess_query(query));
     auto [projected_columns, projected_column_to_original_key]
             = OUTCOME_TRYX(create_projected_columns_and_projection_map(projections));
