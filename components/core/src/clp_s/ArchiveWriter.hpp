@@ -287,8 +287,8 @@ private:
     ZstdCompressor m_tables_compressor;
     ZstdCompressor m_table_metadata_compressor;
 
-    bool m_range_open{false};
     RangeIndexWriter m_range_index_writer;
+    bool m_range_open{false};
 };
 }  // namespace clp_s
 

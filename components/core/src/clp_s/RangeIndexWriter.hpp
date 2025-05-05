@@ -64,10 +64,9 @@ public:
             return ErrorCodeNotReady;
         }
         auto& fields = range.fields;
-        if (auto it = fields.find(key); fields.end() != it) {
+        if (auto [it, success] = fields.try_emplace(key, value); false == success) {
             return ErrorCodeBadParam;
         }
-        fields.emplace(key, value);
         return ErrorCodeSuccess;
     }
 
