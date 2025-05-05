@@ -166,7 +166,7 @@ public:
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
      * - Forwards `ColumnDescriptorTokenIterator::next`'s return values.
-     * - Forwards `handle_column_resolution_on_leaf_node`'s return values.
+     * - Forwards `handle_column_resolution_on_new_schema_tree_node`'s return values.
      */
     template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
     [[nodiscard]] auto update_partially_resolved_columns(
