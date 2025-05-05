@@ -6,80 +6,13 @@ import {
 } from "mongodb";
 import {Socket} from "socket.io";
 
+import {
+    ClientToServerEvents,
+    InterServerEvents,
+    ServerToClientEvents,
+    SocketData,
+} from "@common/index.js";
 
-/**
- * Error response to event.
- */
-interface Err {
-    error: string;
-    queryId?: number;
-}
-
-/**
- * Success response to event.
- */
-interface Success<T> {
-    data: T;
-}
-
-/**
- * Event response.
- */
-type Response<T> = Err | Success<T>;
-
-/**
- * Events that the client can emit to the server.
- */
-type ClientToServerEvents = {
-    "disconnect": () => void;
-    "collection::init": (
-        requestArgs: {
-            collectionName: string;
-        },
-        callback: (res: Response<void>) => void
-    ) => void;
-    "collection::find::toArray": (
-        requestArgs: {
-            query: Filter<Document>;
-            options: FindOptions;
-        },
-        callback: (res: Response<{data: Document[]}>) => void) => void;
-    "collection::find::toReactiveArray": (
-        requestArgs: {
-            query: Filter<Document>;
-            options: FindOptions;
-        },
-        callback: (res: Response<{queryId: number}>) => void) => void;
-    "collection::find::unsubscribe": (
-        requestArgs: {
-            queryId: number;
-        }
-    ) => Promise<void>;
-};
-
-/**
- * Events that the server can emit to the client.
- */
-interface ServerToClientEvents {
-    "collection::find::update": (respArgs: {
-        queryId: number;
-        data: Document[];
-    }) => void;
-}
-
-/**
- * Collection associated with each socket connection.
- */
-interface SocketData {
-    collectionName: string;
-}
-
-/**
- * Empty but required by Socket IO.
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface InterServerEvents {
-}
 
 /**
  * Custom socket type for Mongo Socket IO server.
@@ -128,7 +61,8 @@ interface DbOptions {
 const CLIENT_UPDATE_TIMEOUT_MS = 500;
 
 /**
- * MongoDb change stream for a query, and a list of subscribed connections.
+ * MongoDb change stream for a query, and a list of subscribed connections. Subscribed connections
+ * can include duplicates if the same connection subscribes to the same query multiple times.
  */
 interface Watcher {
     changeStream: ChangeStream;
@@ -137,15 +71,10 @@ interface Watcher {
 
 export {
     CLIENT_UPDATE_TIMEOUT_MS,
-    ClientToServerEvents,
     ConnectionId,
     DbOptions,
-    InterServerEvents,
     MongoCustomSocket,
     QueryId,
     QueryParameters,
-    Response,
-    ServerToClientEvents,
-    SocketData,
     Watcher,
 };
