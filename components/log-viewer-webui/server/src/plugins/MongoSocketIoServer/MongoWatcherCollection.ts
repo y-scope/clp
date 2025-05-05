@@ -10,7 +10,10 @@ import {
     QueryParameters,
     Watcher,
 } from "./typings.js";
-import {convertQueryToChangeStreamFormat} from "./utils.js";
+import {
+    convertQueryToChangeStreamFormat,
+    removeItemFromArray,
+} from "./utils.js";
 
 
 /**
@@ -24,7 +27,6 @@ class MongoWatcherCollection {
 
     /**
      * @param collectionName
-     * @param io
      * @param mongoDb
      */
     constructor (collectionName: string, mongoDb: Db) {
@@ -41,7 +43,7 @@ class MongoWatcherCollection {
     }
 
     /**
-     * Checks if a watcher exists for the given queryId.
+     * Checks if a watcher exists for the given query ID.
      *
      * @param queryId
      * @return True if a watcher exists, false otherwise.
@@ -69,36 +71,28 @@ class MongoWatcherCollection {
         const watcher = this.#queryIdtoWatcherMap.get(queryId);
 
         if ("undefined" === typeof watcher) {
-            console.warn(`No watcher found for queryId ${queryId}`);
+            console.warn(`No watcher found for queryID:${queryId}`);
 
             return false;
         }
-        console.log(`Length ${watcher.subscribers}`);
 
         if (1 < watcher.subscribers.length) {
-            // Remove the first instance of the connectionId from the subscribers list. Note
-            // there can be multiple instances of the same connectionId in the list.
-            const index = watcher.subscribers.indexOf(connectionId);
-            if (-1 !== index) {
-                watcher.subscribers.splice(index, 1);
-            }
+            removeItemFromArray(watcher.subscribers, connectionId);
 
             return false;
         }
 
         watcher.changeStream.close().catch((err: unknown) => {
-            console.error(`Error closing watcher for queryId ${queryId}:`, err);
+            console.error(`Error closing watcher for queryID:${queryId}:`, err);
         });
         this.#queryIdtoWatcherMap.delete(queryId);
+
         return true;
     }
 
     /**
-     * Adds connection to an existing watcher and joins the the room for the
-     * given queryId.
+     * Adds connection to an existing watcher and joins the the room for the given query ID.
      *
-     * @param watcher
-     * @param queryParameters
      * @param queryId
      * @param socket
      */
@@ -111,24 +105,22 @@ class MongoWatcherCollection {
         if ("undefined" === typeof watcher) {
             throw new Error(`No watcher found for queryId ${queryId}`);
         }
-        console.log(`I subscribed ${socket.id}`)
 
         watcher.subscribers.push(socket.id);
         await socket.join(queryId.toString());
     }
 
     /**
-     * Creates a new watcher for the given query and queryId.
+     * Creates a watcher for the given query.
      *
      * @param queryParams
      * @param queryId
      * @param emitUpdate
-     * @return The newly created watcher.
      */
     createWatcher (
         queryParams: QueryParameters,
         queryId: QueryId,
-        emitUpdate: (queryId: QueryId, data: object[]) => void
+        emitUpdate: (data: object[]) => void
     ): void {
         const watcherQuery = convertQueryToChangeStreamFormat(queryParams.query);
         const mongoWatcher = this.#collection.watch(
@@ -137,23 +129,41 @@ class MongoWatcherCollection {
         );
 
         const watcher: Watcher = {changeStream: mongoWatcher, subscribers: []};
-        this.#setupWatcherListener(watcher, queryParams, queryId, emitUpdate);
+        this.#setupWatcherListener(watcher, queryParams, emitUpdate);
         this.#queryIdtoWatcherMap.set(queryId, watcher);
     }
 
     /**
-     * Sets up listener for the watcher to handle change events and emit updates to clients.
+     * Executes a query on the collection and retrieves matching documents.
+     *
+     * @param queryParameters
+     * @return
+     */
+    async find (
+        queryParameters: QueryParameters
+    ): Promise<object[]> {
+        const {query, options} = queryParameters;
+        try {
+            const documents = await this.#collection.find(query, options).toArray();
+            return documents;
+        } catch (error) {
+            console.error("Error fetching data for query:", error);
+
+            return [];
+        }
+    }
+
+    /**
+     * Sets up listener to emit updates to clients on change events.
      *
      * @param watcher
      * @param queryParameters
-     * @param queryId
      * @param emitUpdate
      */
     #setupWatcherListener (
         watcher: Watcher,
         queryParameters: QueryParameters,
-        queryId: QueryId,
-        emitUpdate: (queryId: QueryId, data: object[]) => void
+        emitUpdate: (data: object[]) => void
     ) {
         let lastEmitTime = 0;
         let emitTimeout: NodeJS.Timeout | null = null;
@@ -163,13 +173,21 @@ class MongoWatcherCollection {
             if (CLIENT_UPDATE_TIMEOUT_MS <= currentTime - lastEmitTime) {
                 lastEmitTime = currentTime;
                 const data = await this.find(queryParameters);
-                emitUpdate(queryId, data);
+                emitUpdate(data);
             } else if (!emitTimeout) {
                 const delay = CLIENT_UPDATE_TIMEOUT_MS - (currentTime - lastEmitTime);
-                emitTimeout = setTimeout(async () => {
+
+                emitTimeout = setTimeout(() => {
                     emitTimeout = null;
-                    const data = await this.find(queryParameters);
-                    emitUpdate(queryId, data);
+
+                    const fetchAndEmit = async () => {
+                        const data = await this.find(queryParameters);
+                        emitUpdate(data);
+                    };
+
+                    fetchAndEmit().catch((error: unknown) => {
+                        console.error("Error in emitUpdatesWithTimeout:", error);
+                    });
                     lastEmitTime = Date.now();
                 }, delay);
             }
@@ -180,25 +198,6 @@ class MongoWatcherCollection {
                 console.error("Error in emitUpdatesWithTimeout:", error);
             });
         });
-    }
-
-    /**
-     * Emits updated data to clients subscribed to the given queryId.
-     *
-     * @param queryParameters
-     * @return A promise that resolves to an array of documents.
-     */
-    async find (
-        queryParameters: QueryParameters
-    ): Promise<object[]> {
-        const {query, options} = queryParameters;
-        try {
-            const documents = await this.#collection.find(query, options).toArray();
-            return documents;
-        } catch (error) {
-            console.error("Error fetching data for update:", error);
-            return [];
-        }
     }
 }
 

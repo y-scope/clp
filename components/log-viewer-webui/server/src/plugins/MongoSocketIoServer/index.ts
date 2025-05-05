@@ -1,17 +1,7 @@
 /* eslint-disable max-lines */
 /* eslint-disable no-warning-comments */
-// TODO: Move listeners to a seperate file to reduce lines
+// TODO: Move listeners to a separate file to reduce lines
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
-
-import {
-    FastifyInstance,
-    FastifyPluginAsync,
-} from "fastify";
-import fastifyPlugin from "fastify-plugin";
-import {
-    Db,
-} from "mongodb";
-import {Server} from "socket.io";
 
 import type {
     ClientToServerEvents,
@@ -20,6 +10,14 @@ import type {
     ServerToClientEvents,
     SocketData,
 } from "@common/index.js";
+import {
+    FastifyInstance,
+    FastifyPluginAsync,
+} from "fastify";
+import fastifyPlugin from "fastify-plugin";
+import {Db} from "mongodb";
+import {Server} from "socket.io";
+
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,
@@ -32,14 +30,16 @@ import {
     getQuery,
     getQueryHash,
     initializeMongoClient,
+    removeItemFromArray,
 } from "./utils.js";
 
 
 /**
  * Manages client interactions with MongoDB.
  *
- * TODO: In current implementation, all queries in a collection are sent using the same event. A
- * potential improvement would be to use different event names per query.
+ * TODO: In current implementation, multiple queries in the same collection send updates over
+ * one socket with the same event name. A potential improvement would be to use different event
+ * names per query, limiting the number of events listeners triggered in the client.
  */
 class MongoSocketIoServer {
     #fastify: FastifyInstance;
@@ -52,8 +52,8 @@ class MongoSocketIoServer {
     // Mapping of active queries to their hash
     #queryIdtoQueryHashMap: Map<QueryId, string> = new Map();
 
-    // List of subscribed query IDs for each connection. Duplicate query IDs for the same connection ID
-    // are allowed since the connection can subscribe to the same query multiple times.
+    // List of subscribed query IDs for each connection. A connection can subscribe
+    // to the same queryID multiple times, so the list can contain duplicates.
     #subscribedQueryIdsMap: Map<ConnectionId, QueryId[]> = new Map();
 
     readonly #mongoDb: Db;
@@ -102,7 +102,7 @@ class MongoSocketIoServer {
             socket.on("collection::init", this.#collectionInitListener.bind(this, socket));
             socket.on(
                 "collection::find::subscribe",
-                this.#collectionFindToReactiveArrayListener.bind(this, socket)
+                this.#collectionFindSuscribeListener.bind(this, socket)
             );
             socket.on(
                 "collection::find::unsubscribe",
@@ -129,7 +129,10 @@ class MongoSocketIoServer {
         }
 
         this.#subscribedQueryIdsMap.delete(socket.id);
-        this.#fastify.log.info(`Subscriber map: ${JSON.stringify(Array.from(this.#subscribedQueryIdsMap.entries()))}`);
+        this.#fastify.log.debug(
+            "Subscribed queryIDs map" +
+            ` ${JSON.stringify(Array.from(this.#subscribedQueryIdsMap.entries()))}`
+        );
     }
 
     /**
@@ -171,7 +174,7 @@ class MongoSocketIoServer {
             return;
         }
 
-        socket.data.collectionName = collectionName;
+        socket.data = {...socket.data, collectionName};
     }
 
 
@@ -220,7 +223,7 @@ class MongoSocketIoServer {
     }
 
     /**
-     * Listener for subscribing to a reactive find query. The client will receive updates whenever
+     * Listener for subscribing to a find query. The client will receive updates whenever
      * the query results change.
      *
      * @param socket
@@ -229,23 +232,24 @@ class MongoSocketIoServer {
      * @param requestArgs.options
      * @param callback
      */
-    async #collectionFindToReactiveArrayListener (
+    async #collectionFindSuscribeListener (
         socket: MongoCustomSocket,
         requestArgs: {query: object; options: object},
         callback: (res: Response<{queryId: number; initialDocuments: object[]}>) => void
     ): Promise<void> {
         const {query, options} = requestArgs;
         const {collectionName} = socket.data;
+
         if (!collectionName) {
-            this.#fastify.log.error("Collection name is undefined");
+            this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
 
             return;
         }
 
         this.#fastify.log.info(
-            `Socket:${socket.id} requested query:${JSON.stringify(query)} with options:${JSON.stringify(options)} to collection:${collectionName}`
+            `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
+            `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
-
 
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
@@ -253,35 +257,40 @@ class MongoSocketIoServer {
             this.#collections.set(collectionName, watcherCollection);
         }
 
-        const queryParameters: QueryParameters = {
-            collectionName,
-            query,
-            options,
-        };
-
+        const queryParameters: QueryParameters = {collectionName, query, options};
         const queryId = this.#getQueryId(queryParameters);
 
+        await this.#subcribeToQuery(watcherCollection, queryParameters, queryId, socket);
 
-        const hasWatcher = watcherCollection.hasWatcher(queryId);
+        const initialDocuments = await watcherCollection.find(queryParameters);
+        callback({data: {queryId, initialDocuments}});
 
-        if (false === hasWatcher) {
-            const emitUpdate = (queryId: QueryId, data: object[]) => {
+        this.#AddQueryIdToSubscribedList(queryId, socket.id);
+        this.#fastify.log.info(`Socket:${socket.id} subscribed to queryID:${queryId}.`);
+    }
+
+    /**
+     * Subscribes to query updates.
+     *
+     * @param watcherCollection
+     * @param queryParameters
+     * @param queryId
+     * @param socket
+     */
+    async #subcribeToQuery (
+        watcherCollection: MongoWatcherCollection,
+        queryParameters: QueryParameters,
+        queryId: QueryId,
+        socket: MongoCustomSocket
+    ): Promise<void> {
+        if (false === watcherCollection.hasWatcher(queryId)) {
+            const emitUpdate = (data: object[]) => {
                 this.#io.to(`${queryId}`).emit("collection::find::update", {queryId, data});
             };
 
             watcherCollection.createWatcher(queryParameters, queryId, emitUpdate);
         }
-
         await watcherCollection.subscribe(queryId, socket);
-
-        const initialDocuments = await watcherCollection.find(queryParameters);
-
-        callback({data: {queryId, initialDocuments}});
-        this.#AddQueryIdToSubscribedList(queryId, socket.id);
-        this.#fastify.log.info(
-            `Socket:${socket.id} subscribed to queryID:${queryId}.`
-        );
-
     }
 
     /**
@@ -309,20 +318,22 @@ class MongoSocketIoServer {
 
         const lastSubscriber = collection.unsubcribe(queryId, socket.id);
         this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query ${queryId}`);
-        this.#fastify.log.info(`last subscriber? ${lastSubscriber}`);
 
         if (lastSubscriber) {
             this.#fastify.log.info(`QueryID:${queryId} deleted from query map.`);
             this.#queryIdtoQueryHashMap.delete(queryId);
         }
 
+        this.#fastify.log.debug(
+            "Query ID to query hash map:" +
+            ` ${JSON.stringify(Array.from(this.#queryIdtoQueryHashMap.entries()))}`
+        );
+
         if (false === collection.isReferenced()) {
-            this.#fastify.log.info(`Collection:${queryParams.collectionName} deallocated from server.`);
+            this.#fastify.log.info(`Collection:${queryParams.collectionName}` +
+            " deallocated from server.");
             this.#collections.delete(queryParams.collectionName);
         }
-        this.#fastify.log.info(`queryID map: ${JSON.stringify(Array.from(this.#queryIdtoQueryHashMap.entries()))}`);
-
-
     }
 
     /**
@@ -338,7 +349,7 @@ class MongoSocketIoServer {
     ): Promise<void> {
         const {queryId} = requestArgs;
         this.#fastify.log.info(
-            `Socket ${socket.id} requested unsubscription to QueryId ${queryId}`
+            `Socket:${socket.id} requested unsubscription to QueryId:${queryId}`
         );
 
         const subscribedQueryIds = this.#subscribedQueryIdsMap.get(socket.id);
@@ -353,13 +364,12 @@ class MongoSocketIoServer {
         this.#unsubscribe(socket, queryId);
         await socket.leave(queryId.toString());
 
-        // Remove one queryID.
-        const index = subscribedQueryIds.indexOf(queryId);
-        if (-1 !== index) {
-            subscribedQueryIds.splice(index, 1);
-        }
+        removeItemFromArray(subscribedQueryIds, queryId);
 
-        this.#fastify.log.info(`Subscriber map: ${JSON.stringify(Array.from(this.#subscribedQueryIdsMap.entries()))}`);
+        this.#fastify.log.debug(
+            `Subscribed queryIDs map ${
+                JSON.stringify(Array.from(this.#subscribedQueryIdsMap.entries()))}`
+        );
     }
 }
 

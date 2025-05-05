@@ -21,7 +21,9 @@ import {
  * @param query
  * @return Modified query.
  */
-const convertQueryToChangeStreamFormat = (query: Filter<Document>): Filter<Document> => {
+const convertQueryToChangeStreamFormat = (
+    query: Filter<Document>
+): Filter<Document> => {
     const changeStreamQuery: Filter<Document> = {};
     for (const key in query) {
         if (Object.hasOwn(query, key)) {
@@ -38,9 +40,9 @@ const convertQueryToChangeStreamFormat = (query: Filter<Document>): Filter<Docum
  * @param queryParams
  * @return Unique hash for query parameters.
  */
-const getQueryHash = function (
-    queryParams: QueryParameters,
-): string {
+const getQueryHash = (
+    queryParams: QueryParameters
+): string => {
     return JSON.stringify(queryParams);
 };
 
@@ -50,9 +52,9 @@ const getQueryHash = function (
  * @param queryHash
  * @return
  */
-const getQuery = function (
+const getQuery = (
     queryHash: string
-): QueryParameters {
+): QueryParameters => {
     const parsedValue: unknown = JSON.parse(queryHash);
     return parsedValue as QueryParameters;
 };
@@ -64,9 +66,9 @@ const getQuery = function (
  * @return
  * @throws {Error} If there is a MongoDB connection error.
  */
-const initializeMongoClient = async function (
+const initializeMongoClient = async (
     options: DbOptions
-): Promise<Db> {
+): Promise<Db> => {
     const mongoUri = `mongodb://${options.host}:${options.port}`;
     const mongoClient = new MongoClient(mongoUri);
     try {
@@ -78,9 +80,26 @@ const initializeMongoClient = async function (
     }
 };
 
+/**
+ * Removes the first instance of item from an array, if it exists.
+ *
+ * @param array
+ * @param item
+ */
+const removeItemFromArray = <T>(
+    array: T[],
+    item: T
+): void => {
+    const index = array.indexOf(item);
+    if (-1 !== index) {
+        array.splice(index, 1);
+    }
+};
+
 export {
     convertQueryToChangeStreamFormat,
     getQuery,
     getQueryHash,
     initializeMongoClient,
+    removeItemFromArray,
 };
