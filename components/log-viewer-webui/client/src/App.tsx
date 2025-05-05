@@ -1,69 +1,87 @@
-/* eslint-disable react/jsx-key */
-
-// import { CssVarsProvider } from "@mui/joy";
-// import { LOCAL_STORAGE_KEY } from "./typings/config";
-// import QueryStatus from "./ui/QueryStatus";
-import MongoCollection from "./mongoCDCLib/MongoCollection";
-import {useTracker} from "./mongoCDCLib/useTracker";
+import { listItemButtonClasses } from "@mui/joy";
+import MongoCollectionSocket from "./api/socket/MongoCollectionSocket";
+import {useCursor} from "./api/socket/useCursor";
+import {useState} from "react";
 
 
-const collection = new MongoCollection("compression-jobs");
 
-// const collection2 = new MongoReplicaCollection("compression-jobs");
+//const collection2 = new MongoCollectionSocket("stats");
+
+//const collection2 = new MongoCollectionSocket("compression-jobs");
 
 /**
  * Renders the main application.
  *
  * @return
  */
-const App = () => {
-    const results = useTracker(
-        () => collection.find({
-            _id: {
-                $gte: 1,
-                $lte: 10,
-            },
-        }, {sort: {start_time: -1}}),
+const SingleResultViewer = ({ collection }: { collection: MongoCollectionSocket }) => {
+    const singleResult = useCursor(
+        () => collection.find({}, { limit: 1 }),
         []
     );
-
-    const results2 = useTracker(
-        () => collection.find({
-            _id: {
-                $gte: 1,
-                $lte: 5,
-            },
-        }, {sort: {start_time: -1}}),
-        []
-    );
-
-    /* for (let i = 0; i < results.length; i++) {
-        console.log(results[i]);
-    }
-
-    for (let i = 0; i < results2.length; i++) {
-        console.log(results2[i]);
-    } */
 
     return (
         <div>
-            {results.map((r) => (
-                <div>
-                    {JSON.stringify(r)}
-                </div>
+            {singleResult.map((r, index) => (
+                <div key={index}>{JSON.stringify(r)}</div>
             ))}
-            {results2.map((r) => (
-                <div>
-                    {JSON.stringify(r)}
-                </div>
-            ))}
+        </div>
+    );
+};
 
+/**
+ * Renders the main application.
+ *
+ * @return
+ */
+const SingleResult2Viewer = ({ collection }: { collection: MongoCollectionSocket }) => {
+    const singleResult = useCursor(
+        () => collection.find({}, { limit: 5 }),
+        []
+    );
+
+    return (
+        <div>
+            {singleResult.map((r, index) => (
+                <div key={index}>{JSON.stringify(r)}</div>
+            ))}
+        </div>
+    );
+};
+// Move this to top of app
+const collection = new MongoCollectionSocket("compression-jobs");
+const collection2 = new MongoCollectionSocket("stats");
+
+const App = () => {
+
+    const [show, setShow] = useState(true);
+
+    return (
+        <div>
+            <div>
+                <button onClick={() => setShow(!show)}>Toggle</button>
+                {show && <SingleResultViewer collection={collection} />}
+            </div>
+
+            <p>------------------------</p>
+
+            <div>
+                <button onClick={() => setShow(!show)}>Toggle</button>
+                {show && <SingleResult2Viewer collection={collection2} />}
+            </div>
+
+
+            <p>------------------------</p>
         </div>
 
-    // <CssVarsProvider modeStorageKey={LOCAL_STORAGE_KEY.THEME}>
-    //     <QueryStatus/>
-    // </CssVarsProvider>
     );
 };
 
 export default App;
+
+
+//{results.map((r, index) => (
+    //<div key={index}> {/* Add a unique key */}
+   //     {JSON.stringify(r)}
+   // </div>
+//))}

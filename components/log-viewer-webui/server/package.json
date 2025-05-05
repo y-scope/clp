@@ -2,15 +2,18 @@
   "name": "log-viewer-webui-server",
   "version": "0.1.0",
   "description": "",
-  "main": "src/main.ts",
+  "main": "dist/src/main.js",
   "scripts": {
     "build": "tsc -b",
     "build:watch": "npm run build -- --watch",
     "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "npm run lint:check -- --fix",
     "prod": "NODE_ENV=production node dist/src/main.js",
-    "start": "NODE_ENV=development concurrently \"npm run build:watch\" \"nodemon dist/src/main.js\"",
-    "test": "NODE_ENV=test tap"
+    "start": "NODE_ENV=development concurrently \"npm run build:watch\" \"nodemon dist/server/src/main.js\"",
+    "node": "NODE_ENV=development nodemon dist/src/main.js ",
+    "test": "NODE_ENV=test tap",
+    "start2": "NODE_ENV=development concurrently \"npm run build:watch\" \"npm run serve\"",
+    "serve": "wait-on dist/src/main.js && nodemon dist/src/main.js"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
@@ -24,19 +27,23 @@
     "@fastify/type-provider-typebox": "^5.1.0",
     "@msgpack/msgpack": "^3.1.0",
     "@sinclair/typebox": "^0.34.28",
-    "@types/node": "^22.13.9",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "fastify-plugin": "^5.0.1",
     "http-status-codes": "^2.3.0",
+    "mongodb": "^6.16.0",
     "pino-pretty": "^13.0.0",
     "socket.io": "^4.8.1",
     "typescript": "~5.7.3"
   },
   "devDependencies": {
+    "@types/node": "^22.15.3",
     "concurrently": "^9.1.2",
     "eslint-config-yscope": "latest",
+    "install": "^0.13.0",
     "nodemon": "^3.1.9",
-    "tap": "^21.1.0"
+    "npm": "^11.3.0",
+    "tap": "^21.1.0",
+    "wait-on": "^8.0.3"
   }
 }

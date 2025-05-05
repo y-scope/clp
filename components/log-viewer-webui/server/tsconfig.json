@@ -10,11 +10,15 @@
     ],
     "module": "nodenext",
     "moduleResolution": "node16",
-    "outDir": "dist",
+    "outDir": "dist", // For common folder
     "removeComments": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "target": "es2022",
+    "baseUrl": ".",
+    "paths": {
+      "@common/*": ["../common/*"]  // Map imports from "@common/*" to the common folder
+    },
 
     "alwaysStrict": true,
     "exactOptionalPropertyTypes": true,
@@ -31,9 +35,10 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
     "useUnknownInCatchVariables": true,
-    "strict": true
+    "strict": true,
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../common/**/*"
   ]
 }

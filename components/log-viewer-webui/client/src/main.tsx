@@ -21,7 +21,7 @@ const AppComponent = ("true" === VITE_USE_ANTD_APP) ?
 
 const root = createRoot(rootElement);
 root.render(
-    <StrictMode>
+    //<StrictMode>
         <AppComponent/>
-    </StrictMode>
+    //</StrictMode>
 );
