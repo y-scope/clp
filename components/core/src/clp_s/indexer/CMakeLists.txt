@@ -82,18 +82,19 @@ set(
 
 add_executable(indexer ${INDEXER_SOURCES})
 target_compile_features(indexer PRIVATE cxx_std_20)
-target_include_directories(indexer PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_link_libraries(indexer
         PRIVATE
         absl::flat_hash_map
         Boost::iostreams Boost::program_options Boost::url
         ${CURL_LIBRARIES}
         clp::string_utils
+        date::date
         MariaDBClient::MariaDBClient
         OpenSSL::Crypto
-        simdjson
+        simdjson::simdjson
         spdlog::spdlog
-        yaml-cpp::yaml-cpp
+        yaml-cpp
+        ystdlib::containers
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory

@@ -22,7 +22,14 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_DOCS_BUILD_DIR}}"
-    dir: "{{.TASKFILE_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/docs-venv.md5"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+      - "conf/**/*"
+      - "src/**/*"
+    dir: "{{.ROOT_DIR}}/docs"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:checksum:validate"
@@ -51,13 +58,6 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    sources:
-      - "{{.G_BUILD_DIR}}/docs-venv.md5"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
-      - "{{.TASKFILE}}"
-      - "conf/**/*"
-      - "src/**/*"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   docs-venv:
     internal: true
@@ -65,6 +65,11 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_DOCS_VENV_DIR}}"
       REQUIREMENTS_FILE: "{{.ROOT_DIR}}/docs/requirements.txt"
+    sources:
+      - "{{.REQUIREMENTS_FILE}}"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:checksum:validate"
@@ -82,17 +87,16 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    sources:
-      - "{{.REQUIREMENTS_FILE}}"
-      - "{{.ROOT_DIR}}/Taskfile.yml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
 
   http-server:
     internal: true
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
       OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - ":init"
       - task: ":utils:checksum:validate"
@@ -107,7 +111,3 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    sources:
-      - "{{.ROOT_DIR}}/Taskfile.yml"
-      - "{{.TASKFILE}}"
-    generates: ["{{.CHECKSUM_FILE}}"]

@@ -7,7 +7,6 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "archive_constants.hpp"
 #include "DictionaryWriter.hpp"
 #include "Schema.hpp"
@@ -66,8 +65,7 @@ public:
     };
 
     // Constructor
-    explicit ArchiveWriter(std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db)
-            : m_metadata_db(std::move(metadata_db)) {}
+    ArchiveWriter() = default;
 
     // Destructor
     ~ArchiveWriter() = default;
@@ -212,14 +210,9 @@ private:
     void write_archive_header(FileWriter& archive_writer, size_t metadata_section_size);
 
     /**
-     * Updates the metadata db with the archive's metadata (id, size, timestamp ranges, etc.)
-     */
-    void update_metadata_db();
-
-    /**
      * Prints the archive's statistics (id, uncompressed size, compressed size, etc.)
      */
-    void print_archive_stats();
+    auto print_archive_stats() const -> void;
 
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
@@ -238,7 +231,6 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
     std::shared_ptr<LogTypeDictionaryWriter> m_array_dict;  // log type dictionary for arrays
     TimestampDictionaryWriter m_timestamp_dict;
-    std::shared_ptr<clp::GlobalMySQLMetadataDB> m_metadata_db;
     int m_compression_level{};
     bool m_print_archive_stats{};
     bool m_single_file_archive{};

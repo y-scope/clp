@@ -1,9 +1,9 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Union
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, PrivateAttr, validator
+from pydantic import BaseModel, PrivateAttr, root_validator, validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -37,10 +37,18 @@ QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
+ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
+ARCHIVES_TABLE_SUFFIX = "archives"
+COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
+DATASETS_TABLE_SUFFIX = "datasets"
+FILES_TABLE_SUFFIX = "files"
+TAGS_TABLE_SUFFIX = "tags"
+
 OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
+CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 
 
@@ -52,6 +60,13 @@ class StorageEngine(KebabCaseStrEnum):
 class StorageType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
+
+
+class AwsAuthType(LowercaseStrEnum):
+    credentials = auto()
+    profile = auto()
+    env_vars = auto()
+    ec2 = auto()
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
@@ -313,51 +328,78 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: str
     secret_access_key: str
+    session_token: Optional[str]
 
     @validator("access_key_id")
     def validate_access_key_id(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("access_key_id cannot be empty")
         return field
 
     @validator("secret_access_key")
     def validate_secret_access_key(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("secret_access_key cannot be empty")
         return field
+
+
+class AwsAuthentication(BaseModel):
+    type: Literal[
+        AwsAuthType.credentials.value,
+        AwsAuthType.profile.value,
+        AwsAuthType.env_vars.value,
+        AwsAuthType.ec2.value,
+    ]
+    profile: Optional[str] = None
+    credentials: Optional[S3Credentials] = None
+
+    @root_validator(pre=True)
+    def validate_authentication(cls, values):
+        auth_type = values.get("type")
+        profile = values.get("profile")
+        credentials = values.get("credentials")
+
+        try:
+            auth_enum = AwsAuthType(auth_type)
+        except ValueError:
+            raise ValueError(f"Unsupported authentication type '{auth_type}'.")
+
+        if profile and credentials:
+            raise ValueError("profile and credentials cannot be set simultaneously.")
+        if AwsAuthType.profile == auth_enum and not profile:
+            raise ValueError(f"profile must be set when type is '{auth_enum}.'")
+        if AwsAuthType.credentials == auth_enum and not credentials:
+            raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
+        if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
+            raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
+        return values
 
 
 class S3Config(BaseModel):
     region_code: str
     bucket: str
     key_prefix: str
-
-    credentials: S3Credentials
+    aws_authentication: AwsAuthentication
 
     @validator("region_code")
     def validate_region_code(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("region_code cannot be empty")
         return field
 
     @validator("bucket")
     def validate_bucket(cls, field):
-        if field == "":
+        if "" == field:
             raise ValueError("bucket cannot be empty")
         return field
 
-    @validator("key_prefix")
-    def validate_key_prefix(cls, field):
-        if field == "":
-            raise ValueError("key_prefix cannot be empty")
-        if not field.endswith("/"):
-            raise ValueError('key_prefix must end with "/"')
-        return field
 
-    # TODO: When we support empty credentials, this method should be used to return a tuple that's
-    # either (None, None) if empty, or the credentials otherwise.
-    def get_credentials(self) -> Tuple[str, str]:
-        return self.credentials.access_key_id, self.credentials.secret_access_key
+class S3IngestionConfig(BaseModel):
+    type: Literal[StorageType.S3.value] = StorageType.S3.value
+    aws_authentication: AwsAuthentication
+
+    def dump_to_primitive_dict(self):
+        return self.dict()
 
 
 class FsStorage(BaseModel):
@@ -381,14 +423,26 @@ class FsStorage(BaseModel):
 
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
-    staging_directory: pathlib.Path
     s3_config: S3Config
+    staging_directory: pathlib.Path
 
     @validator("staging_directory")
     def validate_staging_directory(cls, field):
         if "" == field:
             raise ValueError("staging_directory cannot be empty")
         return field
+
+    @root_validator
+    def validate_key_prefix(cls, values):
+        s3_config = values.get("s3_config")
+        if not hasattr(s3_config, "key_prefix"):
+            raise ValueError("s3_config must have field key_prefix")
+        key_prefix = s3_config.key_prefix
+        if "" == key_prefix:
+            raise ValueError("s3_config.key_prefix cannot be empty")
+        if not key_prefix.endswith("/"):
+            raise ValueError('s3_config.key_prefix must end with "/"')
+        return values
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
@@ -397,6 +451,10 @@ class S3Storage(BaseModel):
         d = self.dict()
         d["staging_directory"] = str(d["staging_directory"])
         return d
+
+
+class FsIngestionConfig(FsStorage):
+    directory: pathlib.Path = pathlib.Path("/")
 
 
 class ArchiveFsStorage(FsStorage):
@@ -415,7 +473,9 @@ class StreamS3Storage(S3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
-def _get_directory_from_storage_config(storage_config: Union[FsStorage, S3Storage]) -> pathlib.Path:
+def _get_directory_from_storage_config(
+    storage_config: Union[FsStorage, S3Storage],
+) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
@@ -548,7 +608,7 @@ class LogViewerWebUi(BaseModel):
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
-    input_logs_directory: pathlib.Path = pathlib.Path("/")
+    logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
 
     package: Package = Package()
     database: Database = Database()
@@ -568,11 +628,13 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
+    aws_config_directory: Optional[pathlib.Path] = None
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
-        self.input_logs_directory = make_config_path_absolute(clp_home, self.input_logs_directory)
+        if StorageType.FS == self.logs_input.type:
+            self.logs_input.make_config_paths_absolute(clp_home)
         self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.storage.make_config_paths_absolute(clp_home)
         self.stream_output.storage.make_config_paths_absolute(clp_home)
@@ -580,14 +642,21 @@ class CLPConfig(BaseModel):
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
-    def validate_input_logs_dir(self):
-        # NOTE: This can't be a pydantic validator since input_logs_dir might be a package-relative
-        # path that will only be resolved after pydantic validation
-        input_logs_dir = self.input_logs_directory
-        if not input_logs_dir.exists():
-            raise ValueError(f"input_logs_directory '{input_logs_dir}' doesn't exist.")
-        if not input_logs_dir.is_dir():
-            raise ValueError(f"input_logs_directory '{input_logs_dir}' is not a directory.")
+    def validate_logs_input_config(self):
+        logs_input_type = self.logs_input.type
+        if StorageType.FS == logs_input_type:
+            # NOTE: This can't be a pydantic validator since input_logs_dir might be a
+            # package-relative path that will only be resolved after pydantic validation
+            input_logs_dir = self.logs_input.directory
+            if not input_logs_dir.exists():
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
+            if not input_logs_dir.is_dir():
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
+        if StorageType.S3 == logs_input_type and StorageEngine.CLP_S != self.package.storage_engine:
+            raise ValueError(
+                f"logs_input.type = 's3' is only supported with package.storage_engine"
+                f" = '{StorageEngine.CLP_S}'"
+            )
 
     def validate_archive_output_config(self):
         if (
@@ -603,7 +672,15 @@ class CLPConfig(BaseModel):
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
-    def validate_stream_output_dir(self):
+    def validate_stream_output_config(self):
+        if (
+            StorageType.S3 == self.stream_output.storage.type
+            and StorageEngine.CLP_S != self.package.storage_engine
+        ):
+            raise ValueError(
+                f"stream_output.storage.type = 's3' is only supported with package.storage_engine"
+                f" = '{StorageEngine.CLP_S}'"
+            )
         try:
             validate_path_could_be_dir(self.stream_output.get_directory())
         except ValueError as ex:
@@ -620,6 +697,34 @@ class CLPConfig(BaseModel):
             validate_path_could_be_dir(self.logs_directory)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
+
+    def validate_aws_config_dir(self):
+        profile_auth_used = False
+        auth_configs = []
+
+        if StorageType.S3 == self.logs_input.type:
+            auth_configs.append(self.logs_input.aws_authentication)
+        if StorageType.S3 == self.archive_output.storage.type:
+            auth_configs.append(self.archive_output.storage.s3_config.aws_authentication)
+        if StorageType.S3 == self.stream_output.storage.type:
+            auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
+
+        for auth in auth_configs:
+            if AwsAuthType.profile.value == auth.type:
+                profile_auth_used = True
+                break
+
+        if profile_auth_used:
+            if self.aws_config_directory is None:
+                raise ValueError(
+                    "aws_config_directory must be set when using profile authentication"
+                )
+            if not self.aws_config_directory.exists():
+                raise ValueError("aws_config_directory does not exist")
+        if not profile_auth_used and self.aws_config_directory is not None:
+            raise ValueError(
+                "aws_config_directory should not be set when profile authentication is not used"
+            )
 
     def load_execution_container_name(self):
         if self.execution_container is not None:
@@ -675,13 +780,17 @@ class CLPConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
+        d["logs_input"] = self.logs_input.dump_to_primitive_dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
-        d["input_logs_directory"] = str(self.input_logs_directory)
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
         d["logs_directory"] = str(self.logs_directory)
+        if self.aws_config_directory is not None:
+            d["aws_config_directory"] = str(self.aws_config_directory)
+        else:
+            d["aws_config_directory"] = None
         return d
 
 

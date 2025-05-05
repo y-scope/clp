@@ -12,9 +12,9 @@
 #include <utility>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
-#include <json/single_include/nlohmann/json.hpp>
+#include <catch2/catch.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../src/clp/BufferReader.hpp"
 #include "../src/clp/ErrorCode.hpp"

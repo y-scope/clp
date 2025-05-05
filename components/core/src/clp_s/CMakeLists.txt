@@ -18,8 +18,6 @@ set(
         ../clp/CurlStringList.hpp
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
-        ../clp/database_utils.cpp
-        ../clp/database_utils.hpp
         ../clp/Defs.h
         ../clp/ErrorCode.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
@@ -42,23 +40,12 @@ set(
         ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
-        ../clp/GlobalMetadataDB.hpp
-        ../clp/GlobalMetadataDBConfig.cpp
-        ../clp/GlobalMetadataDBConfig.hpp
-        ../clp/GlobalMySQLMetadataDB.cpp
-        ../clp/GlobalMySQLMetadataDB.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
-        ../clp/MySQLDB.cpp
-        ../clp/MySQLDB.hpp
-        ../clp/MySQLParamBindings.cpp
-        ../clp/MySQLParamBindings.hpp
-        ../clp/MySQLPreparedStatement.cpp
-        ../clp/MySQLPreparedStatement.hpp
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
@@ -70,6 +57,7 @@ set(
         ../clp/spdlog_with_specializations.hpp
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
+        ../clp/streaming_archive/Constants.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/Thread.cpp
@@ -85,7 +73,6 @@ set(
 
 set(
         CLP_S_SOURCES
-        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         archive_constants.hpp
         ArchiveReader.cpp
         ArchiveReader.hpp
@@ -174,6 +161,8 @@ set(
         search/OutputHandler.hpp
         search/Projection.cpp
         search/Projection.hpp
+        search/QueryRunner.cpp
+        search/QueryRunner.hpp
         search/SchemaMatch.cpp
         search/SchemaMatch.hpp
 )
@@ -215,12 +204,13 @@ add_library(
         ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
 )
 add_library(clp_s::TimestampPattern ALIAS clp_s_TimestampPattern)
-target_include_directories(clp_s_TimestampPattern PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
 target_compile_features(clp_s_TimestampPattern PRIVATE cxx_std_20)
 target_link_libraries(
         clp_s_TimestampPattern
         PRIVATE
         clp::string_utils
+        date::date
+        spdlog::spdlog
 )
 
 add_executable(
@@ -245,13 +235,18 @@ target_link_libraries(
         MariaDBClient::MariaDBClient
         ${MONGOCXX_TARGET}
         msgpack-cxx
+        nlohmann_json::nlohmann_json
         OpenSSL::Crypto
-        simdjson
+        simdjson::simdjson
         spdlog::spdlog
-        yaml-cpp::yaml-cpp
+        yaml-cpp
+        ystdlib::containers
         ZStd::ZStd
 )
-target_include_directories(clp-s PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
+target_include_directories(clp-s
+        PRIVATE
+        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
+)
 set_target_properties(
         clp-s
         PROPERTIES

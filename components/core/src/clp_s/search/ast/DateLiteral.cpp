@@ -42,7 +42,7 @@ std::shared_ptr<Literal> DateLiteral::create_from_string(std::string const& v) {
     return std::shared_ptr<Literal>(static_cast<Literal*>(new DateLiteral(timestamp, v)));
 }
 
-void DateLiteral::print() {
+void DateLiteral::print() const {
     get_print_stream() << m_epoch_str;
 }
 

@@ -67,7 +67,7 @@ std::shared_ptr<ColumnDescriptor> ColumnDescriptor::copy() {
     return std::make_shared<ColumnDescriptor>(*this);
 }
 
-void ColumnDescriptor::print() {
+void ColumnDescriptor::print() const {
     auto& os = get_print_stream();
     os << "ColumnDescriptor<";
     for (uint32_t flag = LiteralType::TypesBegin; flag < LiteralType::TypesEnd; flag <<= 1) {

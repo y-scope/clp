@@ -12,7 +12,7 @@ namespace clp::streaming_compression::zstd {
 Decompressor::Decompressor()
         : ::clp::streaming_compression::Decompressor{CompressorType::ZSTD},
           m_decompression_stream{ZSTD_createDStream()},
-          m_unused_decompressed_stream_block_buffer{ZSTD_DStreamOutSize()} {
+          m_unused_decompressed_stream_block_buffer(ZSTD_DStreamOutSize()) {
     if (nullptr == m_decompression_stream) {
         SPDLOG_ERROR("streaming_compression::zstd::Decompressor: ZSTD_createDStream() error");
         throw OperationFailed(ErrorCode_Failure, __FILENAME__, __LINE__);

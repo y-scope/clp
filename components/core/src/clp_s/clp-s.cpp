@@ -7,13 +7,12 @@
 #include <string>
 #include <utility>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/CurlGlobalInstance.hpp"
-#include "../clp/GlobalMySQLMetadataDB.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
 #include "CommandLineArguments.hpp"
@@ -102,19 +101,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
 
-    auto const& db_config_container = command_line_arguments.get_metadata_db_config();
-    if (db_config_container.has_value()) {
-        auto const& db_config = db_config_container.value();
-        option.metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
-                db_config.get_metadata_db_host(),
-                db_config.get_metadata_db_port(),
-                db_config.get_metadata_db_username(),
-                db_config.get_metadata_db_password(),
-                db_config.get_metadata_db_name(),
-                db_config.get_metadata_table_prefix()
-        );
-    }
-
     clp_s::JsonParser parser(option);
     if (CommandLineArguments::FileType::KeyValueIr == option.input_file_type) {
         if (false == parser.parse_from_ir()) {
@@ -189,8 +175,11 @@ bool search_archive(
     }
 
     // Narrow against schemas
-    SchemaMatch match_pass(archive_reader->get_schema_tree(), archive_reader->get_schema_map());
-    if (expr = match_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+    auto match_pass = std::make_shared<SchemaMatch>(
+            archive_reader->get_schema_tree(),
+            archive_reader->get_schema_map()
+    );
+    if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
@@ -276,7 +265,6 @@ bool search_archive(
             match_pass,
             expr,
             archive_reader,
-            timestamp_dict,
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
     );

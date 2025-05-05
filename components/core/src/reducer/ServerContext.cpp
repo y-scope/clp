@@ -1,7 +1,6 @@
 #include "ServerContext.hpp"
 
 #include <bsoncxx/builder/stream/document.hpp>
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/bulk_write.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
@@ -10,6 +9,7 @@
 #include <mongocxx/model/replace_one.hpp>
 #include <mongocxx/uri.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../clp/spdlog_with_specializations.hpp"
 #include "CommandLineArguments.hpp"

@@ -88,7 +88,7 @@ fragment ESCAPED_SPACE
     ;
 
 fragment SPECIAL_CHARACTER
-    : [\\():<>"*?{}.@]
+    : [\\():<>"*?{}.@$!#]
     ;
 
 // For unicode hex

@@ -54,7 +54,13 @@ const app = async ({
                 port: settings.MongoDbPort,
             },
         });
-        await server.register(S3Manager, {region: settings.StreamFilesS3Region});
+        await server.register(
+            S3Manager,
+            {
+                region: settings.StreamFilesS3Region,
+                profile: settings.StreamFilesS3Profile,
+            }
+        );
         await server.register(MongoSocketIoServer, {
             host: settings.MongoDbHost,
             port: settings.MongoDbPort,
