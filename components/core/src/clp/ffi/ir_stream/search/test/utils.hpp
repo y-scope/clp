@@ -38,8 +38,6 @@ public:
             SchemaTree::Node::Type type
     ) const -> std::vector<SchemaTree::Node::id_t>;
 
-    [[nodiscard]] auto get_projectable_node_ids() const -> std::vector<SchemaTree::Node::id_t>;
-
     auto set_matchable_node(SchemaTree::Node::id_t node_id, SchemaTree::Node::Type type) -> void {
         m_matchable_node_ids.emplace(node_id);
         m_matchable_types |= schema_tree_node_type_to_literal_types(type);

@@ -175,10 +175,8 @@ auto generate_projections(
         if (column_query.find('*') != std::string::npos) {
             continue;
         }
-        auto const projectable_node_ids{possible_matches.get_projectable_node_ids()};
-        if (projectable_node_ids.empty()) {
-            continue;
-        }
+        auto const projectable_node_ids{possible_matches.get_matchable_node_ids()};
+        REQUIRE_FALSE(projectable_node_ids.empty());
         auto const column_query_with_namespace{fmt::format("{}{}", column_namespace, column_query)};
         projections.emplace_back(
                 column_query_with_namespace,

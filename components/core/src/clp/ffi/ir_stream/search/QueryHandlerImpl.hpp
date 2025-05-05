@@ -74,6 +74,10 @@ public:
 
         [[nodiscard]] auto is_wildcard() const -> bool { return m_curr_token_it->wildcard(); }
 
+        [[nodiscard]] auto is_trailing_wildcard() const -> bool {
+            return is_last() && is_wildcard();
+        }
+
         [[nodiscard]] auto get_token() const -> std::string_view {
             return m_curr_token_it->get_token();
         }
@@ -201,11 +205,11 @@ private:
 
     // Methods
     /**
-     * Handles column resolution on the given schema-tree leaf node and the token in the column.
+     * Handles column resolution of the given token iterator on the a new schema-tree tree node.
      * @tparam NewProjectedSchemaTreeNodeCallbackType
      * @param is_auto_generated
-     * @param leaf_node_id
-     * @param leaf_node_locator
+     * @param node_id
+     * @param node_locator
      * @param token_it The current resolved token in the column.
      * @param new_projected_schema_tree_node_callback
      * @return A void result on success, or an error code indicating the failure:
@@ -213,10 +217,10 @@ private:
      * - Forwards `new_projected_schema_tree_node_callback`'s return values.
      */
     template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
-    [[nodiscard]] auto handle_column_resolution_on_leaf_node(
+    [[nodiscard]] auto handle_column_resolution_on_new_schema_tree_node(
             bool is_auto_generated,
-            SchemaTree::Node::id_t leaf_node_id,
-            SchemaTree::NodeLocator const& leaf_node_locator,
+            SchemaTree::Node::id_t node_id,
+            SchemaTree::NodeLocator const& node_locator,
             ColumnDescriptorTokenIterator const& token_it,
             NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
     ) -> outcome_v2::std_result<void>;
@@ -253,41 +257,45 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
     std::vector<std::pair<SchemaTree::Node::id_t, ColumnDescriptorTokenIterator>>
             new_partial_resolutions;
     for (auto const& token_it : partial_resolutions_to_update.at(parent_node_id)) {
-        if (SchemaTree::Node::Type::Obj == node_locator.get_type()) {
-            // Handle schema-tree non-leaf nodes.
-            if (token_it.is_last() && false == token_it.is_wildcard()) {
-                // TODO: Handle object search when supported.
-                continue;
-            }
-
-            if (token_it.is_wildcard()) {
-                new_partial_resolutions.emplace_back(node_id, token_it);
-                if (false == token_it.is_last()) {
-                    new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(token_it.next()));
-                }
-                continue;
-            }
-
-            if (token_it.get_token() != node_locator.get_key_name()) {
-                continue;
-            }
-
-            auto const next_token_it{OUTCOME_TRYX(token_it.next())};
-            new_partial_resolutions.emplace_back(node_id, next_token_it);
-            if (false == next_token_it.is_last() && next_token_it.is_wildcard()) {
-                // Handle the case where the wildcard matches nothing
-                new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(next_token_it.next()));
-            }
-            continue;
-        }
-
-        OUTCOME_TRYV(handle_column_resolution_on_leaf_node(
+        OUTCOME_TRYV(handle_column_resolution_on_new_schema_tree_node(
                 is_auto_generated,
                 node_id,
                 node_locator,
                 token_it,
                 new_projected_schema_tree_node_callback
         ));
+
+        // Handle partial resolution updates
+        if (SchemaTree::Node::Type::Obj != node_locator.get_type()) {
+            // If the schema-tree node is not of type `Obj`, it cannot have children, so no further
+            // resolution is possible from this node.
+            continue;
+        }
+
+        if (token_it.is_wildcard()) {
+            // For wildcard tokens, simulate potential matches by:
+            // - Adding a resolution that assumes this node matches part of the wildcard.
+            // - If this isn't the last wildcard token, also add a resolution for continuing the
+            //   match.
+            new_partial_resolutions.emplace_back(node_id, token_it);
+            if (false == token_it.is_last()) {
+                new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(token_it.next()));
+            }
+            continue;
+        }
+
+        if (token_it.is_last() || token_it.get_token() != node_locator.get_key_name()) {
+            // If this is the last token, or the token doesn't match the node's key, then no further
+            // resolution is possible through the given node.
+            continue;
+        }
+
+        auto const next_token_it{OUTCOME_TRYX(token_it.next())};
+        new_partial_resolutions.emplace_back(node_id, next_token_it);
+        if (false == next_token_it.is_last() && next_token_it.is_wildcard()) {
+            // Handle the case where the wildcard matches nothing
+            new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(next_token_it.next()));
+        }
     }
 
     for (auto const [node_id, token_it] : new_partial_resolutions) {
@@ -302,29 +310,23 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
 }
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
-auto QueryHandlerImpl::handle_column_resolution_on_leaf_node(
+auto QueryHandlerImpl::handle_column_resolution_on_new_schema_tree_node(
         bool is_auto_generated,
-        SchemaTree::Node::id_t leaf_node_id,
-        SchemaTree::NodeLocator const& leaf_node_locator,
+        SchemaTree::Node::id_t node_id,
+        SchemaTree::NodeLocator const& node_locator,
         QueryHandlerImpl::ColumnDescriptorTokenIterator const& token_it,
         NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
 ) -> outcome_v2::std_result<void> {
-    // Handle schema-tree leaf nodes.
-    if (false == token_it.is_last()) {
-        // Treat the trailing wildcard as reaching the last token
-        auto const next_token_it{OUTCOME_TRYX(token_it.next())};
-        if (false == next_token_it.is_last() || false == next_token_it.is_wildcard()) {
-            return outcome_v2::success();
-        }
-    }
-
-    // Reaching the last token.
-    if (false == token_it.match_schema_tree_node_type(leaf_node_locator.get_type())
-        || (false == token_it.is_wildcard()
-            && token_it.get_token() != leaf_node_locator.get_key_name()))
+    if ((false == token_it.is_last()
+         && false == OUTCOME_TRYX(token_it.next()).is_trailing_wildcard())
+        || false == token_it.match_schema_tree_node_type(node_locator.get_type())
+        || (false == token_it.is_wildcard() && token_it.get_token() != node_locator.get_key_name()))
     {
-        // If the token can't match the new node, or the token is not a wildcard, and it doesn't
-        // match the key of the new node, then this token cannot be resolved on this node.
+        // If the given token:
+        // - is neither the end token nor the last token before a trailing wildcard
+        // - doesn't match the new node's type
+        // - is neither a wildcard nor equal to the new node's key
+        // There should be no resolution.
         return outcome_v2::success();
     }
 
@@ -332,7 +334,7 @@ auto QueryHandlerImpl::handle_column_resolution_on_leaf_node(
     if (m_projected_column_to_original_key.contains(col)) {
         OUTCOME_TRYV(new_projected_schema_tree_node_callback(
                 is_auto_generated,
-                leaf_node_id,
+                node_id,
                 m_projected_column_to_original_key.at(col)
         ));
         return outcome_v2::success();
@@ -342,7 +344,7 @@ auto QueryHandlerImpl::handle_column_resolution_on_leaf_node(
             col,
             std::unordered_set<SchemaTree::Node::id_t>{}
     );
-    it->second.emplace(leaf_node_id);
+    it->second.emplace(node_id);
     return outcome_v2::success();
 }
 }  // namespace clp::ffi::ir_stream::search

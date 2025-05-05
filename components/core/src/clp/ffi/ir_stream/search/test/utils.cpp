@@ -55,17 +55,6 @@ auto ColumnQueryPossibleMatches::get_matchable_node_ids_from_schema_tree_type(
     return node_ids;
 }
 
-auto ColumnQueryPossibleMatches::get_projectable_node_ids() const
-        -> std::vector<SchemaTree::Node::id_t> {
-    std::vector<SchemaTree::Node::id_t> projectable_node_ids;
-    for (auto const node_id : m_matchable_node_ids) {
-        if (m_schema_tree->get_node(node_id).get_type() != SchemaTree::Node::Type::Obj) {
-            projectable_node_ids.emplace_back(node_id);
-        }
-    }
-    return projectable_node_ids;
-}
-
 auto ColumnQueryPossibleMatches::serialize() const -> std::string {
     constexpr size_t cBitsetSize{sizeof(m_matchable_types) * 8};
     return fmt::format(
