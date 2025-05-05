@@ -438,6 +438,7 @@ def main(argv):
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
         clp_storage_engine = clp_config.package.storage_engine
+        datasets_cache: Set[str] = set()
         if StorageEngine.CLP_S == clp_storage_engine:
             datasets_cache = _fetch_existing_datasets(
                 db_conn, db_cursor, clp_metadata_db_connection_config
