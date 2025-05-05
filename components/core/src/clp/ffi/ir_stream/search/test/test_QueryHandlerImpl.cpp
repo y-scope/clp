@@ -35,8 +35,8 @@ constexpr value_bool_t cRefTestBool{false};
 
 /**
  * Generates all the matchable KQL expressions based on the column queries and their matchable
- * types. For each column query `C` matched type `T`, we generate an expression of `C: cRefTestT`,
- * where `cRefTestT` is any of the constants defined above.
+ * types. For each column query `C` and matched type `T`, we generate an expression of
+ * `C: cRefTestT`, where `cRefTestT` is any of the constants defined above.
  * @param column_namespace The namespace of the column.
  * @param column_query_to_possible_matches
  * @return A pair that consists of:
