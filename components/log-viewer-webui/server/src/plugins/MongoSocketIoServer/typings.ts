@@ -31,7 +31,7 @@ type MongoCustomSocket = Socket<
 type QueryId = number;
 
 /**
- * Unique ID to repsent each socket connection.
+ * Unique ID to represent each socket connection.
  */
 type ConnectionId = string;
 

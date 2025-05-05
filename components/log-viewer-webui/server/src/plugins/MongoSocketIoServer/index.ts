@@ -50,7 +50,7 @@ class MongoSocketIoServer {
     #collections: Map<string, MongoWatcherCollection> = new Map();
 
     // Mapping of active queries to their hash
-    #queryIdtoQueryHashMap: Map<QueryId, string> = new Map();
+    #queryIdToQueryHashMap: Map<QueryId, string> = new Map();
 
     // List of subscribed query IDs for each connection. A connection can subscribe
     // to the same queryID multiple times, so the list can contain duplicates.
@@ -184,7 +184,7 @@ class MongoSocketIoServer {
      * @param queryId
      * @param socketId
      */
-    #AddQueryIdToSubscribedList (queryId: QueryId, socketId: ConnectionId) {
+    #addQueryIdToSubscribedList (queryId: QueryId, socketId: ConnectionId) {
         const subscribedQueryIds = this.#subscribedQueryIdsMap.get(socketId);
         if ("undefined" === typeof subscribedQueryIds) {
             this.#subscribedQueryIdsMap.set(socketId, [queryId]);
@@ -204,19 +204,19 @@ class MongoSocketIoServer {
      */
     #getQueryId (queryParams: QueryParameters): number {
         const queryHash = getQueryHash(queryParams);
-        for (const [queryId, hash] of this.#queryIdtoQueryHashMap.entries()) {
+        for (const [queryId, hash] of this.#queryIdToQueryHashMap.entries()) {
             if (hash === queryHash) {
                 return queryId;
             }
         }
 
         let queryId = 0;
-        if (0 === this.#queryIdtoQueryHashMap.size) {
-            this.#queryIdtoQueryHashMap.set(queryId, queryHash);
+        if (0 === this.#queryIdToQueryHashMap.size) {
+            this.#queryIdToQueryHashMap.set(queryId, queryHash);
         } else {
-            const maxKey = Math.max(...Array.from(this.#queryIdtoQueryHashMap.keys()));
+            const maxKey = Math.max(...Array.from(this.#queryIdToQueryHashMap.keys()));
             queryId = maxKey + 1;
-            this.#queryIdtoQueryHashMap.set(queryId, queryHash);
+            this.#queryIdToQueryHashMap.set(queryId, queryHash);
         }
 
         return queryId;
@@ -260,12 +260,12 @@ class MongoSocketIoServer {
         const queryParameters: QueryParameters = {collectionName, query, options};
         const queryId = this.#getQueryId(queryParameters);
 
-        await this.#subcribeToQuery(watcherCollection, queryParameters, queryId, socket);
+        await this.#subscribeToQuery(watcherCollection, queryParameters, queryId, socket);
 
         const initialDocuments = await watcherCollection.find(queryParameters);
         callback({data: {queryId, initialDocuments}});
 
-        this.#AddQueryIdToSubscribedList(queryId, socket.id);
+        this.#addQueryIdToSubscribedList(queryId, socket.id);
         this.#fastify.log.info(`Socket:${socket.id} subscribed to queryID:${queryId}.`);
     }
 
@@ -277,7 +277,7 @@ class MongoSocketIoServer {
      * @param queryId
      * @param socket
      */
-    async #subcribeToQuery (
+    async #subscribeToQuery (
         watcherCollection: MongoWatcherCollection,
         queryParameters: QueryParameters,
         queryId: QueryId,
@@ -300,7 +300,7 @@ class MongoSocketIoServer {
      * @param queryId
      */
     #unsubscribe (socket: MongoCustomSocket, queryId: number) {
-        const queryHash: string | undefined = this.#queryIdtoQueryHashMap.get(queryId);
+        const queryHash: string | undefined = this.#queryIdToQueryHashMap.get(queryId);
         if ("undefined" === typeof queryHash) {
             this.#fastify.log.error(`QueryId ${queryId} not found in query map`);
 
@@ -321,12 +321,12 @@ class MongoSocketIoServer {
 
         if (lastSubscriber) {
             this.#fastify.log.info(`QueryID:${queryId} deleted from query map.`);
-            this.#queryIdtoQueryHashMap.delete(queryId);
+            this.#queryIdToQueryHashMap.delete(queryId);
         }
 
         this.#fastify.log.debug(
             "Query ID to query hash map:" +
-            ` ${JSON.stringify(Array.from(this.#queryIdtoQueryHashMap.entries()))}`
+            ` ${JSON.stringify(Array.from(this.#queryIdToQueryHashMap.entries()))}`
         );
 
         if (false === collection.isReferenced()) {

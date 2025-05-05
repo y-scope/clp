@@ -174,7 +174,7 @@ class MongoWatcherCollection {
                 lastEmitTime = currentTime;
                 const data = await this.find(queryParameters);
                 emitUpdate(data);
-            } else if (!emitTimeout) {
+            } else if (null === emitTimeout) {
                 const delay = CLIENT_UPDATE_TIMEOUT_MS - (currentTime - lastEmitTime);
 
                 emitTimeout = setTimeout(() => {

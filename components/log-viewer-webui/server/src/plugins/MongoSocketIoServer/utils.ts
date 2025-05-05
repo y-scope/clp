@@ -43,7 +43,7 @@ const convertQueryToChangeStreamFormat = (
 const getQueryHash = (
     queryParams: QueryParameters
 ): string => {
-    return JSON.stringify(queryParams);
+    return JSON.stringify(queryParams, Object.keys(queryParams).sort());
 };
 
 /**
