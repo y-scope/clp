@@ -156,7 +156,7 @@ def _process_s3_input(
 
 
 def _fetch_existing_datasets(
-    db_conn, db_cursor, clp_metadata_db_connection_config: Dict[str, Any]
+    db_cursor, clp_metadata_db_connection_config: Dict[str, Any]
 ) -> Set[str]:
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
     db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
@@ -440,9 +440,7 @@ def main(argv):
         clp_storage_engine = clp_config.package.storage_engine
         datasets_cache: Set[str] = set()
         if StorageEngine.CLP_S == clp_storage_engine:
-            datasets_cache = _fetch_existing_datasets(
-                db_conn, db_cursor, clp_metadata_db_connection_config
-            )
+            datasets_cache = _fetch_existing_datasets(db_cursor, clp_metadata_db_connection_config)
 
         # Start Job Processing Loop
         while True:
