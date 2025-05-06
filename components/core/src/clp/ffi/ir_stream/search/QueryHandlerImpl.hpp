@@ -2,19 +2,25 @@
 #define CLP_FFI_IR_STREAM_SEARCH_QUERYHANDLERIMPL_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <outcome/outcome.hpp>
 
+#include "../../../../clp_s/search/ast/AndExpr.hpp"
 #include "../../../../clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../../../../clp_s/search/ast/EmptyExpr.hpp"
 #include "../../../../clp_s/search/ast/Expression.hpp"
+#include "../../../../clp_s/search/ast/FilterExpr.hpp"
 #include "../../../../clp_s/search/ast/Literal.hpp"
+#include "../../../../clp_s/search/ast/OrExpr.hpp"
+#include "../../../../clp_s/search/ast/Value.hpp"
 #include "../../KeyValuePairLogEvent.hpp"
 #include "../../SchemaTree.hpp"
 #include "AstEvaluationResult.hpp"
@@ -145,24 +151,26 @@ public:
     ~QueryHandlerImpl() = default;
 
     /**
-     * Implementation of `QueryHandler::evaluate_node_id_value_pairs`.
-     * @param auto_gen_node_id_value_pairs
+     * Implementation of `QueryHandler::evaluate_kv_pair_log_event`.
+     * @param log_event
      * @param user_gen_node_id_value_pairs
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
-     * - TODO
+     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying AST DFS evaluation doesn't
+     *   return any evaluation results.
+     * - Forwards `AstExprIterator::create`'s return values.
+     * - Forwards `advance_ast_dfs_evaluation`'s return values.
      */
-    [[nodiscard]] auto evaluate_node_id_value_pairs(
-            KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
-            KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
-    ) -> outcome_v2::std_result<AstEvaluationResult>;
+    [[nodiscard]] auto evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event)
+            -> outcome_v2::std_result<AstEvaluationResult>;
 
     /**
      * Implementation of `QueryHandler::update_partially_resolved_columns` with new projected
      * schema-tree node callback given as a template parameter.
      * @tparam NewProjectedSchemaTreeNodeCallbackType
-     * @param auto_gen_node_id_value_pairs
-     * @param user_gen_node_id_value_pairs
+     * @param is_auto_generated
+     * @param node_locator
+     * @param node_id
      * @param new_projected_schema_tree_node_callback
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
@@ -184,6 +192,97 @@ public:
     }
 
 private:
+    // Types
+    /**
+     * Iterator for efficiently traversing and evaluating clp-s AST's expressions.
+     */
+    class AstExprIterator {
+    public:
+        // Factory function
+        /**
+         * @param expr
+         * @return A result containing the constructed iterator for `expr`, or an error code
+         * indicating the failure:
+         * - ErrorCodeEnum::ExpressionTypeUnexpected if the type of expression is not one of the
+         *   following:
+         *   - clp_s::search::ast::FilterExpr
+         *   - clp_s::search::ast::AndExpr
+         *   - clp_s::search::ast::OrExpr
+         */
+        [[nodiscard]] static auto create(clp_s::search::ast::Value* expr)
+                -> outcome_v2::std_result<AstExprIterator>;
+
+        // Methods
+        /**
+         * @return A result containing the iterator of the next child expression operator, or an
+         * error code indicating the failure:
+         * - ErrorCodeEnum::AttemptToIterateAstLeafExpr if the current expression is a leaf
+         * expression
+         *   (`clp_s::search::ast::FilterExpr`).
+         * - Forwards `create`'s return values.
+         */
+        [[nodiscard]] auto next_op() -> std::optional<outcome_v2::std_result<AstExprIterator>>;
+
+        /**
+         * @return The underlying expression as `clp_s::search::ast::AndExpr` if the underlying type
+         * matches, or nullptr otherwise.
+         */
+        [[nodiscard]] auto as_and_expr() const -> clp_s::search::ast::AndExpr const* {
+            if (std::holds_alternative<clp_s::search::ast::AndExpr*>(m_expr)) {
+                return std::get<clp_s::search::ast::AndExpr*>(m_expr);
+            }
+            return nullptr;
+        }
+
+        /**
+         * @return The underlying expression as `clp_s::search::ast::OrExpr` if the underlying type
+         * matches, or nullptr otherwise.
+         */
+        [[nodiscard]] auto as_or_expr() const -> clp_s::search::ast::OrExpr const* {
+            if (std::holds_alternative<clp_s::search::ast::OrExpr*>(m_expr)) {
+                return std::get<clp_s::search::ast::OrExpr*>(m_expr);
+            }
+            return nullptr;
+        }
+
+        /**
+         * @return The underlying expression as `clp_s::search::ast::FilterExpr` if the underlying
+         * type matches, or nullptr otherwise.
+         */
+        [[nodiscard]] auto as_filter_expr() const -> clp_s::search::ast::FilterExpr* {
+            if (std::holds_alternative<clp_s::search::ast::FilterExpr*>(m_expr)) {
+                return std::get<clp_s::search::ast::FilterExpr*>(m_expr);
+            }
+            return nullptr;
+        }
+
+        [[nodiscard]] auto is_inverted() const -> bool { return m_is_inverted; }
+
+    private:
+        // Types
+        using ExprVariant = std::variant<
+                clp_s::search::ast::AndExpr*,
+                clp_s::search::ast::OrExpr*,
+                clp_s::search::ast::FilterExpr*>;
+
+        // Constructor
+        AstExprIterator(
+                ExprVariant expr,
+                clp_s::search::ast::OpList::const_iterator op_next_it,
+                clp_s::search::ast::OpList::const_iterator op_end_it,
+                bool is_inverted
+        )
+                : m_expr{expr},
+                  m_op_next_it{op_next_it},
+                  m_op_end_it{op_end_it},
+                  m_is_inverted{is_inverted} {}
+
+        ExprVariant m_expr;
+        clp_s::search::ast::OpList::const_iterator m_op_next_it;
+        clp_s::search::ast::OpList::const_iterator m_op_end_it;
+        bool m_is_inverted;
+    };
+
     // Constructor
     QueryHandlerImpl(
             std::shared_ptr<clp_s::search::ast::Expression> query,
@@ -205,7 +304,7 @@ private:
               },
               m_projected_columns{std::move(projected_columns)},
               m_projected_column_to_original_key{std::move(projected_column_to_original_key)},
-              m_case_sensitive_search{case_sensitive_match} {}
+              m_case_sensitive_match{case_sensitive_match} {}
 
     // Methods
     /**
@@ -229,6 +328,53 @@ private:
             NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
     ) -> outcome_v2::std_result<void>;
 
+    /**
+     * Evaluates the filter expression against the given kv-pair log event.
+     * @param filter_expr
+     * @param log_event
+     * @return A result containing the evaluation result on success, or an error code indicating the
+     * failure:
+     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying column of the filter is
+     *   neither user-generated nor auto-generated.
+     * - Forwards `evaluate_wildcard_filter`'s return values.
+     * - Forwards `evaluate_filter_against_node_id_value_pair`'s return values.
+     */
+    [[nodiscard]] auto evaluate_filter_expr(
+            clp_s::search::ast::FilterExpr* filter_expr,
+            KeyValuePairLogEvent const& log_event
+    ) -> outcome_v2::std_result<AstEvaluationResult>;
+
+    auto push_ast_dfs_stack(AstExprIterator ast_expr_it) -> void {
+        m_ast_dfs_stack.emplace_back(ast_expr_it, AstEvaluationResultBitmask{});
+    }
+
+    /**
+     * Pops the AST DFS stack and update the evaluation accordingly:
+     * - If the stack if not empty, update the parent's evaluation results.
+     * - Otherwise, update `query_evaluation_results`.
+     * @param evaluation_result
+     * @param query_evaluation_result Returns the query evaluation result.
+     */
+    auto pop_ast_dfs_stack_and_update_evaluation_results(
+            AstEvaluationResult evaluation_result,
+            std::optional<AstEvaluationResult>& query_evaluation_result
+    ) -> void;
+
+    /**
+     * Advances AST DFA evaluation by visiting the top of `m_ast_dfs_stack`.
+     * @param log_event
+     * @param query_evaluation_result Returns the query evaluation result.
+     * @return A void result on success, or an error code indicating the failure:
+     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the expression iterator on the stack top
+     *   is an unexpected expression type.
+     * - Forwards `evaluate_filter_expr`'s return values.
+     * - Forwards `AstExprIterator::next_op`'s return values.
+     */
+    [[nodiscard]] auto advance_ast_dfs_evaluation(
+            KeyValuePairLogEvent const& log_event,
+            std::optional<AstEvaluationResult>& query_evaluation_result
+    ) -> outcome_v2::std_result<void>;
+
     // Variables
     std::shared_ptr<clp_s::search::ast::Expression> m_query;
     bool m_is_empty_query;
@@ -240,7 +386,8 @@ private:
             m_resolved_column_to_schema_tree_node_ids;
     std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> m_projected_columns;
     ProjectionMap m_projected_column_to_original_key;
-    bool m_case_sensitive_search;
+    bool m_case_sensitive_match;
+    std::vector<std::pair<AstExprIterator, AstEvaluationResultBitmask>> m_ast_dfs_stack;
 };
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
