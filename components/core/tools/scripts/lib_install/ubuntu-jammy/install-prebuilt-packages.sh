@@ -31,12 +31,12 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
 task_pkg_arch=$(dpkg --print-architecture)
-task_deb_pkg="$(mktemp -t --suffix ".deb")"
+task_pkg_path="$(mktemp -t --suffix ".deb")"
 curl \
     --fail \
     --location \
-    --output "$task_deb_pkg" \
+    --output "$task_pkg_path" \
     --show-error \
     "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.deb"
-dpkg --install "$task_deb_pkg"
-rm "$task_deb_pkg"
+dpkg --install "$task_pkg_path"
+rm "$task_pkg_path"
