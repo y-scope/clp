@@ -48,5 +48,5 @@ curl \
     --output "$task_pkg_path" \
     --show-error \
     "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.rpm"
-rpm --install "$task_pkg_path"
+dnf install --assumeyes "$task_pkg_path"
 rm "$task_pkg_path"
