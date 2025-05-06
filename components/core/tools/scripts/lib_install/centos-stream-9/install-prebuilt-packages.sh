@@ -26,14 +26,18 @@ dnf install -y \
 
 # Determine architecture for `task` release to install
 rpm_arch=$(rpm --eval "%{_arch}")
-if [[ "x86_64" == "$rpm_arch" ]]; then
-    task_pkg_arch="amd64"
-elif [[ "aarch64" == "$rpm_arch" ]]; then
-    task_pkg_arch="arm64"
-else
-    echo "Error: Unsupported architecture - $rpm_arch"
-    exit 1
-fi
+case "$rpm_arch" in
+    "x86_64")
+        task_pkg_arch="amd64"
+        ;;
+    "aarch64")
+        task_pkg_arch="arm64"
+        ;;
+    *)
+        echo "Error: Unsupported architecture - $rpm_arch"
+        exit 1
+        ;;
+esac
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
