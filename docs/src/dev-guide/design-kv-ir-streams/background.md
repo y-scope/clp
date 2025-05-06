@@ -46,7 +46,7 @@ and [Table 2](#table-2). clp-s' value types, including those used in the schema,
 clp-s assigns a type to a value based on the value's "abstract" type (i.e., whether it's an integer,
 float, boolean, string, object, null, or array) and how the value should be encoded. For some
 abstract types, clp-s only has one way of encoding it, so it assigns the corresponding clp-s
-type--e.g., the integer corresponding to the `timestamp` key. For other abstract types, clp-s can
+type---e.g., the integer corresponding to the `timestamp` key. For other abstract types, clp-s can
 encode the value in multiple ways, so it assigns the clp-s type where the encoded value will result
 in a good trade-off between compactness and efficient searches---e.g., the strings corresponding to
 the `level` and `message` keys use different clp-s types.
