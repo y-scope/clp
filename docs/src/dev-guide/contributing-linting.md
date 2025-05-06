@@ -15,7 +15,8 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * `md5sum`
 * Python 3.8 or newer
 * python3-venv
-* [Task] >= 3.38.0
+* [Task] >= 3.38.0 and < 3.43.0
+  * We constrain the version due to unresolved [issues][clp-issue-872].
 
 ## Running the linters
 
@@ -31,7 +32,8 @@ To also apply any automatic fixes:
 task lint:fix
 ```
 
-[clp-lint]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-lint.yaml
 [clp-core-build]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-core-build.yaml
+[clp-lint]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-lint.yaml
+[clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
 [Task]: https://taskfile.dev/
