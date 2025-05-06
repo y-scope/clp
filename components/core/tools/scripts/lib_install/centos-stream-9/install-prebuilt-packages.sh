@@ -37,7 +37,7 @@ fi
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-task_pkg_path="$(mktemp -t --suffix ".rpm")"
+task_pkg_path="$(mktemp -t --suffix ".rpm" task-pkg.XXXXXXXXXX)"
 curl \
     --fail \
     --location \

@@ -8,7 +8,7 @@ set -u
 
 brew update
 
-formula_dir="$(mktemp -d)"
+formula_dir="$(mktemp -d -t "clp-dep-formulas")"
 
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
