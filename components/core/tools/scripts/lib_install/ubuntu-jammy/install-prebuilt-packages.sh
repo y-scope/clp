@@ -39,3 +39,4 @@ curl \
     --show-error \
     "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.deb"
 dpkg --install "$task_deb_pkg"
+rm "$task_deb_pkg"

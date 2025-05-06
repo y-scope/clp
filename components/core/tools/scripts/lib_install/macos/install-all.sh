@@ -33,6 +33,8 @@ curl \
 /Formula/g/go-task.rb
 brew install --formula "$task_formula_path"
 
+rm -rf "$formula_dir"
+
 brew install \
   boost \
   coreutils \
