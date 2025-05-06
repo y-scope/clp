@@ -119,7 +119,7 @@ with dot notation. The value types are described in [Table 3](#table-3).
 | timers.stage_2 | Float            |
 
 +++
- **Table 2**: The schema for log event &#35;2 in [Figure 1](#figure-1).
+**Table 2**: The schema for log event &#35;2 in [Figure 1](#figure-1).
 :::
 
 (table-3)=
