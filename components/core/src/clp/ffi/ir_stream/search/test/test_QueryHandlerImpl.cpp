@@ -396,7 +396,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     auto const unresolvable_projections_from_unrecognized_namespaces{
             generate_projections(cReservedNamespace1, column_query_to_possible_matches).first
     };
-    auto empty_query = clp_s::search::ast::EmptyExpr::create();
+    auto null_query = std::shared_ptr<clp_s::search::ast::Expression>{};
 
     auto projections{resolvable_projections};
     projections.insert(
@@ -405,7 +405,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
             unresolvable_projections_from_unrecognized_namespaces.cend()
     );
 
-    auto query_handler_impl_result{QueryHandlerImpl::create(empty_query, projections, true)};
+    auto query_handler_impl_result{QueryHandlerImpl::create(null_query, projections, true)};
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 

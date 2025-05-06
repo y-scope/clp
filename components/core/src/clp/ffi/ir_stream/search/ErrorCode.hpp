@@ -23,7 +23,6 @@ enum class ErrorCodeEnum : uint8_t {
     MethodNotImplemented,
     ProjectionColumnDescriptorCreationFailure,
     QueryTransformationPassFailed,
-    QueryExpressionIsNull,
 };
 
 using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;

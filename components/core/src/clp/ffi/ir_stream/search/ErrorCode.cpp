@@ -42,8 +42,6 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
             return "The requested method is not implemented.";
         case ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure:
             return "Failed to create a column descriptor for the given projection.";
-        case ErrorCodeEnum::QueryExpressionIsNull:
-            return "The query expression is NULL.";
         case ErrorCodeEnum::QueryTransformationPassFailed:
             return "Failed to execute transformation passes on the query expression.";
         default:

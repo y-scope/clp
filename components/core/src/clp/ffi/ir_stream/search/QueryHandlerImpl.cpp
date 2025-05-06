@@ -127,7 +127,6 @@ private:
  * Pre-processes a search query by applying several transformation passes.
  * @param query
  * @return A result containing the transformed
- * - ErrorCodeEnum::QueryExpressionIsNull if `query` is nullptr.
  * - ErrorCodeEnum::QueryTransformationPassFailed if any of the transformation pass failed.
  */
 [[nodiscard]] auto preprocess_query(std::shared_ptr<Expression> query)
@@ -199,7 +198,7 @@ private:
 auto preprocess_query(std::shared_ptr<Expression> query)
         -> outcome_v2::std_result<std::shared_ptr<Expression>> {
     if (nullptr == query) {
-        return ErrorCode{ErrorCodeEnum::QueryExpressionIsNull};
+        return query;
     }
 
     if (nullptr != std::dynamic_pointer_cast<EmptyExpr>(query)) {
@@ -317,6 +316,10 @@ auto initialize_partial_resolution_from_search_ast(
         QueryHandlerImpl::PartialResolutionMap& auto_gen_namespace_partial_resolutions,
         QueryHandlerImpl::PartialResolutionMap& user_gen_namespace_partial_resolutions
 ) -> outcome_v2::std_result<void> {
+    if (nullptr == root) {
+        return outcome_v2::success();
+    }
+
     std::vector<Expression*> ast_dfs_stack;
     ast_dfs_stack.emplace_back(root.get());
     while (false == ast_dfs_stack.empty()) {
@@ -411,8 +414,12 @@ auto QueryHandlerImpl::evaluate_node_id_value_pairs(
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
 ) -> outcome_v2::std_result<AstEvaluationResult> {
-    if (m_is_empty_query) {
+    if (nullptr == m_query) {
         return AstEvaluationResult::True;
+    }
+
+    if (m_is_empty_query) {
+        return AstEvaluationResult::False;
     }
 
     std::optional<AstEvaluationResult> optional_evaluation_result;
