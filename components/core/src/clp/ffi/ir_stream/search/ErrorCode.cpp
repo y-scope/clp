@@ -19,6 +19,11 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
     switch (error_enum) {
         case ErrorCodeEnum::AstDynamicCastFailure:
             return "Failed to dynamically cast an AST node to the expected type.";
+        case ErrorCodeEnum::AstEvaluationInvariantViolation:
+            return "Internal invariant violated during AST evaluation. This indicates a serious "
+                   "bug in the evaluation logic.";
+        case ErrorCodeEnum::AttemptToIterateAstLeafExpr:
+            return "Attempted to iterate an leaf expression of an AST.";
         case ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds:
             return "Attempted to access a token beyond the end of the column descriptor.";
         case ErrorCodeEnum::ColumnTokenizationFailure:
@@ -27,6 +32,8 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
             return "The projected column is not unique.";
         case ErrorCodeEnum::EncodedTextAstDecodingFailure:
             return "Failed to decode the given encoded text AST.";
+        case ErrorCodeEnum::ExpressionTypeUnexpected:
+            return "Unexpected expression type.";
         case ErrorCodeEnum::LiteralTypeUnexpected:
             return "Unexpected literal type.";
         case ErrorCodeEnum::LiteralTypeUnsupported:

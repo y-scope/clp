@@ -7,11 +7,13 @@
 #include <string_view>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <outcome/outcome.hpp>
 
 #include "../../../../clp_s/archive_constants.hpp"
+#include "../../../../clp_s/search/ast/AndExpr.hpp"
 #include "../../../../clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../../../../clp_s/search/ast/ConvertToExists.hpp"
 #include "../../../../clp_s/search/ast/EmptyExpr.hpp"
@@ -19,8 +21,10 @@
 #include "../../../../clp_s/search/ast/FilterExpr.hpp"
 #include "../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../clp_s/search/ast/NarrowTypes.hpp"
+#include "../../../../clp_s/search/ast/OrExpr.hpp"
 #include "../../../../clp_s/search/ast/OrOfAndForm.hpp"
 #include "../../../../clp_s/search/ast/SearchUtils.hpp"
+#include "../../../../clp_s/search/ast/Value.hpp"
 #include "../../KeyValuePairLogEvent.hpp"
 #include "../../SchemaTree.hpp"
 #include "AstEvaluationResult.hpp"
@@ -28,11 +32,96 @@
 
 namespace clp::ffi::ir_stream::search {
 namespace {
+using clp_s::search::ast::AndExpr;
 using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::LiteralTypeBitmask;
+using clp_s::search::ast::OrExpr;
+
+/**
+ * Iterator for efficiently traversing and evaluating clp-s AST's expressions.
+ */
+class AstExprIterator {
+public:
+    // Factory function
+    // TODO
+    [[nodiscard]] static auto create(clp_s::search::ast::Value* expr)
+            -> outcome_v2::std_result<AstExprIterator> {
+        if (auto* and_expr{dynamic_cast<AndExpr*>(expr)}; nullptr != and_expr) {
+            return AstExprIterator{ExprVariant{and_expr}, and_expr->op_begin(), and_expr->op_end()};
+        }
+
+        if (auto* or_expr{dynamic_cast<OrExpr*>(expr)}; nullptr != or_expr) {
+            return AstExprIterator{ExprVariant{or_expr}, or_expr->op_begin(), or_expr->op_end()};
+        }
+
+        if (auto* filter_expr{dynamic_cast<FilterExpr*>(expr)}; nullptr != filter_expr) {
+            return AstExprIterator{
+                    ExprVariant{filter_expr},
+                    filter_expr->op_begin(),
+                    filter_expr->op_end()
+            };
+        }
+
+        return ErrorCode{ErrorCodeEnum::ExpressionTypeUnexpected};
+    }
+
+    // Methods
+    // TODO
+    [[nodiscard]] auto next_op() -> std::optional<outcome_v2::std_result<AstExprIterator>> {
+        if (m_op_end_it == m_op_next_it) {
+            return std::nullopt;
+        }
+        if (std::holds_alternative<FilterExpr*>(m_expr)) {
+            return ErrorCode{ErrorCodeEnum::AttemptToIterateAstLeafExpr};
+        }
+        return create((m_op_next_it++)->get());
+    }
+
+    // TODO
+    [[nodiscard]] auto as_and_expr() const -> AndExpr* {
+        if (std::holds_alternative<AndExpr*>(m_expr)) {
+            return std::get<AndExpr*>(m_expr);
+        }
+        return nullptr;
+    }
+
+    // TODO
+    [[nodiscard]] auto as_or_expr() const -> OrExpr* {
+        if (std::holds_alternative<OrExpr*>(m_expr)) {
+            return std::get<OrExpr*>(m_expr);
+        }
+        return nullptr;
+    }
+
+    // TODO
+    [[nodiscard]] auto as_filter_expr() const -> FilterExpr* {
+        if (std::holds_alternative<FilterExpr*>(m_expr)) {
+            return std::get<FilterExpr*>(m_expr);
+        }
+        return nullptr;
+    }
+
+private:
+    // Types
+    using ExprVariant = std::variant<AndExpr*, OrExpr*, FilterExpr*>;
+
+    // Constructor
+    AstExprIterator(
+            ExprVariant expr,
+            clp_s::search::ast::OpList::iterator op_next_it,
+            clp_s::search::ast::OpList::iterator op_end_it
+    )
+            : m_expr{expr},
+              m_op_next_it{op_next_it},
+              m_op_end_it{op_end_it} {}
+
+    ExprVariant m_expr;
+    clp_s::search::ast::OpList::iterator m_op_next_it;
+    clp_s::search::ast::OpList::iterator m_op_end_it;
+};
 
 /**
  * Pre-processes a search query by applying several transformation passes.
@@ -318,12 +407,108 @@ auto QueryHandlerImpl::create(
     };
 }
 
-// TODO: Fix clang-tidy
-// NOLINTNEXTLINE(*)
 auto QueryHandlerImpl::evaluate_node_id_value_pairs(
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
         [[maybe_unused]] KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
 ) -> outcome_v2::std_result<AstEvaluationResult> {
-    return ErrorCode{ErrorCodeEnum::MethodNotImplemented};
+    if (m_is_empty_query) {
+        return AstEvaluationResult::True;
+    }
+
+    std::optional<AstEvaluationResult> optional_evaluation_result;
+    std::vector<std::pair<AstExprIterator, AstEvaluationResultBitmask>> ast_dfs_stack;
+    ast_dfs_stack.emplace_back(
+            OUTCOME_TRYX(AstExprIterator::create(m_query.get())),
+            AstEvaluationResultBitmask{}
+    );
+
+    auto pop_stack_and_update_parent_evaluation_result
+            = [&](AstEvaluationResult child_expr_result, bool is_inverted = false) -> void {
+        ast_dfs_stack.pop_back();
+        if (child_expr_result != AstEvaluationResult::Pruned && is_inverted) {
+            child_expr_result = (child_expr_result == AstEvaluationResult::True)
+                                        ? AstEvaluationResult::False
+                                        : AstEvaluationResult::True;
+        }
+        if (ast_dfs_stack.empty()) {
+            optional_evaluation_result.emplace(child_expr_result);
+            return;
+        }
+        ast_dfs_stack.back().second |= child_expr_result;
+    };
+
+    while (false == ast_dfs_stack.empty()) {
+        auto& [expr_it, evaluation_results] = ast_dfs_stack.back();
+        if (auto* filter_expr{expr_it.as_filter_expr()}; nullptr != filter_expr) {
+            // Handle `FilterExpr` evaluation
+            // TODO: Evaluate filter expression.
+            // pop_stack_and_update_parent_evaluation_result(filter_result);
+            continue;
+        }
+
+        if (auto* and_expr{expr_it.as_and_expr()}; nullptr != and_expr) {
+            // Handle `AndExpr` evaluation
+            if (0 != (evaluation_results & AstEvaluationResult::Pruned)) {
+                pop_stack_and_update_parent_evaluation_result(AstEvaluationResult::Pruned);
+                continue;
+            }
+            if (0 != (evaluation_results & AstEvaluationResult::False)) {
+                pop_stack_and_update_parent_evaluation_result(
+                        AstEvaluationResult::False,
+                        and_expr->is_inverted()
+                );
+                continue;
+            }
+            auto const optional_next_op_it{expr_it.next_op()};
+            if (optional_next_op_it.has_value()) {
+                ast_dfs_stack.emplace_back(
+                        OUTCOME_TRYX(optional_next_op_it.value()),
+                        AstEvaluationResultBitmask{}
+                );
+            } else {
+                pop_stack_and_update_parent_evaluation_result(
+                        AstEvaluationResult::True,
+                        and_expr->is_inverted()
+                );
+            }
+            continue;
+        }
+
+        // Handle `OrExpr` evaluation
+        auto* or_expr{expr_it.as_or_expr()};
+        if (nullptr == or_expr) {
+            return ErrorCode{ErrorCodeEnum::AstEvaluationInvariantViolation};
+        }
+        if (0 != (evaluation_results & AstEvaluationResult::True)) {
+            pop_stack_and_update_parent_evaluation_result(
+                    AstEvaluationResult::True,
+                    or_expr->is_inverted()
+            );
+            continue;
+        }
+        auto const optional_next_op_it{expr_it.next_op()};
+        if (optional_next_op_it.has_value()) {
+            ast_dfs_stack.emplace_back(
+                    OUTCOME_TRYX(optional_next_op_it.value()),
+                    AstEvaluationResultBitmask{}
+            );
+            continue;
+        }
+        if (evaluation_results == (evaluation_results & AstEvaluationResult::Pruned)) {
+            // All pruned
+            pop_stack_and_update_parent_evaluation_result(AstEvaluationResult::Pruned);
+            continue;
+        }
+        pop_stack_and_update_parent_evaluation_result(
+                AstEvaluationResult::False,
+                or_expr->is_inverted()
+        );
+    }
+
+    if (false == optional_evaluation_result.has_value()) {
+        return ErrorCode{ErrorCodeEnum::AstEvaluationInvariantViolation};
+    }
+
+    return optional_evaluation_result.value();
 }
 }  // namespace clp::ffi::ir_stream::search

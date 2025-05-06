@@ -12,6 +12,7 @@
 #include <outcome/outcome.hpp>
 
 #include "../../../../clp_s/search/ast/ColumnDescriptor.hpp"
+#include "../../../../clp_s/search/ast/EmptyExpr.hpp"
 #include "../../../../clp_s/search/ast/Expression.hpp"
 #include "../../../../clp_s/search/ast/Literal.hpp"
 #include "../../KeyValuePairLogEvent.hpp"
@@ -193,6 +194,9 @@ private:
             bool case_sensitive_match
     )
             : m_query{std::move(query)},
+              m_is_empty_query{
+                      nullptr != dynamic_cast<clp_s::search::ast::EmptyExpr*>(m_query.get())
+              },
               m_auto_gen_namespace_partial_resolutions{
                       std::move(auto_gen_namespace_partial_resolutions)
               },
@@ -227,6 +231,7 @@ private:
 
     // Variables
     std::shared_ptr<clp_s::search::ast::Expression> m_query;
+    bool m_is_empty_query;
     PartialResolutionMap m_auto_gen_namespace_partial_resolutions;
     PartialResolutionMap m_user_gen_namespace_partial_resolutions;
     std::unordered_map<
