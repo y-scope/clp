@@ -4,7 +4,9 @@ import {defineConfig} from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
+    base: "./",
     plugins: [react()],
+    publicDir: "public",
     server: {
         port: 8080,
         proxy: {
@@ -16,5 +18,4 @@ export default defineConfig({
             },
         },
     },
-    publicDir: "public",
 });
