@@ -412,8 +412,9 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     SchemaTree::Node::id_t node_id{1};
     std::map<std::string, std::set<SchemaTree::Node::id_t>> actual_resolved_projections;
     auto new_projected_schema_tree_node_callback
-            = [&](bool is_auto_gen, SchemaTree::Node::id_t node_id, std::string_view key
-              ) -> outcome_v2::std_result<void> {
+            = [&](bool is_auto_gen,
+                  SchemaTree::Node::id_t node_id,
+                  std::string_view key) -> outcome_v2::std_result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
         auto [column_it, column_inserted] = actual_resolved_projections.try_emplace(
                 std::string{key},
