@@ -13,7 +13,7 @@
 #include <outcome/outcome.hpp>
 
 #include "../../../../../clp_s/archive_constants.hpp"
-#include "../../../../../clp_s/search/ast/EmptyExpr.hpp"
+#include "../../../../../clp_s/search/ast/Expression.hpp"
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../../clp_s/search/kql/kql.hpp"
 #include "../../../SchemaTree.hpp"
