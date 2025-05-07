@@ -362,7 +362,8 @@ void MetadataDB::FileIterator::get_path(string& path) const {
 }
 
 epochtime_t MetadataDB::FileIterator::get_begin_ts() const {
-    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)
+    return m_statement.column_int64(
+            enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)
     );
 }
 
@@ -384,7 +385,8 @@ size_t MetadataDB::FileIterator::get_num_uncompressed_bytes() const {
 }
 
 size_t MetadataDB::FileIterator::get_begin_message_ix() const {
-    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)
+    return m_statement.column_int64(
+            enum_to_underlying_type(FilesTableFieldIndexes::BeginMessageIx)
     );
 }
 
