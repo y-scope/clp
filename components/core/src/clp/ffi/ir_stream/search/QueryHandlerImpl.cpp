@@ -355,16 +355,21 @@ auto evaluate_filter_against_node_id_value_pair(
         if (false == filter_expr->get_column()->matches_type(literal_type)) {
             return AstEvaluationResult::Pruned;
         }
-        if (OUTCOME_TRYX(evaluate_filter_against_literal_type_value_pair(
-                    filter_expr,
-                    literal_type,
-                    value,
-                    case_sensitive_match
-            )))
-        {
-            return AstEvaluationResult::True;
+        auto const evaluation_result{evaluate_filter_against_literal_type_value_pair(
+                filter_expr,
+                literal_type,
+                value,
+                case_sensitive_match
+        )};
+        if (false == evaluation_result.has_error()) {
+            return evaluation_result.value() ? AstEvaluationResult::True
+                                             : AstEvaluationResult::False;
         }
-        return AstEvaluationResult::False;
+        if (ErrorCode{ErrorCodeEnum::LiteralTypeUnsupported} == evaluation_result.error()) {
+            // Evaluations on unsupported literal types are considered `AstEvaluationResult::False`.
+            return AstEvaluationResult::False;
+        }
+        return evaluation_result.error();
     } catch (TraceableException const& ex) {
         return ErrorCode{ErrorCodeEnum::AstEvaluationInvariantViolation};
     }
