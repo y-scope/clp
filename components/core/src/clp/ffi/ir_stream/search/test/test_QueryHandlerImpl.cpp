@@ -528,17 +528,30 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     auto const column_query_to_possible_matches{get_schema_tree_column_queries(schema_tree)};
     CAPTURE(column_query_to_possible_matches);
 
-    auto const is_auto_generated = GENERATE(true, false);
     auto const [matchable_kql_expressions, expected_column_resolutions]
-            = generate_matchable_kql_expressions(
-                    is_auto_generated ? cAutogenNamespace : cDefaultNamespace,
-                    column_query_to_possible_matches
-            );
+            = generate_matchable_kql_expressions("", column_query_to_possible_matches);
+
+    auto const is_auto_generated = GENERATE(true, false);
+    std::vector<std::string> matchable_kql_expressions_with_column_resolutions;
+    std::vector<std::string> single_wildcard_kql_expressions;
+    auto const namespace_id{is_auto_generated ? cAutogenNamespace : cDefaultNamespace};
+    for (auto const& matchable_expression : matchable_kql_expressions) {
+        auto const formatted_expression{fmt::format("{}{}", namespace_id, matchable_expression)};
+        if (matchable_expression.starts_with("*:")) {
+            single_wildcard_kql_expressions.emplace_back(formatted_expression);
+        } else {
+            matchable_kql_expressions_with_column_resolutions.emplace_back(formatted_expression);
+        }
+    }
 
     SECTION("basic") {
-        auto const matchable_kql_query_str{
-                fmt::format("{}", fmt::join(matchable_kql_expressions, " OR "))
-        };
+        auto const matchable_kql_query_str = GENERATE_COPY(
+                fmt::format(
+                        "{}",
+                        fmt::join(matchable_kql_expressions_with_column_resolutions, " OR ")
+                ),
+                fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " OR "))
+        );
         CAPTURE(matchable_kql_query_str);
 
         auto query_stream{std::istringstream{matchable_kql_query_str}};
@@ -551,21 +564,38 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
         for (auto const& locator : locators) {
             auto const optional_node_id{schema_tree->try_get_node_id(locator)};
             REQUIRE(optional_node_id.has_value());
-            REQUIRE_FALSE(query_handler_impl.update_partially_resolved_columns(
-                    is_auto_generated,
-                    locator,
-                    *optional_node_id,
-                    trivial_new_projected_schema_tree_node_callback
-            ));
+            // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+            auto const node_id{optional_node_id.value()};
+            REQUIRE_FALSE(query_handler_impl
+                                  .update_partially_resolved_columns(
+                                          is_auto_generated,
+                                          locator,
+                                          node_id,
+                                          trivial_new_projected_schema_tree_node_callback
+                                  )
+                                  .has_error());
         }
 
         for (auto const& locator : locators) {
             auto const optional_node_id{schema_tree->try_get_node_id(locator)};
             REQUIRE(optional_node_id.has_value());
-            auto const matchable_values{get_matchable_values(locator.get_type())};
+            // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+            auto const node_id{*optional_node_id};
+            CAPTURE(fmt::format("Testing Node ID: {}", node_id));
+
+            auto const node_type{locator.get_type()};
+            auto const matchable_values{get_matchable_values(node_type)};
             for (auto const& matchable_value : matchable_values) {
+                if (SchemaTree::Node::Type::UnstructuredArray == node_type
+                    || SchemaTree::Node::Type::Obj == node_type)
+                {
+                    // We skip these two types because:
+                    // - the current implementation doesn't support `UnstructuredArray`
+                    // - we don't generate matchable queries for `Obj`.
+                    continue;
+                }
                 KeyValuePairLogEvent::NodeIdValuePairs const node_id_value_pairs{
-                        {*optional_node_id, matchable_value}
+                        {node_id, matchable_value}
                 };
                 auto const auto_gen_node_id_value_pairs{
                         is_auto_generated ? node_id_value_pairs
@@ -582,13 +612,14 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                         user_gen_node_id_value_pairs,
                         UtcOffset{0}
                 )};
-                REQUIRE_FALSE(kv_pair_log_event_result.has_value());
+                REQUIRE_FALSE(kv_pair_log_event_result.has_error());
                 auto const& kv_pair_log_event{kv_pair_log_event_result.value()};
                 auto const evaluation_result{
                         query_handler_impl.evaluate_kv_pair_log_event(kv_pair_log_event)
                 };
-                REQUIRE_FALSE(evaluation_result.has_value());
-                REQUIRE(evaluation_result.value() == AstEvaluationResult::True);
+                REQUIRE_FALSE(evaluation_result.has_error());
+                CAPTURE(evaluation_result.value());
+                REQUIRE((evaluation_result.value() == AstEvaluationResult::True));
             }
         }
     }
