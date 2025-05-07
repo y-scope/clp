@@ -96,7 +96,7 @@ public:
      * the failure:
      * - Forwards `QueryHandlerImpl::evaluate_node_id_value_pairs`'s return values.
      */
-    [[nodiscard]] auto evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event, )
+    [[nodiscard]] auto evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event)
             -> outcome_v2::std_result<AstEvaluationResult> {
         return m_query_handler_impl.evaluate_kv_pair_log_event(log_event);
     }
