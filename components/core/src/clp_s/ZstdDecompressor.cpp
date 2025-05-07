@@ -266,8 +266,9 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
     memory_map_params.path = compressed_file_path;
     memory_map_params.flags = boost::iostreams::mapped_file::readonly;
     memory_map_params.length = compressed_file_size;
-    memory_map_params.hint = m_memory_mapped_compressed_file.data(
-    );  // Try to map it to the same memory location as previous memory mapped file
+    memory_map_params.hint
+            = m_memory_mapped_compressed_file.data();  // Try to map it to the same memory location
+                                                       // as previous memory mapped file
     m_memory_mapped_compressed_file.open(memory_map_params);
     if (false == m_memory_mapped_compressed_file.is_open()) {
         SPDLOG_ERROR(
@@ -299,8 +300,8 @@ void ZstdDecompressor::reset_stream() {
         m_file_read_buffer_length = 0;
         m_compressed_stream_block.size = m_file_read_buffer_length;
         if (false
-            == (clp::ErrorCode::ErrorCode_Success == rc || clp::ErrorCode::ErrorCode_EndOfFile == rc
-            ))
+            == (clp::ErrorCode::ErrorCode_Success == rc
+                || clp::ErrorCode::ErrorCode_EndOfFile == rc))
         {
             throw OperationFailed(static_cast<ErrorCode>(rc), __FILENAME__, __LINE__);
         }

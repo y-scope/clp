@@ -425,9 +425,9 @@ void GlobalSQLiteMetadataDB::open() {
             m_db.prepare_statement(statement_buffer.data(), statement_buffer.size())
     );
 
-    m_upsert_files_transaction_begin_statement
-            = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement("BEGIN TRANSACTION")
-            );
+    m_upsert_files_transaction_begin_statement = std::make_unique<SQLitePreparedStatement>(
+            m_db.prepare_statement("BEGIN TRANSACTION")
+    );
     m_upsert_files_transaction_end_statement
             = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement("END TRANSACTION"));
 
