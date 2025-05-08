@@ -2,10 +2,16 @@ import {StatusCodes} from "http-status-codes";
 import tap from "tap";
 
 import app from "./app.js";
+import fastify from 'fastify';
 
 
 tap.test("Tests the example routes", async (t) => {
-    const server = await app({fastifyOptions: {}, sqlDbPass: "", sqlDbUser: ""});
+    const server = fastify();
+
+    await server.register(app, {
+        sqlDbUser: process.env.CLP_DB_USER!,
+        sqlDbPass: process.env.CLP_DB_PASS!,
+    });
     t.teardown(() => server.close());
 
     let resp = await server.inject({

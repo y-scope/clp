@@ -6,6 +6,9 @@ import {
     parseEnvVars,
 } from "./utils/env.js";
 
+import fastify from 'fastify';
+
+
 
 /**
  * Sets up and runs the server.
@@ -13,13 +16,15 @@ import {
 const main = async () => {
     const envVars = parseEnvVars();
     const loggerConfig = ENV_TO_LOGGER_MAP[envVars.NODE_ENV];
-    const server = await app({
-        fastifyOptions: {
-            ...(loggerConfig && {logger: loggerConfig}),
-        },
-        sqlDbPass: envVars.CLP_DB_PASS,
-        sqlDbUser: envVars.CLP_DB_USER,
+
+    const server = fastify({
+        ...(loggerConfig && { logger: loggerConfig }),
     });
+
+    await server.register(app, {
+        sqlDbUser: process.env.CLP_DB_USER!,
+        sqlDbPass: process.env.CLP_DB_PASS!,
+      });
 
     try {
         await server.listen({host: envVars.HOST, port: Number(envVars.PORT)});

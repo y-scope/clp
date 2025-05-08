@@ -89,6 +89,7 @@ class DbManager {
         try {
             await app.register(fastifyMysql, {
                 promise: true,
+                name: '2',
                 connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
                     `${config.port}/${config.database}`,
             });
@@ -119,6 +120,7 @@ class DbManager {
             await app.register(fastifyMongoDb, {
                 forceClose: true,
                 url: `mongodb://${config.host}:${config.port}/${config.database}`,
+                name: "MONGO1",
             });
         } catch (e: unknown) {
             throw new Error(
@@ -128,11 +130,12 @@ class DbManager {
                 {cause: e}
             );
         }
-        if ("undefined" === typeof app.mongo.db) {
+          // Check if the MongoDB client was properly initialized
+        if ("undefined" === typeof app.mongo.MONGO1 || "undefined" === typeof app.mongo.MONGO1.db) {
             throw new Error("Failed to initialize MongoDB plugin.");
         }
 
-        return {streamFilesCollection: app.mongo.db.collection(config.streamFilesCollectionName)};
+        return {streamFilesCollection: app.mongo.MONGO1.db.collection(config.streamFilesCollectionName)};
     }
 
 

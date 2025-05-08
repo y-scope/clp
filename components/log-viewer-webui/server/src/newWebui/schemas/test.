@@ -1,0 +1,11 @@
+/**
+ * Enum of the `query_jobs` table's column names.
+ *
+ * @enum {string}
+ */
+const QUERY_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
+    ID: "id",
+    STATUS: "status",
+    TYPE: "type",
+    JOB_CONFIG: "job_config",
+});

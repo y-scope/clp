@@ -8,12 +8,12 @@ export default defineConfig({
     plugins: [react()],
     publicDir: "public",
     server: {
-        port: 8080,
+        port: 3001,
         proxy: {
             "/query/": {
                 // Below target should match the server's configuration in
                 // `components/log-viewer-webui/server/.env` (or `.env.local` if overridden)
-                target: "http://localhost:3000/",
+                target: "http://localhost:3001/",
                 changeOrigin: true,
             },
         },

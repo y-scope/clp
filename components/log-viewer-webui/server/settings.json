@@ -3,6 +3,10 @@
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
     "SqlDbQueryJobsTableName": "query_jobs",
+    "SqlDbClpArchivesTableName": "clp_archives",
+    "SqlDbClpFilesTableName": "clp_files",
+    "SqlDbCompressionJobsTableName": "compression_jobs",
+
     "MongoDbHost": "localhost",
     "MongoDbPort": 27017,
     "MongoDbName": "clp-query-results",
@@ -14,5 +18,17 @@
     "StreamTargetUncompressedSize": 134217728,
     "StreamFilesS3Region": null,
     "StreamFilesS3PathPrefix": null,
-    "StreamFilesS3Profile": null
+    "StreamFilesS3Profile": null,
+
+
+    "public": {
+        "AggregationResultsCollectionName": "aggregation-results",
+        "ClpStorageEngine": "clp",
+        "CompressionJobsCollectionName": "compression-jobs",
+        "LogViewerWebuiUrl": "http://localhost:8080",
+        "SearchResultsCollectionName": "search-results",
+        "SearchResultsMetadataCollectionName": "results-metadata",
+        "StatsCollectionName": "stats",
+        "SupportUrl": "https://github.com/y-scope/clp/issues/new/choose"
+    }
 }

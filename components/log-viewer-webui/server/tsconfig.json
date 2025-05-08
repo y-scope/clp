@@ -35,5 +35,5 @@
   },
   "include": [
     "src/**/*"
-  ]
+, "src/server.ts"  ]
 }
