@@ -1,10 +1,9 @@
+import {QueryId} from "@common/index.js";
 import type {
     Collection,
     Db,
 } from "mongodb";
-import type {
-    QueryId
-} from "@common/index.js";
+
 import {
     CLIENT_UPDATE_TIMEOUT_MILLIS,
     MongoCustomSocket,

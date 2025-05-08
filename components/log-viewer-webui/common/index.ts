@@ -70,7 +70,7 @@ interface InterServerEvents {
  * Collection associated with each socket connection.
  */
 interface SocketData {
-    collectionName: string;
+    collectionName?: string;
 }
 
 export {

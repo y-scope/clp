@@ -6,10 +6,10 @@
 import type {
     ClientToServerEvents,
     InterServerEvents,
+    QueryId,
     Response,
     ServerToClientEvents,
     SocketData,
-    QueryId
 } from "@common/index.js";
 import {
     FastifyInstance,
@@ -240,7 +240,7 @@ class MongoSocketIoServer {
         const {query, options} = requestArgs;
         const {collectionName} = socket.data;
 
-        if (null === collectionName || "undefined" === typeof collectionName) {
+        if ("undefined" === typeof collectionName) {
             this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
 
             return;
