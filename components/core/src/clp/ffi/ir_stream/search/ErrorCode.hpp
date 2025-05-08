@@ -11,16 +11,18 @@ namespace clp::ffi::ir_stream::search {
  */
 enum class ErrorCodeEnum : uint8_t {
     AstDynamicCastFailure = 1,
+    AstEvaluationInvariantViolation,
+    AttemptToIterateAstLeafExpr,
     ColumnDescriptorTokenIteratorOutOfBounds,
     ColumnTokenizationFailure,
     DuplicateProjectedColumn,
     EncodedTextAstDecodingFailure,
+    ExpressionTypeUnexpected,
     LiteralTypeUnexpected,
     LiteralTypeUnsupported,
     MethodNotImplemented,
     ProjectionColumnDescriptorCreationFailure,
     QueryTransformationPassFailed,
-    QueryExpressionIsNull,
 };
 
 using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;
