@@ -1,10 +1,19 @@
 #ifndef CLP_S_ARCHIVEREADERADAPTOR_HPP
 #define CLP_S_ARCHIVEREADERADAPTOR_HPP
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
+
+// We use NOLINTNEXTLINE to satisfy clang-tidy here because while we don't use any symbols from
+// `nlohmann/json.hpp` directly this code does not compile without the definition of
+// `nlohmann::basic_json<>` found in the `nlohmann/json.hpp` header.
+// NOLINTNEXTLINE(misc-include-cleaner)
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 #include "../clp/BoundedReader.hpp"
 #include "../clp/ReaderInterface.hpp"
@@ -26,6 +35,18 @@ public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
+    };
+
+    struct RangeIndexEntry {
+        explicit RangeIndexEntry(size_t start_index, size_t end_index, nlohmann::json&& fields)
+                : start_index{start_index},
+                  end_index{end_index},
+                  // Note: brace initializer would make nlohmann wrap the fields object in an array.
+                  fields(fields) {}
+
+        size_t start_index;
+        size_t end_index;
+        nlohmann::json fields;
     };
 
     explicit ArchiveReaderAdaptor(Path const& archive_path, NetworkAuthOption const& network_auth);
@@ -62,6 +83,8 @@ public:
 
     ArchiveHeader const& get_header() const { return m_archive_header; }
 
+    std::vector<RangeIndexEntry> const& get_range_index() const { return m_range_index; }
+
 private:
     /**
      * Tries to read an ArchiveFileInfo packet from the archive metadata.
@@ -89,6 +112,14 @@ private:
      * @return relevant ErrorCode on failure.
      */
     ErrorCode try_read_archive_info(ZstdDecompressor& decompressor, size_t size);
+
+    /**
+     * Tries to read a RangeIndex packet from the archive metadata.
+     * @param decompressor
+     * @param size The numer of decompressed bytes making up the packet.
+     * @return ErrorCodeSuccess on success or the relevant ErrorCode on failure.
+     */
+    auto try_read_range_index(ZstdDecompressor& decompressor, size_t size) -> ErrorCode;
 
     /**
      * Tries to read an unknown metadata packet from the archive metadata.
@@ -140,6 +171,7 @@ private:
     std::optional<std::string> m_current_reader_holder;
     std::shared_ptr<TimestampDictionaryReader> m_timestamp_dictionary;
     std::shared_ptr<clp::ReaderInterface> m_reader;
+    std::vector<RangeIndexEntry> m_range_index;
 };
 }  // namespace clp_s
 #endif  // CLP_S_ARCHIVEREADERADAPTOR_HPP
