@@ -1,13 +1,25 @@
 .queryBox {
   width: 100%;
+}
+
+.position {
+  position: sticky;
+  width: 100%;
+  height: 100%;
+}
+
+.wrapper {
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0px;
   overflow: hidden;
   border-radius: var(--antd-border-radius);
   --antd-border-radius: 8px;
 }
 
-.progressWrapper {
-  height: 0;
-  position: relative;
-  top: -10px;
-  width: 100%;
+.progress {
+  position: absolute;
+  bottom: -8px;
 }

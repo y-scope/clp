@@ -22,8 +22,9 @@ const QueryBox = (queryBoxProps: QueryBoxProps) => {
     const inputProps = queryBoxProps as InputProps;
     const {progress} = queryBoxProps;
     let progressStyle;
-    let percent = 0;
+    let percent;
     if (null === progress) {
+        percent = 0;
         progressStyle = {display: "none"};
     } else {
         percent = Math.max(Math.min(progress, 100), 0);
@@ -32,14 +33,17 @@ const QueryBox = (queryBoxProps: QueryBoxProps) => {
 
     return (
         <div className={styles["queryBox"]}>
-            <Input {...inputProps}/>
-            <div className={styles["progressWrapper"]}>
-                <Progress
-                    percent={percent}
-                    showInfo={false}
-                    size={"small"}
-                    strokeLinecap={"butt"}
-                    style={progressStyle}/>
+            <div className={styles["position"]}>
+                <Input {...inputProps}/>
+                <div className={styles["wrapper"]}>
+                    <Progress
+                        className={styles["progress"] || ""}
+                        percent={percent}
+                        showInfo={false}
+                        size={"small"}
+                        strokeLinecap={"butt"}
+                        style={progressStyle}/>
+                </div>
             </div>
         </div>
     );
