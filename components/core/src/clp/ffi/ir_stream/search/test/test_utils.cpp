@@ -1,7 +1,5 @@
 #include <algorithm>
 #include <concepts>
-#include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -21,7 +19,6 @@
 #include "../../../../../clp_s/search/ast/Integral.hpp"
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../../clp_s/search/ast/StringLiteral.hpp"
-#include "../../../../ir/EncodedTextAst.hpp"
 #include "../../../../ir/types.hpp"
 #include "../../../Value.hpp"
 #include "../utils.hpp"
@@ -34,9 +31,7 @@ using clp::ffi::value_bool_t;
 using clp::ffi::value_float_t;
 using clp::ffi::value_int_t;
 using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::EightByteEncodedTextAst;
 using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::FourByteEncodedTextAst;
 using clp_s::search::ast::BooleanLiteral;
 using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::Expression;

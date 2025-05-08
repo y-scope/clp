@@ -83,6 +83,29 @@ constexpr value_bool_t cRefTestBool{false};
  */
 [[nodiscard]] auto get_matchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value>;
 
+/**
+ * @param node_type
+ * @return A vector of unmatchable values of the given node type.
+ */
+[[nodiscard]] auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value>;
+
+/**
+ * Gets the query evaluation results on the kv-pair log event constructed by the given node-ID-value
+ * pairs.
+ * @param auto_gen_schema_tree
+ * @param user_gen_schema_tree
+ * @param auto_gen_node_id_value_pairs
+ * @param user_gen_node_id_value_pairs
+ * @param query_handler_impl
+ */
+[[nodiscard]] auto get_query_evaluation_result(
+        std::shared_ptr<SchemaTree> auto_gen_schema_tree,
+        std::shared_ptr<SchemaTree> user_gen_schema_tree,
+        KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs,
+        QueryHandlerImpl& query_handler_impl
+) -> AstEvaluationResult;
+
 auto generate_matchable_kql_expressions(
         std::string_view column_namespace,
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
@@ -233,11 +256,64 @@ auto get_matchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value
             );
             return matchable_values;
         }
-        case SchemaTree::Node::Type::Obj:
-            return {Value{}};
         default:
+            // Unsupported types
+            REQUIRE(false);
+            // The following return should never be reached. It is added to silent clang-tidy
+            // warnings.
             return {};
     }
+}
+
+auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value> {
+    switch (node_type) {
+        case SchemaTree::Node::Type::Int:
+            return {Value{cRefTestInt + 1}};
+        case SchemaTree::Node::Type::Float:
+            return {Value{cRefTestFloat + 1.0}};
+        case SchemaTree::Node::Type::Bool:
+            return {Value{false == cRefTestBool}};
+        case SchemaTree::Node::Type::Str: {
+            std::vector<Value> matchable_values;
+            matchable_values.emplace_back(std::string{});
+            std::string_view const unmatchable_long_str{"This is a static message"};
+            REQUIRE((unmatchable_long_str.find(cRefTestStr) == std::string::npos));
+            matchable_values.emplace_back(
+                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unmatchable_long_str)
+            );
+            matchable_values.emplace_back(
+                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(unmatchable_long_str)
+            );
+            return matchable_values;
+        }
+        default:
+            // Unsupported types
+            REQUIRE(false);
+            // The following return should never be reached. It is added to silent clang-tidy
+            // warnings.
+            return {};
+    }
+}
+
+auto get_query_evaluation_result(
+        std::shared_ptr<SchemaTree> auto_gen_schema_tree,
+        std::shared_ptr<SchemaTree> user_gen_schema_tree,
+        KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
+        KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs,
+        QueryHandlerImpl& query_handler_impl
+) -> AstEvaluationResult {
+    auto const kv_pair_log_event_result{KeyValuePairLogEvent::create(
+            std::move(auto_gen_schema_tree),
+            std::move(user_gen_schema_tree),
+            auto_gen_node_id_value_pairs,
+            user_gen_node_id_value_pairs,
+            UtcOffset{0}
+    )};
+    REQUIRE_FALSE(kv_pair_log_event_result.has_error());
+    auto const& kv_pair_log_event{kv_pair_log_event_result.value()};
+    auto const evaluation_result{query_handler_impl.evaluate_kv_pair_log_event(kv_pair_log_event)};
+    REQUIRE_FALSE(evaluation_result.has_error());
+    return evaluation_result.value();
 }
 }  // namespace
 
@@ -531,30 +607,8 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     auto const [matchable_kql_expressions, expected_column_resolutions]
             = generate_matchable_kql_expressions("", column_query_to_possible_matches);
 
-    auto const is_auto_generated = GENERATE(true, false);
-    std::vector<std::string> matchable_kql_expressions_with_column_resolutions;
-    std::vector<std::string> single_wildcard_kql_expressions;
-    auto const namespace_id{is_auto_generated ? cAutogenNamespace : cDefaultNamespace};
-    for (auto const& matchable_expression : matchable_kql_expressions) {
-        auto const formatted_expression{fmt::format("{}{}", namespace_id, matchable_expression)};
-        if (matchable_expression.starts_with("*:")) {
-            single_wildcard_kql_expressions.emplace_back(formatted_expression);
-        } else {
-            matchable_kql_expressions_with_column_resolutions.emplace_back(formatted_expression);
-        }
-    }
-
-    SECTION("basic") {
-        auto const matchable_kql_query_str = GENERATE_COPY(
-                fmt::format(
-                        "{}",
-                        fmt::join(matchable_kql_expressions_with_column_resolutions, " OR ")
-                ),
-                fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " OR "))
-        );
-        CAPTURE(matchable_kql_query_str);
-
-        auto query_stream{std::istringstream{matchable_kql_query_str}};
+    auto create_query_handler = [&](std::string const& query_str) -> QueryHandlerImpl {
+        auto query_stream{std::istringstream{query_str}};
         auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
 
         auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
@@ -568,7 +622,15 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
             auto const node_id{optional_node_id.value()};
             REQUIRE_FALSE(query_handler_impl
                                   .update_partially_resolved_columns(
-                                          is_auto_generated,
+                                          true,
+                                          locator,
+                                          node_id,
+                                          trivial_new_projected_schema_tree_node_callback
+                                  )
+                                  .has_error());
+            REQUIRE_FALSE(query_handler_impl
+                                  .update_partially_resolved_columns(
+                                          false,
                                           locator,
                                           node_id,
                                           trivial_new_projected_schema_tree_node_callback
@@ -576,24 +638,99 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                                   .has_error());
         }
 
+        return std::move(query_handler_impl);
+    };
+
+    SECTION("Basic test with a single matchable node-ID-value pair") {
+        std::vector<std::string> matchable_kql_expressions_with_column_resolutions;
+        std::vector<std::string> kql_expressions_with_unknown_namespace;
+        std::vector<std::string> single_wildcard_kql_expressions;
+
+        auto const is_auto_generated = GENERATE(true, false);
+        auto const namespace_id{is_auto_generated ? cAutogenNamespace : cDefaultNamespace};
+        for (auto const& matchable_expression : matchable_kql_expressions) {
+            auto const formatted_expression{
+                    fmt::format("{}{}", namespace_id, matchable_expression)
+            };
+            if (matchable_expression.starts_with("*:")) {
+                single_wildcard_kql_expressions.emplace_back(formatted_expression);
+            } else {
+                matchable_kql_expressions_with_column_resolutions.emplace_back(
+                        formatted_expression
+                );
+                kql_expressions_with_unknown_namespace.emplace_back(
+                        fmt::format("{}{}", cReservedNamespace1, matchable_expression)
+                );
+            }
+        }
+
+        // Evaluate a single matchable node-ID-value pair against a list of queries.
+        // For queries consisting of chained AND expressions, the result can be either `Pruned` or
+        // `False`. Thus, `expected_evaluation_results` is a bitmask capturing all valid outcomes.
+        auto const [matchable_kql_query_str, expected_evaluation_results] = GENERATE_COPY(
+                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                        fmt::format(
+                                "{}",
+                                fmt::join(matchable_kql_expressions_with_column_resolutions, " OR ")
+                        ),
+                        AstEvaluationResult::True
+                ),
+                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                        fmt::format(
+                                "{}",
+                                fmt::join(
+                                        matchable_kql_expressions_with_column_resolutions,
+                                        " AND "
+                                )
+                        ),
+                        AstEvaluationResult::Pruned | AstEvaluationResult::False
+                ),
+                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                        fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " OR ")),
+                        AstEvaluationResult::True
+                ),
+                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                        fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " AND ")),
+                        AstEvaluationResult::Pruned | AstEvaluationResult::False
+                ),
+                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                        fmt::format(
+                                "{}",
+                                fmt::join(kql_expressions_with_unknown_namespace, " OR ")
+                        ),
+                        AstEvaluationResult::Pruned
+                ),
+                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                        fmt::format(
+                                "{}",
+                                fmt::join(kql_expressions_with_unknown_namespace, " AND ")
+                        ),
+                        AstEvaluationResult::Pruned
+                )
+        );
+        CAPTURE(matchable_kql_query_str);
+        CAPTURE(expected_evaluation_results);
+
+        auto query_handler_impl{create_query_handler(matchable_kql_query_str)};
+
         for (auto const& locator : locators) {
+            auto const node_type{locator.get_type()};
+            if (SchemaTree::Node::Type::UnstructuredArray == node_type
+                || SchemaTree::Node::Type::Obj == node_type)
+            {
+                // We skip these two types because:
+                // - the current implementation doesn't support `UnstructuredArray`
+                // - we don't generate matchable queries for `Obj`.
+                continue;
+            }
+
             auto const optional_node_id{schema_tree->try_get_node_id(locator)};
             REQUIRE(optional_node_id.has_value());
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
             auto const node_id{*optional_node_id};
             CAPTURE(fmt::format("Testing Node ID: {}", node_id));
 
-            auto const node_type{locator.get_type()};
-            auto const matchable_values{get_matchable_values(node_type)};
-            for (auto const& matchable_value : matchable_values) {
-                if (SchemaTree::Node::Type::UnstructuredArray == node_type
-                    || SchemaTree::Node::Type::Obj == node_type)
-                {
-                    // We skip these two types because:
-                    // - the current implementation doesn't support `UnstructuredArray`
-                    // - we don't generate matchable queries for `Obj`.
-                    continue;
-                }
+            for (auto const& matchable_value : get_matchable_values(node_type)) {
                 KeyValuePairLogEvent::NodeIdValuePairs const node_id_value_pairs{
                         {node_id, matchable_value}
                 };
@@ -605,23 +742,172 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                         is_auto_generated ? KeyValuePairLogEvent::NodeIdValuePairs{}
                                           : node_id_value_pairs
                 };
-                auto const kv_pair_log_event_result{KeyValuePairLogEvent::create(
+                auto const evaluation_result{get_query_evaluation_result(
                         schema_tree,
                         schema_tree,
                         auto_gen_node_id_value_pairs,
                         user_gen_node_id_value_pairs,
-                        UtcOffset{0}
+                        query_handler_impl
                 )};
-                REQUIRE_FALSE(kv_pair_log_event_result.has_error());
-                auto const& kv_pair_log_event{kv_pair_log_event_result.value()};
-                auto const evaluation_result{
-                        query_handler_impl.evaluate_kv_pair_log_event(kv_pair_log_event)
-                };
-                REQUIRE_FALSE(evaluation_result.has_error());
-                CAPTURE(evaluation_result.value());
-                REQUIRE((evaluation_result.value() == AstEvaluationResult::True));
+                CAPTURE(evaluation_result);
+                REQUIRE(((evaluation_result & expected_evaluation_results) != 0));
             }
         }
+    }
+
+    SECTION("Matchable node-ID-value pairs on both user-generated and auto-generated namespaces") {
+        std::vector<std::string> matchable_kql_expression_pairs;
+
+        for (auto const& matchable_expression : matchable_kql_expressions) {
+            if (matchable_expression.starts_with("*:")) {
+                // We ignore all single wildcard queries since they match both auto-gen and user-gen
+                // kv-pairs
+                continue;
+            }
+            matchable_kql_expression_pairs.emplace_back(
+                    fmt::format(
+                            "({}{} AND {}{})",
+                            cDefaultNamespace,
+                            matchable_expression,
+                            cAutogenNamespace,
+                            matchable_expression
+                    )
+            );
+        }
+
+        auto const kql_query_str{
+                fmt::format("{}", fmt::join(matchable_kql_expression_pairs, " OR ")),
+        };
+        CAPTURE(kql_query_str);
+
+        auto query_handler_impl{create_query_handler(kql_query_str)};
+
+        for (auto const& locator : locators) {
+            auto const node_type{locator.get_type()};
+            if (SchemaTree::Node::Type::UnstructuredArray == node_type
+                || SchemaTree::Node::Type::Obj == node_type)
+            {
+                continue;
+            }
+            auto const optional_node_id{schema_tree->try_get_node_id(locator)};
+            REQUIRE(optional_node_id.has_value());
+            // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+            auto const node_id{*optional_node_id};
+
+            auto const evaluation_result{get_query_evaluation_result(
+                    schema_tree,
+                    schema_tree,
+                    {},
+                    {},
+                    query_handler_impl
+            )};
+            CAPTURE(evaluation_result);
+            REQUIRE((evaluation_result == AstEvaluationResult::Pruned));
+
+            // NOTE: We use nested for loop to generated matchable/unmatchable values instead of
+            // using `GENERATE` since `GENERATE` in this case has a way worse performance (about
+            // 100 times slower).
+            for (auto const& matchable_value : get_matchable_values(node_type)) {
+                AstEvaluationResult evaluation_result{};
+                evaluation_result = get_query_evaluation_result(
+                        schema_tree,
+                        schema_tree,
+                        {{node_id, matchable_value}},
+                        {{node_id, matchable_value}},
+                        query_handler_impl
+                );
+                CAPTURE(evaluation_result);
+                REQUIRE((evaluation_result == AstEvaluationResult::True));
+
+                for (auto const& unmatchable_value : get_unmatchable_values(node_type)) {
+                    evaluation_result = get_query_evaluation_result(
+                            schema_tree,
+                            schema_tree,
+                            {{node_id, unmatchable_value}},
+                            {{node_id, matchable_value}},
+                            query_handler_impl
+                    );
+                    CAPTURE(evaluation_result);
+                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+
+                    evaluation_result = get_query_evaluation_result(
+                            schema_tree,
+                            schema_tree,
+                            {{node_id, matchable_value}},
+                            {{node_id, unmatchable_value}},
+                            query_handler_impl
+                    );
+                    CAPTURE(evaluation_result);
+                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+
+                    evaluation_result = get_query_evaluation_result(
+                            schema_tree,
+                            schema_tree,
+                            {{node_id, unmatchable_value}},
+                            {{node_id, unmatchable_value}},
+                            query_handler_impl
+                    );
+                    CAPTURE(evaluation_result);
+                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+                }
+            }
+        }
+    }
+
+    SECTION("Test array evaluation") {
+        // Array evaluation is not supported in the current implementation. To make the search still
+        // usable, array evaluation shouldn't fail but return `False` instead.
+
+        /*
+         * Schema-tree with unstructured array:
+         * <0:root:Obj>
+         *      |
+         *      |-------------------------> <1:a:Obj>
+         *      |                               |
+         *      |--> <2:b:Int                   |--> <3:b:Obj>
+         *      |                               |        |
+         *      |--> <12:a:Int>                 |        |------------> <4:c:Obj>
+         *      |                               |        |                  |
+         *      |--> <14:arr:UnstructuredArray> |        |--> <5:d:Str>     |--> <7:a:Str>
+         *                                      |        |                  |
+         *                                      |        |--> <6:d:Bool>    |--> <8:d:Str>
+         *                                      |        |                  |
+         *                                      |        |--> <10:e:Obj>    |--> <9:d:Float>
+         *                                      |                           |
+         *                                      |--> <13:b:Bool>            |--> <11:f:Obj>
+         */
+        constexpr std::string_view cArrayKeyName{"arr"};
+        constexpr SchemaTree::Node::id_t cArrayNodeId{14};
+        SchemaTree::NodeLocator const array_node_locator{
+                SchemaTree::cRootId,
+                cArrayKeyName,
+                SchemaTree::Node::Type::UnstructuredArray
+        };
+        REQUIRE((cArrayNodeId == schema_tree->insert_node(array_node_locator)));
+        auto const unstructured_array{fmt::format("[{}, {}]", cRefTestInt, cRefTestBool)};
+
+        auto const array_query{fmt::format("{}: {}", cArrayKeyName, cRefTestInt)};
+        auto query_handler_impl{create_query_handler(array_query)};
+        REQUIRE_FALSE(query_handler_impl
+                              .update_partially_resolved_columns(
+                                      false,
+                                      array_node_locator,
+                                      cArrayNodeId,
+                                      trivial_new_projected_schema_tree_node_callback
+                              )
+                              .has_error());
+        auto const evaluation_result{get_query_evaluation_result(
+                schema_tree,
+                schema_tree,
+                {},
+                {{cArrayNodeId,
+                  Value{
+                          get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unstructured_array)
+                  }}},
+                query_handler_impl
+        )};
+        CAPTURE(evaluation_result);
+        REQUIRE((AstEvaluationResult::False == evaluation_result));
     }
 }
 }  // namespace clp::ffi::ir_stream::search::test

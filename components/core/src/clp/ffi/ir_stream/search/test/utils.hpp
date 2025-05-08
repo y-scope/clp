@@ -1,6 +1,8 @@
 #ifndef CLP_FFI_IR_STREAM_SEARCH_TEST_UTILS_HPP
 #define CLP_FFI_IR_STREAM_SEARCH_TEST_UTILS_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -14,6 +16,7 @@
 #include <outcome/outcome.hpp>
 
 #include "../../../../../clp_s/search/ast/Literal.hpp"
+#include "../../../../ir/EncodedTextAst.hpp"
 #include "../../../../ir/types.hpp"
 #include "../../../encoding_methods.hpp"
 #include "../../../SchemaTree.hpp"
