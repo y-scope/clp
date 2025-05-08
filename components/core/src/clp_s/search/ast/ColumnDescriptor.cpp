@@ -59,7 +59,8 @@ std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_descriptors(
         DescriptorList const& descriptors,
         std::string_view descriptor_namespace
 ) {
-    return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(descriptors, descriptor_namespace)
+    return std::shared_ptr<ColumnDescriptor>(
+            new ColumnDescriptor(descriptors, descriptor_namespace)
     );
 }
 

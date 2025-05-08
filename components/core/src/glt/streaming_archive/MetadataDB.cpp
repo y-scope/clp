@@ -323,7 +323,8 @@ void MetadataDB::FileIterator::get_path(string& path) const {
 }
 
 epochtime_t MetadataDB::FileIterator::get_begin_ts() const {
-    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)
+    return m_statement.column_int64(
+            enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)
     );
 }
 

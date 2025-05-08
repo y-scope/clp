@@ -10,10 +10,17 @@ namespace clp::ffi::ir_stream::search {
  * Represents all possible error codes related to KV-pair IR stream search.
  */
 enum class ErrorCodeEnum : uint8_t {
+    AstDynamicCastFailure = 1,
+    ColumnDescriptorTokenIteratorOutOfBounds,
+    ColumnTokenizationFailure,
+    DuplicateProjectedColumn,
     EncodedTextAstDecodingFailure,
     LiteralTypeUnexpected,
     LiteralTypeUnsupported,
     MethodNotImplemented,
+    ProjectionColumnDescriptorCreationFailure,
+    QueryTransformationPassFailed,
+    QueryExpressionIsNull,
 };
 
 using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;
