@@ -1,5 +1,4 @@
-import {Input} from "antd";
-
+import QueryBox from "../../../components/QueryBox";
 import useSearchStore from "../SearchState";
 import styles from "./index.module.css";
 import SearchButton from "./SearchButton";
@@ -17,8 +16,9 @@ const SearchControls = () => {
 
     return (
         <div className={styles["searchControlsContainer"]}>
-            <Input
+            <QueryBox
                 placeholder={"Enter your query"}
+                progress={null}
                 size={"large"}
                 value={queryString}
                 onChange={(e) => {
