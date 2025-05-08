@@ -939,7 +939,14 @@ def start_log_viewer_webui(
     container_log_viewer_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log-viewer-webui"
     node_path = str(container_log_viewer_webui_dir / "server" / "node_modules")
     settings_json_path = (
-        get_clp_home() / "var" / "www" / "log-viewer-webui" / "server" / "dist" / "server" / "settings.json"
+        get_clp_home()
+        / "var"
+        / "www"
+        / "log-viewer-webui"
+        / "server"
+        / "dist"
+        / "server"
+        / "settings.json"
     )
 
     validate_log_viewer_webui_config(clp_config, settings_json_path)
