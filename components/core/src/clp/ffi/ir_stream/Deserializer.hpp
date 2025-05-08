@@ -20,9 +20,25 @@
 #include "IrUnitHandlerInterface.hpp"
 #include "IrUnitType.hpp"
 #include "protocol_constants.hpp"
+#include "search/NewProjectedSchemaTreeNodeCallbackReq.hpp"
+#include "search/QueryHandler.hpp"
 #include "utils.hpp"
 
 namespace clp::ffi::ir_stream {
+struct EmptyQueryHandler {};
+
+template <typename T>
+struct is_query_handler : std::false_type {};
+
+template <search::NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
+struct is_query_handler<search::QueryHandler<NewProjectedSchemaTreeNodeCallbackType>>
+        : std::true_type {};
+
+template <typename QueryHandlerType>
+concept QueryHandlerReq = (std::is_same_v<QueryHandlerType, EmptyQueryHandler>
+                           || is_query_handler<QueryHandlerType>::value)
+                          && std::is_move_constructible_v<QueryHandlerType>;
+
 /**
  * A deserializer for reading IR units from a CLP kv-pair IR stream. An IR unit handler should be
  * provided to perform user-defined operations on each deserialized IR unit.
@@ -31,26 +47,29 @@ namespace clp::ffi::ir_stream {
  * responsible for maintaining a `ReaderInterface` to input IR bytes from an I/O stream.
  *
  * @tparam IrUnitHandler
+ * @tparam QueryHandlerType
  */
-template <IrUnitHandlerInterface IrUnitHandler>
+template <
+        IrUnitHandlerInterface IrUnitHandler,
+        QueryHandlerReq QueryHandlerType = EmptyQueryHandler>
 requires(std::move_constructible<IrUnitHandler>)
 class Deserializer {
 public:
     // Factory function
-    /**
-     * Creates a deserializer by reading the stream's preamble from the given reader.
-     * @param reader
-     * @param ir_unit_handler
-     * @return A result containing the deserializer or an error code indicating the failure:
-     * - std::errc::result_out_of_range if the IR stream is truncated
-     * - std::errc::protocol_error if the IR stream is corrupted
-     * - std::errc::protocol_not_supported if either:
-     *   - the IR stream contains an unsupported metadata format;
-     *   - the IR stream's version is unsupported;
-     *   - or the IR stream's user-defined metadata is not a JSON object.
-     */
+    [[nodiscard]] static auto
+    create(ReaderInterface& reader, IrUnitHandler ir_unit_handler, QueryHandlerType query_handler)
+            -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>
+    requires is_query_handler<QueryHandlerType>::value
+    {
+        return create_generic(reader, std::move(ir_unit_handler), std::move(query_handler));
+    }
+
     [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
-            -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>;
+            -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>
+    requires std::is_same_v<QueryHandlerType, EmptyQueryHandler>
+    {
+        return create_generic(reader, std::move(ir_unit_handler), {});
+    }
 
     // Delete copy constructor and assignment
     Deserializer(Deserializer const&) = delete;
@@ -118,10 +137,34 @@ public:
     [[nodiscard]] auto get_metadata() const -> nlohmann::json const& { return m_metadata; }
 
 private:
+    // Factory function
+    /**
+     * Creates a deserializer by reading the stream's preamble from the given reader.
+     * @param reader
+     * @param ir_unit_handler
+     * @return A result containing the deserializer or an error code indicating the failure:
+     * - std::errc::result_out_of_range if the IR stream is truncated
+     * - std::errc::protocol_error if the IR stream is corrupted
+     * - std::errc::protocol_not_supported if either:
+     *   - the IR stream contains an unsupported metadata format;
+     *   - the IR stream's version is unsupported;
+     *   - or the IR stream's user-defined metadata is not a JSON object.
+     */
+    [[nodiscard]] static auto create_generic(
+            ReaderInterface& reader,
+            IrUnitHandler ir_unit_handler,
+            QueryHandlerType query_handler
+    ) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>;
+
     // Constructor
-    Deserializer(IrUnitHandler ir_unit_handler, nlohmann::json metadata)
+    Deserializer(
+            IrUnitHandler ir_unit_handler,
+            nlohmann::json metadata,
+            QueryHandlerType query_handler
+    )
             : m_ir_unit_handler{std::move(ir_unit_handler)},
-              m_metadata(std::move(metadata)) {}
+              m_metadata(std::move(metadata)),
+              m_query_handler{std::move(query_handler)} {}
 
     // Variables
     std::shared_ptr<SchemaTree> m_auto_gen_keys_schema_tree{std::make_shared<SchemaTree>()};
@@ -130,12 +173,16 @@ private:
     UtcOffset m_utc_offset{0};
     IrUnitHandler m_ir_unit_handler;
     bool m_is_complete{false};
+    [[no_unique_address]] QueryHandlerType m_query_handler;
 };
 
-template <IrUnitHandlerInterface IrUnitHandler>
+template <IrUnitHandlerInterface IrUnitHandler, QueryHandlerReq QueryHandlerType>
 requires(std::move_constructible<IrUnitHandler>)
-auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
-        -> OUTCOME_V2_NAMESPACE::std_result<Deserializer> {
+auto Deserializer<IrUnitHandler, QueryHandlerType>::create_generic(
+        ReaderInterface& reader,
+        IrUnitHandler ir_unit_handler,
+        QueryHandlerType query_handler
+) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer> {
     bool is_four_byte_encoded{};
     if (auto const err{get_encoding_type(reader, is_four_byte_encoded)};
         IRErrorCode::IRErrorCode_Success != err)
@@ -176,13 +223,18 @@ auto Deserializer<IrUnitHandler>::create(ReaderInterface& reader, IrUnitHandler 
         return std::errc::protocol_not_supported;
     }
 
-    return Deserializer{std::move(ir_unit_handler), std::move(metadata_json)};
+    return Deserializer{
+            std::move(ir_unit_handler),
+            std::move(metadata_json),
+            std::move(query_handler)
+    };
 }
 
-template <IrUnitHandlerInterface IrUnitHandler>
+template <IrUnitHandlerInterface IrUnitHandler, QueryHandlerReq QueryHandlerType>
 requires(std::move_constructible<IrUnitHandler>)
-auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
+auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
+        ReaderInterface& reader
+) -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
     if (is_stream_completed()) {
         return std::errc::operation_not_permitted;
     }
@@ -211,6 +263,16 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
                 return result.error();
             }
 
+            if constexpr (is_query_handler<QueryHandlerType>::value) {
+                auto const query_evaluation_result{
+                        OUTCOME_TRYX(m_query_handler.evaluate(result.value()))
+                };
+                if (search::AstEvaluationResult::True != query_evaluation_result) {
+                    // TODO
+                    return std::errc::no_message_available;
+                }
+            }
+
             if (auto const err{m_ir_unit_handler.handle_log_event(std::move(result.value()))};
                 IRErrorCode::IRErrorCode_Success != err)
             {
@@ -237,7 +299,15 @@ auto Deserializer<IrUnitHandler>::deserialize_next_ir_unit(ReaderInterface& read
                 return std::errc::protocol_error;
             }
 
-            std::ignore = schema_tree_to_insert->insert_node(node_locator);
+            auto const node_id{schema_tree_to_insert->insert_node(node_locator)};
+
+            if constexpr (is_query_handler<QueryHandlerType>::value) {
+                OUTCOME_TRYV(m_query_handler.update_partially_resolved_columns(
+                        is_auto_generated,
+                        node_locator,
+                        node_id
+                ));
+            }
 
             if (auto const err{m_ir_unit_handler.handle_schema_tree_node_insertion(
                         is_auto_generated,
