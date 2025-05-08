@@ -117,6 +117,10 @@ public:
 
     std::shared_ptr<ReaderUtils::SchemaMap> get_schema_map() { return m_schema_map; }
 
+    auto get_range_index() const -> std::vector<ArchiveReaderAdaptor::RangeIndexEntry> const& {
+        return m_archive_reader_adaptor->get_range_index();
+    }
+
     /**
      * Writes decoded messages to a file.
      * @param writer
