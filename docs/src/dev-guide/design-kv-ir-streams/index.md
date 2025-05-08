@@ -16,6 +16,13 @@ Background
 ^^^
 Any necessary information to understand the stream's format.
 :::
+
+:::{grid-item-card}
+:link: auto-gen-kv-pairs
+Auto-generated KV pairs
+^^^
+What are auto-generated KV pairs and how they're handled in streams.
+:::
 ::::
 
 :::{warning}
@@ -26,4 +33,5 @@ Any necessary information to understand the stream's format.
 :hidden:
 
 background
+auto-gen-kv-pairs
 :::
