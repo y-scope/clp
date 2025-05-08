@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 #include <system_error>
-#include <tuple>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -20,28 +20,15 @@
 #include "IrUnitHandlerInterface.hpp"
 #include "IrUnitType.hpp"
 #include "protocol_constants.hpp"
-#include "search/NewProjectedSchemaTreeNodeCallbackReq.hpp"
 #include "search/QueryHandler.hpp"
+#include "search/QueryHandlerReq.hpp"
 #include "utils.hpp"
 
 namespace clp::ffi::ir_stream {
-struct EmptyQueryHandler {};
-
-template <typename T>
-struct is_query_handler : std::false_type {};
-
-template <search::NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
-struct is_query_handler<search::QueryHandler<NewProjectedSchemaTreeNodeCallbackType>>
-        : std::true_type {};
-
-template <typename QueryHandlerType>
-concept QueryHandlerReq = (std::is_same_v<QueryHandlerType, EmptyQueryHandler>
-                           || is_query_handler<QueryHandlerType>::value)
-                          && std::is_move_constructible_v<QueryHandlerType>;
-
 /**
  * A deserializer for reading IR units from a CLP kv-pair IR stream. An IR unit handler should be
- * provided to perform user-defined operations on each deserialized IR unit.
+ * provided to perform user-defined operations on each deserialized IR unit. Additionally, a query
+ * handler can be provided to handle KQL queries and column projections.
  *
  * NOTE: This class is designed only to provide deserialization functionalities. Callers are
  * responsible for maintaining a `ReaderInterface` to input IR bytes from an I/O stream.
@@ -51,24 +38,44 @@ concept QueryHandlerReq = (std::is_same_v<QueryHandlerType, EmptyQueryHandler>
  */
 template <
         IrUnitHandlerInterface IrUnitHandler,
-        QueryHandlerReq QueryHandlerType = EmptyQueryHandler>
+        search::QueryHandlerReq QueryHandlerType = search::EmptyQueryHandler>
 requires(std::move_constructible<IrUnitHandler>)
 class Deserializer {
 public:
     // Factory function
+    /**
+     * Creates a deserializer with an empty query handler.
+     * This factory function is used when the deserializer doesn't requires any query evaluations.
+     * @param reader
+     * @param ir_unit_handler
+     * @return A result containing the deserializer on success, or an error code indicating the
+     * failure:
+     * - Forwards `create_generic`'s return values.
+     */
+    [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
+            -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>
+    requires std::is_same_v<QueryHandlerType, search::EmptyQueryHandler>
+    {
+        return create_generic(reader, std::move(ir_unit_handler), {});
+    }
+
+    /**
+     * Creates a deserializer with a query handler.
+     * This factory function is used when the deserializer needs to perform query evaluations or
+     * column projections.
+     * @param reader
+     * @param ir_unit_handler
+     * @param query_handler
+     * @return A result containing the deserializer on success, or an error code indicating the
+     * failure:
+     * - Forwards `create_generic`'s return values.
+     */
     [[nodiscard]] static auto
     create(ReaderInterface& reader, IrUnitHandler ir_unit_handler, QueryHandlerType query_handler)
             -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>
-    requires is_query_handler<QueryHandlerType>::value
+    requires search::IsQueryHandler<QueryHandlerType>::value
     {
         return create_generic(reader, std::move(ir_unit_handler), std::move(query_handler));
-    }
-
-    [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
-            -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>
-    requires std::is_same_v<QueryHandlerType, EmptyQueryHandler>
-    {
-        return create_generic(reader, std::move(ir_unit_handler), {});
     }
 
     // Delete copy constructor and assignment
@@ -84,34 +91,44 @@ public:
 
     // Methods
     /**
-     * Deserializes the stream from the given reader up to and including the next log event IR unit.
+     * Deserializes the stream from the given reader up to and including the next log event IR unit,
+     * and invokes the user-defined IR unit handler according to the deserialized IR unit type.
+     *
+     * NOTE: If the deserialized IR unit is `IrUnitType::LogEvent` and the query handler is not
+     * `search::EmptyQueryHandler`, `handle_log_event` will only be invoked if the query evaluation
+     * returns `search::AstEvaluationResult::True`.
+     *
      * @param reader
      * @return Forwards `deserialize_tag`s return values if no tag bytes can be read to determine
      * the next IR unit type.
      * @return std::errc::protocol_not_supported if the IR unit type is not supported.
      * @return std::errc::operation_not_permitted if the deserializer already reached the end of
      * stream by deserializing an end-of-stream IR unit in the previous calls.
-     * @return IRUnitType::LogEvent if a log event IR unit is deserialized, or an error code
+     * @return IrUnitType::LogEvent if a log event IR unit is deserialized, or an error code
      * indicating the failure:
      * - Forwards `deserialize_ir_unit_kv_pair_log_event`'s return values if it failed to
      *   deserialize and construct the log event.
      * - Forwards `handle_log_event`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
-     * @return IRUnitType::SchemaTreeNodeInsertion if a schema tree node insertion IR unit is
+     * - Forwards `search::QueryHandler::evaluate_kv_pair_log_event`'s return values on failure, if
+     *   `m_query_handler` is not `search::EmptyQueryHandler`.
+     * @return IrUnitType::SchemaTreeNodeInsertion if a schema tree node insertion IR unit is
      * deserialized, or an error code indicating the failure:
      * - Forwards `deserialize_ir_unit_schema_tree_node_insertion`'s return values if it failed to
      *   deserialize and construct the schema tree node locator.
      * - Forwards `handle_schema_tree_node_insertion`'s return values from the user-defined IR unit
      *   handler on unit handling failure.
+     * - Forwards `search::QueryHandler::update_partially_resolved_columns`'s return values on
+     *   failure, if `m_query_handler` is not `search::EmptyQueryHandler`.
      * - std::errc::protocol_error if the deserialized schema tree node already exists in the schema
      *   tree.
-     * @return IRUnitType::UtcOffsetChange if a UTC offset change IR unit is deserialized, or an
+     * @return IrUnitType::UtcOffsetChange if a UTC offset change IR unit is deserialized, or an
      * error code indicating the failure:
      * - Forwards `deserialize_ir_unit_utc_offset_change`'s return values if it failed to
      *   deserialize the UTC offset.
      * - Forwards `handle_utc_offset_change`'s return values from the user-defined IR unit handler
      *   on unit handling failure.
-     * @return IRUnitType::EndOfStream if an end-of-stream IR unit is deserialized, or an error code
+     * @return IrUnitType::EndOfStream if an end-of-stream IR unit is deserialized, or an error code
      * indicating the failure:
      * - Forwards `handle_end_of_stream`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
@@ -176,7 +193,7 @@ private:
     [[no_unique_address]] QueryHandlerType m_query_handler;
 };
 
-template <IrUnitHandlerInterface IrUnitHandler, QueryHandlerReq QueryHandlerType>
+template <IrUnitHandlerInterface IrUnitHandler, search::QueryHandlerReq QueryHandlerType>
 requires(std::move_constructible<IrUnitHandler>)
 auto Deserializer<IrUnitHandler, QueryHandlerType>::create_generic(
         ReaderInterface& reader,
@@ -230,7 +247,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::create_generic(
     };
 }
 
-template <IrUnitHandlerInterface IrUnitHandler, QueryHandlerReq QueryHandlerType>
+template <IrUnitHandlerInterface IrUnitHandler, search::QueryHandlerReq QueryHandlerType>
 requires(std::move_constructible<IrUnitHandler>)
 auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         ReaderInterface& reader
@@ -263,13 +280,11 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
                 return result.error();
             }
 
-            if constexpr (is_query_handler<QueryHandlerType>::value) {
-                auto const query_evaluation_result{
-                        OUTCOME_TRYX(m_query_handler.evaluate(result.value()))
-                };
-                if (search::AstEvaluationResult::True != query_evaluation_result) {
-                    // TODO
-                    return std::errc::no_message_available;
+            if constexpr (search::IsQueryHandler<QueryHandlerType>::value) {
+                if (search::AstEvaluationResult::True
+                    != OUTCOME_TRYX(m_query_handler.evaluate(result.value())))
+                {
+                    break;
                 }
             }
 
@@ -301,7 +316,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
 
             auto const node_id{schema_tree_to_insert->insert_node(node_locator)};
 
-            if constexpr (is_query_handler<QueryHandlerType>::value) {
+            if constexpr (search::IsQueryHandler<QueryHandlerType>::value) {
                 OUTCOME_TRYV(m_query_handler.update_partially_resolved_columns(
                         is_auto_generated,
                         node_locator,
