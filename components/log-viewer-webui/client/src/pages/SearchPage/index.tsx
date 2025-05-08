@@ -1,4 +1,6 @@
+import styles from "./index.module.css";
 import SearchControls from "./SearchControls";
+import SearchResultsTable from "./SearchResults/SearchResultsTable";
 
 
 /**
@@ -8,7 +10,10 @@ import SearchControls from "./SearchControls";
  */
 const SearchPage = () => {
     return (
-        <SearchControls/>
+        <div className={styles["searchPageContainer"]}>
+            <SearchControls/>
+            <SearchResultsTable/>
+        </div>
     );
 };
 
