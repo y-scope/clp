@@ -9,6 +9,7 @@ import type {
     Response,
     ServerToClientEvents,
     SocketData,
+    QueryId
 } from "@common/index.js";
 import {
     FastifyInstance,
@@ -23,7 +24,6 @@ import {
     ConnectionId,
     DbOptions,
     MongoCustomSocket,
-    QueryId,
     QueryParameters,
 } from "./typings.js";
 import {
@@ -35,7 +35,7 @@ import {
 
 
 /**
- * Manages client interactions with MongoDB.
+ * Integrates MongoDB with Socket.IO to provide real-time updates for MongoDB queries.
  *
  * TODO: In current implementation, multiple queries in the same collection send updates over
  * one socket with the same event name. A potential improvement would be to use different event
@@ -46,14 +46,14 @@ class MongoSocketIoServer {
 
     #io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
-    // Collections with active queries
+    // Collections with active queries.
     #collections: Map<string, MongoWatcherCollection> = new Map();
 
-    // Mapping of active queries to their hash
+    // Mapping of active queries to their hashes.
     #queryIdToQueryHashMap: Map<QueryId, string> = new Map();
 
-    // List of subscribed query IDs for each connection. A connection can subscribe
-    // to the same queryID multiple times, so the list can contain duplicates.
+    // Mapping of connection IDs to the query IDs they are subscribed to. A connection can
+    // subscribe to the same queryID multiple times, so the list can contain duplicates.
     #subscribedQueryIdsMap: Map<ConnectionId, QueryId[]> = new Map();
 
     readonly #mongoDb: Db;
@@ -141,7 +141,7 @@ class MongoSocketIoServer {
      * @param collectionName
      * @return Whether the collection exists.
      */
-    async #collectionExists (collectionName: string): Promise<boolean> {
+    async #hasCollection (collectionName: string): Promise<boolean> {
         const collections = await this.#mongoDb.listCollections().toArray();
         return collections.some((collection) => collection.name === collectionName);
     }
@@ -164,8 +164,8 @@ class MongoSocketIoServer {
             `Socket:${socket.id} requested init of collection:${collectionName}`
         );
 
-        const exists = await this.#collectionExists(collectionName);
-        if (false === exists) {
+        const hasCollection = await this.#hasCollection(collectionName);
+        if (false === hasCollection) {
             this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
             callback({
                 error: `Collection ${collectionName} does not exist in MongoDB`,
@@ -240,7 +240,7 @@ class MongoSocketIoServer {
         const {query, options} = requestArgs;
         const {collectionName} = socket.data;
 
-        if (!collectionName) {
+        if (null === collectionName || "undefined" === typeof collectionName) {
             this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
 
             return;
@@ -316,10 +316,10 @@ class MongoSocketIoServer {
             return;
         }
 
-        const lastSubscriber = collection.unsubcribe(queryId, socket.id);
+        const isLastSubscriber = collection.unsubcribe(queryId, socket.id);
         this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query ${queryId}`);
 
-        if (lastSubscriber) {
+        if (isLastSubscriber) {
             this.#fastify.log.info(`QueryID:${queryId} deleted from query map.`);
             this.#queryIdToQueryHashMap.delete(queryId);
         }

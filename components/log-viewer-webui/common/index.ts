@@ -1,9 +1,16 @@
 /**
+ * Unique ID for each active unique query. Multiple clients can subscribe to the same ID if the
+ * queries are identical. The ID is also used to represent the socket room, and MongoDB
+ * change stream.
+ */
+type QueryId = number;
+
+/**
  * Error response to event.
  */
 interface Err {
     error: string;
-    queryId?: number;
+    queryId?: QueryId;
 }
 
 /**
@@ -17,6 +24,7 @@ interface Success<T> {
  * Event response.
  */
 type Response<T> = Err | Success<T>;
+
 
 /**
  * Events that the client can emit to the server.
@@ -34,10 +42,10 @@ type ClientToServerEvents = {
             query: object;
             options: object;
         },
-        callback: (res: Response<{queryId: number; initialDocuments: object[]}>) => void) => void;
+        callback: (res: Response<{queryId: QueryId; initialDocuments: object[]}>) => void) => void;
     "collection::find::unsubscribe": (
         requestArgs: {
-            queryId: number;
+            queryId: QueryId;
         }
     ) => Promise<void>;
 };
@@ -47,7 +55,7 @@ type ClientToServerEvents = {
  */
 interface ServerToClientEvents {
     "collection::find::update": (respArgs: {
-        queryId: number;
+        queryId: QueryId;
         data: object[];
     }) => void;
 }
@@ -72,4 +80,5 @@ export {
     Response,
     ServerToClientEvents,
     SocketData,
+    QueryId
 };

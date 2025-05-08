@@ -24,13 +24,6 @@ type MongoCustomSocket = Socket<
 >;
 
 /**
- * Unique ID for each active unique query. Multiple clients can subscribe to the same ID if the
- * queries are identical. The ID is also used to represent the socket room, and MongoDB
- * change stream.
- */
-type QueryId = number;
-
-/**
  * Unique ID to represent each socket connection.
  */
 type ConnectionId = string;
@@ -58,7 +51,7 @@ interface DbOptions {
 /**
  * Timeout for emitting updates to the client.
  */
-const CLIENT_UPDATE_TIMEOUT_MS = 500;
+const CLIENT_UPDATE_TIMEOUT_MILLIS = 500;
 
 /**
  * MongoDB change stream for a query, and a list of subscribed connections. Subscribed connections
@@ -70,11 +63,10 @@ interface Watcher {
 }
 
 export {
-    CLIENT_UPDATE_TIMEOUT_MS,
+    CLIENT_UPDATE_TIMEOUT_MILLIS,
     ConnectionId,
     DbOptions,
     MongoCustomSocket,
-    QueryId,
     QueryParameters,
     Watcher,
 };

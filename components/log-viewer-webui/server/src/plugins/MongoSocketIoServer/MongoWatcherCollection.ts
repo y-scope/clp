@@ -2,11 +2,12 @@ import type {
     Collection,
     Db,
 } from "mongodb";
-
+import type {
+    QueryId
+} from "@common/index.js";
 import {
-    CLIENT_UPDATE_TIMEOUT_MS,
+    CLIENT_UPDATE_TIMEOUT_MILLIS,
     MongoCustomSocket,
-    QueryId,
     QueryParameters,
     Watcher,
 } from "./typings.js";
@@ -57,7 +58,6 @@ class MongoWatcherCollection {
 
         return true;
     }
-
 
     /**
      * Unsubscribes a connection from a watcher. If the watcher has no more subscribers, it closes
@@ -170,12 +170,12 @@ class MongoWatcherCollection {
 
         const emitUpdateWithTimeout = async () => {
             const currentTime = Date.now();
-            if (CLIENT_UPDATE_TIMEOUT_MS <= currentTime - lastEmitTime) {
+            if (CLIENT_UPDATE_TIMEOUT_MILLIS <= currentTime - lastEmitTime) {
                 lastEmitTime = currentTime;
                 const data = await this.find(queryParameters);
                 emitUpdate(data);
             } else if (null === emitTimeout) {
-                const delay = CLIENT_UPDATE_TIMEOUT_MS - (currentTime - lastEmitTime);
+                const delay = CLIENT_UPDATE_TIMEOUT_MILLIS - (currentTime - lastEmitTime);
 
                 emitTimeout = setTimeout(() => {
                     emitTimeout = null;
