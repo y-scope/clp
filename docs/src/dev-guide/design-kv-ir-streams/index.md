@@ -21,7 +21,7 @@ Any necessary information to understand the stream's format.
 :link: auto-gen-kv-pairs
 Auto-generated KV pairs
 ^^^
-What are auto-generated KV pairs and how they're handled in streams.
+An overview of auto-generated KV pairs and their handling in streams.
 :::
 ::::
 
