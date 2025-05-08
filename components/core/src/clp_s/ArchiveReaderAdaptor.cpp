@@ -97,6 +97,13 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_info(ZstdDecompressor& decompre
     return ErrorCodeSuccess;
 }
 
+auto
+ArchiveReaderAdaptor::try_read_unknown_metadata_packet(ZstdDecompressor& decompressor, size_t size)
+        -> ErrorCode {
+    std::vector<char> buffer(size);
+    return decompressor.try_read_exact_length(buffer.data(), buffer.size());
+}
+
 ErrorCode ArchiveReaderAdaptor::load_archive_metadata() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;
     m_reader = try_create_reader_at_header();
@@ -175,6 +182,7 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
                 rc = try_read_archive_info(decompressor, packet_size);
                 break;
             default:
+                rc = try_read_unknown_metadata_packet(decompressor, packet_size);
                 break;
         }
         if (ErrorCodeSuccess != rc) {

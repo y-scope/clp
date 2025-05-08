@@ -215,7 +215,8 @@ bool ServerContext::publish_pipeline_results() {
     vector<bsoncxx::document::view> result_documents;
     for (auto group_it = m_pipeline->finish(); false == group_it->done(); group_it->next()) {
         auto& group = group_it->get();
-        results.push_back(serialize(group.get_tags(), group.record_iter(), nlohmann::json::to_bson)
+        results.push_back(
+                serialize(group.get_tags(), group.record_iter(), nlohmann::json::to_bson)
         );
 
         vector<uint8_t>& encoded_result = results.back();

@@ -216,14 +216,17 @@ auto encode_and_serialize_schema_tree_node_id(
     };
 
     if (node_id <= static_cast<SchemaTree::Node::id_t>(INT8_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int8_t>(one_byte_length_indicator_tag);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator()<int8_t>(
+                one_byte_length_indicator_tag
+        );
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT16_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int16_t>(two_byte_length_indicator_tag);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator()<int16_t>(
+                two_byte_length_indicator_tag
+        );
     } else if (node_id <= static_cast<SchemaTree::Node::id_t>(INT32_MAX)) {
-        size_dependent_encode_and_serialize_schema_tree_node_id.template operator(
-        )<int32_t>(four_byte_length_indicator_tag);
+        size_dependent_encode_and_serialize_schema_tree_node_id.template operator()<int32_t>(
+                four_byte_length_indicator_tag
+        );
     } else {
         return false;
     }
@@ -239,8 +242,8 @@ auto deserialize_and_decode_schema_tree_node_id(
         ReaderInterface& reader
 ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
     auto size_dependent_deserialize_and_decode_schema_tree_node_id
-            = [&reader]<SignedIntegerType encoded_node_id_t>(
-              ) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+            = [&reader]<SignedIntegerType encoded_node_id_t>()
+            -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
         encoded_node_id_t encoded_node_id{};
         if (false == deserialize_int(reader, encoded_node_id)) {
             return std::errc::result_out_of_range;
@@ -253,16 +256,16 @@ auto deserialize_and_decode_schema_tree_node_id(
     };
 
     if (one_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
-        )<int8_t>();
+        return size_dependent_deserialize_and_decode_schema_tree_node_id
+                .template operator()<int8_t>();
     }
     if (two_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
-        )<int16_t>();
+        return size_dependent_deserialize_and_decode_schema_tree_node_id
+                .template operator()<int16_t>();
     }
     if (four_byte_length_indicator_tag == length_indicator_tag) {
-        return size_dependent_deserialize_and_decode_schema_tree_node_id.template operator(
-        )<int32_t>();
+        return size_dependent_deserialize_and_decode_schema_tree_node_id
+                .template operator()<int32_t>();
     }
     return std::errc::protocol_error;
 }

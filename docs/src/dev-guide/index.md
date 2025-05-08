@@ -80,5 +80,6 @@ tooling-gh-workflows
 :hidden:
 
 design-project-structure
+design-kv-ir-streams/index
 design-parsing-wildcard-queries
 :::
