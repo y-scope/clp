@@ -1,6 +1,7 @@
 import {
     Input,
     InputProps,
+    Progress,
 } from "antd";
 
 import {Nullable} from "../../typings/common";
@@ -21,19 +22,23 @@ const QueryBox = (queryBoxProps: QueryBoxProps) => {
     const inputProps = queryBoxProps as InputProps;
     const {progress} = queryBoxProps;
     let progressStyle;
+    let percent = 0;
     if (null === progress) {
         progressStyle = {display: "none"};
     } else {
-        const progressValueInRange = Math.max(Math.min(progress, 100), 0);
-        progressStyle = {display: "block", width: `${progressValueInRange}%`};
+        percent = Math.max(Math.min(progress, 100), 0);
+        progressStyle = {display: "block"};
     }
 
     return (
         <div className={styles["queryBox"]}>
             <Input {...inputProps}/>
             <div className={styles["progressWrapper"]}>
-                <div
-                    className={styles["progressColor"]}
+                <Progress
+                    percent={percent}
+                    showInfo={false}
+                    size={"small"}
+                    strokeLinecap={"butt"}
                     style={progressStyle}/>
             </div>
         </div>

@@ -3,17 +3,11 @@
   overflow: hidden;
   border-radius: var(--antd-border-radius);
   --antd-border-radius: 8px;
-  --height: 4px;
 }
 
 .progressWrapper {
   height: 0;
   position: relative;
-  top: calc(0px - var(--height));
+  top: -10px;
   width: 100%;
-}
-
-.progressColor {
-  background-color: #108ee9;
-  height: var(--height);
 }
