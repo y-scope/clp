@@ -276,7 +276,7 @@ auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Val
         case SchemaTree::Node::Type::Str: {
             std::vector<Value> matchable_values;
             matchable_values.emplace_back(std::string{});
-            std::string_view const unmatchable_long_str{"This is a static message"};
+            std::string_view const unmatchable_long_str{"This is a static message: ID=0"};
             REQUIRE((unmatchable_long_str.find(cRefTestStr) == std::string::npos));
             matchable_values.emplace_back(
                     get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unmatchable_long_str)
@@ -758,6 +758,13 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     SECTION("Matchable node-ID-value pairs on both user-generated and auto-generated namespaces") {
         std::vector<std::string> matchable_kql_expression_pairs;
 
+        auto const with_inverter = GENERATE(true, false);
+        CAPTURE(with_inverter);
+        // NOTE: By applying De Morgan's law, `cExpressionWithInverter` should be equivalent to
+        // `cExpressionWithoutInverter`.
+        constexpr std::string_view cExpressionWithInverter{"NOT (NOT {}{} OR NOT {}{})"};
+        constexpr std::string_view cExpressionWithoutInverter{"({}{} AND {}{})"};
+
         for (auto const& matchable_expression : matchable_kql_expressions) {
             if (matchable_expression.starts_with("*:")) {
                 // We ignore all single wildcard queries since they match both auto-gen and user-gen
@@ -765,18 +772,25 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                 continue;
             }
             matchable_kql_expression_pairs.emplace_back(
-                    fmt::format(
-                            "({}{} AND {}{})",
-                            cDefaultNamespace,
-                            matchable_expression,
-                            cAutogenNamespace,
-                            matchable_expression
-                    )
+                    with_inverter ? fmt::format(
+                                            cExpressionWithInverter,
+                                            cDefaultNamespace,
+                                            matchable_expression,
+                                            cAutogenNamespace,
+                                            matchable_expression
+                                    )
+                                  : fmt::format(
+                                            cExpressionWithoutInverter,
+                                            cDefaultNamespace,
+                                            matchable_expression,
+                                            cAutogenNamespace,
+                                            matchable_expression
+                                    )
             );
         }
 
         auto const kql_query_str{
-                fmt::format("{}", fmt::join(matchable_kql_expression_pairs, " OR ")),
+                fmt::format("{}", fmt::join(matchable_kql_expression_pairs, " OR "))
         };
         CAPTURE(kql_query_str);
 
@@ -793,16 +807,17 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
             REQUIRE(optional_node_id.has_value());
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
             auto const node_id{*optional_node_id};
+            CAPTURE(node_id);
 
-            auto const evaluation_result{get_query_evaluation_result(
+            auto const pruned_evaluation_result{get_query_evaluation_result(
                     schema_tree,
                     schema_tree,
                     {},
                     {},
                     query_handler_impl
             )};
-            CAPTURE(evaluation_result);
-            REQUIRE((evaluation_result == AstEvaluationResult::Pruned));
+            CAPTURE(pruned_evaluation_result);
+            REQUIRE((pruned_evaluation_result == AstEvaluationResult::Pruned));
 
             // NOTE: We use nested for loop to generated matchable/unmatchable values instead of
             // using `GENERATE` since `GENERATE` in this case has a way worse performance (about
