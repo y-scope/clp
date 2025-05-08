@@ -316,7 +316,7 @@ class MongoSocketIoServer {
             return;
         }
 
-        const isLastSubscriber = collection.unsubcribe(queryId, socket.id);
+        const isLastSubscriber = collection.unsubscribe(queryId, socket.id);
         this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query ${queryId}`);
 
         if (isLastSubscriber) {

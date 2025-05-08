@@ -66,7 +66,7 @@ class MongoWatcherCollection {
      * @param connectionId
      * @return True if connection is last subcriber, false otherwise.
      */
-    unsubcribe (queryId: number, connectionId: string): boolean {
+    unsubscribe (queryId: number, connectionId: string): boolean {
         const watcher = this.#queryIdtoWatcherMap.get(queryId);
 
         if ("undefined" === typeof watcher) {
