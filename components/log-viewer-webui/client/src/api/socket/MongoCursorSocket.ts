@@ -68,6 +68,7 @@ class MongoCursorSocket {
             );
 
         if ("error" in response) {
+            this.#socket.off("collection::find::update", this.#updateListener);
             throw new Error(`Subscription failed: ${response.error}`);
         }
 
