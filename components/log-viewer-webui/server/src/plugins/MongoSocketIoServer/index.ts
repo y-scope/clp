@@ -99,7 +99,6 @@ class MongoSocketIoServer {
         this.#io.on("connection", (socket) => {
             this.#fastify.log.info(`New socket connected with ID:${socket.id}`);
             socket.on("disconnect", this.#disconnectListener.bind(this, socket));
-            socket.on("collection::init", this.#collectionInitListener.bind(this, socket));
             socket.on(
                 "collection::find::subscribe",
                 this.#collectionFindSubscribeListener.bind(this, socket)
@@ -145,32 +144,6 @@ class MongoSocketIoServer {
         const collections = await this.#mongoDb.listCollections().toArray();
         return collections.some((collection) => collection.name === collectionName);
     }
-
-    /**
-     * Listener for initializing a connection to a collection.
-     *
-     * @param socket
-     * @param requestArgs
-     * @param requestArgs.collectionName
-     */
-    async #collectionInitListener (
-        socket: MongoCustomSocket,
-        requestArgs: {collectionName: string},
-    ): Promise<void> {
-        const {collectionName} = requestArgs;
-        this.#fastify.log.info(
-            `Socket:${socket.id} requested init of collection:${collectionName}`
-        );
-        /* eslint-disable no-warning-comments */
-        // TODO: The init socket event could race with the subscription event (i.e. the
-        // subscription event could run concurrently with the init event) leading to errors due
-        // to an uninitialized collection. Consider removing this event entirely and using the
-        // subscription event to initialize the collection. If this event remains, do not run any
-        // async/await code in this function. With no aysnc/await, a race is unlikely since the
-        // init and subscription events should be serialised by Socket.IO.
-        socket.data = {...socket.data, collectionName};
-    }
-
 
     /**
      * Adds the query ID to the connection's subscribed query IDs.
@@ -244,29 +217,20 @@ class MongoSocketIoServer {
      * @param requestArgs
      * @param requestArgs.query
      * @param requestArgs.options
+     * @param requestArgs.collectionName
      * @param callback
      */
     async #collectionFindSubscribeListener (
         socket: MongoCustomSocket,
-        requestArgs: {query: object; options: object},
+        requestArgs: {collectionName: string; query: object; options: object},
         callback: (res: Response<{queryId: number; initialDocuments: object[]}>) => void
     ): Promise<void> {
-        const {query, options} = requestArgs;
-        const {collectionName} = socket.data;
+        const {collectionName, query, options} = requestArgs;
 
         this.#fastify.log.info(
             `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
-
-        if ("undefined" === typeof collectionName) {
-            this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
-            callback({
-                error: "Collection was not initialized on server prior to query request.",
-            });
-
-            return;
-        }
 
         const hasCollection = await this.#hasCollection(collectionName);
         if (false === hasCollection) {

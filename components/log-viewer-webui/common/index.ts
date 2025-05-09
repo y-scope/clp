@@ -31,13 +31,9 @@ type Response<T> = Err | Success<T>;
  */
 type ClientToServerEvents = {
     "disconnect": () => void;
-    "collection::init": (
-        requestArgs: {
-            collectionName: string;
-        },
-    ) => void;
     "collection::find::subscribe": (
         requestArgs: {
+            collectionName: string;
             query: object;
             options: object;
         },
@@ -53,6 +49,9 @@ type ClientToServerEvents = {
  * Events that the server can emit to the client.
  */
 interface ServerToClientEvents {
+    // eslint-disable-next-line no-warning-comments
+    // TODO: Consider replace this with `collection::find::update${number}`, which will
+    // limit callbacks being triggered in the client to their respective query IDs.
     "collection::find::update": (respArgs: {
         queryId: QueryId;
         data: object[];

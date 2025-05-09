@@ -15,6 +15,8 @@ import {Nullable} from "../../typings/common";
 class MongoCursorSocket {
     #socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
+    #collectionName: string;
+
     #query: object;
 
     #options: object;
@@ -27,15 +29,18 @@ class MongoCursorSocket {
 
     /**
      * @param socket
+     * @param collectionName
      * @param query
      * @param options
      */
     constructor (
         socket: Socket<ServerToClientEvents, ClientToServerEvents>,
+        collectionName: string,
         query: object,
         options: object
     ) {
         this.#socket = socket;
+        this.#collectionName = collectionName;
         this.#query = query;
         this.#options = options;
     }
@@ -62,6 +67,7 @@ class MongoCursorSocket {
             await this.#socket.emitWithAck(
                 "collection::find::subscribe",
                 {
+                    collectionName: this.#collectionName,
                     query: this.#query,
                     options: this.#options,
                 }

@@ -3,9 +3,10 @@ import {
     ServerToClientEvents,
 } from "@common/index.js";
 import {
-    io,
     Socket,
 } from "socket.io-client";
+
+import {getSharedSocket} from "./SocketSingleton.js";
 
 import {MongoCursorSocket} from "./MongoCursorSocket.js";
 
@@ -15,6 +16,7 @@ import {MongoCursorSocket} from "./MongoCursorSocket.js";
  * query the collection.
  */
 class MongoCollectionSocket {
+    collectionName: string;
     private socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
     /**
@@ -23,22 +25,8 @@ class MongoCollectionSocket {
      * @param collectionName
      */
     constructor (collectionName: string) {
-        // eslint-disable-next-line no-warning-comments
-        // TODO: Add support for user provided domain name (i.e. io("https://server-domain.com")).
-        // Implementation could involve parsing server .env file and moving server .env to a
-        // common folder.
-
-        // eslint-disable-next-line no-warning-comments
-        // TODO: Current implementation creates a new socket connection for each collection. This
-        // could be problematic if the number of collections is large since browsers limit the
-        // number of web sockets per domain. An simple change is to use Socket.IO namespace
-        // feature, and having Socket.IO multiplex the socket per collection namespace. Another
-        // more involved option is to implement a shared socket.
-        // Namespace reference: https://socket.io/docs/v4/namespaces/
-        this.socket = io();
-        this.socket.emit("collection::init", {
-            collectionName: collectionName,
-        });
+        this.socket = getSharedSocket();
+        this.collectionName = collectionName;
         console.log(`MongoDB collection:${collectionName} initialized.`);
     }
 
@@ -53,6 +41,7 @@ class MongoCollectionSocket {
     find (query: object, options: object) {
         return new MongoCursorSocket(
             this.socket,
+            this.collectionName,
             query,
             options,
         );
