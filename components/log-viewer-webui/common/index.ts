@@ -50,7 +50,7 @@ type ClientToServerEvents = {
  */
 interface ServerToClientEvents {
     // eslint-disable-next-line no-warning-comments
-    // TODO: Consider replace this with `collection::find::update${number}`, which will
+    // TODO: Consider replacing this with `collection::find::update${number}`, which will
     // limit callbacks being triggered in the client to their respective query IDs.
     "collection::find::update": (respArgs: {
         queryId: QueryId;
