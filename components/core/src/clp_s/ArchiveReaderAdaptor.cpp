@@ -130,12 +130,16 @@ auto ArchiveReaderAdaptor::try_read_range_index(ZstdDecompressor& decompressor, 
         {
             return ErrorCodeCorrupt;
         }
-        auto start_index{
-                range_index_entry.at(RangeIndexWriter::cStartIndexName).template get<size_t>()
-        };
-        auto end_index{
-                range_index_entry.at(RangeIndexWriter::cEndIndexName).template get<size_t>()
-        };
+        size_t start_index{};
+        size_t end_index{};
+        try {
+            start_index = range_index_entry.at(RangeIndexWriter::cStartIndexName)
+                                  .template get<size_t>();
+            end_index
+                    = range_index_entry.at(RangeIndexWriter::cEndIndexName).template get<size_t>();
+        } catch (std::exception const&) {
+            return ErrorCodeCorrupt;
+        }
         if (start_index > end_index) {
             return ErrorCodeCorrupt;
         }
