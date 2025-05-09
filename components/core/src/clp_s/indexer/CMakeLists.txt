@@ -90,6 +90,8 @@ target_link_libraries(indexer
         clp::string_utils
         date::date
         MariaDBClient::MariaDBClient
+        msgpack-cxx
+        nlohmann_json::nlohmann_json
         OpenSSL::Crypto
         simdjson::simdjson
         spdlog::spdlog
