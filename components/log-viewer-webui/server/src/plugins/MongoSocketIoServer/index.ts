@@ -167,7 +167,7 @@ class MongoSocketIoServer {
         // to an uninitialized collection. Consider removing this event entirely and using the
         // subscription event to initialize the collection. If this event remains, do not run any
         // async/await code in this function. With no aysnc/await, a race is unlikely since the
-        // init and subscription events should be serialized by Socket.IO.
+        // init and subscription events should be serialised by Socket.IO.
         socket.data = {...socket.data, collectionName};
     }
 

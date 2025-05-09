@@ -47,7 +47,7 @@ class MongoCursorSocket {
      * @throws {Error} if subscription fails.
      */
     async subscribe (onDataUpdate: (data: object[]) => void): Promise<void> {
-        console.log("Attepting to subscribe to query:", this.#query);
+        console.log("Attempting to subscribe to query:", JSON.stringify(this.#query));
 
         this.#updateListener = (respArgs: {queryId: number; data: object[]}) => {
             // Server sends updates for multiple queryIDs using the same event name.
