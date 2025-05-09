@@ -2,13 +2,10 @@ import {
     ClientToServerEvents,
     ServerToClientEvents,
 } from "@common/index.js";
-import {
-    Socket,
-} from "socket.io-client";
-
-import {getSharedSocket} from "./SocketSingleton.js";
+import {Socket} from "socket.io-client";
 
 import {MongoCursorSocket} from "./MongoCursorSocket.js";
+import {getSharedSocket} from "./SocketSingleton.js";
 
 
 /**
@@ -17,6 +14,7 @@ import {MongoCursorSocket} from "./MongoCursorSocket.js";
  */
 class MongoCollectionSocket {
     collectionName: string;
+
     private socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
     /**
