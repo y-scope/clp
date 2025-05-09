@@ -162,12 +162,12 @@ class MongoSocketIoServer {
             `Socket:${socket.id} requested init of collection:${collectionName}`
         );
         /* eslint-disable no-warning-comments */
-        // TODO: The init socket event could race with the subscription event (i.e. the subscription
-        // event could run concurrently with the init event) leading to errors due to an unitialized
-        // collection. Consider removing this event entirely and using the subscription event to
-        // initialize the collection. If this event remains, do not run any async/await code
-        // in this function. With no aysnc/await, a race is unlikely since the init and
-        // subscription events should be serialized by Socket.IO.
+        // TODO: The init socket event could race with the subscription event (i.e. the
+        // subscription event could run concurrently with the init event) leading to errors due
+        // to an uninitialized collection. Consider removing this event entirely and using the
+        // subscription event to initialize the collection. If this event remains, do not run any
+        // async/await code in this function. With no aysnc/await, a race is unlikely since the
+        // init and subscription events should be serialized by Socket.IO.
         socket.data = {...socket.data, collectionName};
     }
 
