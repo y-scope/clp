@@ -29,6 +29,16 @@ set(
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         ../clp/ffi/ir_stream/Serializer.cpp
         ../clp/ffi/ir_stream/Serializer.hpp
+        ../clp/ffi/ir_stream/search/AstEvaluationResult.hpp
+        ../clp/ffi/ir_stream/search/ErrorCode.cpp
+        ../clp/ffi/ir_stream/search/ErrorCode.hpp
+        ../clp/ffi/ir_stream/search/NewProjectedSchemaTreeNodeCallbackReq.hpp
+        ../clp/ffi/ir_stream/search/QueryHandler.hpp
+        ../clp/ffi/ir_stream/search/QueryHandlerImpl.cpp
+        ../clp/ffi/ir_stream/search/QueryHandlerImpl.hpp
+        ../clp/ffi/ir_stream/search/QueryHandlerReq.hpp
+        ../clp/ffi/ir_stream/search/utils.cpp
+        ../clp/ffi/ir_stream/search/utils.hpp
         ../clp/ffi/ir_stream/utils.cpp
         ../clp/ffi/ir_stream/utils.hpp
         ../clp/ffi/KeyValuePairLogEvent.cpp
