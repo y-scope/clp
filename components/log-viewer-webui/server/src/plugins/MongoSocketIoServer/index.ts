@@ -152,28 +152,22 @@ class MongoSocketIoServer {
      * @param socket
      * @param requestArgs
      * @param requestArgs.collectionName
-     * @param callback
      */
     async #collectionInitListener (
         socket: MongoCustomSocket,
         requestArgs: {collectionName: string},
-        callback:(res: Response<void>) => void
     ): Promise<void> {
         const {collectionName} = requestArgs;
         this.#fastify.log.info(
             `Socket:${socket.id} requested init of collection:${collectionName}`
         );
-
-        const hasCollection = await this.#hasCollection(collectionName);
-        if (false === hasCollection) {
-            this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
-            callback({
-                error: `Collection ${collectionName} does not exist in MongoDB`,
-            });
-
-            return;
-        }
-
+        /* eslint-disable no-warning-comments */
+        // TODO: The init socket event could race with the subscription event (i.e. the subscription
+        // event could run concurrently with the init event) leading to errors due to an unitialized
+        // collection. Consider removing this event entirely and using the subscription event to
+        // initialize the collection. If this event remains, do not run any async/await code
+        // in this function. With no aysnc/await, a race is unlikely since the init and
+        // subscription events should be serialized by Socket.IO.
         socket.data = {...socket.data, collectionName};
     }
 
@@ -223,6 +217,26 @@ class MongoSocketIoServer {
     }
 
     /**
+     * Gets an existing watcher collection or creates a new one if it doesn't exist.
+     *
+     * @param collectionName
+     * @return The watcher collection instance.
+     */
+    #getOrCreateWatcherCollection (
+        collectionName: string
+    )
+        : MongoWatcherCollection {
+        let watcherCollection = this.#collections.get(collectionName);
+        if ("undefined" === typeof watcherCollection) {
+            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
+            this.#fastify.log.info(`Created MongoDb collection:${collectionName}.`);
+            this.#collections.set(collectionName, watcherCollection);
+        }
+
+        return watcherCollection;
+    }
+
+    /**
      * Listener for subscribing to a find query. The client will receive updates whenever
      * the query results change.
      *
@@ -240,22 +254,31 @@ class MongoSocketIoServer {
         const {query, options} = requestArgs;
         const {collectionName} = socket.data;
 
-        if ("undefined" === typeof collectionName) {
-            this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
-
-            return;
-        }
-
         this.#fastify.log.info(
             `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
 
-        let watcherCollection = this.#collections.get(collectionName);
-        if ("undefined" === typeof watcherCollection) {
-            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#collections.set(collectionName, watcherCollection);
+        if ("undefined" === typeof collectionName) {
+            this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
+            callback({
+                error: "Collection was not initialized on server prior to query request.",
+            });
+
+            return;
         }
+
+        const hasCollection = await this.#hasCollection(collectionName);
+        if (false === hasCollection) {
+            this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
+            callback({
+                error: `Collection ${collectionName} does not exist in MongoDB on server`,
+            });
+
+            return;
+        }
+
+        const watcherCollection = this.#getOrCreateWatcherCollection(collectionName);
 
         const queryParameters: QueryParameters = {collectionName, query, options};
         const queryId = this.#getQueryId(queryParameters);

@@ -35,7 +35,6 @@ type ClientToServerEvents = {
         requestArgs: {
             collectionName: string;
         },
-        callback: (res: Response<void>) => void
     ) => void;
     "collection::find::subscribe": (
         requestArgs: {
@@ -73,7 +72,7 @@ interface SocketData {
     collectionName?: string;
 }
 
-export {
+export type {
     ClientToServerEvents,
     Err,
     InterServerEvents,
