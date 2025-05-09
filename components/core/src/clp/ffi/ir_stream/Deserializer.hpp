@@ -20,7 +20,6 @@
 #include "IrUnitHandlerInterface.hpp"
 #include "IrUnitType.hpp"
 #include "protocol_constants.hpp"
-#include "search/QueryHandler.hpp"
 #include "search/QueryHandlerReq.hpp"
 #include "utils.hpp"
 
@@ -247,6 +246,31 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::create_generic(
     };
 }
 
+/**
+ * Wrapper of `Deserializer`'s factory function to enable auto type deduction.
+ * @param reader
+ * @param ir_unit_handler
+ * @return Forwards `Deserializer::create`'s return values.
+ */
+template <IrUnitHandlerInterface IrUnitHandler>
+requires std::is_move_constructible_v<IrUnitHandler>
+[[nodiscard]] auto make_deserializer(
+        ReaderInterface& reader, IrUnitHandler ir_unit_handler
+) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandler>>;
+
+/**
+ * Wrapper of `Deserializer`'s factory function to enable auto type deduction.
+ * @param reader
+ * @param ir_unit_handler
+ * @param query_handler
+ * @return Forwards `Deserializer::create`'s return values.
+ */
+template <IrUnitHandlerInterface IrUnitHandler, search::QueryHandlerReq QueryHandlerType>
+requires std::move_constructible<IrUnitHandler>
+[[nodiscard]] auto make_deserializer(
+        ReaderInterface& reader, IrUnitHandler ir_unit_handler, QueryHandlerType query_handler
+) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandler>>;
+
 template <IrUnitHandlerInterface IrUnitHandler, search::QueryHandlerReq QueryHandlerType>
 requires(std::move_constructible<IrUnitHandler>)
 auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
@@ -370,6 +394,24 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
     }
 
     return ir_unit_type;
+}
+
+template <IrUnitHandlerInterface IrUnitHandler>
+requires std::is_move_constructible_v<IrUnitHandler>
+[[nodiscard]] auto make_deserializer(
+        ReaderInterface& reader, IrUnitHandler ir_unit_handler
+) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandler>> {
+    return Deserializer<IrUnitHandler>::create(reader, std::move(ir_unit_handler));
+}
+
+template <IrUnitHandlerInterface IrUnitHandler, search::QueryHandlerReq QueryHandlerType>
+requires std::move_constructible<IrUnitHandler>
+[[nodiscard]] auto make_deserializer(
+        ReaderInterface& reader, IrUnitHandler ir_unit_handler, QueryHandlerType query_handler
+) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandler>> {
+    return Deserializer<IrUnitHandler, QueryHandlerType>::create(
+            reader, std::move(ir_unit_handler), std::move(query_handler)
+    );
 }
 }  // namespace clp::ffi::ir_stream
 
