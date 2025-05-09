@@ -282,7 +282,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
 
             if constexpr (search::IsQueryHandler<QueryHandlerType>::value) {
                 if (search::AstEvaluationResult::True
-                    != OUTCOME_TRYX(m_query_handler.evaluate(result.value())))
+                    != OUTCOME_TRYX(m_query_handler.evaluate_kv_pair_log_event(result.value())))
                 {
                     break;
                 }
