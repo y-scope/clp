@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 // We use NOLINTNEXTLINE to satisfy clang-tidy here because while we don't use any symbols from
@@ -42,7 +43,7 @@ public:
                 : start_index{start_index},
                   end_index{end_index},
                   // Note: brace initializer would make nlohmann wrap the fields object in an array.
-                  fields(fields) {}
+                  fields(std::move(fields)) {}
 
         size_t start_index;
         size_t end_index;
@@ -116,7 +117,7 @@ private:
     /**
      * Tries to read a RangeIndex packet from the archive metadata.
      * @param decompressor
-     * @param size The numer of decompressed bytes making up the packet.
+     * @param size The number of decompressed bytes making up the packet.
      * @return ErrorCodeSuccess on success or the relevant ErrorCode on failure.
      */
     auto try_read_range_index(ZstdDecompressor& decompressor, size_t size) -> ErrorCode;
