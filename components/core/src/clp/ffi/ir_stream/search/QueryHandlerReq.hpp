@@ -18,14 +18,15 @@ struct EmptyQueryHandler {};
  * @tparam T The type to check.
  */
 template <typename T>
-struct IsQueryHandler : std::false_type {};
+struct IsNonEmptyQueryHandler : std::false_type {};
 
 /**
  * Specialization of `IsQueryHandler` for `clp::ffi::ir_stream::search::QueryHandler`.
  * @tparam NewProjectedSchemaTreeNodeCallbackType
  */
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
-struct IsQueryHandler<QueryHandler<NewProjectedSchemaTreeNodeCallbackType>> : std::true_type {};
+struct IsNonEmptyQueryHandler<QueryHandler<NewProjectedSchemaTreeNodeCallbackType>>
+        : std::true_type {};
 
 /**
  * Requirements for a query handler that can be used with `clp::ffi::ir_stream::Deserializer`. A
@@ -38,7 +39,7 @@ struct IsQueryHandler<QueryHandler<NewProjectedSchemaTreeNodeCallbackType>> : st
  */
 template <typename QueryHandlerType>
 concept QueryHandlerReq = (std::is_same_v<QueryHandlerType, EmptyQueryHandler>
-                           || IsQueryHandler<QueryHandlerType>::value)
+                           || IsNonEmptyQueryHandler<QueryHandlerType>::value)
                           && std::is_move_constructible_v<QueryHandlerType>;
 }  // namespace clp::ffi::ir_stream::search
 
