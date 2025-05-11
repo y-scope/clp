@@ -22,17 +22,19 @@ struct IsQueryHandler : std::false_type {};
 
 /**
  * Specialization of `IsQueryHandler` for `clp::ffi::ir_stream::search::QueryHandler`.
- * This specialization evaluates to `true` for valid `QueryHandler` types.
  * @tparam NewProjectedSchemaTreeNodeCallbackType
  */
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
 struct IsQueryHandler<QueryHandler<NewProjectedSchemaTreeNodeCallbackType>> : std::true_type {};
 
 /**
- * Requirements for a query handler that can be used with`clp::ffi::ir_stream::Deserializer`.
- * A valid query handler must either be `EmptyQueryHandler` or satisfy the `IsQueryHandler` trait,
- * and must also be move-constructible.
- * @tparam QueryHandlerType The type to validate as a query handler.
+ * Requirements for a query handler that can be used with `clp::ffi::ir_stream::Deserializer`. A
+ * valid query handler must be:
+ *
+ * - an `EmptyQueryHandler` or satisfy the `IsQueryHandler` trait.
+ * - move constructible.
+ *
+ * @tparam QueryHandlerType The type to check.
  */
 template <typename QueryHandlerType>
 concept QueryHandlerReq = (std::is_same_v<QueryHandlerType, EmptyQueryHandler>

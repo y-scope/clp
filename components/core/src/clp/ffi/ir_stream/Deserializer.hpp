@@ -27,7 +27,7 @@ namespace clp::ffi::ir_stream {
 /**
  * A deserializer for reading IR units from a CLP kv-pair IR stream. An IR unit handler should be
  * provided to perform user-defined operations on each deserialized IR unit. Additionally, a query
- * handler can be provided to handle KQL queries and column projections.
+ * handler can be provided to handle queries and column projections.
  *
  * NOTE: This class is designed only to provide deserialization functionalities. Callers are
  * responsible for maintaining a `ReaderInterface` to input IR bytes from an I/O stream.
@@ -43,8 +43,8 @@ class Deserializer {
 public:
     // Factory function
     /**
-     * Creates a deserializer with an empty query handler.
-     * This factory function is used when the deserializer doesn't requires any query evaluations.
+     * Creates a deserializer with an empty query handler (for use when the deserializer won't be
+     * used to perform queries or column projections).
      * @param reader
      * @param ir_unit_handler
      * @return A result containing the deserializer on success, or an error code indicating the
@@ -59,9 +59,8 @@ public:
     }
 
     /**
-     * Creates a deserializer with a query handler.
-     * This factory function is used when the deserializer needs to perform query evaluations or
-     * column projections.
+     * Creates a deserializer with a query handler (for use when the deserializer will be used to
+     * perform queries or column projections).
      * @param reader
      * @param ir_unit_handler
      * @param query_handler
@@ -94,7 +93,8 @@ public:
      * and invokes the user-defined IR unit handler according to the deserialized IR unit type.
      *
      * NOTE: If the deserialized IR unit is `IrUnitType::LogEvent` and the query handler is not
-     * `search::EmptyQueryHandler`, `handle_log_event` will only be invoked if the query evaluation
+     * `search::EmptyQueryHandler`, `handle_log_event` will only be invoked if the query handler
+     
      * returns `search::AstEvaluationResult::True`.
      *
      * @param reader
@@ -110,7 +110,7 @@ public:
      * - Forwards `handle_log_event`'s return values from the user-defined IR unit handler on
      *   unit handling failure.
      * - Forwards `search::QueryHandler::evaluate_kv_pair_log_event`'s return values on failure, if
-     *   `m_query_handler` is not `search::EmptyQueryHandler`.
+     *   `QueryHandlerType` is not `search::EmptyQueryHandler`.
      * @return IrUnitType::SchemaTreeNodeInsertion if a schema tree node insertion IR unit is
      * deserialized, or an error code indicating the failure:
      * - Forwards `deserialize_ir_unit_schema_tree_node_insertion`'s return values if it failed to
@@ -118,7 +118,7 @@ public:
      * - Forwards `handle_schema_tree_node_insertion`'s return values from the user-defined IR unit
      *   handler on unit handling failure.
      * - Forwards `search::QueryHandler::update_partially_resolved_columns`'s return values on
-     *   failure, if `m_query_handler` is not `search::EmptyQueryHandler`.
+     *   failure, if `QueryHandlerType` is not `search::EmptyQueryHandler`.
      * - std::errc::protocol_error if the deserialized schema tree node already exists in the schema
      *   tree.
      * @return IrUnitType::UtcOffsetChange if a UTC offset change IR unit is deserialized, or an
@@ -247,7 +247,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::create_generic(
 }
 
 /**
- * Wrapper of `Deserializer`'s factory function to enable auto type deduction.
+ * Wrapper for `Deserializer`'s factory function to enable automatic type deduction.
  * @param reader
  * @param ir_unit_handler
  * @return Forwards `Deserializer::create`'s return values.
@@ -259,7 +259,7 @@ requires std::is_move_constructible_v<IrUnitHandler>
 ) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandler>>;
 
 /**
- * Wrapper of `Deserializer`'s factory function to enable auto type deduction.
+ * Wrapper for `Deserializer`'s factory function to enable automatic type deduction.
  * @param reader
  * @param ir_unit_handler
  * @param query_handler
