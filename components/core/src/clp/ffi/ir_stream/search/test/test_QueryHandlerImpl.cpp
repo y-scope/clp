@@ -756,14 +756,8 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     }
 
     SECTION("Matchable node-ID-value pairs on both user-generated and auto-generated namespaces") {
-        std::vector<std::string> matchable_kql_expression_pairs;
-
-        auto const with_inverter = GENERATE(true, false);
-        CAPTURE(with_inverter);
-        // NOTE: By applying De Morgan's law, `cExpressionWithInverter` should be equivalent to
-        // `cExpressionWithoutInverter`.
-        constexpr std::string_view cExpressionWithInverter{"NOT (NOT {}{} OR NOT {}{})"};
-        constexpr std::string_view cExpressionWithoutInverter{"({}{} AND {}{})"};
+        std::vector<std::string> xor_matchable_expressions;
+        constexpr std::string_view cXorExpression{"(({}{} AND NOT {}{}) OR (NOT {}{} AND {}{}))"};
 
         for (auto const& matchable_expression : matchable_kql_expressions) {
             if (matchable_expression.starts_with("*:")) {
@@ -771,27 +765,22 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                 // kv-pairs
                 continue;
             }
-            matchable_kql_expression_pairs.emplace_back(
-                    with_inverter ? fmt::format(
-                                            cExpressionWithInverter,
-                                            cDefaultNamespace,
-                                            matchable_expression,
-                                            cAutogenNamespace,
-                                            matchable_expression
-                                    )
-                                  : fmt::format(
-                                            cExpressionWithoutInverter,
-                                            cDefaultNamespace,
-                                            matchable_expression,
-                                            cAutogenNamespace,
-                                            matchable_expression
-                                    )
+            xor_matchable_expressions.emplace_back(
+                    fmt::format(
+                            cXorExpression,
+                            cDefaultNamespace,
+                            matchable_expression,
+                            cAutogenNamespace,
+                            matchable_expression,
+                            cDefaultNamespace,
+                            matchable_expression,
+                            cAutogenNamespace,
+                            matchable_expression
+                    )
             );
         }
 
-        auto const kql_query_str{
-                fmt::format("{}", fmt::join(matchable_kql_expression_pairs, " OR "))
-        };
+        auto const kql_query_str{fmt::format("{}", fmt::join(xor_matchable_expressions, " OR "))};
         CAPTURE(kql_query_str);
 
         auto query_handler_impl{create_query_handler(kql_query_str)};
@@ -817,7 +806,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                     query_handler_impl
             )};
             CAPTURE(pruned_evaluation_result);
-            REQUIRE((pruned_evaluation_result == AstEvaluationResult::Pruned));
+            REQUIRE((AstEvaluationResult::Pruned == pruned_evaluation_result));
 
             // NOTE: We use nested for loop to generated matchable/unmatchable values instead of
             // using `GENERATE` since `GENERATE` in this case has a way worse performance (about
@@ -832,7 +821,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                         query_handler_impl
                 );
                 CAPTURE(evaluation_result);
-                REQUIRE((evaluation_result == AstEvaluationResult::True));
+                REQUIRE((AstEvaluationResult::False == evaluation_result));
 
                 for (auto const& unmatchable_value : get_unmatchable_values(node_type)) {
                     evaluation_result = get_query_evaluation_result(
@@ -843,7 +832,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                             query_handler_impl
                     );
                     CAPTURE(evaluation_result);
-                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+                    REQUIRE((AstEvaluationResult::True == evaluation_result));
 
                     evaluation_result = get_query_evaluation_result(
                             schema_tree,
@@ -853,7 +842,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                             query_handler_impl
                     );
                     CAPTURE(evaluation_result);
-                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+                    REQUIRE((AstEvaluationResult::True == evaluation_result));
 
                     evaluation_result = get_query_evaluation_result(
                             schema_tree,
@@ -863,7 +852,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                             query_handler_impl
                     );
                     CAPTURE(evaluation_result);
-                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+                    REQUIRE((AstEvaluationResult::False == evaluation_result));
                 }
             }
         }
