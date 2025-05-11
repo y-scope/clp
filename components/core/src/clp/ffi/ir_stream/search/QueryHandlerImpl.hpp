@@ -334,8 +334,8 @@ private:
      * @param log_event
      * @return A result containing the evaluation result on success, or an error code indicating the
      * failure:
-     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying column of the filter is
-     *   neither user-generated nor auto-generated.
+     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying column of the filter has
+     *   been resolved, but is neither user-generated nor auto-generated.
      * - Forwards `evaluate_wildcard_filter`'s return values.
      * - Forwards `evaluate_filter_against_node_id_value_pair`'s return values.
      */

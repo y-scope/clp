@@ -274,17 +274,17 @@ auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Val
         case SchemaTree::Node::Type::Bool:
             return {Value{false == cRefTestBool}};
         case SchemaTree::Node::Type::Str: {
-            std::vector<Value> matchable_values;
-            matchable_values.emplace_back(std::string{});
+            std::vector<Value> unmatchable_values;
+            unmatchable_values.emplace_back(std::string{});
             std::string_view const unmatchable_long_str{"This is a static message: ID=0"};
             REQUIRE((unmatchable_long_str.find(cRefTestStr) == std::string::npos));
-            matchable_values.emplace_back(
+            unmatchable_values.emplace_back(
                     get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unmatchable_long_str)
             );
-            matchable_values.emplace_back(
+            unmatchable_values.emplace_back(
                     get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(unmatchable_long_str)
             );
-            return matchable_values;
+            return unmatchable_values;
         }
         default:
             // Unsupported types
@@ -610,6 +610,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     auto create_query_handler = [&](std::string const& query_str) -> QueryHandlerImpl {
         auto query_stream{std::istringstream{query_str}};
         auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
+        REQUIRE((nullptr != query));
 
         auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
         REQUIRE_FALSE(query_handler_impl_result.has_error());
@@ -638,7 +639,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                                   .has_error());
         }
 
-        return std::move(query_handler_impl);
+        return std::move(query_handler_impl_result.value());
     };
 
     SECTION("Basic test with a single matchable node-ID-value pair") {
