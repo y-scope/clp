@@ -757,7 +757,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
 
     SECTION("Matchable node-ID-value pairs on both user-generated and auto-generated namespaces") {
         std::vector<std::string> xor_matchable_expressions;
-        constexpr std::string_view cXorExpression{"(({}{} AND NOT {}{}) OR (NOT {}{} AND {}{}))"};
+        constexpr std::string_view cXorExpression{"(({} AND NOT @{}) OR (NOT {} AND @{}))"};
 
         for (auto const& matchable_expression : matchable_kql_expressions) {
             if (matchable_expression.starts_with("*:")) {
@@ -768,18 +768,17 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
             xor_matchable_expressions.emplace_back(
                     fmt::format(
                             cXorExpression,
-                            cDefaultNamespace,
                             matchable_expression,
-                            cAutogenNamespace,
                             matchable_expression,
-                            cDefaultNamespace,
                             matchable_expression,
-                            cAutogenNamespace,
                             matchable_expression
                     )
             );
         }
 
+        // Combine all XOR expressions into a single KQL query string joined by "OR".
+        // Each XOR expression matches either the default namespace or the auto-generated namespace
+        // of the same column, but not both.
         auto const kql_query_str{fmt::format("{}", fmt::join(xor_matchable_expressions, " OR "))};
         CAPTURE(kql_query_str);
 
