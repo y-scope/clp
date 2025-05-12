@@ -5,7 +5,7 @@ import fp from 'fastify-plugin'
 
 import closeWithGrace from 'close-with-grace'
 
-import serviceApp from './newWebui/app.js'
+import serviceApp from './fastify-v2/app.js'
 
 /**
  * Do not use NODE_ENV to determine what logger (or any env related feature) to use

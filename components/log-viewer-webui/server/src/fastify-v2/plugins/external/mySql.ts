@@ -5,6 +5,7 @@ import {
 import { FastifyInstance } from 'fastify'
 
 import settings from "../../../../settings.json" with {type: "json"};
+
 // use MySQLPromisePool if passed promise = true
 declare module 'fastify' {
     interface FastifyInstance {
@@ -22,8 +23,6 @@ export const autoConfig = (fastify: FastifyInstance) => {
         password: fastify.config.CLP_DB_PASS,
         database: settings.SqlDbName,
         port: Number(settings.SqlDbPort),
-        // Temporary until old webui refactored
-        name: "MYSQL2"
     }
 }
 

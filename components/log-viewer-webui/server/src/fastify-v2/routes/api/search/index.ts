@@ -1,7 +1,7 @@
 import {
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_SIGNAL,
-} from "../constants";
+} from "../constants.js";
 
 import { Collection } from 'mongodb'; // Assuming MongoDB is used for SearchResultsMetadataCollection
 

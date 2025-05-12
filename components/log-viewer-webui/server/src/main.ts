@@ -24,7 +24,7 @@ const main = async () => {
     await server.register(app, {
         sqlDbUser: process.env.CLP_DB_USER!,
         sqlDbPass: process.env.CLP_DB_PASS!,
-      });
+    });
 
     try {
         await server.listen({host: envVars.HOST, port: Number(envVars.PORT)});
