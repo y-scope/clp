@@ -1,7 +1,6 @@
-import process from "node:process";
-
 import {
-    FastifyPluginAsync
+    FastifyInstance,
+    FastifyPluginAsync,
 } from "fastify";
 
 import settings from "../settings.json" with {type: "json"};
@@ -11,7 +10,7 @@ import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
-import { FastifyInstance } from 'fastify'
+
 
 interface AppPluginOptions {
     sqlDbUser: string;
@@ -21,7 +20,8 @@ interface AppPluginOptions {
 /**
  * Creates the Fastify app with the given options.
  *
- * TODO: Once old webui code is refactored to new modlular fastify style, this plugin should be removed.
+ * TODO: Once old webui code is refactored to new modlular fastify style, this plugin should be
+ * removed.
  *
  * @param fastify
  * @param opts
@@ -31,7 +31,7 @@ const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
     fastify: FastifyInstance,
     opts: AppPluginOptions
 ) => {
-    const { sqlDbUser, sqlDbPass } = opts;
+    const {sqlDbUser, sqlDbPass} = opts;
 
     await fastify.register(DbManager, {
         mysqlConfig: {
@@ -60,7 +60,7 @@ const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
         host: settings.MongoDbHost,
         port: settings.MongoDbPort,
         database: settings.MongoDbName,
-        })
+    });
 
     // Register the routes
     await fastify.register(staticRoutes);

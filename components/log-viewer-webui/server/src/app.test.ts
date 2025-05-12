@@ -1,8 +1,9 @@
+import fastify from "fastify";
+import fp from "fastify-plugin";
 import {StatusCodes} from "http-status-codes";
+import serviceApp from "src/fastify-v2/app.js";
 import tap from "tap";
-import fastify from 'fastify'
-import serviceApp from 'src/fastify-v2/app.js'
-import fp from 'fastify-plugin'
+
 
 tap.test("Tests the example routes", async (t) => {
     const server = fastify();

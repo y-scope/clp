@@ -1,94 +1,99 @@
-import env from '@fastify/env'
+/* eslint-disable sort-keys */
+import env from "@fastify/env";
 
-declare module 'fastify' {
-  export interface FastifyInstance {
-    config: {
-      PORT: number;
-      HOST: string
-      CLP_DB_USER: string
-      CLP_DB_PASS: string
+declare module "fastify" {
+    export interface FastifyInstance {
+        config: {
+            PORT: number;
+            HOST: string;
+            CLP_DB_USER: string;
+            CLP_DB_PASS: string;
 
-      CLIENT_DIR: string
-      STREAMS_DATA_DIR: string
-      LOG_VIEWER_DIR: string
+            CLIENT_DIR: string;
+            STREAMS_DATA_DIR: string;
+            LOG_VIEWER_DIR: string;
 
-      RATE_LIMIT_MAX: number;
-    };
-  }
+            RATE_LIMIT_MAX: number;
+        };
+    }
 }
+
 
 const schema = {
-  type: 'object',
-  required: [
-    'PORT',
-    'HOST',
-    'CLP_DB_USER',
-    'CLP_DB_PASS',
-    'CLIENT_DIR',
-    'STREAMS_DATA_DIR',
-    'LOG_VIEWER_DIR',
-  ],
-  properties: {
-    PORT: {
-        type: 'number',
-        default: '3000',
-        minimum: 1,
-        maximum: 65535,
+    type: "object",
+    required: [
+        "PORT",
+        "HOST",
+        "CLP_DB_USER",
+        "CLP_DB_PASS",
+        "CLIENT_DIR",
+        "STREAMS_DATA_DIR",
+        "LOG_VIEWER_DIR",
+    ],
+    properties: {
+        PORT: {
+            type: "number",
+            default: "3000",
+            minimum: 1,
+            maximum: 65535,
+        },
+        HOST: {
+            type: "string",
+            minLength: 1,
+            default: "localhost",
+        },
+
+        // Databases
+        CLP_DB_USER: {
+            type: "string",
+            minLength: 1,
+            default: "clp-user",
+        },
+        CLP_DB_PASS: {
+            type: "string",
+        },
+
+        // Directories
+        CLIENT_DIR: {
+            type: "string",
+            minLength: 1,
+            default: "../client/dist",
+        },
+        STREAMS_DATA_DIR: {
+            type: "string",
+            minLength: 1,
+            default: "../../../build/clp-package/var/data/streams",
+        },
+        LOG_VIEWER_DIR: {
+            type: "string",
+            minLength: 1,
+            default: "../yscope-log-viewer/dist",
+        },
+
+        // Security
+        RATE_LIMIT_MAX: {
+            type: "number",
+            default: 100,
+        },
     },
-    HOST: {
-        type: 'string',
-        minLength: 1,
-        default: 'localhost'
-    },
-    // Databases
-    CLP_DB_USER: {
-        type: 'string',
-        minLength: 1,
-        default: 'clp-user'
-    },
-    CLP_DB_PASS: {
-      type: 'string',
-    },
-    // Directories
-    CLIENT_DIR: {
-        type: 'string',
-        minLength: 1,
-        default: '../client/dist'
-    },
-    STREAMS_DATA_DIR: {
-        type: 'string',
-        minLength: 1,
-        default: '../../../build/clp-package/var/data/streams'
-    },
-    LOG_VIEWER_DIR: {
-        type: 'string',
-        minLength: 1,
-        default: '../yscope-log-viewer/dist'
-    },
-    // Security
-    RATE_LIMIT_MAX: {
-      type: 'number',
-      default: 100
-    },
-  }
-}
+};
 
 export const autoConfig = {
 
-  confKey: 'config',
-  schema,
+    confKey: "config",
+    schema: schema,
 
-  // Needed to read .env in root folder
-  dotenv: {
-    path: [
-      '.env.local',
-      '.env'
-    ]
-  },
+    // Needed to read .env in root folder
+    dotenv: {
+        path: [
+            ".env.local",
+            ".env",
+        ],
+    },
 
-  // Source for the configuration data
-  // Optional, default: process.env
-  data: process.env
-}
+    // Source for the configuration data
+    // Optional, default: process.env
+    data: process.env,
+};
 
-export default env
+export default env;

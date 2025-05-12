@@ -71,6 +71,7 @@ class DbManager {
             app.mongo.db.collection<StreamFileMongoDocument>(
                 dbConfig.mongoConfig.streamFilesCollectionName
             );
+
         return new DbManager({
             app: app,
             mysqlConnectionPool: mysqlConnectionPool,
