@@ -4,14 +4,14 @@ import {
   } from '@fastify/type-provider-typebox'
 
 /**
- * Sample code to demonstrate how to create a Fastify route.
+ * Example to demonstrate how to create a Fastify route.
  *
- * TODO: Remove sample code when new webui app code is ready.
+ * TODO: Remove example code when new webui app code is ready.
  */
   const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    const { sampleApp } = fastify
+    const { ExamplePlugin } = fastify
     fastify.get(
-      '/sample',
+      '/Example',
       {
         schema: {
           response: {
@@ -22,10 +22,11 @@ import {
         }
       },
       async function () {
-        const sampleMessage = await sampleApp.getSample();
-        return { message: sampleMessage };
+        const exampleMessage = await ExamplePlugin.getExample();
+        return { message: exampleMessage };
       }
     )
   }
 
   export default plugin
+  

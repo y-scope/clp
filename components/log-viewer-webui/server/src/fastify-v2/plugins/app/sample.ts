@@ -1,27 +1,26 @@
-
 import { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
 
 declare module 'fastify' {
   export interface FastifyInstance {
-    sampleApp: ReturnType<typeof createSamplePlugin>;
+    ExamplePlugin: ReturnType<typeof createExamplePlugin>;
   }
 }
 
 /**
- * Sample code to demonstrate how to create a Fastify plugin.
+ * Example to demonstrate how to create a Fastify plugin.
  *
- * TODO: Remove sample code when new webui app code is ready.
+ * TODO: Remove example when new webui app code is complete.
  */
-function createSamplePlugin (fastify: FastifyInstance) {
+function createExamplePlugin (fastify: FastifyInstance) {
     return {
       /**
-       * Returns a sample string.
+       * Returns `Example`.
        *
-       * @returns  A sample string.
+       * @returns
        */
-      async getSample (): Promise<string> {
-        return `sample`;
+      async getExample (): Promise<string> {
+        return `Example`;
       },
     }
   }
@@ -29,9 +28,9 @@ function createSamplePlugin (fastify: FastifyInstance) {
 
 export default fp(
   function (fastify) {
-    fastify.decorate('samplePlugin', createSamplePlugin(fastify))
+    fastify.decorate('ExamplePlugin', createExamplePlugin(fastify))
   },
   {
-    name: 'samplePlugin',
+    name: 'ExamplePlugin',
   }
 )

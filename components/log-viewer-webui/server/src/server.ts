@@ -12,7 +12,7 @@ import serviceApp from './fastify-v2/app.js'
  * @see {@link https://www.youtube.com/watch?v=HMM7GJC5E2o}
  */
 function getLoggerOptions () {
-  // Only if the program is running in an interactive terminal
+  // Only if the program is running in an interactive terminal.
   if (process.stdout.isTTY) {
     return {
       level: 'info',
@@ -33,14 +33,16 @@ const app = Fastify({
   logger: getLoggerOptions(),
   ajv: {
     customOptions: {
-      coerceTypes: 'array', // change type of data to match type keyword
-      removeAdditional: 'all' // Remove additional body properties
+      // Change type of data to match type keyword.
+      coerceTypes: 'array',
+      // Remove additional body properties.
+      removeAdditional: 'all'
     }
   }
 })
 
 async function init () {
-  // fp must be used to override default error handler
+  // fp must be used to override default error handler.
   app.register(fp(serviceApp))
 
   closeWithGrace(

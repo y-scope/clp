@@ -6,14 +6,13 @@ import { FastifyInstance } from 'fastify'
 
 import settings from "../../../../settings.json" with {type: "json"};
 
-// use MySQLPromisePool if passed promise = true
+// The typing of `@fastify/mysql` needs to be manually specified.
+// See https://github.com/fastify/fastify-mysql#typescript
 declare module 'fastify' {
     interface FastifyInstance {
       mysql: MySQLPromisePool;
-      MYSQL2: MySQLPromisePool;
     }
 }
-
 
 export const autoConfig = (fastify: FastifyInstance) => {
     return {

@@ -1,16 +1,12 @@
 import {StatusCodes} from "http-status-codes";
 import tap from "tap";
 import fastify from 'fastify'
-import serviceApp from '../../src/app.js'
+import serviceApp from 'src/fastify-v2/app.js'
 import fp from 'fastify-plugin'
 
-import app from "./app.js";
-
-
 tap.test("Tests the example routes", async (t) => {
-    const app = fastify()
-    await app.register(fp(serviceApp))
-    const server = await app({fastifyOptions: {}, sqlDbPass: "", sqlDbUser: ""});
+    const server = fastify();
+    await server.register(fp(serviceApp));
     t.teardown(() => server.close());
 
     let resp = await server.inject({

@@ -56,7 +56,7 @@ const schema = {
     STREAMS_DATA_DIR: {
         type: 'string',
         minLength: 1,
-        default: '../../../../build/clp-package/var/data/streams'
+        default: '../../../build/clp-package/var/data/streams'
     },
     LOG_VIEWER_DIR: {
         type: 'string',
@@ -66,17 +66,14 @@ const schema = {
     // Security
     RATE_LIMIT_MAX: {
       type: 'number',
-      default: 100 // Put it to 4 in your .env file for tests
+      default: 100
     },
   }
 }
 
 export const autoConfig = {
-  // Decorate Fastify instance with `config` key
-  // Optional, default: 'config'
-  confKey: 'config',
 
-  // Schema to validate
+  confKey: 'config',
   schema,
 
   // Needed to read .env in root folder
@@ -92,9 +89,4 @@ export const autoConfig = {
   data: process.env
 }
 
-/**
- * This plugins helps to check environment variables.
- *
- * @see {@link https://github.com/fastify/fastify-env}
- */
 export default env
