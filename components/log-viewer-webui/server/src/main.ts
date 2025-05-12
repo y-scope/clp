@@ -1,4 +1,4 @@
-// https://github.com/fastify/demo/blob/main/src/server.ts
+// Reference: https://github.com/fastify/demo/blob/main/src/server.ts
 
 import Fastify from 'fastify'
 import fp from 'fastify-plugin'

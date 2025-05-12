@@ -11,7 +11,7 @@ import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
-import { FastifyInstance, FastifyPluginOptions } from 'fastify'
+import { FastifyInstance } from 'fastify'
 
 interface AppPluginOptions {
     sqlDbUser: string;
@@ -29,7 +29,7 @@ interface AppPluginOptions {
  */
 const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
     fastify: FastifyInstance,
-    opts: FastifyPluginOptions
+    opts: AppPluginOptions
 ) => {
     const { sqlDbUser, sqlDbPass } = opts;
 

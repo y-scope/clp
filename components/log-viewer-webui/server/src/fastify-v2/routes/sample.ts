@@ -29,4 +29,3 @@ import {
   }
 
   export default plugin
-  
