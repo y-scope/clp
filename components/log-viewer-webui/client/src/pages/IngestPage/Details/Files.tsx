@@ -1,9 +1,6 @@
+import useIngestStore from "../IngestState";
 import DetailsCard from "./DetailsCard";
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_FILES = 124;
 
 /**
  * Renders the files statistic.
@@ -11,9 +8,10 @@ const DUMMY_FILES = 124;
  * @return
  */
 const Files = () => {
+    const files = useIngestStore((state) => state.numFiles);
     return (
         <DetailsCard
-            stat={DUMMY_FILES.toString()}
+            stat={files.toString()}
             title={"Files"}/>
     );
 };

@@ -1,12 +1,6 @@
-import dayjs from "dayjs";
-
+import useIngestStore from "../IngestState";
 import DetailsCard from "./DetailsCard";
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_START_DATE = "2021-12-14";
-const DUMMY_END_DATE = "2025-04-16";
 
 const DATE_FORMAT = "MMMM D, YYYY";
 
@@ -16,8 +10,9 @@ const DATE_FORMAT = "MMMM D, YYYY";
  * @return
  */
 const TimeRange = () => {
-    const formattedStat = `${dayjs(DUMMY_START_DATE).format(DATE_FORMAT)} -
-        ${dayjs(DUMMY_END_DATE).format(DATE_FORMAT)}`;
+    const [startDate, endDate] = useIngestStore((state) => state.timeRange);
+    const formattedStat = `${startDate.format(DATE_FORMAT)} -
+        ${endDate.format(DATE_FORMAT)}`;
 
     return (
         <DetailsCard
