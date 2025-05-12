@@ -56,14 +56,14 @@ query syntax, but also has a few additional benefits.
 
 ## Querying auto-generated KV pairs
 
-Since KV-IR streams store auto-generated KV pairs and user-generated KV pairs in different
-namespaces, we differentiate which namespace to query using special query syntax. For instance, if a
-log event has both an auto-generated KV pair and user-generated KV pair with the key `timestamp`, we
-need some way to allow the user to query one of the two. We could use two different queries, one to
-query each namespace, but this wouldn't allow users to join filters from both namespaces. Instead,
-we use the key-prefix `@` to denote a filter on an auto-generated KV pair---e.g., `@timestamp: 0`
-denotes a filter for an auto-generated KV pair with the key `timestamp` and value `0`. Accordingly,
-filters on user-generated KV pairs whose keys start with the character `@` will need to escape the
+If a log event has both an auto-generated KV pair and user-generated KV pair with the same key,
+e.g., `timestamp`, we need a mechanism to let the user query one or the other unambiguously.
+Naively, we could use two different queries, one to query each namespace, but this wouldn't allow
+users to join filters from both namespaces, and it would double the query evaluation workload. As a
+solution, we introduce a special query syntax to differentiate the queried namespace: we use the
+key-prefix `@` to denote a filter on an auto-generated KV pair---e.g., `@timestamp: 0` denotes a
+filter for an auto-generated KV pair with the key `timestamp` and value `0`. Accordingly, filters on
+user-generated KV pairs whose keys start with the character `@` will need to escape the
 `@` symbol.
 
 ## Additional benefits
