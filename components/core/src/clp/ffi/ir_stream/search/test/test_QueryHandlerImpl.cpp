@@ -785,6 +785,12 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
 
         auto query_handler_impl{create_query_handler(kql_query_str)};
 
+        auto const pruned_evaluation_result{
+                get_query_evaluation_result(schema_tree, schema_tree, {}, {}, query_handler_impl)
+        };
+        CAPTURE(pruned_evaluation_result);
+        REQUIRE((AstEvaluationResult::Pruned == pruned_evaluation_result));
+
         for (auto const& locator : locators) {
             auto const node_type{locator.get_type()};
             if (SchemaTree::Node::Type::UnstructuredArray == node_type
@@ -797,16 +803,6 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
             // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
             auto const node_id{*optional_node_id};
             CAPTURE(node_id);
-
-            auto const pruned_evaluation_result{get_query_evaluation_result(
-                    schema_tree,
-                    schema_tree,
-                    {},
-                    {},
-                    query_handler_impl
-            )};
-            CAPTURE(pruned_evaluation_result);
-            REQUIRE((AstEvaluationResult::Pruned == pruned_evaluation_result));
 
             // NOTE: We use nested for loop to generated matchable/unmatchable values instead of
             // using `GENERATE` since `GENERATE` in this case has a way worse performance (about
