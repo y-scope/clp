@@ -31,7 +31,9 @@ const schema = {
   properties: {
     PORT: {
         type: 'number',
-        default: '3000'
+        default: '3000',
+        minimum: 1,
+        maximum: 65535,
     },
     HOST: {
         type: 'string',
@@ -77,12 +79,12 @@ export const autoConfig = {
   schema,
 
   // Needed to read .env in root folder
-  dotenv: true,
-  // or, pass config options available on dotenv module
-  // dotenv: {
-  //   path: `${import.meta.dirname}/.env`,
-  //   debug: true
-  // }
+  dotenv: {
+    path: [
+      '.env.local',
+      '.env'
+    ]
+  },
 
   // Source for the configuration data
   // Optional, default: process.env
