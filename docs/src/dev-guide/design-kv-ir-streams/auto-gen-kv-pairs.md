@@ -53,7 +53,7 @@ namespace, which introduces the following constraints:
 * Users must avoid selecting keys that might conflict with those used by the logging library. This
   requires the user to keep track of all library-reserved keys, and can be exacerbated if the user
   needs to use multiple logging libraries across multiple languages. Some libraries like [Zap] allow
-  users to configure the keys that are used for the framework-generated KV pairs, but this still
+  users to configure the keys that are used for the library-generated KV pairs, but this still
   requires the user to avoid those keys.
 * Logging libraries must avoid using keys that are likely to conflict with user-defined keys, *and*
   implement a policy to resolve any conflicts that do occur. Libraries could store their generated
