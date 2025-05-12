@@ -31,6 +31,7 @@
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/time_types.hpp"
+#include "../src/clp/ffi/ir_stream/search/test/utils.hpp"
 
 using clp::BufferReader;
 using clp::enum_to_underlying_type;
@@ -68,6 +69,7 @@ using std::is_same_v;
 using std::string;
 using std::string_view;
 using std::vector;
+using clp::ffi::ir_stream::search::test::unpack_and_serialize_msgpack_bytes;
 
 namespace {
 /**
@@ -211,21 +213,6 @@ auto flush_and_clear_serializer_buffer(
 ) -> void;
 
 /**
- * Unpacks and serializes the given msgpack bytes using kv serializer.
- * @tparam encoded_variable_t
- * @param auto_gen_msgpack_bytes
- * @param user_gen_msgpack_bytes
- * @param serializer
- * @return Whether serialization succeeded.
- */
-template <typename encoded_variable_t>
-[[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& auto_gen_msgpack_bytes,
-        vector<uint8_t> const& user_gen_msgpack_bytes,
-        Serializer<encoded_variable_t>& serializer
-) -> bool;
-
-/**
  * @return A msgpack object handle that holds an empty msgpack map.
  */
 [[nodiscard]] auto create_msgpack_empty_map_obj_handle() -> msgpack::object_handle;
@@ -361,36 +348,6 @@ auto flush_and_clear_serializer_buffer(
     auto const view{serializer.get_ir_buf_view()};
     byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
     serializer.clear_ir_buf();
-}
-
-template <typename encoded_variable_t>
-auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& auto_gen_msgpack_bytes,
-        vector<uint8_t> const& user_gen_msgpack_bytes,
-        Serializer<encoded_variable_t>& serializer
-) -> bool {
-    auto const auto_gen_msgpack_byte_handle{msgpack::unpack(
-            clp::size_checked_pointer_cast<char const>(auto_gen_msgpack_bytes.data()),
-            auto_gen_msgpack_bytes.size()
-    )};
-    auto const auto_gen_msgpack_obj{auto_gen_msgpack_byte_handle.get()};
-    if (msgpack::type::MAP != auto_gen_msgpack_obj.type) {
-        return false;
-    }
-
-    auto const user_gen_msgpack_byte_handle{msgpack::unpack(
-            clp::size_checked_pointer_cast<char const>(user_gen_msgpack_bytes.data()),
-            user_gen_msgpack_bytes.size()
-    )};
-    auto const user_gen_msgpack_obj{user_gen_msgpack_byte_handle.get()};
-    if (msgpack::type::MAP != user_gen_msgpack_obj.type) {
-        return false;
-    }
-
-    return serializer.serialize_msgpack_map(
-            auto_gen_msgpack_obj.via.map,
-            user_gen_msgpack_obj.via.map
-    );
 }
 
 auto create_msgpack_empty_map_obj_handle() -> msgpack::object_handle {
