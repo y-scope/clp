@@ -14,14 +14,15 @@ namespace clp::ffi::ir_stream::search {
 struct EmptyQueryHandler {};
 
 /**
- * A type trait to determine if a given type is a valid `clp::ffi::ir_stream::search::QueryHandler`.
+ * A type trait to determine if a given type is an instantiation of
+ * `clp::ffi::ir_stream::search::QueryHandler`.
  * @tparam T The type to check.
  */
 template <typename T>
 struct IsNonEmptyQueryHandler : std::false_type {};
 
 /**
- * Specialization of `IsQueryHandler` for `clp::ffi::ir_stream::search::QueryHandler`.
+ * Specialization of `IsNonEmptyQueryHandler` for `clp::ffi::ir_stream::search::QueryHandler`.
  * @tparam NewProjectedSchemaTreeNodeCallbackType
  */
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
@@ -32,7 +33,7 @@ struct IsNonEmptyQueryHandler<QueryHandler<NewProjectedSchemaTreeNodeCallbackTyp
  * Requirements for a query handler that can be used with `clp::ffi::ir_stream::Deserializer`. A
  * valid query handler must be:
  *
- * - an `EmptyQueryHandler` or satisfy the `IsQueryHandler` trait.
+ * - an `EmptyQueryHandler` or satisfy the `IsNonEmptyQueryHandler` trait.
  * - move constructible.
  *
  * @tparam QueryHandlerType The type to check.
