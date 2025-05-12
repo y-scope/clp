@@ -157,12 +157,8 @@ TEMPLATE_TEST_CASE(
     JsonPair const json_pair_2{nested_obj_0, nested_obj_1};
     JsonPair const json_pair_3{nested_obj_1, nested_obj_0};
 
-    std::vector<JsonPair> const json_pairs_to_serialize{
-            json_pair_0,
-            json_pair_1,
-            json_pair_2,
-            json_pair_3
-    };
+    std::vector<JsonPair> const
+            json_pairs_to_serialize{json_pair_0, json_pair_1, json_pair_2, json_pair_3};
 
     auto const ir_stream_bytes{
             serialize_json_pairs_into_kv_pair_ir_stream<TestType>(json_pairs_to_serialize)
@@ -207,12 +203,12 @@ TEMPLATE_TEST_CASE(
                     std::vector<JsonPair>{json_pair_1, json_pair_3}
             ),
             std::make_pair(
-                    fmt::format("@*.{} >= {} AND *.{} <= {}", cIntKey, cIntBase, cIntKey, cIntBase),
-                    std::vector<JsonPair>{json_pair_1, json_pair_3}
-            ),
-            std::make_pair(
                     fmt::format("@*.{} <= {} AND *.{} >= {}", cIntKey, cIntBase, cIntKey, cIntBase),
                     std::vector<JsonPair>{json_pair_0, json_pair_2}
+            ),
+            std::make_pair(
+                    fmt::format("@*.{} >= {} AND *.{} <= {}", cIntKey, cIntBase, cIntKey, cIntBase),
+                    std::vector<JsonPair>{json_pair_1, json_pair_3}
             ),
             std::make_pair(
                     fmt::format("@*.{} > {} OR *.{} > {}", cIntKey, cIntBase, cIntKey, cIntBase),
@@ -228,16 +224,6 @@ TEMPLATE_TEST_CASE(
             ),
             std::make_pair(
                     fmt::format(
-                            "@*.{} > {} AND NOT *.{} > {}",
-                            cIntKey,
-                            cIntBase,
-                            cIntKey,
-                            cIntBase
-                    ),
-                    std::vector<JsonPair>{json_pair_1, json_pair_3}
-            ),
-            std::make_pair(
-                    fmt::format(
                             "@*.{} < {} AND NOT *.{} < {}",
                             cIntKey,
                             cIntBase,
@@ -245,6 +231,16 @@ TEMPLATE_TEST_CASE(
                             cIntBase
                     ),
                     std::vector<JsonPair>{json_pair_0, json_pair_2}
+            ),
+            std::make_pair(
+                    fmt::format(
+                            "@*.{} > {} AND NOT *.{} > {}",
+                            cIntKey,
+                            cIntBase,
+                            cIntKey,
+                            cIntBase
+                    ),
+                    std::vector<JsonPair>{json_pair_1, json_pair_3}
             ),
             std::make_pair(
                     fmt::format(
@@ -266,7 +262,8 @@ TEMPLATE_TEST_CASE(
                     ),
                     json_pairs_to_serialize
             ),
-            std::make_pair(fmt::format("*.{}.*: *", cUnresolvableKey), std::vector<JsonPair>{})
+            std::make_pair(fmt::format("*.{}.*: *", cUnresolvableKey), std::vector<JsonPair>{}),
+            std::make_pair(fmt::format("NOT *.{}.*: *", cUnresolvableKey), std::vector<JsonPair>{})
     );
     CAPTURE(kql_query_str);
 
