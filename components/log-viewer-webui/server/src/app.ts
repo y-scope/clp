@@ -8,6 +8,7 @@ import {
 
 import settings from "../settings.json" with {type: "json"};
 import DbManager from "./plugins/DbManager.js";
+import MongoSocketIoServer from "./plugins/MongoSocketIoServer/index.js";
 import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
@@ -60,6 +61,11 @@ const app = async ({
                 profile: settings.StreamFilesS3Profile,
             }
         );
+        await server.register(MongoSocketIoServer, {
+            host: settings.MongoDbHost,
+            port: settings.MongoDbPort,
+            database: settings.MongoDbName,
+        });
     }
 
     await server.register(staticRoutes);
