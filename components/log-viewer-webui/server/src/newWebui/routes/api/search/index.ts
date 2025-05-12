@@ -1,46 +1,36 @@
-import {Meteor} from "meteor/meteor";
-
-import {logger} from "/imports/utils/logger";
-
-import {SearchResultsMetadataCollection} from "../collections";
 import {
     SEARCH_MAX_NUM_RESULTS,
     SEARCH_SIGNAL,
 } from "../constants";
-import {ERROR_NAME_COLLECTION_DROPPED} from "../SearchJobCollectionsManager";
-import {searchJobCollectionsManager} from "./collections";
-import QueryJobsDbManager from "./QueryJobsDbManager";
 
+import { Collection } from 'mongodb'; // Assuming MongoDB is used for SearchResultsMetadataCollection
 
-/**
- * @type {QueryJobsDbManager|null}
- */
-let queryJobsDbManager = null;
+type UpdateSearchResultsMetaParams = {
+    jobId: number;
+    lastSignal: string;
+    SearchResultsMetadataCollection: Collection;
+};
 
-/**
- * Initializes the QueryJobsDbManager.
- *
- * @param {import("mysql2/promise").Pool} sqlDbConnPool
- * @param {object} tableNames
- * @param {string} tableNames.queryJobsTableName
- * @throws {Error} on error.
- */
-const initQueryJobsDbManager = (sqlDbConnPool, {queryJobsTableName}) => {
-    queryJobsDbManager = new QueryJobsDbManager(sqlDbConnPool, {queryJobsTableName});
+type SearchResultsMetadataFields = {
+    lastSignal?: string;
+    errorMsg?: string | null;
+    numTotalResults?: number;
 };
 
 /**
  * Modifies the search results metadata for a given job ID.
  *
- * @param {object} filter
- * @param {number} filter.jobId
- * @param {string} filter.lastSignal
- * @param {SearchResultsMetadata} fields The fields to be updated in the search results metadata.
+ * @param {UpdateSearchResultsMetaParams} params
+ * @param {SearchResultsMetadataFields} fields The fields to be updated in the search results metadata.
  */
-const updateSearchResultsMeta = ({
-    jobId,
-    lastSignal,
-}, fields) => {
+const updateSearchResultsMeta = (
+    {
+        jobId,
+        lastSignal,
+        SearchResultsMetadataCollection,
+    }: UpdateSearchResultsMetaParams,
+    fields: SearchResultsMetadataFields
+) => {
     const filter = {
         _id: jobId.toString(),
         lastSignal: lastSignal,
@@ -57,13 +47,19 @@ const updateSearchResultsMeta = ({
 /**
  * Updates the search signal when the specified job finishes.
  *
- * @param {object} props
- * @param {number} props.searchJobId of the job to monitor
- * @param {number} props.aggregationJobId of the job to monitor
+ * @param {object} params
+ * @param {number} params.searchJobId of the job to monitor
+ * @param {number} params.aggregationJobId of the job to monitor
+ * @param {QueryJobsDbManager} queryJobsDbManager
+ * @param {SearchJobCollectionsManager} searchJobCollectionsManager
+ * @param {SearchResultsMetadataCollection} SearchResultsMetadataCollection
  */
 const updateSearchSignalWhenJobsFinish = async ({
     searchJobId,
     aggregationJobId,
+    queryJobsDbManager,
+    searchJobCollectionsManager,
+    SearchResultsMetadataCollection,
 }) => {
     let errorMsg;
     try {
@@ -90,6 +86,7 @@ const updateSearchSignalWhenJobsFinish = async ({
     updateSearchResultsMeta({
         jobId: searchJobId,
         lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+        SearchResultsMetadataCollection,
     }, {
         lastSignal: SEARCH_SIGNAL.RESP_DONE,
         errorMsg: errorMsg,
@@ -104,8 +101,9 @@ const updateSearchSignalWhenJobsFinish = async ({
  * Creates MongoDB indexes for a specific job's collection.
  *
  * @param {number} searchJobId used to identify the Mongo Collection to add indexes
+ * @param {SearchJobCollectionsManager} searchJobCollectionsManager
  */
-const createMongoIndexes = async (searchJobId) => {
+const createMongoIndexes = async (searchJobId, searchJobCollectionsManager) => {
     const timestampAscendingIndex = {
         key: {
             timestamp: 1,
@@ -129,142 +127,6 @@ const createMongoIndexes = async (searchJobId) => {
     ]);
 };
 
-Meteor.methods({
-    /**
-     * @typedef {object} SubmitQueryResp
-     * @property {number} searchJobId
-     * @property {number} aggregationJobId
-     */
-    /**
-     * Submits a search query and initiates the search process.
-     *
-     * @param {object} props
-     * @param {string} props.queryString
-     * @param {number} props.timestampBegin
-     * @param {number} props.timestampEnd
-     * @param {boolean} props.ignoreCase
-     * @param {number} props.timeRangeBucketSizeMillis
-     * @return {SubmitQueryResp}
-     */
-    async "search.submitQuery" ({
-        queryString,
-        timestampBegin,
-        timestampEnd,
-        ignoreCase,
-        timeRangeBucketSizeMillis,
-    }) {
-        this.unblock();
-
-        const args = {
-            query_string: queryString,
-
-            begin_timestamp: timestampBegin,
-            end_timestamp: timestampEnd,
-            ignore_case: ignoreCase,
-            max_num_results: SEARCH_MAX_NUM_RESULTS,
-        };
-
-        logger.info("search.submitQuery args =", args);
-
-        let searchJobId;
-        let aggregationJobId;
-        try {
-            searchJobId = await queryJobsDbManager.submitSearchJob(args);
-            aggregationJobId =
-                await queryJobsDbManager.submitAggregationJob(args, timeRangeBucketSizeMillis);
-        } catch (e) {
-            const errorMsg = "Unable to submit search/aggregation job to the SQL database.";
-            logger.error(errorMsg, e.toString());
-            throw new Meteor.Error("query-submit-error", errorMsg);
-        }
-
-        SearchResultsMetadataCollection.insert({
-            _id: searchJobId.toString(),
-            lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
-            errorMsg: null,
-        });
-
-        Meteor.defer(async () => {
-            await updateSearchSignalWhenJobsFinish({
-                searchJobId,
-                aggregationJobId,
-            });
-        });
-
-        await createMongoIndexes(searchJobId);
-
-        return {searchJobId, aggregationJobId};
-    },
-
-    /**
-     * Clears the results of a search operation identified by jobId.
-     *
-     * @param {object} props
-     * @param {number} props.searchJobId of the search results to clear
-     * @param {number} props.aggregationJobId of the search results to clear
-     */
-    async "search.clearResults" ({
-        searchJobId,
-        aggregationJobId,
-    }) {
-        this.unblock();
-
-        logger.info(`search.clearResults searchJobId=${searchJobId}, ` +
-            `aggregationJobId=${aggregationJobId}`);
-
-        try {
-            await searchJobCollectionsManager.dropCollection(searchJobId);
-            await searchJobCollectionsManager.dropCollection(aggregationJobId);
-        } catch (e) {
-            const errorMsg = `Failed to clear search results for searchJobId=${searchJobId}, ` +
-                `aggregationJobId=${aggregationJobId}`;
-
-            logger.error(errorMsg, e.toString());
-            throw new Meteor.Error("clear-results-error", errorMsg);
-        }
-    },
-
-    /**
-     * Cancels an ongoing search operation identified by jobId.
-     *
-     * @param {object} props
-     * @param {number} props.searchJobId
-     * @param {number} props.aggregationJobId
-     */
-    async "search.cancelOperation" ({
-        searchJobId,
-        aggregationJobId,
-    }) {
-        this.unblock();
-
-        logger.info(`search.cancelOperation searchJobId=${searchJobId}, ` +
-            `aggregationJobId=${aggregationJobId}`);
-
-        try {
-            await queryJobsDbManager.submitQueryCancellation(searchJobId);
-            await queryJobsDbManager.submitQueryCancellation(aggregationJobId);
-            updateSearchResultsMeta({
-                jobId: searchJobId,
-                lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
-            }, {
-                lastSignal: SEARCH_SIGNAL.RESP_DONE,
-                errorMsg: "Query cancelled before it could be completed.",
-            });
-        } catch (e) {
-            const errorMsg = `Failed to submit cancel request for searchJobId=${searchJobId},` +
-                `aggregationJobId=${aggregationJobId}.`;
-
-            logger.error(errorMsg, e.toString());
-            throw new Meteor.Error("query-cancel-error", errorMsg);
-        }
-    },
-});
-
-export {initQueryJobsDbManager};
-
-
-
-
 import {
     FastifyPluginAsyncTypebox,
     Type
@@ -273,7 +135,10 @@ import {
    import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/search.js'
 
   const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    const { QueryJobsDbManager, SearchJobCollectionsManager } = fastify
+    const { QueryJobsDbManager,
+      SearchJobCollectionsManager,
+      SearchResultsMetadataCollection
+    } = fastify
 
     fastify.post(
         '/search',
@@ -282,8 +147,7 @@ import {
             body: CreateSearchJobSchema,
             response: {
               200: SearchJobResultSchema,
-              404: Type.Object({ message: Type.String() }),
-              400: Type.Object({ message: Type.String() })
+              500: Type.Object({ message: Type.String() }),
             },
             tags: ['Search']
           },
@@ -322,7 +186,8 @@ import {
               return reply.internalServerError(message);
             }
 
-            SearchResultsMetadataCollection.insert({
+            // I need to update the schema.
+            SearchResultsMetadataCollection.insertOne({
               _id: searchJobId.toString(),
               lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
               errorMsg: null
@@ -330,72 +195,99 @@ import {
 
             // Defer signal update until after response is sent
             setImmediate(() => {
-              updateSearchSignalWhenJobsFinish({ searchJobId, aggregationJobId }).catch(err =>
+              updateSearchSignalWhenJobsFinish({
+                searchJobId,
+                aggregationJobId,
+                queryJobsDbManager: QueryJobsDbManager,
+                searchJobCollectionsManager: SearchJobCollectionsManager,
+                SearchResultsMetadataCollection,
+              }).catch(err =>
                 request.log.error(err, 'Deferred update failed')
               );
             });
 
-            await createMongoIndexes(searchJobId);
+            await createMongoIndexes(searchJobId, SearchJobCollectionsManager);
 
             return { searchJobId, aggregationJobId };
           }
+    );
 
+    fastify.delete(
+      '/search/results',
+      {
+        schema: {
+          body: SearchJobResultSchema,
+          response: {
+            204: Type.Null,
+            500: Type.Object({ message: Type.String() }),
+          },
+          tags: ['Search'],
+        },
+      },
+      async function (request, reply) {
+        const { searchJobId, aggregationJobId } = request.body;
 
+        request.log.info(
+          `search.clearResults searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`
+        );
 
+        try {
+          await SearchJobCollectionsManager.dropCollection(searchJobId);
+          await SearchJobCollectionsManager.dropCollection(aggregationJobId);
 
-
+          reply.code(204);
+        } catch (err: any) {
+          const message = `Failed to clear search results for searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`;
+          request.log.error(err, message);
+          return reply.internalServerError(message);
+        }
+      }
+    );
 
 
     fastify.post(
-      '/login',
+      '/search/cancel',
       {
         schema: {
-          body: CredentialsSchema,
+          body: SearchJobResultSchema,
           response: {
-            200: Type.Object({
-              success: Type.Boolean(),
-              message: Type.Optional(Type.String())
-            }),
-            401: Type.Object({
-              message: Type.String()
-            })
+            204: Type.Null,
+            500: Type.Object({ message: Type.String()}),
           },
-          tags: ['Authentication']
-        }
+          tags: ['Search'],
+        },
       },
       async function (request, reply) {
-        const { email, password } = request.body
+        const { searchJobId, aggregationJobId } = request.body;
 
-        return fastify.knex.transaction(async (trx) => {
-          const user = await usersRepository.findByEmail(email, trx)
+        request.log.info(
+          `search.cancelOperation searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`
+        );
 
-          if (user) {
-            const isPasswordValid = await passwordManager.compare(
-              password,
-              user.password
-            )
-            if (isPasswordValid) {
-              const roles = await usersRepository.findUserRolesByEmail(email, trx)
+        try {
+          await QueryJobsDbManager.submitQueryCancellation(searchJobId);
+          await QueryJobsDbManager.submitQueryCancellation(aggregationJobId);
 
-              request.session.user = {
-                id: user.id,
-                email: user.email,
-                username: user.username,
-                roles: roles.map((role) => role.name)
-              }
-
-              await request.session.save()
-
-              return { success: true }
+          updateSearchResultsMeta(
+            {
+              jobId: searchJobId,
+              lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+              SearchResultsMetadataCollection,
+            },
+            {
+              lastSignal: SEARCH_SIGNAL.RESP_DONE,
+              errorMsg: 'Query cancelled before it could be completed.',
             }
-          }
+          );
 
-          reply.status(401)
-
-          return { message: 'Invalid email or password.' }
-        })
+          reply.code(204);
+        } catch (err: any) {
+          const message = `Failed to submit cancel request for searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`;
+          request.log.error(err, message);
+          return reply.internalServerError(message);
+        }
       }
-    )
+    );
   }
 
   export default plugin

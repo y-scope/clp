@@ -15,6 +15,8 @@ import settings from "../../../../settings.json" with {type: "json"};
 
 import { sleep } from "../../../utils/misc.js";
 
+import { Collection, Document } from "mongodb";
+
 /**
  * Interval in milliseconds for polling the completion status of a job.
  */
@@ -38,6 +40,8 @@ declare module 'fastify' {
     QueryJobsDbManager: ReturnType<typeof createQueryJobsDbManager>;
   }
 }
+
+
 
 /**
  * Class for submitting and monitoring query jobs in the database.
@@ -67,6 +71,7 @@ function createQueryJobsDbManager (fastify: FastifyInstance) {
     },
 
 
+
     /**
      * Submits an aggregation job to the database.
      *
@@ -84,6 +89,24 @@ function createQueryJobsDbManager (fastify: FastifyInstance) {
         };
 
         return await this.submitSearchJob(searchAggregationConfig);
+    },
+
+    /**
+     * Submits a query cancellation request to the database.
+     *
+     * @param {number} jobId ID of the job to cancel.
+     * @return {Promise<void>}
+     * @throws {Error} on error.
+     */
+    async submitQueryCancellation (jobId: number) {
+        await sqlDbConnPool.query(
+            `UPDATE ${settings.SqlDbQueryJobsTableName  }
+                SET ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${QUERY_JOB_STATUS.CANCELLING}
+                WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
+                AND ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
+                IN (${QUERY_JOB_STATUS.PENDING}, ${QUERY_JOB_STATUS.RUNNING})`,
+            jobId,
+        );
     },
 
     /**
@@ -138,6 +161,6 @@ export default fp(
   },
   {
     name: 'QueryJobsDbManager',
-    dependencies: ['SearchJobCollectionsManager']
+    dependencies: ['SearchJobCollectionsManager', 'SearchResultsMetadataCollection'],
   }
 )
