@@ -67,12 +67,11 @@ advanced query syntax, but also has additional benefits.
 If a log event has both an auto-generated KV pair and user-generated KV pair with the same key,
 e.g., `timestamp`, we need a mechanism to let the user query one or the other unambiguously.
 Naively, we could use two different queries, one to query each namespace, but this wouldn't allow
-users to join filters from both namespaces, and it would double the query evaluation workload. As a
-solution, we introduce a special query syntax to differentiate the queried namespace: we use the
-key-prefix `@` to denote a filter on an auto-generated KV pair---e.g., `@timestamp: 0` denotes a
+users to join filters from both namespaces, and it would double the query evaluation workload.
+Instead, we use a special query syntax to indicate which namespace to query. Specifically, we use
+the key-prefix `@` to denote a filter on an auto-generated KV pair---e.g., `@timestamp: 0` denotes a
 filter for an auto-generated KV pair with the key `timestamp` and value `0`. Accordingly, filters on
-user-generated KV pairs whose keys start with the character `@` will need to escape the
-`@` symbol.
+user-generated KV pairs whose keys start with the character `@` will need to escape the `@` symbol.
 
 ## Additional benefits
 
