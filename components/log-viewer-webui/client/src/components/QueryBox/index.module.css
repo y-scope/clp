@@ -3,7 +3,7 @@
 }
 
 .queryBoxPosition {
-  /* Defines a new positioning context for absolutely positioned descendants such as the wrapper and progress bar */
+  /* Defines a new positioning context for absolutely positioned descendants such as the wrapper and progress bar. */
   position: relative;
   width: 100%;
   height: 100%;
