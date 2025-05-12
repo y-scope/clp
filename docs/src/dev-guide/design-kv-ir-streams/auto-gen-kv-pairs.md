@@ -86,7 +86,7 @@ the same key to filter their logs by level when viewing them in the [log viewer]
 
 Another benefit of supporting auto-generated KV pairs is that we can potentially leverage
 the query syntax for more advanced queries on unstructured text KV pairs. For instance, we could
-support a syntax like `@message` to query the KV pair, `message`, and the syntax `@message.#vars[0]`
+support a syntax like `@message` to query the KV pair `message`, and the syntax `@message.#vars[0]`
 to query the first variable parsed from the KV pair. We'll explore this further once the feature has
 been implemented.
 
