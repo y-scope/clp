@@ -15,9 +15,9 @@ export interface QueryBoxProps extends InputProps {
 /**
  * Renders an Input with a progress bar.
  *
- * @param queryBoxProps
- * @param queryBoxProps.progress
- * @param queryBoxProps.rest
+ * @param props
+ * @param props.progress
+ * @param props.rest
  * @return
  */
 const QueryBox = ({progress, ...rest}: QueryBoxProps) => {
