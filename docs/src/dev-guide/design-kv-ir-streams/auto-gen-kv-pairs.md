@@ -78,7 +78,7 @@ user-generated KV pairs whose keys start with the character `@` will need to esc
 One benefit of supporting auto-generated KV pairs is that our CLP logging libraries or plugins can
 use a consistent set of keys for auto-generated KV pairs, making it easier for users to filter for
 those keys. For instance, if a user is logging in both Java and Python, and they use CLP logging
-plugins to generate KV-IR streams, the streams generated should both use the same key for log
+plugins to generate KV-IR streams, the generated streams should both use the same key for log
 levels---e.g., `level`. In turn, this would allow users to query log levels across both their Java
 and Python logs using the query syntax `@level: <value>`. In addition, it would allow users to use
 the same key to filter their logs by level when viewing them in the [log viewer][log-viewer].
