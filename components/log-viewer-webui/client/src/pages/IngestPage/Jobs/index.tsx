@@ -76,6 +76,8 @@ interface JobsProps {
 /**
  * Renders table with ingestion jobs inside a card.
  *
+ * @param root0
+ * @param root0.className
  * @return
  */
 const Jobs = ({className}: JobsProps) => {
