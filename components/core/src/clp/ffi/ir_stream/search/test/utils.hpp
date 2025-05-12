@@ -70,7 +70,9 @@ private:
  * Trivial implementation of `NewProjectedSchemaTreeNodeCallback` that always return success without
  * doing anything.
  * @param is_auto_generated
- * @param
+ * @param node_id
+ * @param projected_key_path
+ * @return A void result.
  */
 [[nodiscard]] auto trivial_new_projected_schema_tree_node_callback(
         bool is_auto_generated,

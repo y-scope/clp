@@ -217,8 +217,7 @@ private:
          * @return A result containing the iterator of the next child expression operator, or an
          * error code indicating the failure:
          * - ErrorCodeEnum::AttemptToIterateAstLeafExpr if the current expression is a leaf
-         * expression
-         *   (`clp_s::search::ast::FilterExpr`).
+         *   expression (`clp_s::search::ast::FilterExpr`).
          * - Forwards `create`'s return values.
          */
         [[nodiscard]] auto next_op() -> std::optional<outcome_v2::std_result<AstExprIterator>>;
@@ -277,6 +276,7 @@ private:
                   m_op_end_it{op_end_it},
                   m_is_inverted{is_inverted} {}
 
+        // Variables
         ExprVariant m_expr;
         clp_s::search::ast::OpList::const_iterator m_op_next_it;
         clp_s::search::ast::OpList::const_iterator m_op_end_it;

@@ -44,14 +44,15 @@ using clp_s::search::ast::LiteralTypeBitmask;
 /**
  * Pre-processes a search query by applying several transformation passes.
  * @param query
- * @return A result containing the transformed
+ * @return A result containing the transformed query on success, or an error code indicating the
+ * failure:
  * - ErrorCodeEnum::QueryTransformationPassFailed if any of the transformation pass failed.
  */
 [[nodiscard]] auto preprocess_query(std::shared_ptr<Expression> query)
         -> outcome_v2::std_result<std::shared_ptr<Expression>>;
 
 /**
- * Creates projected columns and column-to-original-key map from the given projections.
+ * Creates column descriptors and column-to-original-key map from the given projections.
  * @param projections
  * @return A result containing a pair or an error code indicating the failure:
  * - The pair:
@@ -565,7 +566,7 @@ auto QueryHandlerImpl::evaluate_filter_expr(
         evaluation_results |= evaluation_result;
     }
 
-    if ((evaluation_results & AstEvaluationResult::False) != 0) {
+    if (0 != (evaluation_results & AstEvaluationResult::False)) {
         return AstEvaluationResult::False;
     }
     return AstEvaluationResult::Pruned;
@@ -647,7 +648,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         push_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
         return outcome_v2::success();
     }
-    if ((evaluation_results & AstEvaluationResult::False) != 0) {
+    if (0 != (evaluation_results & AstEvaluationResult::False)) {
         pop_ast_dfs_stack_and_update_evaluation_results(
                 AstEvaluationResult::False,
                 query_evaluation_result
