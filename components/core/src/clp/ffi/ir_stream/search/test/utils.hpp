@@ -109,7 +109,7 @@ requires std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
         -> clp::ir::EncodedTextAst<encoded_variable_t>;
 
 /**
- * Unpacks and serializes the given msgpack bytes using kv serializer.
+ * Unpacks and serializes the given msgpack bytes using the given serializer.
  * @tparam encoded_variable_t
  * @param auto_gen_msgpack_bytes
  * @param user_gen_msgpack_bytes
@@ -166,8 +166,8 @@ auto unpack_and_serialize_msgpack_bytes(
             clp::size_checked_pointer_cast<char const>(user_gen_msgpack_bytes.data()),
             user_gen_msgpack_bytes.size()
     )};
-
     auto const user_gen_msgpack_obj{user_gen_msgpack_byte_handle.get()};
+
     // NOLINTNEXTLINE(misc-include-cleaner)
     if (msgpack::type::MAP != user_gen_msgpack_obj.type) {
         return false;

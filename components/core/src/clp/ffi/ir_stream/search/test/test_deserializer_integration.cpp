@@ -34,7 +34,7 @@ namespace {
 using JsonPair = std::pair<nlohmann::json, nlohmann::json>;
 
 /**
- * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purpose.
+ * Implementation of `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
  */
 class IrUnitHandler {
 public:
@@ -76,10 +76,11 @@ private:
 };
 
 /**
- * Serializes a vector of JSON object pairs into a key-value pair IR stream.
+ * Serializes a vector of JSON object pairs into a key-value pair IR stream, where each pair is
+ * treated as containing an object with auto-generated KV pairs and an object with user-generated KV
+ * pairs.
  * @tparam encoded_variable_t
- * @param json_pairs A vector of JSON pairs. The objects in the pair are serialized as
- * auto-generated kv-pairs and user-generated kv-pairs, respectively.
+ * @param json_pairs
  * @return A vector of bytes representing the serialized IR stream.
  */
 template <typename encoded_variable_t>
@@ -88,9 +89,10 @@ template <typename encoded_variable_t>
 ) -> std::vector<int8_t>;
 
 /**
- * Serializes a vector of JSON object pairs into a string.
+ * Serializes a vector of JSON object pairs into a string, where each pair represents the
+ * auto-generated and user-generated KV pairs in a log event.
  * @param json_pairs
- * @return A string representing the serialized JSON pairs.
+ * @return The string.
  */
 [[nodiscard]] auto serialize_json_pairs_to_str(std::vector<JsonPair> const& json_pairs)
         -> std::string;
@@ -145,7 +147,7 @@ TEMPLATE_TEST_CASE(
     nlohmann::json const base_obj_1 = {
             {cIntKey, cIntBase + 1},
             {cStrKey,
-             fmt::format("This is a ClpStr: {}; And it contains a var={}", cTestSubStr, cIntBase)}
+             fmt::format("This is a {} ClpStr; And it contains a var={}", cTestSubStr, cIntBase)}
     };
     nlohmann::json const nested_obj_0 = {{cObjKey, base_obj_0}};
     nlohmann::json const nested_obj_1 = {{cObjKey, base_obj_1}};
@@ -156,10 +158,10 @@ TEMPLATE_TEST_CASE(
     JsonPair const json_pair_3{nested_obj_1, nested_obj_0};
 
     std::vector<JsonPair> const json_pairs_to_serialize{
-            {base_obj_0, base_obj_1},
-            {base_obj_1, base_obj_0},
-            {nested_obj_0, nested_obj_1},
-            {nested_obj_1, nested_obj_0}
+            json_pair_0,
+            json_pair_1,
+            json_pair_2,
+            json_pair_3
     };
 
     auto const ir_stream_bytes{
@@ -268,7 +270,7 @@ TEMPLATE_TEST_CASE(
     );
     CAPTURE(kql_query_str);
 
-    auto query_stream{std::istringstream{kql_query_str}};
+    std::istringstream query_stream{kql_query_str};
     auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
     REQUIRE((nullptr != query));
 
