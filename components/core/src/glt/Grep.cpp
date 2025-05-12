@@ -763,8 +763,8 @@ size_t Grep::search_and_output(
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             bool matched = wildcard_match_unsafe(
                     decompressed_msg,
@@ -820,8 +820,8 @@ bool Grep::search_and_decompress(
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             matched = wildcard_match_unsafe(
                     decompressed_msg,
@@ -862,8 +862,8 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             // Decompress match
             bool decompress_successful

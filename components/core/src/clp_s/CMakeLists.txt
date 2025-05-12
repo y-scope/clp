@@ -112,6 +112,8 @@ set(
         PackedStreamReader.cpp
         PackedStreamReader.hpp
         ParsedMessage.hpp
+        RangeIndexWriter.cpp
+        RangeIndexWriter.hpp
         ReaderUtils.cpp
         ReaderUtils.hpp
         Schema.cpp
@@ -210,6 +212,7 @@ target_link_libraries(
         PRIVATE
         clp::string_utils
         date::date
+        spdlog::spdlog
 )
 
 add_executable(

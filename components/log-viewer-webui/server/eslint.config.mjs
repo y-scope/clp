@@ -7,6 +7,8 @@ const EslintConfig = [
     {
         ignores: [
             "dist/",
+            "yscope-log-viewer/dist/",
+            "client/dist/",
             "node_modules/",
         ],
     },

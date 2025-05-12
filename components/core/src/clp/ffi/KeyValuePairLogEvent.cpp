@@ -437,8 +437,10 @@ auto serialize_node_id_value_pairs_to_json(
     }
 
     bool json_exception_captured{false};
-    auto json_exception_handler = [&]([[maybe_unused]] nlohmann::json::exception const& ex
-                                  ) -> void { json_exception_captured = true; };
+    auto json_exception_handler
+            = [&]([[maybe_unused]] nlohmann::json::exception const& ex) -> void {
+        json_exception_captured = true;
+    };
     using DfsIterator = JsonSerializationIterator<decltype(json_exception_handler)>;
 
     // NOTE: We use a `std::stack` (which uses `std::deque` as the underlying container) instead of
@@ -573,8 +575,9 @@ auto KeyValuePairLogEvent::get_user_gen_keys_schema_subtree_bitmap() const
 
 auto KeyValuePairLogEvent::serialize_to_json() const
         -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
-    auto const auto_gen_keys_schema_subtree_bitmap_result{get_auto_gen_keys_schema_subtree_bitmap(
-    )};
+    auto const auto_gen_keys_schema_subtree_bitmap_result{
+            get_auto_gen_keys_schema_subtree_bitmap()
+    };
     if (auto_gen_keys_schema_subtree_bitmap_result.has_error()) {
         return auto_gen_keys_schema_subtree_bitmap_result.error();
     }
@@ -587,8 +590,9 @@ auto KeyValuePairLogEvent::serialize_to_json() const
         return serialized_auto_gen_kv_pairs_result.error();
     }
 
-    auto const user_gen_keys_schema_subtree_bitmap_result{get_user_gen_keys_schema_subtree_bitmap(
-    )};
+    auto const user_gen_keys_schema_subtree_bitmap_result{
+            get_user_gen_keys_schema_subtree_bitmap()
+    };
     if (user_gen_keys_schema_subtree_bitmap_result.has_error()) {
         return user_gen_keys_schema_subtree_bitmap_result.error();
     }

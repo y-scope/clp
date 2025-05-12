@@ -8,20 +8,37 @@ set -u
 
 brew update
 
+formula_dir="$(mktemp -d -t "clp-dep-formulas")"
+
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
-cmake_formula_path=/tmp/cmake.rb
-curl --fail --location --show-error \
-  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce/Formula/c/cmake.rb \
-  --output "${cmake_formula_path}"
-brew install --formula "${cmake_formula_path}"
+cmake_formula_path="${formula_dir}/cmake.rb"
+curl \
+  --fail \
+  --location \
+  --output "$cmake_formula_path" \
+  --show-error \
+  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce\
+/Formula/c/cmake.rb
+brew install --formula "$cmake_formula_path"
+
+# Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+task_formula_path="${formula_dir}/go-task.rb"
+curl \
+  --fail \
+  --location \
+  --output "$task_formula_path" \
+  --show-error \
+  https://raw.githubusercontent.com/Homebrew/homebrew-core/356f8408263b6a06e8f5f83cad574773d8054e1c\
+/Formula/g/go-task.rb
+brew install --formula "$task_formula_path"
+
+rm -rf "$formula_dir"
 
 brew install \
   boost \
   coreutils \
-  fmt \
   gcc \
-  go-task \
   java11 \
   libarchive \
   llvm@16 \
@@ -29,7 +46,6 @@ brew install \
   mariadb-connector-c \
   mongo-cxx-driver \
   msgpack-cxx \
-  spdlog \
   xz \
   zstd
 

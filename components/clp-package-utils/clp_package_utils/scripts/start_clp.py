@@ -14,14 +14,15 @@ from typing import Any, Dict, List, Optional
 import yaml
 from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
+    ARCHIVES_TABLE_SUFFIX,
     AwsAuthType,
-    CLP_METADATA_TABLE_PREFIX,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
+    FILES_TABLE_SUFFIX,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
@@ -861,13 +862,15 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
 
     # Read and update settings.json
+    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+    table_prefix = clp_db_connection_params["table_prefix"]
     meteor_settings_updates = {
         "private": {
             "SqlDbHost": clp_config.database.host,
             "SqlDbPort": clp_config.database.port,
             "SqlDbName": clp_config.database.name,
-            "SqlDbClpArchivesTableName": f"{CLP_METADATA_TABLE_PREFIX}archives",
-            "SqlDbClpFilesTableName": f"{CLP_METADATA_TABLE_PREFIX}files",
+            "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
+            "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
         },
@@ -936,7 +939,14 @@ def start_log_viewer_webui(
     container_log_viewer_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log-viewer-webui"
     node_path = str(container_log_viewer_webui_dir / "server" / "node_modules")
     settings_json_path = (
-        get_clp_home() / "var" / "www" / "log-viewer-webui" / "server" / "dist" / "settings.json"
+        get_clp_home()
+        / "var"
+        / "www"
+        / "log-viewer-webui"
+        / "server"
+        / "dist"
+        / "server"
+        / "settings.json"
     )
 
     validate_log_viewer_webui_config(clp_config, settings_json_path)
@@ -1024,7 +1034,7 @@ def start_log_viewer_webui(
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
-        str(container_log_viewer_webui_dir / "server" / "dist" / "src" / "main.js"),
+        str(container_log_viewer_webui_dir / "server" / "dist" / "server" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)

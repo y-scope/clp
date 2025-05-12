@@ -524,9 +524,9 @@ int main(int argc, char const* argv[]) {
         case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
             auto global_metadata_db_path
                     = archives_dir / clp::streaming_archive::cMetadataDBFileName;
-            global_metadata_db
-                    = std::make_unique<clp::GlobalSQLiteMetadataDB>(global_metadata_db_path.string()
-                    );
+            global_metadata_db = std::make_unique<clp::GlobalSQLiteMetadataDB>(
+                    global_metadata_db_path.string()
+            );
             break;
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
