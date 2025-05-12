@@ -15,7 +15,7 @@ import {getSharedSocket} from "./SocketSingleton.js";
 class MongoCollectionSocket {
     collectionName: string;
 
-    private socket: Socket<ServerToClientEvents, ClientToServerEvents>;
+    #socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
     /**
      * Initalizes socket connection to a MongoDB collection on the server.
@@ -23,7 +23,7 @@ class MongoCollectionSocket {
      * @param collectionName
      */
     constructor (collectionName: string) {
-        this.socket = getSharedSocket();
+        this.#socket = getSharedSocket();
         this.collectionName = collectionName;
         console.log(`MongoDB collection:${collectionName} initialized.`);
     }
@@ -38,7 +38,7 @@ class MongoCollectionSocket {
 
     find (query: object, options: object) {
         return new MongoCursorSocket(
-            this.socket,
+            this.#socket,
             this.collectionName,
             query,
             options,

@@ -6,15 +6,17 @@ import {
     io,
     Socket,
 } from "socket.io-client";
+import {
+    Nullable,
+} from "../../typings/common";
 
-
-let sharedSocket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null;
+let sharedSocket: Nullable<Socket<ServerToClientEvents, ClientToServerEvents>> = null;
 
 /**
- * Returns the shared Socket.io instance for the application.
- * Creates a new connection if one doesn't exist yet.
+ * Returns the shared Socket.io instance for the application. Creates a new connection if one
+ * doesn't exist yet.
  *
- * @return The shared Socket.io instance
+ * @return The shared Socket.io instance.
  */
 const getSharedSocket = (): Socket<ServerToClientEvents, ClientToServerEvents> => {
     if (!sharedSocket) {

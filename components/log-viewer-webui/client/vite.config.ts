@@ -6,11 +6,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 // https://vite.dev/config/
 export default defineConfig({
     base: "./",
-    plugins: [react(),
-        tsconfigPaths()],
+    plugins: [
+        react(),
+        tsconfigPaths()
+    ],
     publicDir: "public",
     server: {
-        host: "0.0.0.0",
         port: 8080,
         proxy: {
             "/query/": {
