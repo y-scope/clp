@@ -32,15 +32,6 @@ function getLoggerOptions () {
 
 const app = Fastify({
     logger: getLoggerOptions(),
-    ajv: {
-        customOptions: {
-            // Change type of data to match type keyword.
-            coerceTypes: "array",
-
-            // Remove additional body properties.
-            removeAdditional: "all",
-        },
-    },
 });
 
 /**

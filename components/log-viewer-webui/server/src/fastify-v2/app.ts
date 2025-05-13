@@ -10,19 +10,8 @@ import {
 
 import FastifyV1App from "../app.js";
 
-
-export const options = {
-    ajv: {
-        customOptions: {
-            coerceTypes: "array",
-            removeAdditional: "all",
-        },
-    },
-};
-
 const RATE_LIMIT_MAX_REQUESTS = 3;
 const RATE_LIMIT_TIME_WINDOW_MS = 500;
-const HTTP_INTERNAL_SERVER_ERROR = 500;
 
 /**
  * Registers all plugins and routes.
@@ -43,6 +32,9 @@ export default async function serviceApp (
         dir: path.join(import.meta.dirname, "plugins/external"),
         options: {...opts},
     });
+
+    // Log the options for testing purposes
+    fastify.log.info(JSON.stringify(opts));
 
     /* eslint-disable no-warning-comments */
     // TODO: Refactor old webui code to use more modular fastify style. Temporarily, the old webui
@@ -80,7 +72,7 @@ export default async function serviceApp (
             "Unhandled error occurred"
         );
 
-        if ("undefined" !== typeof err.statusCode && HTTP_INTERNAL_SERVER_ERROR > err.statusCode) {
+        if ("undefined" !== typeof err.statusCode && 500 > err.statusCode) {
             reply.code(err.statusCode);
 
             return err.message;

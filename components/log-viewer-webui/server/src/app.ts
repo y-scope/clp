@@ -56,11 +56,11 @@ const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
             profile: settings.StreamFilesS3Profile,
         }
     );
-    await fastify.register(MongoSocketIoServer, {
-        host: settings.MongoDbHost,
-        port: settings.MongoDbPort,
-        database: settings.MongoDbName,
-    });
+    //await fastify.register(MongoSocketIoServer, {
+    //    host: settings.MongoDbHost,
+    //    port: settings.MongoDbPort,
+    //    database: settings.MongoDbName,
+    //});
 
     // Register the routes
     await fastify.register(staticRoutes);
