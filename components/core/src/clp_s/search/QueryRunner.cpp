@@ -47,13 +47,13 @@ auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
     m_schema = schema_id;
     populate_searched_wildcard_columns(m_expr);
 
-    auto result = constant_propagate(m_expr);
-    if (result == EvaluatedValue::False) {
-        return result;
+    m_expression_value = constant_propagate(m_expr);
+    if (m_expression_value == EvaluatedValue::False) {
+        return m_expression_value;
     }
 
     add_wildcard_columns_to_searched_columns();
-    return result;
+    return m_expression_value;
 }
 
 void QueryRunner::clear_readers() {
