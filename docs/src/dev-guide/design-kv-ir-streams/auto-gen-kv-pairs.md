@@ -45,10 +45,10 @@ logger.Info("Task completed successfully.",
 **Figure 2**: The JSON output of the LPS in [Figure 1](#figure-1).
 :::
 
-One of the key differences between KV-IR streams and a format like [JSON lines][json-lines] (JSONL)
-is that KV-IR streams support storing auto-generated KV pairs separately from user-generated KV
-pairs. Since the JSONL format has no such support, the two categories are stored in the same key
-namespace, which introduces the following constraints:
+One of the key differences between KV-IR streams and [JSON lines][json-lines] (JSONL) files is that
+KV-IR streams support storing auto-generated KV pairs separately from user-generated KV pairs. Since
+the JSONL format has no such support, the two categories are stored in the same key namespace, which
+introduces the following constraints:
 
 * Users must avoid selecting keys that might conflict with those used by the logging library. This
   requires the user to keep track of all library-reserved keys, and can be exacerbated if the user
@@ -75,13 +75,13 @@ user-generated KV pairs whose keys start with the character `@` will need to esc
 
 ## Additional benefits
 
-One benefit of supporting auto-generated KV pairs is that our CLP logging libraries or plugins can
-use a consistent set of keys for these KV pairs, making it easier for users to filter for the pairs.
-For instance, if a user is logging in both Java and Python, and they use CLP logging plugins to
-generate KV-IR streams, the generated streams should both use the same key for log levels---e.g.,
-`level`. In turn, this would allow users to query log levels across both their Java and Python logs
-using the query syntax `@level: <value>`. In addition, it would allow users to use the same key to
-filter their logs by level when viewing them in the [log viewer][log-viewer].
+One benefit of supporting auto-generated KV pairs is that our CLP logging libraries/plugins can use
+a consistent set of keys for these KV pairs, making it easier for users to filter for them. For
+instance, if a user is logging in both Java and Python, and they use CLP logging plugins to generate
+KV-IR streams, the generated streams can both use the same key for log levels---e.g., `level`. In
+turn, this would allow users to query log levels across both their Java and Python logs using the
+query syntax `@level: <value>`. In addition, it would allow users to use the same key to filter
+their logs by level when viewing them in the [log viewer][log-viewer].
 
 Another benefit of supporting auto-generated KV pairs is that we can potentially leverage
 the query syntax for more advanced queries on unstructured text KV pairs. For instance, we could
