@@ -280,10 +280,8 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
     SECTION("Namespaced column") {
         auto namespace_name = GENERATE("@", "$", "!", "#");
         auto namespaced_query_fmt_string = GENERATE("{}column : *", "\"{}column\": *");
-        auto namespaced_query = fmt::vformat(
-            namespaced_query_fmt_string,
-            fmt::make_format_args(namespace_name)
-        );
+        auto namespaced_query
+                = fmt::vformat(namespaced_query_fmt_string, fmt::make_format_args(namespace_name));
         stringstream query{namespaced_query};
         auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query));
         REQUIRE(nullptr != filter);
@@ -304,8 +302,8 @@ TEST_CASE("Test parsing KQL", "[KQL]") {
         auto escaped_namespace_query_fmt_string = GENERATE("\\{}column : *", "\"\\{}column\": *");
         auto column = fmt::vformat("{}column", fmt::make_format_args(namespace_name));
         auto escaped_namespace_query = fmt::vformat(
-            escaped_namespace_query_fmt_string,
-            fmt::make_format_args(namespace_name)
+                escaped_namespace_query_fmt_string,
+                fmt::make_format_args(namespace_name)
         );
         stringstream query{escaped_namespace_query};
         auto filter = std::dynamic_pointer_cast<FilterExpr>(parse_kql_expression(query));
