@@ -180,7 +180,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
             {R"aa(arr.b > 1000)aa", {7, 8}},
-            {R"aa(var_string: *)aa", {9}}
+            {R"aa(var_string: *)aa", {9}},
+            {R"aa(clp_string: *)aa", {9}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);

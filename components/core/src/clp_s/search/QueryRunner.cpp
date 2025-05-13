@@ -200,7 +200,7 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     auto* column = expr->get_column().get();
     auto op = expr->get_operation();
     if (column->matches_type(LiteralType::ClpStringT)) {
-        Query* q = m_expr_clp_query[expr];
+        Query* q = m_expr_clp_query.at(expr);
         for (auto const& entry : m_clp_string_readers) {
             if (evaluate_clp_string_filter(op, q, entry.second)) {
                 return true;
@@ -269,7 +269,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
         case LiteralType::FloatT:
             return evaluate_float_filter(expr->get_operation(), column_id, literal);
         case LiteralType::ClpStringT:
-            q = m_expr_clp_query[expr];
+            q = m_expr_clp_query.at(expr);
             return evaluate_clp_string_filter(
                     expr->get_operation(),
                     q,
