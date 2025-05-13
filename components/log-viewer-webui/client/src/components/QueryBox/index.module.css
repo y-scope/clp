@@ -1,0 +1,27 @@
+.queryBox {
+  width: 100%;
+}
+
+.queryBoxPosition {
+  /* Defines a new positioning context for absolutely positioned descendants such as the wrapper and progress bar. */
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.queryBoxWrapper {
+  /* Prevents the progress bar from obstructing the input box. */
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  overflow: hidden;
+  border-radius: var(--antd-border-radius);
+  --antd-border-radius: 8px;
+}
+
+.queryBoxProgress {
+  position: absolute;
+  bottom: -8px;
+}
