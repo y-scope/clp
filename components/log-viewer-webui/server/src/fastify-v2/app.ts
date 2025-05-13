@@ -10,6 +10,8 @@ import {
 
 import FastifyV1App from "../app.js";
 
+
+const INTERNAL_SERVER_ERROR_CODE = 500;
 const RATE_LIMIT_MAX_REQUESTS = 3;
 const RATE_LIMIT_TIME_WINDOW_MS = 500;
 
@@ -24,7 +26,8 @@ export default async function serviceApp (
     fastify: FastifyInstance,
     opts: FastifyPluginOptions
 ) {
-    // Option only serves testing purpose.
+    // Option only serves testing purpose. It's used in testing to expose all decorators to the
+    // test app. Some decorators may not be exposed in production.
     delete opts.skipOverride;
 
     // Loads all external plugins. Registered first as application plugins might depend on them.
@@ -32,9 +35,6 @@ export default async function serviceApp (
         dir: path.join(import.meta.dirname, "plugins/external"),
         options: {...opts},
     });
-
-    // Log the options for testing purposes
-    fastify.log.info(JSON.stringify(opts));
 
     /* eslint-disable no-warning-comments */
     // TODO: Refactor old webui code to use more modular fastify style. Temporarily, the old webui
@@ -72,7 +72,7 @@ export default async function serviceApp (
             "Unhandled error occurred"
         );
 
-        if ("undefined" !== typeof err.statusCode && 500 > err.statusCode) {
+        if ("undefined" !== typeof err.statusCode && INTERNAL_SERVER_ERROR_CODE > err.statusCode) {
             reply.code(err.statusCode);
 
             return err.message;

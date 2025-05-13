@@ -1,38 +1,44 @@
 // Reference: https://github.com/fastify/demo/blob/main/test/helper.ts
 
-import { FastifyInstance,} from 'fastify'
-import { build as buildApplication } from 'fastify-cli/helper.js'
-import path from 'node:path'
+import path from "node:path";
 
-import { Test } from 'tap';
+import {FastifyInstance} from "fastify";
+import {build as buildApplication} from "fastify-cli/helper.js";
+import {Test} from "tap";
 
-const AppPath = path.join(import.meta.dirname, '../app.ts')
 
-export function config () {
-  return {
-    skipOverride: true, // Register our application with fastify-plugin
-  }
-}
+const AppPath = path.join(import.meta.dirname, "../app.ts");
 
-// automatically build and tear down our instance
-export async function build (t: Test) {
-  // you can set all the options supported by the fastify CLI command
-  const argv = [AppPath]
+/**
+ * Provides test configuration options.
+ *
+ * @return
+ */
+export const config = () => {
+    // Register application with fastify-plugin to expose all decorators for testing
+    // purposes.
+    return {
+        skipOverride: true,
+    };
+};
 
-  // fastify-plugin ensures that all decorators
-  // are exposed for testing purposes, this is
-  // different from the production setup
-  console.log("Building application...");
-  const app = (await buildApplication(
-    argv,
-    config(),
-  )) as FastifyInstance
-  console.log("Application built.");
+/**
+ * Automatically build and tear down fastify app.
+ *
+ * @param t The test instance.
+ * @return Fastify instance.
+ */
+export const build = async (t: Test): Promise<FastifyInstance> => {
+    const argv = [AppPath];
 
-    t.teardown(() => {
-        console.log("Closing application");
-        app.close();
+    const app = await buildApplication(argv, config()) as FastifyInstance;
+
+    console.log("Application built.");
+
+    t.teardown(async () => {
+        console.log("Closing application.");
+        await app.close();
     });
 
-  return app
-}
+    return app;
+};
