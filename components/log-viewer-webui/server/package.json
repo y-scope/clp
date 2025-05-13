@@ -12,7 +12,7 @@
     "standalone": "npm run build && node --env-file=.env dist/server/src/main.js",
     "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "npm run lint:check -- --fix",
-    "test": "tap"
+    "test": "NODE_ENV=test tap"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",

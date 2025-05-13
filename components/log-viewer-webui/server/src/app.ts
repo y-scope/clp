@@ -32,35 +32,36 @@ const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
     opts: AppPluginOptions
 ) => {
     const {sqlDbUser, sqlDbPass} = opts;
-
-    await fastify.register(DbManager, {
-        mysqlConfig: {
-            database: settings.SqlDbName,
-            host: settings.SqlDbHost,
-            password: sqlDbPass,
-            port: settings.SqlDbPort,
-            queryJobsTableName: settings.SqlDbQueryJobsTableName,
-            user: sqlDbUser,
-        },
-        mongoConfig: {
-            database: settings.MongoDbName,
+    if ("test" !== process.env.NODE_ENV) {
+        await fastify.register(DbManager, {
+            mysqlConfig: {
+                database: settings.SqlDbName,
+                host: settings.SqlDbHost,
+                password: sqlDbPass,
+                port: settings.SqlDbPort,
+                queryJobsTableName: settings.SqlDbQueryJobsTableName,
+                user: sqlDbUser,
+            },
+            mongoConfig: {
+                database: settings.MongoDbName,
+                host: settings.MongoDbHost,
+                streamFilesCollectionName: settings.MongoDbStreamFilesCollectionName,
+                port: settings.MongoDbPort,
+            },
+        });
+        await fastify.register(
+            S3Manager,
+            {
+                region: settings.StreamFilesS3Region,
+                profile: settings.StreamFilesS3Profile,
+            }
+        );
+        await fastify.register(MongoSocketIoServer, {
             host: settings.MongoDbHost,
-            streamFilesCollectionName: settings.MongoDbStreamFilesCollectionName,
             port: settings.MongoDbPort,
-        },
-    });
-    await fastify.register(
-        S3Manager,
-        {
-            region: settings.StreamFilesS3Region,
-            profile: settings.StreamFilesS3Profile,
-        }
-    );
-    //await fastify.register(MongoSocketIoServer, {
-    //    host: settings.MongoDbHost,
-    //    port: settings.MongoDbPort,
-    //    database: settings.MongoDbName,
-    //});
+            database: settings.MongoDbName,
+        });
+    }
 
     // Register the routes
     await fastify.register(staticRoutes);
