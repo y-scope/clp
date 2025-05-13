@@ -28,22 +28,28 @@ cd components/log-viewer-webui
 To run the client during development:
 
 ```shell
-npm run start
+npm run dev
 ```
 
 To run the server during development:
 
 ```shell
-npm run start
+npm run dev
 ```
 
 To run the server in production:
 
 ```shell
-npm run prod
+npm run start
 ```
 
-In both cases, if you want to customize what host and port the server binds to, you can use the
+To run the server as a standalone Node.js process (i.e., without the Fastify CLI):
+
+```shell
+npm run standalone
+```
+
+If you want to customize what host and port the server binds to, you can use the
 environment variables in `components/log-viewer-webui/server/.env`.
 
 ## Testing

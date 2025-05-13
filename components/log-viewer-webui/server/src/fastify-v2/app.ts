@@ -36,7 +36,7 @@ export default async function serviceApp (
         options: {...opts},
     });
 
-    /* eslint-disable no-warning-comments */
+    // eslint-disable-next-line no-warning-comments
     // TODO: Refactor old webui code to use more modular fastify style. Temporarily, the old webui
     // code is loaded as a separate plugin.
     await fastify.register(FastifyV1App, {
