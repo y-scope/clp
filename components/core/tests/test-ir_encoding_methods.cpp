@@ -708,8 +708,8 @@ TEMPLATE_TEST_CASE(
     // Check if encoding type is properly read
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) == IRErrorCode::IRErrorCode_Success
-    );
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding)
+            == IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
     REQUIRE(MagicNumberLength == ir_buffer.get_pos());
 
@@ -831,7 +831,8 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
     REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(incomplete_preamble_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR
+    REQUIRE(
+            IRErrorCode::IRErrorCode_Incomplete_IR
             == deserialize_log_event<TestType>(incomplete_preamble_buffer, tag, message, timestamp)
     );
 }
