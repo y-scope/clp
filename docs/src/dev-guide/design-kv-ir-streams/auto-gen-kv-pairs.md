@@ -33,7 +33,7 @@ logger.Info("Task completed successfully.",
 
 ```json
 {
-  "ts":1708161000.123456,
+  "ts": 1708161000.123456,
   "level": "info",
   "message": "Task completed successfully.",
   "task": "task_1",
