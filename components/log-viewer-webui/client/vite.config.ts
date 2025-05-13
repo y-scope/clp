@@ -8,7 +8,7 @@ export default defineConfig({
     base: "./",
     plugins: [
         react(),
-        tsconfigPaths()
+        tsconfigPaths(),
     ],
     publicDir: "public",
     server: {

@@ -6,9 +6,9 @@ import {
     io,
     Socket,
 } from "socket.io-client";
-import {
-    Nullable,
-} from "../../typings/common";
+
+import {Nullable} from "../../typings/common";
+
 
 let sharedSocket: Nullable<Socket<ServerToClientEvents, ClientToServerEvents>> = null;
 
