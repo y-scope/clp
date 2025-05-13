@@ -90,13 +90,13 @@ constexpr value_bool_t cRefTestBool{false};
 [[nodiscard]] auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value>;
 
 /**
- * Gets the query evaluation results on the kv-pair log event constructed by the given node-ID-value
- * pairs.
  * @param auto_gen_schema_tree
  * @param user_gen_schema_tree
  * @param auto_gen_node_id_value_pairs
  * @param user_gen_node_id_value_pairs
  * @param query_handler_impl
+ * @return The query evaluation result on the kv-pair log event constructed by the given
+ * schema-trees and node-ID-value pairs.
  */
 [[nodiscard]] auto get_query_evaluation_result(
         std::shared_ptr<SchemaTree> auto_gen_schema_tree,

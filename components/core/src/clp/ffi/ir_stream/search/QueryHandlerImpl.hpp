@@ -349,9 +349,9 @@ private:
     }
 
     /**
-     * Pops the AST DFS stack and update the evaluation accordingly:
+     * Pops the AST DFS stack and updates the evaluation result accordingly:
      * - If the stack if not empty, update the parent's evaluation results.
-     * - Otherwise, update `query_evaluation_results`.
+     * - Otherwise, update `query_evaluation_result`.
      * @param evaluation_result
      * @param query_evaluation_result Returns the query evaluation result.
      */
@@ -361,7 +361,7 @@ private:
     ) -> void;
 
     /**
-     * Advances AST DFA evaluation by visiting the top of `m_ast_dfs_stack`.
+     * Advances AST DFS evaluation by visiting the top of `m_ast_dfs_stack`.
      * @param log_event
      * @param query_evaluation_result Returns the query evaluation result.
      * @return A void result on success, or an error code indicating the failure:
