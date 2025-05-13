@@ -1,6 +1,7 @@
 /* eslint-disable sort-keys */
 import env from "@fastify/env";
 
+
 declare module "fastify" {
     export interface FastifyInstance {
         config: {
