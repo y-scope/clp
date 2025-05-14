@@ -8,12 +8,7 @@
 #include <string_view>
 #include <vector>
 
-// We use NOLINTNEXTLINE to satisfy clang-tidy here because while we don't use any symbols from
-// `nlohmann/json.hpp` directly this code does not compile without the definition of
-// `nlohmann::basic_json<>` found in the `nlohmann/json.hpp` header.
-// NOLINTNEXTLINE(misc-include-cleaner)
 #include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
 
 #include "ErrorCode.hpp"
 #include "ZstdCompressor.hpp"
