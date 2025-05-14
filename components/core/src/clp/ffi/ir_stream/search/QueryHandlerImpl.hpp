@@ -153,7 +153,6 @@ public:
     /**
      * Implementation of `QueryHandler::evaluate_kv_pair_log_event`.
      * @param log_event
-     * @param user_gen_node_id_value_pairs
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
      * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying AST DFS evaluation doesn't
