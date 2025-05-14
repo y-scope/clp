@@ -438,7 +438,7 @@ auto QueryHandlerImpl::evaluate_kv_pair_log_event(KeyValuePairLogEvent const& lo
 
     std::optional<AstEvaluationResult> optional_evaluation_result;
     m_ast_dfs_stack.clear();
-    push_ast_dfs_stack(OUTCOME_TRYX(AstExprIterator::create(m_query.get())));
+    push_to_ast_dfs_stack(OUTCOME_TRYX(AstExprIterator::create(m_query.get())));
     while (false == m_ast_dfs_stack.empty()) {
         OUTCOME_TRYV(advance_ast_dfs_evaluation(log_event, optional_evaluation_result));
     }
@@ -621,7 +621,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         }
         auto const optional_next_op_it{expr_it.next_op()};
         if (optional_next_op_it.has_value()) {
-            push_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
+            push_to_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
         } else {
             pop_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::True,
@@ -645,7 +645,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
     }
     auto const optional_next_op_it{expr_it.next_op()};
     if (optional_next_op_it.has_value()) {
-        push_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
+        push_to_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
         return outcome_v2::success();
     }
     if (0 != (evaluation_results & AstEvaluationResult::False)) {

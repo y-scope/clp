@@ -343,7 +343,7 @@ private:
             KeyValuePairLogEvent const& log_event
     ) -> outcome_v2::std_result<AstEvaluationResult>;
 
-    auto push_ast_dfs_stack(AstExprIterator ast_expr_it) -> void {
+    auto push_to_ast_dfs_stack(AstExprIterator ast_expr_it) -> void {
         m_ast_dfs_stack.emplace_back(ast_expr_it, ast_evaluation_result_bitmask_t{});
     }
 
@@ -354,7 +354,7 @@ private:
      * @param evaluation_result
      * @param query_evaluation_result Returns the query evaluation result.
      */
-    auto pop_ast_dfs_stack_and_update_evaluation_results(
+    auto pop_from_ast_dfs_stack_and_update_evaluation_results(
             AstEvaluationResult evaluation_result,
             std::optional<AstEvaluationResult>& query_evaluation_result
     ) -> void;
