@@ -24,6 +24,7 @@
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/clp/ffi/ir_stream/search/test/utils.hpp"
 #include "../src/clp/ffi/ir_stream/Serializer.hpp"
 #include "../src/clp/ffi/ir_stream/utils.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
@@ -31,7 +32,6 @@
 #include "../src/clp/ir/LogEventDeserializer.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/time_types.hpp"
-#include "../src/clp/ffi/ir_stream/search/test/utils.hpp"
 
 using clp::BufferReader;
 using clp::enum_to_underlying_type;
@@ -50,6 +50,7 @@ using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
 using clp::ffi::ir_stream::IRErrorCode;
+using clp::ffi::ir_stream::search::test::unpack_and_serialize_msgpack_bytes;
 using clp::ffi::ir_stream::serialize_utc_offset_change;
 using clp::ffi::ir_stream::Serializer;
 using clp::ffi::ir_stream::validate_protocol_version;
@@ -69,7 +70,6 @@ using std::is_same_v;
 using std::string;
 using std::string_view;
 using std::vector;
-using clp::ffi::ir_stream::search::test::unpack_and_serialize_msgpack_bytes;
 
 namespace {
 /**
@@ -665,8 +665,8 @@ TEMPLATE_TEST_CASE(
     // Check if encoding type is properly read
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) == IRErrorCode::IRErrorCode_Success
-    );
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding)
+            == IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
     REQUIRE(MagicNumberLength == ir_buffer.get_pos());
 
@@ -788,7 +788,8 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
     REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(incomplete_preamble_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR
+    REQUIRE(
+            IRErrorCode::IRErrorCode_Incomplete_IR
             == deserialize_log_event<TestType>(incomplete_preamble_buffer, tag, message, timestamp)
     );
 }

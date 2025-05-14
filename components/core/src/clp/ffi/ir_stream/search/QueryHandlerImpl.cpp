@@ -44,14 +44,15 @@ using clp_s::search::ast::LiteralTypeBitmask;
 /**
  * Pre-processes a search query by applying several transformation passes.
  * @param query
- * @return A result containing the transformed
+ * @return A result containing the transformed query on success, or an error code indicating the
+ * failure:
  * - ErrorCodeEnum::QueryTransformationPassFailed if any of the transformation pass failed.
  */
 [[nodiscard]] auto preprocess_query(std::shared_ptr<Expression> query)
         -> outcome_v2::std_result<std::shared_ptr<Expression>>;
 
 /**
- * Creates projected columns and column-to-original-key map from the given projections.
+ * Creates column descriptors and column-to-original-key map from the given projections.
  * @param projections
  * @return A result containing a pair or an error code indicating the failure:
  * - The pair:
@@ -381,7 +382,7 @@ auto evaluate_wildcard_filter(
         SchemaTree const& schema_tree,
         bool case_sensitive_match
 ) -> outcome_v2::std_result<AstEvaluationResult> {
-    AstEvaluationResultBitmask evaluation_results{};
+    ast_evaluation_result_bitmask_t evaluation_results{};
     for (auto const& [node_id, value] : node_id_value_pairs) {
         auto const evaluation_result{OUTCOME_TRYX(evaluate_filter_against_node_id_value_pair(
                 filter_expr,
@@ -437,7 +438,7 @@ auto QueryHandlerImpl::evaluate_kv_pair_log_event(KeyValuePairLogEvent const& lo
 
     std::optional<AstEvaluationResult> optional_evaluation_result;
     m_ast_dfs_stack.clear();
-    push_ast_dfs_stack(OUTCOME_TRYX(AstExprIterator::create(m_query.get())));
+    push_to_ast_dfs_stack(OUTCOME_TRYX(AstExprIterator::create(m_query.get())));
     while (false == m_ast_dfs_stack.empty()) {
         OUTCOME_TRYV(advance_ast_dfs_evaluation(log_event, optional_evaluation_result));
     }
@@ -547,7 +548,7 @@ auto QueryHandlerImpl::evaluate_filter_expr(
     };
     auto const& matchable_node_ids{m_resolved_column_to_schema_tree_node_ids.at(col)};
 
-    AstEvaluationResultBitmask evaluation_results{};
+    ast_evaluation_result_bitmask_t evaluation_results{};
     for (auto const matchable_node_id : matchable_node_ids) {
         if (false == node_id_value_pairs.contains(matchable_node_id)) {
             continue;
@@ -565,13 +566,13 @@ auto QueryHandlerImpl::evaluate_filter_expr(
         evaluation_results |= evaluation_result;
     }
 
-    if ((evaluation_results & AstEvaluationResult::False) != 0) {
+    if (0 != (evaluation_results & AstEvaluationResult::False)) {
         return AstEvaluationResult::False;
     }
     return AstEvaluationResult::Pruned;
 }
 
-auto QueryHandlerImpl::pop_ast_dfs_stack_and_update_evaluation_results(
+auto QueryHandlerImpl::pop_from_ast_dfs_stack_and_update_evaluation_results(
         clp::ffi::ir_stream::search::AstEvaluationResult evaluation_result,
         std::optional<AstEvaluationResult>& query_evaluation_result
 ) -> void {
@@ -595,7 +596,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
 ) -> outcome_v2::std_result<void> {
     auto& [expr_it, evaluation_results] = m_ast_dfs_stack.back();
     if (auto* filter_expr{expr_it.as_filter_expr()}; nullptr != filter_expr) {
-        pop_ast_dfs_stack_and_update_evaluation_results(
+        pop_from_ast_dfs_stack_and_update_evaluation_results(
                 OUTCOME_TRYX(evaluate_filter_expr(filter_expr, log_event)),
                 query_evaluation_result
         );
@@ -605,14 +606,14 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
     if (auto const* and_expr{expr_it.as_and_expr()}; nullptr != and_expr) {
         // Handle `AndExpr` evaluation
         if (0 != (evaluation_results & AstEvaluationResult::Pruned)) {
-            pop_ast_dfs_stack_and_update_evaluation_results(
+            pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::Pruned,
                     query_evaluation_result
             );
             return outcome_v2::success();
         }
         if (0 != (evaluation_results & AstEvaluationResult::False)) {
-            pop_ast_dfs_stack_and_update_evaluation_results(
+            pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::False,
                     query_evaluation_result
             );
@@ -620,9 +621,9 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         }
         auto const optional_next_op_it{expr_it.next_op()};
         if (optional_next_op_it.has_value()) {
-            push_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
+            push_to_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
         } else {
-            pop_ast_dfs_stack_and_update_evaluation_results(
+            pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::True,
                     query_evaluation_result
             );
@@ -636,7 +637,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         return ErrorCode{ErrorCodeEnum::AstEvaluationInvariantViolation};
     }
     if (0 != (evaluation_results & AstEvaluationResult::True)) {
-        pop_ast_dfs_stack_and_update_evaluation_results(
+        pop_from_ast_dfs_stack_and_update_evaluation_results(
                 AstEvaluationResult::True,
                 query_evaluation_result
         );
@@ -644,18 +645,19 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
     }
     auto const optional_next_op_it{expr_it.next_op()};
     if (optional_next_op_it.has_value()) {
-        push_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
+        push_to_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
         return outcome_v2::success();
     }
-    if ((evaluation_results & AstEvaluationResult::False) != 0) {
-        pop_ast_dfs_stack_and_update_evaluation_results(
+    if (0 != (evaluation_results & AstEvaluationResult::False)) {
+        pop_from_ast_dfs_stack_and_update_evaluation_results(
                 AstEvaluationResult::False,
                 query_evaluation_result
         );
         return outcome_v2::success();
     }
+
     // All pruned
-    pop_ast_dfs_stack_and_update_evaluation_results(
+    pop_from_ast_dfs_stack_and_update_evaluation_results(
             AstEvaluationResult::Pruned,
             query_evaluation_result
     );

@@ -153,7 +153,6 @@ public:
     /**
      * Implementation of `QueryHandler::evaluate_kv_pair_log_event`.
      * @param log_event
-     * @param user_gen_node_id_value_pairs
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
      * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying AST DFS evaluation doesn't
@@ -214,12 +213,13 @@ private:
 
         // Methods
         /**
-         * @return A result containing the iterator of the next child expression operator, or an
-         * error code indicating the failure:
+         * Retrieves the next child expression operator to visit as an `AstExprIterator`.
+         * @return A result containing the next `AstExprIterator` to visit on success, or an error
+         * code indicating the failure:
          * - ErrorCodeEnum::AttemptToIterateAstLeafExpr if the current expression is a leaf
-         * expression
-         *   (`clp_s::search::ast::FilterExpr`).
+         *   expression (`clp_s::search::ast::FilterExpr`) with no child operators.
          * - Forwards `create`'s return values.
+         * @return std::nullopt if there are no more child operators to visit.
          */
         [[nodiscard]] auto next_op() -> std::optional<outcome_v2::std_result<AstExprIterator>>;
 
@@ -277,6 +277,7 @@ private:
                   m_op_end_it{op_end_it},
                   m_is_inverted{is_inverted} {}
 
+        // Variables
         ExprVariant m_expr;
         clp_s::search::ast::OpList::const_iterator m_op_next_it;
         clp_s::search::ast::OpList::const_iterator m_op_end_it;
@@ -334,8 +335,8 @@ private:
      * @param log_event
      * @return A result containing the evaluation result on success, or an error code indicating the
      * failure:
-     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying column of the filter is
-     *   neither user-generated nor auto-generated.
+     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the underlying column of the filter has
+     *   been resolved, but is neither user-generated nor auto-generated.
      * - Forwards `evaluate_wildcard_filter`'s return values.
      * - Forwards `evaluate_filter_against_node_id_value_pair`'s return values.
      */
@@ -344,29 +345,29 @@ private:
             KeyValuePairLogEvent const& log_event
     ) -> outcome_v2::std_result<AstEvaluationResult>;
 
-    auto push_ast_dfs_stack(AstExprIterator ast_expr_it) -> void {
-        m_ast_dfs_stack.emplace_back(ast_expr_it, AstEvaluationResultBitmask{});
+    auto push_to_ast_dfs_stack(AstExprIterator ast_expr_it) -> void {
+        m_ast_dfs_stack.emplace_back(ast_expr_it, ast_evaluation_result_bitmask_t{});
     }
 
     /**
-     * Pops the AST DFS stack and update the evaluation accordingly:
-     * - If the stack if not empty, update the parent's evaluation results.
-     * - Otherwise, update `query_evaluation_results`.
+     * Pops from the AST DFS stack and updates the evaluation result accordingly:
+     * - If the stack still has elements, updates the parent's evaluation results.
+     * - Otherwise, updates `query_evaluation_result`.
      * @param evaluation_result
      * @param query_evaluation_result Returns the query evaluation result.
      */
-    auto pop_ast_dfs_stack_and_update_evaluation_results(
+    auto pop_from_ast_dfs_stack_and_update_evaluation_results(
             AstEvaluationResult evaluation_result,
             std::optional<AstEvaluationResult>& query_evaluation_result
     ) -> void;
 
     /**
-     * Advances AST DFA evaluation by visiting the top of `m_ast_dfs_stack`.
+     * Advances the AST DFS evaluation by visiting the top of `m_ast_dfs_stack`.
      * @param log_event
      * @param query_evaluation_result Returns the query evaluation result.
      * @return A void result on success, or an error code indicating the failure:
-     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the expression iterator on the stack top
-     *   is an unexpected expression type.
+     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the expression iterator at the top of the
+     *   stack is an unexpected expression type.
      * - Forwards `evaluate_filter_expr`'s return values.
      * - Forwards `AstExprIterator::next_op`'s return values.
      */
@@ -387,7 +388,7 @@ private:
     std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> m_projected_columns;
     ProjectionMap m_projected_column_to_original_key;
     bool m_case_sensitive_match;
-    std::vector<std::pair<AstExprIterator, AstEvaluationResultBitmask>> m_ast_dfs_stack;
+    std::vector<std::pair<AstExprIterator, ast_evaluation_result_bitmask_t>> m_ast_dfs_stack;
 };
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>

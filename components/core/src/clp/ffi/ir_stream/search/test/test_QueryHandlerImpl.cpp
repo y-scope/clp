@@ -90,13 +90,13 @@ constexpr value_bool_t cRefTestBool{false};
 [[nodiscard]] auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value>;
 
 /**
- * Gets the query evaluation results on the kv-pair log event constructed by the given node-ID-value
- * pairs.
  * @param auto_gen_schema_tree
  * @param user_gen_schema_tree
  * @param auto_gen_node_id_value_pairs
  * @param user_gen_node_id_value_pairs
  * @param query_handler_impl
+ * @return The query evaluation result on the kv-pair log event constructed by the given
+ * schema-trees and node-ID-value pairs.
  */
 [[nodiscard]] auto get_query_evaluation_result(
         std::shared_ptr<SchemaTree> auto_gen_schema_tree,
@@ -259,7 +259,8 @@ auto get_matchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value
         default:
             // Unsupported types
             REQUIRE(false);
-            // The following return should never be reached. It is added to silent clang-tidy
+
+            // The following return should never be reached. It's used to silence clang-tidy
             // warnings.
             return {};
     }
@@ -274,22 +275,23 @@ auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Val
         case SchemaTree::Node::Type::Bool:
             return {Value{false == cRefTestBool}};
         case SchemaTree::Node::Type::Str: {
-            std::vector<Value> matchable_values;
-            matchable_values.emplace_back(std::string{});
-            std::string_view const unmatchable_long_str{"This is a static message: ID=0"};
-            REQUIRE((unmatchable_long_str.find(cRefTestStr) == std::string::npos));
-            matchable_values.emplace_back(
-                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unmatchable_long_str)
+            std::vector<Value> unmatchable_values;
+            unmatchable_values.emplace_back(std::string{});
+            constexpr std::string_view cUnmatchableLongStr{"This is a static message: ID=0"};
+            REQUIRE((cUnmatchableLongStr.find(cRefTestStr) == std::string::npos));
+            unmatchable_values.emplace_back(
+                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(cUnmatchableLongStr)
             );
-            matchable_values.emplace_back(
-                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(unmatchable_long_str)
+            unmatchable_values.emplace_back(
+                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(cUnmatchableLongStr)
             );
-            return matchable_values;
+            return unmatchable_values;
         }
         default:
             // Unsupported types
             REQUIRE(false);
-            // The following return should never be reached. It is added to silent clang-tidy
+
+            // The following return should never be reached. It's used to silence clang-tidy
             // warnings.
             return {};
     }
@@ -610,6 +612,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     auto create_query_handler = [&](std::string const& query_str) -> QueryHandlerImpl {
         auto query_stream{std::istringstream{query_str}};
         auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
+        REQUIRE((nullptr != query));
 
         auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
         REQUIRE_FALSE(query_handler_impl_result.has_error());
@@ -638,7 +641,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                                   .has_error());
         }
 
-        return std::move(query_handler_impl);
+        return std::move(query_handler_impl_result.value());
     };
 
     SECTION("Basic test with a single matchable node-ID-value pair") {
@@ -668,14 +671,14 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
         // For queries consisting of chained AND expressions, the result can be either `Pruned` or
         // `False`. Thus, `expected_evaluation_results` is a bitmask capturing all valid outcomes.
         auto const [matchable_kql_query_str, expected_evaluation_results] = GENERATE_COPY(
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(matchable_kql_expressions_with_column_resolutions, " OR ")
                         ),
                         AstEvaluationResult::True
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(
@@ -685,22 +688,22 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                         ),
                         AstEvaluationResult::Pruned | AstEvaluationResult::False
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " OR ")),
                         AstEvaluationResult::True
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " AND ")),
                         AstEvaluationResult::Pruned | AstEvaluationResult::False
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(kql_expressions_with_unknown_namespace, " OR ")
                         ),
                         AstEvaluationResult::Pruned
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(kql_expressions_with_unknown_namespace, " AND ")
@@ -756,14 +759,8 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     }
 
     SECTION("Matchable node-ID-value pairs on both user-generated and auto-generated namespaces") {
-        std::vector<std::string> matchable_kql_expression_pairs;
-
-        auto const with_inverter = GENERATE(true, false);
-        CAPTURE(with_inverter);
-        // NOTE: By applying De Morgan's law, `cExpressionWithInverter` should be equivalent to
-        // `cExpressionWithoutInverter`.
-        constexpr std::string_view cExpressionWithInverter{"NOT (NOT {}{} OR NOT {}{})"};
-        constexpr std::string_view cExpressionWithoutInverter{"({}{} AND {}{})"};
+        std::vector<std::string> xor_matchable_expressions;
+        constexpr std::string_view cXorExpression{"(({} AND NOT @{}) OR (NOT {} AND @{}))"};
 
         for (auto const& matchable_expression : matchable_kql_expressions) {
             if (matchable_expression.starts_with("*:")) {
@@ -771,30 +768,30 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                 // kv-pairs
                 continue;
             }
-            matchable_kql_expression_pairs.emplace_back(
-                    with_inverter ? fmt::format(
-                                            cExpressionWithInverter,
-                                            cDefaultNamespace,
-                                            matchable_expression,
-                                            cAutogenNamespace,
-                                            matchable_expression
-                                    )
-                                  : fmt::format(
-                                            cExpressionWithoutInverter,
-                                            cDefaultNamespace,
-                                            matchable_expression,
-                                            cAutogenNamespace,
-                                            matchable_expression
-                                    )
+            xor_matchable_expressions.emplace_back(
+                    fmt::format(
+                            cXorExpression,
+                            matchable_expression,
+                            matchable_expression,
+                            matchable_expression,
+                            matchable_expression
+                    )
             );
         }
 
-        auto const kql_query_str{
-                fmt::format("{}", fmt::join(matchable_kql_expression_pairs, " OR "))
-        };
+        // Combine all XOR expressions into a single KQL query string joined by "OR".
+        // Each XOR expression matches the key either in the default namespace or the
+        // auto-generated namespace, but not both.
+        auto const kql_query_str{fmt::format("{}", fmt::join(xor_matchable_expressions, " OR "))};
         CAPTURE(kql_query_str);
 
         auto query_handler_impl{create_query_handler(kql_query_str)};
+
+        auto const pruned_evaluation_result{
+                get_query_evaluation_result(schema_tree, schema_tree, {}, {}, query_handler_impl)
+        };
+        CAPTURE(pruned_evaluation_result);
+        REQUIRE((AstEvaluationResult::Pruned == pruned_evaluation_result));
 
         for (auto const& locator : locators) {
             auto const node_type{locator.get_type()};
@@ -809,19 +806,8 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
             auto const node_id{*optional_node_id};
             CAPTURE(node_id);
 
-            auto const pruned_evaluation_result{get_query_evaluation_result(
-                    schema_tree,
-                    schema_tree,
-                    {},
-                    {},
-                    query_handler_impl
-            )};
-            CAPTURE(pruned_evaluation_result);
-            REQUIRE((pruned_evaluation_result == AstEvaluationResult::Pruned));
-
-            // NOTE: We use nested for loop to generated matchable/unmatchable values instead of
-            // using `GENERATE` since `GENERATE` in this case has a way worse performance (about
-            // 100 times slower).
+            // NOTE: We use a nested for loop to generate matchable/unmatchable values instead of
+            // using `GENERATE` since, in this case, `GENERATE` is about 100x slower.
             for (auto const& matchable_value : get_matchable_values(node_type)) {
                 AstEvaluationResult evaluation_result{};
                 evaluation_result = get_query_evaluation_result(
@@ -832,7 +818,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                         query_handler_impl
                 );
                 CAPTURE(evaluation_result);
-                REQUIRE((evaluation_result == AstEvaluationResult::True));
+                REQUIRE((AstEvaluationResult::False == evaluation_result));
 
                 for (auto const& unmatchable_value : get_unmatchable_values(node_type)) {
                     evaluation_result = get_query_evaluation_result(
@@ -843,7 +829,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                             query_handler_impl
                     );
                     CAPTURE(evaluation_result);
-                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+                    REQUIRE((AstEvaluationResult::True == evaluation_result));
 
                     evaluation_result = get_query_evaluation_result(
                             schema_tree,
@@ -853,7 +839,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                             query_handler_impl
                     );
                     CAPTURE(evaluation_result);
-                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+                    REQUIRE((AstEvaluationResult::True == evaluation_result));
 
                     evaluation_result = get_query_evaluation_result(
                             schema_tree,
@@ -863,15 +849,15 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                             query_handler_impl
                     );
                     CAPTURE(evaluation_result);
-                    REQUIRE((evaluation_result == AstEvaluationResult::False));
+                    REQUIRE((AstEvaluationResult::False == evaluation_result));
                 }
             }
         }
     }
 
     SECTION("Test array evaluation") {
-        // Array evaluation is not supported in the current implementation. To make the search still
-        // usable, array evaluation shouldn't fail but return `False` instead.
+        // Array evaluation is not supported in the current implementation, but query evaluations
+        // should still return `False` instead of failing.
 
         /*
          * Schema-tree with unstructured array:

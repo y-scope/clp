@@ -20,10 +20,10 @@ auto ErrorCategory::message(ErrorCodeEnum error_enum) const -> std::string {
         case ErrorCodeEnum::AstDynamicCastFailure:
             return "Failed to dynamically cast an AST node to the expected type.";
         case ErrorCodeEnum::AstEvaluationInvariantViolation:
-            return "Internal invariant violated during AST evaluation. This indicates a serious "
-                   "bug in the evaluation logic.";
+            return "Internal invariant violated during AST evaluation. This indicates a serious"
+                   " bug in the evaluation logic.";
         case ErrorCodeEnum::AttemptToIterateAstLeafExpr:
-            return "Attempted to iterate an leaf expression of an AST.";
+            return "Attempted to iterate a leaf expression of an AST.";
         case ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds:
             return "Attempted to access a token beyond the end of the column descriptor.";
         case ErrorCodeEnum::ColumnTokenizationFailure:

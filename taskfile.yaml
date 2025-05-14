@@ -1,5 +1,8 @@
 version: "3"
 
+set: ["u", "pipefail"]
+shopt: ["globstar"]
+
 includes:
   deps: "taskfiles/deps/main.yaml"
   docs: "taskfiles/docs.yaml"
