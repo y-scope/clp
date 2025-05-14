@@ -39,9 +39,9 @@ public:
     // Methods inherited from Literal
     bool matches_type(LiteralType type) override { return type & m_string_type; }
 
-    bool matches_any(LiteralTypeBitmask mask) override { return mask & m_string_type; }
+    bool matches_any(literal_type_bitmask_t mask) override { return mask & m_string_type; }
 
-    bool matches_exactly(LiteralTypeBitmask mask) override { return mask == m_string_type; }
+    bool matches_exactly(literal_type_bitmask_t mask) override { return mask == m_string_type; }
 
     bool as_clp_string(std::string& ret, FilterOperation op) override;
 
@@ -59,7 +59,7 @@ public:
 
 private:
     std::string m_v;
-    LiteralTypeBitmask m_string_type;
+    literal_type_bitmask_t m_string_type;
 
     // Constructor
     explicit StringLiteral(std::string v) : m_v(std::move(v)), m_string_type(0) {
