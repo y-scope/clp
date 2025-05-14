@@ -11,6 +11,7 @@
     "MongoDbPort": 27017,
     "MongoDbName": "clp-query-results",
     "MongoDbStreamFilesCollectionName": "stream-files",
+    "MongoDbSearchResultsMetadataCollectionName": "results-metadata"
 
     "ClientDir": "../client/dist",
     "LogViewerDir": "../yscope-log-viewer/dist",
