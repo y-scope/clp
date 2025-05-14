@@ -23,9 +23,6 @@ const schema = {
         "HOST",
         "CLP_DB_USER",
         "CLP_DB_PASS",
-        "CLIENT_DIR",
-        "STREAMS_DATA_DIR",
-        "LOG_VIEWER_DIR",
     ],
     properties: {
         PORT: {
