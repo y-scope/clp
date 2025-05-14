@@ -99,7 +99,6 @@ class MongoSocketIoServer {
         this.#io.on("connection", (socket) => {
             this.#fastify.log.info(`New socket connected with ID:${socket.id}`);
             socket.on("disconnect", this.#disconnectListener.bind(this, socket));
-            socket.on("collection::init", this.#collectionInitListener.bind(this, socket));
             socket.on(
                 "collection::find::subscribe",
                 this.#collectionFindSubscribeListener.bind(this, socket)
@@ -147,38 +146,6 @@ class MongoSocketIoServer {
     }
 
     /**
-     * Listener for initializing a connection to a collection.
-     *
-     * @param socket
-     * @param requestArgs
-     * @param requestArgs.collectionName
-     * @param callback
-     */
-    async #collectionInitListener (
-        socket: MongoCustomSocket,
-        requestArgs: {collectionName: string},
-        callback:(res: Response<void>) => void
-    ): Promise<void> {
-        const {collectionName} = requestArgs;
-        this.#fastify.log.info(
-            `Socket:${socket.id} requested init of collection:${collectionName}`
-        );
-
-        const hasCollection = await this.#hasCollection(collectionName);
-        if (false === hasCollection) {
-            this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
-            callback({
-                error: `Collection ${collectionName} does not exist in MongoDB`,
-            });
-
-            return;
-        }
-
-        socket.data = {...socket.data, collectionName};
-    }
-
-
-    /**
      * Adds the query ID to the connection's subscribed query IDs.
      *
      * @param queryId
@@ -223,6 +190,26 @@ class MongoSocketIoServer {
     }
 
     /**
+     * Gets an existing watcher collection or creates a new one if it doesn't exist.
+     *
+     * @param collectionName
+     * @return The watcher collection instance.
+     */
+    #getOrCreateWatcherCollection (
+        collectionName: string
+    )
+        : MongoWatcherCollection {
+        let watcherCollection = this.#collections.get(collectionName);
+        if ("undefined" === typeof watcherCollection) {
+            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
+            this.#fastify.log.info(`Created MongoDb collection:${collectionName}.`);
+            this.#collections.set(collectionName, watcherCollection);
+        }
+
+        return watcherCollection;
+    }
+
+    /**
      * Listener for subscribing to a find query. The client will receive updates whenever
      * the query results change.
      *
@@ -230,32 +217,32 @@ class MongoSocketIoServer {
      * @param requestArgs
      * @param requestArgs.query
      * @param requestArgs.options
+     * @param requestArgs.collectionName
      * @param callback
      */
     async #collectionFindSubscribeListener (
         socket: MongoCustomSocket,
-        requestArgs: {query: object; options: object},
+        requestArgs: {collectionName: string; query: object; options: object},
         callback: (res: Response<{queryId: number; initialDocuments: object[]}>) => void
     ): Promise<void> {
-        const {query, options} = requestArgs;
-        const {collectionName} = socket.data;
-
-        if ("undefined" === typeof collectionName) {
-            this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
-
-            return;
-        }
+        const {collectionName, query, options} = requestArgs;
 
         this.#fastify.log.info(
             `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
 
-        let watcherCollection = this.#collections.get(collectionName);
-        if ("undefined" === typeof watcherCollection) {
-            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#collections.set(collectionName, watcherCollection);
+        const hasCollection = await this.#hasCollection(collectionName);
+        if (false === hasCollection) {
+            this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
+            callback({
+                error: `Collection ${collectionName} does not exist in MongoDB on server`,
+            });
+
+            return;
         }
+
+        const watcherCollection = this.#getOrCreateWatcherCollection(collectionName);
 
         const queryParameters: QueryParameters = {collectionName, query, options};
         const queryId = this.#getQueryId(queryParameters);
