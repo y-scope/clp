@@ -25,8 +25,8 @@ using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::Literal;
+using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::LiteralType;
-using clp_s::search::ast::LiteralTypeBitmask;
 using clp_s::search::ast::OpList;
 using clp_s::search::ast::OrExpr;
 
@@ -935,7 +935,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             return;
         }
         m_wildcard_columns.push_back(col);
-        LiteralTypeBitmask matching_types{0};
+        literal_type_bitmask_t matching_types{0};
         for (int32_t node : (*m_schemas)[m_schema]) {
             if (Schema::schema_entry_is_unordered_object(node)) {
                 continue;
@@ -1048,9 +1048,9 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             bool matches_var_string = false;
             bool has_clp_string = false;
             bool matches_clp_string = false;
-            constexpr LiteralTypeBitmask other_types = LiteralType::ArrayT | ast::cIntegralTypes
-                                                       | LiteralType::NullT | LiteralType::BooleanT
-                                                       | LiteralType::EpochDateT;
+            constexpr literal_type_bitmask_t other_types
+                    = LiteralType::ArrayT | ast::cIntegralTypes | LiteralType::NullT
+                      | LiteralType::BooleanT | LiteralType::EpochDateT;
             bool has_other = wildcard->matches_any(other_types);
             std::string filter_string;
             bool valid
