@@ -3,29 +3,11 @@ import { Collection } from "mongodb";
 
 import { SearchResultsMetadataDocument } from '../../../plugins/app/search/SearchResultsMetadataCollection/typings.js';
 import { SEARCH_SIGNAL } from '../../../plugins/app/search/constants.js';
-
-type UpdateSearchResultsMetaProps = {
-    jobId: number;
-    lastSignal: SEARCH_SIGNAL;
-    SearchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
-    logger: FastifyBaseLogger;
-    fields: Partial<SearchResultsMetadataDocument>;
-};
-
-type UpdateSearchSignalWhenJobsFinishProps = {
-    searchJobId: number;
-    aggregationJobId: number;
-    queryJobsDbManager: any; // Replace with actual type
-    searchJobCollectionsManager: any; // Replace with actual type
-    SearchResultsMetadataCollection: Collection<any>; // Replace with actual type
-    logger: FastifyBaseLogger;
-};
-
-type CreateMongoIndexesProps = {
-    searchJobId: number;
-    searchJobCollectionsManager: any; // Replace with actual type
-    logger: FastifyBaseLogger;
-};
+import {
+    UpdateSearchResultsMetaProps,
+    UpdateSearchSignalWhenJobsFinishProps,
+    CreateMongoIndexesProps,
+} from './typings.js';
 
 /**
  * Modifies the search results metadata for a given job ID.
