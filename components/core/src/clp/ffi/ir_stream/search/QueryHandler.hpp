@@ -90,21 +90,15 @@ public:
     }
 
     /**
-     * Evaluates the given node-ID-value pairs against the underlying query.
-     * @param auto_gen_node_id_value_pairs
-     * @param user_gen_node_id_value_pairs
+     * Evaluates the given kv-pair log event against the underlying query.
+     * @param log_event
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
-     * - Forwards `QueryHandlerImpl::evaluate_node_id_value_pairs`'s return values.
+     * - Forwards `QueryHandlerImpl::evaluate_kv_pair_log_event`'s return values.
      */
-    [[nodiscard]] auto evaluate_node_id_value_pairs(
-            KeyValuePairLogEvent::NodeIdValuePairs const& auto_gen_node_id_value_pairs,
-            KeyValuePairLogEvent::NodeIdValuePairs const& user_gen_node_id_value_pairs
-    ) -> outcome_v2::std_result<AstEvaluationResult> {
-        return m_query_handler_impl.evaluate_node_id_value_pairs(
-                auto_gen_node_id_value_pairs,
-                user_gen_node_id_value_pairs
-        );
+    [[nodiscard]] auto evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event)
+            -> outcome_v2::std_result<AstEvaluationResult> {
+        return m_query_handler_impl.evaluate_kv_pair_log_event(log_event);
     }
 
 private:
