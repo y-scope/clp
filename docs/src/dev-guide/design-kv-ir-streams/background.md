@@ -196,8 +196,9 @@ As [Figure 3](#figure-3) shows, the archive-level schema tree uses different *na
 more than just the KV pairs that appear *in* the event. For instance, the `Metadata` namespace
 contains metadata KV pairs like the log event's index in the archive. The `Default` namespace
 contains the KV pairs that aren't specific to a special namespace, which in the case of Figure 3,
-are the KV pairs that appear in the example log events. As we'll see in future docs, namespaces
-also allow clp-s to compress log events that contain namespaces themselves.
+are the KV pairs that appear in the example log events. As we'll see in the docs about
+[auto-generated KV pairs](auto-gen-kv-pairs.md), namespaces also allow clp-s to compress log events
+that contain namespaces themselves.
 
 To merge an event's schema tree with the archive-level schema tree, clp-s iterates over each pair of
 nodes---one from each tree:
