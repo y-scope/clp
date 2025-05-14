@@ -15,9 +15,10 @@
 #include "../src/clp/FileWriter.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
+#include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/InputConfig.hpp"
-#include "../src/clp_s/JsonParser.hpp"
+#include "ClpSTestUtils.hpp"
 #include "TestOutputCleaner.hpp"
 
 constexpr std::string_view cTestRangeIndexArchiveDirectory{"test-range-index-archive"};
@@ -36,8 +37,7 @@ void serialize_record(
         nlohmann::json const& user_gen,
         clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t>& serializer
 );
-void compress_ir();
-void compress(bool single_file_archive, bool from_ir);
+void generate_ir();
 void check_archive_metadata(bool from_ir);
 
 auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
@@ -77,7 +77,7 @@ void serialize_record(
     REQUIRE(serializer.serialize_msgpack_map(auto_gen_obj.via.map, user_gen_obj.via.map));
 }
 
-void compress_ir() {
+void generate_ir() {
     std::filesystem::create_directory(cTestRangeIndexIRDirectory);
     REQUIRE(std::filesystem::is_directory(cTestRangeIndexIRDirectory));
 
@@ -113,53 +113,6 @@ void compress_ir() {
     compressor.write(reinterpret_cast<char const*>(&eof_packet), sizeof(eof_packet));
     compressor.close();
     writer.close();
-}
-
-void compress(bool single_file_archive, bool from_ir) {
-    constexpr auto cDefaultTargetEncodedSize = 8ULL * 1024 * 1024 * 1024;  // 8 GiB
-    constexpr auto cDefaultMaxDocumentSize = 512ULL * 1024 * 1024;  // 512 MiB
-    constexpr auto cDefaultMinTableSize = 1ULL * 1024 * 1024;  // 1 MiB
-    constexpr auto cDefaultCompressionLevel = 3;
-    constexpr auto cDefaultPrintArchiveStats = false;
-    constexpr auto cDefaultStructurizeArrays = false;
-    auto const input_file_path{
-            from_ir ? get_ir_test_input_relative_path() : get_test_input_local_path()
-    };
-    auto const input_file_type{
-            from_ir ? clp_s::CommandLineArguments::FileType::KeyValueIr
-                    : clp_s::CommandLineArguments::FileType::Json
-    };
-
-    if (from_ir) {
-        compress_ir();
-    }
-
-    std::filesystem::create_directory(cTestRangeIndexArchiveDirectory);
-    REQUIRE((std::filesystem::is_directory(cTestRangeIndexArchiveDirectory)));
-
-    clp_s::JsonParserOption parser_option{};
-    parser_option.input_paths.emplace_back(
-            clp_s::Path{.source = clp_s::InputSource::Filesystem, .path = input_file_path}
-    );
-    parser_option.archives_dir = cTestRangeIndexArchiveDirectory;
-    parser_option.target_encoded_size = cDefaultTargetEncodedSize;
-    parser_option.max_document_size = cDefaultMaxDocumentSize;
-    parser_option.min_table_size = cDefaultMinTableSize;
-    parser_option.compression_level = cDefaultCompressionLevel;
-    parser_option.print_archive_stats = cDefaultPrintArchiveStats;
-    parser_option.structurize_arrays = cDefaultStructurizeArrays;
-    parser_option.single_file_archive = single_file_archive;
-    parser_option.input_file_type = input_file_type;
-
-    clp_s::JsonParser parser{parser_option};
-    if (from_ir) {
-        REQUIRE(parser.parse_from_ir());
-    } else {
-        REQUIRE(parser.parse());
-    }
-    parser.store();
-
-    REQUIRE((false == std::filesystem::is_empty(cTestRangeIndexArchiveDirectory)));
 }
 
 void check_archive_metadata(bool from_ir) {
@@ -217,6 +170,19 @@ TEST_CASE("clp-s-range-index", "[clp-s][range-index]") {
             {std::string{cTestRangeIndexArchiveDirectory}, std::string{cTestRangeIndexIRDirectory}}
     };
 
-    compress(single_file_archive, from_ir);
+    auto input_file{get_test_input_local_path()};
+    auto input_file_type{clp_s::CommandLineArguments::FileType::Json};
+    if (from_ir) {
+        generate_ir();
+        input_file = get_ir_test_input_relative_path();
+        input_file_type = clp_s::CommandLineArguments::FileType::KeyValueIr;
+    }
+    REQUIRE_NOTHROW(compress_archive(
+            input_file,
+            std::string{cTestRangeIndexArchiveDirectory},
+            single_file_archive,
+            false,
+            input_file_type
+    ));
     check_archive_metadata(from_ir);
 }
