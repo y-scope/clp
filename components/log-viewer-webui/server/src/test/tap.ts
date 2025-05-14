@@ -10,7 +10,7 @@ import {Test} from "tap";
 // eslint-disable-next-line no-warning-comments
 // TODO: Setup testing for new webui fastify app in `fastify-v2/app.ts`. Testing will need
 // to be split into unit tests and integregation tests (require clp package running).
-const AppPath = path.join(import.meta.dirname, "../app.ts");
+const appPath = path.join(import.meta.dirname, "../app.ts");
 
 /**
  * Provides test configuration options.
@@ -32,7 +32,7 @@ export const config = () => {
  * @return Fastify instance.
  */
 export const build = async (t: Test): Promise<FastifyInstance> => {
-    const argv = [AppPath];
+    const argv = [appPath];
 
     const app = await buildApplication(argv, config()) as FastifyInstance;
 

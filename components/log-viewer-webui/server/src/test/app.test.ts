@@ -1,7 +1,7 @@
 import {StatusCodes} from "http-status-codes";
 import tap, {Test} from "tap";
 
-import {build} from "../utils/tap.js";
+import {build} from "./tap.js";
 
 
 tap.test("Tests the example routes", async (t: Test) => {

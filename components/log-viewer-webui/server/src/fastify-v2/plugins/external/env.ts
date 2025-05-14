@@ -10,10 +10,6 @@ declare module "fastify" {
             CLP_DB_USER: string;
             CLP_DB_PASS: string;
 
-            CLIENT_DIR: string;
-            STREAMS_DATA_DIR: string;
-            LOG_VIEWER_DIR: string;
-
             RATE_LIMIT_MAX: number;
         };
     }
@@ -52,23 +48,6 @@ const schema = {
         },
         CLP_DB_PASS: {
             type: "string",
-        },
-
-        // Directories
-        CLIENT_DIR: {
-            type: "string",
-            minLength: 1,
-            default: "../client/dist",
-        },
-        STREAMS_DATA_DIR: {
-            type: "string",
-            minLength: 1,
-            default: "../../../build/clp-package/var/data/streams",
-        },
-        LOG_VIEWER_DIR: {
-            type: "string",
-            minLength: 1,
-            default: "../yscope-log-viewer/dist",
         },
 
         // Security

@@ -43,7 +43,7 @@ To run the server in production:
 npm run start
 ```
 
-To run the server as a standalone Node.js process (i.e., without the Fastify CLI):
+To run the server as a standalone Node.js process:
 
 ```shell
 npm run standalone
