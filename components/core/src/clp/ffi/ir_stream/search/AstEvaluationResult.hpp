@@ -17,7 +17,7 @@ enum AstEvaluationResult : uint8_t {
     Pruned = 1 << 2,
 };
 
-using AstEvaluationResultBitmask = std::underlying_type_t<AstEvaluationResult>;
+using ast_evaluation_result_bitmask_t = std::underlying_type_t<AstEvaluationResult>;
 }  // namespace clp::ffi::ir_stream::search
 
 #endif  // CLP_FFI_IR_STREAM_SEARCH_ASTEVALUATIONRESULT_HPP

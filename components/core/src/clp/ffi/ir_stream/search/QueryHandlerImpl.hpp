@@ -344,7 +344,7 @@ private:
     ) -> outcome_v2::std_result<AstEvaluationResult>;
 
     auto push_ast_dfs_stack(AstExprIterator ast_expr_it) -> void {
-        m_ast_dfs_stack.emplace_back(ast_expr_it, AstEvaluationResultBitmask{});
+        m_ast_dfs_stack.emplace_back(ast_expr_it, ast_evaluation_result_bitmask_t{});
     }
 
     /**
@@ -386,7 +386,7 @@ private:
     std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> m_projected_columns;
     ProjectionMap m_projected_column_to_original_key;
     bool m_case_sensitive_match;
-    std::vector<std::pair<AstExprIterator, AstEvaluationResultBitmask>> m_ast_dfs_stack;
+    std::vector<std::pair<AstExprIterator, ast_evaluation_result_bitmask_t>> m_ast_dfs_stack;
 };
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>

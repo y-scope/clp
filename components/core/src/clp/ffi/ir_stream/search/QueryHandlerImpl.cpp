@@ -382,7 +382,7 @@ auto evaluate_wildcard_filter(
         SchemaTree const& schema_tree,
         bool case_sensitive_match
 ) -> outcome_v2::std_result<AstEvaluationResult> {
-    AstEvaluationResultBitmask evaluation_results{};
+    ast_evaluation_result_bitmask_t evaluation_results{};
     for (auto const& [node_id, value] : node_id_value_pairs) {
         auto const evaluation_result{OUTCOME_TRYX(evaluate_filter_against_node_id_value_pair(
                 filter_expr,
@@ -548,7 +548,7 @@ auto QueryHandlerImpl::evaluate_filter_expr(
     };
     auto const& matchable_node_ids{m_resolved_column_to_schema_tree_node_ids.at(col)};
 
-    AstEvaluationResultBitmask evaluation_results{};
+    ast_evaluation_result_bitmask_t evaluation_results{};
     for (auto const matchable_node_id : matchable_node_ids) {
         if (false == node_id_value_pairs.contains(matchable_node_id)) {
             continue;

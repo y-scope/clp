@@ -671,14 +671,14 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
         // For queries consisting of chained AND expressions, the result can be either `Pruned` or
         // `False`. Thus, `expected_evaluation_results` is a bitmask capturing all valid outcomes.
         auto const [matchable_kql_query_str, expected_evaluation_results] = GENERATE_COPY(
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(matchable_kql_expressions_with_column_resolutions, " OR ")
                         ),
                         AstEvaluationResult::True
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(
@@ -688,22 +688,22 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
                         ),
                         AstEvaluationResult::Pruned | AstEvaluationResult::False
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " OR ")),
                         AstEvaluationResult::True
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format("{}", fmt::join(single_wildcard_kql_expressions, " AND ")),
                         AstEvaluationResult::Pruned | AstEvaluationResult::False
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(kql_expressions_with_unknown_namespace, " OR ")
                         ),
                         AstEvaluationResult::Pruned
                 ),
-                std::make_pair<std::string, AstEvaluationResultBitmask>(
+                std::make_pair<std::string, ast_evaluation_result_bitmask_t>(
                         fmt::format(
                                 "{}",
                                 fmt::join(kql_expressions_with_unknown_namespace, " AND ")
