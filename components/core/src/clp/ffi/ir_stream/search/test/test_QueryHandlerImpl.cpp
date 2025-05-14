@@ -277,13 +277,13 @@ auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Val
         case SchemaTree::Node::Type::Str: {
             std::vector<Value> unmatchable_values;
             unmatchable_values.emplace_back(std::string{});
-            std::string_view const unmatchable_long_str{"This is a static message: ID=0"};
-            REQUIRE((unmatchable_long_str.find(cRefTestStr) == std::string::npos));
+            constexpr std::string_view cUnmatchableLongStr{"This is a static message: ID=0"};
+            REQUIRE((cUnmatchableLongStr.find(cRefTestStr) == std::string::npos));
             unmatchable_values.emplace_back(
-                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(unmatchable_long_str)
+                    get_encoded_text_ast<ir::four_byte_encoded_variable_t>(cUnmatchableLongStr)
             );
             unmatchable_values.emplace_back(
-                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(unmatchable_long_str)
+                    get_encoded_text_ast<ir::eight_byte_encoded_variable_t>(cUnmatchableLongStr)
             );
             return unmatchable_values;
         }
