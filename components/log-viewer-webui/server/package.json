@@ -26,7 +26,7 @@
     "@sinclair/typebox": "^0.34.28",
     "@types/node": "^22.13.9",
     "dotenv": "^16.4.7",
-    "fastify": "^5.2.1",
+    "fastify": "^5.3.2",
     "fastify-plugin": "^5.0.1",
     "http-status-codes": "^2.3.0",
     "pino-pretty": "^13.0.0",
