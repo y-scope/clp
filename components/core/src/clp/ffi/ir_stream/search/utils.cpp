@@ -21,8 +21,8 @@ namespace clp::ffi::ir_stream::search {
 namespace {
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::Literal;
+using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::LiteralType;
-using clp_s::search::ast::LiteralTypeBitmask;
 
 /**
  * Evaluates a numerical filter operation by applying the specified `FilterOperation` to two
@@ -280,7 +280,7 @@ auto evaluate_clp_string_filter_op(
 }  // namespace
 
 auto schema_tree_node_type_to_literal_types(SchemaTree::Node::Type node_type)
-        -> clp_s::search::ast::LiteralTypeBitmask {
+        -> clp_s::search::ast::literal_type_bitmask_t {
     switch (node_type) {
         case SchemaTree::Node::Type::Int:
             return LiteralType::IntegerT;

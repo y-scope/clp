@@ -26,7 +26,7 @@ namespace {
 using clp_s::constants::cAutogenNamespace;
 using clp_s::constants::cDefaultNamespace;
 using clp_s::constants::cReservedNamespace1;
-using clp_s::search::ast::LiteralTypeBitmask;
+using clp_s::search::ast::literal_type_bitmask_t;
 
 constexpr std::string_view cRefTestStr{"*test*"};
 constexpr value_int_t cRefTestInt{0};
@@ -62,7 +62,7 @@ constexpr value_bool_t cRefTestBool{false};
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
 )
         -> std::pair<
-                std::vector<std::pair<std::string, LiteralTypeBitmask>>,
+                std::vector<std::pair<std::string, literal_type_bitmask_t>>,
                 std::map<std::string, std::set<SchemaTree::Node::id_t>>>;
 
 /**
@@ -167,9 +167,9 @@ auto generate_projections(
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
 )
         -> std::pair<
-                std::vector<std::pair<std::string, LiteralTypeBitmask>>,
+                std::vector<std::pair<std::string, literal_type_bitmask_t>>,
                 std::map<std::string, std::set<SchemaTree::Node::id_t>>> {
-    std::vector<std::pair<std::string, LiteralTypeBitmask>> projections;
+    std::vector<std::pair<std::string, literal_type_bitmask_t>> projections;
     std::map<std::string, std::set<SchemaTree::Node::id_t>> expected_resolved_projections;
     for (auto const& [column_query, possible_matches] : column_query_to_possible_matches) {
         if (column_query.find('*') != std::string::npos) {
