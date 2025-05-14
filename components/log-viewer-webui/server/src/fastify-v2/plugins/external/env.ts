@@ -56,7 +56,6 @@ const schema = {
 };
 
 export const autoConfig = {
-
     confKey: "config",
     schema: schema,
 
