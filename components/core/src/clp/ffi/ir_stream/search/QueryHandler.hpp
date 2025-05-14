@@ -94,7 +94,7 @@ public:
      * @param log_event
      * @return A result containing the evaluation result on success, or an error code indicating
      * the failure:
-     * - Forwards `QueryHandlerImpl::evaluate_node_id_value_pairs`'s return values.
+     * - Forwards `QueryHandlerImpl::evaluate_kv_pair_log_event`'s return values.
      */
     [[nodiscard]] auto evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event)
             -> outcome_v2::std_result<AstEvaluationResult> {

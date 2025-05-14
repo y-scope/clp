@@ -349,9 +349,9 @@ private:
     }
 
     /**
-     * Pops the AST DFS stack and updates the evaluation result accordingly:
-     * - If the stack if not empty, update the parent's evaluation results.
-     * - Otherwise, update `query_evaluation_result`.
+     * Pops from the AST DFS stack and updates the evaluation result accordingly:
+     * - If the stack still has elements, updates the parent's evaluation results.
+     * - Otherwise, updates `query_evaluation_result`.
      * @param evaluation_result
      * @param query_evaluation_result Returns the query evaluation result.
      */
@@ -361,12 +361,12 @@ private:
     ) -> void;
 
     /**
-     * Advances AST DFS evaluation by visiting the top of `m_ast_dfs_stack`.
+     * Advances the AST DFS evaluation by visiting the top of `m_ast_dfs_stack`.
      * @param log_event
      * @param query_evaluation_result Returns the query evaluation result.
      * @return A void result on success, or an error code indicating the failure:
-     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the expression iterator on the stack top
-     *   is an unexpected expression type.
+     * - ErrorCodeEnum::AstEvaluationInvariantViolation if the expression iterator at the top of the
+     *   stack is an unexpected expression type.
      * - Forwards `evaluate_filter_expr`'s return values.
      * - Forwards `AstExprIterator::next_op`'s return values.
      */

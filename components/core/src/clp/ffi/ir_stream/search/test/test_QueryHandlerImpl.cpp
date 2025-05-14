@@ -259,7 +259,8 @@ auto get_matchable_values(SchemaTree::Node::Type node_type) -> std::vector<Value
         default:
             // Unsupported types
             REQUIRE(false);
-            // The following return should never be reached. It is added to silent clang-tidy
+
+            // The following return should never be reached. It's used to silence clang-tidy
             // warnings.
             return {};
     }
@@ -289,7 +290,8 @@ auto get_unmatchable_values(SchemaTree::Node::Type node_type) -> std::vector<Val
         default:
             // Unsupported types
             REQUIRE(false);
-            // The following return should never be reached. It is added to silent clang-tidy
+
+            // The following return should never be reached. It's used to silence clang-tidy
             // warnings.
             return {};
     }
@@ -778,8 +780,8 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
         }
 
         // Combine all XOR expressions into a single KQL query string joined by "OR".
-        // Each XOR expression matches either the default namespace or the auto-generated namespace
-        // of the same column, but not both.
+        // Each XOR expression matches the key either in the default namespace or the
+        // auto-generated namespace, but not both.
         auto const kql_query_str{fmt::format("{}", fmt::join(xor_matchable_expressions, " OR "))};
         CAPTURE(kql_query_str);
 
@@ -804,9 +806,8 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
             auto const node_id{*optional_node_id};
             CAPTURE(node_id);
 
-            // NOTE: We use nested for loop to generated matchable/unmatchable values instead of
-            // using `GENERATE` since `GENERATE` in this case has a way worse performance (about
-            // 100 times slower).
+            // NOTE: We use a nested for loop to generate matchable/unmatchable values instead of
+            // using `GENERATE` since, in this case, `GENERATE` is about 100x slower.
             for (auto const& matchable_value : get_matchable_values(node_type)) {
                 AstEvaluationResult evaluation_result{};
                 evaluation_result = get_query_evaluation_result(
@@ -855,8 +856,8 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
     }
 
     SECTION("Test array evaluation") {
-        // Array evaluation is not supported in the current implementation. To make the search still
-        // usable, array evaluation shouldn't fail but return `False` instead.
+        // Array evaluation is not supported in the current implementation, but query evaluations
+        // should still return `False` instead of failing.
 
         /*
          * Schema-tree with unstructured array:
