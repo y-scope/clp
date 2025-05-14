@@ -572,7 +572,7 @@ auto QueryHandlerImpl::evaluate_filter_expr(
     return AstEvaluationResult::Pruned;
 }
 
-auto QueryHandlerImpl::pop_ast_dfs_stack_and_update_evaluation_results(
+auto QueryHandlerImpl::pop_from_ast_dfs_stack_and_update_evaluation_results(
         clp::ffi::ir_stream::search::AstEvaluationResult evaluation_result,
         std::optional<AstEvaluationResult>& query_evaluation_result
 ) -> void {
@@ -596,7 +596,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
 ) -> outcome_v2::std_result<void> {
     auto& [expr_it, evaluation_results] = m_ast_dfs_stack.back();
     if (auto* filter_expr{expr_it.as_filter_expr()}; nullptr != filter_expr) {
-        pop_ast_dfs_stack_and_update_evaluation_results(
+        pop_from_ast_dfs_stack_and_update_evaluation_results(
                 OUTCOME_TRYX(evaluate_filter_expr(filter_expr, log_event)),
                 query_evaluation_result
         );
@@ -606,14 +606,14 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
     if (auto const* and_expr{expr_it.as_and_expr()}; nullptr != and_expr) {
         // Handle `AndExpr` evaluation
         if (0 != (evaluation_results & AstEvaluationResult::Pruned)) {
-            pop_ast_dfs_stack_and_update_evaluation_results(
+            pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::Pruned,
                     query_evaluation_result
             );
             return outcome_v2::success();
         }
         if (0 != (evaluation_results & AstEvaluationResult::False)) {
-            pop_ast_dfs_stack_and_update_evaluation_results(
+            pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::False,
                     query_evaluation_result
             );
@@ -623,7 +623,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         if (optional_next_op_it.has_value()) {
             push_to_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
         } else {
-            pop_ast_dfs_stack_and_update_evaluation_results(
+            pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::True,
                     query_evaluation_result
             );
@@ -637,7 +637,7 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         return ErrorCode{ErrorCodeEnum::AstEvaluationInvariantViolation};
     }
     if (0 != (evaluation_results & AstEvaluationResult::True)) {
-        pop_ast_dfs_stack_and_update_evaluation_results(
+        pop_from_ast_dfs_stack_and_update_evaluation_results(
                 AstEvaluationResult::True,
                 query_evaluation_result
         );
@@ -649,14 +649,15 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         return outcome_v2::success();
     }
     if (0 != (evaluation_results & AstEvaluationResult::False)) {
-        pop_ast_dfs_stack_and_update_evaluation_results(
+        pop_from_ast_dfs_stack_and_update_evaluation_results(
                 AstEvaluationResult::False,
                 query_evaluation_result
         );
         return outcome_v2::success();
     }
+
     // All pruned
-    pop_ast_dfs_stack_and_update_evaluation_results(
+    pop_from_ast_dfs_stack_and_update_evaluation_results(
             AstEvaluationResult::Pruned,
             query_evaluation_result
     );
