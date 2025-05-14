@@ -213,11 +213,13 @@ private:
 
         // Methods
         /**
-         * @return A result containing the iterator of the next child expression operator, or an
-         * error code indicating the failure:
+         * Retrieves the next child expression operator to visit as an `AstExprIterator`.
+         * @return A result containing the next `AstExprIterator` to visit on success, or an error
+         * code indicating the failure:
          * - ErrorCodeEnum::AttemptToIterateAstLeafExpr if the current expression is a leaf
-         *   expression (`clp_s::search::ast::FilterExpr`).
+         *   expression (`clp_s::search::ast::FilterExpr`) with no child operators.
          * - Forwards `create`'s return values.
+         * @return std::nullopt if there are no more child operators to visit.
          */
         [[nodiscard]] auto next_op() -> std::optional<outcome_v2::std_result<AstExprIterator>>;
 
