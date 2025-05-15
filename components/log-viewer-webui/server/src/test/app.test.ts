@@ -1,12 +1,11 @@
 import {StatusCodes} from "http-status-codes";
-import tap from "tap";
+import tap, {Test} from "tap";
 
-import app from "./app.js";
+import {build} from "./tap.js";
 
 
-tap.test("Tests the example routes", async (t) => {
-    const server = await app({fastifyOptions: {}, sqlDbPass: "", sqlDbUser: ""});
-    t.teardown(() => server.close());
+tap.test("Tests the example routes", async (t: Test) => {
+    const server = await build(t);
 
     let resp = await server.inject({
         method: "GET",
