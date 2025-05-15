@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <string>
+#include <type_traits>
 
 #include "FilterOperation.hpp"
 #include "Value.hpp"
@@ -25,10 +26,10 @@ enum LiteralType : uint32_t {
     UnknownT = ((uint32_t)1) << 31
 };
 
-using LiteralTypeBitmask = uint32_t;
+using literal_type_bitmask_t = std::underlying_type_t<LiteralType>;
 
-constexpr LiteralTypeBitmask cIntegralTypes = LiteralType::IntegerT | LiteralType::FloatT;
-constexpr LiteralTypeBitmask cAllTypes = TypesEnd - 1;
+constexpr literal_type_bitmask_t cIntegralTypes = LiteralType::IntegerT | LiteralType::FloatT;
+constexpr literal_type_bitmask_t cAllTypes = TypesEnd - 1;
 
 /**
  * Parent class for all Literals in the AST.
@@ -47,9 +48,9 @@ public:
      */
     virtual bool matches_type(LiteralType type) = 0;
 
-    virtual bool matches_any(LiteralTypeBitmask mask) = 0;
+    virtual bool matches_any(literal_type_bitmask_t mask) = 0;
 
-    virtual bool matches_exactly(LiteralTypeBitmask mask) = 0;
+    virtual bool matches_exactly(literal_type_bitmask_t mask) = 0;
 
     /**
      * Convert LiteralType enum values to strings . Only used for printing.

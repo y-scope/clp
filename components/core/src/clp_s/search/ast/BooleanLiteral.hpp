@@ -37,9 +37,11 @@ public:
     // Methods inherited from Literal
     bool matches_type(LiteralType type) override { return type & LiteralType::BooleanT; }
 
-    bool matches_any(LiteralTypeBitmask mask) override { return mask & LiteralType::BooleanT; }
+    bool matches_any(literal_type_bitmask_t mask) override { return mask & LiteralType::BooleanT; }
 
-    bool matches_exactly(LiteralTypeBitmask mask) override { return mask == LiteralType::BooleanT; }
+    bool matches_exactly(literal_type_bitmask_t mask) override {
+        return mask == LiteralType::BooleanT;
+    }
 
     bool as_var_string(std::string& ret, FilterOperation op) override;
 

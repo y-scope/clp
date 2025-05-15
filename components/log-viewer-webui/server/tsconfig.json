@@ -15,6 +15,11 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "target": "es2022",
+    "baseUrl": ".",
+    "paths": {
+    // Map imports from "@common/*" to the common server-client folder
+      "@common/*": ["../common/*"]
+    },
 
     "alwaysStrict": true,
     "exactOptionalPropertyTypes": true,
@@ -34,6 +39,7 @@
     "strict": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "../common/**/*"
   ]
 }
