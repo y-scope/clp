@@ -11,16 +11,15 @@ const DEFAULT_FASTIFY_CLOSE_GRACE_DELAY = 500;
 const DEFAULT_PORT = 3000;
 
 /**
- * Do not use NODE_ENV to determine what logger (or any env related feature) to use
+ * Generates logger configuration options based on the environment.
  *
  * @return Logger options for Fastify.
- * @see {@link https://www.youtube.com/watch?v=HMM7GJC5E2o}
  */
 const getLoggerOptions = () => {
     // Only if the program is running in an interactive terminal.
     if (process.stdout.isTTY) {
         return {
-            level: "info",
+            level: process.env.LOG_LEVEL ?? "info",
             transport: {
                 target: "pino-pretty",
                 options: {
@@ -30,7 +29,7 @@ const getLoggerOptions = () => {
         };
     }
 
-    return {level: process.env.LOG_LEVEL ?? "silent"};
+    return {level: process.env.LOG_LEVEL ?? "info"};
 };
 
 const app = fastify({

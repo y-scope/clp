@@ -4,12 +4,12 @@ import path from "node:path";
 
 import {FastifyInstance} from "fastify";
 import {build as buildApplication} from "fastify-cli/helper.js";
-import {Test} from "tap";
+import type {Test} from "tap";
 
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Setup testing for new webui fastify app in `fastify-v2/app.ts`. Testing will need
-// to be split into unit tests and integregation tests (require clp package running).
+// to be split into unit tests and integration tests (require clp package running).
 const appPath = path.join(import.meta.dirname, "../app.ts");
 
 /**
@@ -17,7 +17,7 @@ const appPath = path.join(import.meta.dirname, "../app.ts");
  *
  * @return
  */
-export const config = () => {
+const config = () => {
     // Register application with fastify-plugin to expose all decorators for testing
     // purposes.
     return {
@@ -31,7 +31,7 @@ export const config = () => {
  * @param t The test instance.
  * @return Fastify instance.
  */
-export const build = async (t: Test): Promise<FastifyInstance> => {
+const build = async (t: Test): Promise<FastifyInstance> => {
     const argv = [appPath];
 
     const app = await buildApplication(argv, config()) as FastifyInstance;
@@ -45,3 +45,5 @@ export const build = async (t: Test): Promise<FastifyInstance> => {
 
     return app;
 };
+
+export {build};
