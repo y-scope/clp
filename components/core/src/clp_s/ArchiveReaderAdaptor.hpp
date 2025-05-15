@@ -26,6 +26,21 @@
 
 namespace clp_s {
 /**
+ * RangeIndexEntry is a struct representing a single entry in the archive range index.
+ */
+struct RangeIndexEntry {
+    explicit RangeIndexEntry(size_t start_index, size_t end_index, nlohmann::json&& fields)
+            : start_index{start_index},
+              end_index{end_index},
+              // Note: brace initializer would make nlohmann wrap the fields object in an array.
+              fields(std::move(fields)) {}
+
+    size_t start_index;
+    size_t end_index;
+    nlohmann::json fields;
+};
+
+/**
  * ArchiveReaderAdaptor is an adaptor class which helps with reading single and multi-file archives
  * which exist on either S3 or a locally mounted file system.
  */
@@ -36,18 +51,6 @@ public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
-    };
-
-    struct RangeIndexEntry {
-        explicit RangeIndexEntry(size_t start_index, size_t end_index, nlohmann::json&& fields)
-                : start_index{start_index},
-                  end_index{end_index},
-                  // Note: brace initializer would make nlohmann wrap the fields object in an array.
-                  fields(std::move(fields)) {}
-
-        size_t start_index;
-        size_t end_index;
-        nlohmann::json fields;
     };
 
     explicit ArchiveReaderAdaptor(Path const& archive_path, NetworkAuthOption const& network_auth);
