@@ -2,12 +2,14 @@
 
 #include <sys/errno.h>
 
-#include <cstdint>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include <fmt/core.h>
+#include <nlohmann/json_fwd.hpp>
 #include <outcome/outcome.hpp>
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/ErrorCode.hpp>
@@ -25,6 +27,8 @@
 #include "../clp/time_types.hpp"
 #include "../clp/TraceableException.hpp"
 #include "CommandLineArguments.hpp"
+#include "InputConfig.hpp"
+#include "ReaderUtils.hpp"
 #include "search/ast/Expression.hpp"
 
 using clp_s::KvIrSearchError;
@@ -67,7 +71,7 @@ public:
     ~IrUnitHandler() = default;
 
     // Methods implementing `IrUnitHandlerInterface`
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode;
+    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent log_event) -> IRErrorCode;
 
     [[nodiscard]] static auto handle_utc_offset_change(
             [[maybe_unused]] UtcOffset utc_offset_old,
@@ -104,7 +108,10 @@ private:
  * @param query
  * @param reducer_socket_fd
  * @return A void result on success, or an error code indicating the failure:
- * - Forwards `clp::ffi::ir_stream::Deserializer::create`'s return values.
+ * - KvIrSearchErrorEnum::DeserializerCreationFailure if `clp::ffi::ir_stream::Deserializer::create`
+ *   failed. This specific error code is returned instead of propagating the return values of
+ *   `clp::ffi::ir_stream::Deserializer::create`, allowing callers to identify cases where the input
+ *   might not be a kv-pair IR stream.
  * - Forwards `clp::ffi::ir_stream::Deserializer::deserialize_next_ir_unit`'s return values.
  * - Forwards `clp::ffi::ir_stream::search::QueryHandler::create`'s return values.
  * - Forwards `IrUnitHandler::create`'s return values.
@@ -137,7 +144,38 @@ auto IrUnitHandler::create(
     return IrUnitHandler{};
 }
 
-auto IrUnitHandler::handle_log_event(clp::ffi::KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+auto IrUnitHandler::handle_log_event(clp::ffi::KeyValuePairLogEvent log_event) -> IRErrorCode {
+    auto const serialize_result{log_event.serialize_to_json()};
+    if (serialize_result.has_error()) {
+        SPDLOG_ERROR(
+                "kv-ir search: Failed to serialize kv-pair log event to JSON objects."
+                " error_category={}, error={}",
+                serialize_result.error().category().name(),
+                serialize_result.error().message()
+        );
+        return IRErrorCode::IRErrorCode_Decode_Error;
+    }
+    auto const& [auto_gen_kv_pairs, user_gen_kv_pairs] = serialize_result.value();
+
+    try {
+        constexpr std::string_view cAutoGenKey{"\"auto_generated_kv_pairs\""};
+        constexpr std::string_view cUserGenKey{"\"user_generated_kv_pairs\""};
+        std::cout << fmt::format(
+                "{{{}:{},{}:{}}}\n",
+                cAutoGenKey,
+                auto_gen_kv_pairs.dump(),
+                cUserGenKey,
+                user_gen_kv_pairs.dump()
+        );
+    } catch (nlohmann::json::exception const& ex) {
+        SPDLOG_ERROR(
+                "kv-ir search: Failed to serialize kv-pair log event into JSON strings."
+                " ErrorMessage={}",
+                ex.what()
+        );
+        return IRErrorCode::IRErrorCode_Corrupted_IR;
+    }
+
     return IRErrorCode::IRErrorCode_Success;
 }
 
@@ -156,7 +194,7 @@ auto deserialize_and_search_kv_ir_stream(
     using QueryHandlerType = clp::ffi::ir_stream::search::QueryHandler<
             decltype(trivial_new_projected_schema_tree_node_callback)>;
 
-    auto deserializer{OUTCOME_TRYX(make_deserializer(
+    auto deserializer_result{make_deserializer(
             stream_reader,
             OUTCOME_TRYX(IrUnitHandler::create(command_line_arguments, reducer_socket_fd)),
             OUTCOME_TRYX(
@@ -164,11 +202,16 @@ auto deserialize_and_search_kv_ir_stream(
                             trivial_new_projected_schema_tree_node_callback,
                             std::move(query),
                             {},
-                            false
+                            false == command_line_arguments.get_ignore_case()
                     )
             )
-    ))};
+    )};
 
+    if (deserializer_result.has_error()) {
+        return KvIrSearchError{KvIrSearchErrorEnum::DeserializerCreationFailure};
+    }
+
+    auto& deserializer{deserializer_result.value()};
     while (IrUnitType::EndOfStream
            != OUTCOME_TRYX(deserializer.deserialize_next_ir_unit(stream_reader)))
     {}
@@ -177,41 +220,52 @@ auto deserialize_and_search_kv_ir_stream(
 }
 }  // namespace
 
-[[nodiscard]] auto search_kv_ir_stream(
-        std::string const& stream_path,
+auto search_kv_ir_stream(
+        Path const& stream_path,
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<search::ast::Expression> query,
         int reducer_socket_fd
 ) -> outcome_v2::std_result<void> {
-    clp::streaming_compression::zstd::Decompressor decompressor;
-    if (auto const err{decompressor.open(stream_path)}; clp::ErrorCode_Success != err) {
-        if (clp::ErrorCode_FileNotFound == err) {
-            SPDLOG_ERROR("kv-ir stream '{}' does not exist.", stream_path);
-        } else if (clp::ErrorCode_errno == err) {
-            SPDLOG_ERROR("Failed to open kv-ir stream '{}', errno={}", stream_path, errno);
-        } else {
-            SPDLOG_ERROR("Failed to open kv-ir stream '{}', error_code={}", stream_path, err);
-        }
-        return KvIrSearchError{KvIrSearchErrorEnum::ClpLegacyError};
-    }
-
     if (false == command_line_arguments.get_projection_columns().empty()) {
-        SPDLOG_ERROR("Projection support on kv-ir stream search is not implemented.");
+        SPDLOG_ERROR("kv-ir search: Projection support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
+    auto const raw_reader{
+            ReaderUtils::try_create_reader(stream_path, command_line_arguments.get_network_auth())
+    };
+    if (nullptr == raw_reader) {
+        return KvIrSearchError{KvIrSearchErrorEnum::StreamReaderCreationFailure};
+    }
+
     try {
+        clp::streaming_compression::zstd::Decompressor decompressor;
+        decompressor.open(*raw_reader, 4096);
         OUTCOME_TRYV(deserialize_and_search_kv_ir_stream(
                 decompressor,
                 command_line_arguments,
                 std::move(query),
                 reducer_socket_fd
         ));
+        decompressor.close();
     } catch (clp::TraceableException const& ex) {
-        // TODO
+        auto const err{ex.get_error_code()};
+        if (clp::ErrorCode_errno == err) {
+            SPDLOG_ERROR(
+                    "kv-ir search failed on `clp::TraceableException`: errno={}, msg={}",
+                    errno,
+                    ex.what()
+            );
+        } else {
+            SPDLOG_ERROR(
+                    "kv-ir search failed on `clp::TraceableException`: error_code={}, msg={}",
+                    err,
+                    ex.what()
+            );
+        }
+        return KvIrSearchError{KvIrSearchErrorEnum::ClpLegacyError};
     }
 
-    decompressor.close();
     return outcome_v2::success();
 }
 }  // namespace clp_s
@@ -226,8 +280,12 @@ auto KvIrSearchErrorCategory::message(clp_s::KvIrSearchErrorEnum error_enum) con
     switch (error_enum) {
         case KvIrSearchErrorEnum::ClpLegacyError:
             return "clp legacy error.";
+        case KvIrSearchErrorEnum::DeserializerCreationFailure:
+            return "Failed to create `clp::ffi::ir_stream::Deserializer`.";
         case KvIrSearchErrorEnum::ProjectionSupportNotImplemented:
             return "Projection support is not implemented yet.";
+        case KvIrSearchErrorEnum::StreamReaderCreationFailure:
+            return "Failed to create stream reader.";
         case KvIrSearchErrorEnum::UnsupportedOutputHandlerType:
             return "Unsupported output handler type.";
         default:

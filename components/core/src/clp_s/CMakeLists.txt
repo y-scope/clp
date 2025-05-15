@@ -52,6 +52,7 @@ set(
         ../clp/FileReader.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
+        ../clp/ir/constants.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/parsing.cpp

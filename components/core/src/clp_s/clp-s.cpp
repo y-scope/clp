@@ -5,6 +5,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <utility>
 
 #include <mongocxx/instance.hpp>
@@ -13,12 +14,14 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/CurlGlobalInstance.hpp"
+#include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
+#include "kv_ir_search.hpp"
 #include "search/AddTimestampConditions.hpp"
 #include "search/ast/ConvertToExists.hpp"
 #include "search/ast/EmptyExpr.hpp"
@@ -40,6 +43,8 @@ using clp_s::cArchiveFormatDevelopmentVersionFlag;
 using clp_s::cEpochTimeMax;
 using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
+using clp_s::KvIrSearchError;
+using clp_s::KvIrSearchErrorEnum;
 using clp_s::StringUtils;
 
 namespace {
@@ -359,6 +364,47 @@ int main(int argc, char const* argv[]) {
 
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         for (auto const& archive_path : command_line_arguments.get_input_paths()) {
+            if (std::string::npos != archive_path.path.find(clp::ir::cIrFileExtension)) {
+                auto const result{clp_s::search_kv_ir_stream(
+                        archive_path,
+                        command_line_arguments,
+                        expr->copy(),
+                        reducer_socket_fd
+                )};
+                if (false == result.has_error()) {
+                    continue;
+                }
+
+                auto const error{result.error()};
+                if (std::errc::result_out_of_range == error) {
+                    // To support real-time search, we will allow incomplete IR streams.
+                    // TODO: Use dedicated error code for this case once issue #904 is resolved.
+                    SPDLOG_WARN("IR stream `{}` is truncated", archive_path.path);
+                    continue;
+                }
+
+                SPDLOG_ERROR(
+                        "Failed to search '{}' as an IR stream, error_category={}, error={}",
+                        archive_path.path,
+                        error.category().name(),
+                        error.message()
+                );
+                if (KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented} == error
+                    || KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType} == error)
+                {
+                    // These errors are treated as non-fatal since it's because we currently don't
+                    // have supports for these features.
+                    continue;
+                }
+
+                if (KvIrSearchError{KvIrSearchErrorEnum::DeserializerCreationFailure} != error) {
+                    // If the error is `DeserializerCreationFailure`, we may continue to treat the
+                    // input as an archive and retry. Otherwise, it should be considered as a
+                    // non-recoverable failure and return directly.
+                    return 1;
+                }
+            }
+
             try {
                 archive_reader->open(archive_path, command_line_arguments.get_network_auth());
             } catch (std::exception const& e) {
