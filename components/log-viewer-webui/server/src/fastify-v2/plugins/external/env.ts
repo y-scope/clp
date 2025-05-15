@@ -27,7 +27,7 @@ const schema = {
     properties: {
         PORT: {
             type: "number",
-            default: "3000",
+            default: 3000,
             minimum: 1,
             maximum: 65535,
         },
