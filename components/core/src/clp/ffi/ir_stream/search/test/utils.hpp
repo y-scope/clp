@@ -35,7 +35,7 @@ public:
     explicit ColumnQueryPossibleMatches(std::shared_ptr<SchemaTree> schema_tree)
             : m_schema_tree{std::move(schema_tree)} {}
 
-    [[nodiscard]] auto get_matchable_types() const -> clp_s::search::ast::LiteralTypeBitmask {
+    [[nodiscard]] auto get_matchable_types() const -> clp_s::search::ast::literal_type_bitmask_t {
         return m_matchable_types;
     }
 
@@ -65,7 +65,7 @@ public:
 
 private:
     std::shared_ptr<SchemaTree> m_schema_tree;
-    clp_s::search::ast::LiteralTypeBitmask m_matchable_types{};
+    clp_s::search::ast::literal_type_bitmask_t m_matchable_types{};
     std::set<SchemaTree::Node::id_t> m_matchable_node_ids;
 };
 
