@@ -165,6 +165,9 @@ tasks:
         vars:
           FLAGS:
             - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            # The following line filter is added to ignore msgpack issue #1098:
+            # https://github.com/msgpack/msgpack-c/issues/1098
+            - "-line-filter \"[{\\\"name\\\":\\\"cpp11_zone.hpp\\\",\\\"lines\\\":[[197,197]]}]\""
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
           OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
@@ -750,6 +753,9 @@ tasks:
           # yamllint enable rule:line-length
           FLAGS:
             - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            # The following line filter is added to ignore msgpack issue #1098:
+            # https://github.com/msgpack/msgpack-c/issues/1098
+            - "-line-filter \"[\\\"name\\\":\\\"cpp11_zone.hpp\\\",\\\"lines\\\":[[197,197]]}]\""
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
           INCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/*"
