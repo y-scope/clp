@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <string>
 
 #include <outcome/outcome.hpp>
 #include <ystdlib/error_handling/ErrorCode.hpp>
@@ -15,6 +14,7 @@
 namespace clp_s {
 enum class KvIrSearchErrorEnum : uint8_t {
     ClpLegacyError = 1,
+    CountSupportNotImplemented,
     DeserializerCreationFailure,
     ProjectionSupportNotImplemented,
     StreamReaderCreationFailure,
@@ -30,10 +30,11 @@ using KvIrSearchError = ystdlib::error_handling::ErrorCode<KvIrSearchErrorEnum>;
  * @param query
  * @param reducer_socket_fd
  * @return A void result on success, or an error code indicating the failure:
+ * - KvIrStreamErrorEnum::ClpLegacyError if a `clp::TraceableException` is caught.
+ * - KvIrStreamErrorEnum::CountSupportNotImplemented if count-related features are enabled.
+ * - KvIrStreamErrorEnum::ProjectionSupportNotImplemented if projection is non-empty.
  * - KvIrStreamErrorEnum::StreamReaderCreationFailure if the stream reader cannot be successfully
  *   created.
- * - KvIrStreamErrorEnum::ClpLegacyError if a `clp::TraceableException` is caught.
- * - KvIrStreamErrorEnum::ProjectionSupportNotImplemented if projection is non-empty.
  * - Forwards `deserialize_and_search_kv_ir_stream`'s return values.
  */
 [[nodiscard]] auto search_kv_ir_stream(

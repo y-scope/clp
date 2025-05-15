@@ -1,7 +1,7 @@
 #include "kv_ir_search.hpp"
 
-#include <sys/errno.h>
-
+#include <cerrno>
+#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -15,7 +15,6 @@
 #include <ystdlib/error_handling/ErrorCode.hpp>
 
 #include "../clp/ErrorCode.hpp"
-#include "../clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../clp/ffi/ir_stream/Deserializer.hpp"
 #include "../clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../clp/ffi/ir_stream/search/QueryHandler.hpp"
@@ -30,6 +29,11 @@
 #include "InputConfig.hpp"
 #include "ReaderUtils.hpp"
 #include "search/ast/Expression.hpp"
+
+// This include has a circular dependency with the `.inc` file.
+// The following clang-tidy suppression should be removed once the circular dependency is resolved.
+// NOLINTNEXTLINE(misc-header-include-cycle)
+#include "../clp/ffi/ir_stream/decoding_methods.hpp"
 
 using clp_s::KvIrSearchError;
 using clp_s::KvIrSearchErrorEnum;
@@ -144,6 +148,14 @@ auto IrUnitHandler::create(
     return IrUnitHandler{};
 }
 
+/**
+ * The following clang-tidy check is disabled because this function is intentionally designed as a
+ * non-static member function for the following reasons:
+ * - It is expected to be extended in the future to support additional search features.
+ * - It must be invoked through an object created by the factory function, which ensures all
+ *   necessary validations are performed.
+ */
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IrUnitHandler::handle_log_event(clp::ffi::KeyValuePairLogEvent log_event) -> IRErrorCode {
     auto const serialize_result{log_event.serialize_to_json()};
     if (serialize_result.has_error()) {
@@ -194,18 +206,21 @@ auto deserialize_and_search_kv_ir_stream(
     using QueryHandlerType = clp::ffi::ir_stream::search::QueryHandler<
             decltype(trivial_new_projected_schema_tree_node_callback)>;
 
-    auto deserializer_result{make_deserializer(
-            stream_reader,
-            OUTCOME_TRYX(IrUnitHandler::create(command_line_arguments, reducer_socket_fd)),
-            OUTCOME_TRYX(
-                    QueryHandlerType::create(
-                            trivial_new_projected_schema_tree_node_callback,
-                            std::move(query),
-                            {},
-                            false == command_line_arguments.get_ignore_case()
-                    )
+    auto ir_unit_handler{
+            OUTCOME_TRYX(IrUnitHandler::create(command_line_arguments, reducer_socket_fd))
+    };
+    auto query_handler{OUTCOME_TRYX(
+            QueryHandlerType::create(
+                    trivial_new_projected_schema_tree_node_callback,
+                    std::move(query),
+                    {},
+                    false == command_line_arguments.get_ignore_case()
             )
     )};
+
+    auto deserializer_result{
+            make_deserializer(stream_reader, std::move(ir_unit_handler), std::move(query_handler))
+    };
 
     if (deserializer_result.has_error()) {
         return KvIrSearchError{KvIrSearchErrorEnum::DeserializerCreationFailure};
@@ -231,6 +246,13 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
     }
 
+    if (command_line_arguments.do_count_by_time_aggregation()
+        || command_line_arguments.do_count_results_aggregation())
+    {
+        SPDLOG_ERROR("kv-ir search: Count support is not implemented.");
+        return KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented};
+    }
+
     auto const raw_reader{
             ReaderUtils::try_create_reader(stream_path, command_line_arguments.get_network_auth())
     };
@@ -238,9 +260,19 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::StreamReaderCreationFailure};
     }
 
+    if (command_line_arguments.get_search_begin_ts().has_value()
+        || command_line_arguments.get_search_end_ts().has_value())
+    {
+        SPDLOG_WARN(
+                "kv-ir search: Timestamp filters are currently not supported."
+                " Values will be ignored."
+        );
+    }
+
     try {
         clp::streaming_compression::zstd::Decompressor decompressor;
-        decompressor.open(*raw_reader, 4096);
+        constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KB
+        decompressor.open(*raw_reader, cReaderBufferSize);
         OUTCOME_TRYV(deserialize_and_search_kv_ir_stream(
                 decompressor,
                 command_line_arguments,
@@ -280,10 +312,12 @@ auto KvIrSearchErrorCategory::message(clp_s::KvIrSearchErrorEnum error_enum) con
     switch (error_enum) {
         case KvIrSearchErrorEnum::ClpLegacyError:
             return "clp legacy error.";
+        case KvIrSearchErrorEnum::CountSupportNotImplemented:
+            return "Count support is not implemented.";
         case KvIrSearchErrorEnum::DeserializerCreationFailure:
             return "Failed to create `clp::ffi::ir_stream::Deserializer`.";
         case KvIrSearchErrorEnum::ProjectionSupportNotImplemented:
-            return "Projection support is not implemented yet.";
+            return "Projection support is not implemented.";
         case KvIrSearchErrorEnum::StreamReaderCreationFailure:
             return "Failed to create stream reader.";
         case KvIrSearchErrorEnum::UnsupportedOutputHandlerType:

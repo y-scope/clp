@@ -363,10 +363,10 @@ int main(int argc, char const* argv[]) {
         }
 
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
-        for (auto const& archive_path : command_line_arguments.get_input_paths()) {
-            if (std::string::npos != archive_path.path.find(clp::ir::cIrFileExtension)) {
+        for (auto const& input_path : command_line_arguments.get_input_paths()) {
+            if (std::string::npos != input_path.path.find(clp::ir::cIrFileExtension)) {
                 auto const result{clp_s::search_kv_ir_stream(
-                        archive_path,
+                        input_path,
                         command_line_arguments,
                         expr->copy(),
                         reducer_socket_fd
@@ -379,18 +379,19 @@ int main(int argc, char const* argv[]) {
                 if (std::errc::result_out_of_range == error) {
                     // To support real-time search, we will allow incomplete IR streams.
                     // TODO: Use dedicated error code for this case once issue #904 is resolved.
-                    SPDLOG_WARN("IR stream `{}` is truncated", archive_path.path);
+                    SPDLOG_WARN("IR stream `{}` is truncated", input_path.path);
                     continue;
                 }
 
                 SPDLOG_ERROR(
                         "Failed to search '{}' as an IR stream, error_category={}, error={}",
-                        archive_path.path,
+                        input_path.path,
                         error.category().name(),
                         error.message()
                 );
                 if (KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented} == error
-                    || KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType} == error)
+                    || KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType} == error
+                    || KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented} == error)
                 {
                     // These errors are treated as non-fatal since it's because we currently don't
                     // have supports for these features.
@@ -406,7 +407,7 @@ int main(int argc, char const* argv[]) {
             }
 
             try {
-                archive_reader->open(archive_path, command_line_arguments.get_network_auth());
+                archive_reader->open(input_path, command_line_arguments.get_network_auth());
             } catch (std::exception const& e) {
                 SPDLOG_ERROR("Failed to open archive - {}", e.what());
                 return 1;
