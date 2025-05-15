@@ -26,8 +26,8 @@ using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::LiteralType;
-using clp_s::search::ast::LiteralTypeBitmask;
 using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::OrOfAndForm;
 
@@ -328,7 +328,7 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
                 continue;
             }
 
-            LiteralTypeBitmask types = 0;
+            literal_type_bitmask_t types = 0;
             for (int32_t schema : common_schema) {
                 if (m_descriptor_to_schema[column].count(schema)) {
                     types |= node_to_literal_type(

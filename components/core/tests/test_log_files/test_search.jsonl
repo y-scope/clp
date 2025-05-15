@@ -7,3 +7,4 @@
 {"idx": 6, "msg": "Msg 6: \tAbc123"}
 {"idx": 7, "arr": [{"a": 999}, {"b": 1001}]}
 {"idx": 8, "arr": {"a": 999, "b": 1001}}
+{"idx": 9, "var_string": "a", "clp_string": "a b", "float": 1.1, "int": 1, "bool": true, "array": [], "object": {}}

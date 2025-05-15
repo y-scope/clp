@@ -179,16 +179,18 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "Msg 5: \rAbc123")aa", {5}},
             {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
-            {R"aa(arr.b > 1000)aa", {7, 8}}
+            {R"aa(arr.b > 1000)aa", {7, 8}},
+            {R"aa(var_string: *)aa", {9}},
+            {R"aa(clp_string: *)aa", {9}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
-    compress(structurize_arrays, single_file_archive);
+    REQUIRE_NOTHROW(compress(structurize_arrays, single_file_archive));
 
     for (auto const& [query, expected_results] : queries_and_results) {
-        search(query, false, expected_results);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 }
