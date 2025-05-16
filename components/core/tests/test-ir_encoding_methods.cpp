@@ -96,11 +96,11 @@ private:
 };
 
 /**
- * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for testing purposes.
  */
 class IrUnitHandler {
 public:
-    // Implements `clp::ffi::ir_stream::IrUnitHandlerInterface` interface
+    // Implements `clp::ffi::ir_stream::IrUnitHandlerReq`
     [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
         m_deserialized_log_events.emplace_back(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
