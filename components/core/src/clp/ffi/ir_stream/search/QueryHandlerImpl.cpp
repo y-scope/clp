@@ -39,7 +39,7 @@ using clp_s::search::ast::ColumnDescriptor;
 using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
-using clp_s::search::ast::LiteralTypeBitmask;
+using clp_s::search::ast::literal_type_bitmask_t;
 
 /**
  * Pre-processes a search query by applying several transformation passes.
@@ -65,7 +65,7 @@ using clp_s::search::ast::LiteralTypeBitmask;
  *     descriptor for the projected key.
  */
 [[nodiscard]] auto create_projected_columns_and_projection_map(
-        std::vector<std::pair<std::string, LiteralTypeBitmask>> const& projections
+        std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections
 )
         -> outcome_v2::std_result<std::pair<
                 std::vector<std::shared_ptr<ColumnDescriptor>>,
@@ -182,7 +182,7 @@ auto preprocess_query(std::shared_ptr<Expression> query)
 }
 
 auto create_projected_columns_and_projection_map(
-        std::vector<std::pair<std::string, LiteralTypeBitmask>> const& projections
+        std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections
 )
         -> outcome_v2::std_result<std::pair<
                 std::vector<std::shared_ptr<ColumnDescriptor>>,
@@ -405,7 +405,7 @@ auto evaluate_wildcard_filter(
 
 auto QueryHandlerImpl::create(
         std::shared_ptr<Expression> query,
-        std::vector<std::pair<std::string, LiteralTypeBitmask>> const& projections,
+        std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
         bool case_sensitive_match
 ) -> outcome_v2::std_result<QueryHandlerImpl> {
     query = OUTCOME_TRYX(preprocess_query(query));

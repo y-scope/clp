@@ -134,7 +134,7 @@ public:
      */
     [[nodiscard]] static auto create(
             std::shared_ptr<clp_s::search::ast::Expression> query,
-            std::vector<std::pair<std::string, clp_s::search::ast::LiteralTypeBitmask>> const&
+            std::vector<std::pair<std::string, clp_s::search::ast::literal_type_bitmask_t>> const&
                     projections,
             bool case_sensitive_match
     ) -> outcome_v2::std_result<QueryHandlerImpl>;
