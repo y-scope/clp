@@ -461,6 +461,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/search/QueryHandler.hpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.cpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.hpp
+        src/clp/ffi/ir_stream/search/QueryHandlerReq.hpp
+        src/clp/ffi/ir_stream/search/test/test_deserializer_integration.cpp
         src/clp/ffi/ir_stream/search/test/test_QueryHandlerImpl.cpp
         src/clp/ffi/ir_stream/search/test/test_utils.cpp
         src/clp/ffi/ir_stream/search/test/utils.cpp
@@ -628,11 +630,14 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        tests/clp_s_test_utils.cpp
+        tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp

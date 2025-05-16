@@ -15,8 +15,8 @@
 
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
+#include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
-#include "../src/clp_s/JsonParser.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../src/clp_s/search/ast/ConvertToExists.hpp"
 #include "../src/clp_s/search/ast/EmptyExpr.hpp"
@@ -33,6 +33,7 @@
 #include "../src/clp_s/search/Projection.hpp"
 #include "../src/clp_s/search/SchemaMatch.hpp"
 #include "../src/clp_s/Utils.hpp"
+#include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
 constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archive"};
@@ -44,7 +45,6 @@ namespace {
 auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path;
 auto get_test_input_local_path() -> std::string;
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression>;
-void compress(bool structurize_arrays, bool single_file_archive);
 void
 search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results);
 void search(
@@ -92,39 +92,6 @@ auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search
     auto expr = clp_s::search::ast::OrExpr::create(matching_filter, non_matching_filter);
     expr->add_operand(object_subtree_non_matching_filter);
     return expr;
-}
-
-void compress(bool structurize_arrays, bool single_file_archive) {
-    constexpr auto cDefaultTargetEncodedSize = 8ULL * 1024 * 1024 * 1024;  // 8 GiB
-    constexpr auto cDefaultMaxDocumentSize = 512ULL * 1024 * 1024;  // 512 MiB
-    constexpr auto cDefaultMinTableSize = 1ULL * 1024 * 1024;  // 1 MiB
-    constexpr auto cDefaultCompressionLevel = 3;
-    constexpr auto cDefaultPrintArchiveStats = false;
-
-    std::filesystem::create_directory(cTestSearchArchiveDirectory);
-    REQUIRE((std::filesystem::is_directory(cTestSearchArchiveDirectory)));
-
-    clp_s::JsonParserOption parser_option{};
-    parser_option.input_paths.emplace_back(
-            clp_s::Path{
-                    .source = clp_s::InputSource::Filesystem,
-                    .path = get_test_input_local_path()
-            }
-    );
-    parser_option.archives_dir = cTestSearchArchiveDirectory;
-    parser_option.target_encoded_size = cDefaultTargetEncodedSize;
-    parser_option.max_document_size = cDefaultMaxDocumentSize;
-    parser_option.min_table_size = cDefaultMinTableSize;
-    parser_option.compression_level = cDefaultCompressionLevel;
-    parser_option.print_archive_stats = cDefaultPrintArchiveStats;
-    parser_option.structurize_arrays = structurize_arrays;
-    parser_option.single_file_archive = single_file_archive;
-
-    clp_s::JsonParser parser{parser_option};
-    REQUIRE(parser.parse());
-    parser.store();
-
-    REQUIRE((false == std::filesystem::is_empty(cTestSearchArchiveDirectory)));
 }
 
 void validate_results(
@@ -234,7 +201,13 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
-    REQUIRE_NOTHROW(compress(structurize_arrays, single_file_archive));
+    REQUIRE_NOTHROW(compress_archive(
+            get_test_input_local_path(),
+            std::string{cTestSearchArchiveDirectory},
+            single_file_archive,
+            structurize_arrays,
+            clp_s::CommandLineArguments::FileType::Json
+    ));
 
     for (auto const& [query, expected_results] : queries_and_results) {
         REQUIRE_NOTHROW(search(query, false, expected_results));
