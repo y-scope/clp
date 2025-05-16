@@ -13,13 +13,16 @@
 #include <vector>
 
 #include <catch2/catch.hpp>
+#include <msgpack.hpp>
 #include <outcome/outcome.hpp>
 
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../ir/EncodedTextAst.hpp"
 #include "../../../../ir/types.hpp"
+#include "../../../../type_utils.hpp"
 #include "../../../encoding_methods.hpp"
 #include "../../../SchemaTree.hpp"
+#include "../../Serializer.hpp"
 #include "../utils.hpp"
 
 namespace clp::ffi::ir_stream::search::test {
@@ -107,6 +110,21 @@ requires std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
 [[nodiscard]] auto get_encoded_text_ast(std::string_view text)
         -> clp::ir::EncodedTextAst<encoded_variable_t>;
 
+/**
+ * Unpacks and serializes the given msgpack bytes using the given serializer.
+ * @tparam encoded_variable_t
+ * @param auto_gen_msgpack_bytes
+ * @param user_gen_msgpack_bytes
+ * @param serializer
+ * @return Whether serialization succeeded.
+ */
+template <typename encoded_variable_t>
+[[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
+        std::vector<uint8_t> const& auto_gen_msgpack_bytes,
+        std::vector<uint8_t> const& user_gen_msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
+) -> bool;
+
 template <typename encoded_variable_t>
 requires std::is_same_v<encoded_variable_t, ir::eight_byte_encoded_variable_t>
          || std::is_same_v<encoded_variable_t, ir::four_byte_encoded_variable_t>
@@ -125,6 +143,46 @@ auto get_encoded_text_ast(std::string_view text) -> clp::ir::EncodedTextAst<enco
     }
 
     return clp::ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars};
+}
+
+template <typename encoded_variable_t>
+auto unpack_and_serialize_msgpack_bytes(
+        std::vector<uint8_t> const& auto_gen_msgpack_bytes,
+        std::vector<uint8_t> const& user_gen_msgpack_bytes,
+        Serializer<encoded_variable_t>& serializer
+) -> bool {
+    // NOLINTNEXTLINE(misc-include-cleaner)
+    auto const auto_gen_msgpack_byte_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(auto_gen_msgpack_bytes.data()),
+            auto_gen_msgpack_bytes.size()
+    )};
+    auto const auto_gen_msgpack_obj{auto_gen_msgpack_byte_handle.get()};
+
+    // NOLINTNEXTLINE(misc-include-cleaner)
+    if (msgpack::type::MAP != auto_gen_msgpack_obj.type) {
+        return false;
+    }
+
+    // NOLINTNEXTLINE(misc-include-cleaner)
+    auto const user_gen_msgpack_byte_handle{msgpack::unpack(
+            clp::size_checked_pointer_cast<char const>(user_gen_msgpack_bytes.data()),
+            user_gen_msgpack_bytes.size()
+    )};
+    auto const user_gen_msgpack_obj{user_gen_msgpack_byte_handle.get()};
+
+    // NOLINTNEXTLINE(misc-include-cleaner)
+    if (msgpack::type::MAP != user_gen_msgpack_obj.type) {
+        return false;
+    }
+
+    // The following clang-tidy suppression is needed because it's the only way to access the
+    // msgpack object as a map.
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
+    return serializer.serialize_msgpack_map(
+            auto_gen_msgpack_obj.via.map,
+            user_gen_msgpack_obj.via.map
+    );
+    // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 }
 }  // namespace clp::ffi::ir_stream::search::test
 
