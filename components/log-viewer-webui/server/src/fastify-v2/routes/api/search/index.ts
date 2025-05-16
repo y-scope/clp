@@ -2,12 +2,13 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
+import {StatusCodes} from "http-status-codes";
 
 import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
-    CreateSearchJobSchema,
-    SearchJobSchema,
+    CreateQueryJobSchema,
+    QueryJobSchema,
 } from "../../../schemas/search.js";
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
 import {
@@ -18,9 +19,11 @@ import {
 
 
 /**
+ * Search API routes.
  *
  * @param fastify
  */
+// eslint-disable-next-line max-lines-per-function
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const {
         QueryJobsDbManager,
@@ -35,32 +38,33 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         "/query",
         {
             schema: {
-                body: CreateSearchJobSchema,
+                body: CreateQueryJobSchema,
                 response: {
-                    201: SearchJobSchema,
-                    500: ErrorSchema,
+                    [StatusCodes.CREATED]: QueryJobSchema,
+                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Search"],
             },
         },
         async (request, reply) => {
             const {
-                queryString,
+
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
                 timeRangeBucketSizeMillis,
+                queryString,
             } = request.body;
 
             const args = {
-                query_string: queryString,
                 begin_timestamp: timestampBegin,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
                 max_num_results: SEARCH_MAX_NUM_RESULTS,
+                query_string: queryString,
             };
 
-            request.log.info({args}, "/search args");
+            request.log.info({args}, "/api/search/query args");
 
             let searchJobId: number;
             let aggregationJobId: number;
@@ -74,36 +78,37 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             } catch (err: unknown) {
                 const errMsg = "Unable to submit search/aggregation job to the SQL database";
                 request.log.error(err, errMsg);
-                reply.code(500);
 
-                return {message: errMsg};
+                return reply.internalServerError(errMsg);
             }
 
-            SearchResultsMetadataCollection.insertOne({
+            await SearchResultsMetadataCollection.insertOne({
                 _id: searchJobId.toString(),
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                 errorMsg: null,
             });
 
             // Defer signal update until after response is sent
-            setImmediate(async () => {
-                await updateSearchSignalWhenJobsFinish({
-                    searchJobId,
-                    aggregationJobId,
+            setImmediate(() => {
+                updateSearchSignalWhenJobsFinish({
+                    aggregationJobId: aggregationJobId,
+                    logger: request.log,
                     queryJobsDbManager: QueryJobsDbManager,
                     searchJobCollectionsManager: SearchJobCollectionsManager,
-                    SearchResultsMetadataCollection,
-                    logger: request.log,
+                    searchJobId: searchJobId,
+                    searchResultsMetadataCollection: SearchResultsMetadataCollection,
+                }).catch((err: unknown) => {
+                    request.log.error(err, "Error updating search signal when jobs finish");
                 });
             });
 
             await createMongoIndexes({
-                searchJobId,
-                searchJobCollectionsManager: SearchJobCollectionsManager,
                 logger: request.log,
+                searchJobId: searchJobId,
+                searchJobCollectionsManager: SearchJobCollectionsManager,
             });
 
-            reply.code(201);
+            reply.code(StatusCodes.CREATED);
 
             return {searchJobId, aggregationJobId};
         }
@@ -113,13 +118,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
      * Clears the results of a search operation identified by jobId.
      */
     fastify.delete(
-        "/search/results",
+        "/results",
         {
             schema: {
-                body: SearchJobSchema,
+                body: QueryJobSchema,
                 response: {
-                    204: Type.Null(),
-                    500: ErrorSchema,
+                    [StatusCodes.NO_CONTENT]: Type.Null(),
+                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Search"],
             },
@@ -130,7 +135,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             request.log.info({
                 searchJobId,
                 aggregationJobId,
-            }, "/search/results args");
+            }, "api/search/results args");
 
             try {
                 await SearchJobCollectionsManager.dropCollection(searchJobId);
@@ -145,24 +150,24 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     },
                     errMsg
                 );
-                reply.code(500);
 
-                return {message: `${errMsg} for searchJobId=${searchJobId}, ` +
-                `aggregationJobId=${aggregationJobId}`};
+                return reply.internalServerError(`${errMsg} for searchJobId=${searchJobId}, ` +
+                `aggregationJobId=${aggregationJobId}`);
             }
-            reply.code(204);
+
+            return reply.code(StatusCodes.NO_CONTENT);
         }
     );
 
 
     fastify.post(
-        "/search/cancel",
+        "/cancel",
         {
             schema: {
-                body: SearchJobSchema,
+                body: QueryJobSchema,
                 response: {
-                    204: Type.Null(),
-                    500: ErrorSchema,
+                    [StatusCodes.NO_CONTENT]: Type.Null(),
+                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Search"],
             },
@@ -170,23 +175,24 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         async (request, reply) => {
             const {searchJobId, aggregationJobId} = request.body;
 
-            request.log.info(
-                `/search/cancel searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`
-            );
+            request.log.info({
+                searchJobId,
+                aggregationJobId,
+            }, "api/search/cancel args");
 
             try {
                 await QueryJobsDbManager.submitQueryCancellation(searchJobId);
                 await QueryJobsDbManager.submitQueryCancellation(aggregationJobId);
 
-                updateSearchResultsMeta({
-                    jobId: searchJobId,
-                    lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
-                    SearchResultsMetadataCollection,
-                    logger: request.log,
+                await updateSearchResultsMeta({
                     fields: {
                         lastSignal: SEARCH_SIGNAL.RESP_DONE,
                         errorMsg: "Query cancelled before it could be completed.",
                     },
+                    jobId: searchJobId,
+                    lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+                    logger: request.log,
+                    searchResultsMetadataCollection: SearchResultsMetadataCollection,
                 });
             } catch (err: unknown) {
                 const errMsg = "Failed to submit cancel request";
@@ -198,13 +204,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     },
                     errMsg
                 );
-                reply.code(500);
 
-                return {message: `${errMsg} for searchJobId=${searchJobId}, ` +
-                `aggregationJobId=${aggregationJobId}`};
+                return reply.internalServerError(`${errMsg} for searchJobId=${searchJobId}, ` +
+                `aggregationJobId=${aggregationJobId}`);
             }
 
-            reply.code(204);
+            return reply.code(StatusCodes.NO_CONTENT);
         }
     );
 };

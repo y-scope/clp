@@ -12,18 +12,18 @@ import {
  * Modifies the search results metadata for a given job ID.
  *
  * @param props
+ * @param props.fields
  * @param props.jobId
  * @param props.lastSignal
- * @param props.SearchResultsMetadataCollection
  * @param props.logger
- * @param props.fields
+ * @param props.searchResultsMetadataCollection
  */
-const updateSearchResultsMeta = ({
+const updateSearchResultsMeta = async ({
+    fields,
     jobId,
     lastSignal,
-    SearchResultsMetadataCollection,
     logger,
-    fields,
+    searchResultsMetadataCollection,
 }: UpdateSearchResultsMetaProps) => {
     const filter = {
         _id: jobId.toString(),
@@ -35,29 +35,30 @@ const updateSearchResultsMeta = ({
     };
 
     logger.debug("SearchResultsMetadataCollection modifier = ", modifier);
-    SearchResultsMetadataCollection.updateOne(filter, modifier);
+    await searchResultsMetadataCollection.updateOne(filter, modifier);
 };
 
 /**
  * Updates the search signal when the specified job finishes.
  *
  * @param props
- * @param props.searchJobId
  * @param props.aggregationJobId
- * @param props.queryJobsDbManager
- * @param props.searchJobCollectionsManager
- * @param props.SearchResultsMetadataCollection
  * @param props.logger
+ * @param props.queryJobsDbManager
+ * @param props.searchJobId
+ * @param props.searchJobCollectionsManager
+ * @param props.searchResultsMetadataCollection
  */
 const updateSearchSignalWhenJobsFinish = async ({
-    searchJobId,
     aggregationJobId,
     queryJobsDbManager,
-    searchJobCollectionsManager,
-    SearchResultsMetadataCollection,
     logger,
+    searchJobId,
+    searchJobCollectionsManager,
+    searchResultsMetadataCollection,
+
 }: UpdateSearchSignalWhenJobsFinishProps) => {
-    let errorMsg;
+    let errorMsg = null;
     try {
         await queryJobsDbManager.awaitJobCompletion(searchJobId);
         await queryJobsDbManager.awaitJobCompletion(aggregationJobId);
@@ -86,19 +87,19 @@ const updateSearchSignalWhenJobsFinish = async ({
         throw e;
     }
 
-    updateSearchResultsMeta({
-        jobId: searchJobId,
-        lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
-        SearchResultsMetadataCollection,
-        logger,
+    await updateSearchResultsMeta({
         fields: {
             lastSignal: SEARCH_SIGNAL.RESP_DONE,
-            errorMsg: errorMsg ?? null,
+            errorMsg: errorMsg,
             numTotalResults: Math.min(
                 numResultsInCollection,
                 SEARCH_MAX_NUM_RESULTS
             ),
         },
+        jobId: searchJobId,
+        lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+        logger: logger,
+        searchResultsMetadataCollection: searchResultsMetadataCollection,
     });
 };
 
@@ -106,14 +107,14 @@ const updateSearchSignalWhenJobsFinish = async ({
  * Creates MongoDB indexes for a specific job's collection.
  *
  * @param props
+ * @param props.logger
  * @param props.searchJobId
  * @param props.searchJobCollectionsManager
- * @param props.logger
  */
 const createMongoIndexes = async ({
+    logger,
     searchJobId,
     searchJobCollectionsManager,
-    logger,
 }: CreateMongoIndexesProps) => {
     const timestampAscendingIndex = {
         key: {

@@ -5,16 +5,22 @@ import {
     StringSchema,
 } from "./common.js";
 
-
-export const CreateSearchJobSchema = Type.Object({
+/* Schema for request to create a new query job */
+const CreateQueryJobSchema = Type.Object({
+    ignoreCase: Type.Boolean(),
     queryString: StringSchema,
     timestampBegin: Type.Integer(),
-    timestampEnd: Type.Integer(),
-    ignoreCase: Type.Boolean(),
     timeRangeBucketSizeMillis: Type.Integer(),
+    timestampEnd: Type.Integer(),
 });
 
-export const SearchJobSchema = Type.Object({
+/* Schema to identify query job */
+const QueryJobSchema = Type.Object({
     searchJobId: IdSchema,
     aggregationJobId: IdSchema,
 });
+
+export {
+    CreateQueryJobSchema,
+    QueryJobSchema,
+};

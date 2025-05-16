@@ -7,11 +7,11 @@ import {
     FastifyInstance,
     FastifyPluginOptions,
 } from "fastify";
+import {StatusCodes} from "http-status-codes";
 
 import FastifyV1App from "../app.js";
 
 
-const INTERNAL_SERVER_ERROR_CODE = 500;
 const RATE_LIMIT_MAX_REQUESTS = 3;
 const RATE_LIMIT_TIME_WINDOW_MS = 500;
 const IGNORED_FILES_REGEX = /^.*(?:utils|typings)\.js$/;
@@ -75,7 +75,9 @@ export default async function serviceApp (
             "Unhandled error occurred"
         );
 
-        if ("undefined" !== typeof err.statusCode && INTERNAL_SERVER_ERROR_CODE > err.statusCode) {
+        if ("undefined" !== typeof err.statusCode &&
+            StatusCodes.INTERNAL_SERVER_ERROR as number > err.statusCode
+        ) {
             reply.code(err.statusCode);
 
             return err.message;

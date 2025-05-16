@@ -8,6 +8,7 @@ import {
     SearchResultsMetadataDocument,
 } from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
 
+
 /**
  * The maximum number of results to retrieve for a search.
  */
@@ -16,7 +17,7 @@ const SEARCH_MAX_NUM_RESULTS = 1000;
 type UpdateSearchResultsMetaProps = {
     jobId: number;
     lastSignal: SEARCH_SIGNAL;
-    SearchResultsMetadataCollection: FastifyInstance["SearchResultsMetadataCollection"];
+    searchResultsMetadataCollection: FastifyInstance["SearchResultsMetadataCollection"];
     logger: FastifyBaseLogger;
     fields: Partial<SearchResultsMetadataDocument>;
 };
@@ -26,7 +27,7 @@ type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;
     queryJobsDbManager: FastifyInstance["QueryJobsDbManager"];
     searchJobCollectionsManager: FastifyInstance["SearchJobCollectionsManager"];
-    SearchResultsMetadataCollection: FastifyInstance["SearchResultsMetadataCollection"];
+    searchResultsMetadataCollection: FastifyInstance["SearchResultsMetadataCollection"];
     logger: FastifyBaseLogger;
 };
 
