@@ -34,7 +34,7 @@ namespace {
 using JsonPair = std::pair<nlohmann::json, nlohmann::json>;
 
 /**
- * Implementation of `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ * Implementation of `clp::ffi::ir_stream::IrUnitHandlerReq` for testing purposes.
  */
 class IrUnitHandler {
 public:

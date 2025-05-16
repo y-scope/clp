@@ -6,7 +6,7 @@
 #include <catch2/catch.hpp>
 
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
-#include "../src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp"
+#include "../src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../src/clp/ffi/SchemaTree.hpp"
 #include "../src/clp/time_types.hpp"
@@ -22,11 +22,11 @@ constexpr UtcOffset cTestUtcOffsetDelta{1000};
 constexpr std::string_view cTestSchemaTreeNodeKeyName{"test_key"};
 
 /**
- * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for testing purposes.
  */
 class TrivialIrUnitHandler {
 public:
-    // Implements `clp::ffi::ir_stream::IrUnitHandlerInterface` interface
+    // Implements `clp::ffi::ir_stream::IrUnitHandlerReq`
     [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
         m_log_event.emplace(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
@@ -75,20 +75,18 @@ private:
 
 /**
  * Class that inherits `TrivialIrUnitHandler` which also implements
- * `clp::ffi::ir_stream::IrUnitHandlerInterface`.
+ * `clp::ffi::ir_stream::IrUnitHandlerReq`.
  */
 class TriviallyInheritedIrUnitHandler : public TrivialIrUnitHandler {};
 
 /**
  * Simulates the use of an IR unit handler. It calls every method required by
- * `clp::ffi::ir_stream::IrUnitHandlerInterface` and ensure they don't return errors.
+ * `clp::ffi::ir_stream::IrUnitHandlerReq` and ensure they don't return errors.
  * @param handler
  */
-auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler)
-        -> void;
+auto test_ir_unit_handler_req(clp::ffi::ir_stream::IrUnitHandlerReq auto& handler) -> void;
 
-auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface auto& handler)
-        -> void {
+auto test_ir_unit_handler_req(clp::ffi::ir_stream::IrUnitHandlerReq auto& handler) -> void {
     auto test_log_event_result{KeyValuePairLogEvent::create(
             std::make_shared<SchemaTree>(),
             std::make_shared<SchemaTree>(),
@@ -121,14 +119,14 @@ auto test_ir_unit_handler_interface(clp::ffi::ir_stream::IrUnitHandlerInterface 
 }  // namespace
 
 TEMPLATE_TEST_CASE(
-        "test_ir_unit_handler_interface_basic",
+        "test_ir_unit_handler_req_basic",
         "[ffi][ir_stream]",
         TrivialIrUnitHandler,
         TriviallyInheritedIrUnitHandler
 ) {
     TestType handler;
     REQUIRE_FALSE(handler.is_complete());
-    test_ir_unit_handler_interface(handler);
+    test_ir_unit_handler_req(handler);
 
     REQUIRE((handler.get_utc_offset_delta() == cTestUtcOffsetDelta));
     auto const& optional_log_event{handler.get_log_event()};

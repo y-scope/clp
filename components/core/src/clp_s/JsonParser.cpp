@@ -40,7 +40,7 @@ using clp::UtcOffset;
 
 namespace clp_s {
 /**
- * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for Key-Value IR compression.
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
  */
 class IrUnitHandler {
 public:
