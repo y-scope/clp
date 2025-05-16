@@ -3,10 +3,12 @@
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
     "SqlDbQueryJobsTableName": "query_jobs",
+
     "MongoDbHost": "localhost",
     "MongoDbPort": 27017,
     "MongoDbName": "clp-query-results",
     "MongoDbStreamFilesCollectionName": "stream-files",
+    "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
 
     "ClientDir": "../../client/dist",
     "LogViewerDir": "../../yscope-log-viewer/dist",
