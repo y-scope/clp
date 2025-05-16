@@ -207,7 +207,7 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "2840e403b1d7a0d3a75ecc4df574ab0674284bb21d76ac5f817695f2b56905f2"
+          FILE_SHA256: "14e15bda4e7c26ee42b0329d7ff746235f67bda084305c9d61297e9a521deb18"
           INCLUDE_PATTERNS:
             - "*/single-header"
           OUTPUT_DIR: "{{.SRC_DIR}}"
@@ -216,7 +216,7 @@ tasks:
           # release tarball, since the latter is served from githubusercontent.com which is blocked
           # by some developers' firewalls. The source files we use are identical between the two
           # tarballs.
-          URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.9.tar.gz"
+          URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.12.tar.gz"
       - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
       - "rm -f '{{.INSTALL_SYMLINK}}'"
       - "ln -s '{{.SRC_DIR}}/single-header' '{{.INSTALL_SYMLINK}}'"

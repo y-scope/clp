@@ -1,36 +1,34 @@
+import fp from "fastify-plugin";
 
-import fp from 'fastify-plugin'
-
-declare module 'fastify' {
-  export interface FastifyInstance {
-    sampleApp: ReturnType<typeof createSamplePlugin>;
-  }
-}
 
 /**
- * Sample code to demonstrate how to create a Fastify plugin.
+ * Example to demonstrate how to create a Fastify plugin.
  *
- * TODO: Remove sample code when new webui app code is ready.
+ * TODO: Remove example code when new webui app code is ready.
+ *
+ * @return plugin interface.
  */
-function createSamplePlugin () {
+const createExamplePlugin = () => {
     return {
-      /**
-       * Returns a sample string.
-       *
-       * @returns  A sample string.
-       */
-      async getSample (): Promise<string> {
-        return `sample`;
-      },
+        /**
+         * Returns `Example`.
+         *
+         * @return
+         */
+        async getExample (): Promise<string> {
+            return "Example";
+        },
+    };
+};
+
+export default fp(async (fastify) => {
+    fastify.decorate("ExamplePlugin", createExamplePlugin());
+}, {
+    name: "ExamplePlugin",
+});
+
+declare module "fastify" {
+    export interface FastifyInstance {
+        ExamplePlugin: ReturnType<typeof createExamplePlugin>;
     }
-  }
-
-
-export default fp(
-  function (fastify) {
-    fastify.decorate('samplePlugin', createSamplePlugin())
-  },
-  {
-    name: 'samplePlugin',
-  }
-)
+}

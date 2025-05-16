@@ -1,8 +1,9 @@
 {
   "extends": "./tsconfig.base.json",
   "include": [
-    "../src"
-, "../../IngestPage3"  ],
+    "../src",
+    "../common/**/*"
+  ],
 
   "compilerOptions": {
     "lib": [
@@ -15,6 +16,10 @@
     "target": "ES2022",
     "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "useDefineForClassFields": true,
+    "baseUrl": "../",
+    "paths": {
+      "@common/*": ["../common/*"], // Map imports from "@common/*" to the shared folder
+    },
 
     /* Bundler mode */
     "isolatedModules": true,

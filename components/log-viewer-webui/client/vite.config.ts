@@ -1,11 +1,15 @@
 import react from "@vitejs/plugin-react";
 import {defineConfig} from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 
 // https://vite.dev/config/
 export default defineConfig({
     base: "./",
-    plugins: [react()],
+    plugins: [
+        react(),
+        tsconfigPaths(),
+    ],
     publicDir: "public",
     server: {
         port: 3001,
@@ -16,6 +20,15 @@ export default defineConfig({
                 target: "http://localhost:3001/",
                 changeOrigin: true,
             },
+            "/socket.io/": {
+                target: "ws://localhost:3000/",
+                changeOrigin: true,
+                ws: true,
+            },
+        },
+        fs: {
+            // allow serving files from one level up (common folder)
+            allow: [".."],
         },
     },
 });

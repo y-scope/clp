@@ -24,8 +24,8 @@ using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::Literal;
+using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::LiteralType;
-using clp_s::search::ast::LiteralTypeBitmask;
 using clp_s::search::ast::OpList;
 using clp_s::search::ast::OrExpr;
 

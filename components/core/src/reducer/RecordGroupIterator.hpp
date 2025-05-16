@@ -121,7 +121,8 @@ public:
     FilteredInt64MapRecordGroupIterator(FilteredInt64MapRecordGroupIterator const&&) = delete;
     FilteredInt64MapRecordGroupIterator const& operator=(FilteredInt64MapRecordGroupIterator const&)
             = delete;
-    FilteredInt64MapRecordGroupIterator const& operator=(FilteredInt64MapRecordGroupIterator const&&
+    FilteredInt64MapRecordGroupIterator const& operator=(
+            FilteredInt64MapRecordGroupIterator const&&
     ) = delete;
 
     RecordGroup& get() override {

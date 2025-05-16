@@ -937,8 +937,8 @@ void TimestampPattern::insert_formatted_timestamp(epochtime_t const timestamp, s
 }
 
 bool operator==(TimestampPattern const& lhs, TimestampPattern const& rhs) {
-    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts && lhs.m_format == rhs.m_format
-    );
+    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts
+            && lhs.m_format == rhs.m_format);
 }
 
 bool operator!=(TimestampPattern const& lhs, TimestampPattern const& rhs) {

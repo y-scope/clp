@@ -91,6 +91,14 @@ private:
     ErrorCode try_read_archive_info(ZstdDecompressor& decompressor, size_t size);
 
     /**
+     * Tries to read an unknown metadata packet from the archive metadata.
+     * @param decompressor
+     * @param size The number of decompressed bytes making up the packet.
+     * @return ErrorCodeSuccess on success or the relevant ErrorCode on failure.
+     */
+    auto try_read_unknown_metadata_packet(ZstdDecompressor& decompressor, size_t size) -> ErrorCode;
+
+    /**
      * Tries to create a reader for the archive header.
      * @return A ReaderInterface opened and pointing to the archive header on success.
      * @return nullptr on failure.

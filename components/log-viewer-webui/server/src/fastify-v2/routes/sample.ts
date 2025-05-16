@@ -1,31 +1,34 @@
 import {
     FastifyPluginAsyncTypebox,
-    Type
-  } from '@fastify/type-provider-typebox'
+    Type,
+} from "@fastify/type-provider-typebox";
+
 
 /**
- * Sample code to demonstrate how to create a Fastify route.
+ * Example to demonstrate how to create a Fastify route.
  *
- * TODO: Remove sample code when new webui app code is ready.
+ * TODO: Remove example code when new webui app code is ready.
+ *
+ * @param fastify
  */
-  const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    const { sampleApp } = fastify
+const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
+    const {ExamplePlugin} = fastify;
     fastify.get(
-      '/sample',
-      {
-        schema: {
-          response: {
-            200: Type.Object({
-              message: Type.String()
-            })
-          }
+        "/Example",
+        {
+            schema: {
+                response: {
+                    200: Type.Object({
+                        message: Type.String(),
+                    }),
+                },
+            },
+        },
+        async () => {
+            const exampleMessage = await ExamplePlugin.getExample();
+            return {message: exampleMessage};
         }
-      },
-      async function () {
-        const sampleMessage = await sampleApp.getSample();
-        return { message: sampleMessage };
-      }
-    )
-  }
+    );
+};
 
-  export default plugin
+export default plugin;

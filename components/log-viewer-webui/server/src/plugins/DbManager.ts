@@ -1,7 +1,3 @@
-
-import {
-    MySQLPromisePool,
-} from "@fastify/mysql";
 import {encode as msgpackEncode} from "@msgpack/msgpack";
 import {
     FastifyInstance,
@@ -73,7 +69,11 @@ class DbManager {
         if ("undefined" === typeof app.mongo.db) {
             throw new Error("MongoDB database not found");
         }
-        const streamFilesCollection = app.mongo.db.collection<StreamFileMongoDocument>(dbConfig.mongoConfig.streamFilesCollectionName);
+        const streamFilesCollection =
+            app.mongo.db.collection<StreamFileMongoDocument>(
+                dbConfig.mongoConfig.streamFilesCollectionName
+            );
+
         return new DbManager({
             app: app,
             mysqlConnectionPool: mysqlConnectionPool,
@@ -217,11 +217,6 @@ const dbManagerPluginCallback: FastifyPluginAsync<DbManagerOptions> = async (app
 
 declare module "fastify" {
     interface FastifyInstance {
-
-        // The typing of `@fastify/mysql` needs to be manually specified.
-        // See https://github.com/fastify/fastify-mysql#typescript
-        mysql: MySQLPromisePool;
-
         dbManager: DbManager;
     }
 }

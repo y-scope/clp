@@ -63,7 +63,8 @@ int run(int argc, char const* argv[]) {
             reader_parser = std::make_unique<log_surgeon::ReaderParser>(schema_file_path);
         }
 
-        boost::filesystem::path path_prefix_to_remove(command_line_args.get_path_prefix_to_remove()
+        boost::filesystem::path path_prefix_to_remove(
+                command_line_args.get_path_prefix_to_remove()
         );
 
         // Validate input paths exist
