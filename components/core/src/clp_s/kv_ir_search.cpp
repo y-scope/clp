@@ -308,7 +308,7 @@ auto KvIrSearchErrorCategory::name() const noexcept -> char const* {
 }
 
 template <>
-auto KvIrSearchErrorCategory::message(clp_s::KvIrSearchErrorEnum error_enum) const -> std::string {
+auto KvIrSearchErrorCategory::message(KvIrSearchErrorEnum error_enum) const -> std::string {
     switch (error_enum) {
         case KvIrSearchErrorEnum::ClpLegacyError:
             return "clp legacy error.";
