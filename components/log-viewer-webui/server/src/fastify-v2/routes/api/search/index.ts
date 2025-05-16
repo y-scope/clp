@@ -64,7 +64,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 query_string: queryString,
             };
 
-            request.log.info({args}, "/api/search/query args");
+            request.log.info(args, "/api/search/query args");
 
             let searchJobId: number;
             let aggregationJobId: number;
