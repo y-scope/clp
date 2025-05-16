@@ -81,7 +81,7 @@ public:
             [[maybe_unused]] UtcOffset utc_offset_old,
             [[maybe_unused]] UtcOffset utc_offset_new
     ) -> IRErrorCode {
-        return IRErrorCode::IRErrorCode_Decode_Error;
+        return IRErrorCode::IRErrorCode_Success;
     }
 
     [[nodiscard]] static auto handle_schema_tree_node_insertion(

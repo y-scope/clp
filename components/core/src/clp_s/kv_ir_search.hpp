@@ -30,10 +30,10 @@ using KvIrSearchError = ystdlib::error_handling::ErrorCode<KvIrSearchErrorEnum>;
  * @param query
  * @param reducer_socket_fd
  * @return A void result on success, or an error code indicating the failure:
- * - KvIrStreamErrorEnum::ClpLegacyError if a `clp::TraceableException` is caught.
- * - KvIrStreamErrorEnum::CountSupportNotImplemented if count-related features are enabled.
- * - KvIrStreamErrorEnum::ProjectionSupportNotImplemented if projection is non-empty.
- * - KvIrStreamErrorEnum::StreamReaderCreationFailure if the stream reader cannot be successfully
+ * - KvIrSearchErrorEnum::ClpLegacyError if a `clp::TraceableException` is caught.
+ * - KvIrSearchErrorEnum::CountSupportNotImplemented if count-related features are enabled.
+ * - KvIrSearchErrorEnum::ProjectionSupportNotImplemented if projection is non-empty.
+ * - KvIrSearchErrorEnum::StreamReaderCreationFailure if the stream reader cannot be successfully
  *   created.
  * - Forwards `deserialize_and_search_kv_ir_stream`'s return values.
  */
