@@ -3,8 +3,15 @@ import {
     FastifyInstance,
 } from "fastify";
 
-import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
-import {SearchResultsMetadataDocument} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
+import {
+    SEARCH_SIGNAL,
+    SearchResultsMetadataDocument,
+} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
+
+/**
+ * The maximum number of results to retrieve for a search.
+ */
+const SEARCH_MAX_NUM_RESULTS = 1000;
 
 type UpdateSearchResultsMetaProps = {
     jobId: number;
@@ -29,14 +36,9 @@ type CreateMongoIndexesProps = {
     logger: FastifyBaseLogger;
 };
 
-/**
- * The maximum number of results to retrieve for a search.
- */
-const SEARCH_MAX_NUM_RESULTS = 1000;
-
 export {
     CreateMongoIndexesProps,
+    SEARCH_MAX_NUM_RESULTS,
     UpdateSearchResultsMetaProps,
     UpdateSearchSignalWhenJobsFinishProps,
-    SEARCH_MAX_NUM_RESULTS,
 };

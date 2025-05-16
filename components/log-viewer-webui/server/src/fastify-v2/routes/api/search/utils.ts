@@ -1,15 +1,22 @@
-import { SEARCH_MAX_NUM_RESULTS } from './typings.js';
+import {CollectionDroppedError} from "../../../plugins/app/search/SearchJobCollectionsManager/typings.js";
 import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
 import {
+    CreateMongoIndexesProps,
+    SEARCH_MAX_NUM_RESULTS,
     UpdateSearchResultsMetaProps,
     UpdateSearchSignalWhenJobsFinishProps,
-    CreateMongoIndexesProps,
-} from './typings.js';
-import { CollectionDroppedError } from '../../../plugins/app/search/SearchJobCollectionsManager/typings.js';
+} from "./typings.js";
+
+
 /**
  * Modifies the search results metadata for a given job ID.
  *
- * @param {UpdateSearchResultsMetaProps} params
+ * @param props
+ * @param props.jobId
+ * @param props.lastSignal
+ * @param props.SearchResultsMetadataCollection
+ * @param props.logger
+ * @param props.fields
  */
 const updateSearchResultsMeta = ({
     jobId,
@@ -31,6 +38,17 @@ const updateSearchResultsMeta = ({
     SearchResultsMetadataCollection.updateOne(filter, modifier);
 };
 
+/**
+ * Updates the search signal when the specified job finishes.
+ *
+ * @param props
+ * @param props.searchJobId
+ * @param props.aggregationJobId
+ * @param props.queryJobsDbManager
+ * @param props.searchJobCollectionsManager
+ * @param props.SearchResultsMetadataCollection
+ * @param props.logger
+ */
 const updateSearchSignalWhenJobsFinish = async ({
     searchJobId,
     aggregationJobId,
@@ -54,13 +72,15 @@ const updateSearchSignalWhenJobsFinish = async ({
     try {
         const collection = await searchJobCollectionsManager
             .getOrCreateCollection(searchJobId);
-            numResultsInCollection = await collection.countDocuments();
-        //Need this here in new method. I believe publication used to do this?
-        await searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
 
+        numResultsInCollection = await collection.countDocuments();
+
+        // Need this here in new method. I believe publication used to do this?
+        await searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     } catch (e: unknown) {
         if (e instanceof CollectionDroppedError) {
             logger.warn(`Collection ${searchJobId} has been dropped.`);
+
             return;
         }
         throw e;
@@ -82,6 +102,14 @@ const updateSearchSignalWhenJobsFinish = async ({
     });
 };
 
+/**
+ * Creates MongoDB indexes for a specific job's collection.
+ *
+ * @param props
+ * @param props.searchJobId
+ * @param props.searchJobCollectionsManager
+ * @param props.logger
+ */
 const createMongoIndexes = async ({
     searchJobId,
     searchJobCollectionsManager,
@@ -110,4 +138,8 @@ const createMongoIndexes = async ({
     ]);
 };
 
-export { updateSearchResultsMeta, updateSearchSignalWhenJobsFinish, createMongoIndexes };
+export {
+    createMongoIndexes,
+    updateSearchResultsMeta,
+    updateSearchSignalWhenJobsFinish,
+};
