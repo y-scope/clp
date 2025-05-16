@@ -1,35 +1,69 @@
-import process from "node:process";
+// Reference: https://github.com/fastify/demo/blob/main/src/server.ts
 
-import app from "./app.js";
-import {
-    ENV_TO_LOGGER_MAP,
-    parseEnvVars,
-} from "./utils/env.js";
+import closeWithGrace from "close-with-grace";
+import fastify from "fastify";
+import fp from "fastify-plugin";
 
+import serviceApp from "./fastify-v2/app.js";
+
+
+const DEFAULT_FASTIFY_CLOSE_GRACE_DELAY = 500;
+const DEFAULT_PORT = 3000;
 
 /**
- * Sets up and runs the server.
+ * Generates logger configuration options based on the environment.
+ *
+ * @return Logger options for Fastify.
  */
-const main = async () => {
-    const envVars = parseEnvVars();
-    const loggerConfig = ENV_TO_LOGGER_MAP[envVars.NODE_ENV];
-    const server = await app({
-        fastifyOptions: {
-            ...(loggerConfig && {logger: loggerConfig}),
-        },
-        sqlDbPass: envVars.CLP_DB_PASS,
-        sqlDbUser: envVars.CLP_DB_USER,
-    });
+const getLoggerOptions = () => {
+    // Only if the program is running in an interactive terminal.
+    if (process.stdout.isTTY) {
+        return {
+            level: process.env.LOG_LEVEL ?? "info",
+            transport: {
+                target: "pino-pretty",
+                options: {
+                    ignore: "pid,hostname",
+                },
+            },
+        };
+    }
+
+    return {level: process.env.LOG_LEVEL ?? "info"};
+};
+
+const app = fastify({
+    logger: getLoggerOptions(),
+});
+
+/**
+ * Initialize the Fastify server.
+ *
+ * @return
+ */
+const init = async (): Promise<void> => {
+    // fp must be used to override default error handler.
+    app.register(fp(serviceApp));
+
+    closeWithGrace(
+        {delay: Number(DEFAULT_FASTIFY_CLOSE_GRACE_DELAY)},
+        async ({err}) => {
+            if (err) {
+                app.log.error(err);
+            }
+
+            await app.close();
+        }
+    );
+
+    await app.ready();
 
     try {
-        await server.listen({host: envVars.HOST, port: Number(envVars.PORT)});
-    } catch (e) {
-        server.log.error(e);
+        await app.listen({port: Number(process.env.PORT || DEFAULT_PORT)});
+    } catch (err) {
+        app.log.error(err);
         process.exit(1);
     }
 };
 
-main().catch((e: unknown) => {
-    console.error(e);
-    process.exit(1);
-});
+await init();
