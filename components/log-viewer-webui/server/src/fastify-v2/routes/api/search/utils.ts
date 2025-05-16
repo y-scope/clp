@@ -58,29 +58,25 @@ const updateSearchSignalWhenJobsFinish = async ({
     searchResultsMetadataCollection,
 
 }: UpdateSearchSignalWhenJobsFinishProps) => {
-    let errorMsg = null;
+    let errorMsg: string | null = null;
+
     try {
         await queryJobsDbManager.awaitJobCompletion(searchJobId);
         await queryJobsDbManager.awaitJobCompletion(aggregationJobId);
     } catch (e: unknown) {
-        if (e instanceof Error) {
-            errorMsg = e.message;
-        }
-        errorMsg = "Error while waiting for job completion";
+        errorMsg = e instanceof Error ?
+            e.message :
+            "Error while waiting for job completion";
     }
 
-    let numResultsInCollection = -1;
+    let numResultsInCollection: number;
+
     try {
-        const collection = await searchJobCollectionsManager
-            .getOrCreateCollection(searchJobId);
-
+        const collection = await searchJobCollectionsManager.getOrCreateCollection(searchJobId);
         numResultsInCollection = await collection.countDocuments();
-
-        // Need this here in new method. I believe publication used to do this?
-        await searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
     } catch (e: unknown) {
         if (e instanceof CollectionDroppedError) {
-            logger.warn(`Collection ${searchJobId} has been dropped.`);
+            logger.warn({e, errorMsg});
 
             return;
         }

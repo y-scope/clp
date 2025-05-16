@@ -5,12 +5,13 @@ import {
     StringSchema,
 } from "./common.js";
 
+
 /* Schema for request to create a new query job */
 const CreateQueryJobSchema = Type.Object({
     ignoreCase: Type.Boolean(),
     queryString: StringSchema,
-    timestampBegin: Type.Integer(),
     timeRangeBucketSizeMillis: Type.Integer(),
+    timestampBegin: Type.Integer(),
     timestampEnd: Type.Integer(),
 });
 

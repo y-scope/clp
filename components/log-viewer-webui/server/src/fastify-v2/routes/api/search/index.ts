@@ -82,6 +82,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 return reply.internalServerError(errMsg);
             }
 
+            await SearchJobCollectionsManager.getOrCreateCollection(searchJobId);
+            await SearchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
+
             await SearchResultsMetadataCollection.insertOne({
                 _id: searchJobId.toString(),
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
