@@ -53,7 +53,7 @@ const useIngestStore = create<IngestState>((set) => ({
             });
 
             if (Number(HttpStatusCode.Ok) !== response.status) {
-                throw new Error();
+                throw new Error("Failed to fetch stats.");
             }
             const [resp] = response.data;
             if ("undefined" === typeof resp) {
@@ -80,7 +80,7 @@ const useIngestStore = create<IngestState>((set) => ({
             });
 
             if (Number(HttpStatusCode.Ok) !== response.status) {
-                throw new Error();
+                throw new Error("Failed to fetch jobs.");
             }
             const resp = response.data;
             const jobs = resp
@@ -91,7 +91,7 @@ const useIngestStore = create<IngestState>((set) => ({
                 jobs: jobs,
             }));
         } catch (error: unknown) {
-            console.error("An error occurred when fetching stats: ", error);
+            console.error("An error occurred when fetching jobs: ", error);
         }
     },
 }));

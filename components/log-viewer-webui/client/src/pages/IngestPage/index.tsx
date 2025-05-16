@@ -23,7 +23,7 @@ const IngestPage = () => {
             .catch((error: unknown) => {
                 console.error(error);
             });
-    });
+    }, []);
 
     return (
         <div className={styles["ingestPageGrid"]}>
