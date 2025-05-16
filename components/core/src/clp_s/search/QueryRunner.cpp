@@ -64,10 +64,6 @@ void QueryRunner::clear_readers() {
 }
 
 void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
-    if (true == m_metadata_columns.contains(column_id)) {
-        return;
-    }
-
     if ((0
          != (m_wildcard_type_mask
              & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
@@ -199,9 +195,16 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     auto literal = expr->get_operand();
     auto* column = expr->get_column().get();
     auto op = expr->get_operation();
+    auto const& subtree_type{column->get_subtree_type()};
+    auto const matches_metadata{
+            subtree_type.has_value() && constants::cMetadataSubtreeType == subtree_type.value()
+    };
     if (column->matches_type(LiteralType::ClpStringT)) {
         Query* q = m_expr_clp_query.at(expr);
         for (auto const& entry : m_clp_string_readers) {
+            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                continue;
+            }
             if (evaluate_clp_string_filter(op, q, entry.second)) {
                 return true;
             }
@@ -211,6 +214,9 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     if (column->matches_type(LiteralType::VarStringT)) {
         std::unordered_set<int64_t>* matching_vars = m_expr_var_match_map[expr];
         for (auto const& entry : m_var_string_readers) {
+            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                continue;
+            }
             if (evaluate_var_string_filter(op, entry.second, matching_vars)) {
                 return true;
             }
@@ -219,6 +225,9 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
 
     if (column->matches_type(LiteralType::EpochDateT)) {
         for (auto entry : m_datestring_readers) {
+            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                continue;
+            }
             if (evaluate_epoch_date_filter(op, entry.second, literal)) {
                 return true;
             }
@@ -227,6 +236,9 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
 
     m_maybe_number = expr->get_column()->matches_type(LiteralType::FloatT);
     for (int32_t column_id : m_wildcard_to_searched_basic_columns[column]) {
+        if (false == matches_metadata && m_metadata_columns.contains(column_id)) {
+            continue;
+        }
         bool ret = false;
         switch (node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
             case LiteralType::IntegerT:
