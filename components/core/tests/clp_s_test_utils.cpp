@@ -1,4 +1,4 @@
-#include "ClpSTestUtils.hpp"
+#include "clp_s_test_utils.hpp"
 
 #include <filesystem>
 #include <string>

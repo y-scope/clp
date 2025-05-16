@@ -18,7 +18,7 @@
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/InputConfig.hpp"
-#include "ClpSTestUtils.hpp"
+#include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
 constexpr std::string_view cTestRangeIndexArchiveDirectory{"test-range-index-archive"};

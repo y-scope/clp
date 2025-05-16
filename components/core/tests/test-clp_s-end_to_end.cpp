@@ -11,7 +11,7 @@
 #include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonConstructor.hpp"
-#include "ClpSTestUtils.hpp"
+#include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
 constexpr std::string_view cTestEndToEndArchiveDirectory{"test-end-to-end-archive"};

@@ -28,7 +28,7 @@
 #include "../src/clp_s/search/Projection.hpp"
 #include "../src/clp_s/search/SchemaMatch.hpp"
 #include "../src/clp_s/Utils.hpp"
-#include "ClpSTestUtils.hpp"
+#include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
 constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archive"};
