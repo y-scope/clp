@@ -755,7 +755,8 @@ tasks:
             - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
             # The following line filter is added to ignore msgpack issue #1098:
             # https://github.com/msgpack/msgpack-c/issues/1098
-            - "-line-filter \"[{\\\"name\\\":\\\"cpp11_zone.hpp\\\",\\\"lines\\\":[[197,197]]}]\""
+            - >-
+              --line-filter "[{\"name\":\"cpp11_zone.hpp\",\"lines\":[[197,197]]}]"
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
           INCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/*"
