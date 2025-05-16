@@ -1,15 +1,5 @@
-import { Nullable } from "../../../../../typings/common.js";
+import {Nullable} from "../../../../../typings/common.js";
 
-/**
- * MongoDB document for search results metadata. `numTotalResults` is optional
- * since it is only set when the search job is completed.
- */
-interface SearchResultsMetadataDocument {
-    _id: string;
-    errorMsg: Nullable<string>;
-    lastSignal: SEARCH_SIGNAL;
-    numTotalResults?: number;
-}
 
 /**
  * Enum of search-related signals.
@@ -28,7 +18,16 @@ enum SEARCH_SIGNAL {
     RESP_QUERYING = "resp-querying",
 }
 
+/**
+ * MongoDB document for search results metadata. `numTotalResults` is optional
+ * since it is only set when the search job is completed.
+ */
+interface SearchResultsMetadataDocument {
+    _id: string;
+    errorMsg: Nullable<string>;
+    lastSignal: SEARCH_SIGNAL;
+    numTotalResults?: number;
+}
 
-
-export type { SearchResultsMetadataDocument };
-export { SEARCH_SIGNAL };
+export type {SearchResultsMetadataDocument};
+export {SEARCH_SIGNAL};
