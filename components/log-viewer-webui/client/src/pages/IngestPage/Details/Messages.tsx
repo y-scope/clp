@@ -1,9 +1,6 @@
+import useIngestStore from "../IngestState";
 import DetailsCard from "./DetailsCard";
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_MESSAGES = 1235844;
 
 /**
  * Renders the messages statistic.
@@ -11,9 +8,10 @@ const DUMMY_MESSAGES = 1235844;
  * @return
  */
 const Messages = () => {
+    const messages = useIngestStore((state) => state.numMessages);
     return (
         <DetailsCard
-            stat={DUMMY_MESSAGES.toString()}
+            stat={messages.toString()}
             title={"Messages"}/>
     );
 };

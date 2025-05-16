@@ -1,12 +1,8 @@
 import {theme} from "antd";
 
 import StatCard from "../../../components/StatCard";
+import useIngestStore from "../IngestState";
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_COMPRESSED_SIZE = 1004023;
-const DUMMY_UNCOMPRESSED_SIZE = 110300010;
 
 /**
  * Renders space savings card.
@@ -15,8 +11,9 @@ const DUMMY_UNCOMPRESSED_SIZE = 110300010;
  */
 const SpaceSavings = () => {
     const {token} = theme.useToken();
-    const compressedSize = DUMMY_COMPRESSED_SIZE as number;
-    const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE as number;
+    const compressedSize = useIngestStore((state) => state.compressedSize);
+    const uncompressedSize = useIngestStore((state) => state.uncompressedSize);
+
 
     const spaceSavingsPercent = (0 !== uncompressedSize) ?
         100 * (1 - (compressedSize / uncompressedSize)) :

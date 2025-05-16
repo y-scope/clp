@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
 import {FastifyPluginAsync} from "fastify";
@@ -16,6 +17,21 @@ import {EXTRACT_JOB_TYPES} from "../typings/DbManager.js";
  */
 const routes: FastifyPluginAsync = async (app) => {
     const fastify = app.withTypeProvider<TypeBoxTypeProvider>();
+
+    fastify.post(
+        "/query/sql",
+        {
+            schema: {
+                body: Type.Object({
+                    queryString: Type.String({minLength: 1}),
+                }),
+            },
+        },
+        async (req) => {
+            const {queryString} = req.body;
+            return await fastify.dbManager.queryMySql(queryString);
+        },
+    );
 
     fastify.post("/query/extract-stream", {
         schema: {
