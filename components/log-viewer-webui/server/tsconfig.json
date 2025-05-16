@@ -18,7 +18,8 @@
     "baseUrl": ".",
     "paths": {
     // Map imports from "@common/*" to the common server-client folder
-      "@common/*": ["../common/*"]
+      "@common/*": ["../common/*"],
+      "@settings": ["settings.json"]
     },
 
     "alwaysStrict": true,

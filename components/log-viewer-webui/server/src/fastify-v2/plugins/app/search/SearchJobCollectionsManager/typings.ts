@@ -1,4 +1,7 @@
-interface SearchResultsMetadataDocument {
+/**
+ * MongoDB document for search results.
+ */
+interface SearchResultsDocument {
   _id: string;
   orig_file_id: string;
   orig_file_path: string;
@@ -7,6 +10,9 @@ interface SearchResultsMetadataDocument {
   message: string;
 }
 
+/**
+ * Error thrown when a MongoDB collection has been dropped unexpectedly.
+ */
 class CollectionDroppedError extends Error {
   constructor(collectionName: string) {
     super(`Collection ${collectionName} has been dropped.`);
@@ -14,4 +20,6 @@ class CollectionDroppedError extends Error {
   }
 }
 
-export { SearchResultsMetadataDocument, CollectionDroppedError };
+export type { SearchResultsDocument };
+
+export { CollectionDroppedError };

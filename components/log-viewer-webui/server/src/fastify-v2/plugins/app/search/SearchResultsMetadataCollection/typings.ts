@@ -1,5 +1,9 @@
 import { Nullable } from "../../../../../typings/common.js";
 
+/**
+ * MongoDB document for search results metadata. `numTotalResults` is optional
+ * since it is only set when the search job is completed.
+ */
 interface SearchResultsMetadataDocument {
     _id: string;
     errorMsg: Nullable<string>;
@@ -12,8 +16,6 @@ interface SearchResultsMetadataDocument {
  *
  * This includes request and response signals for various search operations and their respective
  * states.
- *
- * @enum {string}
  */
 enum SEARCH_SIGNAL {
     NONE = "none",
@@ -28,4 +30,5 @@ enum SEARCH_SIGNAL {
 
 
 
-export { SearchResultsMetadataDocument, SEARCH_SIGNAL };
+export type { SearchResultsMetadataDocument };
+export { SEARCH_SIGNAL };

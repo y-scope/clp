@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
 
-import settings from "../../../../../../settings.json" with {type: "json"};
-import { SearchResultsMetadataDocument } from './typings.js';
+import settings from "@settings" with {type: "json"};
+import type { SearchResultsMetadataDocument } from './typings.js';
 
 /**
  * Creates a MongoDB collection for search results metadata.

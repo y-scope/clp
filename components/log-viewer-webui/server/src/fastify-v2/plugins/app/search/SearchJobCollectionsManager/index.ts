@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 import { Nullable } from "../../../../../typings/common.js";
 import type { Db, Collection } from "mongodb";
-import type { SearchResultsMetadataDocument } from "./typings.js";
+import type { SearchResultsDocument } from "./typings.js";
 import { CollectionDroppedError } from "./typings.js";
 
 /**
@@ -10,7 +10,9 @@ import { CollectionDroppedError } from "./typings.js";
  * have unique names.
  */
 class SearchJobCollectionsManager {
-  #collections: Map<string, Nullable<Collection<SearchResultsMetadataDocument>>> = new Map();
+  #jobIdToCollectionsMap: Map<string, Nullable<Collection<SearchResultsDocument>>>
+    = new Map();
+
   #db: Db;
 
   private constructor (db: Db) {
@@ -38,14 +40,18 @@ class SearchJobCollectionsManager {
    * @return MongoDB collection
    * @throws {CollectionDroppedError} if the collection was already dropped.
    */
-  async getOrCreateCollection(jobId: number): Promise<Collection<SearchResultsMetadataDocument>> {
+  async getOrCreateCollection(jobId: number): Promise<Collection<SearchResultsDocument>> {
     const name = jobId.toString();
-    if (false === this.#collections.has(name)) {
-      this.#collections.set(name, this.#db.collection(name));
-    } else if (this.#collections.get(name) === null) {
+    if (false === this.#jobIdToCollectionsMap.has(name)) {
+      this.#jobIdToCollectionsMap.set(name, this.#db.collection(name));
+    } else if (this.#jobIdToCollectionsMap.get(name) === null) {
       throw new CollectionDroppedError(name);
     }
-    return this.#collections.get(name) as Collection<SearchResultsMetadataDocument>;
+    // `collections.get(name)` will always return a valid collection since:
+    // -  Function creates a new collection if it doesn't exist in map.
+    // -  Throws an error if the collection was already dropped.
+    // Therefore, we can safely cast to `Collection<SearchResultsDocument>`.
+    return this.#jobIdToCollectionsMap.get(name) as Collection<SearchResultsDocument>;
   }
 
   /**
@@ -56,13 +62,13 @@ class SearchJobCollectionsManager {
    */
   async dropCollection(jobId: number) {
     const name = jobId.toString();
-    const collection = this.#collections.get(name);
+    const collection = this.#jobIdToCollectionsMap.get(name);
     if ("undefined" === typeof collection || null === collection) {
       throw new Error(`Collection ${name} not found`);
     }
 
     await collection.drop();
-    this.#collections.set(name, null);
+    this.#jobIdToCollectionsMap.set(name, null);
   }
 }
 

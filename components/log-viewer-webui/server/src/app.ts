@@ -11,6 +11,7 @@ import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
 
+
 interface AppPluginOptions {
     sqlDbUser: string;
     sqlDbPass: string;

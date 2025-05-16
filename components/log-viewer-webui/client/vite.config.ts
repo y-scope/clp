@@ -12,12 +12,12 @@ export default defineConfig({
     ],
     publicDir: "public",
     server: {
-        port: 3001,
+        port: 3000,
         proxy: {
             "/query/": {
                 // Below target should match the server's configuration in
                 // `components/log-viewer-webui/server/.env` (or `.env.local` if overridden)
-                target: "http://localhost:3001/",
+                target: "http://localhost:3000/",
                 changeOrigin: true,
             },
             "/socket.io/": {
