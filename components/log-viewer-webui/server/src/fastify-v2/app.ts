@@ -14,6 +14,7 @@ import FastifyV1App from "../app.js";
 const INTERNAL_SERVER_ERROR_CODE = 500;
 const RATE_LIMIT_MAX_REQUESTS = 3;
 const RATE_LIMIT_TIME_WINDOW_MS = 500;
+const IGNORED_FILES_REGEX = /^.*(?:utils|typings)\.js$/;
 
 /**
  * Registers all plugins and routes.
@@ -47,12 +48,14 @@ export default async function serviceApp (
     // Loads all application plugins.
     fastify.register(fastifyAutoload, {
         dir: path.join(import.meta.dirname, "plugins/app"),
+        ignorePattern: IGNORED_FILES_REGEX,
         options: {...opts},
     });
 
     // Loads all routes.
     fastify.register(fastifyAutoload, {
         dir: path.join(import.meta.dirname, "routes"),
+        ignorePattern: IGNORED_FILES_REGEX,
         autoHooks: true,
         cascadeHooks: true,
         options: {...opts},
