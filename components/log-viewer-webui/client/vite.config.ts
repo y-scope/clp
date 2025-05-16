@@ -12,7 +12,7 @@ export default defineConfig({
     ],
     publicDir: "public",
     server: {
-        port: 3000,
+        port: 8080,
         proxy: {
             "/query/": {
                 // Below target should match the server's configuration in

@@ -86,5 +86,3 @@ export default fp(
     name: 'SearchJobCollectionsManager',
   }
 );
-
-export {CollectionDroppedError}
