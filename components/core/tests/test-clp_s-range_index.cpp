@@ -15,6 +15,7 @@
 #include "../src/clp/FileWriter.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/streaming_compression/zstd/Compressor.hpp"
+#include "../src/clp/type_utils.hpp"
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/InputConfig.hpp"
@@ -63,11 +64,11 @@ void serialize_record(
     auto const auto_gen_bytes{nlohmann::json::to_msgpack(auto_gen)};
     auto const user_gen_bytes{nlohmann::json::to_msgpack(user_gen)};
     auto const auto_gen_handle{msgpack::unpack(
-            reinterpret_cast<char const*>(auto_gen_bytes.data()),
+            clp::size_checked_pointer_cast<char const>(auto_gen_bytes.data()),
             auto_gen_bytes.size()
     )};
     auto const user_gen_handle{msgpack::unpack(
-            reinterpret_cast<char const*>(user_gen_bytes.data()),
+            clp::size_checked_pointer_cast<char const>(user_gen_bytes.data()),
             user_gen_bytes.size()
     )};
     auto const auto_gen_obj{auto_gen_handle.get()};
@@ -109,8 +110,8 @@ void generate_ir() {
 
     auto const eof_packet{clp::ffi::ir_stream::cProtocol::Eof};
     auto const ir_buf{serializer.get_ir_buf_view()};
-    compressor.write(reinterpret_cast<char const*>(ir_buf.data()), ir_buf.size());
-    compressor.write(reinterpret_cast<char const*>(&eof_packet), sizeof(eof_packet));
+    compressor.write(clp::size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size());
+    compressor.write(clp::size_checked_pointer_cast<char const>(&eof_packet), sizeof(eof_packet));
     compressor.close();
     writer.close();
 }
