@@ -12,16 +12,14 @@ import {
 import {Nullable} from "../typings/common.js";
 import {
     DbManagerOptions,
-    StreamFileMongoDocument,
-    StreamFilesCollection,
-} from "../typings/DbManager.js";
-import {
+    QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
     QUERY_JOB_TYPE,
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
-    QUERY_JOB_STATUS,
-} from "../typings/query.js";
+    StreamFileMongoDocument,
+    StreamFilesCollection,
+} from "../typings/DbManager.js";
 import {sleep} from "../utils/time.js";
 
 

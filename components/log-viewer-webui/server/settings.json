@@ -3,9 +3,6 @@
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
     "SqlDbQueryJobsTableName": "query_jobs",
-    "SqlDbClpArchivesTableName": "clp_archives",
-    "SqlDbClpFilesTableName": "clp_files",
-    "SqlDbCompressionJobsTableName": "compression_jobs",
 
     "MongoDbHost": "localhost",
     "MongoDbPort": 27017,
