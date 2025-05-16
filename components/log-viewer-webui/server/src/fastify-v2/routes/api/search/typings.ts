@@ -3,9 +3,8 @@ import {
     FastifyInstance,
 } from "fastify";
 
-import {SEARCH_SIGNAL} from "../../../plugins/app/search/constants.js";
+import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
 import {SearchResultsMetadataDocument} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
-
 
 type UpdateSearchResultsMetaProps = {
     jobId: number;

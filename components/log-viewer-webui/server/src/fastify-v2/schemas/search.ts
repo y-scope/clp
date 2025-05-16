@@ -9,7 +9,7 @@ export const CreateSearchJobSchema = Type.Object({
   timeRangeBucketSizeMillis: Type.Integer(),
 })
 
-export const SearchJobResultSchema = Type.Object({
+export const SearchJobSchema = Type.Object({
   searchJobId: IdSchema,
   aggregationJobId: IdSchema
 })

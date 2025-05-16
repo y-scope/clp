@@ -1,27 +1,32 @@
-import { SEARCH_SIGNAL, SEARCH_MAX_NUM_RESULTS } from '../../../plugins/app/search/constants.js';
-
+import { SEARCH_MAX_NUM_RESULTS } from './constants.js';
+import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
 import { updateSearchResultsMeta, updateSearchSignalWhenJobsFinish, createMongoIndexes } from './utils.js';
 import {
     FastifyPluginAsyncTypebox,
     Type
   } from '@fastify/type-provider-typebox'
-import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/search.js'
+import { CreateSearchJobSchema, SearchJobSchema } from '../../../schemas/search.js'
+import { FastifyErrorSchema } from '../../../schemas/error.js'
+import { QuerySubmitError, ClearResultsError, QueryCancelError } from './errors.js';
 
   const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    const { QueryJobsDbManager,
+    const {
+      QueryJobsDbManager,
       SearchJobCollectionsManager,
       SearchResultsMetadataCollection,
-      log: logger
     } = fastify;
 
+     /**
+     * Submits a search query and initiates the search process.
+     */
     fastify.post(
         '/search',
         {
           schema: {
             body: CreateSearchJobSchema,
             response: {
-              200: SearchJobResultSchema,
-              500: Type.Object({ message: Type.String() }),
+              201: SearchJobSchema,
+              500: FastifyErrorSchema,
             },
             tags: ['Search']
           },
@@ -44,7 +49,7 @@ import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/s
               max_num_results: SEARCH_MAX_NUM_RESULTS
             };
 
-            request.log.info({ args }, 'Submitting search query');
+            request.log.info({ args }, "/search args");
 
             let searchJobId: number;
             let aggregationJobId: number;
@@ -56,9 +61,9 @@ import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/s
                 timeRangeBucketSizeMillis
               );
             } catch (err: unknown) {
-              const errorMsg = 'Unable to submit search/aggregation job to the SQL database';
-              request.log.error(errorMsg, err);
-              return reply.internalServerError(errorMsg);
+              request.log.error( err , 'Unable to submit search/aggregation job to the SQL database');
+              reply.code(500)
+              return QuerySubmitError();
             }
 
             SearchResultsMetadataCollection.insertOne({
@@ -68,37 +73,40 @@ import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/s
             });
 
             // Defer signal update until after response is sent
-            setImmediate(() => {
-                updateSearchSignalWhenJobsFinish({
+            setImmediate( async () => {
+                await updateSearchSignalWhenJobsFinish({
                 searchJobId,
                 aggregationJobId,
                 queryJobsDbManager: QueryJobsDbManager,
                 searchJobCollectionsManager: SearchJobCollectionsManager,
                 SearchResultsMetadataCollection,
                 logger: request.log,
-                }).catch(err =>
-                request.log.error(err, 'Deferred update failed')
-                );
+                });
             });
 
             await createMongoIndexes({
               searchJobId,
               searchJobCollectionsManager: SearchJobCollectionsManager,
-              logger,
+              logger: request.log,
             });
+
+            reply.code(201)
 
             return { searchJobId, aggregationJobId };
           }
     );
 
+    /**
+     * Clears the results of a search operation identified by jobId.
+     */
     fastify.delete(
       '/search/results',
       {
         schema: {
-          body: SearchJobResultSchema,
+          body: SearchJobSchema,
           response: {
-            204: Type.Null,
-            500: Type.Object({ message: Type.String() }),
+            204: Type.Null(),
+            500: FastifyErrorSchema,
           },
           tags: ['Search'],
         },
@@ -106,20 +114,30 @@ import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/s
       async function (request, reply) {
         const { searchJobId, aggregationJobId } = request.body;
 
-        request.log.info(
-          `search.clearResults searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`
-        );
+        request.log.info({
+          searchJobId,
+          aggregationJobId,
+        }, "/search/results args");
 
         try {
           await SearchJobCollectionsManager.dropCollection(searchJobId);
           await SearchJobCollectionsManager.dropCollection(aggregationJobId);
+        } catch (err: unknown) {
+          request.log.error(
+            {
+              err,
+              searchJobId,
+              aggregationJobId,
+            },
+            'Failed to clear search results'
+          );
 
-          reply.code(204);
-        } catch (err: any) {
-          const message = `Failed to clear search results for searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`;
-          request.log.error(err, message);
-          return reply.internalServerError(message);
+          reply.code(500);
+          return ClearResultsError(searchJobId, aggregationJobId);
         }
+
+        reply.code(204);
+        return;
       }
     );
 
@@ -128,10 +146,10 @@ import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/s
       '/search/cancel',
       {
         schema: {
-          body: SearchJobResultSchema,
+          body: SearchJobSchema,
           response: {
-            204: Type.Null,
-            500: Type.Object({ message: Type.String()}),
+            204: Type.Null(),
+            500: FastifyErrorSchema,
           },
           tags: ['Search'],
         },
@@ -140,7 +158,7 @@ import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/s
         const { searchJobId, aggregationJobId } = request.body;
 
         request.log.info(
-          `search.cancelOperation searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`
+          `/search/cancel searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`
         );
 
         try {
@@ -151,19 +169,28 @@ import { CreateSearchJobSchema, SearchJobResultSchema } from '../../../schemas/s
             jobId: searchJobId,
             lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
             SearchResultsMetadataCollection,
-            logger,
+            logger: request.log,
             fields: {
               lastSignal: SEARCH_SIGNAL.RESP_DONE,
               errorMsg: 'Query cancelled before it could be completed.',
             },
           });
 
-          reply.code(204);
-        } catch (err: any) {
-          const message = `Failed to submit cancel request for searchJobId=${searchJobId}, aggregationJobId=${aggregationJobId}`;
-          request.log.error(err, message);
-          return reply.internalServerError(message);
+        } catch (err: unknown) {
+          request.log.error(
+            {
+              err,
+              searchJobId,
+              aggregationJobId,
+            },
+            'Failed to submit cancel request'
+          );
+          reply.code(500);
+          return QueryCancelError(searchJobId, aggregationJobId);
         }
+
+        reply.code(204);
+        return;
       }
     );
   }

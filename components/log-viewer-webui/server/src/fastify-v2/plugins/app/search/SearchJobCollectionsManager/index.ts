@@ -1,16 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
-import { Nullable } from "../../../../typings/common.js";
+import { Nullable } from "../../../../../typings/common.js";
 import type { Db, Collection } from "mongodb";
-
-interface SearchResultsMetadataDocument {
-  _id: string;
-  orig_file_id: string;
-  orig_file_path: string;
-  log_event_ix: number;
-  timestamp: number;
-  message: string;
-}
+import type { SearchResultsMetadataDocument } from "./typings.js";
+import { CollectionDroppedError } from "./typings.js";
 
 /**
  * Class to keep track of MongoDB collections created for search jobs, ensuring all collections
@@ -43,16 +36,16 @@ class SearchJobCollectionsManager {
    *
    * @param jobId
    * @return MongoDB collection
-   * @throws {Error} if the collection was already dropped.
+   * @throws {CollectionDroppedError} if the collection was already dropped.
    */
-  async getOrCreateCollection(jobId: number) {
+  async getOrCreateCollection(jobId: number): Promise<Collection<SearchResultsMetadataDocument>> {
     const name = jobId.toString();
     if (false === this.#collections.has(name)) {
       this.#collections.set(name, this.#db.collection(name));
     } else if (this.#collections.get(name) === null) {
-      throw new Error(`Collection ${name} has been dropped.`);
+      throw new CollectionDroppedError(name);
     }
-    return this.#collections.get(name);
+    return this.#collections.get(name) as Collection<SearchResultsMetadataDocument>;
   }
 
   /**
@@ -87,3 +80,5 @@ export default fp(
     name: 'SearchJobCollectionsManager',
   }
 );
+
+export {CollectionDroppedError}

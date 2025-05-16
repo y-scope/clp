@@ -1,12 +1,11 @@
 import { encode } from "@msgpack/msgpack";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
-// Fix types to modern typescripts
-// Use shared types with DB manager, and move to new file.
 import {
-  QUERY_JOB_STATUS,
   QUERY_JOB_STATUS_WAITING_STATES,
   QUERY_JOB_TYPE,
-} from "./constants.js";
+  QUERY_JOB_STATUS,
+  QUERY_JOBS_TABLE_COLUMN_NAMES,
+} from "../../../../typings/query.js";
 import { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
 import settings from "../../../../../settings.json" with { type: "json" };
@@ -20,16 +19,6 @@ import type {
  * Interval in milliseconds for polling the completion status of a job.
  */
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 500;
-
-/**
- * Enum of the `query_jobs` table's column names.
- */
-enum QUERY_JOBS_TABLE_COLUMN_NAMES {
-  ID = "id",
-  STATUS = "status",
-  TYPE = "type",
-  JOB_CONFIG = "job_config",
-}
 
 /**
  * Class for submitting and monitoring query jobs in the database.
@@ -144,7 +133,7 @@ class QueryJobsDbManager {
       }
       const status = rows[0]![QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
 
-      if (false === QUERY_JOB_STATUS_WAITING_STATES.includes(status)) {
+      if (false === QUERY_JOB_STATUS_WAITING_STATES.has(status)) {
         if (QUERY_JOB_STATUS.CANCELLED === status) {
           throw new Error(`Job ${jobId} was cancelled.`);
         } else if (QUERY_JOB_STATUS.SUCCEEDED !== status) {

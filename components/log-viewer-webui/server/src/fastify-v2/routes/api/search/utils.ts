@@ -1,14 +1,11 @@
-import { FastifyBaseLogger } from "fastify";
-import { Collection } from "mongodb";
-
-import { SearchResultsMetadataDocument } from '../../../plugins/app/search/SearchResultsMetadataCollection/typings.js';
-import { SEARCH_SIGNAL } from '../../../plugins/app/search/constants.js';
+import { SEARCH_MAX_NUM_RESULTS } from '../../../plugins/app/search/constants.js';
+import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
 import {
     UpdateSearchResultsMetaProps,
     UpdateSearchSignalWhenJobsFinishProps,
     CreateMongoIndexesProps,
 } from './typings.js';
-
+import { CollectionDroppedError } from '../../../plugins/app/search/SearchJobCollectionsManager/index.js';
 /**
  * Modifies the search results metadata for a given job ID.
  *
@@ -46,17 +43,23 @@ const updateSearchSignalWhenJobsFinish = async ({
     try {
         await queryJobsDbManager.awaitJobCompletion(searchJobId);
         await queryJobsDbManager.awaitJobCompletion(aggregationJobId);
-    } catch (e) {
-        errorMsg = e.message;
+    } catch (e: unknown) {
+        if (e instanceof Error) {
+            errorMsg = e.message;
+        }
+        errorMsg = "Error while waiting for job completion";
     }
 
     let numResultsInCollection = -1;
     try {
-        numResultsInCollection = await searchJobCollectionsManager
-            .getOrCreateCollection(searchJobId)
-            .countDocuments();
-    } catch (e) {
-        if (ERROR_NAME_COLLECTION_DROPPED === e.error) {
+        const collection = await searchJobCollectionsManager
+            .getOrCreateCollection(searchJobId);
+            numResultsInCollection = await collection.countDocuments();
+        //Need this here in new method. I believe publication used to do this?
+        await searchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
+
+    } catch (e: unknown) {
+        if (e instanceof CollectionDroppedError) {
             logger.warn(`Collection ${searchJobId} has been dropped.`);
             return;
         }
@@ -70,7 +73,7 @@ const updateSearchSignalWhenJobsFinish = async ({
         logger,
         fields: {
             lastSignal: SEARCH_SIGNAL.RESP_DONE,
-            errorMsg: errorMsg,
+            errorMsg: errorMsg ?? null,
             numTotalResults: Math.min(
                 numResultsInCollection,
                 SEARCH_MAX_NUM_RESULTS
@@ -99,10 +102,9 @@ const createMongoIndexes = async ({
         name: "timestamp-descending",
     };
 
-    const queryJobCollection = searchJobCollectionsManager.getOrCreateCollection(searchJobId);
-    const queryJobRawCollection = queryJobCollection.rawCollection();
+    const queryJobCollection = await searchJobCollectionsManager.getOrCreateCollection(searchJobId);
     logger.info(`Creating indexes for collection ${searchJobId}`);
-    await queryJobRawCollection.createIndexes([
+    await queryJobCollection.createIndexes([
         timestampAscendingIndex,
         timestampDescendingIndex,
     ]);

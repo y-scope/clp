@@ -1,5 +1,4 @@
 
-import { FastifyInstance } from 'fastify'
 import fp from 'fastify-plugin'
 
 declare module 'fastify' {
@@ -13,7 +12,7 @@ declare module 'fastify' {
  *
  * TODO: Remove sample code when new webui app code is ready.
  */
-function createSamplePlugin (fastify: FastifyInstance) {
+function createSamplePlugin () {
     return {
       /**
        * Returns a sample string.
@@ -29,7 +28,7 @@ function createSamplePlugin (fastify: FastifyInstance) {
 
 export default fp(
   function (fastify) {
-    fastify.decorate('samplePlugin', createSamplePlugin(fastify))
+    fastify.decorate('samplePlugin', createSamplePlugin())
   },
   {
     name: 'samplePlugin',

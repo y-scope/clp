@@ -45,16 +45,22 @@ export default async function serviceApp (
   // Loads all application plugins defined in plugins/app
   fastify.register(fastifyAutoload, {
     dir: path.join(import.meta.dirname, 'plugins/app'),
+    ignorePattern: /^.*(?:constants|typings|utils).js$/,
     options: { ...opts }
   })
 
   // loads all plugins routes
   fastify.register(fastifyAutoload, {
    dir: path.join(import.meta.dirname, 'routes'),
+   ignorePattern: /^.*(?:constants|typings|utils).js$/,
    autoHooks: true,
    cascadeHooks: true,
    options: { ...opts }
   })
+
+  fastify.addHook('onRoute', (routeOptions) => {
+    console.log(`Route registered: ${routeOptions.method} ${routeOptions.url}`);
+  });
 
   fastify.setErrorHandler((err, request, reply) => {
     fastify.log.error(
