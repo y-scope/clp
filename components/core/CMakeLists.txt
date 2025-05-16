@@ -630,11 +630,14 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        tests/clp_s_test_utils.cpp
+        tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
