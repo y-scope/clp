@@ -447,7 +447,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/IrErrorCode.cpp
         src/clp/ffi/ir_stream/IrErrorCode.hpp
-        src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+        src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
@@ -641,7 +641,7 @@ set(SOURCE_FILES_unitTest
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-ffi_IrUnitHandlerInterface.cpp
+        tests/test-ffi_IrUnitHandlerReq.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
