@@ -14,7 +14,7 @@ Brotli = "^1.1.0"
 celery = "^5.3.6"
 # mariadb version must be compatible with libmariadev installed in runtime env.
 # See https://mariadb.com/docs/server/connect/programming-languages/python/install/#Dependencies
-mariadb = "~1.0.11"
+mariadb = "~1.1.10"
 msgpack = "^1.0.7"
 mysql-connector-python = "^8.2.0"
 pika = "^1.3.2"

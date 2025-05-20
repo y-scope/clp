@@ -83,7 +83,7 @@ class SQL_Adapter:
 
     def create_mariadb_connection(
         self, disable_localhost_socket_connection: bool = False
-    ) -> mariadb.connection:
+    ) -> mariadb.Connection:
         try:
             connection = mariadb.connect(
                 **self.database_config.get_mysql_connection_params(
