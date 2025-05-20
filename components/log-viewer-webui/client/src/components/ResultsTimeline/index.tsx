@@ -1,3 +1,5 @@
+/* eslint-disable max-lines-per-function */
+
 import {useEffect} from "react";
 import {Bar} from "react-chartjs-2";
 
@@ -8,6 +10,7 @@ import {
     LinearScale,
     TimeScale,
     Tooltip,
+    TooltipItem,
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
@@ -15,14 +18,18 @@ import Duration, {DurationUnitType} from "dayjs/plugin/duration";
 
 import {Nullable} from "../../typings/common";
 import {
-    convertLocalDateToSameUtcDatetime,
     convertUtcDatetimeToSameLocalDate,
+    convertZoomTimestampToUtcDatetime,
     DATETIME_FORMAT_TEMPLATE,
     expandTimeRangeToDurationMultiple,
     TIME_UNIT,
     TimeRange,
 } from "../../utils/datetime";
-import {deselectAll} from "../../utils/misc";
+import {
+    adaptTimelineBucketsForChartJs,
+    MAX_DATA_POINTS_PER_TIMELINE,
+    TimelineBucket,
+} from "./TimelineBucket";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./ResultsTimeline.css";
@@ -36,54 +43,6 @@ ChartJs.register(
     zoomPlugin
 );
 
-
-interface TimelineBucket {
-    timestamp: number;
-    count: number;
-}
-
-const MAX_DATA_POINTS_PER_TIMELINE = 40;
-
-/**
- * Converts an array of timeline buckets into an array of objects compatible with Chart.js.
- *
- * @param timelineBuckets
- * @return
- */
-const adaptTimelineBucketsForChartJs = (timelineBuckets: TimelineBucket[]) => (
-    timelineBuckets.map(
-        ({
-            timestamp,
-            count,
-        }) => ({
-            x: timestamp,
-            y: count,
-        })
-    )
-);
-
-/**
- * Converts the timestamp from Chart.js' zoom plugin to a UTC Dayjs object.
- * NOTE: The Chart.js timescale operates in the local timezone, but we want to the timeline to
- * appear as if it's in UTC, so we apply the negative offset of the local timezone to all timestamps
- * before passing them to Chart.js. However, the zoom plugin thinks that Chart.js is displaying
- * timestamps in the local timezone, so it also applies the negative offset of the local timezone
- * before passing them to onZoom. So to get the original UTC timestamp, this method needs to apply
- * the local timezone offset twice.
- *
- * @param timestampUnixMillis
- * @return The corresponding Dayjs object
- */
-const convertZoomTimestampToUtcDatetime = (timestampUnixMillis: number) => {
-    // Create a Date object with given timestamp, which contains local timezone information.
-    const initialDate = new Date(timestampUnixMillis);
-
-    // Reverse local timezone offset.
-    const intermediateDateTime = convertLocalDateToSameUtcDatetime(initialDate);
-
-    // Reverse local timezone offset again.
-    return convertLocalDateToSameUtcDatetime(intermediateDateTime.toDate());
-};
 
 interface TimelineConfig {
     range: {begin: dayjs.Dayjs; end: dayjs.Dayjs};
@@ -144,6 +103,21 @@ const computeTimelineConfig = (
         bucketDuration: bucketDuration,
     };
 };
+
+
+/**
+ * Deselects all selections within the browser viewport.
+ */
+const deselectAll = () => {
+    const selection = window.getSelection();
+    if (null !== selection) {
+        selection.removeAllRanges();
+    }
+};
+
+interface ChartTooltipItemRaw {
+    x: number;
+}
 
 interface SearchResultsTimelineProps {
     isInputDisabled: boolean;
@@ -245,7 +219,11 @@ const SearchResultsTimeline = ({
             tooltip: {
                 callbacks: {
                     title: (tooltipItems) => {
-                        const [{raw: {x}}] = tooltipItems;
+                        const [firstTooltipItem]: TooltipItem<"bar">[] = tooltipItems;
+                        if ("undefined" === typeof firstTooltipItem) {
+                            return "";
+                        }
+                        const {x} = firstTooltipItem.raw as ChartTooltipItemRaw;
                         const bucketBeginTime = dayjs.utc(x);
                         const bucketEndTime = bucketBeginTime
                             .add(timelineConfig.bucketDuration);
@@ -269,6 +247,9 @@ const SearchResultsTimeline = ({
                     mode: "x",
                     onZoom: ({chart}) => {
                         const xAxis = chart.scales["x"];
+                        if ("undefined" === typeof xAxis) {
+                            return;
+                        }
                         const {min, max} = xAxis;
                         const newTimeRange = {
                             begin: convertZoomTimestampToUtcDatetime(parseInt(min, 10)),

@@ -142,7 +142,7 @@ const convertLocalDateToSameUtcDatetime = (localDate: Date) => {
  * @param timeRange.end
  * @return The expanded time range.
  */
-const expandTimeRangeToDurationMultiple = (duration: Duration.Duration, {
+const expandTimeRangeToDurationMultiple = (duration: DayjsDuration.Duration, {
     begin,
     end,
 }: TimeRange) => {
@@ -155,11 +155,35 @@ const expandTimeRangeToDurationMultiple = (duration: Duration.Duration, {
     return {begin: dayjs.utc(adjustedBegin), end: dayjs.utc(adjustedEnd)};
 };
 
+/**
+ * Converts the timestamp from Chart.js' zoom plugin to a UTC Dayjs object.
+ * NOTE: The Chart.js timescale operates in the local timezone, but we want to the timeline to
+ * appear as if it's in UTC, so we apply the negative offset of the local timezone to all timestamps
+ * before passing them to Chart.js. However, the zoom plugin thinks that Chart.js is displaying
+ * timestamps in the local timezone, so it also applies the negative offset of the local timezone
+ * before passing them to onZoom. So to get the original UTC timestamp, this method needs to apply
+ * the local timezone offset twice.
+ *
+ * @param timestampUnixMillis
+ * @return The corresponding Dayjs object
+ */
+const convertZoomTimestampToUtcDatetime = (timestampUnixMillis: number) => {
+    // Create a Date object with given timestamp, which contains local timezone information.
+    const initialDate = new Date(timestampUnixMillis);
+
+    // Reverse local timezone offset.
+    const intermediateDateTime = convertLocalDateToSameUtcDatetime(initialDate);
+
+    // Reverse local timezone offset again.
+    return convertLocalDateToSameUtcDatetime(intermediateDateTime.toDate());
+};
+
 export type {TimeRange};
 export {
     computeTimeRange,
     convertLocalDateToSameUtcDatetime,
     convertUtcDatetimeToSameLocalDate,
+    convertZoomTimestampToUtcDatetime,
     DATETIME_FORMAT_TEMPLATE,
     DEFAULT_TIME_RANGE,
     expandTimeRangeToDurationMultiple,
