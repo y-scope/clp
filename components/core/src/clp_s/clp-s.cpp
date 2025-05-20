@@ -29,6 +29,7 @@
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
+#include "search/EvaluateMetadataFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
 #include "search/kql/kql.hpp"
 #include "search/Output.hpp"
@@ -167,6 +168,15 @@ bool search_archive(
 
     ast::ConvertToExists convert_pass;
     if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        SPDLOG_ERROR("Query '{}' is logically false", query);
+        return false;
+    }
+
+    EvaluateMetadataFilters metadata_filter_pass{
+            archive_reader->get_range_index(),
+            false == command_line_arguments.get_ignore_case()
+    };
+    if (expr = metadata_filter_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }

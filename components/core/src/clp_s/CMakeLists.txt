@@ -168,6 +168,8 @@ set(
         search/clp_search/Grep.hpp
         search/clp_search/Query.cpp
         search/clp_search/Query.hpp
+        search/EvaluateMetadataFilters.cpp
+        search/EvaluateMetadataFilters.hpp
         search/EvaluateTimestampIndex.cpp
         search/EvaluateTimestampIndex.hpp
         search/Output.cpp

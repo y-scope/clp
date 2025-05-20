@@ -26,6 +26,7 @@
 #include "../src/clp_s/search/ast/NarrowTypes.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/OrOfAndForm.hpp"
+#include "../src/clp_s/search/EvaluateMetadataFilters.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/Output.hpp"
@@ -159,6 +160,14 @@ void search(
         archive_reader->open(archive_path, clp_s::NetworkAuthOption{});
 
         auto archive_expr = expr->copy();
+
+        clp_s::search::EvaluateMetadataFilters metadata_filter_pass{
+                archive_reader->get_range_index(),
+                false == ignore_case
+        };
+        expr = metadata_filter_pass.run(expr);
+        REQUIRE(nullptr != expr);
+        REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(expr));
 
         auto timestamp_dict = archive_reader->get_timestamp_dictionary();
         clp_s::search::EvaluateTimestampIndex timestamp_index_pass(timestamp_dict);
