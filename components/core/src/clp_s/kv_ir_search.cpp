@@ -93,16 +93,12 @@ public:
     }
 
     [[nodiscard]] auto handle_end_of_stream() -> IRErrorCode {
-        m_is_complete = true;
         return IRErrorCode::IRErrorCode_Success;
     }
 
 private:
     // Constructor
     IrUnitHandler() = default;
-
-    // Variable
-    bool m_is_complete{false};
 };
 
 /**

@@ -383,25 +383,31 @@ int main(int argc, char const* argv[]) {
                     continue;
                 }
 
-                SPDLOG_ERROR(
-                        "Failed to search '{}' as an IR stream, error_category={}, error={}",
-                        input_path.path,
-                        error.category().name(),
-                        error.message()
-                );
                 if (KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented} == error
                     || KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType} == error
                     || KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented} == error)
                 {
-                    // These errors are treated as non-fatal since it's because we currently don't
-                    // have supports for these features.
-                    continue;
-                }
-
-                if (KvIrSearchError{KvIrSearchErrorEnum::DeserializerCreationFailure} != error) {
+                    // These errors are treated as non-fatal because they result from unsupported
+                    // features. However, this approach may cause archives with this extension to be
+                    // skipped if the search uses advanced features that are not yet implemented. To
+                    // mitigate this, we log a warning and proceed to search the input as an
+                    // archive.
+                    SPDLOG_WARN(
+                            "Attempted to search an IR stream using unsupported features. Falling"
+                            " back to searching the input as an archive."
+                    );
+                } else if (KvIrSearchError{KvIrSearchErrorEnum::DeserializerCreationFailure}
+                           != error)
+                {
                     // If the error is `DeserializerCreationFailure`, we may continue to treat the
                     // input as an archive and retry. Otherwise, it should be considered as a
                     // non-recoverable failure and return directly.
+                    SPDLOG_ERROR(
+                            "Failed to search '{}' as an IR stream, error_category={}, error={}",
+                            input_path.path,
+                            error.category().name(),
+                            error.message()
+                    );
                     return 1;
                 }
             }
