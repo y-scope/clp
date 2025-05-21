@@ -69,7 +69,7 @@ const computeHumanSize = (num: number) => {
 
 
 /**
- * Convert a QuryJobsItem to JobData
+ * Convert a QueryJobsItem to JobData
  *
  * @param job
  * @return
@@ -102,7 +102,7 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
         null !== job.duration &&
         0 < job.duration
     ) {
-        speedText = `${computeHumanSize(job.uncompressed_size / job.duration)}/s`;
+        speedText = `${computeHumanSize(uncompressedSize / job.duration)}/s`;
     }
 
     return {
