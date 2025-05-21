@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 
-import {Nullable} from "../../../typings/common";
 import {JobData} from "../Jobs/typings";
+import {QueryJobsItem} from "./sql";
 
 
 /**
@@ -67,19 +67,6 @@ const computeHumanSize = (num: number) => {
     return `${Math.round(num)} B`;
 };
 
-interface QueryJobsItem {
-    compressed_size: number;
-    duration: Nullable<number>;
-    retrieval_time: number;
-    start_time: Nullable<string>;
-    status: number;
-    status_msg: string;
-    uncompressed_size: number;
-    update_time: string;
-    _id: number;
-}
-
-type QueryJobsResp = QueryJobsItem[];
 
 /**
  * Convert a QuryJobsItem to JobData
@@ -92,8 +79,12 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
     let compressedSizeText = "";
     let speedText = "";
 
-    if (null === job.duration && null !== job.start_time) {
-        job.duration = dayjs().unix() - dayjs(job.start_time).unix();
+    if (null === job.duration) {
+        if (null !== job.start_time) {
+            job.duration = dayjs().unix() - dayjs(job.start_time).unix();
+        } else {
+            speedText = "N/A";
+        }
     }
 
     const uncompressedSize = Number(job.uncompressed_size);
@@ -106,10 +97,10 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
         compressedSizeText = computeHumanSize(compressedSize);
     }
 
-    if (
-        false === isNaN(uncompressedSize) &&
-    0 !== uncompressedSize &&
-    0 < job.duration
+    if (false === isNaN(uncompressedSize) &&
+        0 !== uncompressedSize &&
+        null !== job.duration &&
+        0 < job.duration
     ) {
         speedText = `${computeHumanSize(job.uncompressed_size / job.duration)}/s`;
     }
@@ -124,5 +115,4 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
     };
 };
 
-export type {QueryJobsResp};
 export {convertQueryJobsItemToJobData};

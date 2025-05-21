@@ -1,17 +1,17 @@
-import useIngestStore from "../IngestState";
 import DetailsCard from "./DetailsCard";
 
 
 /**
  * Renders the messages statistic.
  *
+ * @param props
+ * @param props.numMessages
  * @return
  */
-const Messages = () => {
-    const messages = useIngestStore((state) => state.numMessages);
+const Messages = ({numMessages}: {numMessages: number}) => {
     return (
         <DetailsCard
-            stat={messages.toString()}
+            stat={numMessages.toString()}
             title={"Messages"}/>
     );
 };

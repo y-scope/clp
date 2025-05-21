@@ -1,17 +1,17 @@
-import useIngestStore from "../IngestState";
 import DetailsCard from "./DetailsCard";
 
 
 /**
  * Renders the files statistic.
  *
+ * @param props
+ * @param props.numFiles
  * @return
  */
-const Files = () => {
-    const files = useIngestStore((state) => state.numFiles);
+const Files = ({numFiles}: {numFiles: number}) => {
     return (
         <DetailsCard
-            stat={files.toString()}
+            stat={numFiles.toString()}
             title={"Files"}/>
     );
 };

@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
 import {FastifyPluginAsync} from "fastify";
@@ -15,6 +14,7 @@ import {EXTRACT_JOB_TYPES} from "../typings/DbManager.js";
  * @param app
  * @return
  */
+// eslint-disable-next-line max-lines-per-function
 const routes: FastifyPluginAsync = async (app) => {
     const fastify = app.withTypeProvider<TypeBoxTypeProvider>();
 
