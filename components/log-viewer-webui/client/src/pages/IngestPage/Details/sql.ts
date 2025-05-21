@@ -1,25 +1,9 @@
-import {SQL_CONFIG} from "../sqlConfig";
+import {
+    CLP_ARCHIVES_TABLE_COLUMN_NAMES,
+    CLP_FILES_TABLE_COLUMN_NAMES,
+    SQL_CONFIG,
+} from "../sqlConfig";
 
-
-/**
- * Enum of the column names for the `clp_archives` table.
- *
- * @enum {string}
- */
-const CLP_ARCHIVES_TABLE_COLUMN_NAMES = Object.freeze({
-    BEGIN_TIMESTAMP: "begin_timestamp",
-    END_TIMESTAMP: "end_timestamp",
-});
-
-/**
- * Enum of the column names for the `clp_files` table.
- *
- * @enum {string}
- */
-const CLP_FILES_TABLE_COLUMN_NAMES = Object.freeze({
-    ORIG_FILE_ID: "orig_file_id",
-    NUM_MESSAGES: "num_messages",
-});
 
 /**
  * Builds the query string to query stats.

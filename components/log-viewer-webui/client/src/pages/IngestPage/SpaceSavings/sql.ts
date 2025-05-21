@@ -1,15 +1,8 @@
-import {SQL_CONFIG} from "../sqlConfig";
+import {
+    CLP_ARCHIVES_TABLE_COLUMN_NAMES,
+    SQL_CONFIG,
+} from "../sqlConfig";
 
-
-/**
- * Enum of the column names for the `clp_archives` table.
- *
- * @enum {string}
- */
-const CLP_ARCHIVES_TABLE_COLUMN_NAMES = Object.freeze({
-    UNCOMPRESSED_SIZE: "uncompressed_size",
-    SIZE: "size",
-});
 
 /**
  * Builds the query string to query stats.

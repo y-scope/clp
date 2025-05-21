@@ -1,29 +1,10 @@
 import {Nullable} from "src/typings/common";
 
-import {SQL_CONFIG} from "../sqlConfig";
+import {
+    COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
+    SQL_CONFIG,
+} from "../sqlConfig";
 
-
-/**
- * Enum of the column names for the `compression_jobs` table.
- *
- * @enum {string}
- */
-const COMPRESSION_JOBS_TABLE_COLUMN_NAMES = Object.freeze({
-    CLP_BINARY_VERSION: "clp_binary_version",
-    CLP_CONFIG: "clp_config",
-    COMPRESSED_SIZE: "compressed_size",
-    CREATION_TIME: "creation_time",
-    DURATION: "duration",
-    ID: "id",
-    NUM_TASKS: "num_tasks",
-    NUM_TASKS_COMPLETED: "num_tasks_completed",
-    ORIGINAL_SIZE: "original_size",
-    START_TIME: "start_time",
-    STATUS: "status",
-    STATUS_MSG: "status_msg",
-    UNCOMPRESSED_SIZE: "uncompressed_size",
-    UPDATE_TIME: "update_time",
-});
 
 /**
  * Builds the query string to query jobs.
