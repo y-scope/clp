@@ -52,9 +52,9 @@ export default async function serviceApp (
 
     // Loads all routes.
     fastify.register(fastifyAutoload, {
-        dir: path.join(import.meta.dirname, "routes"),
         autoHooks: true,
         cascadeHooks: true,
+        dir: path.join(import.meta.dirname, "routes"),
         options: {...opts},
     });
 
