@@ -1,9 +1,10 @@
+import {setTimeout} from "node:timers/promises";
+
 import type {MySQLPromisePool} from "@fastify/mysql";
 import {encode} from "@msgpack/msgpack";
 import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
-import {setTimeout} from "timers/promises";
 
 import settings from "../../../../../../settings.json" with {type: "json"};
 import {
@@ -125,11 +126,12 @@ class QueryJobsDbManager {
                     `,
                     jobId
                 );
+
                 [queryJob] = queryRows;
             } catch (e: unknown) {
-                throw new Error("Failed to query status for job ${jobId}", { cause: e });
+                throw new Error(`Failed to query status for job ${jobId}`, {cause: e});
             }
-            if (undefined === queryJob) {
+            if ("undefined" === typeof queryJob) {
                 throw new Error(`Job ${jobId} not found in the database.`);
             }
 
