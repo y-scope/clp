@@ -1,0 +1,20 @@
+token literal names:
+null
+null
+
+token symbolic names:
+null
+SPACE
+
+rule names:
+SPACE
+
+channel names:
+DEFAULT_TOKEN_CHANNEL
+HIDDEN
+
+mode names:
+DEFAULT_MODE
+
+atn:
+[4, 0, 1, 7, 6, -1, 2, 0, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 3, 0, 9, 10, 13, 13, 32, 32, 6, 0, 1, 1, 0, 0, 0, 1, 3, 1, 0, 0, 0, 3, 4, 7, 0, 0, 0, 4, 5, 1, 0, 0, 0, 5, 6, 6, 0, 0, 0, 6, 2, 1, 0, 0, 0, 1, 0, 1, 6, 0, 0]
