@@ -8,6 +8,10 @@
 #include "../../time_types.hpp"
 #include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
+
+// This include has a circular dependency with the `.inc` file.
+// The following clang-tidy suppression should be removed once the circular dependency is resolved.
+// NOLINTNEXTLINE(misc-header-include-cycle)
 #include "decoding_methods.hpp"
 
 namespace clp::ffi::ir_stream {

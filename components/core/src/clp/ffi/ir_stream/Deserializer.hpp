@@ -1,7 +1,6 @@
 #ifndef CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 #define CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 
-#include <concepts>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -10,18 +9,24 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <outcome/outcome.hpp>
 
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
-#include "decoding_methods.hpp"
 #include "ir_unit_deserialization_methods.hpp"
 #include "IrUnitHandlerReq.hpp"
 #include "IrUnitType.hpp"
 #include "protocol_constants.hpp"
+#include "search/AstEvaluationResult.hpp"
 #include "search/QueryHandlerReq.hpp"
 #include "utils.hpp"
+
+// This include has a circular dependency with the `.inc` file.
+// The following clang-tidy suppression should be removed once the circular dependency is resolved.
+// NOLINTNEXTLINE(misc-header-include-cycle)
+#include "decoding_methods.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
@@ -291,26 +296,23 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
     auto const ir_unit_type{optional_ir_unit_type.value()};
     switch (ir_unit_type) {
         case IrUnitType::LogEvent: {
-            auto result{deserialize_ir_unit_kv_pair_log_event(
+            auto log_event{OUTCOME_TRYX(deserialize_ir_unit_kv_pair_log_event(
                     reader,
                     tag,
                     m_auto_gen_keys_schema_tree,
                     m_user_gen_keys_schema_tree,
                     m_utc_offset
-            )};
-            if (result.has_error()) {
-                return result.error();
-            }
+            ))};
 
             if constexpr (search::IsNonEmptyQueryHandler<QueryHandlerType>::value) {
                 if (search::AstEvaluationResult::True
-                    != OUTCOME_TRYX(m_query_handler.evaluate_kv_pair_log_event(result.value())))
+                    != OUTCOME_TRYX(m_query_handler.evaluate_kv_pair_log_event(log_event)))
                 {
                     break;
                 }
             }
 
-            if (auto const err{m_ir_unit_handler.handle_log_event(std::move(result.value()))};
+            if (auto const err{m_ir_unit_handler.handle_log_event(std::move(log_event))};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return ir_error_code_to_errc(err);
@@ -320,14 +322,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
 
         case IrUnitType::SchemaTreeNodeInsertion: {
             std::string key_name;
-            auto const result{
+            auto const [is_auto_generated, node_locator]{OUTCOME_TRYX(
                     deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
-            };
-            if (result.has_error()) {
-                return result.error();
-            }
-
-            auto const& [is_auto_generated, node_locator]{result.value()};
+            )};
             auto& schema_tree_to_insert{
                     is_auto_generated ? m_auto_gen_keys_schema_tree : m_user_gen_keys_schema_tree
             };
@@ -359,12 +356,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         }
 
         case IrUnitType::UtcOffsetChange: {
-            auto const result{deserialize_ir_unit_utc_offset_change(reader)};
-            if (result.has_error()) {
-                return result.error();
-            }
-
-            auto const new_utc_offset{result.value()};
+            auto const new_utc_offset{OUTCOME_TRYX(deserialize_ir_unit_utc_offset_change(reader))};
             if (auto const err{
                         m_ir_unit_handler.handle_utc_offset_change(m_utc_offset, new_utc_offset)
                 };
