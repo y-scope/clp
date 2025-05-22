@@ -108,6 +108,10 @@ class QueryJobsDbManager {
      * cancelled, or if the job completed in an unexpected state.
      */
     async awaitJobCompletion (jobId: number): Promise<void> {
+            console.log(
+                "am i waiting for job completion?",
+                jobId,
+            );
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         while (true) {
             let rows: QueryJob[];
@@ -150,6 +154,10 @@ class QueryJobsDbManager {
                 }
                 break;
             }
+            console.log()
+            console.log(
+                `Job ${jobId} is still in progress. Status: ${Object.keys(QUERY_JOB_STATUS)[status]}`
+            );
 
             await setTimeout(JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS);
         }

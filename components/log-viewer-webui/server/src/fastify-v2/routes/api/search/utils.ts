@@ -60,6 +60,8 @@ const updateSearchSignalWhenJobsFinish = async ({
 }: UpdateSearchSignalWhenJobsFinishProps) => {
     let errorMsg: string | null = null;
 
+    logger.info("Waiting for job completion");
+
     try {
         await queryJobsDbManager.awaitJobCompletion(searchJobId);
         await queryJobsDbManager.awaitJobCompletion(aggregationJobId);
@@ -68,6 +70,8 @@ const updateSearchSignalWhenJobsFinish = async ({
             e.message :
             "Error while waiting for job completion";
     }
+
+    logger.info("job finised");
 
     let numResultsInCollection: number;
 
@@ -97,6 +101,8 @@ const updateSearchSignalWhenJobsFinish = async ({
         logger: logger,
         searchResultsMetadataCollection: searchResultsMetadataCollection,
     });
+
+        logger.info("job updated");
 };
 
 /**
