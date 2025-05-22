@@ -177,8 +177,8 @@ bool search_archive(
             false == command_line_arguments.get_ignore_case()
     };
     if (expr = metadata_filter_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
-        SPDLOG_ERROR("Query '{}' is logically false", query);
-        return false;
+        SPDLOG_INFO("No matching metadata ranges for query '{}'", query);
+        return true;
     }
 
     // skip decompressing the archive if we won't match based on
