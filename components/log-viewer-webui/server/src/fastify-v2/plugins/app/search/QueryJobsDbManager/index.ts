@@ -46,10 +46,13 @@ class QueryJobsDbManager {
      */
     async submitSearchJob (searchConfig: object): Promise<number> {
         const [queryInsertResults] = await this.#sqlDbConnPool.query<ResultSetHeader>(
-            `INSERT INTO ${settings.SqlDbQueryJobsTableName}
-           (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG},
-            ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
-       VALUES (?, ?)`,
+            `
+            INSERT INTO ${settings.SqlDbQueryJobsTableName} (
+               ${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG},
+               ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE}
+            )
+            VALUES (?, ?)
+            `,
             [
                 Buffer.from(encode(searchConfig)),
                 QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION,
@@ -78,7 +81,7 @@ class QueryJobsDbManager {
             },
         };
 
-        return await this.submitSearchJob(searchAggregationConfig);
+        return this.submitSearchJob(searchAggregationConfig);
     }
 
     /**
@@ -90,11 +93,13 @@ class QueryJobsDbManager {
      */
     async submitQueryCancellation (jobId: number): Promise<void> {
         await this.#sqlDbConnPool.query(
-            `UPDATE ${settings.SqlDbQueryJobsTableName}
-                SET ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${QUERY_JOB_STATUS.CANCELLING}
-                WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
-                AND ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
-                IN (${QUERY_JOB_STATUS.PENDING}, ${QUERY_JOB_STATUS.RUNNING})`,
+            `
+            UPDATE ${settings.SqlDbQueryJobsTableName}
+            SET ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${QUERY_JOB_STATUS.CANCELLING}
+            WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
+            AND ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
+            IN (${QUERY_JOB_STATUS.PENDING}, ${QUERY_JOB_STATUS.RUNNING})
+            `,
             jobId,
         );
     }
@@ -110,34 +115,25 @@ class QueryJobsDbManager {
     async awaitJobCompletion (jobId: number): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         while (true) {
-            let rows: QueryJob[];
+            let queryJob: QueryJob | undefined;
             try {
                 const [queryRows] = await this.#sqlDbConnPool.query<QueryJob[]>(
                     `
-          SELECT ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
-          FROM ${settings.SqlDbQueryJobsTableName}
-          WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
-          `,
+                    SELECT ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS}
+                    FROM ${settings.SqlDbQueryJobsTableName}
+                    WHERE ${QUERY_JOBS_TABLE_COLUMN_NAMES.ID} = ?
+                    `,
                     jobId
                 );
-
-                rows = queryRows;
+                [queryJob] = queryRows;
             } catch (e: unknown) {
-                let errorMessage: string;
-
-                if (e instanceof Error) {
-                    errorMessage = e.message;
-                } else {
-                    errorMessage = String(e);
-                }
-
-                throw new Error(`Failed to query status for job ${jobId} - ${errorMessage}`);
+                throw new Error("Failed to query status for job ${jobId}", { cause: e });
             }
-            if (0 === rows.length) {
-                throw new Error(`Job ${jobId} not found in database.`);
+            if (undefined === queryJob) {
+                throw new Error(`Job ${jobId} not found in the database.`);
             }
 
-            const status = (rows[0] as QueryJob)[QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
+            const status = queryJob[QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS];
 
             if (false === QUERY_JOB_STATUS_WAITING_STATES.has(status)) {
                 if (QUERY_JOB_STATUS.CANCELLED === status) {

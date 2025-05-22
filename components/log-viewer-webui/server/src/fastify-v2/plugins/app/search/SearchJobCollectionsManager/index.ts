@@ -50,9 +50,10 @@ class SearchJobCollectionsManager {
      */
     async getOrCreateCollection (jobId: number): Promise<Collection<SearchResultsDocument>> {
         const name = jobId.toString();
-        if (false === this.#jobIdToCollectionsMap.has(name)) {
+        const collection = this.#jobIdToCollectionsMap.get(name)
+        if ("undefined" === typeof collection) {
             this.#jobIdToCollectionsMap.set(name, this.#db.collection(name));
-        } else if (null === this.#jobIdToCollectionsMap.get(name)) {
+        } else if (null === collection) {
             throw new CollectionDroppedError(name);
         }
 
@@ -73,8 +74,10 @@ class SearchJobCollectionsManager {
     async dropCollection (jobId: number) {
         const name = jobId.toString();
         const collection = this.#jobIdToCollectionsMap.get(name);
-        if ("undefined" === typeof collection || null === collection) {
-            throw new Error(`Collection ${name} not found`);
+       if ("undefined" === typeof collection) {
+	        throw new Error(`Collection ${name} not found`);
+        } else if (null === collection) {
+            throw new CollectionDroppedError(name);
         }
 
         await collection.drop();
