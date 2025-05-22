@@ -68,3 +68,25 @@ jobs:
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
           platform_id: "ubuntu"
           platform_version_id: "jammy"
+
+  ubuntu-noble-execution-image:
+    name: "ubuntu-noble-execution-image"
+    if: "'true' == needs.filter-relevant-changes.outputs.ubuntu_noble_image_changed"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Workaround actions/runner-images/issues/6775"
+        shell: "bash"
+        run: "chown $(id -u):$(id -g) -R ."
+
+      - uses: "./.github/actions/clp-execution-image-build"
+        with:
+          image_registry: "ghcr.io"
+          image_registry_username: "${{github.actor}}"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"
+          platform_id: "ubuntu"
+          platform_version_id: "noble"
