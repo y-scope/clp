@@ -63,3 +63,4 @@ target_link_libraries(
     PRIVATE
     simdjson::simdjson
 )
+target_include_directories(clp_s_search_ast PUBLIC ../../../)
