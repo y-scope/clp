@@ -181,7 +181,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                                 bool_value,
                                 m_case_sensitive_match
                         )};
-                        if (false == ret.has_error() && ret.value()) {
+                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
                             return true;
                         }
                     }
@@ -197,7 +197,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                                 int_value,
                                 m_case_sensitive_match
                         )};
-                        if (false == ret.has_error() && ret.value()) {
+                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
                             return true;
                         }
                     }
@@ -215,7 +215,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                                 int_value,
                                 m_case_sensitive_match
                         )};
-                        if (false == ret.has_error() && ret.value()) {
+                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
                             return true;
                         }
                     }
@@ -231,16 +231,22 @@ auto EvaluateMetadataFilters::evaluate_filter(
                                 float_value,
                                 m_case_sensitive_match
                         )};
-                        if (false == ret.has_error() && ret.value()) {
+                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
                             return true;
                         }
                     }
                     break;
                 case nlohmann::json::value_t::string: {
+                    if (false
+                        == col->matches_any(
+                                ast::LiteralType::VarStringT | ast::LiteralType::ClpStringT
+                        ))
+                    {
+                        break;
+                    }
                     auto tmp_string{cur_field.template get<std::string>()};
                     bool contains_space{std::string::npos != tmp_string.find(' ')};
-                    if (false == contains_space && col->matches_type(ast::LiteralType::VarStringT))
-                    {
+                    if (false == contains_space) {
                         std::optional<clp::ffi::Value> str_value{
                                 clp::ffi::Value{std::move(tmp_string)}
                         };
@@ -250,10 +256,10 @@ auto EvaluateMetadataFilters::evaluate_filter(
                                 str_value,
                                 m_case_sensitive_match
                         )};
-                        if (false == ret.has_error() && ret.value()) {
+                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
                             return true;
                         }
-                    } else if (contains_space && col->matches_type(ast::LiteralType::ClpStringT)) {
+                    } else {
                         std::optional<clp::ffi::Value> str_value{
                                 clp::ffi::Value{get_encoded_text_ast(tmp_string)}
                         };
@@ -263,7 +269,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                                 str_value,
                                 m_case_sensitive_match
                         )};
-                        if (false == ret.has_error() && ret.value()) {
+                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
                             return true;
                         }
                     }
@@ -277,7 +283,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                                 null_value,
                                 m_case_sensitive_match
                         )};
-                        if (false == ret.has_error() && ret.value()) {
+                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
                             return true;
                         }
                     }
