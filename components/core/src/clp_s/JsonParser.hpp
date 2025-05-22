@@ -39,7 +39,7 @@ using namespace simdjson;
 namespace clp_s {
 struct JsonParserOption {
     std::vector<Path> input_paths;
-    CommandLineArguments::FileType input_file_type{CommandLineArguments::FileType::Json};
+    FileType input_file_type{FileType::Json};
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size{};

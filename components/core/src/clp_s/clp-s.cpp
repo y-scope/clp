@@ -107,7 +107,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.record_log_order = command_line_arguments.get_record_log_order();
 
     clp_s::JsonParser parser(option);
-    if (CommandLineArguments::FileType::KeyValueIr == option.input_file_type) {
+    if (clp_s::FileType::KeyValueIr == option.input_file_type) {
         if (false == parser.parse_from_ir()) {
             SPDLOG_ERROR("Encountered error while parsing input");
             return false;

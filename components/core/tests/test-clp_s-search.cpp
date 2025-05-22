@@ -160,7 +160,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             std::string{cTestSearchArchiveDirectory},
             single_file_archive,
             structurize_arrays,
-            clp_s::CommandLineArguments::FileType::Json
+            clp_s::FileType::Json
     ));
 
     for (auto const& [query, expected_results] : queries_and_results) {
