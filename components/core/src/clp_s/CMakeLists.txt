@@ -52,6 +52,7 @@ set(
         ../clp/FileReader.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
+        ../clp/ir/constants.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
         ../clp/ir/parsing.cpp
@@ -119,6 +120,8 @@ set(
         JsonParser.cpp
         JsonParser.hpp
         JsonSerializer.hpp
+        kv_ir_search.cpp
+        kv_ir_search.hpp
         PackedStreamReader.cpp
         PackedStreamReader.hpp
         ParsedMessage.hpp
@@ -253,6 +256,7 @@ target_link_libraries(
         spdlog::spdlog
         yaml-cpp
         ystdlib::containers
+        ystdlib::error_handling
         ZStd::ZStd
 )
 target_include_directories(clp-s
