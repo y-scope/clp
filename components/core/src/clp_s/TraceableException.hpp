@@ -11,7 +11,7 @@
 // Define a version of __FILE__ that's relative to the source directory
 #ifdef SOURCE_PATH_SIZE
     // Temporary until we switch to using C++20's std::source_location
-    // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,readability-identifier-naming)
+    // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp,cppcoreguidelines-pro-bounds-pointer-arithmetic,readability-identifier-naming)
     #define __FILENAME__ ((__FILE__) + SOURCE_PATH_SIZE)
 #else
     // We don't know the source path size, so just default to __FILE__
