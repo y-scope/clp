@@ -1,19 +1,17 @@
 import DetailsCard from "./DetailsCard";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_MESSAGES = 1235844;
-
 /**
  * Renders the messages statistic.
  *
+ * @param props
+ * @param props.numMessages
  * @return
  */
-const Messages = () => {
+const Messages = ({numMessages}: {numMessages: number}) => {
     return (
         <DetailsCard
-            stat={DUMMY_MESSAGES.toString()}
+            stat={numMessages.toString()}
             title={"Messages"}/>
     );
 };

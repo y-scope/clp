@@ -1,12 +1,20 @@
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+
 import {theme} from "antd";
 
 import StatCard from "../../../components/StatCard";
+import useRefreshIntervalStore from "../RefreshIntervalState";
+import {querySql} from "../sqlConfig";
+import {
+    getSpaceSavingsSql,
+    SpaceSavingsResp,
+} from "./sql";
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_COMPRESSED_SIZE = 1004023;
-const DUMMY_UNCOMPRESSED_SIZE = 110300010;
 
 /**
  * Renders space savings card.
@@ -14,9 +22,36 @@ const DUMMY_UNCOMPRESSED_SIZE = 110300010;
  * @return
  */
 const SpaceSavings = () => {
+    const {refreshInterval} = useRefreshIntervalStore();
+    const [compressedSize, setCompressedSize] = useState<number>(0);
+    const [uncompressedSize, setUncompressedSize] = useState<number>(0);
     const {token} = theme.useToken();
-    const compressedSize = DUMMY_COMPRESSED_SIZE as number;
-    const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE as number;
+    const intervalIdRef = useRef<number>(0);
+
+    const update = useCallback(() => {
+        (async () => {
+            const {data: [resp]} = await querySql<SpaceSavingsResp>(getSpaceSavingsSql());
+            if ("undefined" === typeof resp) {
+                throw new Error();
+            }
+            setCompressedSize(resp.total_compressed_size);
+            setUncompressedSize(resp.total_uncompressed_size);
+        })().catch((error: unknown) => {
+            console.error("An error occurred when fetching space savings: ", error);
+        });
+    }, [setCompressedSize,
+        setUncompressedSize]);
+
+    useEffect(() => {
+        update();
+        intervalIdRef.current = setInterval(update, refreshInterval);
+
+        return () => {
+            clearInterval(intervalIdRef.current);
+        };
+    }, [refreshInterval,
+        update]);
+
 
     const spaceSavingsPercent = (0 !== uncompressedSize) ?
         100 * (1 - (compressedSize / uncompressedSize)) :
