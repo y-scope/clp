@@ -17,17 +17,16 @@ export interface QueryBoxProps extends InputProps {
  *
  * @param props
  * @param props.progress
- * @param props.rest
+ * @param props.inputProps
  * @return
  */
-const QueryBox = ({progress, ...rest}: QueryBoxProps) => {
+const QueryBox = ({progress, ...inputProps}: QueryBoxProps) => {
     return (
         <div className={styles["queryBox"]}>
-            <div className={styles["queryBoxPosition"]}>
-                <Input {...rest}/>
-                <div className={styles["queryBoxWrapper"]}>
+                <Input {...inputProps}/>
+                <div className={styles["progressBarMask"]}>
                     <Progress
-                        className={styles["queryBoxProgress"] || ""}
+                        className={styles["progressBar"] || ""}
                         percent={progress ?? 0}
                         showInfo={false}
                         size={"small"}
@@ -36,7 +35,6 @@ const QueryBox = ({progress, ...rest}: QueryBoxProps) => {
                             "none" :
                             "block"}}/>
                 </div>
-            </div>
         </div>
     );
 };

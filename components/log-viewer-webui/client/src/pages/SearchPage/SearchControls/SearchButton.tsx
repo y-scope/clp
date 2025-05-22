@@ -4,7 +4,8 @@ import {
     Tooltip,
 } from "antd";
 
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
+import {handleQuerySubmit} from "../SearchState/query";
 import styles from "./index.module.css";
 
 
@@ -31,7 +32,18 @@ const SearchButton = () => {
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}
-            >
+                onClick={() => {
+                    handleQuerySubmit({
+                        queryString,
+                        timestampBegin: 0,
+                        timestampEnd: Date.now(),
+                        ignoreCase: false,
+                        timeRangeBucketSizeMillis: 150,
+                    }).catch((error) => {
+                        console.error("Error during query submission:", error);
+                    }
+                    );
+                }}>
                 Search
             </Button>
         </Tooltip>

@@ -33,6 +33,8 @@ import {
     removeItemFromArray,
 } from "./utils.js";
 
+let globalQueryIdCounter = 0;
+
 
 /**
  * Integrates MongoDB with Socket.IO to provide real-time updates for MongoDB queries.
@@ -171,20 +173,24 @@ class MongoSocketIoServer {
      */
     #getQueryId (queryParams: QueryParameters): number {
         const queryHash = getQueryHash(queryParams);
+        this.#fastify.log.info(
+            `QueryId:${globalQueryIdCounter} params:${queryParams} query hash:${queryHash}`
+        );
         for (const [queryId, hash] of this.#queryIdToQueryHashMap.entries()) {
+            this.#fastify.log.info(
+                `QueryId:${queryId} hash:${hash} requested hash:${queryHash}`
+            );
             if (hash === queryHash) {
                 return queryId;
             }
         }
+        this.#fastify.log.info(
+            `QueryId ${globalQueryIdCounter} not found in query map. Creating a new one.`
+        );
 
-        let queryId = 0;
-        if (0 === this.#queryIdToQueryHashMap.size) {
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        } else {
-            const maxKey = Math.max(...Array.from(this.#queryIdToQueryHashMap.keys()));
-            queryId = maxKey + 1;
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        }
+        let queryId = globalQueryIdCounter;
+        this.#queryIdToQueryHashMap.set(queryId, queryHash);
+        globalQueryIdCounter += 1;
 
         return queryId;
     }

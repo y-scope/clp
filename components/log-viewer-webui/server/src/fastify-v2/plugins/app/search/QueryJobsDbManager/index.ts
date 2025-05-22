@@ -1,6 +1,6 @@
 import type {MySQLPromisePool} from "@fastify/mysql";
 import {encode} from "@msgpack/msgpack";
-import settings from "@settings" with { type: "json" };
+import settings from "../../../../../../settings.json" with { type: "json" };
 import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";

@@ -15,7 +15,7 @@ import {MongoCursorSocket} from "./MongoCursorSocket.js";
  * @return Reactive array.
  */
 const useCursor = (
-    query: () => MongoCursorSocket,
+    query: () => MongoCursorSocket | null,
     dependencies: DependencyList = []
 ): object[] => {
     const [data, setData] = useState<object[]>([]);
@@ -23,6 +23,10 @@ const useCursor = (
 
     useEffect(() => {
         const cursor = query();
+
+        if (!cursor) {
+            return;
+        }
 
         // Flag to ignore updates after unmounting.
         let ignore = false;

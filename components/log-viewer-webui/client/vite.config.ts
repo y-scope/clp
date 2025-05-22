@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react";
 import {defineConfig} from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+import path from "node:path";
 
 
 // https://vite.dev/config/
@@ -8,8 +8,12 @@ export default defineConfig({
     base: "./",
     plugins: [
         react(),
-        tsconfigPaths(),
     ],
+    resolve: {
+        alias: {
+            "@common": path.resolve(__dirname, "../common"),
+        }
+    },
     publicDir: "public",
     server: {
         port: 8080,
@@ -17,11 +21,17 @@ export default defineConfig({
             "/query/": {
                 // Below target should match the server's configuration in
                 // `components/log-viewer-webui/server/.env` (or `.env.local` if overridden)
-                target: "http://localhost:3000/",
+                target: "http://localhost:3001/",
+                changeOrigin: true,
+            },
+            "/api/": {
+                // Below target should match the server's configuration in
+                // `components/log-viewer-webui/server/.env` (or `.env.local` if overridden)
+                target: "http://localhost:3001/",
                 changeOrigin: true,
             },
             "/socket.io/": {
-                target: "ws://localhost:3000/",
+                target: "ws://localhost:3001/",
                 changeOrigin: true,
                 ws: true,
             },
