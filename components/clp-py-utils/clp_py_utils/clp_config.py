@@ -733,7 +733,7 @@ class CLPConfig(BaseModel):
 
         os_release = dotenv_values(self._os_release_file_path)
         if "ubuntu" == os_release["ID"]:
-            if "noble" == os_release['VERSION_CODENAME']:
+            if "noble" == os_release["VERSION_CODENAME"]:
                 self.execution_container = (
                     f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:dev"
                 )
