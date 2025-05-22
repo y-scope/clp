@@ -1,8 +1,10 @@
-/* eslint-disable max-lines-per-function */
-
 import {useEffect} from "react";
 import {Bar} from "react-chartjs-2";
 
+import {
+    Card,
+    theme,
+} from "antd";
 import {
     BarElement,
     Chart as ChartJs,
@@ -48,6 +50,7 @@ interface TimelineConfig {
     range: {begin: dayjs.Dayjs; end: dayjs.Dayjs};
     bucketDuration: Duration.Duration;
 }
+
 
 /**
  * Computes the timestamp range and bucket duration necessary to render the bars in the timeline
@@ -136,12 +139,15 @@ interface SearchResultsTimelineProps {
  * @param props.timelineConfig
  * @return
  */
-const SearchResultsTimeline = ({
+// eslint-disable-next-line max-lines-per-function
+const ResultsTimeline = ({
     isInputDisabled,
     onTimelineZoom,
     timelineBuckets,
     timelineConfig,
 }: SearchResultsTimelineProps) => {
+    const {token} = theme.useToken();
+
     useEffect(() => {
         document.documentElement.style.setProperty(
             "--timeline-chart-cursor",
@@ -158,10 +164,8 @@ const SearchResultsTimeline = ({
     const data = {
         datasets: [
             {
-                backgroundColor: "#4096a0",
+                backgroundColor: token.colorPrimary,
                 barPercentage: 1.2,
-                borderColor: "#007380",
-                borderWidth: 2,
                 minBarLength: 5,
 
                 data: adaptTimelineBucketsForChartJs(timelineBuckets),
@@ -242,7 +246,7 @@ const SearchResultsTimeline = ({
                 zoom: {
                     drag: {
                         enabled: false === isInputDisabled,
-                        backgroundColor: "rgba(64,150,160,0.3)",
+                        backgroundColor: token.colorBgTextActive,
                     },
                     mode: "x",
                     onZoom: ({chart}) => {
@@ -252,8 +256,8 @@ const SearchResultsTimeline = ({
                         }
                         const {min, max} = xAxis;
                         const newTimeRange = {
-                            begin: convertZoomTimestampToUtcDatetime(parseInt(min, 10)),
-                            end: convertZoomTimestampToUtcDatetime(parseInt(max, 10)),
+                            begin: convertZoomTimestampToUtcDatetime(Number.parseInt(min, 10)),
+                            end: convertZoomTimestampToUtcDatetime(Number.parseInt(max, 10)),
                         };
 
                         onTimelineZoom(newTimeRange);
@@ -264,15 +268,18 @@ const SearchResultsTimeline = ({
     };
 
     return (
-        <Bar
-            className={"timeline-chart"}
-            data={data}
-            options={options}
+        <Card>
+            <Bar
+                className={"timeline-chart"}
+                data={data}
+                options={options}
 
-            // If the user inadvertently selected the timeline, then dragging on it will drag the
-            // timeline object rather than selecting a time range within it. Thus, on mouse down, we
-            // clear any existing selections so that the following drag selects a time range.
-            onMouseDown={deselectAll}/>
+                // If the user inadvertently selected the timeline, then dragging on it
+                // will drag the timeline object rather than selecting a time range within it.
+                // Thus, on mouse down, we clear any existing selections
+                // so that the following drag selects a time range.
+                onMouseDown={deselectAll}/>
+        </Card>
     );
 };
 
@@ -280,5 +287,5 @@ export type {
     TimelineBucket,
     TimelineConfig,
 };
-export default SearchResultsTimeline;
+export default ResultsTimeline;
 export {computeTimelineConfig};

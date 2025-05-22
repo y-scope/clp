@@ -1,5 +1,3 @@
-import {useState} from "react";
-
 import {
     DatePicker,
     Select,
@@ -25,8 +23,7 @@ import {
  * @return
  */
 const TimeRangeInput = () => {
-    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
-    const [selectedOption, setSelectedOption] = useState<TIME_RANGE_OPTION>(DEFAULT_TIME_RANGE);
+    const {timeRange, updateTimeRange, selectedOption, setSelectedOption} = useSearchStore();
 
     const handleSelectChange = (timeRangeOption: TIME_RANGE_OPTION) => {
         setSelectedOption(timeRangeOption);
@@ -55,6 +52,7 @@ const TimeRangeInput = () => {
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
                 size={"large"}
+                value={selectedOption}
                 variant={"filled"}
                 className={selectedOption === TIME_RANGE_OPTION.CUSTOM ?
                     (styles["customSelected"] || "") :
@@ -66,6 +64,7 @@ const TimeRangeInput = () => {
                     showNow={true}
                     showTime={true}
                     size={"large"}
+                    value={timeRange}
                     onChange={(dates) => {
                         handleRangePickerChange(dates);
                     }}/>

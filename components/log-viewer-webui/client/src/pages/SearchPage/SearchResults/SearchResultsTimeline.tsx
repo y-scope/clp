@@ -8,6 +8,8 @@ import {
     expandTimeRangeToDurationMultiple,
     TimeRange,
 } from "../../../utils/datetime";
+import {TIME_RANGE_OPTION} from "../SearchControls/TimeRangeInput/utils";
+import useSearchStore from "../SearchState";
 import {SearchResult} from "./SearchResultsTable/typings";
 
 
@@ -42,7 +44,7 @@ const DUMMY_RESULTS: SearchResult[] = [
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace with values from database once api implemented.
-const DUMMUY_BUCKETS: TimelineBucket[] = [
+const DUMMY_BUCKETS: TimelineBucket[] = [
     {
         count: 2,
         timestamp: dayjs().subtract(1, "hour")
@@ -60,16 +62,18 @@ const DUMMUY_BUCKETS: TimelineBucket[] = [
 ];
 
 /**
- * Renders search results in a table.
+ * Renders timeline visualization of search results.
  *
  * @return
  */
 const SearchResultsTimeline = () => {
+    const {updateTimeRange, setSelectedOption} = useSearchStore();
+
     if (0 === DUMMY_RESULTS.length) {
         return null;
     }
 
-    const timestamps = DUMMUY_BUCKETS.map(({timestamp}) => timestamp);
+    const timestamps = DUMMY_BUCKETS.map(({timestamp}) => timestamp);
     const begin = Math.min(...timestamps);
     const end = Math.max(...timestamps);
 
@@ -84,15 +88,17 @@ const SearchResultsTimeline = () => {
             newTimeRange,
         );
 
-        console.log(expandedTimeRange);
+        updateTimeRange([expandedTimeRange.begin,
+            expandedTimeRange.end]);
+        setSelectedOption(TIME_RANGE_OPTION.CUSTOM);
 
-        // handleQuerySubmit(expandedTimeRange);
+        // submit query
     };
 
     return (
         <ResultsTimeline
             isInputDisabled={false}
-            timelineBuckets={DUMMUY_BUCKETS}
+            timelineBuckets={DUMMY_BUCKETS}
             timelineConfig={timelineConfig}
             onTimelineZoom={handleTimelineZoom}/>
     );
