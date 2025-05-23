@@ -70,22 +70,29 @@ auto get_test_input_local_path() -> std::string {
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression> {
     auto zero_literal = clp_s::search::ast::Integral::create_from_int(0);
     auto one_literal = clp_s::search::ast::Integral::create_from_int(1);
-    auto non_matching_idx = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
-            {std::string{clp_s::constants::cLogEventIdxName}},
-            std::string{clp_s::constants::cDefaultNamespace}
-    );
-    auto object_subtree_non_matching_idx = non_matching_idx->copy();
-    object_subtree_non_matching_idx->set_subtree_type(
+    auto column_with_no_subtree_type
+            = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
+                    {std::string{clp_s::constants::cLogEventIdxName}},
+                    std::string{clp_s::constants::cDefaultNamespace}
+            );
+    auto column_with_object_subtree_type = column_with_no_subtree_type->copy();
+    column_with_object_subtree_type->set_subtree_type(
             std::string{clp_s::constants::cObjectSubtreeType}
     );
-    auto matching_idx = non_matching_idx->copy();
-    matching_idx->set_subtree_type(std::string{clp_s::constants::cMetadataSubtreeType});
+    auto column_with_metadata_subtree_type = column_with_no_subtree_type->copy();
+    column_with_metadata_subtree_type->set_subtree_type(
+            std::string{clp_s::constants::cMetadataSubtreeType}
+    );
     auto const op = clp_s::search::ast::FilterOperation::EQ;
-    auto matching_filter = clp_s::search::ast::FilterExpr::create(matching_idx, op, zero_literal);
+    auto matching_filter = clp_s::search::ast::FilterExpr::create(
+            column_with_metadata_subtree_type,
+            op,
+            zero_literal
+    );
     auto non_matching_filter
-            = clp_s::search::ast::FilterExpr::create(non_matching_idx, op, one_literal);
+            = clp_s::search::ast::FilterExpr::create(column_with_no_subtree_type, op, one_literal);
     auto object_subtree_non_matching_filter = clp_s::search::ast::FilterExpr::create(
-            object_subtree_non_matching_idx,
+            column_with_object_subtree_type,
             op,
             one_literal
     );

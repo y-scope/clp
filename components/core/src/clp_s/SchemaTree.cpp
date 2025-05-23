@@ -61,10 +61,8 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
     return node_id;
 }
 
-auto SchemaTree::get_subtree_for_namespace_and_type(
-        std::string_view subtree_namespace,
-        NodeType type
-) const -> int32_t {
+auto SchemaTree::get_subtree_node_id(std::string_view subtree_namespace, NodeType type) const
+        -> int32_t {
     auto it = m_namespace_and_type_to_subtree_id.find({subtree_namespace, type});
     if (m_namespace_and_type_to_subtree_id.end() != it) {
         return it->second;

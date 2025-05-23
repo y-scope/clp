@@ -145,7 +145,7 @@ public:
      * @return -1 if the Object sub-tree does not exist.
      */
     int32_t get_object_subtree_node_id_for_namespace(std::string_view subtree_namespace) const {
-        return get_subtree_for_namespace_and_type(subtree_namespace, NodeType::Object);
+        return get_subtree_node_id(subtree_namespace, NodeType::Object);
     }
 
     /**
@@ -163,8 +163,7 @@ public:
      * @return the Id of the subtree identified by the given namespace and type or -1 if the
      * requested subtree does not exist.
      */
-    auto get_subtree_node_id(std::string_view subtree_namespace, NodeType type) const
-            -> int32_t;
+    auto get_subtree_node_id(std::string_view subtree_namespace, NodeType type) const -> int32_t;
 
     auto get_subtrees() const
             -> absl::btree_map<std::pair<std::string_view, NodeType>, int32_t> const& {
@@ -176,7 +175,7 @@ public:
      * @return -1 if the Metadata sub-tree does not exist.
      */
     int32_t get_metadata_subtree_node_id() const {
-        return get_subtree_for_namespace_and_type(constants::cDefaultNamespace, NodeType::Metadata);
+        return get_subtree_node_id(constants::cDefaultNamespace, NodeType::Metadata);
     }
 
     std::vector<SchemaNode> const& get_nodes() const { return m_nodes; }

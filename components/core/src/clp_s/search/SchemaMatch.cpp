@@ -40,7 +40,7 @@ namespace {
  * @param subtree_type
  * @return the corresponding `NodeType` or `NodeType::Unknown` if the subtree type is unknown.
  */
-auto get_node_type_for_subtree_type(std::string_view subtree_type) -> NodeType {
+auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
     if (constants::cMetadataSubtreeType == subtree_type) {
         return NodeType::Metadata;
     }
@@ -184,9 +184,9 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
 
     if (auto const& subtree_type{column->get_subtree_type()}; subtree_type.has_value()) {
         // Resolve against the subtree with matching namespace and type if it exists.
-        auto const node_type{get_node_type_for_subtree_type(subtree_type.value())};
+        auto const node_type{get_subtree_node_type(subtree_type.value())};
         if (auto const subtree_root_node_id
-            = m_tree->get_subtree_for_namespace_and_type(column->get_namespace(), node_type);
+            = m_tree->get_subtree_node_id(column->get_namespace(), node_type);
             -1 != subtree_root_node_id)
         {
             auto const& root_node = m_tree->get_node(subtree_root_node_id);
