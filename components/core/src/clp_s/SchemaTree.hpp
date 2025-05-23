@@ -157,13 +157,13 @@ public:
     int32_t get_metadata_field_id(std::string_view const field_name) const;
 
     /**
-     * Gets the Id for some subtree identified by a namespace and type.
+     * Gets the Id of the root for a subtree identified by a namespace and type.
      * @param subtree_namespace
      * @param type
      * @return the Id of the subtree identified by the given namespace and type or -1 if the
      * requested subtree does not exist.
      */
-    auto get_subtree_for_namespace_and_type(std::string_view subtree_namespace, NodeType type) const
+    auto get_subtree_node_id(std::string_view subtree_namespace, NodeType type) const
             -> int32_t;
 
     auto get_subtrees() const
