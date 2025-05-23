@@ -21,22 +21,20 @@ import {
     convertZoomTimestampToUtcDatetime,
     DATETIME_FORMAT_TEMPLATE,
     TimeRange,
-} from "../../utils/datetime";
-import {
-    adaptTimelineBucketsForChartJs,
-    TimelineBucket,
-} from "./TimelineBucket";
+} from "./datetime";
 import {
     ChartTooltipItemRaw,
+    TimelineBucket,
     TimelineConfig,
 } from "./typings";
 import {
+    adaptTimelineBucketsForChartJs,
     computeTimelineConfig,
     deselectAll,
 } from "./utils";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
-import "./ResultsTimeline.css";
+import "./index.module.css";
 
 
 ChartJs.register(

@@ -4,9 +4,32 @@ import {DurationUnitType} from "dayjs/plugin/duration";
 import {
     expandTimeRangeToDurationMultiple,
     TIME_UNIT,
-} from "../../utils/datetime";
-import {MAX_DATA_POINTS_PER_TIMELINE} from "./TimelineBucket";
-import {TimelineConfig} from "./typings";
+} from "./datetime";
+import {
+    MAX_DATA_POINTS_PER_TIMELINE,
+    TimelineBucket,
+    TimelineConfig,
+} from "./typings";
+
+
+/**
+ * Converts an array of timeline buckets into an array of objects compatible with Chart.js.
+ *
+ * @param timelineBuckets
+ * @return
+ */
+const adaptTimelineBucketsForChartJs = (timelineBuckets: TimelineBucket[])
+: {x: number; y: number}[] => (
+    timelineBuckets.map(
+        ({
+            timestamp,
+            count,
+        }) => ({
+            x: timestamp,
+            y: count,
+        })
+    )
+);
 
 
 /**
@@ -78,5 +101,7 @@ const deselectAll = () => {
 };
 
 export {
-    computeTimelineConfig, deselectAll,
+    adaptTimelineBucketsForChartJs,
+    computeTimelineConfig,
+    deselectAll,
 };

@@ -17,6 +17,22 @@ interface ChartTooltipItemRaw {
     x: number;
 }
 
+
+/**
+ * An object that represents `count` log events at `timestamp`.
+ */
+interface TimelineBucket {
+    timestamp: number;
+    count: number;
+}
+
+/**
+ * The max number of data points in a timeline component.
+ */
+const MAX_DATA_POINTS_PER_TIMELINE = 40;
+
 export type {
-    ChartTooltipItemRaw, TimelineConfig,
+    ChartTooltipItemRaw, TimelineBucket,
+    TimelineConfig,
 };
+export {MAX_DATA_POINTS_PER_TIMELINE};

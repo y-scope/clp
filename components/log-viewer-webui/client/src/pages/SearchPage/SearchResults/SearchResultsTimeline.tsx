@@ -8,7 +8,7 @@ import ResultsTimeline, {
 import {
     expandTimeRangeToDurationMultiple,
     TimeRange,
-} from "../../../utils/datetime";
+} from "../../../components/ResultsTimeline/datetime";
 import {TIME_RANGE_OPTION} from "../SearchControls/TimeRangeInput/utils";
 import useSearchStore from "../SearchState";
 import {SearchResult} from "./SearchResultsTable/typings";
