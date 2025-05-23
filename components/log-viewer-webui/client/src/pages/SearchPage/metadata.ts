@@ -27,4 +27,5 @@ const useResultsMetadata = () => {
 
 export { useResultsMetadata };
 
-
+// we get the metadata. If the metadata is not empty
+// We check the signal and set the UI state.

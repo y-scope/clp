@@ -1,5 +1,4 @@
-
-import axios from "axios";
+import axios, {AxiosResponse} from "axios";
 
 type QueryArgs = {
     timestampBegin: number;
@@ -14,13 +13,13 @@ type QueryResponse = {
     aggregationJobId: string;
 };
 
-const submitQuery = async ({
+const submitQuery = ({
     timestampBegin,
     timestampEnd,
     ignoreCase,
     timeRangeBucketSizeMillis,
     queryString,
-}: QueryArgs) => {
+}: QueryArgs): Promise<QueryResponse> => {
     const payload = {
         timestampBegin,
         timestampEnd,
@@ -31,19 +30,8 @@ const submitQuery = async ({
 
     console.log("Submitting query with payload:", payload);
 
-    try {
-        const response =
-            await axios.post<QueryResponse>("/api/search/query", payload);
-        const { searchJobId, aggregationJobId } = response.data;
-        return { searchJobId, aggregationJobId };
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            console.error("Axios error during query submission:", error.message, error.response?.data);
-        } else {
-            console.error("Unknown error during query submission:", error);
-        }
-        throw error;
-    }
+    return axios.post<QueryResponse>("/api/search/query", payload)
+        .then(response => response.data);
 };
 
 export { submitQuery };

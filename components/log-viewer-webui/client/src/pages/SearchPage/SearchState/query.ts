@@ -2,29 +2,29 @@ import useSearchStore from "./index";
 import { clearQueryResults } from "../../../api/search/queryClear";
 import { submitQuery } from "../../../api/search/querySubmit";
 import { cancelQuery } from "../../../api/search/queryCancel";
+import { SEARCH_UI_STATE } from "./typings";
 
-export const handleClearResults = async () => {
+const handleClearResults = () => {
     const store = useSearchStore.getState();
+
+    if (store.searchUiState === SEARCH_UI_STATE.DEFAULT) {
+        return;
+    }
 
     const searchJobId = store.searchJobId;
     const aggregationJobId = store.aggregationJobId;
 
     if (!searchJobId || !aggregationJobId) {
-        console.warn("No searchJobId or aggregationJobId to clear.");
-        return;
+        throw new Error("No searchJobId or aggregationJobId to clear.");
     }
 
-    try {
-        await clearQueryResults({
-            searchJobId,
-            aggregationJobId,
-        });
-        store.updateSearchJobId(null);
-        store.updateAggregationJobId(null);
-        console.log("Query results cleared successfully");
-    } catch (error) {
+    clearQueryResults({
+        searchJobId,
+        aggregationJobId,
+    }).catch((error) => {
         console.error("Failed to clear query results:", error);
-    }
+    });
+
 };
 
 // Add handleQuerySubmit that uses submitQuery from the API
@@ -36,45 +36,76 @@ type QueryArgs = {
     queryString: string;
 };
 
-export const handleQuerySubmit = async (args: QueryArgs) => {
+const handleQuerySubmit = () => {
+
     const store = useSearchStore.getState();
 
-    const searchJobId = store.searchJobId;
-
-    if (null !== searchJobId) {
-        // Clear result caches before starting a new query
-        await handleClearResults();
+    if (store.searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ) {
+        console.warn("Query already submitted, ignoring submit request.");
+        return;
     }
 
-    const result = await submitQuery(args);
+    if (store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
+        store.searchUiState !== SEARCH_UI_STATE.DONE
+    ) {
+        throw new Error("Cannot submit query when not in DEFAULT or DONE state.");
+    }
 
-    // Update store with new job IDs
-    store.updateSearchJobId(result.searchJobId);
-    store.updateAggregationJobId(result.aggregationJobId);
+    handleClearResults();
 
-    return result;
+    const args: QueryArgs = {
+        queryString: store.queryString,
+        timestampBegin: store.timeRange[0].valueOf(),
+        timestampEnd: store.timeRange[1].valueOf(),
+        ignoreCase: false,
+        timeRangeBucketSizeMillis: 150,
+    };
+
+    store.updateSearchUiState(SEARCH_UI_STATE.QUERY_SUBMITTED);
+
+    submitQuery(args)
+        .then((result) => {
+            store.updateSearchJobId(result.searchJobId);
+            store.updateAggregationJobId(result.aggregationJobId);
+            store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
+        })
+        .catch((error) => {
+            console.error("Failed to submit query:", error);
+        });
 };
 
-export const handleQueryCancel = async () => {
+const handleQueryCancel = () => {
     const store = useSearchStore.getState();
+
+    if (store.searchUiState !== SEARCH_UI_STATE.QUERYING) {
+       throw new Error("Cannot cancel query when not in QUERYING state.");
+    }
 
     const searchJobId = store.searchJobId;
     const aggregationJobId = store.aggregationJobId;
 
     if (!searchJobId || !aggregationJobId) {
-        console.warn("No searchJobId or aggregationJobId to cancel.");
-        return;
+        throw new Error("Cannot cancel query without jobIDs");
     }
 
-    try {
-        await cancelQuery({
-            searchJobId,
-            aggregationJobId,
-        });
-        store.updateSearchJobId(null);
-        store.updateAggregationJobId(null);
+    cancelQuery({
+        searchJobId,
+        aggregationJobId,
+    }).then(() => {
         console.log("Query cancelled successfully");
-    } catch (error) {
+    }).catch((error) => {
         console.error("Failed to cancel query:", error);
-    }
+    });
+
+    // Reset the state. I dont need to wait for promise to resolve. Another query
+    // can be submitted before previous cancel finished
+    store.updateSearchJobId(null);
+    store.updateAggregationJobId(null);
+    store.updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
+};
+
+export {
+    handleClearResults,
+    handleQuerySubmit,
+    handleQueryCancel,
 };

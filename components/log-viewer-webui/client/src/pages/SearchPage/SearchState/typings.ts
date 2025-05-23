@@ -1,0 +1,9 @@
+
+enum SEARCH_UI_STATE {
+    DEFAULT,
+    QUERY_SUBMITTED,
+    QUERYING,
+    DONE,
+}
+
+export {SEARCH_UI_STATE};

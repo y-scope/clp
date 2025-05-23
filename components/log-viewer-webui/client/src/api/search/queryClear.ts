@@ -5,10 +5,10 @@ type QueryClearArgs = {
     aggregationJobId: string;
 };
 
-const clearQueryResults = async ({
+const clearQueryResults = ({
     searchJobId,
     aggregationJobId,
-}: QueryClearArgs) => {
+}: QueryClearArgs): Promise<import("axios").AxiosResponse<any>> => {
     const payload = {
         searchJobId,
         aggregationJobId,
@@ -16,16 +16,7 @@ const clearQueryResults = async ({
 
     console.log("Clearing query results with payload:", payload);
 
-    try {
-        await axios.delete("/api/search/results", { data: payload });
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            console.error("Axios error during query clear:", error.message, error.response?.data);
-        } else {
-            console.error("Unknown error during query clear:", error);
-        }
-        throw error;
-    }
+    return axios.delete("/api/search/results", { data: payload });
 };
 
 export { clearQueryResults };

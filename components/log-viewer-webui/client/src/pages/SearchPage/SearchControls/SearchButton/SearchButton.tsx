@@ -29,17 +29,16 @@ const SearchButton = () => {
 
     return (
         <>
-            {!isSearchSignalQuerying(searchSignal) &&
+            {!isSearchSignalQuerying(searchSignal) ? (
                 <Tooltip title={isQueryStringEmpty ? "Enter query to search" : ""}>
                     <SearchSubmitButton
                         queryString={queryString}
                         isQueryStringEmpty={isQueryStringEmpty}
                     />
                 </Tooltip>
-            }
-            {isSearchSignalQuerying(searchSignal) &&
+            ) : (
                 <SearchCancelButton />
-            }
+            )}
         </>
     );
 };
