@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <queue>
+#include <string_view>
 #include <tuple>
 #include <utility>
 
+#include "../archive_constants.hpp"
 #include "../SchemaTree.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
@@ -32,6 +34,23 @@ using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
+namespace {
+/**
+ * Gets the `NodeType` corresponding to a given subtree type.
+ * @param subtree_type
+ * @return the corresponding `NodeType` or `NodeType::Unknown` if the subtree type is unknown.
+ */
+auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
+    if (constants::cMetadataSubtreeType == subtree_type) {
+        return NodeType::Metadata;
+    }
+    if (constants::cObjectSubtreeType == subtree_type) {
+        return NodeType::Object;
+    }
+    return NodeType::Unknown;
+}
+}  // namespace
+
 // TODO: write proper iterators on the AST to make this code less awful.
 // In particular schema intersection needs AST iterators and a proper refactor
 SchemaMatch::SchemaMatch(
@@ -141,6 +160,7 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     bool matched = false;
     // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
     // namespaces.
+    // TODO: consider removing this imprecise loop when we resolve issue #907.
     if (column->is_pure_wildcard()) {
         for (auto const& node : m_tree->get_nodes()) {
             if (column->matches_type(node_to_literal_type(node.get_type()))) {
@@ -156,18 +176,34 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
         return matched;
     }
 
-    // TODO: Once we start supporting mixing different types of logs we will have to match against
-    // more than just the object subtree.
-    auto const subtree_root_node_id
-            = m_tree->get_object_subtree_node_id_for_namespace(column->get_namespace());
-    if (-1 == subtree_root_node_id) {
-        return matched;
-    }
-    auto const& root = m_tree->get_node(subtree_root_node_id);
-    for (int32_t child_node_id : root.get_children_ids()) {
-        matched |= populate_column_mapping(column, child_node_id);
-    }
+    auto resolve_against_subtree = [&](SchemaNode const& root_node) -> void {
+        for (int32_t child_node_id : root_node.get_children_ids()) {
+            matched |= populate_column_mapping(column, child_node_id);
+        }
+    };
 
+    if (auto const& subtree_type{column->get_subtree_type()}; subtree_type.has_value()) {
+        // Resolve against the subtree with matching namespace and type if it exists.
+        auto const node_type{get_subtree_node_type(subtree_type.value())};
+        if (auto const subtree_root_node_id
+            = m_tree->get_subtree_node_id(column->get_namespace(), node_type);
+            -1 != subtree_root_node_id)
+        {
+            auto const& root_node = m_tree->get_node(subtree_root_node_id);
+            resolve_against_subtree(root_node);
+        }
+    } else {
+        // Resolve against every subtree that has matching namespaces except for the
+        // `NodeType::Metadata` subtree.
+        for (auto const& [namespace_type_pair, subtree_root_node_id] : m_tree->get_subtrees()) {
+            if (NodeType::Metadata != namespace_type_pair.second
+                && namespace_type_pair.first == column->get_namespace())
+            {
+                auto const& root_node = m_tree->get_node(subtree_root_node_id);
+                resolve_against_subtree(root_node);
+            }
+        }
+    }
     return matched;
 }
 

@@ -12,6 +12,7 @@
 #include <absl/container/btree_map.h>
 #include <absl/container/flat_hash_map.h>
 
+#include "archive_constants.hpp"
 #include "search/ast/Literal.hpp"
 
 namespace clp_s {
@@ -144,12 +145,7 @@ public:
      * @return -1 if the Object sub-tree does not exist.
      */
     int32_t get_object_subtree_node_id_for_namespace(std::string_view subtree_namespace) const {
-        if (auto it = m_namespace_to_object_subtree_id.find(subtree_namespace);
-            it != m_namespace_to_object_subtree_id.end())
-        {
-            return it->second;
-        }
-        return -1;
+        return get_subtree_node_id(subtree_namespace, NodeType::Object);
     }
 
     /**
@@ -158,13 +154,29 @@ public:
      *
      * @return the field Id if the field exists within the Metadata sub-tree, -1 otherwise.
      */
-    int32_t get_metadata_field_id(std::string_view const field_name);
+    int32_t get_metadata_field_id(std::string_view const field_name) const;
+
+    /**
+     * Gets the Id of the root for a subtree identified by a namespace and type.
+     * @param subtree_namespace
+     * @param type
+     * @return the Id of the subtree identified by the given namespace and type or -1 if the
+     * requested subtree does not exist.
+     */
+    auto get_subtree_node_id(std::string_view subtree_namespace, NodeType type) const -> int32_t;
+
+    auto get_subtrees() const
+            -> absl::btree_map<std::pair<std::string_view, NodeType>, int32_t> const& {
+        return m_namespace_and_type_to_subtree_id;
+    }
 
     /**
      * @return the Id of the root of the Metadata sub-tree.
      * @return -1 if the Metadata sub-tree does not exist.
      */
-    int32_t get_metadata_subtree_node_id() { return m_metadata_subtree_id; }
+    int32_t get_metadata_subtree_node_id() const {
+        return get_subtree_node_id(constants::cDefaultNamespace, NodeType::Metadata);
+    }
 
     std::vector<SchemaNode> const& get_nodes() const { return m_nodes; }
 
@@ -182,8 +194,7 @@ public:
     void clear() {
         m_nodes.clear();
         m_node_map.clear();
-        m_metadata_subtree_id = -1;
-        m_namespace_to_object_subtree_id.clear();
+        m_namespace_and_type_to_subtree_id.clear();
     }
 
     /**
@@ -203,8 +214,8 @@ public:
 private:
     std::vector<SchemaNode> m_nodes;
     absl::flat_hash_map<std::tuple<int32_t, std::string_view const, NodeType>, int32_t> m_node_map;
-    absl::btree_map<std::string, int32_t> m_namespace_to_object_subtree_id;
-    int32_t m_metadata_subtree_id{-1};
+    absl::btree_map<std::pair<std::string_view, NodeType>, int32_t>
+            m_namespace_and_type_to_subtree_id;
 };
 }  // namespace clp_s
 

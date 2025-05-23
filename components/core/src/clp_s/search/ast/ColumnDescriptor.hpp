@@ -2,9 +2,11 @@
 #define CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "../../ErrorCode.hpp"
@@ -280,6 +282,12 @@ public:
         m_namespace = descriptor_namespace;
     }
 
+    auto get_subtree_type() const -> std::optional<std::string> const& { return m_subtree_type; }
+
+    auto set_subtree_type(std::optional<std::string> subtree_type) {
+        m_subtree_type = std::move(subtree_type);
+    }
+
 private:
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
@@ -288,6 +296,7 @@ private:
     int32_t m_id;  // unambiguous CLJ column id this column represents. May be unset.
     bool m_unresolved_descriptors;  // true if contains wildcards
     bool m_pure_wildcard;  // true if column is single wildcard
+    std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
 
     // Constructors
     explicit ColumnDescriptor(std::vector<std::string> const&, std::string_view);
