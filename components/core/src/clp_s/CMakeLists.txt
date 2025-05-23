@@ -83,6 +83,23 @@ set(
 )
 
 set(
+        CLP_S_IO_SOURCES
+
+)
+
+set(
+        CLP_S_ARCHIVE_WRITER_SOURCES
+)
+
+set(
+        CLP_S_ARCHIVE_READER_SOURCES
+)
+
+set(
+        CLP_S_READER_UTILS_SOURCES
+)
+
+set(
         CLP_S_SOURCES
         archive_constants.hpp
         ArchiveReader.cpp
@@ -172,7 +189,7 @@ set(
         search/EvaluateTimestampIndex.hpp
         search/Output.cpp
         search/Output.hpp
-        search/OutputHandler.cpp
+        search/OutputHandler.cpp # TODO maybe don't include
         search/OutputHandler.hpp
         search/Projection.cpp
         search/Projection.hpp
@@ -227,6 +244,7 @@ target_link_libraries(
         date::date
         spdlog::spdlog
 )
+target_include_directories(clp_s_TimestampPattern PUBLIC ../)
 
 add_executable(
         clp-s
