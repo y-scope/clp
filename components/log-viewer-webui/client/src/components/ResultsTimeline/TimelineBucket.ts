@@ -11,7 +11,8 @@ const MAX_DATA_POINTS_PER_TIMELINE = 40;
  * @param timelineBuckets
  * @return
  */
-const adaptTimelineBucketsForChartJs = (timelineBuckets: TimelineBucket[]) => (
+const adaptTimelineBucketsForChartJs = (timelineBuckets: TimelineBucket[])
+: {x: number; y: number}[] => (
     timelineBuckets.map(
         ({
             timestamp,

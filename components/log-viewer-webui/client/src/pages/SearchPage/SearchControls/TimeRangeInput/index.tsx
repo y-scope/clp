@@ -7,7 +7,6 @@ import dayjs from "dayjs";
 import useSearchStore from "../../SearchState";
 import styles from "./index.module.css";
 import {
-    DEFAULT_TIME_RANGE,
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
@@ -23,12 +22,12 @@ import {
  * @return
  */
 const TimeRangeInput = () => {
-    const {timeRange, updateTimeRange, selectedOption, setSelectedOption} = useSearchStore();
+    const {timeRange, updateTimeRange, timeRangeOption, setTimeRangeOption} = useSearchStore();
 
-    const handleSelectChange = (timeRangeOption: TIME_RANGE_OPTION) => {
-        setSelectedOption(timeRangeOption);
-        if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption];
+    const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
+        setTimeRangeOption(newTimeRangeOption);
+        if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
+            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption];
             updateTimeRange(dayJsRange);
         }
     };
@@ -47,18 +46,17 @@ const TimeRangeInput = () => {
             className={styles["timeRangeInputContainer"]}
         >
             <Select
-                defaultValue={DEFAULT_TIME_RANGE}
                 listHeight={300}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
                 size={"large"}
-                value={selectedOption}
+                value={timeRangeOption}
                 variant={"filled"}
-                className={selectedOption === TIME_RANGE_OPTION.CUSTOM ?
+                className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
                     (styles["customSelected"] || "") :
                     ""}
                 onChange={handleSelectChange}/>
-            {selectedOption === TIME_RANGE_OPTION.CUSTOM && (
+            {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
                     className={styles["rangePicker"] || ""}
                     showNow={true}

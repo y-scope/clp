@@ -1,3 +1,4 @@
+import {Card} from "antd";
 import dayjs from "dayjs";
 
 import ResultsTimeline, {
@@ -67,17 +68,16 @@ const DUMMY_BUCKETS: TimelineBucket[] = [
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {updateTimeRange, setSelectedOption} = useSearchStore();
+    const {updateTimeRange, timeRange, setTimeRangeOption} = useSearchStore();
+    const [beginTime, endTime] = timeRange;
+    const timestampBeginUnixMillis = beginTime.utc().valueOf();
+    const timestampEndUnixMillis = endTime.utc().valueOf();
 
     if (0 === DUMMY_RESULTS.length) {
         return null;
     }
 
-    const timestamps = DUMMY_BUCKETS.map(({timestamp}) => timestamp);
-    const begin = Math.min(...timestamps);
-    const end = Math.max(...timestamps);
-
-    const timelineConfig = computeTimelineConfig(begin, end);
+    const timelineConfig = computeTimelineConfig(timestampBeginUnixMillis, timestampEndUnixMillis);
 
     const handleTimelineZoom = (newTimeRange: TimeRange) => {
         // Expand the time range to the granularity of buckets so if the user
@@ -90,17 +90,22 @@ const SearchResultsTimeline = () => {
 
         updateTimeRange([expandedTimeRange.begin,
             expandedTimeRange.end]);
-        setSelectedOption(TIME_RANGE_OPTION.CUSTOM);
+        setTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
 
-        // submit query
+        // eslint-disable-next-line no-warning-comments
+        // TODO: submit query.
     };
 
+    // eslint-disable-next-line no-warning-comments
+    // TODO: fix `isInputDisabled` .
     return (
-        <ResultsTimeline
-            isInputDisabled={false}
-            timelineBuckets={DUMMY_BUCKETS}
-            timelineConfig={timelineConfig}
-            onTimelineZoom={handleTimelineZoom}/>
+        <Card>
+            <ResultsTimeline
+                isInputDisabled={false}
+                timelineBuckets={DUMMY_BUCKETS}
+                timelineConfig={timelineConfig}
+                onTimelineZoom={handleTimelineZoom}/>
+        </Card>
     );
 };
 

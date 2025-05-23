@@ -1,10 +1,7 @@
 import {useEffect} from "react";
 import {Bar} from "react-chartjs-2";
 
-import {
-    Card,
-    theme,
-} from "antd";
+import {theme} from "antd";
 import {
     BarElement,
     Chart as ChartJs,
@@ -16,22 +13,26 @@ import {
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
-import Duration, {DurationUnitType} from "dayjs/plugin/duration";
 
 import {Nullable} from "../../typings/common";
 import {
     convertUtcDatetimeToSameLocalDate,
     convertZoomTimestampToUtcDatetime,
     DATETIME_FORMAT_TEMPLATE,
-    expandTimeRangeToDurationMultiple,
-    TIME_UNIT,
     TimeRange,
 } from "../../utils/datetime";
 import {
     adaptTimelineBucketsForChartJs,
-    MAX_DATA_POINTS_PER_TIMELINE,
     TimelineBucket,
 } from "./TimelineBucket";
+import {
+    ChartTooltipItemRaw,
+    TimelineConfig,
+} from "./typings";
+import {
+    computeTimelineConfig,
+    deselectAll,
+} from "./utils";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
 import "./ResultsTimeline.css";
@@ -45,84 +46,7 @@ ChartJs.register(
     zoomPlugin
 );
 
-
-interface TimelineConfig {
-    range: {begin: dayjs.Dayjs; end: dayjs.Dayjs};
-    bucketDuration: Duration.Duration;
-}
-
-
-/**
- * Computes the timestamp range and bucket duration necessary to render the bars in the timeline
- * chart.
- *
- * @param timestampBeginUnixMillis
- * @param timestampEndUnixMillis
- * @return
- */
-const computeTimelineConfig = (
-    timestampBeginUnixMillis: number,
-    timestampEndUnixMillis: number
-): TimelineConfig => {
-    const timeRangeMillis = timestampEndUnixMillis - timestampBeginUnixMillis;
-    const exactTimelineBucketMillis = timeRangeMillis / MAX_DATA_POINTS_PER_TIMELINE;
-
-    // A list of predefined bucket durations, ordered from least to greatest so that the
-    // `durationSelections.find()` below can find the smallest bucket containing
-    // `exactTimelineBucketMillis`.
-    const durationSelections = [
-        /* eslint-disable @stylistic/array-element-newline, no-magic-numbers */
-        {unit: "second", values: [1, 2, 5, 10, 15, 30]},
-        {unit: "minute", values: [1, 2, 5, 10, 15, 20, 30]},
-        {unit: "hour", values: [1, 2, 3, 4, 8, 12]},
-        {unit: "day", values: [1, 2, 5, 15]},
-        {unit: "month", values: [1, 2, 3, 4, 6]},
-        {unit: "year", values: [1]},
-        /* eslint-enable @stylistic/array-element-newline, no-magic-numbers */
-    ].flatMap(
-        ({
-            unit,
-            values,
-        }) => values.map(
-            (value) => dayjs.duration(value, unit as DurationUnitType),
-        ),
-    );
-
-    const bucketDuration =
-        durationSelections.find(
-            (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
-        ) ||
-        dayjs.duration(
-            Math.ceil(exactTimelineBucketMillis /
-                dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
-            TIME_UNIT.YEAR,
-        );
-
-    return {
-        range: expandTimeRangeToDurationMultiple(bucketDuration, {
-            begin: dayjs.utc(timestampBeginUnixMillis),
-            end: dayjs.utc(timestampEndUnixMillis),
-        }),
-        bucketDuration: bucketDuration,
-    };
-};
-
-
-/**
- * Deselects all selections within the browser viewport.
- */
-const deselectAll = () => {
-    const selection = window.getSelection();
-    if (null !== selection) {
-        selection.removeAllRanges();
-    }
-};
-
-interface ChartTooltipItemRaw {
-    x: number;
-}
-
-interface SearchResultsTimelineProps {
+interface ResultsTimelineProps {
     isInputDisabled: boolean;
     onTimelineZoom: (newTimeRange: TimeRange) => void;
     timelineBuckets: Nullable<TimelineBucket[]>;
@@ -145,7 +69,7 @@ const ResultsTimeline = ({
     onTimelineZoom,
     timelineBuckets,
     timelineConfig,
-}: SearchResultsTimelineProps) => {
+}: ResultsTimelineProps) => {
     const {token} = theme.useToken();
 
     useEffect(() => {
@@ -206,9 +130,9 @@ const ResultsTimeline = ({
                         minute: "HH:mm",
                         hour: "HH:mm",
                     },
-                    parser: (date: number) => convertUtcDatetimeToSameLocalDate(
-                        dayjs.utc(date)
-                    ),
+                    parser: (date: unknown) => convertUtcDatetimeToSameLocalDate(
+                        dayjs.utc(date as number)
+                    ).getTime(),
                 },
             },
             y: {
@@ -256,8 +180,8 @@ const ResultsTimeline = ({
                         }
                         const {min, max} = xAxis;
                         const newTimeRange = {
-                            begin: convertZoomTimestampToUtcDatetime(Number.parseInt(min, 10)),
-                            end: convertZoomTimestampToUtcDatetime(Number.parseInt(max, 10)),
+                            begin: convertZoomTimestampToUtcDatetime(min),
+                            end: convertZoomTimestampToUtcDatetime(max),
                         };
 
                         onTimelineZoom(newTimeRange);
@@ -268,18 +192,15 @@ const ResultsTimeline = ({
     };
 
     return (
-        <Card>
-            <Bar
-                className={"timeline-chart"}
-                data={data}
-                options={options}
+        <Bar
+            className={"timeline-chart"}
+            data={data}
+            options={options}
 
-                // If the user inadvertently selected the timeline, then dragging on it
-                // will drag the timeline object rather than selecting a time range within it.
-                // Thus, on mouse down, we clear any existing selections
-                // so that the following drag selects a time range.
-                onMouseDown={deselectAll}/>
-        </Card>
+            // If the user inadvertently selected the timeline, then dragging on it will drag the
+            // timeline object rather than selecting a time range within it. Thus, on mouse down, we
+            // clear any existing selections so that the following drag selects a time range.
+            onMouseDown={deselectAll}/>
     );
 };
 
