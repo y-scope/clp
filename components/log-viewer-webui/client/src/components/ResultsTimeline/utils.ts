@@ -45,6 +45,8 @@ const computeTimelineConfig = (
         ),
     );
 
+    // bucketDuration is the smallest bucket containing `exactTimelineBucketMilis`.
+    // This makes sure that the duration of timeline's time range is 1 sec, 2 sec, 5 sec and etc.
     const bucketDuration =
         durationSelections.find(
             (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),

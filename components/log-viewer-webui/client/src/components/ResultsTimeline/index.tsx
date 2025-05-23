@@ -4,6 +4,7 @@ import {Bar} from "react-chartjs-2";
 import {theme} from "antd";
 import {
     BarElement,
+    Chart,
     Chart as ChartJs,
     type ChartOptions,
     LinearScale,
@@ -97,6 +98,7 @@ const ResultsTimeline = ({
         ],
     };
 
+    Chart.defaults.font.family = token.fontFamily;
     const options: ChartOptions<"bar"> = {
         animation: {
             duration: 100,
