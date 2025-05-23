@@ -5,6 +5,7 @@ import {
 } from "react";
 
 import {MongoCursorSocket} from "./MongoCursorSocket.js";
+import {Nullable} from "../../typings/common";
 
 
 /**
@@ -15,16 +16,16 @@ import {MongoCursorSocket} from "./MongoCursorSocket.js";
  * @return Reactive array or null while the query is pending response.
  */
 const useCursor = (
-    query: () => MongoCursorSocket | null,
+    query: () => Nullable<MongoCursorSocket>,
     dependencies: DependencyList = []
-): object[]| null => {
-    const [data, setData] = useState<object[] | null >(null);
+): Nullable<object[]> => {
+    const [data, setData] = useState<Nullable<object[]>>(null);
 
 
     useEffect(() => {
         const cursor = query();
 
-        if (!cursor) {
+        if (null === cursor) {
             return;
         }
 

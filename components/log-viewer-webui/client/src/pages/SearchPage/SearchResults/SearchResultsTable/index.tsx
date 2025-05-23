@@ -21,7 +21,7 @@ const SearchResultsTable = () => {
         <Table<SearchResult>
             scroll={{ y: 400 }}
             columns={searchResultsTableColumns}
-            dataSource={searchResults as SearchResult[]}
+            dataSource={searchResults ? searchResults : []}
             pagination={false}
             rowKey={(record) => record._id.toString()}
             virtual={true}/>

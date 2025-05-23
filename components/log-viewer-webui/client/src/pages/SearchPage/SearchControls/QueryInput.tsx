@@ -17,21 +17,17 @@ const PROGRESS_INTERVAL_MILLIS = 100;
  * @return
  */
 const QueryInput = () => {
-    const queryString = useSearchStore((state) => state.queryString);
-    const updateQueryString = useSearchStore((state) => state.updateQueryString);
-    const searchUiState = useSearchStore((state) => state.searchUiState);
-    const [progress, setProgress] = useState(0);
-    const timerIntervalRef = useRef<NodeJS.Timeout>(null);
+    const {queryString, updateQueryString, searchUiState}= useSearchStore();
+    const [progress, setProgress] = useState<number>(0);
+    const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
         if (searchUiState === SEARCH_UI_STATE.QUERYING) {
             if (null === timerIntervalRef.current) {
                 timerIntervalRef.current = setInterval(() => {
                     setProgress((v) => {
-                        if (v + PROGRESS_INCREMENT >= 100) {
-                            clearInterval(timerIntervalRef.current!);
-                            timerIntervalRef.current = null;
-                            return 100;
+                        if (v + PROGRESS_INCREMENT >= 95) {
+                            return 95;
                         }
                         return v + PROGRESS_INCREMENT;
                     });
