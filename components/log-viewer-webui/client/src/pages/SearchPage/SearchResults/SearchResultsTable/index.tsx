@@ -5,7 +5,7 @@ import {
     searchResultsTableColumns,
 } from "./typings";
 
-import {useSearchResults} from "../../../SearchPage/searchResults";
+import {useSearchResults} from "../../SearchState/mongo-queries/useSearchResults";
 
 /**
  * Renders search results in a table.

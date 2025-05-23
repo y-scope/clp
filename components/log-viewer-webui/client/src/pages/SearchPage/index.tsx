@@ -2,12 +2,8 @@ import styles from "./index.module.css";
 import SearchControls from "./SearchControls";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 
-import { useResultsMetadata } from "./metadata";
-import { isSearchSignalQuerying, SEARCH_SIGNAL, SearchResultsMetadataDocument } from "@common/searchResultsMetadata.js";
-import { useEffect, useRef, useState } from "react";
-import useSearchStore, { SEARCH_STATE_DEFAULT } from "./SearchState/index";
-import { SEARCH_UI_STATE } from "./SearchState/typings";
-import { useUpdateSearchUiStateOnDone } from "./hooks/useUpdateSearchUiStateOnDone";
+import { useResultsMetadata } from "./SearchState/mongo-queries/useResultsMetadata";
+import { useUpdateUiStateWithMetadata } from "./SearchState/useUpdateStateWithMetadata";
 
 
 /**
@@ -16,10 +12,8 @@ import { useUpdateSearchUiStateOnDone } from "./hooks/useUpdateSearchUiStateOnDo
  * @return
  */
 const SearchPage = () => {
-    const store = useSearchStore();
     const resultsMetadata = useResultsMetadata();
-
-    useUpdateSearchUiStateOnDone(resultsMetadata, store.updateSearchUiState);
+    useUpdateUiStateWithMetadata(resultsMetadata);
 
     return (
         <div className={styles["searchPageContainer"]}>

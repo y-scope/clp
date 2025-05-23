@@ -1,13 +1,11 @@
 import QueryBox from "../../../components/QueryBox";
 import useSearchStore from "../SearchState/index";
-import { isSearchSignalQuerying, SearchResultsMetadataDocument } from "@common/searchResultsMetadata.js";
-import { useResultsMetadata } from "../metadata";
-
 import {
     useEffect,
     useRef,
     useState,
 } from "react";
+import { SEARCH_UI_STATE } from "../SearchState/typings";
 
 // for pseudo progress bar
 const PROGRESS_INCREMENT = 5;
@@ -21,23 +19,12 @@ const PROGRESS_INTERVAL_MILLIS = 100;
 const QueryInput = () => {
     const queryString = useSearchStore((state) => state.queryString);
     const updateQueryString = useSearchStore((state) => state.updateQueryString);
-    const resultsMetadata = useResultsMetadata();
+    const searchUiState = useSearchStore((state) => state.searchUiState);
     const [progress, setProgress] = useState(0);
     const timerIntervalRef = useRef<NodeJS.Timeout>(null);
 
-    console.log("QueryInput: resultsMetadata", resultsMetadata);
-
     useEffect(() => {
-        // I have idea to potentially just set the searchSignal here
-        // but will get back to later
-        if (Array.isArray(resultsMetadata) && resultsMetadata.length === 0) {
-            return;
-        }
-        let resultMetadata = resultsMetadata[0] as SearchResultsMetadataDocument;
-        console.log(resultsMetadata);
-        console.log("QueryInput: resultsMetadata.lastSignal", resultMetadata.lastSignal);
-        if (true === isSearchSignalQuerying(resultMetadata.lastSignal)) {
-            console.log("QueryInput: isSearchSignalQuerying");
+        if (searchUiState === SEARCH_UI_STATE.QUERYING) {
             if (null === timerIntervalRef.current) {
                 timerIntervalRef.current = setInterval(() => {
                     setProgress((v) => {
@@ -57,7 +44,7 @@ const QueryInput = () => {
             }
             setProgress(0);
         }
-    }, [resultsMetadata]);
+    }, [searchUiState]);
 
     return (
         <QueryBox

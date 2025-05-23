@@ -1,6 +1,6 @@
-import {useCursor} from "../../api/socket/useCursor";
-import MongoCollectionSocket from "../../api/socket/MongoCollectionSocket";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "./SearchState";
+import {useCursor} from "../../../../api/socket/useCursor";
+import MongoCollectionSocket from "../../../../api/socket/MongoCollectionSocket";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
 
 /**
  * Custom hook to get results metadata for the current searchJobId.

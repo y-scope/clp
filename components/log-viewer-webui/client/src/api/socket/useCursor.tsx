@@ -12,13 +12,13 @@ import {MongoCursorSocket} from "./MongoCursorSocket.js";
  *
  * @param query Function which returns a `MongoCursorSocket` instance.
  * @param dependencies Array of dependencies for the query.
- * @return Reactive array.
+ * @return Reactive array or null while the query is pending response.
  */
 const useCursor = (
     query: () => MongoCursorSocket | null,
     dependencies: DependencyList = []
-): object[] => {
-    const [data, setData] = useState<object[]>([]);
+): object[]| null => {
+    const [data, setData] = useState<object[] | null >(null);
 
 
     useEffect(() => {
