@@ -53,7 +53,8 @@ const DUMMY_BUCKETS: TimelineBucket[] = [
     },
     {
         count: 3,
-        timestamp: dayjs().subtract(1, "minutes")
+        // eslint-disable-next-line no-magic-numbers
+        timestamp: dayjs().subtract(5, "hour")
             .valueOf(),
     },
     {
@@ -68,8 +69,7 @@ const DUMMY_BUCKETS: TimelineBucket[] = [
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {updateTimeRange, timeRange, setTimeRangeOption} = useSearchStore();
-    const [beginTime, endTime] = timeRange;
+    const {updateTimeRange, timeRange: [beginTime, endTime], setTimeRangeOption} = useSearchStore();
     const timestampBeginUnixMillis = beginTime.utc().valueOf();
     const timestampEndUnixMillis = endTime.utc().valueOf();
 
@@ -93,7 +93,7 @@ const SearchResultsTimeline = () => {
         setTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
 
         // eslint-disable-next-line no-warning-comments
-        // TODO: submit query.
+        // TODO: submit query based on timelineConfig.
     };
 
     // eslint-disable-next-line no-warning-comments
