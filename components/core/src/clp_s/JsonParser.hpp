@@ -27,7 +27,6 @@
 #include "ParsedMessage.hpp"
 #include "ReaderUtils.hpp"
 #include "Schema.hpp"
-#include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
 #include "TimestampDictionaryWriter.hpp"
