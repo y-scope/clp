@@ -2,10 +2,13 @@
 #define CLP_S_INPUTCONFIG_HPP
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <variant>
 #include <vector>
+
+#include "../clp/ReaderInterface.hpp"
 
 namespace clp_s {
 // Constants used for input configuration
@@ -15,7 +18,7 @@ constexpr char cAwsSessionTokenEnvVar[] = "AWS_SESSION_TOKEN";
 
 /**
  * Enum class defining various file types.
-*/
+ */
 enum class FileType : uint8_t {
     Json = 0,
     KeyValueIr
@@ -109,6 +112,15 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  */
 [[nodiscard]] auto get_archive_id_from_path(Path const& archive_path, std::string& archive_id)
         -> bool;
+
+/**
+ * Tries to open a clp::ReaderInterface using the given Path and NetworkAuthOption.
+ * @param path
+ * @param network_auth
+ * @return the opened clp::ReaderInterface or nullptr on error
+ */
+[[nodiscard]] auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
+        -> std::shared_ptr<clp::ReaderInterface>;
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP
