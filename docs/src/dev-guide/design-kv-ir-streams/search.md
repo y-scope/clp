@@ -16,9 +16,9 @@ represented as a tree of expressions. There are three types of expressions suppo
 * **OR**: This means at least one sub-expression must be satisfied.
 * **Filters**: These are the leaves of the AST, representing key-value pairs with an associated
   operator.
-    * The key is a hierarchical path to the target value,
-    * The value is the value to match, and
-    * The operator can be an exact match or a numeric comparator. 
+  * The key is a hierarchical path to the target value,
+  * The value is the value to match, and
+  * The operator can be an exact match or a numeric comparator.
   
   Both keys and values support the use of `*` wildcards for partial matches.
 
@@ -33,7 +33,6 @@ flowchart TD;
     C --> D[b < 2]
     C --> E[NOT c: 3]
 ```
-
 
 ### Searching clp-s archives
 
@@ -83,6 +82,7 @@ applied.
 
 Currently, only three transformation passes are applied to the query AST (TODO: Ideally, we should
 have a doc to each available transformation pass in clp-s, and we can directly reference them here):
+
 * **Converting to or-of-and form**:
   This transformation rewrites the query AST so that all logical operators are expressed as an `OR`
   of `AND` clauses, using De Morgan's laws. This structure has been shown to be more efficient for
@@ -99,7 +99,8 @@ have a doc to each available transformation pass in clp-s, and we can directly r
 
 To evaluate filters, we must determine which schema-tree nodes correspond to each queried column.
 This requires constructing a mapping from each queried column to one or more schema-tree nodes,
-subject to the following:  
+subject to the following:
+
 * The path from the root to the mapped node must match the queried column's full key path.
 * The schema-tree node's type must be one of the queried column's matchable types.
 
@@ -133,6 +134,7 @@ in sequence until the final token `c` is matched.
 Since the token begins with `a` and it is not a wildcard, we start with an initial state of a
 partially-resolved-node-ID-key pair `(0,a)`, indicating that the next node to resolve is a child of
 the root node (#0) with the key `a`. The initial set of partially-resolved-node-ID-key pairs is:
+
 ```
 {(0,a)}
 ```
@@ -142,17 +144,21 @@ its key is `a`, we can resolve the first token. This leads to a new partially-re
 pair, `(1,*)`, indicating that the next token to resolve is a child of node #1 with any key.
 Similarly, `(1,c)` is also added to the set, since the wildcard token `*` can match no keys. At
 the end of this step, the set of partially-resolved-node-ID-key pairs is:
+
 ```
 {(0,a), (1,c), (1,*)}
 ```
 
 **On node #2's insertion**, it triggers two potential matches on its parent node #1: `(1,*)` and
 `(1,c)`:
-- For `(1,*)`, the wildcard token `*` can match any key, it can be resolved by node #2's key `b`,
+
+* For `(1,*)`, the wildcard token `*` can match any key, it can be resolved by node #2's key `b`,
   and thus leads to the next token on node #2 with a new partially-resolved-node-ID-key pair
   `(2,c)`.
-- For `(1,c)`, the expected key `c` doesn't match node #2's key `b`.
+* For `(1,c)`, the expected key `c` doesn't match node #2's key `b`.
+
 At the end of this step, the set of partially-resolved-node-ID-key pairs is:
+
 ```
 {(0,a), (1,c), (1,*), (2,c)}
 ```
@@ -168,6 +174,7 @@ a matchable node for the filter `a.*.c: TestString`, corresponding to the root-t
 We can construct a mapping for this filter as: `<a.*.c: TestString> -> {4}`.
 
 **On node #5's insertion**, it triggers two matches on its parent node #1: `(1,*)` and `(1,c)`:
+
 * For `(1,*)`, although the wildcard can match any key, the node #5 is of type `str`, which means it
   cannot have child nodes to resolve the subsequent token `c` after the wildcard.
   Therefore, the partially-resolved set will not be updated in this case.
@@ -177,11 +184,14 @@ We can construct a mapping for this filter as: `<a.*.c: TestString> -> {4}`.
   `<a.*.c: Testing> -> {4, 5}`.
 
 In the end, we have the following set of partially-resolved-node-ID-key pairs:
+
 ```
 {(0,a), (1,c), (1,*), (2,c)}
 ```
-We also construct the following mapping that indicates the target filter can be resolved by nodes
-#4 and #5:
+
+We also construct the following mapping that indicates the target filter can be resolved by nodes #4
+and #5:
+
 ```
 {<a.*.c: Testing> -> {4, 5}}
 ```
@@ -191,6 +201,7 @@ streaming process, as additional child nodes may be inserted under nodes #0, #1,
 leading to further resolutions in the future.
 
 In the code level, maintaining this mapping is more complex because:
+
 * Separate mappings must be kept for auto-generated and user-generated key namespaces (TODO: add a
   reference).
 * Since the query AST can contain multiple filters, each partially resolved token in the mapping
@@ -218,6 +229,7 @@ filter's target value and operator, using the constructed filter-to-node-ID mapp
 previous stage to determine which values to check.
 
 During the evaluation, each expression in the query AST may be evaluated as one of the following:
+
 * **true**: This means the sub-expression is satisfied the query logic.
 * **false**: This means the sub-expression is not satisfied by the query logic.
 * **pruned**: This means the sub-expression doesn't have the node-ID-value pairs available to
@@ -227,6 +239,7 @@ During the evaluation, each expression in the query AST may be evaluated as one 
 On the root, we only consider `true` to be a match of a query. Both `false` and `pruned` are
 considered matching failures. The difference is that `false` is logically invertible but `pruned` is
 not. For example:
+
 * If `a: 1` evaluates to `false`, then `NOT a: 1` evaluates to `true` since it is invertible.
 * If `a: 1` evaluates to `pruned`, then `NOT a: 1` should also be to `pruned` as it's not 
   invertible.
