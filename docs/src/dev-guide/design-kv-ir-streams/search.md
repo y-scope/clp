@@ -1,46 +1,76 @@
 # Search KV-IR streams
 
-In this section, we will talk about the algorithm and design for searching KV-IR stream.
+In this section, we will talk about the algorithm and design for searching KV-IR streams.
 
 ## Background
 
 To understand KV-IR search, it is important to first review how clp-s handles search queries.
+
+### The form of clp-s search queries
+
 clp-s allows users to search compressed archives using KQL (TODO: reference) queries, which consist
-of one or more filters combined with logical operators. Each filter represents a key-value pair with
-an associated operator, where:
-- the key is a hierarchical path to the target value,
-- the value is the value to match, and
-- the operator can be an exact match or a numeric comparator. 
+of one or more key-value pair filters combined with logical operators. The KQL query can be
+represented as a tree of expressions. There are three types of expressions supported in a query AST:
+
+- **AND**: This means all sub-expressions must be satisfied.
+- **OR**: This means at least one sub-expression must be satisfied.
+- **Filters**: These are the leaves of the AST, representing key-value pairs with an associated
+  operator.
+    - The key is a hierarchical path to the target value,
+    - The value is the value to match, and
+    - The operator can be an exact match or a numeric comparator. 
+  
+  Both keys and values support the use of `*` wildcards for partial matches.
+
+Note that all types of expressions are invertible, meaning that they can be applied with `NOT`.
+
+For example, a query `a > 1 AND (b < 2 or NOT c: 3)` can be represented as the following AST:
+
+```mermaid
+flowchart TD;
+    A[AND] --> B[a > 1]
+    A --> C[OR]
+    C --> D[b < 2]
+    C --> E[NOT c: 3]
+```
+
+
+### Searching clp-s archives
 
 As described in the clp-s background (TODO: reference), log event schemas are represented using a
 merged schema tree, allowing a flattened view of the tree structure in the ERT (TODO: reference).
 Thus, the queried key effectively corresponds to a column in the ERT, which we refer to as the
 queried column.
 
-Both keys and values support the use of `*` wildcards for partial matches. Internally,
-clp-s first parses the KQL query into an abstract syntax tree (AST), then
-performs several optimizations to identify matchable schemas and dictionary values. Finally, clp-s
-decompresses the relevant ERTs (TODO: reference) and searches through each record by evaluating it
-against the AST.
+Internally, clp-s first parses the KQL query into an abstract syntax tree (AST), then
+performs several optimizations to identify matchable schemas (TODO: We should either add a little
+more information to explain this, or we defer this to clp-s' doc, or just link to the paper...).
+Finally, clp-s decompresses the relevant ERTs (TODO: reference) and searches through each record by
+evaluating it against the AST.
 
-## KV-IR stream search procedure
+## Searching KV-IR streams vs. clp-s archives
 
 KV-IR stream format is very similar to clp-s. It maintains stream-level schema-trees to allow each
 dynamically structured key-value pair log events to be represented as a flattened
 schema-tree-node-ID-value pairs. Similarly, KV-IR stream search uses the same search syntax to
 accept user queries, but comparing to clp-s archive search, it has the following fundamental
-differences:
-- The merged schema-tree is not available at the start of the search; instead, the schema-tree is
-  built dynamically as the stream is read. As a result, queried keys—especially those with
-  wildcards—can only be resolved to specific schema nodes during stream deserialization.
-- The IR stream serializes log events sequentially without grouping by schema, so each log event
-  must be first sequentially deserialized and then evaluated against the search AST individually.
+limitations:
+
+- **Queries must be dynamically resolved to specific schemas during the deserialization**: The
+  merged schema-tree is not available at the start of the search; instead, the schema-tree is built
+  dynamically as the stream is read. As a result, queried keys---especially those with wildcards---
+  can only be resolved to specific schema nodes during stream deserialization.
+- **Every log event in the stream must be evaluated**: The IR stream serializes log events
+  sequentially without grouping by schema, so all log events must be first sequentially deserialized
+  and then evaluated against the search AST individually.
+
+## KV-IR stream search procedure
 
 From a high-level, searching a KV-IR stream includes the following steps:
 
-1. Query AST optimization.
-2. Resolve queried columns to schema-tree nodes.
-3. Evaluate the query against each deserialized log event.
+1. [Query AST optimization](#query-ast-optimization)
+2. [Resolve queried columns to schema-tree nodes](#resolve-queried-columns-to-schema-tree-nodes)
+3. [Evaluate the query against each deserialized log event](#evaluate-the-query-against-each-deserialized-log-event)
 
 ### Query AST optimization
 
@@ -51,8 +81,19 @@ schema-tree information is not available at the start of the search. Therefore, 
 schemaless optimizations: any transformation passes that require schema information won't be
 applied.
 
-Currently, only three transformation passes are applied to the query AST:
-TODO: briefly explain what these three passes do.
+Currently, only three transformation passes are applied to the query AST (TODO: Ideally, we should
+have a doc to each available transformation pass in clp-s, and we can directly reference them here):
+- **Converting to or-of-and form**:
+  This transformation rewrites the query AST so that all logical operators are expressed as an `OR`
+  of `AND` clauses, using De Morgan's laws. This structure has been shown to be more efficient for
+  query evaluation.
+- **Narrowing filter types**: This transformation refines each filter's set of matchable types by
+  removing any types that cannot possibly match. For example, a filter like `a: *string*` will never
+  match an integer, float, or boolean, so those types are excluded. As described in the next stage,
+  this ensures that filters are only resolved to schema-tree nodes with compatible types.
+- **Converting to exists**: This transformation rewrites filters as `EXISTS` or `NEXISTS` operators
+  whenever possible. This allows the evaluation stage to simply check for the presence or absence of
+  a value, avoiding unnecessary value comparisons.
 
 ### Resolve queried columns to schema-tree nodes
 
@@ -150,34 +191,40 @@ streaming process, as additional child nodes may be inserted under nodes #0, #1,
 leading to further resolutions in the future.
 
 In the code level, maintaining this mapping is more complex because:
-- Separate mappings must be kept for auto-generated and user-generated key namespaces.
-- Since the query AST can contain multiple filters, each token in the mapping should also indicate
-  which filter it is associated with.
-- The mapping logic must also account for queried columns that begin or end with wildcards.
+- Separate mappings must be kept for auto-generated and user-generated key namespaces (TODO: add a
+  reference).
+- Since the query AST can contain multiple filters, each partially resolved token in the mapping
+  should also indicate which filter it is associated with.
+- The mapping logic must also handle the case where queried columns begins or ends with wildcards.
+
+Despite these implementation details, the overall algorithm and resolution procedure is the same as
+described above.
 
 ### Evaluate the query against each deserialized log event
 
 For every deserialized log event, we evaluate the query against it in its node-ID-value pairs form.
 The evaluation procedure will walk through the query AST using a depth-first search (DFS) to
-evaluate the sub-expressions. There are three types of sub-expressions in the query AST:
-- **AND**: This means all sub-expressions must be satisfied.
-- **OR**: This means at least one sub-expression must be satisfied.
-- **Filters**: As described above, filters are key-value pairs with an associated operator. The
-  evaluation of a filter is performed by checking if the values in the node-ID-value pairs satisfy
-  the filter's target value and operator, by using the constructed filter-to-node-ID mapping to
-  determines which values to check.
+evaluate the expressions in a bottom-up manner.
 
-Note that all types of sub-expressions are invertible, meaning that they can be applied with `NOT`.
+Among all types of expressions, `AND` and `OR` expressions are not directly evaluated, but rather
+their child expressions are evaluated first. Early exist may be involved: if a child expression
+doesn't satisfy an `AND` expression, the `AND` will return without further evaluating the other
+children. Similarly, if a child expression satisfies an `OR` expression, the `OR` can return
+immediately.
 
-During the evaluation, each sub-expression in the query AST may be evaluated as one of the
-following:
+Filters, as the leaves of the AST, must be directly evaluated on the log event's node-ID-value pairs.
+This evaluation is performed by checking if the values in the node-ID-value pairs satisfy the
+filter's target value and operator, using the constructed filter-to-node-ID mapping from the
+previous stage to determine which values to check.
+
+During the evaluation, each expression in the query AST may be evaluated as one of the following:
 - **true**: This means the sub-expression is satisfied the query logic.
 - **false**: This means the sub-expression is not satisfied by the query logic.
 - **pruned**: This means the sub-expression doesn't have the node-ID-value pairs available to
   evaluate the query. Normally, this means one or more filters' queried columns are not resolved to
   any of the node-IDs in the log event.
 
-At the top level, we only consider `true` to be a match of a query. Both `false` and `pruned` are
+On the root, we only consider `true` to be a match of a query. Both `false` and `pruned` are
 considered matching failures. The difference is that `false` is logically invertible but `pruned` is
 not. For example:
 - If `a: 1` evaluates to `false`, then `NOT a: 1` evaluates to `true` since it is invertible.
