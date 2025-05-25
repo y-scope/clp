@@ -12,13 +12,13 @@ clp-s allows users to search compressed archives using KQL (TODO: reference) que
 of one or more key-value pair filters combined with logical operators. The KQL query can be
 represented as a tree of expressions. There are three types of expressions supported in a query AST:
 
-- **AND**: This means all sub-expressions must be satisfied.
-- **OR**: This means at least one sub-expression must be satisfied.
-- **Filters**: These are the leaves of the AST, representing key-value pairs with an associated
+* **AND**: This means all sub-expressions must be satisfied.
+* **OR**: This means at least one sub-expression must be satisfied.
+* **Filters**: These are the leaves of the AST, representing key-value pairs with an associated
   operator.
-    - The key is a hierarchical path to the target value,
-    - The value is the value to match, and
-    - The operator can be an exact match or a numeric comparator. 
+    * The key is a hierarchical path to the target value,
+    * The value is the value to match, and
+    * The operator can be an exact match or a numeric comparator. 
   
   Both keys and values support the use of `*` wildcards for partial matches.
 
@@ -56,11 +56,11 @@ schema-tree-node-ID-value pairs. Similarly, KV-IR stream search uses the same se
 accept user queries, but comparing to clp-s archive search, it has the following fundamental
 limitations:
 
-- **Queries must be dynamically resolved to specific schemas during the deserialization**: The
+* **Queries must be dynamically resolved to specific schemas during the deserialization**: The
   merged schema-tree is not available at the start of the search; instead, the schema-tree is built
   dynamically as the stream is read. As a result, queried keys---especially those with wildcards---
   can only be resolved to specific schema nodes during stream deserialization.
-- **Every log event in the stream must be evaluated**: The IR stream serializes log events
+* **Every log event in the stream must be evaluated**: The IR stream serializes log events
   sequentially without grouping by schema, so all log events must be first sequentially deserialized
   and then evaluated against the search AST individually.
 
@@ -83,15 +83,15 @@ applied.
 
 Currently, only three transformation passes are applied to the query AST (TODO: Ideally, we should
 have a doc to each available transformation pass in clp-s, and we can directly reference them here):
-- **Converting to or-of-and form**:
+* **Converting to or-of-and form**:
   This transformation rewrites the query AST so that all logical operators are expressed as an `OR`
   of `AND` clauses, using De Morgan's laws. This structure has been shown to be more efficient for
   query evaluation.
-- **Narrowing filter types**: This transformation refines each filter's set of matchable types by
+* **Narrowing filter types**: This transformation refines each filter's set of matchable types by
   removing any types that cannot possibly match. For example, a filter like `a: *string*` will never
   match an integer, float, or boolean, so those types are excluded. As described in the next stage,
   this ensures that filters are only resolved to schema-tree nodes with compatible types.
-- **Converting to exists**: This transformation rewrites filters as `EXISTS` or `NEXISTS` operators
+* **Converting to exists**: This transformation rewrites filters as `EXISTS` or `NEXISTS` operators
   whenever possible. This allows the evaluation stage to simply check for the presence or absence of
   a value, avoiding unnecessary value comparisons.
 
@@ -100,8 +100,8 @@ have a doc to each available transformation pass in clp-s, and we can directly r
 To evaluate filters, we must determine which schema-tree nodes correspond to each queried column.
 This requires constructing a mapping from each queried column to one or more schema-tree nodes,
 subject to the following:  
-- The path from the root to the mapped node must match the queried column's full key path.
-- The schema-tree node's type must be one of the queried column's matchable types.
+* The path from the root to the mapped node must match the queried column's full key path.
+* The schema-tree node's type must be one of the queried column's matchable types.
 
 Unlike clp-s, where the schema is known at the start of the search, the schema-tree in KV-IR streams
 is built dynamically as the stream is deserialized. As a result, the mapping from queried columns to
@@ -109,10 +109,10 @@ schema-tree nodes must also be constructed incrementally. This mapping is built 
 fashion, mirroring the construction of the schema-tree itself. There are two types of nodes to track
 when building this mapping:
 
-- **Partially resolved nodes**: Nodes whose paths match the initial segments of a queried column but
+* **Partially resolved nodes**: Nodes whose paths match the initial segments of a queried column but
   are not fully resolved. These nodes are used for further matching as their child nodes are
   inserted.
-- **Resolved nodes**: Nodes where the full key path and type match the queried column. These nodes
+* **Resolved nodes**: Nodes where the full key path and type match the queried column. These nodes
   are used to evaluate filters against log events.
 
 To illustrate incremental mapping, consider a query filter `a.*.c: TestString` and the following
@@ -168,10 +168,10 @@ a matchable node for the filter `a.*.c: TestString`, corresponding to the root-t
 We can construct a mapping for this filter as: `<a.*.c: TestString> -> {4}`.
 
 **On node #5's insertion**, it triggers two matches on its parent node #1: `(1,*)` and `(1,c)`:
-- For `(1,*)`, although the wildcard can match any key, the node #5 is of type `str`, which means it
+* For `(1,*)`, although the wildcard can match any key, the node #5 is of type `str`, which means it
   cannot have child nodes to resolve the subsequent token `c` after the wildcard.
   Therefore, the partially-resolved set will not be updated in this case.
-- For `(1,c)`, the expected key is matched by `c`, the queried column is fully resolved by the
+* For `(1,c)`, the expected key is matched by `c`, the queried column is fully resolved by the
   root-to-node path `a.c`. The type of node #5 is string, which matches the filter's type.
   Therefore, we update the mapping for the filter `a.*.c: Testing` to include node #5, resulting in
   `<a.*.c: Testing> -> {4, 5}`.
@@ -191,11 +191,11 @@ streaming process, as additional child nodes may be inserted under nodes #0, #1,
 leading to further resolutions in the future.
 
 In the code level, maintaining this mapping is more complex because:
-- Separate mappings must be kept for auto-generated and user-generated key namespaces (TODO: add a
+* Separate mappings must be kept for auto-generated and user-generated key namespaces (TODO: add a
   reference).
-- Since the query AST can contain multiple filters, each partially resolved token in the mapping
+* Since the query AST can contain multiple filters, each partially resolved token in the mapping
   should also indicate which filter it is associated with.
-- The mapping logic must also handle the case where queried columns begins or ends with wildcards.
+* The mapping logic must also handle the case where queried columns begins or ends with wildcards.
 
 Despite these implementation details, the overall algorithm and resolution procedure is the same as
 described above.
@@ -218,15 +218,15 @@ filter's target value and operator, using the constructed filter-to-node-ID mapp
 previous stage to determine which values to check.
 
 During the evaluation, each expression in the query AST may be evaluated as one of the following:
-- **true**: This means the sub-expression is satisfied the query logic.
-- **false**: This means the sub-expression is not satisfied by the query logic.
-- **pruned**: This means the sub-expression doesn't have the node-ID-value pairs available to
+* **true**: This means the sub-expression is satisfied the query logic.
+* **false**: This means the sub-expression is not satisfied by the query logic.
+* **pruned**: This means the sub-expression doesn't have the node-ID-value pairs available to
   evaluate the query. Normally, this means one or more filters' queried columns are not resolved to
   any of the node-IDs in the log event.
 
 On the root, we only consider `true` to be a match of a query. Both `false` and `pruned` are
 considered matching failures. The difference is that `false` is logically invertible but `pruned` is
 not. For example:
-- If `a: 1` evaluates to `false`, then `NOT a: 1` evaluates to `true` since it is invertible.
-- If `a: 1` evaluates to `pruned`, then `NOT a: 1` should also be to `pruned` as it's not 
+* If `a: 1` evaluates to `false`, then `NOT a: 1` evaluates to `true` since it is invertible.
+* If `a: 1` evaluates to `pruned`, then `NOT a: 1` should also be to `pruned` as it's not 
   invertible.
