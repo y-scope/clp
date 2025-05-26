@@ -1,10 +1,7 @@
 import dayjs from "dayjs";
 import {DurationUnitType} from "dayjs/plugin/duration";
 
-import {
-    expandTimeRangeToDurationMultiple,
-    TIME_UNIT,
-} from "./datetime";
+import {expandTimeRangeToDurationMultiple} from "./datetime";
 import {
     MAX_DATA_POINTS_PER_TIMELINE,
     TimelineBucket,
@@ -68,17 +65,17 @@ const computeTimelineConfig = (
         ),
     );
 
-    // bucketDuration is the smallest bucket containing `exactTimelineBucketMilis`.
-    // This makes sure that the duration of timeline's time range is 1 sec, 2 sec, 5 sec and etc.
     const bucketDuration =
-        durationSelections.find(
-            (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
-        ) ||
-        dayjs.duration(
-            Math.ceil(exactTimelineBucketMillis /
-                dayjs.duration(1, TIME_UNIT.YEAR).asMilliseconds()),
-            TIME_UNIT.YEAR,
-        );
+      durationSelections.find(
+          (duration) => (exactTimelineBucketMillis <= duration.asMilliseconds()),
+      ) ||
+
+      // If the timeline bucket spans more than 1 year, calculate a custom multi-year duration.
+      dayjs.duration(
+          Math.ceil(exactTimelineBucketMillis /
+              dayjs.duration(1, "year").asMilliseconds()),
+          "year",
+      );
 
     return {
         range: expandTimeRangeToDurationMultiple(bucketDuration, {

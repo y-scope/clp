@@ -19,22 +19,22 @@ import {Nullable} from "../../typings/common";
 import {
     convertUtcDatetimeToSameLocalDate,
     convertZoomTimestampToUtcDatetime,
-    DATETIME_FORMAT_TEMPLATE,
-    TimeRange,
 } from "./datetime";
 import {
-    ChartTooltipItemRaw,
+    DATETIME_FORMAT_TEMPLATE,
+    TimeRange,
+} from "./datetime/typings";
+import styles from "./index.module.css";
+import {
     TimelineBucket,
     TimelineConfig,
 } from "./typings";
 import {
     adaptTimelineBucketsForChartJs,
-    computeTimelineConfig,
     deselectAll,
 } from "./utils";
 
 import "chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.esm";
-import "./index.module.css";
 
 
 ChartJs.register(
@@ -114,7 +114,6 @@ const ResultsTimeline = ({
 
                 grid: {
                     drawOnChartArea: false,
-                    color: "black",
                     drawTicks: true,
                     offset: true,
                 },
@@ -136,7 +135,10 @@ const ResultsTimeline = ({
                 },
             },
             y: {
+                suggestedMax: 4,
+                type: "linear",
                 ticks: {
+                    precision: 0,
                     autoSkip: true,
                     autoSkipPadding: 10,
                 },
@@ -151,7 +153,7 @@ const ResultsTimeline = ({
                         if ("undefined" === typeof firstTooltipItem) {
                             return "";
                         }
-                        const {x} = firstTooltipItem.raw as ChartTooltipItemRaw;
+                        const {x} = firstTooltipItem.raw as {x: number};
                         const bucketBeginTime = dayjs.utc(x);
                         const bucketEndTime = bucketBeginTime
                             .add(timelineConfig.bucketDuration);
@@ -193,7 +195,7 @@ const ResultsTimeline = ({
 
     return (
         <Bar
-            className={"timeline-chart"}
+            className={styles["timelineChart"]}
             data={data}
             options={options}
 
@@ -209,4 +211,3 @@ export type {
     TimelineConfig,
 };
 export default ResultsTimeline;
-export {computeTimelineConfig};

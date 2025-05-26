@@ -1,6 +1,5 @@
-.timeline-chart {
+.timelineChart {
   cursor: var(--timeline-chart-cursor, crosshair);
   height: 150px;
   max-height: 150px;
-  border-bottom: 1px solid #aeaeae;
 }

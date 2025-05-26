@@ -10,13 +10,6 @@ interface TimelineConfig {
     bucketDuration: Duration.Duration;
 }
 
-/**
- * The type of TooltipItem.raw in chart.js.
- */
-interface ChartTooltipItemRaw {
-    x: number;
-}
-
 
 /**
  * An object that represents `count` log events at `timestamp`.
@@ -32,7 +25,7 @@ interface TimelineBucket {
 const MAX_DATA_POINTS_PER_TIMELINE = 40;
 
 export type {
-    ChartTooltipItemRaw, TimelineBucket,
+    TimelineBucket,
     TimelineConfig,
 };
 export {MAX_DATA_POINTS_PER_TIMELINE};

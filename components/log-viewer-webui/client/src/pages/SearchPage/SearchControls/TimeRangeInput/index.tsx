@@ -22,10 +22,15 @@ import {
  * @return
  */
 const TimeRangeInput = () => {
-    const {timeRange, updateTimeRange, timeRangeOption, setTimeRangeOption} = useSearchStore();
+    const {
+        timeRange,
+        updateTimeRange,
+        timeRangeOption,
+        updateTimeRangeOption,
+    } = useSearchStore();
 
     const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
-        setTimeRangeOption(newTimeRangeOption);
+        updateTimeRangeOption(newTimeRangeOption);
         if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
             const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption];
             updateTimeRange(dayJsRange);

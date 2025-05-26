@@ -1,14 +1,10 @@
 import {Card} from "antd";
 import dayjs from "dayjs";
 
-import ResultsTimeline, {
-    computeTimelineConfig,
-    TimelineBucket,
-} from "../../../components/ResultsTimeline";
-import {
-    expandTimeRangeToDurationMultiple,
-    TimeRange,
-} from "../../../components/ResultsTimeline/datetime";
+import ResultsTimeline, {TimelineBucket} from "../../../components/ResultsTimeline";
+import {expandTimeRangeToDurationMultiple} from "../../../components/ResultsTimeline/datetime";
+import {TimeRange} from "../../../components/ResultsTimeline/datetime/typings";
+import {computeTimelineConfig} from "../../../components/ResultsTimeline/utils";
 import {TIME_RANGE_OPTION} from "../SearchControls/TimeRangeInput/utils";
 import useSearchStore from "../SearchState";
 import {SearchResult} from "./SearchResultsTable/typings";
@@ -48,13 +44,13 @@ const DUMMY_RESULTS: SearchResult[] = [
 const DUMMY_BUCKETS: TimelineBucket[] = [
     {
         count: 2,
-        timestamp: dayjs().subtract(1, "hour")
+        timestamp: dayjs().subtract(10, "day")
             .valueOf(),
     },
     {
         count: 3,
         // eslint-disable-next-line no-magic-numbers
-        timestamp: dayjs().subtract(5, "hour")
+        timestamp: dayjs().subtract(5, "day")
             .valueOf(),
     },
     {
@@ -69,7 +65,11 @@ const DUMMY_BUCKETS: TimelineBucket[] = [
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {updateTimeRange, timeRange: [beginTime, endTime], setTimeRangeOption} = useSearchStore();
+    const {
+        updateTimeRange,
+        timeRange: [beginTime, endTime],
+        updateTimeRangeOption,
+    } = useSearchStore();
     const timestampBeginUnixMillis = beginTime.utc().valueOf();
     const timestampEndUnixMillis = endTime.utc().valueOf();
 
@@ -78,6 +78,7 @@ const SearchResultsTimeline = () => {
     }
 
     const timelineConfig = computeTimelineConfig(timestampBeginUnixMillis, timestampEndUnixMillis);
+    console.log(timelineConfig.bucketDuration);
 
     const handleTimelineZoom = (newTimeRange: TimeRange) => {
         // Expand the time range to the granularity of buckets so if the user
@@ -90,7 +91,7 @@ const SearchResultsTimeline = () => {
 
         updateTimeRange([expandedTimeRange.begin,
             expandedTimeRange.end]);
-        setTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
+        updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
 
         // eslint-disable-next-line no-warning-comments
         // TODO: submit query based on timelineConfig.
