@@ -83,6 +83,10 @@ void ColumnDescriptor::print() const {
     }
     os << ">(";
 
+    if (m_subtree_type.has_value()) {
+        os << "subtree_type=\"" << m_subtree_type.value() << "\", ";
+    }
+    os << "namespace=\"" << m_namespace << "\", tokens=[";
     for (auto it = m_descriptors.begin(); it != m_descriptors.end();) {
         os << "\"" << (*it).get_token() << "\"";
 
@@ -91,7 +95,7 @@ void ColumnDescriptor::print() const {
             os << ", ";
         }
     }
-    os << ")";
+    os << "])";
 }
 
 void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {
