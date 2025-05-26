@@ -33,23 +33,6 @@ const EslintConfig = [
                     ],
                 },
             ],
-            // eslint-disable-next-line no-warning-comments
-            // TODO: update eslint-config-yscope
-            "@stylistic/max-len": [
-                "warn",
-                {
-                    code: 100,
-                    comments: 100,
-                    ignoreComments: false,
-                    ignorePattern: "^(import\\s.+\\sfrom\\s.+|\\} from)",
-                    ignoreRegExpLiterals: true,
-                    ignoreStrings: false,
-                    ignoreTemplateLiterals: false,
-                    ignoreTrailingComments: false,
-                    ignoreUrls: true,
-                    tabWidth: 4,
-                },
-            ],
         },
     },
     {

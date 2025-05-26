@@ -27,6 +27,4 @@ interface SearchResultsMetadataDocument {
 }
 
 export type {SearchResultsMetadataDocument};
-export {
-    SEARCH_SIGNAL
-};
+export { SEARCH_SIGNAL };

@@ -11,7 +11,7 @@ import {StatusCodes} from "http-status-codes";
 import settings from "../../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
-    CreateQueryJobSchema,
+    QueryJobCreationSchema,
     QueryJobSchema,
 } from "../../../schemas/search.js";
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
@@ -50,7 +50,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         "/query",
         {
             schema: {
-                body: CreateQueryJobSchema,
+                body: QueryJobCreationSchema,
                 response: {
                     [StatusCodes.CREATED]: QueryJobSchema,
                     [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
@@ -122,7 +122,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 mongoDb: mongoDb,
 
             });
-
             reply.code(StatusCodes.CREATED);
 
             return {searchJobId, aggregationJobId};

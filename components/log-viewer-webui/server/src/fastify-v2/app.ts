@@ -73,7 +73,7 @@ export default async function serviceApp (
         );
 
         if ("undefined" !== typeof err.statusCode &&
-            StatusCodes.INTERNAL_SERVER_ERROR as number > err.statusCode
+            Number(StatusCodes.INTERNAL_SERVER_ERROR) > err.statusCode
         ) {
             reply.code(err.statusCode);
 
