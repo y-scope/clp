@@ -19,7 +19,7 @@ const submitQuery = ({
     ignoreCase,
     timeRangeBucketSizeMillis,
     queryString,
-}: QueryArgs): Promise<QueryResponse> => {
+}: QueryArgs): Promise<AxiosResponse<QueryResponse>> => {
     const payload = {
         timestampBegin,
         timestampEnd,
@@ -30,8 +30,7 @@ const submitQuery = ({
 
     console.log("Submitting query with payload:", payload);
 
-    return axios.post<QueryResponse>("/api/search/query", payload)
-        .then(response => response.data);
+    return axios.post<QueryResponse>("/api/search/query", payload);
 };
 
 export { submitQuery };

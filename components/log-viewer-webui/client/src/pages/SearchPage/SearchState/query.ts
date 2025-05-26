@@ -21,8 +21,8 @@ const handleClearResults = () => {
         throw new Error("No searchJobId or aggregationJobId to clear.");
     }
 
-    //store.updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
-    //store.updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
+    store.updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
+    store.updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
 
     clearQueryResults({
         searchJobId,
@@ -72,8 +72,8 @@ const handleQuerySubmit = () => {
 
     submitQuery(args)
         .then((result) => {
-            store.updateSearchJobId(result.searchJobId);
-            store.updateAggregationJobId(result.aggregationJobId);
+            store.updateSearchJobId(result.data.searchJobId);
+            store.updateAggregationJobId(result.data.aggregationJobId);
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
             console.log("Query ID Returned", result);
         })

@@ -26,6 +26,7 @@ const useCursor = (
         const cursor = query();
 
         if (null === cursor) {
+            setData(null);
             return;
         }
 
