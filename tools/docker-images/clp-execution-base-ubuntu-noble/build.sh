@@ -21,6 +21,7 @@ else
     exit 1
 fi
 
+# shellcheck disable=SC2206
 build_cmd=(
     docker build
     --tag clp-execution-${arch_name}-ubuntu-noble:dev
