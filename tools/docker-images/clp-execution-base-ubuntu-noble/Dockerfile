@@ -3,7 +3,7 @@ FROM ubuntu:noble AS base
 WORKDIR /root
 
 RUN mkdir -p ./tools/docker-images/clp-execution-base-ubuntu-noble
-ADD ./tools/docker-images/clp-execution-base-ubuntu-noble/setup-scripts ./tools/docker-images/clp-execution-base-ubuntu-noble/setup-scripts
+COPY ./tools/docker-images/clp-execution-base-ubuntu-noble/setup-scripts ./tools/docker-images/clp-execution-base-ubuntu-noble/setup-scripts
 
 RUN ./tools/docker-images/clp-execution-base-ubuntu-noble/setup-scripts/install-prebuilt-packages.sh
 
