@@ -165,9 +165,9 @@ void search(
                 archive_reader->get_range_index(),
                 false == ignore_case
         };
-        expr = metadata_filter_pass.run(expr);
-        REQUIRE(nullptr != expr);
-        REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(expr));
+        archive_expr = metadata_filter_pass.run(archive_expr);
+        REQUIRE(nullptr != archive_expr);
+        REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr));
 
         auto timestamp_dict = archive_reader->get_timestamp_dictionary();
         clp_s::search::EvaluateTimestampIndex timestamp_index_pass(timestamp_dict);
