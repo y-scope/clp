@@ -1,21 +1,12 @@
-<<<<<<< HEAD
-=======
 import {setTimeout} from "node:timers/promises";
 
->>>>>>> main
 import type {MySQLPromisePool} from "@fastify/mysql";
 import {encode} from "@msgpack/msgpack";
 import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
-<<<<<<< HEAD
-import {setTimeout} from "timers/promises";
-
-import settings from "../../../../../../settings.json" with { type: "json" };
-=======
 
 import settings from "../../../../../../settings.json" with {type: "json"};
->>>>>>> main
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
@@ -56,12 +47,6 @@ class QueryJobsDbManager {
      */
     async submitSearchJob (searchConfig: object): Promise<number> {
         const [queryInsertResults] = await this.#sqlDbConnPool.query<ResultSetHeader>(
-<<<<<<< HEAD
-            `INSERT INTO ${settings.SqlDbQueryJobsTableName}
-           (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG},
-            ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
-       VALUES (?, ?)`,
-=======
             `
             INSERT INTO ${settings.SqlDbQueryJobsTableName} (
                ${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG},
@@ -69,7 +54,6 @@ class QueryJobsDbManager {
             )
             VALUES (?, ?)
             `,
->>>>>>> main
             [
                 Buffer.from(encode(searchConfig)),
                 QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION,
@@ -98,11 +82,7 @@ class QueryJobsDbManager {
             },
         };
 
-<<<<<<< HEAD
-        return await this.submitSearchJob(searchAggregationConfig);
-=======
         return this.submitSearchJob(searchAggregationConfig);
->>>>>>> main
     }
 
     /**

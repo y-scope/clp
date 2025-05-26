@@ -27,7 +27,6 @@ import {
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const {
         QueryJobsDbManager,
-        SearchJobCollectionsManager,
         SearchResultsMetadataCollection,
     } = fastify;
 
