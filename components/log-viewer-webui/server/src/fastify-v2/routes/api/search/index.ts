@@ -57,7 +57,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         },
         async (request, reply) => {
             const {
-
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
@@ -91,7 +90,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 return reply.internalServerError(errMsg);
             }
 
-            // Should not throw an error if the collection already exists.
             await mongoDb.createCollection(searchJobId.toString());
             await mongoDb.createCollection(aggregationJobId.toString());
 

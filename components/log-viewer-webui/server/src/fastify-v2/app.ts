@@ -14,7 +14,6 @@ import FastifyV1App from "../app.js";
 
 const RATE_LIMIT_MAX_REQUESTS = 3;
 const RATE_LIMIT_TIME_WINDOW_MS = 500;
-const IGNORED_FILES_REGEX = /^.*(?:utils|typings)\.js$/;
 
 /**
  * Registers all plugins and routes.
@@ -48,7 +47,6 @@ export default async function serviceApp (
     // Loads all application plugins.
     fastify.register(fastifyAutoload, {
         dir: path.join(import.meta.dirname, "plugins/app"),
-        ignorePattern: IGNORED_FILES_REGEX,
         options: {...opts},
     });
 

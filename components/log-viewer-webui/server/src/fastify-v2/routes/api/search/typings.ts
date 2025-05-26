@@ -5,6 +5,7 @@ import {
 
 import {
     SEARCH_SIGNAL,
+    SearchResultsMetadataDocument,
 } from "@common/searchResultsMetadata.js";
 
 import type {
@@ -12,30 +13,17 @@ import type {
     Db,
 } from "mongodb";
 
-import { Nullable } from "../../../../typings/common.js";
-
-/**
- * MongoDB document for search results metadata. `numTotalResults` is optional
- * since it is only set when the search job is completed.
- */
-interface SearchResultsMetadataDocument {
-    _id: string;
-    errorMsg: Nullable<string>;
-    lastSignal: SEARCH_SIGNAL;
-    numTotalResults?: number;
-}
-
 /**
  * The maximum number of results to retrieve for a search.
  */
 const SEARCH_MAX_NUM_RESULTS = 1000;
 
 type UpdateSearchResultsMetaProps = {
+    fields: Partial<SearchResultsMetadataDocument>;
     jobId: number;
     lastSignal: SEARCH_SIGNAL;
-    searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
     logger: FastifyBaseLogger;
-    fields: Partial<SearchResultsMetadataDocument>;
+    searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
 };
 
 type UpdateSearchSignalWhenJobsFinishProps = {
