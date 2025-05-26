@@ -13,8 +13,6 @@
 
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
-#include "ReaderUtils.hpp"
-#include "SchemaTree.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
