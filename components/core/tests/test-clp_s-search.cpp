@@ -217,7 +217,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
                      get_test_input_local_path()
              ),
              {0}},
-            {R"aa(idx: 0 AND NOT $filename: "clp string")aa", {0}},
+            {R"aa(idx: 0 AND NOT $_filename: "clp string")aa", {0}},
+            {R"aa(idx: 0 AND NOT $*._filename.*: "clp string")aa", {0}},
             {R"aa($_filename: file OR $_file_split_number: 1 OR $_archive_creator_id > 0)aa", {}}
     };
     auto structurize_arrays = GENERATE(true, false);
@@ -234,6 +235,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
     ));
 
     for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
         REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 
