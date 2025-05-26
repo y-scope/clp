@@ -40,8 +40,8 @@ target_link_libraries(
         absl::flat_hash_map
         clp_s::ArchiveReader
         clp_s::search::ast
+        simdjson::simdjson
         PRIVATE
         spdlog::spdlog
-        simdjson::simdjson
 )
 target_include_directories(clp_s_search PUBLIC ../../)
