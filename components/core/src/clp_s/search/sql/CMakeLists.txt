@@ -1,10 +1,3 @@
-#ANTLR_TARGET(
-#        SqlParser
-#        Sql.g4
-#        LEXER PARSER VISITOR
-#        PACKAGE sql
-#)
-
 set(ANTLR_GENERATED_SQL_CODE_DIR antlr_generated)
 
 set(ANTLR_GENERATED_SQL_CODE

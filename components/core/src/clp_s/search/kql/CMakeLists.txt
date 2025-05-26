@@ -1,10 +1,3 @@
-#ANTLR_TARGET(
-#        KqlParser
-#        Kql.g4
-#        LEXER PARSER VISITOR
-#        PACKAGE kql
-#)
-
 set(ANTLR_GENERATED_KQL_CODE_DIR antlr_generated)
 
 set(ANTLR_GENERATED_KQL_CODE

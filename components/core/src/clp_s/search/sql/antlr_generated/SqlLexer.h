@@ -7,7 +7,7 @@
 #include "antlr4-runtime.h"
 
 
-namespace sql {
+namespace clp_s::search::sql {
 
 
 class  SqlLexer : public antlr4::Lexer {
@@ -48,4 +48,4 @@ private:
 
 };
 
-}  // namespace sql
+}  // namespace clp_s::search::sql

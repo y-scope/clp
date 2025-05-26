@@ -8,7 +8,7 @@
 #include "SqlParser.h"
 
 
-namespace sql {
+namespace clp_s::search::sql {
 
 /**
  * This class defines an abstract visitor for a parse tree
@@ -25,4 +25,4 @@ public:
 
 };
 
-}  // namespace sql
+}  // namespace clp_s::search::sql

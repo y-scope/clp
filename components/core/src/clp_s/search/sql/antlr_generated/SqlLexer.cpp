@@ -7,7 +7,7 @@
 
 using namespace antlr4;
 
-using namespace sql;
+using namespace clp_s::search::sql;
 
 
 using namespace antlr4;

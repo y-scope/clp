@@ -8,7 +8,7 @@
 #include "SqlVisitor.h"
 
 
-namespace sql {
+namespace clp_s::search::sql {
 
 /**
  * This class provides an empty implementation of SqlVisitor, which can be
@@ -24,4 +24,4 @@ public:
 
 };
 
-}  // namespace sql
+}  // namespace clp_s::search::sql

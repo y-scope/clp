@@ -8,7 +8,7 @@
 #include "KqlParser.h"
 
 
-namespace kql {
+namespace clp_s::search::kql {
 
 /**
  * This class defines an abstract visitor for a parse tree
@@ -47,4 +47,4 @@ public:
 
 };
 
-}  // namespace kql
+}  // namespace clp_s::search::kql

@@ -8,7 +8,7 @@
 
 
 using namespace antlrcpp;
-using namespace sql;
+using namespace clp_s::search::sql;
 
 using namespace antlr4;
 

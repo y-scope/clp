@@ -5,5 +5,5 @@
 #include "SqlVisitor.h"
 
 
-using namespace sql;
+using namespace clp_s::search::sql;
 

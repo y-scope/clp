@@ -5,5 +5,5 @@
 #include "KqlVisitor.h"
 
 
-using namespace kql;
+using namespace clp_s::search::kql;
 

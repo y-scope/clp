@@ -7,7 +7,7 @@
 #include "antlr4-runtime.h"
 
 
-namespace sql {
+namespace clp_s::search::sql {
 
 
 class  SqlParser : public antlr4::Parser {
@@ -61,4 +61,4 @@ public:
 private:
 };
 
-}  // namespace sql
+}  // namespace clp_s::search::sql

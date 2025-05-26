@@ -8,7 +8,7 @@
 #include "KqlVisitor.h"
 
 
-namespace kql {
+namespace clp_s::search::kql {
 
 /**
  * This class provides an empty implementation of KqlVisitor, which can be
@@ -68,4 +68,4 @@ public:
 
 };
 
-}  // namespace kql
+}  // namespace clp_s::search::kql

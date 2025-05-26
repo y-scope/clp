@@ -26,7 +26,6 @@
 #include "KqlParser.h"
 
 using namespace antlr4;
-using namespace kql;
 using clp_s::search::antlr_common::ErrorListener;
 
 using clp_s::search::ast::AndExpr;

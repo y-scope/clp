@@ -15,9 +15,6 @@
 using antlr4::ANTLRInputStream;
 using antlr4::CommonTokenStream;
 using clp_s::search::antlr_common::ErrorListener;
-using sql::SqlBaseVisitor;
-using sql::SqlLexer;
-using sql::SqlParser;
 
 using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;

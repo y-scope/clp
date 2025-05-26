@@ -87,17 +87,27 @@ tasks:
           STORAGE_ENGINE: "clp"
 
   clp-s-generate-antlr:
+    preconditions:
+      - sh: which curl >/dev/null
+        msg: "curl is required to download the ANTLR JAR"
+      - sh: which java >/dev/null
+        msg: "Java is required for ANTLR code generation"
     sources:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
+    generates:
+      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/**/*"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/**/*"
     cmds:
-      - "curl -o /tmp/antlr-4.13.1-complete.jar https://www.antlr.org/download/antlr-4.13.1-complete.jar"
+      - |
+        curl -o /tmp/antlr-4.13.1-complete.jar \
+        https://www.antlr.org/download/antlr-4.13.1-complete.jar
       - |
         java -jar /tmp/antlr-4.13.1-complete.jar \
           -Dlanguage=Cpp \
           -no-listener \
           -visitor \
-          -package kql \
+          -package clp_s::search::kql \
           -o {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated \
           {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4
       - |
@@ -105,7 +115,7 @@ tasks:
           -Dlanguage=Cpp \
           -no-listener \
           -visitor \
-          -package sql \
+          -package clp_s::search::sql \
           -o {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated \
           {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4
       - "rm -f /tmp/antlr-4.13.1-complete.jar"

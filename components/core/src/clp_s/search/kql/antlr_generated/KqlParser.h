@@ -7,7 +7,7 @@
 #include "antlr4-runtime.h"
 
 
-namespace kql {
+namespace clp_s::search::kql {
 
 
 class  KqlParser : public antlr4::Parser {
@@ -249,4 +249,4 @@ public:
 private:
 };
 
-}  // namespace kql
+}  // namespace clp_s::search::kql
