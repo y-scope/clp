@@ -4,6 +4,8 @@ import { submitQuery } from "../../../api/search/querySubmit";
 import { cancelQuery } from "../../../api/search/queryCancel";
 import { SEARCH_UI_STATE } from "./typings";
 
+import { computeTimelineConfig } from "./datetime";
+
 const handleClearResults = () => {
     const store = useSearchStore.getState();
 
@@ -53,12 +55,18 @@ const handleQuerySubmit = () => {
 
     handleClearResults();
 
+    const newTimelineConfig = computeTimelineConfig(
+        store.timeRange[0].valueOf(),
+        store.timeRange[1].valueOf(),
+    );
+
+    //Fix time range later
     const args: QueryArgs = {
         queryString: store.queryString,
         timestampBegin: store.timeRange[0].valueOf(),
         timestampEnd: store.timeRange[1].valueOf(),
         ignoreCase: false,
-        timeRangeBucketSizeMillis: 150,
+        timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
     };
 
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_SUBMITTED);

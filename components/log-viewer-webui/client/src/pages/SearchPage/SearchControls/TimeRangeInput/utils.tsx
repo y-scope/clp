@@ -12,10 +12,11 @@ enum TIME_RANGE_OPTION {
     LAST_7_DAYS = "Last 7 Days",
     LAST_30_DAYS = "Last 30 Days",
     MONTH_TO_DATE = "Month to Date",
+    ALL_TIME = "All Time",
     CUSTOM = "Custom",
 }
 
-const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.TODAY;
+const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.ALL_TIME;
 
 /* eslint-disable no-magic-numbers */
 const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs.Dayjs]> = {
@@ -33,7 +34,8 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs
         dayjs()],
     [TIME_RANGE_OPTION.MONTH_TO_DATE]: [dayjs().startOf("month"),
         dayjs()],
-
+    [TIME_RANGE_OPTION.ALL_TIME]: [dayjs(0),
+        dayjs().add(1, 'year')],
     // Custom option is just a placeholder for typing purposes, its DayJs values should not
     // be used.
     [TIME_RANGE_OPTION.CUSTOM]: [dayjs(),

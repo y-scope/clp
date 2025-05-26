@@ -26,8 +26,8 @@ const QueryInput = () => {
             if (null === timerIntervalRef.current) {
                 timerIntervalRef.current = setInterval(() => {
                     setProgress((v) => {
-                        if (v + PROGRESS_INCREMENT >= 95) {
-                            return 95;
+                        if (v + PROGRESS_INCREMENT >= 100) {
+                            return 100;
                         }
                         return v + PROGRESS_INCREMENT;
                     });

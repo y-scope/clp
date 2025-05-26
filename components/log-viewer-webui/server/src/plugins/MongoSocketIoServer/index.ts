@@ -208,7 +208,7 @@ class MongoSocketIoServer {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
             watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#fastify.log.info(`Created MongoDb collection:${collectionName}.`);
+            this.#fastify.log.info(`Initialize Mongo watcher collection:${collectionName}.`);
             this.#collections.set(collectionName, watcherCollection);
         }
 
