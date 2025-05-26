@@ -19,8 +19,8 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
 
 interface SearchState {
     queryString: string;
-    timeRangeOption: TIME_RANGE_OPTION;
     timeRange: [dayjs.Dayjs, dayjs.Dayjs];
+    timeRangeOption: TIME_RANGE_OPTION;
     updateQueryString: (query: string) => void;
     updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;

@@ -206,8 +206,4 @@ const ResultsTimeline = ({
     );
 };
 
-export type {
-    TimelineBucket,
-    TimelineConfig,
-};
 export default ResultsTimeline;

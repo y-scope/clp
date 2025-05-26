@@ -12,7 +12,7 @@ interface TimelineConfig {
 
 
 /**
- * An object that represents `count` log events at `timestamp`.
+ * Bucket in timeline defined by starting timestamp and count of log events.
  */
 interface TimelineBucket {
     timestamp: number;
