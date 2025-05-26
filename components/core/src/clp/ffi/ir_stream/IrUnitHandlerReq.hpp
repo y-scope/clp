@@ -1,5 +1,5 @@
-#ifndef CLP_FFI_IR_STREAM_IRUNITHANDLERINTERFACE_HPP
-#define CLP_FFI_IR_STREAM_IRUNITHANDLERINTERFACE_HPP
+#ifndef CLP_FFI_IR_STREAM_IRUNITHANDLERREQ_HPP
+#define CLP_FFI_IR_STREAM_IRUNITHANDLERREQ_HPP
 
 #include <concepts>
 #include <memory>
@@ -8,15 +8,20 @@
 #include "../../time_types.hpp"
 #include "../KeyValuePairLogEvent.hpp"
 #include "../SchemaTree.hpp"
+
+// This include has a circular dependency with the `.inc` file.
+// The following clang-tidy suppression should be removed once the circular dependency is resolved.
+// NOLINTNEXTLINE(misc-header-include-cycle)
 #include "decoding_methods.hpp"
 
 namespace clp::ffi::ir_stream {
 /**
- * Concept that defines the IR unit handler interface.
+ * Requirement for the IR unit handler interface.
+ * @tparam IrUnitHandlerType The type of the IR unit handler.
  */
-template <typename Handler>
-concept IrUnitHandlerInterface = requires(
-        Handler handler,
+template <typename IrUnitHandlerType>
+concept IrUnitHandlerInterfaceReq = requires(
+        IrUnitHandlerType handler,
         KeyValuePairLogEvent&& log_event,
         bool is_auto_generated,
         UtcOffset utc_offset_old,
@@ -66,6 +71,14 @@ concept IrUnitHandlerInterface = requires(
         handler.handle_end_of_stream()
     } -> std::same_as<IRErrorCode>;
 };
+
+/**
+ * Requirement for an IR unit handler.
+ * @tparam IrUnitHandlerType The type of the IR unit handler.
+ */
+template <typename IrUnitHandlerType>
+concept IrUnitHandlerReq = std::move_constructible<IrUnitHandlerType>
+                           && IrUnitHandlerInterfaceReq<IrUnitHandlerType>;
 }  // namespace clp::ffi::ir_stream
 
-#endif  // CLP_FFI_IR_STREAM_IRUNITHANDLERINTERFACE_HPP
+#endif  // CLP_FFI_IR_STREAM_IRUNITHANDLERREQ_HPP
