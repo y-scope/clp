@@ -1,19 +1,21 @@
 import DetailsCard from "./DetailsCard";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_FILES = 124;
+interface FilesProps {
+    numFiles: number;
+}
 
 /**
  * Renders the files statistic.
  *
+ * @param props
+ * @param props.numFiles
  * @return
  */
-const Files = () => {
+const Files = ({numFiles}: FilesProps) => {
     return (
         <DetailsCard
-            stat={DUMMY_FILES.toString()}
+            stat={numFiles.toString()}
             title={"Files"}/>
     );
 };
