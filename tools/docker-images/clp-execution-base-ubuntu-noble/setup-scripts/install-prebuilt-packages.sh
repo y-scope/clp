@@ -5,6 +5,7 @@ set -e
 
 # Error on undefined variable
 set -u
+set -o pipefail
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \

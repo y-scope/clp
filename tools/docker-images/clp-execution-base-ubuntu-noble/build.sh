@@ -5,6 +5,7 @@ set -e
 
 # Error on undefined variable
 set -u
+set -o pipefail
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 repo_root=${script_dir}/../../../
