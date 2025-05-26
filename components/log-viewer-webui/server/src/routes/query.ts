@@ -16,8 +16,24 @@ import {
  * @param app
  * @return
  */
+// eslint-disable-next-line max-lines-per-function
 const routes: FastifyPluginAsync = async (app) => {
     const fastify = app.withTypeProvider<TypeBoxTypeProvider>();
+
+    fastify.post(
+        "/query/sql",
+        {
+            schema: {
+                body: Type.Object({
+                    queryString: Type.String({minLength: 1}),
+                }),
+            },
+        },
+        async (req) => {
+            const {queryString} = req.body;
+            return await fastify.dbManager.queryMySql(queryString);
+        },
+    );
 
     fastify.post("/query/extract-stream", {
         schema: {

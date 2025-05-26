@@ -1,23 +1,27 @@
-import dayjs from "dayjs";
+import {Dayjs} from "dayjs";
+import {Nullable} from "src/typings/common";
 
 import DetailsCard from "./DetailsCard";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_START_DATE = "2021-12-14";
-const DUMMY_END_DATE = "2025-04-16";
-
 const DATE_FORMAT = "MMMM D, YYYY";
+
+interface TimeRangeProps {
+    beginDate: Nullable<Dayjs>;
+    endDate: Nullable<Dayjs>;
+}
 
 /**
  * Renders the time range statistic.
  *
+ * @param props
+ * @param props.beginDate
+ * @param props.endDate
  * @return
  */
-const TimeRange = () => {
-    const formattedStat = `${dayjs(DUMMY_START_DATE).format(DATE_FORMAT)} -
-        ${dayjs(DUMMY_END_DATE).format(DATE_FORMAT)}`;
+const TimeRange = ({beginDate, endDate}: TimeRangeProps) => {
+    const formattedStat = `${beginDate?.format(DATE_FORMAT) ?? "Unknown Begin Date"} -
+        ${endDate?.format(DATE_FORMAT) ?? "Unknown End Date"}`;
 
     return (
         <DetailsCard
