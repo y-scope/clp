@@ -57,7 +57,6 @@ export default async function serviceApp (
         autoHooks: true,
         cascadeHooks: true,
         dir: path.join(import.meta.dirname, "routes"),
-        ignorePattern: IGNORED_FILES_REGEX,
         options: {...opts},
     });
 

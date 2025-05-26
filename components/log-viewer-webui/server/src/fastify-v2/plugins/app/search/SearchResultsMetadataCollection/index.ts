@@ -1,7 +1,7 @@
 import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 
-import settings from "../../../../../../settings.json" with { type: "json" };
+import settings from "../../../../../../settings.json" with {type: "json"};
 import type {SearchResultsMetadataDocument} from "./typings.js";
 
 
