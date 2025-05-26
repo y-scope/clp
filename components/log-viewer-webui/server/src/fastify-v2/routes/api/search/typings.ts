@@ -1,12 +1,15 @@
 import {
+    SEARCH_SIGNAL,
+    SearchResultsMetadataDocument,
+} from "@common/searchResultsMetadata.js";
+import {
     FastifyBaseLogger,
     FastifyInstance,
 } from "fastify";
-
-import {
-    SEARCH_SIGNAL,
-    SearchResultsMetadataDocument,
-} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
+import type {
+    Collection,
+    Db,
+} from "mongodb";
 
 
 /**
@@ -15,31 +18,33 @@ import {
 const SEARCH_MAX_NUM_RESULTS = 1000;
 
 type UpdateSearchResultsMetaProps = {
+    fields: Partial<SearchResultsMetadataDocument>;
     jobId: number;
     lastSignal: SEARCH_SIGNAL;
-    searchResultsMetadataCollection: FastifyInstance["SearchResultsMetadataCollection"];
     logger: FastifyBaseLogger;
-    fields: Partial<SearchResultsMetadataDocument>;
+    searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
 };
 
 type UpdateSearchSignalWhenJobsFinishProps = {
-    searchJobId: number;
     aggregationJobId: number;
-    queryJobsDbManager: FastifyInstance["QueryJobsDbManager"];
-    searchJobCollectionsManager: FastifyInstance["SearchJobCollectionsManager"];
-    searchResultsMetadataCollection: FastifyInstance["SearchResultsMetadataCollection"];
     logger: FastifyBaseLogger;
+    mongoDb: Db;
+    queryJobsDbManager: FastifyInstance["QueryJobsDbManager"];
+    searchJobId: number;
+    searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
+
 };
 
 type CreateMongoIndexesProps = {
     searchJobId: number;
-    searchJobCollectionsManager: FastifyInstance["SearchJobCollectionsManager"];
     logger: FastifyBaseLogger;
+    mongoDb: Db;
 };
 
 export {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,
+    SearchResultsMetadataDocument,
     UpdateSearchResultsMetaProps,
     UpdateSearchSignalWhenJobsFinishProps,
 };

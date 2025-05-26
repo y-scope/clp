@@ -14,41 +14,6 @@ enum SEARCH_SIGNAL {
     RESP_DONE = "resp-done",
     RESP_QUERYING = "resp-querying",
 }
-/**
- * Checks if the given search signal is a search signal request.
- *
- * @param {SearchSignal} s
- * @return {boolean}
- */
-const isSearchSignalReq = (s: SEARCH_SIGNAL) => s.startsWith("req-");
-
-/**
- * Checks if the given search signal is a search signal response.
- *
- * @param {SearchSignal} s
- * @return {boolean}
- */
-const isSearchSignalResp = (s: SEARCH_SIGNAL) => s.startsWith("resp-");
-
-/**
- * Checks if the given search signal is a querying request / response.
- *
- * @param {SearchSignal} s
- * @return {boolean}
- */
-const isSearchSignalQuerying = (s: SEARCH_SIGNAL) => s.endsWith("-querying");
-
-/**
- * Checks if the given search signal is an operation in progress, which can be used as a
- * condition to disable UI elements.
- *
- * @param {SearchSignal} s
- * @return {boolean}
- */
-const isOperationInProgress = (s: SEARCH_SIGNAL) => (
-    (true === isSearchSignalReq(s)) ||
-    (true === isSearchSignalQuerying(s))
-);
 
 /**
  * MongoDB document for search results metadata. `numTotalResults` is optional
@@ -56,15 +21,13 @@ const isOperationInProgress = (s: SEARCH_SIGNAL) => (
  */
 interface SearchResultsMetadataDocument {
     _id: string;
+
+    // eslint-disable-next-line no-warning-comments
+    // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
     errorMsg: string | null;
     lastSignal: SEARCH_SIGNAL;
     numTotalResults?: number;
 }
 
 export type {SearchResultsMetadataDocument};
-export {
-    isSearchSignalQuerying,
-    isSearchSignalResp,
-    isOperationInProgress,
-    SEARCH_SIGNAL
-};
+export {SEARCH_SIGNAL};

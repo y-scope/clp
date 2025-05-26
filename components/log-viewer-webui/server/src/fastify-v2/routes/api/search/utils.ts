@@ -1,5 +1,6 @@
-import {CollectionDroppedError} from "../../../plugins/app/search/SearchJobCollectionsManager/typings.js";
-import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
+import {SEARCH_SIGNAL} from "@common/searchResultsMetadata.js";
+import type {Db} from "mongodb";
+
 import {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,
@@ -7,6 +8,18 @@ import {
     UpdateSearchSignalWhenJobsFinishProps,
 } from "./typings.js";
 
+
+/**
+ * Checks if a collection exists in the MongoDB database.
+ *
+ * @param mongoDb
+ * @param collectionName
+ * @return Whether the collection exists.
+ */
+const hasCollection = async (mongoDb: Db, collectionName: string): Promise<boolean> => {
+    const collections = await mongoDb.listCollections().toArray();
+    return collections.some((collection: {name: string}) => collection.name === collectionName);
+};
 
 /**
  * Modifies the search results metadata for a given job ID.
@@ -46,21 +59,19 @@ const updateSearchResultsMeta = async ({
  * @param props.logger
  * @param props.queryJobsDbManager
  * @param props.searchJobId
- * @param props.searchJobCollectionsManager
  * @param props.searchResultsMetadataCollection
+ * @param props.mongoDb
  */
 const updateSearchSignalWhenJobsFinish = async ({
     aggregationJobId,
-    queryJobsDbManager,
     logger,
+    mongoDb,
+    queryJobsDbManager,
     searchJobId,
-    searchJobCollectionsManager,
     searchResultsMetadataCollection,
 
 }: UpdateSearchSignalWhenJobsFinishProps) => {
     let errorMsg: string | null = null;
-
-    logger.info("Waiting for job completion");
 
     try {
         await queryJobsDbManager.awaitJobCompletion(searchJobId);
@@ -71,20 +82,25 @@ const updateSearchSignalWhenJobsFinish = async ({
             "Error while waiting for job completion";
     }
 
-    logger.info("job finised");
+    logger.info(
+        {searchJobId, aggregationJobId, errorMsg},
+        "Search job and aggregation job completed."
+    );
 
     let numResultsInCollection: number;
+    const searchResultCollectionName = searchJobId.toString();
 
-    try {
-        const collection = await searchJobCollectionsManager.getOrCreateCollection(searchJobId);
-        numResultsInCollection = await collection.countDocuments();
-    } catch (e: unknown) {
-        if (e instanceof CollectionDroppedError) {
-            logger.warn({e, errorMsg});
+    if (await hasCollection(mongoDb, searchResultCollectionName)) {
+        mongoDb.collection(searchResultCollectionName);
+        numResultsInCollection = await mongoDb.collection(
+            searchResultCollectionName
+        ).countDocuments();
+    } else {
+        // Client may have sent delete request, removing the mongoDb collection, before the job
+        // finished.
+        logger.warn({errorMsg, searchJobId}, "Collection missing in database.");
 
-            return;
-        }
-        throw e;
+        return;
     }
 
     await updateSearchResultsMeta({
@@ -101,8 +117,6 @@ const updateSearchSignalWhenJobsFinish = async ({
         logger: logger,
         searchResultsMetadataCollection: searchResultsMetadataCollection,
     });
-
-        logger.info("job updated");
 };
 
 /**
@@ -110,13 +124,13 @@ const updateSearchSignalWhenJobsFinish = async ({
  *
  * @param props
  * @param props.logger
+ * @param props.mongoDb
  * @param props.searchJobId
- * @param props.searchJobCollectionsManager
  */
 const createMongoIndexes = async ({
-    logger,
     searchJobId,
-    searchJobCollectionsManager,
+    logger,
+    mongoDb,
 }: CreateMongoIndexesProps) => {
     const timestampAscendingIndex = {
         key: {
@@ -133,7 +147,7 @@ const createMongoIndexes = async ({
         name: "timestamp-descending",
     };
 
-    const queryJobCollection = await searchJobCollectionsManager.getOrCreateCollection(searchJobId);
+    const queryJobCollection = mongoDb.collection(searchJobId.toString());
     logger.info(`Creating indexes for collection ${searchJobId}`);
     await queryJobCollection.createIndexes([
         timestampAscendingIndex,
@@ -143,6 +157,7 @@ const createMongoIndexes = async ({
 
 export {
     createMongoIndexes,
+    hasCollection,
     updateSearchResultsMeta,
     updateSearchSignalWhenJobsFinish,
 };

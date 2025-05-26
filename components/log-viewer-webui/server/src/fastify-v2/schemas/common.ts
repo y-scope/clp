@@ -7,4 +7,7 @@ const StringSchema = Type.String({
 
 const IdSchema = Type.Integer({minimum: 1});
 
-export { StringSchema, IdSchema };
+export {
+    IdSchema,
+    StringSchema,
+};

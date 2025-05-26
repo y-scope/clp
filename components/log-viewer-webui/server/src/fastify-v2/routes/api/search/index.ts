@@ -1,13 +1,17 @@
 import {
+    SEARCH_SIGNAL,
+    SearchResultsMetadataDocument,
+} from "@common/searchResultsMetadata.js";
+import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
-import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
+import settings from "../../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
-    CreateQueryJobSchema,
+    QueryJobCreationSchema,
     QueryJobSchema,
 } from "../../../schemas/search.js";
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
@@ -27,9 +31,17 @@ import {
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const {
         QueryJobsDbManager,
-        SearchJobCollectionsManager,
-        SearchResultsMetadataCollection,
+        mongo,
     } = fastify;
+    const mongoDb = mongo.db;
+
+    if ("undefined" === typeof mongoDb) {
+        throw new Error("MongoDB database not found");
+    }
+
+    const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
+        settings.MongoDbSearchResultsMetadataCollectionName
+    );
 
     /**
      * Submits a search query and initiates the search process.
@@ -38,7 +50,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         "/query",
         {
             schema: {
-                body: CreateQueryJobSchema,
+                body: QueryJobCreationSchema,
                 response: {
                     [StatusCodes.CREATED]: QueryJobSchema,
                     [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
@@ -48,7 +60,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         },
         async (request, reply) => {
             const {
-
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
@@ -82,10 +93,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 return reply.internalServerError(errMsg);
             }
 
-            await SearchJobCollectionsManager.getOrCreateCollection(searchJobId);
-            await SearchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
+            await mongoDb.createCollection(searchJobId.toString());
+            await mongoDb.createCollection(aggregationJobId.toString());
 
-            await SearchResultsMetadataCollection.insertOne({
+            await searchResultsMetadataCollection.insertOne({
                 _id: searchJobId.toString(),
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                 errorMsg: null,
@@ -96,21 +107,20 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 updateSearchSignalWhenJobsFinish({
                     aggregationJobId: aggregationJobId,
                     logger: request.log,
+                    mongoDb: mongoDb,
                     queryJobsDbManager: QueryJobsDbManager,
-                    searchJobCollectionsManager: SearchJobCollectionsManager,
                     searchJobId: searchJobId,
-                    searchResultsMetadataCollection: SearchResultsMetadataCollection,
+                    searchResultsMetadataCollection: searchResultsMetadataCollection,
                 }).catch((err: unknown) => {
                     request.log.error(err, "Error updating search signal when jobs finish");
                 });
             });
 
             await createMongoIndexes({
-                logger: request.log,
                 searchJobId: searchJobId,
-                searchJobCollectionsManager: SearchJobCollectionsManager,
+                logger: request.log,
+                mongoDb: mongoDb,
             });
-
             reply.code(StatusCodes.CREATED);
 
             return {searchJobId, aggregationJobId};
@@ -140,23 +150,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 aggregationJobId,
             }, "api/search/results args");
 
-            try {
-                await SearchJobCollectionsManager.dropCollection(searchJobId);
-                await SearchJobCollectionsManager.dropCollection(aggregationJobId);
-            } catch (err: unknown) {
-                const errMsg = "Failed to clear search results";
-                request.log.error(
-                    {
-                        err,
-                        searchJobId,
-                        aggregationJobId,
-                    },
-                    errMsg
-                );
-
-                return reply.internalServerError(`${errMsg} for searchJobId=${searchJobId}, ` +
-                `aggregationJobId=${aggregationJobId}`);
-            }
+            await mongoDb.collection(searchJobId.toString()).drop();
+            await mongoDb.collection(aggregationJobId.toString()).drop();
 
             return reply.code(StatusCodes.NO_CONTENT);
         }
@@ -195,7 +190,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     jobId: searchJobId,
                     lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                     logger: request.log,
-                    searchResultsMetadataCollection: SearchResultsMetadataCollection,
+                    searchResultsMetadataCollection: searchResultsMetadataCollection,
                 });
             } catch (err: unknown) {
                 const errMsg = "Failed to submit cancel request";

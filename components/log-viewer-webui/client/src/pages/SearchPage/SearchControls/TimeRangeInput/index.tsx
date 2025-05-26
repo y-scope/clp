@@ -1,5 +1,3 @@
-import {useState} from "react";
-
 import {
     DatePicker,
     Select,
@@ -9,7 +7,6 @@ import dayjs from "dayjs";
 import useSearchStore from "../../SearchState";
 import styles from "./index.module.css";
 import {
-    DEFAULT_TIME_RANGE,
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
@@ -27,13 +24,18 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
  * @return
  */
 const TimeRangeInput = () => {
-    const {updateTimeRange, searchUiState} = useSearchStore();
-    const [selectedOption, setSelectedOption] = useState<TIME_RANGE_OPTION>(DEFAULT_TIME_RANGE);
+    const {
+        timeRange,
+        updateTimeRange,
+        timeRangeOption,
+        updateTimeRangeOption,
+        searchUiState,
+    } = useSearchStore();
 
-    const handleSelectChange = (timeRangeOption: TIME_RANGE_OPTION) => {
-        setSelectedOption(timeRangeOption);
-        if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption];
+    const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
+        updateTimeRangeOption(newTimeRangeOption);
+        if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
+            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption];
             updateTimeRange(dayJsRange);
         }
     };
@@ -52,7 +54,6 @@ const TimeRangeInput = () => {
             className={styles["timeRangeInputContainer"]}
         >
             <Select
-                defaultValue={DEFAULT_TIME_RANGE}
                 listHeight={300}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
@@ -60,12 +61,13 @@ const TimeRangeInput = () => {
                             searchUiState === SEARCH_UI_STATE.QUERYING
                         }
                 size={"large"}
+                value={timeRangeOption}
                 variant={"filled"}
-                className={selectedOption === TIME_RANGE_OPTION.CUSTOM ?
+                className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
                     (styles["customSelected"] || "") :
                     ""}
                 onChange={handleSelectChange}/>
-            {selectedOption === TIME_RANGE_OPTION.CUSTOM && (
+            {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
                     className={styles["rangePicker"] || ""}
                     showNow={true}
@@ -74,6 +76,7 @@ const TimeRangeInput = () => {
                                 searchUiState === SEARCH_UI_STATE.QUERYING
                     }
                     size={"large"}
+                    value={timeRange}
                     onChange={(dates) => {
                         handleRangePickerChange(dates);
                     }}/>
