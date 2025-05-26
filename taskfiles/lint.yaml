@@ -135,7 +135,7 @@ tasks:
     cmds:
       - task: ":utils:cpp-lint:clang-format"
         vars:
-          EXCLUDE_PATTERNS: 
+          EXCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/*"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/*"
           FLAGS: ["--dry-run"]
@@ -149,7 +149,7 @@ tasks:
     cmds:
       - task: ":utils:cpp-lint:clang-format"
         vars:
-          EXCLUDE_PATTERNS: 
+          EXCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/*"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/*"
           FLAGS: ["-i"]
