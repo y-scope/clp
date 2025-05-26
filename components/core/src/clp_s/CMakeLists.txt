@@ -390,10 +390,9 @@ target_link_libraries(
         clp_s::search::ast
         clp_s::search::kql
         ${MONGOCXX_TARGET}
+        msgpack-cxx
         spdlog::spdlog
         ystdlib::error_handling
-
-        msgpack-cxx
 )
 target_include_directories(clp-s
         PRIVATE
