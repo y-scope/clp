@@ -331,6 +331,7 @@ target_link_libraries(
         PRIVATE
         fmt::fmt
         ${MONGOCXX_TARGET}
+        spdlog::spdlog
 )
 target_include_directories(clp_s_JsonConstructor PUBLIC ../)
 

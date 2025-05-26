@@ -10,6 +10,7 @@
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/uri.hpp>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
