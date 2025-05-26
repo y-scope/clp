@@ -18,3 +18,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   python3 \
   rsync \
   zstd
+
+# Clean up apt cache
+apt-get clean
+rm -rf /var/lib/apt/lists/*
