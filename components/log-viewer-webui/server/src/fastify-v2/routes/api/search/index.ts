@@ -1,10 +1,14 @@
 import {
+    SEARCH_SIGNAL,
+    SearchResultsMetadataDocument,
+} from "@common/searchResultsMetadata.js";
+import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
-import {SEARCH_SIGNAL, SearchResultsMetadataDocument} from "@common/searchResultsMetadata.js";
+import settings from "../../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     CreateQueryJobSchema,
@@ -17,7 +21,6 @@ import {
     updateSearchSignalWhenJobsFinish,
 } from "./utils.js";
 
-import settings from "../../../../../settings.json" with {type: "json"};
 
 /**
  * Search API routes.
@@ -30,7 +33,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         QueryJobsDbManager,
         mongo,
     } = fastify;
-    const mongoDb = mongo.db
+    const mongoDb = mongo.db;
 
     if ("undefined" === typeof mongoDb) {
         throw new Error("MongoDB database not found");

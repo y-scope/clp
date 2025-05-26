@@ -1,11 +1,13 @@
-
 import {SEARCH_SIGNAL} from "@common/searchResultsMetadata.js";
+import type {Db} from "mongodb";
+
 import {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,
     UpdateSearchResultsMetaProps,
     UpdateSearchSignalWhenJobsFinishProps,
 } from "./typings.js";
+
 
 /**
  * Checks if a collection exists in the MongoDB database.
@@ -14,9 +16,9 @@ import {
  * @param collectionName
  * @return Whether the collection exists.
  */
-const hasCollection = async (mongoDb: any, collectionName: string): Promise<boolean> => {
+const hasCollection = async (mongoDb: Db, collectionName: string): Promise<boolean> => {
     const collections = await mongoDb.listCollections().toArray();
-    return collections.some((collection: { name: string }) => collection.name === collectionName);
+    return collections.some((collection: {name: string}) => collection.name === collectionName);
 };
 
 /**
@@ -57,8 +59,8 @@ const updateSearchResultsMeta = async ({
  * @param props.logger
  * @param props.queryJobsDbManager
  * @param props.searchJobId
- * @param props.searchJobCollectionsManager
  * @param props.searchResultsMetadataCollection
+ * @param props.mongoDb
  */
 const updateSearchSignalWhenJobsFinish = async ({
     aggregationJobId,
@@ -80,6 +82,11 @@ const updateSearchSignalWhenJobsFinish = async ({
             "Error while waiting for job completion";
     }
 
+    logger.info(
+        {searchJobId, aggregationJobId, errorMsg},
+        "Search job and aggregation job completed."
+    );
+
     let numResultsInCollection: number;
     const searchResultCollectionName = searchJobId.toString();
 
@@ -91,7 +98,8 @@ const updateSearchSignalWhenJobsFinish = async ({
     } else {
         // Client may have sent delete request, removing the mongoDb collection, before the job
         // finished.
-        logger.warn({errorMsg, searchJobId}, "Collection missing in database." );
+        logger.warn({errorMsg, searchJobId}, "Collection missing in database.");
+
         return;
     }
 
@@ -116,8 +124,8 @@ const updateSearchSignalWhenJobsFinish = async ({
  *
  * @param props
  * @param props.logger
+ * @param props.mongoDb
  * @param props.searchJobId
- * @param props.searchJobCollectionsManager
  */
 const createMongoIndexes = async ({
     searchJobId,
@@ -149,7 +157,7 @@ const createMongoIndexes = async ({
 
 export {
     createMongoIndexes,
+    hasCollection,
     updateSearchResultsMeta,
     updateSearchSignalWhenJobsFinish,
-    hasCollection,
 };
