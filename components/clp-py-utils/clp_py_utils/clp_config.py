@@ -733,21 +733,15 @@ class CLPConfig(BaseModel):
 
         os_release = dotenv_values(self._os_release_file_path)
         if "ubuntu" == os_release["ID"]:
-            if "noble" == os_release["VERSION_CODENAME"]:
-                self.execution_container = (
-                    f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:dev"
-                )
-            else:
-                self.execution_container = (
-                    f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
-                )
-                self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
+            self.execution_container = (
+                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
+            )
         else:
             raise NotImplementedError(
                 f"Unsupported OS {os_release['ID']} in {OS_RELEASE_FILE_PATH}"
             )
 
-        ## self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
+        self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
 
     def load_database_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)
