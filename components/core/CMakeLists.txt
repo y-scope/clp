@@ -315,6 +315,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/JsonFileIterator.hpp
     src/clp_s/JsonParser.cpp
     src/clp_s/JsonParser.hpp
+    src/clp_s/OutputHandlerImpl.cpp
+    src/clp_s/OutputHandlerImpl.hpp
     src/clp_s/PackedStreamReader.cpp
     src/clp_s/PackedStreamReader.hpp
     src/clp_s/RangeIndexWriter.cpp
@@ -343,7 +345,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/EvaluateTimestampIndex.hpp
     src/clp_s/search/Output.cpp
     src/clp_s/search/Output.hpp
-    src/clp_s/search/OutputHandler.cpp
     src/clp_s/search/OutputHandler.hpp
     src/clp_s/search/Projection.cpp
     src/clp_s/search/Projection.hpp

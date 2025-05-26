@@ -337,16 +337,6 @@ target_link_libraries(
 target_include_directories(clp_s_JsonConstructor PUBLIC ../)
 
 set(
-        CLP_S_SOURCES
-        CommandLineArguments.cpp
-        CommandLineArguments.hpp
-        ErrorCode.hpp
-        kv_ir_search.cpp
-        kv_ir_search.hpp
-        TraceableException.hpp
-)
-
-set(
         CLP_S_SEARCH_SOURCES
         Defs.hpp
         search/AddTimestampConditions.cpp
@@ -361,7 +351,6 @@ set(
         search/EvaluateTimestampIndex.hpp
         search/Output.cpp
         search/Output.hpp
-        search/OutputHandler.cpp # TODO maybe don't include
         search/OutputHandler.hpp
         search/Projection.cpp
         search/Projection.hpp
@@ -388,11 +377,6 @@ target_link_libraries(
         PRIVATE
         spdlog::spdlog
         simdjson::simdjson
-
-        clp_s::clp_dependencies
-        clp_s::reducer_dependencies
-        ${MONGOCXX_TARGET}
-        msgpack-cxx
 )
 
 set(
@@ -419,6 +403,18 @@ target_link_libraries(
 )
 target_include_directories(clp_s_TimestampPattern PUBLIC ../)
 
+set(
+        CLP_S_SOURCES
+        CommandLineArguments.cpp
+        CommandLineArguments.hpp
+        ErrorCode.hpp
+        kv_ir_search.cpp
+        kv_ir_search.hpp
+        OutputHandlerImpl.cpp
+        OutputHandlerImpl.hpp
+        TraceableException.hpp
+)
+
 add_executable(
         clp-s
         clp-s.cpp
@@ -441,6 +437,8 @@ target_link_libraries(
         ${MONGOCXX_TARGET}
         spdlog::spdlog
         ystdlib::error_handling
+
+        msgpack-cxx
 )
 target_include_directories(clp-s
         PRIVATE

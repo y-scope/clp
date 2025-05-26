@@ -22,6 +22,7 @@
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
 #include "kv_ir_search.hpp"
+#include "OutputHandlerImpl.hpp"
 #include "search/AddTimestampConditions.hpp"
 #include "search/ast/ConvertToExists.hpp"
 #include "search/ast/EmptyExpr.hpp"
@@ -227,16 +228,16 @@ bool search_archive(
     try {
         switch (command_line_arguments.get_output_handler_type()) {
             case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<NetworkOutputHandler>(
+                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
                         command_line_arguments.get_network_dest_host(),
                         command_line_arguments.get_network_dest_port()
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Reducer:
                 if (command_line_arguments.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
                 } else if (command_line_arguments.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
                             reducer_socket_fd,
                             command_line_arguments.get_count_by_time_bucket_size()
                     );
@@ -246,7 +247,7 @@ bool search_archive(
                 }
                 break;
             case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
                         command_line_arguments.get_mongodb_uri(),
                         command_line_arguments.get_mongodb_collection(),
                         command_line_arguments.get_batch_size(),
@@ -254,7 +255,7 @@ bool search_archive(
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Stdout:
-                output_handler = std::make_unique<StandardOutputHandler>();
+                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                 break;
             default:
                 SPDLOG_ERROR("Unhandled OutputHandlerType.");

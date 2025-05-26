@@ -16,6 +16,7 @@
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
+#include "../src/clp_s/OutputHandlerImpl.hpp"
 #include "../src/clp_s/search/ast/ConvertToExists.hpp"
 #include "../src/clp_s/search/ast/EmptyExpr.hpp"
 #include "../src/clp_s/search/ast/Expression.hpp"
@@ -24,7 +25,6 @@
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/Output.hpp"
-#include "../src/clp_s/search/OutputHandler.hpp"
 #include "../src/clp_s/search/Projection.hpp"
 #include "../src/clp_s/search/SchemaMatch.hpp"
 #include "../src/clp_s/Utils.hpp"
@@ -42,7 +42,7 @@ auto get_test_input_local_path() -> std::string;
 void
 search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results);
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 );
 
@@ -57,7 +57,7 @@ auto get_test_input_local_path() -> std::string {
 }
 
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 ) {
     std::set<int64_t> results_set;
@@ -96,7 +96,7 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
     expr = convert_pass.run(expr);
     REQUIRE(nullptr != expr);
 
-    std::vector<clp_s::search::VectorOutputHandler::QueryResult> results;
+    std::vector<clp_s::VectorOutputHandler::QueryResult> results;
     for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         auto archive_path = clp_s::Path{
@@ -118,7 +118,7 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
         archive_expr = match_pass->run(archive_expr);
         REQUIRE(nullptr != archive_expr);
 
-        auto output_handler = std::make_unique<clp_s::search::VectorOutputHandler>(results);
+        auto output_handler = std::make_unique<clp_s::VectorOutputHandler>(results);
         clp_s::search::Output output_pass(
                 match_pass,
                 archive_expr,
