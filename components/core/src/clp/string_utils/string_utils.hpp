@@ -126,7 +126,7 @@ bool convert_string_to_int(std::string_view raw, integer_t& converted);
 
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted) {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__clang__)
     auto* raw_begin = raw.data();
     auto* raw_end = raw_begin + raw.size();
 #else
