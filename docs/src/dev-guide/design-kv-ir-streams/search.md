@@ -98,26 +98,77 @@ have a doc to each available transformation pass in clp-s, and we can directly r
 ### Resolve queried columns to schema-tree nodes
 
 To evaluate filters, we must determine which schema-tree nodes correspond to each queried column.
-This requires constructing a mapping from each queried column to one or more schema-tree nodes,
-subject to the following:
+We call this step queried columns to schema-tree node resolution. However, as the schema-tree is
+dynamically constructed across a stream, this resolution must be re-evaluated when a schema-tree has
+been updated.
 
-* The path from the root to the mapped node must match the queried column's full key path.
-* The schema-tree node's type must be one of the queried column's matchable types.
+#### Example (TODO: Maybe some other attractive title)
 
-Unlike clp-s, where the schema is known at the start of the search, the schema-tree in KV-IR streams
-is built dynamically as the stream is deserialized. As a result, the mapping from queried columns to
-schema-tree nodes must also be constructed incrementally. This mapping is built in a top-down
-fashion, mirroring the construction of the schema-tree itself. There are two types of nodes to track
-when building this mapping:
+Let's illustrate this process with a query filter `a.*.c: TestString`: it attempts to
+find a match on a wildcard full key path `a.*.c` against a string value `"TestString"`.
 
-* **Partially resolved nodes**: Nodes whose paths match the initial segments of a queried column but
-  are not fully resolved. These nodes are used for further matching as their child nodes are
-  inserted.
-* **Resolved nodes**: Nodes where the full key path and type match the queried column. These nodes
-  are used to evaluate filters against log events.
+Consider the following schema-tree is constructed dynamically:
 
-To illustrate incremental mapping, consider a query filter `a.*.c: TestString` and the following
-schema-tree (nodes are added in order of their IDs):
+##### Initial schema-tree
+
+```mermaid
+graph TD;
+    0[0:root]
+```
+
+The schema tree starts with the root.
+
+##### Insertion of node #1
+
+```mermaid
+graph TD;
+    0[0:root] --> 1["1:a(obj)"]
+```
+
+When the first node is inserted, nothing will be resolved. But intuitively, we find a key `a` that
+matches the first token in the target key path `a.*.c`, meaning that there can be potential matches
+for `.*.c` among its successors.
+
+##### Insertion of node #2
+
+```mermaid
+graph TD;
+    0[0:root] --> 1["1:a(obj)"]
+    1 --> 2["2:b(obj)"]
+```
+
+Same as the previous step, nothing will be resolved, but `b` will be considered as a match of `*`
+following `a`, indicating that there can be potential matches for `.c` in among its successors.
+
+##### Insertion of node #3
+
+```mermaid
+graph TD;
+    0[0:root] --> 1["1:a(obj)"]
+    1 --> 2["2:b(obj)"]
+    2 --> 3["3:c(int)"]
+```
+
+Next, we have a new node inserted under `b` to construct a full path of `a.b.c`, which matches
+`a.*.c`. However, as a leaf node, #3 can only represent integer values, which means it will never
+match a string that the filter expects. Therefore, nothing should be updated even though all tokens
+in wildcard full key path have been resolved.
+
+##### Insertion of node #4
+
+```mermaid
+graph TD;
+    0[0:root] --> 1["1:a(obj)"]
+    1 --> 2["2:b(obj)"]
+    2 --> 3["3:c(int)"]
+    2 --> 4["4:c(str)"]
+```
+
+We find out first resolution of `a.*.c`, as the path #1->#2->#4 `a.b.c` matches the wildcard full
+key path, and #4's type `str` is a matchable type. This means for any coming node-ID-value pairs
+whose node ID is #4, it will be considered a candidate for matching our target filter.
+
+##### Insertion of node #5
 
 ```mermaid
 graph TD;
@@ -127,6 +178,36 @@ graph TD;
     2 --> 4["4:c(str)"]
     1 --> 5["5:c(str)"]
 ```
+
+We find another resolution of `a.*.c`, as the path #1->#5 `a.c` matches the wildcard full
+key path, and #5's type `str` is a matchable type. This results another matchable candidate #5 for
+matching out target filter.
+
+---
+
+As we can see, the filter has no candidate node IDs for matching until node #4 is inserted; and it
+can have more than one candidate since later #5 is also considered a candidate. The resolution of
+a filter is dynamically evaluated as the tree expands, and it should be in a top-down manner since
+this is naturally how the schema-tree is constructed.
+
+#### A formal approach
+
+Our goal is to construct a mapping from each queried column to one or more schema-tree nodes,
+subject to the following:
+
+* The path from the root to the mapped node must match the queried column's full key path.
+* The schema-tree node's type must be one of the queried column's matchable types.
+
+As we follow the construction of the trees, there are two types of nodes to track when building this
+mapping:
+
+* **Partially resolved nodes**: Nodes whose paths match the initial segments of a queried column but
+  are not fully resolved. These nodes are used for further matching as their child nodes are
+  inserted.
+* **Resolved nodes**: Nodes where the full key path and type match the queried column. These nodes
+  are used to evaluate filters against log events.
+
+We will use the example above to illustrate the formal procedure to construct the mapping.
 
 This queried column `a.*.c` can be tokenized as `[a, *, c]`. The objective is to resolve each token
 in sequence until the final token `c` is matched.
