@@ -1,7 +1,5 @@
 add_subdirectory(indexer)
-add_subdirectory(search/ast)
-add_subdirectory(search/kql)
-add_subdirectory(search/sql)
+add_subdirectory(search)
 
 set(
         CLP_S_CLP_SOURCES
@@ -237,11 +235,11 @@ target_link_libraries(
         clp_s_ArchiveWriter
         PUBLIC
         absl::flat_hash_map
+        clp_s::IO
         simdjson::simdjson
         PRIVATE
         Boost::url
         clp_s::clp_dependencies
-        clp_s::IO
         clp_s::TimestampPattern
         ${CURL_LIBRARIES}
         fmt::fmt
@@ -298,12 +296,12 @@ target_link_libraries(
         clp_s_ArchiveReader
         PUBLIC
         absl::flat_hash_map
+        clp_s::IO
         nlohmann_json::nlohmann_json
         PRIVATE
         absl::flat_hash_map
         Boost::url
         clp_s::clp_dependencies
-        clp_s::IO
         clp_s::TimestampPattern
         ${CURL_LIBRARIES}
         fmt::fmt
@@ -335,49 +333,6 @@ target_link_libraries(
         ${MONGOCXX_TARGET}
 )
 target_include_directories(clp_s_JsonConstructor PUBLIC ../)
-
-set(
-        CLP_S_SEARCH_SOURCES
-        Defs.hpp
-        search/AddTimestampConditions.cpp
-        search/AddTimestampConditions.hpp
-        search/clp_search/EncodedVariableInterpreter.cpp
-        search/clp_search/EncodedVariableInterpreter.hpp
-        search/clp_search/Grep.cpp
-        search/clp_search/Grep.hpp
-        search/clp_search/Query.cpp
-        search/clp_search/Query.hpp
-        search/EvaluateTimestampIndex.cpp
-        search/EvaluateTimestampIndex.hpp
-        search/Output.cpp
-        search/Output.hpp
-        search/OutputHandler.hpp
-        search/Projection.cpp
-        search/Projection.hpp
-        search/QueryRunner.cpp
-        search/QueryRunner.hpp
-        search/SchemaMatch.cpp
-        search/SchemaMatch.hpp
-        VariableEncoder.cpp
-        VariableEncoder.hpp
-)
-
-add_library(
-        clp_s_search
-        ${CLP_S_SEARCH_SOURCES}
-)
-add_library(clp_s::search ALIAS clp_s_search)
-target_compile_features(clp_s_search PRIVATE cxx_std_20)
-target_link_libraries(
-        clp_s_search
-        PUBLIC
-        absl::flat_hash_map
-        clp_s::ArchiveReader
-        clp_s::search::ast
-        PRIVATE
-        spdlog::spdlog
-        simdjson::simdjson
-)
 
 set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
