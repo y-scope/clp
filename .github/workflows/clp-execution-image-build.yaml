@@ -27,6 +27,7 @@ jobs:
     runs-on: "ubuntu-latest"
     outputs:
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
+      ubuntu_noble_image_changed: "${{steps.filter.outputs.ubuntu_noble_image}}"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -46,6 +47,10 @@ jobs:
               - ".github/actions/clp-execution-image-build/action.yaml"
               - ".github/workflows/clp-execution-image-build.yaml"
               - "tools/docker-images/clp-execution-base-ubuntu-jammy/**/*"
+            ubuntu_noble_image:
+              - ".github/actions/clp-execution-image-build/action.yaml"
+              - ".github/workflows/clp-execution-image-build.yaml"
+              - "tools/docker-images/clp-execution-base-ubuntu-noble/**/*"
 
   ubuntu-jammy-execution-image:
     name: "ubuntu-jammy-execution-image"
