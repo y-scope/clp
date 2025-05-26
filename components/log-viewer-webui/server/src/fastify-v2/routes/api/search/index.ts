@@ -120,7 +120,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 searchJobId: searchJobId,
                 logger: request.log,
                 mongoDb: mongoDb,
-
             });
             reply.code(StatusCodes.CREATED);
 

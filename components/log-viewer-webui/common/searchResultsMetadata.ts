@@ -21,10 +21,13 @@ enum SEARCH_SIGNAL {
  */
 interface SearchResultsMetadataDocument {
     _id: string;
+
+    // eslint-disable-next-line no-warning-comments
+    // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
     errorMsg: string | null;
     lastSignal: SEARCH_SIGNAL;
     numTotalResults?: number;
 }
 
 export type {SearchResultsMetadataDocument};
-export { SEARCH_SIGNAL };
+export {SEARCH_SIGNAL};
