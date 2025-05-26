@@ -685,10 +685,11 @@ target_link_libraries(unitTest
         Catch2::Catch2
         ${CURL_LIBRARIES}
         clp_s::search::ast
+        clp_s::search::kql
+        clp_s::search::sql
         clp_s::TimestampPattern
         date::date
         fmt::fmt
-        kql
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
@@ -696,7 +697,6 @@ target_link_libraries(unitTest
         nlohmann_json::nlohmann_json
         simdjson::simdjson
         spdlog::spdlog
-        sql
         OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}

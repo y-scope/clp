@@ -6,16 +6,17 @@ ANTLR_TARGET(
 )
 
 add_library(
-        kql
+        clp_s_search_kql
         ../antlr_common/ErrorListener.hpp
         ${ANTLR_KqlParser_CXX_OUTPUTS}
         kql.cpp
         kql.hpp
 )
-target_compile_features(kql PRIVATE cxx_std_20)
-target_include_directories(kql PRIVATE ${ANTLR_KqlParser_OUTPUT_DIR})
+add_library(clp_s::search::kql ALIAS clp_s_search_kql)
+target_compile_features(clp_s_search_kql PRIVATE cxx_std_20)
+target_include_directories(clp_s_search_kql PRIVATE ${ANTLR_KqlParser_OUTPUT_DIR})
 target_link_libraries(
-	kql
+	clp_s_search_kql
 	PRIVATE
 	antlr4_static
 	clp::string_utils
