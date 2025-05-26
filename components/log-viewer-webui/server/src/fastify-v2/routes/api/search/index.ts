@@ -10,13 +10,14 @@ import {
     CreateQueryJobSchema,
     QueryJobSchema,
 } from "../../../schemas/search.js";
-import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
+import {SEARCH_MAX_NUM_RESULTS, SearchResultsMetadataDocument} from "./typings.js";
 import {
     createMongoIndexes,
     updateSearchResultsMeta,
     updateSearchSignalWhenJobsFinish,
 } from "./utils.js";
 
+import settings from "../../../../../settings.json" with {type: "json"};
 
 /**
  * Search API routes.
@@ -27,8 +28,17 @@ import {
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const {
         QueryJobsDbManager,
-        SearchResultsMetadataCollection,
     } = fastify;
+
+    if ("undefined" === typeof fastify.mongo.db) {
+        throw new Error("MongoDB database not found");
+    }
+
+    const mongoDb = fastify.mongo.db;
+
+    const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
+        settings.MongoDbSearchResultsMetadataCollectionName
+    );
 
     /**
      * Submits a search query and initiates the search process.
@@ -81,10 +91,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 return reply.internalServerError(errMsg);
             }
 
-            await SearchJobCollectionsManager.getOrCreateCollection(searchJobId);
-            await SearchJobCollectionsManager.getOrCreateCollection(aggregationJobId);
+            // Should not throw an error if the collection already exists.
+            await mongoDb.createCollection(searchJobId.toString());
+            await mongoDb.createCollection(aggregationJobId.toString());
 
-            await SearchResultsMetadataCollection.insertOne({
+            await searchResultsMetadataCollection.insertOne({
                 _id: searchJobId.toString(),
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                 errorMsg: null,
@@ -96,7 +107,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     aggregationJobId: aggregationJobId,
                     logger: request.log,
                     queryJobsDbManager: QueryJobsDbManager,
-                    searchJobCollectionsManager: SearchJobCollectionsManager,
                     searchJobId: searchJobId,
                     searchResultsMetadataCollection: SearchResultsMetadataCollection,
                 }).catch((err: unknown) => {

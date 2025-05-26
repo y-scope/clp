@@ -16,15 +16,30 @@ import {
 } from "../../../../../typings/query.js";
 import {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS} from "./typings.js";
 
+import type {
+    Collection,
+    Db,
+} from "mongodb";
+
+import type {SearchResultsMetadataDocument} from "./typings.js";
+
 
 /**
  * Class for submitting and monitoring query jobs in the database.
  */
 class QueryJobsDbManager {
     #sqlDbConnPool: MySQLPromisePool;
+    #mongoDb: Db;
+    // eslint-disable-next-line @typescript-eslint/no-unused-private-class-members
+    #searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
 
-    private constructor (sqlDbConnPool: MySQLPromisePool) {
+    private constructor (sqlDbConnPool: MySQLPromisePool, mongoDB: Db) {
         this.#sqlDbConnPool = sqlDbConnPool;
+        this.#mongoDb = mongoDB
+
+        this.#searchResultsMetadataCollection = this.#mongoDb.collection<SearchResultsMetadataDocument>(
+            settings.MongoDbSearchResultsMetadataCollectionName
+        );
     }
 
     /**
@@ -34,8 +49,12 @@ class QueryJobsDbManager {
      * @return
      */
     static create (fastify: FastifyInstance): QueryJobsDbManager {
-        const sqlDbConnPool = fastify.mysql;
-        return new QueryJobsDbManager(sqlDbConnPool);
+
+        if ("undefined" === typeof fastify.mongo.db) {
+            throw new Error("MongoDB database not found");
+        }
+
+        return new QueryJobsDbManager(fastify.mysql, fastify.mongo.db);
     }
 
     /**

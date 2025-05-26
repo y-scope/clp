@@ -5,9 +5,19 @@ import {
 
 import {
     SEARCH_SIGNAL,
-    SearchResultsMetadataDocument,
 } from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
 
+
+/**
+ * MongoDB document for search results metadata. `numTotalResults` is optional
+ * since it is only set when the search job is completed.
+ */
+interface SearchResultsMetadataDocument {
+    _id: string;
+    errorMsg: Nullable<string>;
+    lastSignal: SEARCH_SIGNAL;
+    numTotalResults?: number;
+}
 
 /**
  * The maximum number of results to retrieve for a search.
@@ -41,5 +51,6 @@ export {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,
     UpdateSearchResultsMetaProps,
+    SearchResultsMetadataDocument,
     UpdateSearchSignalWhenJobsFinishProps,
 };
