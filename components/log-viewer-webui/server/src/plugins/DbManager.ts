@@ -12,14 +12,16 @@ import {
 import {Nullable} from "../typings/common.js";
 import {
     DbManagerOptions,
+    StreamFileMongoDocument,
+    StreamFilesCollection,
+} from "../typings/DbManager.js";
+import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
     QUERY_JOB_TYPE,
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
-    StreamFileMongoDocument,
-    StreamFilesCollection,
-} from "../typings/DbManager.js";
+} from "../typings/query.js";
 import {sleep} from "../utils/time.js";
 
 
@@ -79,6 +81,18 @@ class DbManager {
             queryJobsTableName: dbConfig.mysqlConfig.queryJobsTableName,
         });
     }
+
+    /**
+     * Submits a query to MySQL.
+     *
+     * @param queryString
+     * @return The result from MySQL.
+     */
+    async queryMySql (queryString: string) {
+        const [result] = await this.#mysqlConnectionPool.query(queryString);
+        return result;
+    }
+
 
     /**
      * Submits a stream extraction job to the scheduler and waits for it to finish.
