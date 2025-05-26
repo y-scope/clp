@@ -1,5 +1,5 @@
-import {CollectionDroppedError} from "../../../plugins/app/search/SearchJobCollectionsManager/typings.js";
-import {SEARCH_SIGNAL} from "../../../plugins/app/search/SearchResultsMetadataCollection/typings.js";
+
+import {SEARCH_SIGNAL} from "@common/searchResultsMetadata.js";
 import {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,
@@ -7,6 +7,17 @@ import {
     UpdateSearchSignalWhenJobsFinishProps,
 } from "./typings.js";
 
+/**
+ * Checks if a collection exists in the MongoDB database.
+ *
+ * @param mongoDb
+ * @param collectionName
+ * @return Whether the collection exists.
+ */
+const hasCollection = async (mongoDb: any, collectionName: string): Promise<boolean> => {
+    const collections = await mongoDb.listCollections().toArray();
+    return collections.some((collection: { name: string }) => collection.name === collectionName);
+};
 
 /**
  * Modifies the search results metadata for a given job ID.
@@ -51,10 +62,10 @@ const updateSearchResultsMeta = async ({
  */
 const updateSearchSignalWhenJobsFinish = async ({
     aggregationJobId,
-    queryJobsDbManager,
     logger,
+    mongoDb,
+    queryJobsDbManager,
     searchJobId,
-    searchJobCollectionsManager,
     searchResultsMetadataCollection,
 
 }: UpdateSearchSignalWhenJobsFinishProps) => {
@@ -70,17 +81,16 @@ const updateSearchSignalWhenJobsFinish = async ({
     }
 
     let numResultsInCollection: number;
+    const searchResultCollectionName = searchJobId.toString();
 
-    try {
-        const collection = await searchJobCollectionsManager.getOrCreateCollection(searchJobId);
-        numResultsInCollection = await collection.countDocuments();
-    } catch (e: unknown) {
-        if (e instanceof CollectionDroppedError) {
-            logger.warn({e, errorMsg});
-
-            return;
-        }
-        throw e;
+    if (await hasCollection(mongoDb, searchResultCollectionName)) {
+        mongoDb.collection(searchResultCollectionName);
+        numResultsInCollection = await mongoDb.collection(
+            searchResultCollectionName
+        ).countDocuments();
+    } else {
+        logger.warn({errorMsg, searchJobId}, "Collection missing in database." );
+        return;
     }
 
     await updateSearchResultsMeta({
@@ -108,9 +118,9 @@ const updateSearchSignalWhenJobsFinish = async ({
  * @param props.searchJobCollectionsManager
  */
 const createMongoIndexes = async ({
-    logger,
     searchJobId,
-    searchJobCollectionsManager,
+    logger,
+    mongoDb,
 }: CreateMongoIndexesProps) => {
     const timestampAscendingIndex = {
         key: {
@@ -127,7 +137,7 @@ const createMongoIndexes = async ({
         name: "timestamp-descending",
     };
 
-    const queryJobCollection = await searchJobCollectionsManager.getOrCreateCollection(searchJobId);
+    const queryJobCollection = mongoDb.collection(searchJobId.toString());
     logger.info(`Creating indexes for collection ${searchJobId}`);
     await queryJobCollection.createIndexes([
         timestampAscendingIndex,
@@ -139,4 +149,5 @@ export {
     createMongoIndexes,
     updateSearchResultsMeta,
     updateSearchSignalWhenJobsFinish,
+    hasCollection,
 };

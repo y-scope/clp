@@ -30,7 +30,6 @@ import type {SearchResultsMetadataDocument} from "./typings.js";
 class QueryJobsDbManager {
     #sqlDbConnPool: MySQLPromisePool;
     #mongoDb: Db;
-    // eslint-disable-next-line @typescript-eslint/no-unused-private-class-members
     #searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
 
     private constructor (sqlDbConnPool: MySQLPromisePool, mongoDB: Db) {
