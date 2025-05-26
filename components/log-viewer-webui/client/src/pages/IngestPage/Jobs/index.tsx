@@ -73,8 +73,10 @@ const Jobs = ({className}: JobsProps) => {
         return () => {
             clearInterval(intervalIdRef.current);
         };
-    }, [refreshInterval,
-        fetchJobsStats]);
+    }, [
+        refreshInterval,
+        fetchJobsStats,
+    ]);
 
 
     return (

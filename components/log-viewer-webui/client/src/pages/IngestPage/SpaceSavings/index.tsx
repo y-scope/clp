@@ -40,7 +40,7 @@ const SpaceSavings = () => {
     const {token} = theme.useToken();
     const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
 
-    const update = useCallback(async () => {
+    const fetchSpaceSavingsStats = useCallback(async () => {
         const {data: [resp]} = await querySql<SpaceSavingsResp>(getSpaceSavingsSql());
         if ("undefined" === typeof resp) {
             throw new Error("Space savings response is undefined");
@@ -51,14 +51,16 @@ const SpaceSavings = () => {
 
     useEffect(() => {
         // eslint-disable-next-line no-void
-        void update();
-        intervalIdRef.current = setInterval(update, refreshInterval);
+        void fetchSpaceSavingsStats();
+        intervalIdRef.current = setInterval(fetchSpaceSavingsStats, refreshInterval);
 
         return () => {
             clearInterval(intervalIdRef.current);
         };
-    }, [refreshInterval,
-        update]);
+    }, [
+        refreshInterval,
+        fetchSpaceSavingsStats,
+    ]);
 
 
     const spaceSavingsPercent = (0 !== uncompressedSize) ?

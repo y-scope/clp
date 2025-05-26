@@ -69,8 +69,10 @@ const Details = () => {
         return () => {
             clearInterval(intervalIdRef.current);
         };
-    }, [refreshInterval,
-        fetchDetailsStats]);
+    }, [
+        refreshInterval,
+        fetchDetailsStats,
+    ]);
 
 
     return (
