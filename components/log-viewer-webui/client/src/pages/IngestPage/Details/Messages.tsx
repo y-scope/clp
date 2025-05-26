@@ -1,6 +1,10 @@
 import DetailsCard from "./DetailsCard";
 
 
+interface MessagesProps {
+    numMessages: number;
+}
+
 /**
  * Renders the messages statistic.
  *
@@ -8,7 +12,7 @@ import DetailsCard from "./DetailsCard";
  * @param props.numMessages
  * @return
  */
-const Messages = ({numMessages}: {numMessages: number}) => {
+const Messages = ({numMessages}: MessagesProps) => {
     return (
         <DetailsCard
             stat={numMessages.toString()}

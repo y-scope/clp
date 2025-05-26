@@ -8,6 +8,7 @@ import {
 import {theme} from "antd";
 
 import StatCard from "../../../components/StatCard";
+import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
 import useRefreshIntervalStore from "../RefreshIntervalState";
 import {querySql} from "../sqlConfig";
 import {
@@ -17,33 +18,40 @@ import {
 
 
 /**
+ * Default state for space savings.
+ */
+const SPACE_SAVINGS_DEFAULT = Object.freeze({
+    compressedSize: 0,
+    uncompressedSize: 0,
+});
+
+
+/**
  * Renders space savings card.
  *
  * @return
  */
 const SpaceSavings = () => {
     const {refreshInterval} = useRefreshIntervalStore();
-    const [compressedSize, setCompressedSize] = useState<number>(0);
-    const [uncompressedSize, setUncompressedSize] = useState<number>(0);
+    const [compressedSize, setCompressedSize] =
+        useState<number>(SPACE_SAVINGS_DEFAULT.compressedSize);
+    const [uncompressedSize, setUncompressedSize] =
+        useState<number>(SPACE_SAVINGS_DEFAULT.uncompressedSize);
     const {token} = theme.useToken();
-    const intervalIdRef = useRef<number>(0);
+    const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
 
-    const update = useCallback(() => {
-        (async () => {
-            const {data: [resp]} = await querySql<SpaceSavingsResp>(getSpaceSavingsSql());
-            if ("undefined" === typeof resp) {
-                throw new Error();
-            }
-            setCompressedSize(resp.total_compressed_size);
-            setUncompressedSize(resp.total_uncompressed_size);
-        })().catch((error: unknown) => {
-            console.error("An error occurred when fetching space savings: ", error);
-        });
-    }, [setCompressedSize,
-        setUncompressedSize]);
+    const update = useCallback(async () => {
+        const {data: [resp]} = await querySql<SpaceSavingsResp>(getSpaceSavingsSql());
+        if ("undefined" === typeof resp) {
+            throw new Error("Space savings response is undefined");
+        }
+        setCompressedSize(resp.total_compressed_size);
+        setUncompressedSize(resp.total_uncompressed_size);
+    }, []);
 
     useEffect(() => {
-        update();
+        // eslint-disable-next-line no-void
+        void update();
         intervalIdRef.current = setInterval(update, refreshInterval);
 
         return () => {

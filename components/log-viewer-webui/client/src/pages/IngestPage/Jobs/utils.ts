@@ -1,14 +1,14 @@
+import {PresetStatusColorType} from "antd/es/_util/colors";
 import dayjs from "dayjs";
 
 import {JobData} from "../Jobs/typings";
 import {QueryJobsItem} from "./sql";
+import {formatSizeInBytes} from "./units";
 
 
 /**
- * Enum of compression job statuses, matching the `CompressionJobStatus` class in
+ * Compression job statuses, matching the `CompressionJobStatus` class in
  * `job_orchestration.scheduler.constants`.
- *
- * @enum {CompressionJobStatus}
  */
 enum CompressionJobStatus {
     PENDING = 0,
@@ -18,55 +18,17 @@ enum CompressionJobStatus {
 }
 
 /**
- * Convert JobStatus to Antd's badge string.
- *
- * @param status
- * @return
- * @throws an Error if status is not a CompressionJobStatus.
+ * Map from Job Status to Antd status color name
  */
-const convertJobStatusToBadgeString = (status: CompressionJobStatus) => {
-    switch (status) {
-        case CompressionJobStatus.PENDING:
-            return "warning";
-        case CompressionJobStatus.RUNNING:
-            return "processing";
-        case CompressionJobStatus.SUCCEEDED:
-            return "success";
-        case CompressionJobStatus.FAILED:
-            return "error";
-        default:
-            throw new Error("Unexpected status value.");
-    }
-};
-
-const BYTES_PER_KIBIBYTE = 1024;
-
-/**
- * Computes a human-readable representation of a size in bytes.
- *
- * @param num
- * @return
- */
-const computeHumanSize = (num: number) => {
-    const siPrefixes = ["",
-        "K",
-        "M",
-        "G",
-        "T",
-        "P",
-        "E",
-        "Z"];
-
-    for (let i = 0; i < siPrefixes.length; ++i) {
-        if (BYTES_PER_KIBIBYTE > Math.abs(num)) {
-            return `${Math.round(num)} ${siPrefixes[i]}B`;
-        }
-        num /= BYTES_PER_KIBIBYTE;
-    }
-
-    return `${Math.round(num)} B`;
-};
-
+const JOB_STATUS_TO_DISPLAY_NAME: Record<
+    CompressionJobStatus,
+    PresetStatusColorType
+> = Object.freeze({
+    [CompressionJobStatus.PENDING]: "warning",
+    [CompressionJobStatus.RUNNING]: "processing",
+    [CompressionJobStatus.SUCCEEDED]: "success",
+    [CompressionJobStatus.FAILED]: "error",
+});
 
 /**
  * Convert a QueryJobsItem to JobData
@@ -89,12 +51,12 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
 
     const uncompressedSize = Number(job.uncompressed_size);
     if (false === isNaN(uncompressedSize) && 0 !== uncompressedSize) {
-        uncompressedSizeText = computeHumanSize(uncompressedSize);
+        uncompressedSizeText = formatSizeInBytes(uncompressedSize);
     }
 
     const compressedSize = Number(job.compressed_size);
     if (false === isNaN(compressedSize) && 0 !== compressedSize) {
-        compressedSizeText = computeHumanSize(compressedSize);
+        compressedSizeText = formatSizeInBytes(compressedSize);
     }
 
     if (false === isNaN(uncompressedSize) &&
@@ -102,7 +64,7 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
         null !== job.duration &&
         0 < job.duration
     ) {
-        speedText = `${computeHumanSize(uncompressedSize / job.duration)}/s`;
+        speedText = `${formatSizeInBytes(uncompressedSize / job.duration)}/s`;
     }
 
     return {
@@ -111,7 +73,7 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
         jobId: String(job._id),
         key: String(job._id),
         speed: speedText,
-        status: convertJobStatusToBadgeString(job.status),
+        status: JOB_STATUS_TO_DISPLAY_NAME[job.status as CompressionJobStatus],
     };
 };
 

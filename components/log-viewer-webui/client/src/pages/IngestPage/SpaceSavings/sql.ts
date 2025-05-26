@@ -9,7 +9,7 @@ import {
  *
  * @return
  */
-const getQueryStatsSql = () => `
+const getSpaceSavingsSql = () => `
 SELECT
     SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE}) AS total_uncompressed_size,
     SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.SIZE})              AS total_compressed_size
@@ -24,6 +24,7 @@ interface SpaceSavingsItem {
 type SpaceSavingsResp = SpaceSavingsItem[];
 
 export type {
-    SpaceSavingsItem, SpaceSavingsResp,
+    SpaceSavingsItem,
+    SpaceSavingsResp,
 };
-export {getQueryStatsSql as getSpaceSavingsSql};
+export {getSpaceSavingsSql};

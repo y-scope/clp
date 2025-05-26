@@ -9,6 +9,7 @@ import {Table} from "antd";
 import dayjs from "dayjs";
 
 import {DashboardCard} from "../../../components/DashboardCard";
+import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
 import useRefreshIntervalStore from "../RefreshIntervalState";
 import {querySql} from "../sqlConfig";
 import styles from "./index.module.css";
@@ -25,9 +26,15 @@ import {convertQueryJobsItemToJobData} from "./utils";
 
 const DAYS_TO_SHOW: number = 30;
 
+/**
+ * Default state for jobs.
+ */
+const JOBS_DEFAULT = Object.freeze({
+    jobs: [],
+});
 
 interface JobsProps {
-    className?: string;
+    className: string;
 }
 
 /**
@@ -39,33 +46,35 @@ interface JobsProps {
  */
 const Jobs = ({className}: JobsProps) => {
     const {refreshInterval} = useRefreshIntervalStore();
-    const [jobs, setJobs] = useState<JobData[]>([]);
-    const intervalIdRef = useRef<number>(0);
+    const [jobs, setJobs] = useState<JobData[]>(JOBS_DEFAULT.jobs);
+    const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
 
-    const update = useCallback(() => {
-        (async () => {
-            const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
-                .unix();
-            const {data: resp} = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
-            const newJobs = resp
-                .map((item): JobData => convertQueryJobsItemToJobData(item));
+    /**
+     * Fetches jobs stats from the server.
+     *
+     * @throws {Error} If the response is undefined.
+     */
+    const fetchJobsStats = useCallback(async () => {
+        const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
+            .unix();
+        const {data: resp} = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
+        const newJobs = resp
+            .map((item): JobData => convertQueryJobsItemToJobData(item));
 
-            setJobs(newJobs);
-        })().catch((error: unknown) => {
-            console.error("An error occurred when fetching jobs: ", error);
-        });
-    }, [setJobs]);
+        setJobs(newJobs);
+    }, []);
 
 
     useEffect(() => {
-        update();
-        intervalIdRef.current = setInterval(update, refreshInterval);
+        // eslint-disable-next-line no-void
+        void fetchJobsStats();
+        intervalIdRef.current = setInterval(fetchJobsStats, refreshInterval);
 
         return () => {
             clearInterval(intervalIdRef.current);
         };
     }, [refreshInterval,
-        update]);
+        fetchJobsStats]);
 
 
     return (

@@ -41,6 +41,7 @@ interface DetailsItem {
 type DetailsResp = DetailsItem[];
 
 export type {
-    DetailsItem, DetailsResp,
+    DetailsItem,
+    DetailsResp,
 };
 export {getDetailsSql};

@@ -8,6 +8,7 @@ import {
 import dayjs, {Dayjs} from "dayjs";
 import {Nullable} from "src/typings/common";
 
+import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
 import useRefreshIntervalStore from "../RefreshIntervalState";
 import {querySql} from "../sqlConfig";
 import Files from "./Files";
@@ -21,56 +22,63 @@ import TimeRange from "./TimeRange";
 
 
 /**
+ * Default state for details.
+ */
+const DETAILS_DEFAULT = Object.freeze({
+    beginDate: null,
+    endDate: null,
+
+    numFiles: 0,
+    numMessages: 0,
+});
+
+/**
  * Renders grid with compression details.
  *
  * @return
  */
 const Details = () => {
     const {refreshInterval} = useRefreshIntervalStore();
-    const [startDate, setStartDate] = useState<Nullable<Dayjs>>(null);
-    const [endDate, setEndDate] = useState<Nullable<Dayjs>>(null);
-    const [numFiles, setNumFiles] = useState<number>(0);
-    const [numMessages, setNumMessages] = useState<number>(0);
-    const intervalIdRef = useRef<number>(0);
+    const [beginDate, setBeginDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.beginDate);
+    const [endDate, setEndDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.endDate);
+    const [numFiles, setNumFiles] = useState<number>(DETAILS_DEFAULT.numFiles);
+    const [numMessages, setNumMessages] = useState<number>(DETAILS_DEFAULT.numMessages);
+    const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
 
-    const update = useCallback(
-        () => {
-            (async () => {
-                const {data: [resp]} = await querySql<DetailsResp>(getDetailsSql());
-                if ("undefined" === typeof resp) {
-                    throw new Error();
-                }
-                setStartDate(dayjs(resp.begin_timestamp));
-                setEndDate(dayjs(resp.end_timestamp));
-                setNumFiles(resp.num_files);
-                setNumMessages(resp.num_messages);
-            })().catch((error: unknown) => {
-                console.error("An error occurred when fetching details: ", error);
-            });
+    /**
+     * Fetches details stats from the server.
+     *
+     * @throws {Error} If the response is undefined.
+     */
+    const fetchDetailsStats = useCallback(async () => {
+        const {data: [resp]} = await querySql<DetailsResp>(getDetailsSql());
+        if ("undefined" === typeof resp) {
+            throw new Error("Details response is undefined");
         }
-        , [setStartDate,
-            setEndDate,
-            setNumFiles,
-            setNumMessages]
-    );
+        setBeginDate(dayjs(resp.begin_timestamp));
+        setEndDate(dayjs(resp.end_timestamp));
+        setNumFiles(resp.num_files);
+        setNumMessages(resp.num_messages);
+    }, []);
 
     useEffect(() => {
-        update();
-        intervalIdRef.current = setInterval(update, refreshInterval);
+        // eslint-disable-next-line no-void
+        void fetchDetailsStats();
+        intervalIdRef.current = setInterval(fetchDetailsStats, refreshInterval);
 
         return () => {
             clearInterval(intervalIdRef.current);
         };
     }, [refreshInterval,
-        update]);
+        fetchDetailsStats]);
 
 
     return (
         <div className={styles["detailsGrid"]}>
             <div className={styles["timeRange"]}>
                 <TimeRange
-                    endDate={endDate}
-                    startDate={startDate}/>
+                    beginDate={beginDate}
+                    endDate={endDate}/>
             </div>
             <Messages numMessages={numMessages}/>
             <Files numFiles={numFiles}/>

@@ -6,17 +6,22 @@ import DetailsCard from "./DetailsCard";
 
 const DATE_FORMAT = "MMMM D, YYYY";
 
+interface TimeRangeProps {
+    beginDate: Nullable<Dayjs>;
+    endDate: Nullable<Dayjs>;
+}
+
 /**
  * Renders the time range statistic.
  *
  * @param props
- * @param props.startDate
+ * @param props.beginDate
  * @param props.endDate
  * @return
  */
-const TimeRange = ({startDate, endDate}: {startDate: Nullable<Dayjs>;endDate: Nullable<Dayjs>}) => {
-    const formattedStat = `${startDate?.format(DATE_FORMAT) ?? "N/A"} -
-        ${endDate?.format(DATE_FORMAT) ?? "N/A"}`;
+const TimeRange = ({beginDate, endDate}: TimeRangeProps) => {
+    const formattedStat = `${beginDate?.format(DATE_FORMAT) ?? "Unknown Begin Date"} -
+        ${endDate?.format(DATE_FORMAT) ?? "Unknown End Date"}`;
 
     return (
         <DetailsCard

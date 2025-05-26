@@ -1,6 +1,10 @@
 import DetailsCard from "./DetailsCard";
 
 
+interface FilesProps {
+    numFiles: number;
+}
+
 /**
  * Renders the files statistic.
  *
@@ -8,7 +12,7 @@ import DetailsCard from "./DetailsCard";
  * @param props.numFiles
  * @return
  */
-const Files = ({numFiles}: {numFiles: number}) => {
+const Files = ({numFiles}: FilesProps) => {
     return (
         <DetailsCard
             stat={numFiles.toString()}
