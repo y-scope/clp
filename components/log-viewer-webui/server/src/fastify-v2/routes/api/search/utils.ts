@@ -89,6 +89,8 @@ const updateSearchSignalWhenJobsFinish = async ({
             searchResultCollectionName
         ).countDocuments();
     } else {
+        // Client may have sent delete request, removing the mongoDb collection, before the job
+        // finished.
         logger.warn({errorMsg, searchJobId}, "Collection missing in database." );
         return;
     }

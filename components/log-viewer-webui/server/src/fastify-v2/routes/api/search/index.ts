@@ -4,13 +4,13 @@ import {
 } from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
-import {SEARCH_SIGNAL} from "@common/searchResultsMetadata.js";
+import {SEARCH_SIGNAL, SearchResultsMetadataDocument} from "@common/searchResultsMetadata.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     CreateQueryJobSchema,
     QueryJobSchema,
 } from "../../../schemas/search.js";
-import {SEARCH_MAX_NUM_RESULTS, SearchResultsMetadataDocument} from "./typings.js";
+import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
 import {
     createMongoIndexes,
     updateSearchResultsMeta,
