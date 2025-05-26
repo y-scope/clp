@@ -80,6 +80,20 @@ follows:
 \@key: value
 ```
 
+### Querying kv-pairs in the archive range index
+
+The archive range index maps metadata about each file ingested into an archive to a logical range
+of the archive. Filters that reference fields in this metadata transparently get converted to
+filters that match corresponding logical ranges of an archive.
+
+To search for records corresponding to a kv-pair within the archive range index you can prefix the
+key with `$`. For example, the following query searches for records from a file that was passed to
+compression as `test.jsonl`:
+
+```
+$_filename: "test.jsonl"
+```
+
 ### Wildcards in values
 
 To search for a kv-pair with *any* value, you can specify the value as a single `*`.
