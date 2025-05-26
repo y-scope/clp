@@ -88,9 +88,9 @@ tasks:
 
   clp-s-generate-antlr:
     preconditions:
-      - sh: which curl >/dev/null
+      - sh: "which curl >/dev/null"
         msg: "curl is required to download the ANTLR JAR"
-      - sh: which java >/dev/null
+      - sh: "which java >/dev/null"
         msg: "Java is required for ANTLR code generation"
     sources:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
