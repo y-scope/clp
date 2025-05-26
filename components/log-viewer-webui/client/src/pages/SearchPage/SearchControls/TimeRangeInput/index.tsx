@@ -16,6 +16,8 @@ import {
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
 
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
+
 
 /**
  * Renders controls for selecting a time range for queries. By default, the component is
@@ -25,7 +27,7 @@ import {
  * @return
  */
 const TimeRangeInput = () => {
-    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
+    const {updateTimeRange, searchUiState} = useSearchStore();
     const [selectedOption, setSelectedOption] = useState<TIME_RANGE_OPTION>(DEFAULT_TIME_RANGE);
 
     const handleSelectChange = (timeRangeOption: TIME_RANGE_OPTION) => {
@@ -54,6 +56,9 @@ const TimeRangeInput = () => {
                 listHeight={300}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
+                disabled = {searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ||
+                            searchUiState === SEARCH_UI_STATE.QUERYING
+                        }
                 size={"large"}
                 variant={"filled"}
                 className={selectedOption === TIME_RANGE_OPTION.CUSTOM ?
@@ -65,6 +70,9 @@ const TimeRangeInput = () => {
                     className={styles["rangePicker"] || ""}
                     showNow={true}
                     showTime={true}
+                    disabled = {searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ||
+                                searchUiState === SEARCH_UI_STATE.QUERYING
+                    }
                     size={"large"}
                     onChange={(dates) => {
                         handleRangePickerChange(dates);

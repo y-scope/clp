@@ -3,6 +3,7 @@ import { clearQueryResults } from "../../../api/search/queryClear";
 import { submitQuery } from "../../../api/search/querySubmit";
 import { cancelQuery } from "../../../api/search/queryCancel";
 import { SEARCH_UI_STATE } from "./typings";
+import { SEARCH_STATE_DEFAULT } from "./index";
 
 import { computeTimelineConfig } from "./datetime";
 
@@ -19,6 +20,9 @@ const handleClearResults = () => {
     if (!searchJobId || !aggregationJobId) {
         throw new Error("No searchJobId or aggregationJobId to clear.");
     }
+
+    store.updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
+    store.updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
 
     clearQueryResults({
         searchJobId,
@@ -41,11 +45,6 @@ type QueryArgs = {
 const handleQuerySubmit = () => {
 
     const store = useSearchStore.getState();
-
-    if (store.searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ) {
-        console.warn("Query already submitted, ignoring submit request.");
-        return;
-    }
 
     if (store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
         store.searchUiState !== SEARCH_UI_STATE.DONE
@@ -76,6 +75,7 @@ const handleQuerySubmit = () => {
             store.updateSearchJobId(result.searchJobId);
             store.updateAggregationJobId(result.aggregationJobId);
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
+            console.log("Query ID Returned", result);
         })
         .catch((error) => {
             console.error("Failed to submit query:", error);
@@ -107,9 +107,7 @@ const handleQueryCancel = () => {
 
     // Reset the state. I dont need to wait for promise to resolve. Another query
     // can be submitted before previous cancel finished
-    store.updateSearchJobId(null);
-    store.updateAggregationJobId(null);
-    store.updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
+    store.updateSearchUiState(SEARCH_UI_STATE.DONE);
 };
 
 export {

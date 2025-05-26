@@ -6,8 +6,7 @@ import styles from "./index.module.css";
 import { SEARCH_UI_STATE } from "../../SearchState/typings";
 
 const SubmitButton = () => {
-    const queryString = useSearchStore((state) => state.queryString);
-    const {searchUiState} = useSearchStore();
+    const {searchUiState, queryString} = useSearchStore();
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
 
     return (

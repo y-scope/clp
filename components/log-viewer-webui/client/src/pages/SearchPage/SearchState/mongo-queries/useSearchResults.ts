@@ -17,7 +17,8 @@ const useSearchResults = () => {
         () => {
             // If there is no active search job, there is no metadata to fetch. The cursor will
             // return null.
-            if (searchJobId === SEARCH_STATE_DEFAULT.searchJobId) {
+            if (searchJobId === SEARCH_STATE_DEFAULT.searchJobId
+            ) {
                 return null;
             }
             const collection = new MongoCollectionSocket(searchJobId.toString());
