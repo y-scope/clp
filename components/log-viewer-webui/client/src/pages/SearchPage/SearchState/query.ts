@@ -21,8 +21,8 @@ const handleClearResults = () => {
         throw new Error("No searchJobId or aggregationJobId to clear.");
     }
 
-    store.updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
-    store.updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
+    //store.updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
+    //store.updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
 
     clearQueryResults({
         searchJobId,
