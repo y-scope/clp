@@ -9,7 +9,7 @@ import {theme} from "antd";
 
 import StatCard from "../../../components/StatCard";
 import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
-import useRefreshIntervalStore from "../RefreshIntervalState";
+import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import {
     getSpaceSavingsSql,
@@ -32,7 +32,7 @@ const SPACE_SAVINGS_DEFAULT = Object.freeze({
  * @return
  */
 const SpaceSavings = () => {
-    const {refreshInterval} = useRefreshIntervalStore();
+    const {refreshInterval} = useIngestStatsStore();
     const [compressedSize, setCompressedSize] =
         useState<number>(SPACE_SAVINGS_DEFAULT.compressedSize);
     const [uncompressedSize, setUncompressedSize] =

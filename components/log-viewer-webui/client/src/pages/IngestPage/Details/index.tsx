@@ -9,7 +9,7 @@ import dayjs, {Dayjs} from "dayjs";
 import {Nullable} from "src/typings/common";
 
 import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
-import useRefreshIntervalStore from "../RefreshIntervalState";
+import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import Files from "./Files";
 import styles from "./index.module.css";
@@ -38,7 +38,7 @@ const DETAILS_DEFAULT = Object.freeze({
  * @return
  */
 const Details = () => {
-    const {refreshInterval} = useRefreshIntervalStore();
+    const {refreshInterval} = useIngestStatsStore();
     const [beginDate, setBeginDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.beginDate);
     const [endDate, setEndDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.endDate);
     const [numFiles, setNumFiles] = useState<number>(DETAILS_DEFAULT.numFiles);

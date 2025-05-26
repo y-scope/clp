@@ -10,7 +10,7 @@ import dayjs from "dayjs";
 
 import {DashboardCard} from "../../../components/DashboardCard";
 import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
-import useRefreshIntervalStore from "../RefreshIntervalState";
+import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import styles from "./index.module.css";
 import {
@@ -45,7 +45,7 @@ interface JobsProps {
  * @return
  */
 const Jobs = ({className}: JobsProps) => {
-    const {refreshInterval} = useRefreshIntervalStore();
+    const {refreshInterval} = useIngestStatsStore();
     const [jobs, setJobs] = useState<JobData[]>(JOBS_DEFAULT.jobs);
     const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
 
