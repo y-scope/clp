@@ -2,6 +2,7 @@ import {
     Input,
     InputProps,
     Progress,
+    theme,
 } from "antd";
 
 import {Nullable} from "../../typings/common";
@@ -21,22 +22,26 @@ export interface QueryBoxProps extends InputProps {
  * @return
  */
 const QueryBox = ({progress, ...inputProps}: QueryBoxProps) => {
+    const { token } = theme.useToken();
+
     return (
         <div className={styles["queryBox"]}>
-                <Input {...inputProps}/>
-                <div className={styles["progressBarMask"]}>
+            <Input {...inputProps}/>
+            <div
+                className={styles["progressBarMask"]}
+                style={{ borderRadius: token.borderRadius }}
+            >
+                {progress !== null && (
                     <Progress
                         className={styles["progressBar"] || ""}
-                        percent={progress ?? 0}
+                        percent={progress}
                         status="active"
                         showInfo={false}
                         size={"small"}
-                        trailColor = "#ffffff"
                         strokeLinecap={"butt"}
-                        style={{display: null === progress ?
-                            "none" :
-                            "block"}}/>
-                </div>
+                    />
+                )}
+            </div>
         </div>
     );
 };

@@ -46,7 +46,6 @@ interface JobsProps {
 const Jobs = ({className}: JobsProps) => {
     const {refreshInterval} = useIngestStatsStore();
     const [jobs, setJobs] = useState<JobData[]>(JOBS_DEFAULT.jobs);
-    const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     /**
      * Fetches jobs stats from the server.
@@ -67,13 +66,10 @@ const Jobs = ({className}: JobsProps) => {
     useEffect(() => {
         // eslint-disable-next-line no-void
         void fetchJobsStats();
-        intervalIdRef.current = setInterval(fetchJobsStats, refreshInterval);
+        const intervalId = setInterval(fetchJobsStats, refreshInterval);
 
         return () => {
-            if (null !== intervalIdRef.current) {
-                clearInterval(intervalIdRef.current);
-                intervalIdRef.current = null;
-            }
+            clearInterval(intervalId);
         };
     }, [
         refreshInterval,

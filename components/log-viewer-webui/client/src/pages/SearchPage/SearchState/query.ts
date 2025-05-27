@@ -1,7 +1,7 @@
 import useSearchStore from "./index";
-import { clearQueryResults } from "../../../api/search/queryClear";
-import { submitQuery } from "../../../api/search/querySubmit";
-import { cancelQuery } from "../../../api/search/queryCancel";
+import { clearQueryResults } from "../../../api/search";
+import { submitQuery } from "../../../api/search";
+import { cancelQuery } from "../../../api/search";
 import { SEARCH_UI_STATE } from "./typings";
 //import { SEARCH_STATE_DEFAULT } from "./index";
 

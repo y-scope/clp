@@ -3,8 +3,7 @@ import SearchControls from "./SearchControls";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
 
-import { useResultsMetadata } from "./SearchState/mongo-queries/useResultsMetadata";
-import { useUpdateUiStateWithMetadata } from "./SearchState/useUpdateStateWithMetadata";
+import { useUiUpdateOnDoneSignal } from "./SearchState/useUpdateStateWithMetadata";
 
 
 /**
@@ -13,8 +12,7 @@ import { useUpdateUiStateWithMetadata } from "./SearchState/useUpdateStateWithMe
  * @return
  */
 const SearchPage = () => {
-    const resultsMetadata = useResultsMetadata();
-    useUpdateUiStateWithMetadata(resultsMetadata);
+    useUiUpdateOnDoneSignal();
 
     return (
         <div className={styles["searchPageContainer"]}>

@@ -1,24 +1,22 @@
 import { useEffect } from "react";
 import { SEARCH_UI_STATE } from "./typings";
-import { SEARCH_SIGNAL, SearchResultsMetadataDocument } from "@common/index.js";
+import { SEARCH_SIGNAL } from "@common/index.js";
 import useSearchStore  from "./index";
-import { Nullable } from "../../../typings/common";
+import { useResultsMetadata } from "../reactive-mongo-queries/useResultsMetadata";
 
-
-const useUpdateUiStateWithMetadata = (resultsMetadata: Nullable<SearchResultsMetadataDocument[]>) => {
+const useUiUpdateOnDoneSignal = () => {
     const {updateSearchUiState} = useSearchStore();
+    const resultsMetadata = useResultsMetadata();
     useEffect(() => {
-        if (null === resultsMetadata ||
-            (Array.isArray(resultsMetadata) && resultsMetadata.length === 0)
+        if (null === resultsMetadata
         ) {
             return;
         }
 
-        let resultMetadata = resultsMetadata[0] as SearchResultsMetadataDocument;
-        if (resultMetadata.lastSignal === SEARCH_SIGNAL.RESP_DONE) {
+        if (resultsMetadata.lastSignal === SEARCH_SIGNAL.RESP_DONE) {
             updateSearchUiState(SEARCH_UI_STATE.DONE);
         }
     }, [resultsMetadata]);
 }
 
-export { useUpdateUiStateWithMetadata} ;
+export { useUiUpdateOnDoneSignal };

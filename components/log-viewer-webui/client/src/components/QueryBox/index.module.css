@@ -11,9 +11,6 @@
   position: absolute;
   top: 0;
   overflow: hidden;
-  /*Fix this eventaully*/
-  border-radius: var(--antd-border-radius);
-  --antd-border-radius: 8px;
 }
 
 .progressBar {

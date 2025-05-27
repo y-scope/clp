@@ -5,7 +5,7 @@ import { SEARCH_UI_STATE } from "../../SearchState/typings";
 
 
 /**
- * Renders a button to submit the search query.
+ * Renders a button to submit or cancel the search query.
  *
  * @return
  */

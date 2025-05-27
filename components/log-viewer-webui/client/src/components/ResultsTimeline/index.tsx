@@ -21,9 +21,9 @@ import {
     convertZoomTimestampToUtcDatetime,
 } from "./datetime";
 import {
-    DATETIME_FORMAT_TEMPLATE,
     TimeRange,
 } from "./datetime/typings";
+import {DATETIME_FORMAT_TEMPLATE} from "../../typings/datetime";
 import styles from "./index.module.css";
 import {
     TimelineBucket,

@@ -42,7 +42,6 @@ const Details = () => {
     const [endDate, setEndDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.endDate);
     const [numFiles, setNumFiles] = useState<number>(DETAILS_DEFAULT.numFiles);
     const [numMessages, setNumMessages] = useState<number>(DETAILS_DEFAULT.numMessages);
-    const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     /**
      * Fetches details stats from the server.
@@ -63,13 +62,10 @@ const Details = () => {
     useEffect(() => {
         // eslint-disable-next-line no-void
         void fetchDetailsStats();
-        intervalIdRef.current = setInterval(fetchDetailsStats, refreshInterval);
+        const intervalId = setInterval(fetchDetailsStats, refreshInterval);
 
         return () => {
-            if (null !== intervalIdRef.current) {
-                clearInterval(intervalIdRef.current);
-                intervalIdRef.current = null;
-            }
+            clearInterval(intervalId);
         };
     }, [
         refreshInterval,

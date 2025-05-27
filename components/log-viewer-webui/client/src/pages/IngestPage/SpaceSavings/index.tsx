@@ -37,7 +37,6 @@ const SpaceSavings = () => {
     const [uncompressedSize, setUncompressedSize] =
         useState<number>(SPACE_SAVINGS_DEFAULT.uncompressedSize);
     const {token} = theme.useToken();
-    const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchSpaceSavingsStats = useCallback(async () => {
         const {data: [resp]} = await querySql<SpaceSavingsResp>(getSpaceSavingsSql());
@@ -51,13 +50,10 @@ const SpaceSavings = () => {
     useEffect(() => {
         // eslint-disable-next-line no-void
         void fetchSpaceSavingsStats();
-        intervalIdRef.current = setInterval(fetchSpaceSavingsStats, refreshInterval);
+        const intervalId = setInterval(fetchSpaceSavingsStats, refreshInterval);
 
         return () => {
-            if (null !== intervalIdRef.current) {
-                clearInterval(intervalIdRef.current);
-                intervalIdRef.current = null;
-            }
+            clearInterval(intervalId);
         };
     }, [
         refreshInterval,

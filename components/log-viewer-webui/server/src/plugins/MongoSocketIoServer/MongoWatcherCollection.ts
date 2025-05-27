@@ -1,4 +1,4 @@
-import {QueryId} from "common/index.js";
+import {QueryId} from "@common/index.js";
 import type {
     Collection,
     Db,

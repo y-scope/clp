@@ -1,7 +1,7 @@
 import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "../../../../../../common/index.js";
+} from "@common/index.js";
 import {
     FastifyBaseLogger,
     FastifyInstance,

@@ -7,8 +7,15 @@ import {
 } from "react";
 import { SEARCH_UI_STATE } from "../SearchState/typings";
 
-// for pseudo progress bar
+
+/**
+ * Pseudo progress bar increments on each interval tick.
+ */
 const PROGRESS_INCREMENT = 5;
+
+/**
+ * The interval for updating the pseudo progress bar.
+ */
 const PROGRESS_INTERVAL_MILLIS = 100;
 
 /**
@@ -18,39 +25,46 @@ const PROGRESS_INTERVAL_MILLIS = 100;
  */
 const QueryInput = () => {
     const {queryString, updateQueryString, searchUiState}= useSearchStore();
-    const [progress, setProgress] = useState<number>(0);
-    const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [pseudoProgress, setPseudoProgress] = useState<number>(0);
+    const intervalIdRef = useRef<number>(0);
 
     useEffect(() => {
-        if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-            searchUiState === SEARCH_UI_STATE.QUERYING)
+        if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING)
         {
-            if (null === timerIntervalRef.current) {
-                timerIntervalRef.current = setInterval(() => {
-                    setProgress((v) => {
-                        if (v + PROGRESS_INCREMENT >= 100) {
-                            return 100;
-                        }
-                        return v + PROGRESS_INCREMENT;
-                    });
-                }, PROGRESS_INTERVAL_MILLIS);
+            if (intervalIdRef.current !== 0) {
+                // This should not happen since it should only enter QUERY_ID_PENDING once,
+                // but just in case, we exit to avoid multiple intervals.
+                return;
             }
-        } else {
-            if (null !== timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-            setProgress(0);
+            intervalIdRef.current = window.setInterval(() => {
+                setPseudoProgress((v) => {
+                    if (v + PROGRESS_INCREMENT >= 100) {
+                        return 100;
+                    }
+                    return v + PROGRESS_INCREMENT;
+                });
+            }, PROGRESS_INTERVAL_MILLIS);
+        }
+        else if (searchUiState === SEARCH_UI_STATE.DONE) {
+            clearInterval(intervalIdRef.current);
+            intervalIdRef.current = 0;
+            setPseudoProgress(0);
         }
     }, [searchUiState]);
+
+    // Clear the interval when the component unmounts.
+    useEffect(() => {
+        clearInterval(intervalIdRef.current);
+    }, []);
 
     return (
         <QueryBox
             placeholder={"Enter your query"}
-            progress={progress}
+            progress={pseudoProgress}
             size={"large"}
-            disabled={  searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                        searchUiState === SEARCH_UI_STATE.QUERYING
+            disabled={
+                searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                searchUiState === SEARCH_UI_STATE.QUERYING
             }
             value={queryString}
             onChange={(e) => {

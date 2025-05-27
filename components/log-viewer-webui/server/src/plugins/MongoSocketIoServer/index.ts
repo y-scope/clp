@@ -10,7 +10,7 @@ import type {
     Response,
     ServerToClientEvents,
     SocketData,
-} from "../../../../common/index.js";
+} from "@common/index.js";
 import {
     FastifyInstance,
     FastifyPluginAsync,
@@ -33,8 +33,8 @@ import {
     removeItemFromArray,
 } from "./utils.js";
 
+// Counter for generating unique query IDs.
 let globalQueryIdCounter = 0;
-
 
 /**
  * Integrates MongoDB with Socket.IO to provide real-time updates for MongoDB queries.
@@ -190,7 +190,9 @@ class MongoSocketIoServer {
 
         let queryId = globalQueryIdCounter;
         this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        globalQueryIdCounter += 1;
+
+        // JS is single threaded, so we can safely increment the global counter.
+        globalQueryIdCounter++;
 
         return queryId;
     }

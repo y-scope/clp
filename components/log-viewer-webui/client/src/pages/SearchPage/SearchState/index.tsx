@@ -9,37 +9,50 @@ import {
 
 import {SEARCH_UI_STATE} from "./typings";
 
-import {SearchResultsMetadataDocument} from "@common/index.js";
-
-
 /**
  * Default values of the search state.
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     queryString: "",
+    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
+    timeRangeOption: DEFAULT_TIME_RANGE,
     searchJobId: null,
     aggregationJobId: null,
     searchUiState:  SEARCH_UI_STATE.DEFAULT,
-    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
-    timeRangeOption: DEFAULT_TIME_RANGE,
     searchResultsMetadata: null,
 });
 
 interface SearchState {
+    /**
+     * The search query string.
+     */
     queryString: string;
+    /**
+     * Time range for search query.
+     */
     timeRange: [dayjs.Dayjs, dayjs.Dayjs];
+    /**
+     * Time range preset.
+     */
     timeRangeOption: TIME_RANGE_OPTION;
+    /**
+     * Unique ID from the database for the search job.
+     */
     searchJobId: string | null;
+    /**
+     * Unique ID from the database for the aggregation job.
+     */
     aggregationJobId: string | null;
+    /**
+     * UI state of search page.
+     */
     searchUiState: SEARCH_UI_STATE;
-    searchResultsMetadata: SearchResultsMetadataDocument | null;
     updateQueryString: (query: string) => void;
     updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateSearchJobId: (id: string | null) => void;
     updateAggregationJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
-    updateSearchResultsMetadata: (metadata: SearchResultsMetadataDocument) => void;
 }
 
 const useSearchStore = create<SearchState>((set) => ({
@@ -61,9 +74,6 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateSearchUiState: (state) => {
         set({searchUiState: state});
-    },
-    updateSearchResultsMetadata: (metadata) => {
-        set({searchResultsMetadata: metadata});
     },
 }));
 

@@ -32,7 +32,6 @@
     "@sinclair/typebox": "^0.34.28",
     "@types/node": "^22.13.9",
     "close-with-grace": "^2.2.0",
-    "common": "file:../common",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
     "fastify-plugin": "^5.0.1",

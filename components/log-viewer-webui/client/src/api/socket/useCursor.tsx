@@ -11,15 +11,19 @@ import {Nullable} from "../../typings/common";
 /**
  * Custom hook which returns a real-time reactive array of documents from a `MongoCursorSocket`.
  *
- * @param query Function which returns a `MongoCursorSocket` instance.
+ * @param query Function which returns a `MongoCursorSocket` instance or null.
  * @param dependencies Array of dependencies for the query.
- * @return Reactive array or null while the query is pending response.
+ * @returns
+ * - If `query` returns a `MongoCursorSocket` instance:
+ *     - Returns `null` while the subscription is pending, and a reactive array of documents when
+ *       the subscription is ready.
+ * - If `query` returns `null`, then the hook also returns `null`.
  */
-const useCursor = (
+function useCursor<T = object>(
     query: () => Nullable<MongoCursorSocket>,
     dependencies: DependencyList = []
-): Nullable<object[]> => {
-    const [data, setData] = useState<Nullable<object[]>>(null);
+): Nullable<T[]> {
+    const [data, setData] = useState<Nullable<T[]>>(null);
 
     useEffect(() => {
         const cursor = query();
@@ -36,7 +40,7 @@ const useCursor = (
         // Handler to set data updates from the server.
         const onDataUpdate = (dataUpdate: object[]) => {
             if (false === ignore) {
-                setData(dataUpdate);
+                setData(dataUpdate as T[]);
             }
         };
 
@@ -71,12 +75,3 @@ const useCursor = (
 };
 
 export {useCursor};
-
-
-// Delete the collection
-// Change stream is messed up.
-// We can make an effect.
-
-
-
-// When we call delete. We first must unsubscribe. We call some callback

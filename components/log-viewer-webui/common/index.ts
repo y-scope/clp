@@ -114,5 +114,3 @@ export type {
     SocketData,
     QueryId
 };
-
-

@@ -5,7 +5,7 @@ import {
     searchResultsTableColumns,
 } from "./typings";
 
-import {useSearchResults} from "../../SearchState/mongo-queries/useSearchResults";
+import {useSearchResults} from "../../reactive-mongo-queries/useSearchResults";
 
 /**
  * Renders search results in a table.
@@ -13,16 +13,14 @@ import {useSearchResults} from "../../SearchState/mongo-queries/useSearchResults
  * @return
  */
 const SearchResultsTable = () => {
-
     let searchResults = useSearchResults();
-    console.log("searchResults", searchResults);
 
-// If the state is not done. return empty array.
-// when it is done. 
     return (
         <Table<SearchResult>
             scroll={{ y: 400 }}
             columns={searchResultsTableColumns}
+            // Render empty result array while subscription is pending or if there is no active
+            // query.
             dataSource={searchResults ? searchResults : []}
             pagination={false}
             rowKey={(record) => record._id.toString()}

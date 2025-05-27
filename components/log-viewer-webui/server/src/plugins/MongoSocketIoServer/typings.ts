@@ -3,7 +3,7 @@ import {
     InterServerEvents,
     ServerToClientEvents,
     SocketData,
-} from "../../../../common/index.js";
+} from "@common/index.js";
 import {
     ChangeStream,
     Document,

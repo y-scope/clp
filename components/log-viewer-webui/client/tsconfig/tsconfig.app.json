@@ -18,7 +18,7 @@
     "useDefineForClassFields": true,
     "baseUrl": "../",
     "paths": {
-      "@common/*": ["../common/*"],
+      "@common/*": ["../common/*"], // Map imports from "@common/*" to the shared folder
     },
 
     /* Bundler mode */

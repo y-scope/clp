@@ -1,5 +1,6 @@
 import {TableProps} from "antd";
 import dayjs from "dayjs";
+import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
 
 import Message from "./Message";
 
@@ -16,7 +17,7 @@ interface SearchResult {
     orig_file_id: string;
     log_event_ix: number;
 }
-const DATETIME_FORMAT_TEMPLATE = "YYYY-MMM-DD HH:mm:ss";
+
 /**
  * Columns configuration for the seach results table.
  */
@@ -27,9 +28,6 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         sorter: true,
         title: "Timestamp",
         width: 15,
-        ellipsis: {
-            showTitle: false,
-        },
         render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
     },
     {

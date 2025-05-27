@@ -1,6 +1,6 @@
 import {
     SEARCH_SIGNAL
-} from "../../../../../../common/index.js";
+} from "@common/index.js";
 import type {Db} from "mongodb";
 
 import {
