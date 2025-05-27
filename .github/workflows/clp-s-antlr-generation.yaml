@@ -37,7 +37,6 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      - name: "Run clp-s-genrate-antlr-check task"
+      - name: "Run clp-s-generate-antlr-check task"
         shell: "bash"
         run: "task clp-s-generate-antlr-check"
-        
