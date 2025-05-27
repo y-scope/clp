@@ -106,8 +106,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/**/*"
     cmds:
-      - |
-        curl -o {{.G_ANTLR_JAR_PATH}} {{.G_ANTLR_DOWNLOAD_URL}}
+      - "curl -o {{.G_ANTLR_JAR_PATH}} {{.G_ANTLR_DOWNLOAD_URL}}"
       - |
         java -jar {{.G_ANTLR_JAR_PATH}} \
           -Dlanguage=Cpp \
@@ -132,10 +131,6 @@ tasks:
     deps:
       - "clp-s-generate-antlr"
     cmds:
-      - |
-        git status --porcelain \
-        {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated \
-        {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated
       - |
         git status --porcelain \
         {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated \
