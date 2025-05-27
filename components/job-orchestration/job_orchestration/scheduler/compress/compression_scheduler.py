@@ -203,12 +203,11 @@ def search_and_schedule_new_tasks(
                 if StorageType.S3 == clp_archive_output.storage.type:
                     s3_config = clp_archive_output.storage.s3_config
                     archive_storage_uri = (
-                        f"https://{s3_config.bucket}.s3.{s3_config.region_code}.amazonaws.com"
-                        f"/{Path(s3_config.key_prefix) / dataset_name}"
+                        f"{Path(s3_config.key_prefix) / dataset_name}"
                     )
                 else:
                     archive_storage_uri = (
-                        f"file://{clp_archive_output.get_directory() / dataset_name}"
+                        f"{clp_archive_output.get_directory() / dataset_name}"
                     )
 
                 try:
