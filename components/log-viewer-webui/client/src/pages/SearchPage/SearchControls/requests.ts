@@ -1,0 +1,76 @@
+import useSearchStore from "../SearchState/index";
+import { clearQueryResults } from "../../../api/search";
+import { submitQuery } from "../../../api/search";
+import { cancelQuery } from "../../../api/search";
+import { SEARCH_UI_STATE } from "../SearchState/typings";
+
+import {QueryJobSchema, QueryJobCreationSchema} from "../../../api/search";
+
+const handleClearResults = () => {
+    const {searchUiState, searchJobId, aggregationJobId} = useSearchStore.getState();
+
+    if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
+        return;
+    }
+
+    if (null === searchJobId || null === aggregationJobId) {
+        throw new Error("No searchJobId or aggregationJobId to clear.");
+    }
+
+    clearQueryResults(
+        {searchJobId,aggregationJobId}
+    ).catch((error) => {
+        console.error("Failed to clear query results:", error);
+    });
+
+};
+
+const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
+    const store = useSearchStore.getState();
+
+    if (
+        store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
+        store.searchUiState !== SEARCH_UI_STATE.DONE
+    ) {
+        throw new Error("Cannot submit query when not in DEFAULT or DONE state.");
+    }
+
+    handleClearResults();
+
+    store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
+
+    submitQuery(payload)
+        .then((result) => {
+            store.updateSearchJobId(result.data.searchJobId);
+            store.updateAggregationJobId(result.data.aggregationJobId);
+            store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
+            console.log("Query ID Returned", result);
+        })
+        .catch((error) => {
+            console.error("Failed to submit query:", error);
+        });
+};
+
+const handleQueryCancel = (payload: QueryJobSchema) => {
+    const store = useSearchStore.getState();
+
+    if (store.searchUiState !== SEARCH_UI_STATE.QUERYING) {
+       throw new Error("Cannot cancel query when not in QUERYING state.");
+    }
+
+    cancelQuery(
+        payload
+    ).then(() => {
+        console.log("Query cancelled successfully");
+    }).catch((error) => {
+        console.error("Failed to cancel query:", error);
+    });
+
+    store.updateSearchUiState(SEARCH_UI_STATE.DONE);
+};
+
+
+export {
+    handleQuerySubmit,
+    handleQueryCancel,
+}

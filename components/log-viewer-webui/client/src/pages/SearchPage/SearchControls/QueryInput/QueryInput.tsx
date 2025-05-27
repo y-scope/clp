@@ -1,25 +1,15 @@
-import QueryBox from "../../../components/QueryBox";
-import useSearchStore from "../SearchState/index";
+import QueryBox from "../../../../components/QueryBox";
+import useSearchStore from "../../SearchState/index";
 import {
     useEffect,
     useRef,
     useState,
 } from "react";
-import { SEARCH_UI_STATE } from "../SearchState/typings";
-
-
-/**
- * Pseudo progress bar increments on each interval tick.
- */
-const PROGRESS_INCREMENT = 5;
+import { SEARCH_UI_STATE } from "../../SearchState/typings";
+import { PROGRESS_INCREMENT, PROGRESS_INTERVAL_MILLIS } from "./typings";
 
 /**
- * The interval for updating the pseudo progress bar.
- */
-const PROGRESS_INTERVAL_MILLIS = 100;
-
-/**
- * Renders controls for submitting queries.
+ * Renders a query input and pseudo progress bar.
  *
  * @return
  */
@@ -32,8 +22,7 @@ const QueryInput = () => {
         if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING)
         {
             if (intervalIdRef.current !== 0) {
-                // This should not happen since it should only enter QUERY_ID_PENDING once,
-                // but just in case, we exit to avoid multiple intervals.
+                console.warn("Interval already set for submitted query");
                 return;
             }
             intervalIdRef.current = window.setInterval(() => {
@@ -52,7 +41,7 @@ const QueryInput = () => {
         }
     }, [searchUiState]);
 
-    // Clear the interval when the component unmounts.
+    // Clear the interval if the component unmounts.
     useEffect(() => {
         clearInterval(intervalIdRef.current);
     }, []);

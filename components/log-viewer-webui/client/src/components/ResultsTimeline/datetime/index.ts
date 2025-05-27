@@ -1,13 +1,8 @@
 import dayjs, {Dayjs} from "dayjs";
-import DayjsDuration from "dayjs/plugin/duration";
 import DayjsTimezone from "dayjs/plugin/timezone";
 import DayjsUtc from "dayjs/plugin/utc";
 
-import {TimeRange} from "./typings";
-
-
 dayjs.extend(DayjsUtc);
-dayjs.extend(DayjsDuration);
 dayjs.extend(DayjsTimezone);
 
 /**
@@ -33,28 +28,6 @@ const convertUtcDatetimeToSameLocalDate = (utcDatetime: dayjs.Dayjs): Date => {
  */
 const convertLocalDateToSameUtcDatetime = (localDate: Date) => {
     return dayjs(localDate).utc(true);
-};
-
-/**
- * Expands the time range so that both extremes are multiples of the given duration.
- *
- * @param duration
- * @param timeRange The time range to be expanded.
- * @param timeRange.begin
- * @param timeRange.end
- * @return The expanded time range.
- */
-const expandTimeRangeToDurationMultiple = (duration: DayjsDuration.Duration, {
-    begin,
-    end,
-}: TimeRange) => {
-    const adjustedBegin = begin.valueOf() - (begin.valueOf() % duration.asMilliseconds());
-    const adjustedEnd =
-        Math.floor(
-            (end.valueOf() + duration.asMilliseconds() - 1) / duration.asMilliseconds()
-        ) * duration.asMilliseconds();
-
-    return {begin: dayjs.utc(adjustedBegin), end: dayjs.utc(adjustedEnd)};
 };
 
 /**
@@ -84,5 +57,4 @@ export {
     convertLocalDateToSameUtcDatetime,
     convertUtcDatetimeToSameLocalDate,
     convertZoomTimestampToUtcDatetime,
-    expandTimeRangeToDurationMultiple,
 };

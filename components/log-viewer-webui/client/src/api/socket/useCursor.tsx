@@ -11,13 +11,14 @@ import {Nullable} from "../../typings/common";
 /**
  * Custom hook which returns a real-time reactive array of documents from a `MongoCursorSocket`.
  *
+ * @template T The document type returned by the cursor.
  * @param query Function which returns a `MongoCursorSocket` instance or null.
  * @param dependencies Array of dependencies for the query.
  * @returns
  * - If `query` returns a `MongoCursorSocket` instance:
- *     - Returns `null` while the subscription is pending, and a reactive array of documents when
+ *     - null while the subscription is pending, and a reactive array of documents when
  *       the subscription is ready.
- * - If `query` returns `null`, then the hook also returns `null`.
+ * - If `query` returns null, then the hook also returns null.
  */
 function useCursor<T = object>(
     query: () => Nullable<MongoCursorSocket>,

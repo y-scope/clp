@@ -2,7 +2,7 @@
 import styles from "./index.module.css";
 import SearchButton from "./SearchButton/SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
-import QueryInput from "./QueryInput";
+import QueryInput from "./QueryInput/QueryInput";
 
 
 /**

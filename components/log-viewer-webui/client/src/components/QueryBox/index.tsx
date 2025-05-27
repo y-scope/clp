@@ -9,7 +9,9 @@ import {Nullable} from "../../typings/common";
 import styles from "./index.module.css";
 
 export interface QueryBoxProps extends InputProps {
-    /** The progress of the progress bar from `0` to `100`. Hides the bar if null. */
+    /**
+     * The progress of the progress bar from `0` to `100`. Hides the bar if null.
+    */
     progress: Nullable<number>;
 }
 

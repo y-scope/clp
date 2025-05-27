@@ -31,12 +31,3 @@ const useSearchResults = () => {
 };
 
 export { useSearchResults };
-
-
-// Call Clear, which will delete the mongo collection.
-// But the searchResults are still monitoring it.
-// We need to first unsubsribe.
-// When the query Finishes, we should drop the cursor?
-
-// when the query is done. we stop getting updates.
-// If we cancel

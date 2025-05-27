@@ -1,13 +1,12 @@
 import {Card} from "antd";
 import dayjs from "dayjs";
 
-import { TimelineBucket } from "../../../components/ResultsTimeline/typings";
-import ResultsTimeline from "../../../components/ResultsTimeline/index";
-import {expandTimeRangeToDurationMultiple} from "../../../components/ResultsTimeline/datetime";
-import {TimeRange} from "../../../components/ResultsTimeline/datetime/typings";
-import {computeTimelineConfig} from "../../../components/ResultsTimeline/utils";
-import {TIME_RANGE_OPTION} from "../SearchControls/TimeRangeInput/utils";
-import useSearchStore from "../SearchState";
+import { TimelineBucket } from "../../../../components/ResultsTimeline/typings";
+import ResultsTimeline from "../../../../components/ResultsTimeline/index";
+import {expandTimeRangeToDurationMultiple, computeTimelineConfig } from "./utils";
+import {TimeRange} from "../../../../components/ResultsTimeline/datetime/typings";
+import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
+import useSearchStore from "../../SearchState";
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace with values from database once api implemented.
