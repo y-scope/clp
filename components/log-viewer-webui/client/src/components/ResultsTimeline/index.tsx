@@ -181,10 +181,10 @@ const ResultsTimeline = ({
                             return;
                         }
                         const {min, max} = xAxis;
-                        const newTimeRange = [
-                            convertZoomTimestampToUtcDatetime(min),
-                            convertZoomTimestampToUtcDatetime(max),
-                        ]
+                        const newTimeRange = {
+                            begin: convertZoomTimestampToUtcDatetime(min),
+                            end: convertZoomTimestampToUtcDatetime(max),
+                        };
 
                         onTimelineZoom(newTimeRange);
                     },

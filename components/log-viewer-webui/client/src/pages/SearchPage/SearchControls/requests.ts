@@ -6,6 +6,9 @@ import { SEARCH_UI_STATE } from "../SearchState/typings";
 
 import {QueryJobSchema, QueryJobCreationSchema} from "../../../api/search";
 
+/**
+ * Clears the current search and aggregation query results.
+ */
 const handleClearResults = () => {
     const {searchUiState, searchJobId, aggregationJobId} = useSearchStore.getState();
 
@@ -25,6 +28,10 @@ const handleClearResults = () => {
 
 };
 
+/**
+ * Submits a new search query.
+ * @param payload
+ */
 const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     const store = useSearchStore.getState();
 
@@ -51,6 +58,10 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
         });
 };
 
+/**
+ * Cancels an ongoing search query.
+ * @param payload
+ */
 const handleQueryCancel = (payload: QueryJobSchema) => {
     const store = useSearchStore.getState();
 
