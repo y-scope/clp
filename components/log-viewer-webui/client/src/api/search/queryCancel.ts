@@ -1,6 +1,8 @@
-import axios from "axios";
+import axios, {AxiosResponse} from "axios";
 
-type QueryCancelArgs = {
+// eslint-disable-next-line no-warning-comments
+// TODO: Replace with shared server types once the `@common` directory refactoring is completed.
+type QueryJobSchema = {
     searchJobId: string;
     aggregationJobId: string;
 };
@@ -8,14 +10,13 @@ type QueryCancelArgs = {
 const cancelQuery = ({
     searchJobId,
     aggregationJobId,
-}: QueryCancelArgs): Promise<import("axios").AxiosResponse<any>> => {
+}: QueryJobSchema): Promise<AxiosResponse<null>> => {
     const payload = {
         searchJobId,
         aggregationJobId,
     };
 
-    console.log("Cancelling query with payload:", payload);
-
+    console.log("Cancelling query:", JSON.stringify(payload));
     return axios.post("/api/search/cancel", payload);
 };
 

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { SEARCH_UI_STATE } from "./typings";
-import { SEARCH_SIGNAL, SearchResultsMetadataDocument } from "@common/searchResultsMetadata.js";
+import { SEARCH_SIGNAL, SearchResultsMetadataDocument } from "@common/index.js";
 import useSearchStore  from "./index";
 import { Nullable } from "../../../typings/common";
 

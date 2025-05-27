@@ -13,7 +13,7 @@ const SubmitButton = () => {
         <Tooltip title={isQueryStringEmpty ? "Enter query to search" : ""}>
             <Button
                 className={styles["gradientButton"] || ""}
-                disabled={isQueryStringEmpty || searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED}
+                disabled={isQueryStringEmpty || searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 icon={<SearchOutlined />}
                 size="large"
                 type="primary"

@@ -17,6 +17,8 @@ const SearchResultsTable = () => {
     let searchResults = useSearchResults();
     console.log("searchResults", searchResults);
 
+// If the state is not done. return empty array.
+// when it is done. 
     return (
         <Table<SearchResult>
             scroll={{ y: 400 }}

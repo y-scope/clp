@@ -28,8 +28,10 @@ const QueryBox = ({progress, ...inputProps}: QueryBoxProps) => {
                     <Progress
                         className={styles["progressBar"] || ""}
                         percent={progress ?? 0}
+                        status="active"
                         showInfo={false}
                         size={"small"}
+                        trailColor = "#ffffff"
                         strokeLinecap={"butt"}
                         style={{display: null === progress ?
                             "none" :

@@ -9,7 +9,6 @@ import {Table} from "antd";
 import dayjs from "dayjs";
 
 import {DashboardCard} from "../../../components/DashboardCard";
-import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import styles from "./index.module.css";
@@ -47,7 +46,7 @@ interface JobsProps {
 const Jobs = ({className}: JobsProps) => {
     const {refreshInterval} = useIngestStatsStore();
     const [jobs, setJobs] = useState<JobData[]>(JOBS_DEFAULT.jobs);
-    const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
+    const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     /**
      * Fetches jobs stats from the server.
@@ -71,7 +70,10 @@ const Jobs = ({className}: JobsProps) => {
         intervalIdRef.current = setInterval(fetchJobsStats, refreshInterval);
 
         return () => {
-            clearInterval(intervalIdRef.current);
+            if (null !== intervalIdRef.current) {
+                clearInterval(intervalIdRef.current);
+                intervalIdRef.current = null;
+            }
         };
     }, [
         refreshInterval,

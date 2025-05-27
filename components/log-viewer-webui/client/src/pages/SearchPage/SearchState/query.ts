@@ -3,9 +3,9 @@ import { clearQueryResults } from "../../../api/search/queryClear";
 import { submitQuery } from "../../../api/search/querySubmit";
 import { cancelQuery } from "../../../api/search/queryCancel";
 import { SEARCH_UI_STATE } from "./typings";
-import { SEARCH_STATE_DEFAULT } from "./index";
+//import { SEARCH_STATE_DEFAULT } from "./index";
 
-import { computeTimelineConfig } from "./datetime";
+import {computeTimelineConfig} from "../../../components/ResultsTimeline/utils";
 
 const handleClearResults = () => {
     const store = useSearchStore.getState();
@@ -21,8 +21,8 @@ const handleClearResults = () => {
         throw new Error("No searchJobId or aggregationJobId to clear.");
     }
 
-    store.updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
-    store.updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
+    //store.updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
+    //store.updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
 
     clearQueryResults({
         searchJobId,
@@ -52,8 +52,6 @@ const handleQuerySubmit = () => {
         throw new Error("Cannot submit query when not in DEFAULT or DONE state.");
     }
 
-    handleClearResults();
-
     const newTimelineConfig = computeTimelineConfig(
         store.timeRange[0].valueOf(),
         store.timeRange[1].valueOf(),
@@ -68,7 +66,7 @@ const handleQuerySubmit = () => {
         timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
     };
 
-    store.updateSearchUiState(SEARCH_UI_STATE.QUERY_SUBMITTED);
+    store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(args)
         .then((result) => {

@@ -1,4 +1,4 @@
-import {QueryId} from "@common/index.js";
+import {QueryId} from "common/index.js";
 import type {
     Collection,
     Db,
@@ -128,7 +128,7 @@ class MongoWatcherCollection {
         );
 
         const watcher: Watcher = {changeStream: mongoWatcher, subscribers: []};
-        this.#setupWatcherListener(watcher, queryParams, emitUpdate);
+        this.#setupWatcherListener(watcher, queryParams, queryId, emitUpdate);
         this.#queryIdtoWatcherMap.set(queryId, watcher);
     }
 
@@ -157,11 +157,13 @@ class MongoWatcherCollection {
      *
      * @param watcher
      * @param queryParameters
+     * @param queryId
      * @param emitUpdate
      */
     #setupWatcherListener (
         watcher: Watcher,
         queryParameters: QueryParameters,
+        queryId: QueryId,
         emitUpdate: (data: object[]) => void
     ) {
         let lastEmitTime = 0;
@@ -192,7 +194,11 @@ class MongoWatcherCollection {
             }
         };
 
-        watcher.changeStream.on("change", () => {
+        watcher.changeStream.on("change", (change) => {
+            if (change.operationType === "invalidate") {
+                console.log("Change stream received invalidate event for queryID", queryId);
+                return;
+            }
             emitUpdateWithTimeout().catch((error: unknown) => {
                 console.error("Error in emitUpdatesWithTimeout:", error);
             });

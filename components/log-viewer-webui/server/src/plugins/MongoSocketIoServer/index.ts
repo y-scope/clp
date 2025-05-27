@@ -10,7 +10,7 @@ import type {
     Response,
     ServerToClientEvents,
     SocketData,
-} from "@common/index.js";
+} from "../../../../common/index.js";
 import {
     FastifyInstance,
     FastifyPluginAsync,

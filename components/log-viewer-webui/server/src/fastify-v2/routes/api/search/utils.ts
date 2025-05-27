@@ -1,4 +1,6 @@
-import {SEARCH_SIGNAL} from "@common/searchResultsMetadata.js";
+import {
+    SEARCH_SIGNAL
+} from "../../../../../../common/index.js";
 import type {Db} from "mongodb";
 
 import {

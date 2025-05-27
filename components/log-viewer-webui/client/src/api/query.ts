@@ -19,13 +19,13 @@ import {
  * @param onUploadProgress Callback to handle upload progress events.
  * @return The API response.
  */
-const submitExtractStreamJob = (
+const submitExtractStreamJob = async (
     extractJobType: QUERY_JOB_TYPE,
     streamId: string,
     logEventIdx: number,
     onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
 ): Promise<AxiosResponse<ExtractStreamResp>> => {
-    return axios.post(
+    return await axios.post(
         "/query/extract-stream",
         {
             extractJobType,

@@ -3,11 +3,13 @@ import {create} from "zustand";
 
 import {
     DEFAULT_TIME_RANGE,
+    TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
 } from "../SearchControls/TimeRangeInput/utils";
+
 import {SEARCH_UI_STATE} from "./typings";
 
-import {SearchResultsMetadataDocument} from "@common/searchResultsMetadata.js";
+import {SearchResultsMetadataDocument} from "@common/index.js";
 
 
 /**
@@ -19,18 +21,21 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
     searchUiState:  SEARCH_UI_STATE.DEFAULT,
     timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
+    timeRangeOption: DEFAULT_TIME_RANGE,
     searchResultsMetadata: null,
 });
 
 interface SearchState {
     queryString: string;
     timeRange: [dayjs.Dayjs, dayjs.Dayjs];
+    timeRangeOption: TIME_RANGE_OPTION;
     searchJobId: string | null;
     aggregationJobId: string | null;
     searchUiState: SEARCH_UI_STATE;
     searchResultsMetadata: SearchResultsMetadataDocument | null;
     updateQueryString: (query: string) => void;
     updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
+    updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateSearchJobId: (id: string | null) => void;
     updateAggregationJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
@@ -38,26 +43,24 @@ interface SearchState {
 }
 
 const useSearchStore = create<SearchState>((set) => ({
-    queryString: SEARCH_STATE_DEFAULT.queryString,
-    timeRange: SEARCH_STATE_DEFAULT.timeRange,
-    searchJobId: SEARCH_STATE_DEFAULT.searchJobId,
-    aggregationJobId: SEARCH_STATE_DEFAULT.aggregationJobId,
-    searchUiState: SEARCH_STATE_DEFAULT.searchUiState,
-    searchResultsMetadata: SEARCH_STATE_DEFAULT.searchResultsMetadata,
+    ...SEARCH_STATE_DEFAULT,
     updateQueryString: (query) => {
         set({queryString: query});
     },
-    updateSearchUiState: (state) => {
-        set({searchUiState: state});
-    },
     updateTimeRange: (range) => {
         set({timeRange: range});
+    },
+    updateTimeRangeOption: (option: TIME_RANGE_OPTION) => {
+        set({timeRangeOption: option});
     },
     updateSearchJobId: (id) => {
         set({searchJobId: id});
     },
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateSearchUiState: (state) => {
+        set({searchUiState: state});
     },
     updateSearchResultsMetadata: (metadata) => {
         set({searchResultsMetadata: metadata});

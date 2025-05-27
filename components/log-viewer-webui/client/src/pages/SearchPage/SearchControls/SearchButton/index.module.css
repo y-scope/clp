@@ -4,10 +4,3 @@
     transition: background 0.3s;
     background-size: 200% auto;
 }
-
-.gradientButtonCancel {
-    background-image: linear-gradient(135deg, #e15253, #08b990);
-    color: red;
-    transition: background 0.3s;
-    background-size: 200% auto;
-}

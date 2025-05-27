@@ -8,7 +8,6 @@ import {
 import dayjs, {Dayjs} from "dayjs";
 import {Nullable} from "src/typings/common";
 
-import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import Files from "./Files";
@@ -43,7 +42,7 @@ const Details = () => {
     const [endDate, setEndDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.endDate);
     const [numFiles, setNumFiles] = useState<number>(DETAILS_DEFAULT.numFiles);
     const [numMessages, setNumMessages] = useState<number>(DETAILS_DEFAULT.numMessages);
-    const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
+    const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     /**
      * Fetches details stats from the server.
@@ -67,7 +66,10 @@ const Details = () => {
         intervalIdRef.current = setInterval(fetchDetailsStats, refreshInterval);
 
         return () => {
-            clearInterval(intervalIdRef.current);
+            if (null !== intervalIdRef.current) {
+                clearInterval(intervalIdRef.current);
+                intervalIdRef.current = null;
+            }
         };
     }, [
         refreshInterval,

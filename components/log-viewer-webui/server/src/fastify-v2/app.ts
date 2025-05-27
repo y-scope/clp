@@ -47,7 +47,6 @@ export default async function serviceApp (
     // Loads all application plugins.
     fastify.register(fastifyAutoload, {
         dir: path.join(import.meta.dirname, "plugins/app"),
-        ignorePattern: IGNORED_FILES_REGEX,
         options: {...opts},
     });
 

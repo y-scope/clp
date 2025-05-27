@@ -1,14 +1,18 @@
 import axios, {AxiosResponse} from "axios";
 
-type QueryArgs = {
+// eslint-disable-next-line no-warning-comments
+// TODO: Replace with shared server types once the `@common` directory refactoring is completed.
+type QueryJobCreationSchema = {
+    ignoreCase: boolean;
+    queryString: string;
+    timeRangeBucketSizeMillis: number;
     timestampBegin: number;
     timestampEnd: number;
-    ignoreCase: boolean;
-    timeRangeBucketSizeMillis: number;
-    queryString: string;
 };
 
-type QueryResponse = {
+// eslint-disable-next-line no-warning-comments
+// TODO: Replace with shared server types once the `@common` directory refactoring is completed.
+type QueryJobSchema = {
     searchJobId: string;
     aggregationJobId: string;
 };
@@ -19,7 +23,7 @@ const submitQuery = ({
     ignoreCase,
     timeRangeBucketSizeMillis,
     queryString,
-}: QueryArgs): Promise<AxiosResponse<QueryResponse>> => {
+}: QueryJobCreationSchema): Promise<AxiosResponse<QueryJobSchema>> => {
     const payload = {
         timestampBegin,
         timestampEnd,
@@ -28,9 +32,9 @@ const submitQuery = ({
         queryString,
     };
 
-    console.log("Submitting query with payload:", payload);
+    console.log("Submitting query:", JSON.stringify(payload));
 
-    return axios.post<QueryResponse>("/api/search/query", payload);
+    return axios.post<QueryJobSchema>("/api/search/query", {data: payload});
 };
 
 export { submitQuery };

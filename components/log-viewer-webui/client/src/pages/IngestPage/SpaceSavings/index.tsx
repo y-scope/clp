@@ -8,7 +8,6 @@ import {
 import {theme} from "antd";
 
 import StatCard from "../../../components/StatCard";
-import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import {
@@ -38,7 +37,7 @@ const SpaceSavings = () => {
     const [uncompressedSize, setUncompressedSize] =
         useState<number>(SPACE_SAVINGS_DEFAULT.uncompressedSize);
     const {token} = theme.useToken();
-    const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
+    const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchSpaceSavingsStats = useCallback(async () => {
         const {data: [resp]} = await querySql<SpaceSavingsResp>(getSpaceSavingsSql());
@@ -55,7 +54,10 @@ const SpaceSavings = () => {
         intervalIdRef.current = setInterval(fetchSpaceSavingsStats, refreshInterval);
 
         return () => {
-            clearInterval(intervalIdRef.current);
+            if (null !== intervalIdRef.current) {
+                clearInterval(intervalIdRef.current);
+                intervalIdRef.current = null;
+            }
         };
     }, [
         refreshInterval,

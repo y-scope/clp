@@ -1,7 +1,7 @@
 
 enum SEARCH_UI_STATE {
     DEFAULT,
-    QUERY_SUBMITTED,
+    QUERY_ID_PENDING,
     QUERYING,
     DONE,
 }

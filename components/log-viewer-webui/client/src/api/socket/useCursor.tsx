@@ -21,7 +21,6 @@ const useCursor = (
 ): Nullable<object[]> => {
     const [data, setData] = useState<Nullable<object[]>>(null);
 
-
     useEffect(() => {
         const cursor = query();
 
@@ -72,3 +71,12 @@ const useCursor = (
 };
 
 export {useCursor};
+
+
+// Delete the collection
+// Change stream is messed up.
+// We can make an effect.
+
+
+
+// When we call delete. We first must unsubscribe. We call some callback

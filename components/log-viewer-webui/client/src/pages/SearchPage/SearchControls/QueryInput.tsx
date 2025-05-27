@@ -22,7 +22,7 @@ const QueryInput = () => {
     const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
-        if (searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ||
+        if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
             searchUiState === SEARCH_UI_STATE.QUERYING)
         {
             if (null === timerIntervalRef.current) {
@@ -49,7 +49,7 @@ const QueryInput = () => {
             placeholder={"Enter your query"}
             progress={progress}
             size={"large"}
-            disabled={  searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ||
+            disabled={  searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                         searchUiState === SEARCH_UI_STATE.QUERYING
             }
             value={queryString}

@@ -4,7 +4,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 
-import useSearchStore from "../../SearchState";
+import useSearchStore from "../../SearchState/index";
 import styles from "./index.module.css";
 import {
     isValidDateRange,
@@ -57,7 +57,7 @@ const TimeRangeInput = () => {
                 listHeight={300}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                disabled = {searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ||
+                disabled = {searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                             searchUiState === SEARCH_UI_STATE.QUERYING
                         }
                 size={"large"}
@@ -72,7 +72,7 @@ const TimeRangeInput = () => {
                     className={styles["rangePicker"] || ""}
                     showNow={true}
                     showTime={true}
-                    disabled = {searchUiState === SEARCH_UI_STATE.QUERY_SUBMITTED ||
+                    disabled = {searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING
                     }
                     size={"large"}
