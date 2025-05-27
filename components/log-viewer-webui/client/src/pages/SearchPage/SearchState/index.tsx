@@ -6,8 +6,8 @@ import {
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
 } from "../SearchControls/TimeRangeInput/utils";
-
 import {SEARCH_UI_STATE} from "./typings";
+
 
 /**
  * Default values of the search state.
@@ -18,7 +18,7 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     timeRangeOption: DEFAULT_TIME_RANGE,
     searchJobId: null,
     aggregationJobId: null,
-    searchUiState:  SEARCH_UI_STATE.DEFAULT,
+    searchUiState: SEARCH_UI_STATE.DEFAULT,
     searchResultsMetadata: null,
 });
 
@@ -27,22 +27,27 @@ interface SearchState {
      * The search query string.
      */
     queryString: string;
+
     /**
      * Time range for search query.
      */
     timeRange: [dayjs.Dayjs, dayjs.Dayjs];
+
     /**
      * Time range preset.
      */
     timeRangeOption: TIME_RANGE_OPTION;
+
     /**
      * Unique ID from the database for the search job.
      */
     searchJobId: string | null;
+
     /**
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
     /**
      * UI state of search page.
      */

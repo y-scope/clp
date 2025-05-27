@@ -1,16 +1,12 @@
-
-
-
 import dayjs from "dayjs";
-import {DurationUnitType} from "dayjs/plugin/duration";
+import DayjsDuration, {DurationUnitType} from "dayjs/plugin/duration";
 
+import {TimeRange} from "../../../../components/ResultsTimeline/datetime/typings";
 import {
     MAX_DATA_POINTS_PER_TIMELINE,
     TimelineConfig,
 } from "../../../../components/ResultsTimeline/typings";
 
-import DayjsDuration from "dayjs/plugin/duration";
-import {TimeRange} from "../../../../components/ResultsTimeline/datetime/typings";
 
 dayjs.extend(DayjsDuration);
 
@@ -96,4 +92,4 @@ const computeTimelineConfig = (
 export {
     computeTimelineConfig,
     expandTimeRangeToDurationMultiple,
-}
+};

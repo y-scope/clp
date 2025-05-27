@@ -1,11 +1,11 @@
 import {Table} from "antd";
 
+import {useSearchResults} from "../../reactive-mongo-queries/useSearchResults";
 import {
     SearchResult,
     searchResultsTableColumns,
 } from "./typings";
 
-import {useSearchResults} from "../../reactive-mongo-queries/useSearchResults";
 
 /**
  * Renders search results in a table.
@@ -13,17 +13,17 @@ import {useSearchResults} from "../../reactive-mongo-queries/useSearchResults";
  * @return
  */
 const SearchResultsTable = () => {
-    let searchResults = useSearchResults();
+    const searchResults = useSearchResults();
 
     return (
         <Table<SearchResult>
-            scroll={{ y: 400 }}
+            dataSource={searchResults ? searchResults : []}
             columns={searchResultsTableColumns}
             // Render empty result array while subscription is pending or if there is no active
             // query.
-            dataSource={searchResults ? searchResults : []}
             pagination={false}
             rowKey={(record) => record._id.toString()}
+            scroll={{ y: 400 }}
             virtual={true}/>
     );
 };

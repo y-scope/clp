@@ -1,9 +1,10 @@
-import {useCursor} from "../../../api/socket/useCursor";
-import MongoCollectionSocket from "../../../api/socket/MongoCollectionSocket";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
-import { SearchResultsMetadataDocument } from "@common/index.js";
+import {SearchResultsMetadataDocument} from "@common/index.js";
 
 import settings from "../../../../settings.json" with { type: "json" };
+import MongoCollectionSocket from "../../../api/socket/MongoCollectionSocket";
+import {useCursor} from "../../../api/socket/useCursor";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
+
 
 /**
  * Custom hook to get result metadata for the current searchJobId.
@@ -22,19 +23,20 @@ const useResultsMetadata = () => {
             const collection = new MongoCollectionSocket(
                 settings.MongoDbSearchResultsMetadataCollectionName
             );
-            return collection.find({ _id: searchJobId.toString() }, { limit: 1 });
+
+            return collection.find({_id: searchJobId.toString()}, {limit: 1});
         },
         [searchJobId]
     );
 
     // If there is no metadata, return null.
     if (null === resultsMetadataCursor ||
-        (Array.isArray(resultsMetadataCursor) && resultsMetadataCursor.length === 0)
+        (Array.isArray(resultsMetadataCursor) && 0 === resultsMetadataCursor.length)
     ) {
         return null;
     }
 
-    const resultsMetadata = resultsMetadataCursor[0]
+    const resultsMetadata = resultsMetadataCursor[0];
 
     if ("undefined" === typeof resultsMetadata) {
         return null;
@@ -44,4 +46,4 @@ const useResultsMetadata = () => {
     return resultsMetadata;
 };
 
-export { useResultsMetadata };
+export {useResultsMetadata};

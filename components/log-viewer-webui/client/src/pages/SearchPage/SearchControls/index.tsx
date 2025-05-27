@@ -1,8 +1,7 @@
-
 import styles from "./index.module.css";
+import QueryInput from "./QueryInput/QueryInput";
 import SearchButton from "./SearchButton/SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
-import QueryInput from "./QueryInput/QueryInput";
 
 
 /**
@@ -11,10 +10,9 @@ import QueryInput from "./QueryInput/QueryInput";
  * @return
  */
 const SearchControls = () => {
-
     return (
         <div className={styles["searchControlsContainer"]}>
-            <QueryInput />
+            <QueryInput/>
             <TimeRangeInput/>
             <SearchButton/>
         </div>

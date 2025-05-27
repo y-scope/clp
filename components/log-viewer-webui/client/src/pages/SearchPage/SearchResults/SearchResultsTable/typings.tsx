@@ -1,7 +1,7 @@
 import {TableProps} from "antd";
 import dayjs from "dayjs";
-import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
 
+import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
 import Message from "./Message";
 
 

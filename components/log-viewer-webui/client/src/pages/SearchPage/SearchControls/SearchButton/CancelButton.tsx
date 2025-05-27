@@ -1,7 +1,9 @@
-import { CloseOutlined } from "@ant-design/icons";
-import { Button } from "antd";
-import { handleQueryCancel } from "../requests";
+import {CloseOutlined} from "@ant-design/icons";
+import {Button} from "antd";
+
 import useSearchStore from "../../SearchState/index";
+import {handleQueryCancel} from "../requests";
+
 
 /**
  * Renders a button to cancel the search query.
@@ -13,23 +15,24 @@ const CancelButton = () => {
 
     return (
         <Button
-            icon={<CloseOutlined />}
-            danger
-            type="primary"
-            size="large"
+            danger={true}
+            icon={<CloseOutlined/>}
+            size={"large"}
+            type={"primary"}
             onClick={() => {
                 if (null === searchJobId || null === aggregationJobId) {
                     console.error("Cannot cancel query: searchJobId or aggregationJobId is not set.");
+
                     return;
                 }
                 handleQueryCancel(
-                    { searchJobId, aggregationJobId }
-                )
+                    {searchJobId, aggregationJobId}
+                );
             }}
         >
             Cancel
         </Button>
-    )
+    );
 };
 
 export default CancelButton;

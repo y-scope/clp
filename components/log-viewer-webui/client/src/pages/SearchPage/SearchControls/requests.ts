@@ -1,10 +1,13 @@
+import {
+    cancelQuery,
+    clearQueryResults,
+    QueryJobCreationSchema,
+    QueryJobSchema,
+    submitQuery,
+} from "../../../api/search";
 import useSearchStore from "../SearchState/index";
-import { clearQueryResults } from "../../../api/search";
-import { submitQuery } from "../../../api/search";
-import { cancelQuery } from "../../../api/search";
-import { SEARCH_UI_STATE } from "../SearchState/typings";
+import {SEARCH_UI_STATE} from "../SearchState/typings";
 
-import {QueryJobSchema, QueryJobCreationSchema} from "../../../api/search";
 
 /**
  * Clears the current search and aggregation query results.
@@ -21,15 +24,15 @@ const handleClearResults = () => {
     }
 
     clearQueryResults(
-        {searchJobId,aggregationJobId}
+        {searchJobId, aggregationJobId}
     ).catch((error) => {
         console.error("Failed to clear query results:", error);
     });
-
 };
 
 /**
  * Submits a new search query.
+ *
  * @param payload
  */
 const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
@@ -60,28 +63,30 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 
 /**
  * Cancels an ongoing search query.
+ *
  * @param payload
  */
 const handleQueryCancel = (payload: QueryJobSchema) => {
     const store = useSearchStore.getState();
 
     if (store.searchUiState !== SEARCH_UI_STATE.QUERYING) {
-       throw new Error("Cannot cancel query when not in QUERYING state.");
+        throw new Error("Cannot cancel query when not in QUERYING state.");
     }
 
     cancelQuery(
         payload
     ).then(() => {
         console.log("Query cancelled successfully");
-    }).catch((error) => {
-        console.error("Failed to cancel query:", error);
-    });
+    })
+        .catch((error) => {
+            console.error("Failed to cancel query:", error);
+        });
 
     store.updateSearchUiState(SEARCH_UI_STATE.DONE);
 };
 
 
 export {
-    handleQuerySubmit,
     handleQueryCancel,
-}
+    handleQuerySubmit,
+};

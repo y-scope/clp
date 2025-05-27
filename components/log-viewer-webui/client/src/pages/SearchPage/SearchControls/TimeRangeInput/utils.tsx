@@ -35,7 +35,8 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs
     [TIME_RANGE_OPTION.MONTH_TO_DATE]: [dayjs().startOf("month"),
         dayjs()],
     [TIME_RANGE_OPTION.ALL_TIME]: [dayjs(0),
-        dayjs().add(1, 'year')],
+        dayjs().add(1, "year")],
+
     // Custom option is just a placeholder for typing purposes, its DayJs values should not
     // be used.
     [TIME_RANGE_OPTION.CUSTOM]: [dayjs(),

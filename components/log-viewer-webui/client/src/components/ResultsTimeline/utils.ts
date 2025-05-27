@@ -1,6 +1,5 @@
-import {
-    TimelineBucket,
-} from "./typings";
+import {TimelineBucket} from "./typings";
+
 
 /**
  * Converts an array of timeline buckets into an array of objects compatible with Chart.js.

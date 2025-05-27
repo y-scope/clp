@@ -1,12 +1,17 @@
-import QueryBox from "../../../../components/QueryBox";
-import useSearchStore from "../../SearchState/index";
 import {
     useEffect,
     useRef,
     useState,
 } from "react";
-import { SEARCH_UI_STATE } from "../../SearchState/typings";
-import { PROGRESS_INCREMENT, PROGRESS_INTERVAL_MILLIS } from "./typings";
+
+import QueryBox from "../../../../components/QueryBox";
+import useSearchStore from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import {
+    PROGRESS_INCREMENT,
+    PROGRESS_INTERVAL_MILLIS,
+} from "./typings";
+
 
 /**
  * Renders a query input and pseudo progress bar.
@@ -14,27 +19,27 @@ import { PROGRESS_INCREMENT, PROGRESS_INTERVAL_MILLIS } from "./typings";
  * @return
  */
 const QueryInput = () => {
-    const {queryString, updateQueryString, searchUiState}= useSearchStore();
+    const {queryString, updateQueryString, searchUiState} = useSearchStore();
     const [pseudoProgress, setPseudoProgress] = useState<number>(0);
     const intervalIdRef = useRef<number>(0);
 
     useEffect(() => {
-        if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING)
-        {
-            if (intervalIdRef.current !== 0) {
+        if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING) {
+            if (0 !== intervalIdRef.current) {
                 console.warn("Interval already set for submitted query");
+
                 return;
             }
             intervalIdRef.current = window.setInterval(() => {
                 setPseudoProgress((v) => {
-                    if (v + PROGRESS_INCREMENT >= 100) {
+                    if (100 <= v + PROGRESS_INCREMENT) {
                         return 100;
                     }
+
                     return v + PROGRESS_INCREMENT;
                 });
             }, PROGRESS_INTERVAL_MILLIS);
-        }
-        else if (searchUiState === SEARCH_UI_STATE.DONE) {
+        } else if (searchUiState === SEARCH_UI_STATE.DONE) {
             clearInterval(intervalIdRef.current);
             intervalIdRef.current = 0;
             setPseudoProgress(0);
@@ -51,11 +56,11 @@ const QueryInput = () => {
             placeholder={"Enter your query"}
             progress={pseudoProgress}
             size={"large"}
+            value={queryString}
             disabled={
                 searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                 searchUiState === SEARCH_UI_STATE.QUERYING
             }
-            value={queryString}
             onChange={(e) => {
                 updateQueryString(e.target.value);
             }}/>

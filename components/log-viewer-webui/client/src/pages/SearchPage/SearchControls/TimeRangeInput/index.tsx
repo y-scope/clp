@@ -5,6 +5,7 @@ import {
 import dayjs from "dayjs";
 
 import useSearchStore from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import {
     isValidDateRange,
@@ -12,8 +13,6 @@ import {
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
-
-import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
 /**
@@ -57,26 +56,24 @@ const TimeRangeInput = () => {
                 listHeight={300}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                disabled = {searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                            searchUiState === SEARCH_UI_STATE.QUERYING
-                        }
                 size={"large"}
                 value={timeRangeOption}
                 variant={"filled"}
                 className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
                     (styles["customSelected"] || "") :
                     ""}
+                disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                            searchUiState === SEARCH_UI_STATE.QUERYING}
                 onChange={handleSelectChange}/>
             {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
                     className={styles["rangePicker"] || ""}
                     showNow={true}
                     showTime={true}
-                    disabled = {searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                                searchUiState === SEARCH_UI_STATE.QUERYING
-                    }
                     size={"large"}
                     value={timeRange}
+                    disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                                searchUiState === SEARCH_UI_STATE.QUERYING}
                     onChange={(dates) => {
                         handleRangePickerChange(dates);
                     }}/>

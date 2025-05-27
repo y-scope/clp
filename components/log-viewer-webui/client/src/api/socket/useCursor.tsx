@@ -4,8 +4,8 @@ import {
     useState,
 } from "react";
 
-import {MongoCursorSocket} from "./MongoCursorSocket.js";
 import {Nullable} from "../../typings/common";
+import {MongoCursorSocket} from "./MongoCursorSocket.js";
 
 
 /**
@@ -14,13 +14,13 @@ import {Nullable} from "../../typings/common";
  * @template T The document type returned by the cursor.
  * @param query Function which returns a `MongoCursorSocket` instance or null.
  * @param dependencies Array of dependencies for the query.
- * @returns
+ * @return
  * - If `query` returns a `MongoCursorSocket` instance:
- *     - null while the subscription is pending, and a reactive array of documents when
- *       the subscription is ready.
+ * - null while the subscription is pending, and a reactive array of documents when
+ * the subscription is ready.
  * - If `query` returns null, then the hook also returns null.
  */
-function useCursor<T = object>(
+function useCursor<T = object> (
     query: () => Nullable<MongoCursorSocket>,
     dependencies: DependencyList = []
 ): Nullable<T[]> {
@@ -31,6 +31,7 @@ function useCursor<T = object>(
 
         if (null === cursor) {
             setData(null);
+
             return;
         }
 
@@ -73,6 +74,6 @@ function useCursor<T = object>(
     }, dependencies);
 
     return data;
-};
+}
 
 export {useCursor};

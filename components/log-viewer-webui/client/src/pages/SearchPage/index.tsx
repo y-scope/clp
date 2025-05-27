@@ -2,8 +2,7 @@ import styles from "./index.module.css";
 import SearchControls from "./SearchControls";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
-
-import { useUiUpdateOnDoneSignal } from "./SearchState/useUpdateStateWithMetadata";
+import {useUiUpdateOnDoneSignal} from "./SearchState/useUpdateStateWithMetadata";
 
 
 /**

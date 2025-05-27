@@ -1,7 +1,7 @@
 import useSearchStore from "../../SearchState/index";
-import SubmitButton from "./SubmitButton";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import CancelButton from "./CancelButton";
-import { SEARCH_UI_STATE } from "../../SearchState/typings";
+import SubmitButton from "./SubmitButton";
 
 
 /**
@@ -14,11 +14,13 @@ const SearchButton = () => {
 
     return (
         <>
-            {(store.searchUiState === SEARCH_UI_STATE.QUERYING) ? (
-                <CancelButton />
-            ) : (
-                <SubmitButton />
-            )}
+            {(store.searchUiState === SEARCH_UI_STATE.QUERYING) ?
+                (
+                    <CancelButton/>
+                ) :
+                (
+                    <SubmitButton/>
+                )}
         </>
     );
 };

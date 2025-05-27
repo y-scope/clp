@@ -11,7 +11,7 @@ import styles from "./index.module.css";
 export interface QueryBoxProps extends InputProps {
     /**
      * The progress of the progress bar from `0` to `100`. Hides the bar if null.
-    */
+     */
     progress: Nullable<number>;
 }
 
@@ -24,24 +24,23 @@ export interface QueryBoxProps extends InputProps {
  * @return
  */
 const QueryBox = ({progress, ...inputProps}: QueryBoxProps) => {
-    const { token } = theme.useToken();
+    const {token} = theme.useToken();
 
     return (
         <div className={styles["queryBox"]}>
             <Input {...inputProps}/>
             <div
                 className={styles["progressBarMask"]}
-                style={{ borderRadius: token.borderRadius }}
+                style={{borderRadius: token.borderRadius}}
             >
-                {progress !== null && (
+                {null !== progress && (
                     <Progress
                         className={styles["progressBar"] || ""}
                         percent={progress}
-                        status="active"
                         showInfo={false}
                         size={"small"}
-                        strokeLinecap={"butt"}
-                    />
+                        status={"active"}
+                        strokeLinecap={"butt"}/>
                 )}
             </div>
         </div>
