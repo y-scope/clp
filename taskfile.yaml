@@ -35,6 +35,12 @@ vars:
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
 
+  # ANTLR related
+  G_ANTLR_VERSION: "4.13.1"
+  G_ANTLR_JAR_NAME: "antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+  G_ANTLR_JAR_PATH: "/tmp/{{.G_ANTLR_JAR_NAME}}"
+  G_ANTLR_DOWNLOAD_URL: "https://www.antlr.org/download/{{.G_ANTLR_JAR_NAME}}"
+
 tasks:
   default:
     deps: ["package"]
@@ -94,19 +100,16 @@ tasks:
         msg: "Java is required for ANTLR code generation"
     sources:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/**/*"
     dir: "{{.G_CORE_COMPONENT_DIR}}/src/"
     generates:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/**/*"
     cmds:
       - |
-        curl -o /tmp/antlr-4.13.1-complete.jar \
-        https://www.antlr.org/download/antlr-4.13.1-complete.jar
+        curl -o {{.G_ANTLR_JAR_PATH}} {{.G_ANTLR_DOWNLOAD_URL}}
       - |
-        java -jar /tmp/antlr-4.13.1-complete.jar \
+        java -jar {{.G_ANTLR_JAR_PATH}} \
           -Dlanguage=Cpp \
           -no-listener \
           -visitor \
@@ -115,7 +118,7 @@ tasks:
           -Xexact-output-dir \
           clp_s/search/kql/Kql.g4
       - |
-        java -jar /tmp/antlr-4.13.1-complete.jar \
+        java -jar {{.G_ANTLR_JAR_PATH}} \
           -Dlanguage=Cpp \
           -no-listener \
           -visitor \
@@ -123,7 +126,7 @@ tasks:
           -o clp_s/search/sql/antlr_generated \
           -Xexact-output-dir \
           clp_s/search/sql/Sql.g4
-      - "rm -f /tmp/antlr-4.13.1-complete.jar"
+      - "rm -f {{.G_ANTLR_JAR_PATH}}"
 
   clp-s-generate-antlr-check:
     deps:
