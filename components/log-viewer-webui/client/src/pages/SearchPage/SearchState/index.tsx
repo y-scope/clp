@@ -48,8 +48,9 @@ interface SearchState {
     searchUiState: SEARCH_UI_STATE;
 
     /**
-     * Time range and bucket duration for the timeline. The config is only updated when
-     * queries are submitted, and not by modifications to the ranger picker.
+     * Time range and bucket duration for the timeline. The timeline config should
+     * only be updated when queries are submitted and not when the range picker
+     * selection is changed.
      */
     timelineConfig: TimelineConfig;
 

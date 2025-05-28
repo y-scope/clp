@@ -3,7 +3,7 @@ import {useCursor} from "../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
 import {TimelineBucket} from "../../../components/ResultsTimeline/typings";
 /**
- * Custom hook to get aggregation results for the current searchJobId.
+ * Custom hook to get aggregation results for the current aggregationJobId.
  *
  * @return
  */

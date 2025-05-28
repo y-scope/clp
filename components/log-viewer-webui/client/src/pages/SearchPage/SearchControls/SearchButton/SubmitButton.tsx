@@ -33,6 +33,7 @@ const SubmitButton = () => {
                 size={"large"}
                 type={"primary"}
                 onClick={() => {
+                    // Update timeline to match range picker selection.
                     const newTimelineConfig = computeTimelineConfig(timeRange);
                     updateTimelineConfig(newTimelineConfig);
 
