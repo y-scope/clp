@@ -19,7 +19,7 @@ add_library(
         sql.hpp
 )
 target_compile_features(sql PRIVATE cxx_std_20)
-target_include_directories(sql PRIVATE ${ANTLR_GENERATED_SQL_CODE_DIR})
+target_include_directories(sql PRIVATE ${ANTLR_GENERATED_SQL_CODE_DIR} ${ANTLR_RUNTIME_HEADER})
 target_link_libraries(
 	sql
 	PRIVATE

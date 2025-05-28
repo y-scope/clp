@@ -35,7 +35,7 @@ vars:
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
 
-  # ANTLR related
+  # ANTLR codegen related
   G_ANTLR_VERSION: "4.13.1"
   G_ANTLR_JAR_NAME: "antlr-{{.G_ANTLR_VERSION}}-complete.jar"
   G_ANTLR_JAR_PATH: "/tmp/{{.G_ANTLR_JAR_NAME}}"
@@ -106,6 +106,8 @@ tasks:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/**/*"
     cmds:
+      - "rm -rf {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/*"
+      - "rm -rf {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/*"
       - "curl -o {{.G_ANTLR_JAR_PATH}} {{.G_ANTLR_DOWNLOAD_URL}}"
       - |
         java -jar {{.G_ANTLR_JAR_PATH}} \
@@ -125,6 +127,10 @@ tasks:
           -o clp_s/search/sql/antlr_generated \
           -Xexact-output-dir \
           clp_s/search/sql/Sql.g4
+      - "rm -f {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/*.interp"
+      - "rm -f {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/*.tokens"
+      - "rm -f {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/*.interp"
+      - "rm -f {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/*.tokens"
       - "rm -f {{.G_ANTLR_JAR_PATH}}"
 
   clp-s-generate-antlr-check:

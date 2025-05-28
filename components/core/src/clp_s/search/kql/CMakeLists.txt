@@ -19,7 +19,7 @@ add_library(
         kql.hpp
 )
 target_compile_features(kql PRIVATE cxx_std_20)
-target_include_directories(kql PRIVATE ${ANTLR_GENERATED_KQL_CODE_DIR})
+target_include_directories(kql PRIVATE ${ANTLR_GENERATED_KQL_CODE_DIR} ${ANTLR_RUNTIME_HEADER})
 target_link_libraries(
 	kql
 	PRIVATE
