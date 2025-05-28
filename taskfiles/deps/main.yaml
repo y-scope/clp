@@ -89,7 +89,7 @@ tasks:
     run: "once"
     vars:
       DEP_NAME: "antlr"
-      
+
       # Paths
       CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.DEP_NAME}}.md5"
       OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.DEP_NAME}}"
