@@ -15,7 +15,6 @@
 
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
-#include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/OutputHandlerImpl.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
