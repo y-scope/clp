@@ -165,6 +165,18 @@ auto EvaluateMetadataFilters::evaluate_filter(
     if (col->descriptor_begin() != col->descriptor_end() && col->descriptor_begin()->wildcard()) {
         work_list.emplace_back(++col->descriptor_begin(), fields);
     }
+
+    auto evaluate_expr
+            = [&](ast::LiteralType type, std::optional<clp::ffi::Value> const& value) -> bool {
+        auto ret{evaluate_filter_against_literal_type_value_pair(
+                filter_expr,
+                type,
+                value,
+                m_case_sensitive_match
+        )};
+        return false == ret.has_error() && filter_expr->is_inverted() != ret.value();
+    };
+
     while (false == work_list.empty()) {
         auto [cur_it, cur_field] = work_list.back();
         work_list.pop_back();
@@ -175,13 +187,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                         std::optional<clp::ffi::Value> bool_value{
                                 clp::ffi::Value{cur_field.template get<bool>()}
                         };
-                        auto ret{evaluate_filter_against_literal_type_value_pair(
-                                filter_expr,
-                                ast::LiteralType::BooleanT,
-                                bool_value,
-                                m_case_sensitive_match
-                        )};
-                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
+                        if (evaluate_expr(ast::LiteralType::BooleanT, bool_value)) {
                             return true;
                         }
                     }
@@ -191,13 +197,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                         std::optional<clp::ffi::Value> int_value{
                                 clp::ffi::Value{cur_field.template get<int64_t>()}
                         };
-                        auto ret{evaluate_filter_against_literal_type_value_pair(
-                                filter_expr,
-                                ast::LiteralType::IntegerT,
-                                int_value,
-                                m_case_sensitive_match
-                        )};
-                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
+                        if (evaluate_expr(ast::LiteralType::IntegerT, int_value)) {
                             return true;
                         }
                     }
@@ -209,13 +209,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                         std::optional<clp::ffi::Value> int_value{clp::ffi::Value{
                                 static_cast<int64_t>(cur_field.template get<uint64_t>())
                         }};
-                        auto ret{evaluate_filter_against_literal_type_value_pair(
-                                filter_expr,
-                                ast::LiteralType::IntegerT,
-                                int_value,
-                                m_case_sensitive_match
-                        )};
-                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
+                        if (evaluate_expr(ast::LiteralType::IntegerT, int_value)) {
                             return true;
                         }
                     }
@@ -225,13 +219,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                         std::optional<clp::ffi::Value> float_value{
                                 clp::ffi::Value{cur_field.template get<double>()}
                         };
-                        auto ret{evaluate_filter_against_literal_type_value_pair(
-                                filter_expr,
-                                ast::LiteralType::FloatT,
-                                float_value,
-                                m_case_sensitive_match
-                        )};
-                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
+                        if (evaluate_expr(ast::LiteralType::FloatT, float_value)) {
                             return true;
                         }
                     }
@@ -250,26 +238,14 @@ auto EvaluateMetadataFilters::evaluate_filter(
                         std::optional<clp::ffi::Value> str_value{
                                 clp::ffi::Value{std::move(tmp_string)}
                         };
-                        auto ret{evaluate_filter_against_literal_type_value_pair(
-                                filter_expr,
-                                ast::LiteralType::VarStringT,
-                                str_value,
-                                m_case_sensitive_match
-                        )};
-                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
+                        if (evaluate_expr(ast::LiteralType::VarStringT, str_value)) {
                             return true;
                         }
                     } else {
                         std::optional<clp::ffi::Value> str_value{
                                 clp::ffi::Value{get_encoded_text_ast(tmp_string)}
                         };
-                        auto ret{evaluate_filter_against_literal_type_value_pair(
-                                filter_expr,
-                                ast::LiteralType::ClpStringT,
-                                str_value,
-                                m_case_sensitive_match
-                        )};
-                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
+                        if (evaluate_expr(ast::LiteralType::ClpStringT, str_value)) {
                             return true;
                         }
                     }
@@ -277,13 +253,7 @@ auto EvaluateMetadataFilters::evaluate_filter(
                 case nlohmann::json::value_t::null:
                     if (col->matches_type(ast::LiteralType::NullT)) {
                         std::optional<clp::ffi::Value> null_value{clp::ffi::Value{}};
-                        auto ret{evaluate_filter_against_literal_type_value_pair(
-                                filter_expr,
-                                ast::LiteralType::NullT,
-                                null_value,
-                                m_case_sensitive_match
-                        )};
-                        if (false == ret.has_error() && filter_expr->is_inverted() != ret.value()) {
+                        if (evaluate_expr(ast::LiteralType::NullT, null_value)) {
                             return true;
                         }
                     }
