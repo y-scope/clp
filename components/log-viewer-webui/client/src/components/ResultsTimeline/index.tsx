@@ -15,7 +15,6 @@ import {
 import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
 
-import {Nullable} from "../../typings/common";
 import {DATETIME_FORMAT_TEMPLATE} from "../../typings/datetime";
 import {
     convertUtcDatetimeToSameLocalDate,
@@ -46,7 +45,7 @@ ChartJs.register(
 interface ResultsTimelineProps {
     isInputDisabled: boolean;
     onTimelineZoom: (newTimeRange: TimeRange) => void;
-    timelineBuckets: Nullable<TimelineBucket[]>;
+    timelineBuckets: TimelineBucket[];
     timelineConfig: TimelineConfig;
 }
 
@@ -77,10 +76,6 @@ const ResultsTimeline = ({
                 "crosshair"
         );
     }, [isInputDisabled]);
-
-    if (null === timelineBuckets) {
-        return <div/>;
-    }
 
     const data = {
         datasets: [

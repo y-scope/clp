@@ -8,7 +8,6 @@ import {
 import useSearchStore from "../SearchState/index";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 
-
 /**
  * Clears current search and aggregation query results on server.
  */

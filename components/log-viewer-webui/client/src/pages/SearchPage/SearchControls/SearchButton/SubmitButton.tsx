@@ -17,7 +17,7 @@ import styles from "./index.module.css";
  * @return
  */
 const SubmitButton = () => {
-    const {searchUiState, timeRange, queryString} = useSearchStore();
+    const {searchUiState, timeRange, queryString, updateTimelineConfig} = useSearchStore();
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
 
     return (
@@ -33,15 +33,13 @@ const SubmitButton = () => {
                 size={"large"}
                 type={"primary"}
                 onClick={() => {
-                    const timelineConfig = computeTimelineConfig(
-                        timeRange[0].valueOf(),
-                        timeRange[1].valueOf()
-                    );
+                    const newTimelineConfig = computeTimelineConfig(timeRange);
+                    updateTimelineConfig(newTimelineConfig);
 
                     handleQuerySubmit({
                         ignoreCase: false,
                         queryString: queryString,
-                        timeRangeBucketSizeMillis: timelineConfig.bucketDuration.asMilliseconds(),
+                        timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
                         timestampBegin: timeRange[0].valueOf(),
                         timestampEnd: timeRange[1].valueOf(),
                     });

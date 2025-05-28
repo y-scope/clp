@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import DayjsDuration, {DurationUnitType} from "dayjs/plugin/duration";
+import DayjsUtc from "dayjs/plugin/utc";
 
 import {TimeRange} from "../../../../components/ResultsTimeline/datetime/typings";
 import {
@@ -7,7 +8,7 @@ import {
     TimelineConfig,
 } from "../../../../components/ResultsTimeline/typings";
 
-
+dayjs.extend(DayjsUtc);
 dayjs.extend(DayjsDuration);
 
 /**
@@ -41,9 +42,10 @@ const expandTimeRangeToDurationMultiple = (duration: DayjsDuration.Duration, {
  * @return
  */
 const computeTimelineConfig = (
-    timestampBeginUnixMillis: number,
-    timestampEndUnixMillis: number
+    timeRange: [dayjs.Dayjs, dayjs.Dayjs],
 ): TimelineConfig => {
+    const timestampBeginUnixMillis = dayjs.utc(timeRange[0]).valueOf();
+    const timestampEndUnixMillis = dayjs.utc(timeRange[1]).valueOf();
     const timeRangeMillis = timestampEndUnixMillis - timestampBeginUnixMillis;
     const exactTimelineBucketMillis = timeRangeMillis / MAX_DATA_POINTS_PER_TIMELINE;
 
