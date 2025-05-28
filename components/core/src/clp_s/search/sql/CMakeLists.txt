@@ -1,4 +1,4 @@
-set(ANTLR_GENERATED_SQL_CODE_DIR antlr_generated)
+set(ANTLR_GENERATED_SQL_CODE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/antlr_generated)
 
 set(ANTLR_GENERATED_SQL_CODE
 		${ANTLR_GENERATED_SQL_CODE_DIR}/SqlBaseVisitor.cpp
@@ -13,17 +13,21 @@ set(ANTLR_GENERATED_SQL_CODE
 
 add_library(
         sql
-        ../antlr_common/ErrorListener.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../antlr_common/ErrorListener.hpp
         ${ANTLR_GENERATED_SQL_CODE}
-        sql.cpp
-        sql.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/sql.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/sql.hpp
 )
 target_compile_features(sql PRIVATE cxx_std_20)
-target_include_directories(sql PRIVATE ${ANTLR_GENERATED_SQL_CODE_DIR} ${ANTLR_RUNTIME_HEADER})
+target_include_directories(sql
+	PRIVATE
+	${ANTLR_GENERATED_SQL_CODE_DIR}
+	${ANTLR_RUNTIME_HEADER}
+)
 target_link_libraries(
 	sql
 	PRIVATE
 	antlr4_static
-        clp_s::search::ast
+    clp_s::search::ast
 	spdlog::spdlog
 )

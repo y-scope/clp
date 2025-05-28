@@ -1,4 +1,4 @@
-set(ANTLR_GENERATED_KQL_CODE_DIR antlr_generated)
+set(ANTLR_GENERATED_KQL_CODE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/antlr_generated)
 
 set(ANTLR_GENERATED_KQL_CODE
 		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlBaseVisitor.cpp
@@ -13,13 +13,17 @@ set(ANTLR_GENERATED_KQL_CODE
 
 add_library(
         kql
-        ../antlr_common/ErrorListener.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../antlr_common/ErrorListener.hpp
         ${ANTLR_GENERATED_KQL_CODE}
-        kql.cpp
-        kql.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/kql.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/kql.hpp
 )
 target_compile_features(kql PRIVATE cxx_std_20)
-target_include_directories(kql PRIVATE ${ANTLR_GENERATED_KQL_CODE_DIR} ${ANTLR_RUNTIME_HEADER})
+target_include_directories(kql
+	PRIVATE
+	${ANTLR_GENERATED_KQL_CODE_DIR}
+	${ANTLR_RUNTIME_HEADER}
+)
 target_link_libraries(
 	kql
 	PRIVATE
