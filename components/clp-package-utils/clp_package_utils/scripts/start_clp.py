@@ -23,7 +23,6 @@ from clp_py_utils.clp_config import (
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
     FILES_TABLE_SUFFIX,
-    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -55,7 +54,6 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
-    validate_log_viewer_webui_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
@@ -841,7 +839,12 @@ def read_and_update_settings_json(settings_file_path: pathlib.Path, updates: Dic
     return settings_object
 
 
-def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
+def start_webui(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
+):
     component_name = WEBUI_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
 
@@ -849,95 +852,8 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     if container_exists(container_name):
         return
 
-    webui_logs_dir = clp_config.logs_directory / component_name
-    container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
-    node_path = str(container_webui_dir / "programs" / "server" / "npm" / "node_modules")
-    settings_json_path = get_clp_home() / "var" / "www" / "webui" / "settings.json"
-
-    validate_webui_config(clp_config, webui_logs_dir, settings_json_path)
-
-    # Create directories
-    webui_logs_dir.mkdir(exist_ok=True, parents=True)
-
-    container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
-
-    # Read and update settings.json
-    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
-    table_prefix = clp_db_connection_params["table_prefix"]
-    meteor_settings_updates = {
-        "private": {
-            "SqlDbHost": clp_config.database.host,
-            "SqlDbPort": clp_config.database.port,
-            "SqlDbName": clp_config.database.name,
-            "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
-            "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
-            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
-        },
-        "public": {
-            "ClpStorageEngine": clp_config.package.storage_engine,
-            "LogViewerWebuiUrl": (
-                f"http://{clp_config.log_viewer_webui.host}:{clp_config.log_viewer_webui.port}",
-            ),
-        },
-    }
-    meteor_settings = read_and_update_settings_json(settings_json_path, meteor_settings_updates)
-
-    # Start container
-    # fmt: off
-    container_cmd = [
-        "docker", "run",
-        "-d",
-        "--network", "host",
-        "--name", container_name,
-        "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
-    ]
-    # fmt: on
-    env_vars = [
-        f"NODE_PATH={node_path}",
-        f"MONGO_URL={clp_config.results_cache.get_uri()}",
-        f"PORT={clp_config.webui.port}",
-        f"ROOT_URL=http://{clp_config.webui.host}",
-        f"METEOR_SETTINGS={json.dumps(meteor_settings)}",
-        f"CLP_DB_USER={clp_config.database.username}",
-        f"CLP_DB_PASS={clp_config.database.password}",
-        f"WEBUI_LOGS_DIR={container_webui_logs_dir}",
-        f"WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}",
-    ]
-    necessary_mounts = [
-        mounts.clp_home,
-        DockerMount(DockerMountType.BIND, webui_logs_dir, container_webui_logs_dir),
-    ]
-    append_docker_options(container_cmd, necessary_mounts, env_vars)
-    container_cmd.append(clp_config.execution_container)
-
-    node_cmd = [
-        str(CONTAINER_CLP_HOME / "bin" / "node-14"),
-        str(container_webui_dir / "launcher.js"),
-        str(container_webui_dir / "main.js"),
-    ]
-    cmd = container_cmd + node_cmd
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-
-    logger.info(f"Started {component_name}.")
-
-
-def start_log_viewer_webui(
-    instance_id: str,
-    clp_config: CLPConfig,
-    container_clp_config: CLPConfig,
-    mounts: CLPDockerMounts,
-):
-    component_name = LOG_VIEWER_WEBUI_COMPONENT_NAME
-    logger.info(f"Starting {component_name}...")
-
-    container_name = f"clp-{component_name}-{instance_id}"
-    if container_exists(container_name):
-        return
-
-    container_log_viewer_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log-viewer-webui"
-    node_path = str(container_log_viewer_webui_dir / "server" / "node_modules")
+    container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log-viewer-webui"
+    node_path = str(container_webui_dir / "server" / "node_modules")
     settings_json_path = (
         get_clp_home()
         / "var"
@@ -949,7 +865,7 @@ def start_log_viewer_webui(
         / "settings.json"
     )
 
-    validate_log_viewer_webui_config(clp_config, settings_json_path)
+    validate_webui_config(clp_config, settings_json_path)
 
     # Read, update, and write back settings.json
     settings_json_updates = {
@@ -961,10 +877,10 @@ def start_log_viewer_webui(
         "MongoDbPort": clp_config.results_cache.port,
         "MongoDbName": clp_config.results_cache.db_name,
         "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
-        "ClientDir": str(container_log_viewer_webui_dir / "client"),
+        "ClientDir": str(container_webui_dir / "client"),
         "StreamFilesDir": str(container_clp_config.stream_output.get_directory()),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
-        "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
+        "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
     }
 
     container_cmd_extra_opts = []
@@ -1005,8 +921,8 @@ def start_log_viewer_webui(
 
     necessary_env_vars = [
         f"NODE_PATH={node_path}",
-        f"HOST={clp_config.log_viewer_webui.host}",
-        f"PORT={clp_config.log_viewer_webui.port}",
+        f"HOST={clp_config.webui.host}",
+        f"PORT={clp_config.webui.port}",
         f"CLP_DB_USER={clp_config.database.username}",
         f"CLP_DB_PASS={clp_config.database.password}",
         f"NODE_ENV=production",
@@ -1023,7 +939,7 @@ def start_log_viewer_webui(
             necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
         else:
             aws_mount, aws_env_vars = generate_container_auth_options(
-                clp_config, LOG_VIEWER_WEBUI_COMPONENT_NAME
+                clp_config, WEBUI_COMPONENT_NAME
             )
             if aws_mount:
                 necessary_mounts.append(mounts.aws_config_dir)
@@ -1034,7 +950,7 @@ def start_log_viewer_webui(
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
-        str(container_log_viewer_webui_dir / "server" / "dist" / "server" / "src" / "main.js"),
+        str(container_webui_dir / "server" / "dist" / "server" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -1143,7 +1059,6 @@ def main(argv):
     reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
-    component_args_parser.add_parser(LOG_VIEWER_WEBUI_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -1171,7 +1086,6 @@ def main(argv):
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             QUERY_SCHEDULER_COMPONENT_NAME,
             WEBUI_COMPONENT_NAME,
-            LOG_VIEWER_WEBUI_COMPONENT_NAME,
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
@@ -1267,9 +1181,7 @@ def main(argv):
         if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
-            start_webui(instance_id, clp_config, mounts)
-        if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME):
-            start_log_viewer_webui(instance_id, clp_config, container_clp_config, mounts)
+            start_webui(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:

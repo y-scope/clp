@@ -26,7 +26,6 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
-LOG_VIEWER_WEBUI_COMPONENT_NAME = "log_viewer_webui"
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -572,27 +571,6 @@ class StreamOutput(BaseModel):
 class WebUi(BaseModel):
     host: str = "localhost"
     port: int = 4000
-    logging_level: str = "INFO"
-
-    @validator("host")
-    def validate_host(cls, field):
-        _validate_host(cls, field)
-        return field
-
-    @validator("port")
-    def validate_port(cls, field):
-        _validate_port(cls, field)
-        return field
-
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
-
-
-class LogViewerWebUi(BaseModel):
-    host: str = "localhost"
-    port: int = 3000
 
     @validator("host")
     def validate_host(cls, field):
@@ -621,7 +599,6 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
-    log_viewer_webui: LogViewerWebUi = LogViewerWebUi()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
