@@ -33,6 +33,7 @@ import {
     removeItemFromArray,
 } from "./utils.js";
 
+
 // Counter for generating unique query IDs.
 let globalQueryIdCounter = 0;
 
@@ -173,25 +174,15 @@ class MongoSocketIoServer {
      */
     #getQueryId (queryParams: QueryParameters): number {
         const queryHash = getQueryHash(queryParams);
-        this.#fastify.log.info(
-            `QueryId:${globalQueryIdCounter} params:${queryParams} query hash:${queryHash}`
-        );
         for (const [queryId, hash] of this.#queryIdToQueryHashMap.entries()) {
-            this.#fastify.log.info(
-                `QueryId:${queryId} hash:${hash} requested hash:${queryHash}`
-            );
             if (hash === queryHash) {
                 return queryId;
             }
         }
-        this.#fastify.log.info(
-            `QueryId ${globalQueryIdCounter} not found in query map. Creating a new one.`
-        );
-
-        let queryId = globalQueryIdCounter;
+        const queryId = globalQueryIdCounter;
         this.#queryIdToQueryHashMap.set(queryId, queryHash);
 
-        // JS is single threaded, so we can safely increment the global counter.
+        // JS is single threaded and ++ is atomic, so we can safely increment the global counter.
         globalQueryIdCounter++;
 
         return queryId;

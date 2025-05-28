@@ -1,18 +1,18 @@
 import MongoCollectionSocket from "../../../api/socket/MongoCollectionSocket";
 import {useCursor} from "../../../api/socket/useCursor";
-import {Nullable} from "../../../typings/common";
 import {SearchResult} from "../SearchResults/SearchResultsTable/typings";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
 
 
 /**
- * Custom hook to get results metadata for the current searchJobId.
+ * Custom hook to get search results for the current searchJobId.
+ *
+ * @return
  */
 const useSearchResults = () => {
     const {searchJobId} = useSearchStore();
-    console.log(`this is search jobID ${searchJobId}`);
 
-    const searchResultsCursor = useCursor(
+    const searchResultsCursor = useCursor<SearchResult>(
         () => {
             // If there is no active search job, there is no metadata to fetch. The cursor will
             // return null.
@@ -26,7 +26,7 @@ const useSearchResults = () => {
         [searchJobId]
     );
 
-    return searchResultsCursor as Nullable<SearchResult[]>;
+    return searchResultsCursor;
 };
 
 export {useSearchResults};

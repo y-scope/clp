@@ -19,14 +19,22 @@ const handleClearResults = () => {
         return;
     }
 
-    if (null === searchJobId || null === aggregationJobId) {
-        throw new Error("No searchJobId or aggregationJobId to clear.");
+    if (null === searchJobId) {
+        console.error("Cannot clear results: searchJobId is not set.");
+
+        return;
+    }
+
+    if (null === aggregationJobId) {
+        console.error("Cannot clear results: aggregationJobId is not set.");
+
+        return;
     }
 
     clearQueryResults(
         {searchJobId, aggregationJobId}
-    ).catch((error) => {
-        console.error("Failed to clear query results:", error);
+    ).catch((err: unknown) => {
+        console.error("Failed to clear query results:", err);
     });
 };
 
@@ -42,7 +50,9 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
         store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
         store.searchUiState !== SEARCH_UI_STATE.DONE
     ) {
-        throw new Error("Cannot submit query when not in DEFAULT or DONE state.");
+        console.error("Cannot submit query while existing query is in progress.");
+
+        return;
     }
 
     handleClearResults();
@@ -56,8 +66,8 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
             console.log("Query ID Returned", result);
         })
-        .catch((error) => {
-            console.error("Failed to submit query:", error);
+        .catch((err: unknown) => {
+            console.error("Failed to submit query:", err);
         });
 };
 
@@ -70,7 +80,9 @@ const handleQueryCancel = (payload: QueryJobSchema) => {
     const store = useSearchStore.getState();
 
     if (store.searchUiState !== SEARCH_UI_STATE.QUERYING) {
-        throw new Error("Cannot cancel query when not in QUERYING state.");
+        console.error("Cannot cancel query if there is no ongoing query.");
+
+        return;
     }
 
     cancelQuery(
@@ -78,8 +90,8 @@ const handleQueryCancel = (payload: QueryJobSchema) => {
     ).then(() => {
         console.log("Query cancelled successfully");
     })
-        .catch((error) => {
-            console.error("Failed to cancel query:", error);
+        .catch((err: unknown) => {
+            console.error("Failed to cancel query:", err);
         });
 
     store.updateSearchUiState(SEARCH_UI_STATE.DONE);

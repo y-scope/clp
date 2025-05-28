@@ -195,8 +195,9 @@ class MongoWatcherCollection {
         };
 
         watcher.changeStream.on("change", (change) => {
-            if (change.operationType === "invalidate") {
+            if ("invalidate" === change.operationType) {
                 console.log("Change stream received invalidate event for queryID", queryId);
+
                 return;
             }
             emitUpdateWithTimeout().catch((error: unknown) => {

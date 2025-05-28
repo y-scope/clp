@@ -25,10 +25,10 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
     {
         dataIndex: "timestamp",
         key: "timestamp",
+        render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
         sorter: true,
         title: "Timestamp",
         width: 15,
-        render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
     },
     {
         dataIndex: "message",

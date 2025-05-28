@@ -12,7 +12,9 @@ import styles from "./index.module.css";
 
 
 /**
+ * Renders a button to submit the search query.
  *
+ * @return
  */
 const SubmitButton = () => {
     const {searchUiState, timeRange, queryString} = useSearchStore();
@@ -31,14 +33,17 @@ const SubmitButton = () => {
                 size={"large"}
                 type={"primary"}
                 onClick={() => {
-                    const timelineConfig = computeTimelineConfig(timeRange[0].valueOf(), timeRange[1].valueOf());
+                    const timelineConfig = computeTimelineConfig(
+                        timeRange[0].valueOf(),
+                        timeRange[1].valueOf()
+                    );
 
                     handleQuerySubmit({
+                        ignoreCase: false,
                         queryString: queryString,
+                        timeRangeBucketSizeMillis: timelineConfig.bucketDuration.asMilliseconds(),
                         timestampBegin: timeRange[0].valueOf(),
                         timestampEnd: timeRange[1].valueOf(),
-                        timeRangeBucketSizeMillis: timelineConfig.bucketDuration.asMilliseconds(),
-                        ignoreCase: false,
                     });
                 }}
             >

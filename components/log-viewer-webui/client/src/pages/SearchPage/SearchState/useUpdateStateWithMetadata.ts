@@ -8,7 +8,8 @@ import {SEARCH_UI_STATE} from "./typings";
 
 
 /**
- *
+ * Custom hook to update the UI state when the search signal from results metadata indicates
+ * that the search is done.
  */
 const useUiUpdateOnDoneSignal = () => {
     const {updateSearchUiState} = useSearchStore();
@@ -22,7 +23,8 @@ const useUiUpdateOnDoneSignal = () => {
         if (resultsMetadata.lastSignal === SEARCH_SIGNAL.RESP_DONE) {
             updateSearchUiState(SEARCH_UI_STATE.DONE);
         }
-    }, [resultsMetadata]);
+    }, [resultsMetadata,
+        updateSearchUiState]);
 };
 
 export {useUiUpdateOnDoneSignal};

@@ -10,12 +10,12 @@ export default defineConfig({
     plugins: [
         react(),
     ],
+    publicDir: "public",
     resolve: {
         alias: {
             "@common": path.resolve(__dirname, "../common"),
         },
     },
-    publicDir: "public",
     server: {
         port: 8080,
         proxy: {

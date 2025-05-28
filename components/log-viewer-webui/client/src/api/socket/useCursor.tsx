@@ -20,10 +20,10 @@ import {MongoCursorSocket} from "./MongoCursorSocket.js";
  * the subscription is ready.
  * - If `query` returns null, then the hook also returns null.
  */
-function useCursor<T = object> (
+const useCursor = <T = object>(
     query: () => Nullable<MongoCursorSocket>,
     dependencies: DependencyList = []
-): Nullable<T[]> {
+): Nullable<T[]> => {
     const [data, setData] = useState<Nullable<T[]>>(null);
 
     useEffect(() => {
@@ -32,7 +32,8 @@ function useCursor<T = object> (
         if (null === cursor) {
             setData(null);
 
-            return;
+            return () => {
+            };
         }
 
         // Flag to ignore updates after unmounting.
@@ -74,6 +75,6 @@ function useCursor<T = object> (
     }, dependencies);
 
     return data;
-}
+};
 
 export {useCursor};

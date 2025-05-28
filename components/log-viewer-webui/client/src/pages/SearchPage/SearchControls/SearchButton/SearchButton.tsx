@@ -13,15 +13,9 @@ const SearchButton = () => {
     const store = useSearchStore();
 
     return (
-        <>
-            {(store.searchUiState === SEARCH_UI_STATE.QUERYING) ?
-                (
-                    <CancelButton/>
-                ) :
-                (
-                    <SubmitButton/>
-                )}
-        </>
+        (store.searchUiState === SEARCH_UI_STATE.QUERYING) ?
+            <CancelButton/> :
+            <SubmitButton/>
     );
 };
 

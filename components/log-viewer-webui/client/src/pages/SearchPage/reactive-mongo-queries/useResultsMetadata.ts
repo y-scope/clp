@@ -8,6 +8,8 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
 
 /**
  * Custom hook to get result metadata for the current searchJobId.
+ *
+ * @return
  */
 const useResultsMetadata = () => {
     const {searchJobId} = useSearchStore();
@@ -36,7 +38,7 @@ const useResultsMetadata = () => {
         return null;
     }
 
-    const resultsMetadata = resultsMetadataCursor[0];
+    const [resultsMetadata] = resultsMetadataCursor;
 
     if ("undefined" === typeof resultsMetadata) {
         return null;

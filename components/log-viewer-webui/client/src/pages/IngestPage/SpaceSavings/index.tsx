@@ -1,7 +1,6 @@
 import {
     useCallback,
     useEffect,
-    useRef,
     useState,
 } from "react";
 
@@ -38,18 +37,22 @@ const SpaceSavings = () => {
         useState<number>(SPACE_SAVINGS_DEFAULT.uncompressedSize);
     const {token} = theme.useToken();
 
-    const fetchSpaceSavingsStats = useCallback(async () => {
-        const {data: [resp]} = await querySql<SpaceSavingsResp>(getSpaceSavingsSql());
-        if ("undefined" === typeof resp) {
-            throw new Error("Space savings response is undefined");
-        }
-        setCompressedSize(resp.total_compressed_size);
-        setUncompressedSize(resp.total_uncompressed_size);
+    const fetchSpaceSavingsStats = useCallback(() => {
+        querySql<SpaceSavingsResp>(getSpaceSavingsSql())
+            .then((resp) => {
+                const [spaceSavings] = resp.data;
+                if ("undefined" === typeof spaceSavings) {
+                    throw new Error("Space savings response is undefined");
+                }
+                setCompressedSize(spaceSavings.total_compressed_size);
+                setUncompressedSize(spaceSavings.total_uncompressed_size);
+            })
+            .catch((e: unknown) => {
+                console.error("Failed to fetch space savings stats", e);
+            });
     }, []);
 
     useEffect(() => {
-        // eslint-disable-next-line no-void
-        void fetchSpaceSavingsStats();
         const intervalId = setInterval(fetchSpaceSavingsStats, refreshInterval);
 
         return () => {

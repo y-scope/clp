@@ -1,7 +1,6 @@
 import {
     useCallback,
     useEffect,
-    useRef,
     useState,
 } from "react";
 
@@ -52,20 +51,25 @@ const Jobs = ({className}: JobsProps) => {
      *
      * @throws {Error} If the response is undefined.
      */
-    const fetchJobsStats = useCallback(async () => {
+    const fetchJobsStats = useCallback(() => {
         const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
             .unix();
-        const {data: resp} = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
-        const newJobs = resp
-            .map((item): JobData => convertQueryJobsItemToJobData(item));
 
-        setJobs(newJobs);
+        querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp))
+            .then((resp) => {
+                const newJobs = resp.data.map(
+                    (item): JobData => convertQueryJobsItemToJobData(item)
+                );
+
+                setJobs(newJobs);
+            })
+            .catch((e: unknown) => {
+                console.error("Failed to fetch jobs stats", e);
+            });
     }, []);
 
 
     useEffect(() => {
-        // eslint-disable-next-line no-void
-        void fetchJobsStats();
         const intervalId = setInterval(fetchJobsStats, refreshInterval);
 
         return () => {

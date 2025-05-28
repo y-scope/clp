@@ -1,7 +1,6 @@
 import {
     useCallback,
     useEffect,
-    useRef,
     useState,
 } from "react";
 
@@ -48,20 +47,24 @@ const Details = () => {
      *
      * @throws {Error} If the response is undefined.
      */
-    const fetchDetailsStats = useCallback(async () => {
-        const {data: [resp]} = await querySql<DetailsResp>(getDetailsSql());
-        if ("undefined" === typeof resp) {
-            throw new Error("Details response is undefined");
-        }
-        setBeginDate(dayjs(resp.begin_timestamp));
-        setEndDate(dayjs(resp.end_timestamp));
-        setNumFiles(resp.num_files);
-        setNumMessages(resp.num_messages);
+    const fetchDetailsStats = useCallback(() => {
+        querySql<DetailsResp>(getDetailsSql()).then((resp) => {
+            const [details] = resp.data;
+            if ("undefined" === typeof details) {
+                throw new Error("Details response is undefined");
+            }
+            setBeginDate(dayjs(details.begin_timestamp));
+            setEndDate(dayjs(details.end_timestamp));
+            setNumFiles(details.num_files);
+            setNumMessages(details.num_messages);
+        })
+            .catch((e: unknown) => {
+                console.error("Failed to fetch details stats", e);
+            });
     }, []);
 
+
     useEffect(() => {
-        // eslint-disable-next-line no-void
-        void fetchDetailsStats();
         const intervalId = setInterval(fetchDetailsStats, refreshInterval);
 
         return () => {

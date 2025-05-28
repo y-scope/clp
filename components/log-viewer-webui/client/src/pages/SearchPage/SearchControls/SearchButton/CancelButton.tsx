@@ -20,8 +20,13 @@ const CancelButton = () => {
             size={"large"}
             type={"primary"}
             onClick={() => {
-                if (null === searchJobId || null === aggregationJobId) {
-                    console.error("Cannot cancel query: searchJobId or aggregationJobId is not set.");
+                if (null === searchJobId) {
+                    console.error("Cannot cancel query: searchJobId is not set.");
+
+                    return;
+                }
+                if (null === aggregationJobId) {
+                    console.error("Cannot cancel query: aggregationJobId is not set.");
 
                     return;
                 }
