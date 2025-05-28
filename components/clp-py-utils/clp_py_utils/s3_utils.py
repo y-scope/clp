@@ -14,13 +14,13 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     FsStorage,
-    WEBUI_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     S3Config,
     S3Credentials,
     S3Storage,
     StorageType,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.compression import FileMetadata
 
