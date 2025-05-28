@@ -22,17 +22,17 @@ export default defineConfig({
             "/query/": {
                 // Below target should match the server's configuration in
                 // `components/log-viewer-webui/server/.env` (or `.env.local` if overridden)
-                target: "http://localhost:3001/",
+                target: "http://localhost:3000/",
                 changeOrigin: true,
             },
             "/api/": {
                 // Below target should match the server's configuration in
                 // `components/log-viewer-webui/server/.env` (or `.env.local` if overridden)
-                target: "http://localhost:3001/",
+                target: "http://localhost:3000/",
                 changeOrigin: true,
             },
             "/socket.io/": {
-                target: "ws://localhost:3001/",
+                target: "ws://localhost:3000/",
                 changeOrigin: true,
                 ws: true,
             },

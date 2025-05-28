@@ -47,7 +47,7 @@ const cancelQuery = (payload: QueryJobSchema): Promise<AxiosResponse<null>> => {
 };
 
 /**
- * Sends delete request to server to delete query results.
+ * Sends delete request to server to clear query results.
  *
  * @param payload
  * @return
