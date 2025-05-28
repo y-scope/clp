@@ -128,9 +128,9 @@ bool convert_string_to_int(std::string_view raw, integer_t& converted);
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted) {
     std::span<char const> chars{raw.data(), raw.size()};
-    auto result{std::from_chars(chars.begin(), chars.end(), converted)};
+    auto result{std::from_chars(chars.data(), chars.data() + chars.size(), converted)};
 
-    return result.ptr == chars.end() && result.ec == std::errc();
+    return result.ptr == chars.data() + chars.size() && result.ec == std::errc();
 }
 }  // namespace clp::string_utils
 
