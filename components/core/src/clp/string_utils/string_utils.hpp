@@ -2,6 +2,7 @@
 #define CLP_STRING_UTILS_STRING_UTILS_HPP
 
 #include <charconv>
+#include <span>
 #include <string>
 
 namespace clp::string_utils {
@@ -126,19 +127,10 @@ bool convert_string_to_int(std::string_view raw, integer_t& converted);
 
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted) {
-#if defined(_MSC_VER) || defined(__clang__)
-    auto* raw_begin = raw.data();
-    auto* raw_end = raw_begin + raw.size();
-#else
-    auto raw_begin = raw.cbegin();
-    auto raw_end = raw.cend();
-#endif
-    auto result = std::from_chars(raw_begin, raw_end, converted);
-    if (raw_end != result.ptr) {
-        return false;
-    } else {
-        return result.ec == std::errc();
-    }
+    std::span<char const> chars{raw.data(), raw.size()};
+    auto result{std::from_chars(chars.begin(), chars.end(), converted)};
+
+    return result.ptr == chars.end() && result.ec == std::errc();
 }
 }  // namespace clp::string_utils
 
