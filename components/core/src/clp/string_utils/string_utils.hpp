@@ -127,10 +127,11 @@ bool convert_string_to_int(std::string_view raw, integer_t& converted);
 
 template <typename integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted) {
-    std::span<char const> chars{raw.data(), raw.size()};
-    auto result{std::from_chars(chars.data(), chars.data() + chars.size(), converted)};
+    auto* raw_begin{raw.data()};
+    auto* raw_end{raw_begin + raw.size()};
+    auto const result{std::from_chars(raw_begin, raw_end, converted)};
 
-    return result.ptr == chars.data() + chars.size() && result.ec == std::errc();
+    return result.ptr == raw_end && result.ec == std::errc();
 }
 }  // namespace clp::string_utils
 
