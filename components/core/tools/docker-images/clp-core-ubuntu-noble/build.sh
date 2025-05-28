@@ -5,17 +5,19 @@ set -e
 
 # Error on undefined variable
 set -u
+set -o pipefail
 
 cUsage="Usage: ${BASH_SOURCE[0]} <clp-core-build-dir>"
 if [ "$#" -lt 1 ]; then
-    echo "${cUsage}"
-    exit
+    echo "${cUsage}" >&2
+    exit 1
 fi
 build_dir="$1"
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 build_cmd=(
     docker build
+    --pull
     --tag clp-core-x86-ubuntu-noble:dev
     "$build_dir"
     --file "${script_dir}/Dockerfile"

@@ -14,11 +14,11 @@ RUN apt-get clean \
 
 WORKDIR /clp
 
-ADD ./clg ./
-ADD ./clp ./
-ADD ./clp-s ./
-ADD ./glt ./
-ADD ./make-dictionaries-readable ./
+COPY ./clg ./
+COPY ./clp ./
+COPY ./clp-s ./
+COPY ./glt ./
+COPY ./make-dictionaries-readable ./
 
 # Flatten the image
 FROM scratch
@@ -26,4 +26,4 @@ COPY --from=base / /
 
 WORKDIR /clp
 
-CMD bash
+CMD ["bash"]
