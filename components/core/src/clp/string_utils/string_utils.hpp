@@ -2,7 +2,6 @@
 #define CLP_STRING_UTILS_STRING_UTILS_HPP
 
 #include <charconv>
-#include <span>
 #include <string>
 
 namespace clp::string_utils {
