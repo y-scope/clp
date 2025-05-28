@@ -3,7 +3,7 @@ import {RouterProvider} from "react-router";
 import {ConfigProvider} from "antd";
 
 import router from "./router";
-import THEME_CONFIG, {useThemeStore} from "./theme";
+import THEME_CONFIG from "./theme";
 
 import "@ant-design/v5-patch-for-react-19";
 
@@ -14,14 +14,9 @@ import "@ant-design/v5-patch-for-react-19";
  * @return
  */
 const AntApp = () => {
-    const {algorithm} = useThemeStore();
-
     return (
         <ConfigProvider
-            theme={{
-                ...THEME_CONFIG,
-                algorithm: algorithm,
-            }}
+            theme={THEME_CONFIG}
         >
             <RouterProvider router={router}/>
         </ConfigProvider>

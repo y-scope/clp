@@ -1,7 +1,7 @@
+import {useState} from "react";
 import {
     Link,
     Outlet,
-    useLocation,
 } from "react-router";
 
 import {
@@ -15,21 +15,15 @@ import {
 } from "antd";
 
 import styles from "./MainLayout.module.css";
-import ThemeToggleMenuItem from "./ThemeToggleMenuItem";
 
 
 const {Sider} = Layout;
 
 type MenuItem = Required<MenuProps>["items"][number];
 
-const sidebarTopMenuItems: MenuItem[] = [
-    {type: "divider"},
+const SIDEBAR_MENU_ITEMS: MenuItem[] = [
     {label: <Link to={"/ingest"}>Ingest</Link>, key: "/ingest", icon: <UploadOutlined/>},
     {label: <Link to={"/search"}>Search</Link>, key: "/search", icon: <SearchOutlined/>},
-];
-
-const sidebarBottomMenuItems = [
-    <ThemeToggleMenuItem key={"theme-toggle"}/>,
 ];
 
 /**
@@ -38,34 +32,28 @@ const sidebarBottomMenuItems = [
  * @return
  */
 const MainLayout = () => {
-    const {pathname} = useLocation();
+    const [collapsed, setCollapsed] = useState(false);
 
     return (
         <Layout className={styles["mainLayout"]}>
             <Sider
-                collapsedWidth={50}
+                collapsed={collapsed}
                 collapsible={true}
                 theme={"light"}
-                width={"200"}
+                width={"150"}
+                onCollapse={(value) => {
+                    setCollapsed(value);
+                }}
             >
-                <div className={styles["siderContainer"]}>
-                    <div className={styles["siderLogoContainer"]}>
-                        <img
-                            alt={"CLP Logo"}
-                            className={styles["siderLogo"]}
-                            src={"/clp-logo.png"}/>
-                    </div>
-                    <Menu
-                        className={styles["siderTopMenu"]}
-                        items={sidebarTopMenuItems}
-                        selectedKeys={[pathname]}/>
-                    <Menu
-                        selectable={false}
-                        selectedKeys={[]}
-                    >
-                        {sidebarBottomMenuItems}
-                    </Menu>
+                <div className={styles["siderLogoContainer"]}>
+                    <img
+                        alt={"CLP Logo"}
+                        className={styles["siderLogo"]}
+                        src={"/clp-logo.png"}/>
                 </div>
+                <Menu
+                    items={SIDEBAR_MENU_ITEMS}
+                    mode={"inline"}/>
             </Sider>
             <Layout>
                 <Outlet/>

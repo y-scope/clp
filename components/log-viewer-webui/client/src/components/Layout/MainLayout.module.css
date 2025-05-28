@@ -1,6 +1,5 @@
 .mainLayout {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 .siderLogoContainer {
@@ -10,20 +9,8 @@
   height: 64px;
 }
 
-.siderContainer {
-  flex-direction: column;
-  display: flex;
-  justify-content: space-between;
-  height: 100%;
-}
-
 .siderLogo {
   max-width: 100%;
   max-height: 100%;
-  padding-inline: 10%;
-  padding-block: 16px;
-}
-
-.siderTopMenu {
-  flex-grow: 1;
+  height: 32px;
 }
