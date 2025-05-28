@@ -10,11 +10,12 @@ import {SEARCH_UI_STATE} from "../SearchState/typings";
 
 
 /**
- * Clears the current search and aggregation query results.
+ * Clears current search and aggregation query results on server.
  */
 const handleClearResults = () => {
     const {searchUiState, searchJobId, aggregationJobId} = useSearchStore.getState();
 
+    // In the starting state, there are no results to clear.
     if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
         return;
     }
@@ -39,13 +40,14 @@ const handleClearResults = () => {
 };
 
 /**
- * Submits a new search query.
+ * Submits a new search query to server.
  *
  * @param payload
  */
 const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     const store = useSearchStore.getState();
 
+    // Buttons to submit a query should be disabled while an existing query is in progress.
     if (
         store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
         store.searchUiState !== SEARCH_UI_STATE.DONE
@@ -72,7 +74,7 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 };
 
 /**
- * Cancels an ongoing search query.
+ * Cancels an ongoing search query on server.
  *
  * @param payload
  */

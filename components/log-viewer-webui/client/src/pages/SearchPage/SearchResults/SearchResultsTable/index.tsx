@@ -18,9 +18,6 @@ const SearchResultsTable = () => {
     return (
         <Table<SearchResult>
             columns={searchResultsTableColumns}
-
-            // Render empty result array while subscription is pending or if there is no active
-            // query.
             pagination={false}
             rowKey={(record) => record._id.toString()}
             scroll={{y: 400}}

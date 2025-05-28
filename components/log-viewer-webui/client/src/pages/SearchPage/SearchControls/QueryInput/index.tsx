@@ -23,6 +23,10 @@ const QueryInput = () => {
     const [pseudoProgress, setPseudoProgress] = useState<number>(0);
     const intervalIdRef = useRef<number>(0);
 
+    //console.log("this is progress", pseudoProgress);
+
+    //console.log("this is search UI state", searchUiState);
+
     useEffect(() => {
         if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING) {
             if (0 !== intervalIdRef.current) {

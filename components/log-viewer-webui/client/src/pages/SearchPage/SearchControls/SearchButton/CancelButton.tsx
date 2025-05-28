@@ -2,7 +2,7 @@ import {CloseOutlined} from "@ant-design/icons";
 import {Button} from "antd";
 
 import useSearchStore from "../../SearchState/index";
-import {handleQueryCancel} from "../requests";
+import {handleQueryCancel} from "../search-requests";
 
 
 /**
@@ -20,6 +20,8 @@ const CancelButton = () => {
             size={"large"}
             type={"primary"}
             onClick={() => {
+                // Note it should be impossible to for searchJobId or aggregationJobId to be null,
+                // since the button is only rendered when there is an active query.
                 if (null === searchJobId) {
                     console.error("Cannot cancel query: searchJobId is not set.");
 

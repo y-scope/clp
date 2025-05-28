@@ -1,24 +1,24 @@
 /**
- * Enum representing the different states of the search UI.
+ * Search UI states.
  */
 enum SEARCH_UI_STATE {
     /**
-     * Default state when client starts.
+     * Default state when client starts and there is no active query.
      */
     DEFAULT,
 
     /**
-     * When query is submitted, but the query ID is not yet available.
+     * When query is submitted, but the server has not yet responded with a query ID.
      */
     QUERY_ID_PENDING,
 
     /**
-     * When the query is being processed.
+     * After the client recieved the query ID, and the query is being processed on sever.
      */
     QUERYING,
 
     /**
-     * When the query is finished or cancelled.
+     * When the query is complete or cancelled.
      */
     DONE,
 }

@@ -1,5 +1,5 @@
 /**
- * Pseudo progress bar increments on each interval tick.
+ * Pseudo progress bar increment on each interval tick.
  */
 const PROGRESS_INCREMENT = 5;
 

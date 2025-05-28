@@ -47,7 +47,6 @@ const SearchResultsTimeline = () => {
     const timestampEndUnixMillis = endTime.utc().valueOf();
 
     const timelineConfig = computeTimelineConfig(timestampBeginUnixMillis, timestampEndUnixMillis);
-    console.log(timelineConfig.bucketDuration);
 
     const handleTimelineZoom = (newTimeRange: TimeRange) => {
         // Expand the time range to the granularity of buckets so if the user

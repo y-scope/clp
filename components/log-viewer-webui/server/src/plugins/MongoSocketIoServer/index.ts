@@ -3,14 +3,6 @@
 // TODO: Move listeners to a separate file to reduce lines
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
-import type {
-    ClientToServerEvents,
-    InterServerEvents,
-    QueryId,
-    Response,
-    ServerToClientEvents,
-    SocketData,
-} from "@common/index.js";
 import {
     FastifyInstance,
     FastifyPluginAsync,
@@ -19,6 +11,14 @@ import fastifyPlugin from "fastify-plugin";
 import {Db} from "mongodb";
 import {Server} from "socket.io";
 
+import type {
+    ClientToServerEvents,
+    InterServerEvents,
+    QueryId,
+    Response,
+    ServerToClientEvents,
+    SocketData,
+} from "../../../../common/index.js";
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,

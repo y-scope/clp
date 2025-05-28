@@ -1,13 +1,13 @@
 import {
-    SEARCH_SIGNAL,
-    type SearchResultsMetadataDocument,
-} from "@common/index.js";
-import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
+import {
+    SEARCH_SIGNAL,
+    type SearchResultsMetadataDocument,
+} from "../../../../../../common/index.js";
 import settings from "../../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
@@ -153,7 +153,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             await mongoDb.collection(searchJobId.toString()).drop();
             await mongoDb.collection(aggregationJobId.toString()).drop();
 
-            return reply.code(StatusCodes.NO_CONTENT);
+            reply.code(StatusCodes.NO_CONTENT);
+
+            return null;
         }
     );
 
@@ -207,7 +209,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 `aggregationJobId=${aggregationJobId}`);
             }
 
-            return reply.code(StatusCodes.NO_CONTENT);
+            reply.code(StatusCodes.NO_CONTENT);
+
+            return null;
         }
     );
 };

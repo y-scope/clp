@@ -7,7 +7,7 @@ import {
 import {computeTimelineConfig} from "../../SearchResults/SearchResultsTimeline/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import {handleQuerySubmit} from "../requests";
+import {handleQuerySubmit} from "../search-requests";
 import styles from "./index.module.css";
 
 

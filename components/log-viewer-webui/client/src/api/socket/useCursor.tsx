@@ -15,9 +15,8 @@ import {MongoCursorSocket} from "./MongoCursorSocket.js";
  * @param query Function which returns a `MongoCursorSocket` instance or null.
  * @param dependencies Array of dependencies for the query.
  * @return
- * - If `query` returns a `MongoCursorSocket` instance:
- * - null while the subscription is pending, and a reactive array of documents when
- * the subscription is ready.
+ * - If `query` returns a `MongoCursorSocket` instance, then hook returns null while
+ * the subscription is pending, and a reactive array of documents when the subscription is ready.
  * - If `query` returns null, then the hook also returns null.
  */
 const useCursor = <T = object>(

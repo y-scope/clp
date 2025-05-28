@@ -2,14 +2,18 @@ import axios, {AxiosResponse} from "axios";
 
 
 // eslint-disable-next-line no-warning-comments
-// TODO: Replace with shared types from the `@common` directory once refactoring is completed.
-// Currently, these server types (see schemas directory) require typebox dependency so they cannot
-// be moved to the `@common` directory with current implementation.
+// TODO: Replace with shared type from the `@common` directory once refactoring is completed.
+// Currently, server schema types require typebox dependency so they cannot be moved to the
+// `@common` directory with current implementation.
 type QueryJobSchema = {
     searchJobId: string;
     aggregationJobId: string;
 };
 
+// eslint-disable-next-line no-warning-comments
+// TODO: Replace with shared type from the `@common` directory once refactoring is completed.
+// Currently, server schema types require typebox dependency so they cannot be moved to the
+// `@common` directory with current implementation.
 type QueryJobCreationSchema = {
     ignoreCase: boolean;
     queryString: string;
@@ -19,7 +23,7 @@ type QueryJobCreationSchema = {
 };
 
 /**
- * Sends query post request to server.
+ * Sends post request to server to submit query.
  *
  * @param payload
  * @return
@@ -31,7 +35,7 @@ const submitQuery = (payload: QueryJobCreationSchema): Promise<AxiosResponse<Que
 };
 
 /**
- * Sends cancel post request to server.
+ * Sends post request to server to cancel query.
  *
  * @param payload
  * @return
@@ -43,7 +47,7 @@ const cancelQuery = (payload: QueryJobSchema): Promise<AxiosResponse<null>> => {
 };
 
 /**
- * Sends query delete request to server.
+ * Sends delete request to server to delete query results.
  *
  * @param payload
  * @return
