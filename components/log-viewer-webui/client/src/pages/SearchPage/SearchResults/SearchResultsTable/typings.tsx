@@ -15,8 +15,18 @@ interface SearchResult {
     filePath: string;
     orig_file_path: string;
     orig_file_id: string;
+    archive_id?: string;
     log_event_ix: number;
 }
+
+// Helper: is IR stream
+const IS_IR_STREAM = process.env.REACT_APP_CLP_STORAGE_ENGINE === "clp";
+const STREAM_TYPE = IS_IR_STREAM ? "ir" : "json";
+
+// Helper: get streamId
+const getStreamId = (result: SearchResult) => (
+    IS_IR_STREAM ? result.orig_file_id : result.archive_id
+);
 
 /**
  * Columns configuration for the seach results table.
@@ -36,7 +46,11 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         render: (_, record) => (
             <Message
                 filePath={record.orig_file_path}
-                message={record.message}/>
+                message={record.message}
+                streamId={getStreamId(record) || ""}
+                streamType={STREAM_TYPE}
+                logEventIdx={record.log_event_ix}
+            />
         ),
         title: "Message",
         width: 85,
