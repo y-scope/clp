@@ -48,5 +48,12 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
     },
 ];
 
+/**
+ * Padding for the table to the bottom of the page.
+ */
+const TABLE_BOTTOM_PADDING = 75;
+
 export type {SearchResult};
-export {searchResultsTableColumns};
+export {
+    searchResultsTableColumns, TABLE_BOTTOM_PADDING,
+};

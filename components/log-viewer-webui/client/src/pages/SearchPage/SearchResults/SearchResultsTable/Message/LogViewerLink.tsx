@@ -11,7 +11,6 @@ interface LogViewerLinkProps {
     filePath: string;
     streamId: string;
     logEventIx: number;
-    streamType: string; // Added streamType prop
 }
 
 /**
@@ -25,6 +24,7 @@ interface LogViewerLinkProps {
  */
 const LogViewerLink = ({filePath, streamId, logEventIx}: LogViewerLinkProps) => (
     <Tooltip title={"Open file"}>
+        // Wrap react router link in antd link to apply theme styles.
         <Typography.Link>
             <Link
                 to={{
