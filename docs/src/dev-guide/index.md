@@ -81,6 +81,7 @@ tooling-gh-workflows
 
 design-project-structure
 
+design-clp-structured/index
 design-kv-ir-streams/index
 design-metadata-db
 design-parsing-wildcard-queries
