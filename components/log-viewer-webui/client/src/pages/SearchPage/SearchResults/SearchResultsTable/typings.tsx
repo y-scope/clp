@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
 import Message from "./Message";
+import {getStreamId, getStreamType} from "./utils";
 
 
 /**
@@ -15,18 +16,9 @@ interface SearchResult {
     filePath: string;
     orig_file_path: string;
     orig_file_id: string;
-    archive_id?: string;
+    archive_id: string;
     log_event_ix: number;
 }
-
-// Helper: is IR stream
-const IS_IR_STREAM = process.env.REACT_APP_CLP_STORAGE_ENGINE === "clp";
-const STREAM_TYPE = IS_IR_STREAM ? "ir" : "json";
-
-// Helper: get streamId
-const getStreamId = (result: SearchResult) => (
-    IS_IR_STREAM ? result.orig_file_id : result.archive_id
-);
 
 /**
  * Columns configuration for the seach results table.
@@ -47,8 +39,8 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
             <Message
                 filePath={record.orig_file_path}
                 message={record.message}
-                streamId={getStreamId(record) || ""}
-                streamType={STREAM_TYPE}
+                streamId={getStreamId(record)}
+                streamType={getStreamType()}
                 logEventIdx={record.log_event_ix}
             />
         ),
