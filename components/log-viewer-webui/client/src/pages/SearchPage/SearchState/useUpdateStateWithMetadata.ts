@@ -2,9 +2,9 @@ import {useEffect} from "react";
 
 import {SEARCH_SIGNAL} from "@common/index.js";
 
-import {useResultsMetadata} from "../reactive-mongo-queries/useResultsMetadata";
 import useSearchStore from "./index";
 import {SEARCH_UI_STATE} from "./typings";
+import {useResultsMetadata} from "./useResultsMetadata";
 
 
 /**

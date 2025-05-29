@@ -53,6 +53,7 @@ const SpaceSavings = () => {
     }, []);
 
     useEffect(() => {
+        fetchSpaceSavingsStats();
         const intervalId = setInterval(fetchSpaceSavingsStats, refreshInterval);
 
         return () => {

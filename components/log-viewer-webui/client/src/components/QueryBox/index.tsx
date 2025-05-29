@@ -4,14 +4,15 @@ import {
     Progress,
     theme,
 } from "antd";
+import {Nullable} from "src/typings/common";
 
 import styles from "./index.module.css";
 
 export interface QueryBoxProps extends InputProps {
     /**
-     * The progress of the progress bar from `0` to `100`. Hides the bar if `0`.
+     * The progress of the progress bar from `0` to `100`. Hides the bar if `null`.
      */
-    progress: number;
+    progress: Nullable<number>;
 }
 
 /**
@@ -30,9 +31,9 @@ const QueryBox = ({progress, ...inputProps}: QueryBoxProps) => {
             <Input {...inputProps}/>
             <div
                 className={styles["progressBarMask"]}
-                style={{borderRadius: token.borderRadius}}
+                style={{borderRadius: token.borderRadiusLG}}
             >
-                {0 !== progress && (
+                {null !== progress && (
                     <Progress
                         className={styles["progressBar"] || ""}
                         percent={progress}

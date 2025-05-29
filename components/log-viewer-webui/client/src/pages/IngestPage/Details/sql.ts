@@ -1,3 +1,5 @@
+import {Nullable} from "src/typings/common";
+
 import {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
     CLP_FILES_TABLE_COLUMN_NAMES,
@@ -25,17 +27,22 @@ FROM
 ) a,
 (
     SELECT
-        NULLIF(COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID}), 0) AS num_files,
-        SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES})                       AS num_messages
+        COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID})   AS num_files,
+        CAST(
+            COALESCE(
+                SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}),
+                0
+            ) AS INTEGER
+        ) AS num_messages
     FROM ${SQL_CONFIG.SqlDbClpFilesTableName}
 ) b;
 `;
 
 interface DetailsItem {
-    begin_timestamp: number;
-    end_timestamp: number;
-    num_files: number;
-    num_messages: number;
+    begin_timestamp: Nullable<number>;
+    end_timestamp: Nullable<number>;
+    num_files: Nullable<number>;
+    num_messages: Nullable<number>;
 }
 
 type DetailsResp = DetailsItem[];

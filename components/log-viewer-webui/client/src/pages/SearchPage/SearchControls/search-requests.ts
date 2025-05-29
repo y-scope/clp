@@ -87,6 +87,7 @@ const handleQueryCancel = (payload: QueryJobSchema) => {
         return;
     }
 
+    store.updateSearchUiState(SEARCH_UI_STATE.DONE);
     cancelQuery(
         payload
     ).then(() => {
@@ -95,8 +96,6 @@ const handleQueryCancel = (payload: QueryJobSchema) => {
         .catch((err: unknown) => {
             console.error("Failed to cancel query:", err);
         });
-
-    store.updateSearchUiState(SEARCH_UI_STATE.DONE);
 };
 
 

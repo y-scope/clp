@@ -1,5 +1,4 @@
 import {Dayjs} from "dayjs";
-import {Nullable} from "src/typings/common";
 
 import DetailsCard from "./DetailsCard";
 
@@ -7,8 +6,8 @@ import DetailsCard from "./DetailsCard";
 const DATE_FORMAT = "MMMM D, YYYY";
 
 interface TimeRangeProps {
-    beginDate: Nullable<Dayjs>;
-    endDate: Nullable<Dayjs>;
+    beginDate: Dayjs;
+    endDate: Dayjs;
 }
 
 /**
@@ -20,12 +19,16 @@ interface TimeRangeProps {
  * @return
  */
 const TimeRange = ({beginDate, endDate}: TimeRangeProps) => {
-    const formattedStat = `${beginDate?.format(DATE_FORMAT) ?? "Unknown Begin Date"} -
-        ${endDate?.format(DATE_FORMAT) ?? "Unknown End Date"}`;
+    let stat;
+    if (beginDate.isValid() && endDate.isValid()) {
+        stat = `${beginDate.format(DATE_FORMAT)} - ${endDate.format(DATE_FORMAT)}`;
+    } else {
+        stat = "No timestamp data";
+    }
 
     return (
         <DetailsCard
-            stat={formattedStat}
+            stat={stat}
             title={"Time Range"}/>
     );
 };

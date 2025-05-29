@@ -16,7 +16,10 @@ interface SearchResult {
     filePath: string;
     orig_file_path: string;
     orig_file_id: string;
+<<<<<<< HEAD
     archive_id: string;
+=======
+>>>>>>> main
     log_event_ix: number;
 }
 
@@ -38,16 +41,20 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         render: (_, record) => (
             <Message
                 filePath={record.orig_file_path}
-                message={record.message}
-                streamId={getStreamId(record)}
-                streamType={getStreamType()}
-                logEventIdx={record.log_event_ix}
-            />
+                message={record.message}/>
         ),
         title: "Message",
         width: 85,
     },
 ];
 
+/**
+ * Padding for the table to the bottom of the page.
+ */
+const TABLE_BOTTOM_PADDING = 75;
+
+
 export type {SearchResult};
-export {searchResultsTableColumns};
+export {
+    searchResultsTableColumns, TABLE_BOTTOM_PADDING,
+};
