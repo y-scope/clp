@@ -3,14 +3,6 @@
 // TODO: Move listeners to a separate file to reduce lines
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
-import type {
-    ClientToServerEvents,
-    InterServerEvents,
-    QueryId,
-    Response,
-    ServerToClientEvents,
-    SocketData,
-} from "@common/index.js";
 import {
     FastifyInstance,
     FastifyPluginAsync,
@@ -19,6 +11,14 @@ import fastifyPlugin from "fastify-plugin";
 import {Db} from "mongodb";
 import {Server} from "socket.io";
 
+import type {
+    ClientToServerEvents,
+    InterServerEvents,
+    QueryId,
+    Response,
+    ServerToClientEvents,
+    SocketData,
+} from "../../../../common/index.js";
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,
@@ -55,6 +55,9 @@ class MongoSocketIoServer {
     // Mapping of connection IDs to the query IDs they are subscribed to. A connection can
     // subscribe to the same queryID multiple times, so the list can contain duplicates.
     #subscribedQueryIdsMap: Map<ConnectionId, QueryId[]> = new Map();
+
+    // Counter for generating unique query IDs.
+    #queryIdCounter: QueryId = 0;
 
     readonly #mongoDb: Db;
 
@@ -176,15 +179,11 @@ class MongoSocketIoServer {
                 return queryId;
             }
         }
+        const queryId = this.#queryIdCounter;
+        this.#queryIdToQueryHashMap.set(queryId, queryHash);
 
-        let queryId = 0;
-        if (0 === this.#queryIdToQueryHashMap.size) {
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        } else {
-            const maxKey = Math.max(...Array.from(this.#queryIdToQueryHashMap.keys()));
-            queryId = maxKey + 1;
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        }
+        // JS is single threaded and ++ is atomic, so we can safely increment the global counter.
+        this.#queryIdCounter++;
 
         return queryId;
     }
@@ -202,7 +201,7 @@ class MongoSocketIoServer {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
             watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#fastify.log.info(`Created MongoDb collection:${collectionName}.`);
+            this.#fastify.log.info(`Initialize Mongo watcher collection:${collectionName}.`);
             this.#collections.set(collectionName, watcherCollection);
         }
 

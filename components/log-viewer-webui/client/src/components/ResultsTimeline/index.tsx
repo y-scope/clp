@@ -16,14 +16,12 @@ import zoomPlugin from "chartjs-plugin-zoom";
 import dayjs from "dayjs";
 
 import {Nullable} from "../../typings/common";
+import {DATETIME_FORMAT_TEMPLATE} from "../../typings/datetime";
 import {
     convertUtcDatetimeToSameLocalDate,
     convertZoomTimestampToUtcDatetime,
 } from "./datetime";
-import {
-    DATETIME_FORMAT_TEMPLATE,
-    TimeRange,
-} from "./datetime/typings";
+import {TimeRange} from "./datetime/typings";
 import styles from "./index.module.css";
 import {
     TimelineBucket,

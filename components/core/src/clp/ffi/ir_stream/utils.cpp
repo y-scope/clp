@@ -63,7 +63,7 @@ auto ir_error_code_to_errc(IRErrorCode ir_error_code) -> std::errc {
         case IRErrorCode_Decode_Error:
             return std::errc::protocol_error;
         case IRErrorCode_Eof:
-            return std::errc::no_message_available;
+            return std::errc::no_message;
         default:
             return std::errc::not_supported;
     }

@@ -1,7 +1,6 @@
 import {
     useCallback,
     useEffect,
-    useRef,
     useState,
 } from "react";
 
@@ -9,7 +8,6 @@ import {Table} from "antd";
 import dayjs from "dayjs";
 
 import {DashboardCard} from "../../../components/DashboardCard";
-import {SET_INTERVAL_INVALID_ID} from "../../../typings/time";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import styles from "./index.module.css";
@@ -47,31 +45,36 @@ interface JobsProps {
 const Jobs = ({className}: JobsProps) => {
     const {refreshInterval} = useIngestStatsStore();
     const [jobs, setJobs] = useState<JobData[]>(JOBS_DEFAULT.jobs);
-    const intervalIdRef = useRef<ReturnType<typeof setInterval>>(SET_INTERVAL_INVALID_ID);
 
     /**
      * Fetches jobs stats from the server.
      *
      * @throws {Error} If the response is undefined.
      */
-    const fetchJobsStats = useCallback(async () => {
+    const fetchJobsStats = useCallback(() => {
         const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
             .unix();
-        const {data: resp} = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
-        const newJobs = resp
-            .map((item): JobData => convertQueryJobsItemToJobData(item));
 
-        setJobs(newJobs);
+        querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp))
+            .then((resp) => {
+                const newJobs = resp.data.map(
+                    (item): JobData => convertQueryJobsItemToJobData(item)
+                );
+
+                setJobs(newJobs);
+            })
+            .catch((e: unknown) => {
+                console.error("Failed to fetch jobs stats", e);
+            });
     }, []);
 
 
     useEffect(() => {
-        // eslint-disable-next-line no-void
-        void fetchJobsStats();
-        intervalIdRef.current = setInterval(fetchJobsStats, refreshInterval);
+        fetchJobsStats();
+        const intervalId = setInterval(fetchJobsStats, refreshInterval);
 
         return () => {
-            clearInterval(intervalIdRef.current);
+            clearInterval(intervalId);
         };
     }, [
         refreshInterval,
