@@ -23,8 +23,8 @@ import TimeRange from "./TimeRange";
  * Default state for details.
  */
 const DETAILS_DEFAULT = Object.freeze({
-    beginDate: null,
-    endDate: null,
+    beginDate: dayjs(null),
+    endDate: dayjs(null),
 
     numFiles: 0,
     numMessages: 0,
@@ -37,10 +37,10 @@ const DETAILS_DEFAULT = Object.freeze({
  */
 const Details = () => {
     const {refreshInterval} = useIngestStatsStore();
-    const [beginDate, setBeginDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.beginDate);
-    const [endDate, setEndDate] = useState<Nullable<Dayjs>>(DETAILS_DEFAULT.endDate);
-    const [numFiles, setNumFiles] = useState<number>(DETAILS_DEFAULT.numFiles);
-    const [numMessages, setNumMessages] = useState<number>(DETAILS_DEFAULT.numMessages);
+    const [beginDate, setBeginDate] = useState<Dayjs>(DETAILS_DEFAULT.beginDate);
+    const [endDate, setEndDate] = useState<Dayjs>(DETAILS_DEFAULT.endDate);
+    const [numFiles, setNumFiles] = useState<Nullable<number>>(DETAILS_DEFAULT.numFiles);
+    const [numMessages, setNumMessages] = useState<Nullable<number>>(DETAILS_DEFAULT.numMessages);
 
     /**
      * Fetches details stats from the server.
@@ -65,6 +65,7 @@ const Details = () => {
 
 
     useEffect(() => {
+        fetchDetailsStats();
         const intervalId = setInterval(fetchDetailsStats, refreshInterval);
 
         return () => {

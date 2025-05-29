@@ -1,7 +1,7 @@
 import MongoCollectionSocket from "../../../api/socket/MongoCollectionSocket";
 import {useCursor} from "../../../api/socket/useCursor";
-import {SearchResult} from "./SearchResultsTable/typings";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
+import {SearchResult} from "./SearchResultsTable/typings";
 
 
 /**

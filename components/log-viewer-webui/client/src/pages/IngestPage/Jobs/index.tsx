@@ -70,6 +70,7 @@ const Jobs = ({className}: JobsProps) => {
 
 
     useEffect(() => {
+        fetchJobsStats();
         const intervalId = setInterval(fetchJobsStats, refreshInterval);
 
         return () => {

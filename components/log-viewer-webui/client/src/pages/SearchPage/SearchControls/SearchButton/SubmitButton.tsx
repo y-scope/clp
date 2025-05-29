@@ -1,3 +1,5 @@
+import {useCallback} from "react";
+
 import {SearchOutlined} from "@ant-design/icons";
 import {
     Button,
@@ -20,6 +22,25 @@ const SubmitButton = () => {
     const {searchUiState, timeRange, queryString} = useSearchStore();
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
 
+    /**
+     * Submits search query.
+     */
+    const handleSubmitButtonClick = useCallback(() => {
+        const timelineConfig = computeTimelineConfig(
+            timeRange[0].valueOf(),
+            timeRange[1].valueOf()
+        );
+
+        handleQuerySubmit({
+            ignoreCase: false,
+            queryString: queryString,
+            timeRangeBucketSizeMillis: timelineConfig.bucketDuration.asMilliseconds(),
+            timestampBegin: timeRange[0].valueOf(),
+            timestampEnd: timeRange[1].valueOf(),
+        });
+    }, [queryString,
+        timeRange]);
+
     return (
         <Tooltip
             title={isQueryStringEmpty ?
@@ -32,20 +53,7 @@ const SubmitButton = () => {
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}
-                onClick={() => {
-                    const timelineConfig = computeTimelineConfig(
-                        timeRange[0].valueOf(),
-                        timeRange[1].valueOf()
-                    );
-
-                    handleQuerySubmit({
-                        ignoreCase: false,
-                        queryString: queryString,
-                        timeRangeBucketSizeMillis: timelineConfig.bucketDuration.asMilliseconds(),
-                        timestampBegin: timeRange[0].valueOf(),
-                        timestampEnd: timeRange[1].valueOf(),
-                    });
-                }}
+                onClick={handleSubmitButtonClick}
             >
                 Search
             </Button>

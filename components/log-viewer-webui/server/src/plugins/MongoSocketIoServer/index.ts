@@ -34,9 +34,6 @@ import {
 } from "./utils.js";
 
 
-// Counter for generating unique query IDs.
-let globalQueryIdCounter = 0;
-
 /**
  * Integrates MongoDB with Socket.IO to provide real-time updates for MongoDB queries.
  *
@@ -58,6 +55,9 @@ class MongoSocketIoServer {
     // Mapping of connection IDs to the query IDs they are subscribed to. A connection can
     // subscribe to the same queryID multiple times, so the list can contain duplicates.
     #subscribedQueryIdsMap: Map<ConnectionId, QueryId[]> = new Map();
+
+    // Counter for generating unique query IDs.
+    #queryIdCounter: QueryId = 0;
 
     readonly #mongoDb: Db;
 
@@ -179,11 +179,11 @@ class MongoSocketIoServer {
                 return queryId;
             }
         }
-        const queryId = globalQueryIdCounter;
+        const queryId = this.#queryIdCounter;
         this.#queryIdToQueryHashMap.set(queryId, queryHash);
 
         // JS is single threaded and ++ is atomic, so we can safely increment the global counter.
-        globalQueryIdCounter++;
+        this.#queryIdCounter++;
 
         return queryId;
     }

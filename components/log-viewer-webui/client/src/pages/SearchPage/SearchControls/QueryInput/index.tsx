@@ -4,6 +4,8 @@ import {
     useState,
 } from "react";
 
+import {Nullable} from "src/typings/common";
+
 import QueryBox from "../../../../components/QueryBox";
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
@@ -20,7 +22,7 @@ import {
  */
 const QueryInput = () => {
     const {queryString, updateQueryString, searchUiState} = useSearchStore();
-    const [pseudoProgress, setPseudoProgress] = useState<number>(0);
+    const [pseudoProgress, setPseudoProgress] = useState<Nullable<number>>(null);
     const intervalIdRef = useRef<number>(0);
 
     useEffect(() => {
@@ -32,17 +34,17 @@ const QueryInput = () => {
             }
             intervalIdRef.current = window.setInterval(() => {
                 setPseudoProgress((v) => {
-                    if (100 <= v + PROGRESS_INCREMENT) {
+                    if (100 <= (v ?? 0) + PROGRESS_INCREMENT) {
                         return 100;
                     }
 
-                    return v + PROGRESS_INCREMENT;
+                    return (v ?? 0) + PROGRESS_INCREMENT;
                 });
             }, PROGRESS_INTERVAL_MILLIS);
         } else if (searchUiState === SEARCH_UI_STATE.DONE) {
             clearInterval(intervalIdRef.current);
             intervalIdRef.current = 0;
-            setPseudoProgress(0);
+            setPseudoProgress(null);
         }
     }, [searchUiState]);
 
