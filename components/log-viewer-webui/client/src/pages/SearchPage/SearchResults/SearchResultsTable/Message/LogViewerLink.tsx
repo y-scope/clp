@@ -4,6 +4,8 @@ import {
 } from "antd";
 import { Link } from "react-router";
 import styles from "./index.module.css";
+import {Typography} from "antd";
+
 
 interface LogViewerLinkProps {
     filePath: string;
