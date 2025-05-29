@@ -32,7 +32,6 @@
     "react-router": "^7.4.1",
     "react-syntax-highlighter": "^15.6.1",
     "socket.io-client": "^4.8.1",
-    "vite-tsconfig-paths": "^5.1.4",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
