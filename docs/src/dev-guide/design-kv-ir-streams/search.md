@@ -16,7 +16,7 @@ represented as a tree of expressions. There are three types of expressions suppo
 * **OR**: This means at least one sub-expression must be satisfied.
 * **Filters**: These are the leaves of the AST, representing key-value pairs with an associated
   operator.
-  * The key is a hierarchical path to the target value,
+  * The key is a root-to-leaf path to the target value,
   * The value is the value to match, and
   * The operator can be an exact match or a numeric comparator.
   
@@ -24,7 +24,7 @@ represented as a tree of expressions. There are three types of expressions suppo
 
 Note that all types of expressions are invertible, meaning that they can be applied with `NOT`.
 
-For example, a query `a > 1 AND (b < 2 or NOT c: 3)` can be represented as the following AST:
+For example, a query `a > 1 AND (b < 2 or NOT c.d: 3)` can be represented as the following AST:
 
 ```mermaid
 flowchart TD;
@@ -32,6 +32,19 @@ flowchart TD;
     A --> C[OR]
     C --> D[b < 2]
     C --> E[NOT c: 3]
+```
+
+Here's an example dynamically structured log event (in JSON form) that matches this query:
+
+```json
+{
+  "a": 2,
+  "b": 1,
+  "c": {
+    "d": 4
+  },
+  "e": "whatever"
+}
 ```
 
 ### Searching clp-s archives
@@ -97,17 +110,24 @@ have a doc to each available transformation pass in clp-s, and we can directly r
 
 ### Resolve queried columns to schema-tree nodes
 
-To evaluate filters, we must determine which schema-tree nodes correspond to each queried column.
-We call this step queried columns to schema-tree node resolution. However, as the schema-tree is
-dynamically constructed across a stream, this resolution must be re-evaluated when a schema-tree has
-been updated.
+To evaluate filters, it is necessary to identify which schema-tree nodes correspond to each filter's
+queried columns. In clp-s, this resolution occurs early in the search process: the merged
+schema-tree is traversed to find all nodes that can match a queried column before decompressing any
+ERTs. Only ERTs whose schema includes at least one of these matchable nodes will be decompressed for
+further evaluation, and thus we can avoid walking through irrelevant ERTs.
+
+Unfortunately, this approach is not applicable to KV-IR streams. In KV-IR streams, the schema-tree
+is built dynamically as the stream is read. Therefore, we cannot pre-compute all the matchable
+nodes in advance. Instead, we identify these matchable nodes incrementally as the schema-tree grows,
+in a top-down manner. We call this process "queried column resolution". We will use the following
+example to illustrate this incremental resolution process.
 
 #### Example (TODO: Maybe some other attractive title)
 
-Let's illustrate this process with a query filter `a.*.c: TestString`: it attempts to
-find a match on a wildcard full key path `a.*.c` against a string value `"TestString"`.
+Consider a filter `a.*.c: TestString`, which searches for a value `TestString` at any path matching
+the wildcard root-to-leaf path `a.*.c`.
 
-Consider the following schema-tree is constructed dynamically:
+Suppose the schema-tree is constructed step-by-step as follows:
 
 ##### Initial schema-tree
 
@@ -116,7 +136,7 @@ graph TD;
     0[0:root]
 ```
 
-The schema tree starts with the root.
+The tree starts with only the root node.
 
 ##### Insertion of node #1
 
@@ -125,9 +145,8 @@ graph TD;
     0[0:root] --> 1["1:a(obj)"]
 ```
 
-When the first node is inserted, nothing will be resolved. But intuitively, we find a key `a` that
-matches the first token in the target key path `a.*.c`, meaning that there can be potential matches
-for `.*.c` among its successors.
+After inserting **node #1**, we see a key `a` matching the first token in `a.*.c`, so potential
+matches for `.*.c` may exist among its descendants.
 
 ##### Insertion of node #2
 
@@ -137,8 +156,8 @@ graph TD;
     1 --> 2["2:b(obj)"]
 ```
 
-Same as the previous step, nothing will be resolved, but `b` will be considered as a match of `*`
-following `a`, indicating that there can be potential matches for `.c` in among its successors.
+**Node #2** (`b`) is a child of `a` and matches the `*` wildcard. Potential matches for `.c` may be
+found among its children.
 
 ##### Insertion of node #3
 
@@ -149,10 +168,8 @@ graph TD;
     2 --> 3["3:c(int)"]
 ```
 
-Next, we have a new node inserted under `b` to construct a full path of `a.b.c`, which matches
-`a.*.c`. However, as a leaf node, #3 can only represent integer values, which means it will never
-match a string that the filter expects. Therefore, nothing should be updated even though all tokens
-in wildcard full key path have been resolved.
+**Node #3** completes the path `a.b.c`, matching `a.*.c`. However, since it is of type `int`, it
+cannot match the string value required by the filter, so no resolution occurs yet.
 
 ##### Insertion of node #4
 
@@ -164,9 +181,8 @@ graph TD;
     2 --> 4["4:c(str)"]
 ```
 
-We find out first resolution of `a.*.c`, as the path #1->#2->#4 `a.b.c` matches the wildcard full
-key path, and #4's type `str` is a matchable type. This means for any coming node-ID-value pairs
-whose node ID is #4, it will be considered a candidate for matching our target filter.
+**Node #4** (`c` of type `str`) under `b` completes the path `a.b.c` and matches both the key path
+and the required type. **Node #4** is now a resolved candidate for the filter.
 
 ##### Insertion of node #5
 
@@ -179,27 +195,24 @@ graph TD;
     1 --> 5["5:c(str)"]
 ```
 
-We find another resolution of `a.*.c`, as the path #1->#5 `a.c` matches the wildcard full
-key path, and #5's type `str` is a matchable type. This results another matchable candidate #5 for
-matching out target filter.
+**Node #5** (`c` of type `str`) is a direct child of `a`, matching the path `a.c` (which also fits
+`a.*.c`). **Node #5** is added as another resolved candidate.
 
 ---
 
-As we can see, the filter has no candidate node IDs for matching until node #4 is inserted; and it
-can have more than one candidate since later #5 is also considered a candidate. The resolution of
-a filter is dynamically evaluated as the tree expands, and it should be in a top-down manner since
-this is naturally how the schema-tree is constructed.
+As shown, the filter has no candidate node IDs until **node #4** is inserted, and may have multiple
+candidates as the tree grows. Resolution is evaluated dynamically and in a top-down manner,
+reflecting the schema-tree's construction.
 
 #### A formal approach
 
-Our goal is to construct a mapping from each queried column to one or more schema-tree nodes,
-subject to the following:
+At the code level, the goal is to construct a mapping from each queried column to one or more
+schema-tree nodes, subject to:
 
 * The path from the root to the mapped node must match the queried column's full key path.
 * The schema-tree node's type must be one of the queried column's matchable types.
 
-As we follow the construction of the trees, there are two types of nodes to track when building this
-mapping:
+To achieve this, two categories of nodes are tracked as the schema-tree is built:
 
 * **Partially resolved nodes**: Nodes whose paths match the initial segments of a queried column but
   are not fully resolved. These nodes are used for further matching as their child nodes are
@@ -207,31 +220,32 @@ mapping:
 * **Resolved nodes**: Nodes where the full key path and type match the queried column. These nodes
   are used to evaluate filters against log events.
 
-We will use the example above to illustrate the formal procedure to construct the mapping.
+Let's walk through the example filter `a.*.c: TestString` (tokenized as `[a, *, c]`) again:
 
-This queried column `a.*.c` can be tokenized as `[a, *, c]`. The objective is to resolve each token
-in sequence until the final token `c` is matched.
-
-Since the token begins with `a` and it is not a wildcard, we start with an initial state of a
-partially-resolved-node-ID-key pair `(0,a)`, indicating that the next node to resolve is a child of
-the root node (#0) with the key `a`. The initial set of partially-resolved-node-ID-key pairs is:
+The process begins with an initial state: a partially-resolved-node-ID-key pair `(0, a)`, indicating
+that the next node to resolve is a child of the root node (#0) with the key `a`. The initial set of
+partially-resolved-node-ID-key pairs is `{(0, a)}`.
 
 ```
 {(0,a)}
 ```
 
-**On node #1's insertion**, it triggers a match on `(0,a)` since it's a child node of node #0. Since
-its key is `a`, we can resolve the first token. This leads to a new partially-resolved-node-ID-key
-pair, `(1,*)`, indicating that the next token to resolve is a child of node #1 with any key.
-Similarly, `(1,c)` is also added to the set, since the wildcard token `*` can match no keys. At
-the end of this step, the set of partially-resolved-node-ID-key pairs is:
+On [insertion of node #1](#insertion-of-node-1), it matches the root pair `(0, a)`. This resolves
+the first token. As a result, two new pairs are added:
+
+* `(1, *)`, indicating the next token is a wildcard and any child of node #1 can be a candidate for
+  the next step, and,
+* `(1, c)`, since the wildcard `*` can also match zero keys, allowing a direct match to `c` under
+  node #1.
+
+The set of partially-resolved-node-ID-key pairs is now:
 
 ```
-{(0,a), (1,c), (1,*)}
+{(0, a), (1, *), (1, c)}.
 ```
 
-**On node #2's insertion**, it triggers two potential matches on its parent node #1: `(1,*)` and
-`(1,c)`:
+Next, [node #2 is inserted](#insertion-of-node-2) as a child of node #1 with key `b`. We check on
+the existing partially-resolved-node-ID-key pairs:
 
 * For `(1,*)`, the wildcard token `*` can match any key, it can be resolved by node #2's key `b`,
   and thus leads to the next token on node #2 with a new partially-resolved-node-ID-key pair
@@ -244,17 +258,15 @@ At the end of this step, the set of partially-resolved-node-ID-key pairs is:
 {(0,a), (1,c), (1,*), (2,c)}
 ```
 
-**On node #3's insertion**, it triggers a match on `(2,c)` since it's a child node of node #2.
-Despite the fact that node #3's key matches the next token `c`, the filter, `a.*.c: TestString`, can
-only match string values. As an integer type node, #3 is not qualified, and thus there are no
-updates on the resolutions.
+When [node #3 is inserted](#insertion-of-node-3) as a child of node #2 with key `c` and type `int`,
+the pair `(2, c)` matches key `c`, so the full key path is resolved. However, node #3's type is
+`int`, which does not match the filter's required type `str`, so no mapping is updated.
 
-**On node #4's insertion**, it follows the same matching logic as node #3, but this time the type of
-node #4 does match the filter's type. Since all the tokens are resolved, we can consider node #4 as
-a matchable node for the filter `a.*.c: TestString`, corresponding to the root-to-node path `a.b.c`.
-We can construct a mapping for this filter as: `<a.*.c: TestString> -> {4}`.
+Then, [node #4 is then inserted](#insertion-of-node-4) as another child of node #2 with key `c` and
+type `str`. The pair `(2, c)` matches key `c`, and the type matches the filter. Node #4 is therefore
+added as a resolved candidate for the filter, resulting in the mapping `<a.*.c: TestString> -> {4}`.
 
-**On node #5's insertion**, it triggers two matches on its parent node #1: `(1,*)` and `(1,c)`:
+When [node #5 is inserted](#insertion-of-node-5) as a child of node #1, we check the following:
 
 * For `(1,*)`, although the wildcard can match any key, the node #5 is of type `str`, which means it
   cannot have child nodes to resolve the subsequent token `c` after the wildcard.
@@ -276,6 +288,8 @@ and #5:
 ```
 {<a.*.c: Testing> -> {4, 5}}
 ```
+
+---
 
 It is important to note that these partial resolutions are maintained throughout the entire
 streaming process, as additional child nodes may be inserted under nodes #0, #1, or #2, potentially
