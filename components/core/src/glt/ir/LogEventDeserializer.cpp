@@ -84,7 +84,7 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
     if (ffi::ir_stream::IRErrorCode_Success != ir_error_code) {
         switch (ir_error_code) {
             case ffi::ir_stream::IRErrorCode_Eof:
-                return std::errc::no_message_available;
+                return std::errc::no_message;
             case ffi::ir_stream::IRErrorCode_Incomplete_IR:
                 return std::errc::result_out_of_range;
             case ffi::ir_stream::IRErrorCode_Corrupted_IR:

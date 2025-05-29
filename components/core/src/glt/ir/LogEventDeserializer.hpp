@@ -54,7 +54,7 @@ public:
     /**
      * Deserializes a log event from the stream
      * @return A result containing the log event or an error code indicating the failure:
-     * - std::errc::no_message_available on reaching the end of the IR stream
+     * - std::errc::no_message on reaching the end of the IR stream
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::result_out_of_range if the IR stream is corrupted
      */
