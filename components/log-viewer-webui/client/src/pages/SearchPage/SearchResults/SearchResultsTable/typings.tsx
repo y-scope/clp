@@ -3,7 +3,6 @@ import dayjs from "dayjs";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
 import Message from "./Message";
-import {getStreamId, getStreamType} from "./utils";
 
 
 /**
@@ -16,10 +15,6 @@ interface SearchResult {
     filePath: string;
     orig_file_path: string;
     orig_file_id: string;
-<<<<<<< HEAD
-    archive_id: string;
-=======
->>>>>>> main
     log_event_ix: number;
 }
 
