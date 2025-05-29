@@ -38,6 +38,7 @@ const SubmitButton = () => {
             timestampEnd: timeRange[1].valueOf(),
         });
     }, [queryString,
+        updateTimelineConfig,
         timeRange]);
 
     return (

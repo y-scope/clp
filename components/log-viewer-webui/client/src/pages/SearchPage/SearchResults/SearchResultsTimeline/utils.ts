@@ -8,6 +8,7 @@ import {
     TimelineConfig,
 } from "../../../../components/ResultsTimeline/typings";
 
+
 dayjs.extend(DayjsUtc);
 dayjs.extend(DayjsDuration);
 
@@ -37,8 +38,7 @@ const expandTimeRangeToDurationMultiple = (duration: DayjsDuration.Duration, {
  * Computes the timestamp range and bucket duration necessary to render the bars in the timeline
  * chart.
  *
- * @param timestampBeginUnixMillis
- * @param timestampEndUnixMillis
+ * @param timeRange
  * @return
  */
 const computeTimelineConfig = (

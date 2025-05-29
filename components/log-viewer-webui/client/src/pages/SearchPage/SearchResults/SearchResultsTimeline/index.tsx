@@ -1,17 +1,15 @@
 import {Card} from "antd";
+import {Dayjs} from "dayjs";
+import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
+import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
-import useSearchStore from "../../SearchState/index";
-import {
-    computeTimelineConfig,
-} from "./utils";
-import { SEARCH_UI_STATE } from "../../SearchState/typings";
-import { useAggregationResults } from "./useAggregationResults";
-import { handleQuerySubmit } from "../../SearchControls/search-requests";
-import {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
-import { TimelineConfig } from "src/components/ResultsTimeline/typings";
-import { Dayjs } from "dayjs";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import {useAggregationResults} from "./useAggregationResults";
+import {computeTimelineConfig} from "./utils";
+
 
 /**
  * Renders timeline visualization of search results.
@@ -51,12 +49,12 @@ const SearchResultsTimeline = () => {
             timestampBegin: newTimeRange[0].valueOf(),
             timestampEnd: newTimeRange[1].valueOf(),
         });
-
     };
 
     return (
         <Card>
             <ResultsTimeline
+                timelineConfig={timelineConfig}
                 isInputDisabled={
                     searchUiState === SEARCH_UI_STATE.QUERYING ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING
@@ -64,7 +62,6 @@ const SearchResultsTimeline = () => {
                 timelineBuckets={aggregationResults ?
                     aggregationResults :
                     []}
-                timelineConfig={timelineConfig}
                 onTimelineZoom={handleTimelineZoom}/>
         </Card>
     );

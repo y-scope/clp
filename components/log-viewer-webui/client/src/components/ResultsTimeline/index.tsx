@@ -13,7 +13,7 @@ import {
     TooltipItem,
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../typings/datetime";
 import {
@@ -175,7 +175,7 @@ const ResultsTimeline = ({
                         const {min, max} = xAxis;
                         const newTimeRange: [Dayjs, Dayjs] =
                             [convertZoomTimestampToUtcDatetime(min),
-                            convertZoomTimestampToUtcDatetime(max)]
+                                convertZoomTimestampToUtcDatetime(max)];
 
                         onTimelineZoom(newTimeRange);
                     },
