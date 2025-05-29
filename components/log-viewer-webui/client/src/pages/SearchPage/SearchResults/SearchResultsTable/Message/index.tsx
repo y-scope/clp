@@ -7,12 +7,13 @@ import {highlighterCustomStyles} from "./utils";
 
 import "highlight.js/styles/intellij-light.css";
 
-
 const {Text} = Typography;
 
 interface MessageProps {
     message: string;
     filePath: string;
+    streamId: string;
+    logEventIx: number;
 }
 
 /**
@@ -21,9 +22,11 @@ interface MessageProps {
  * @param props
  * @param props.message
  * @param props.filePath
+ * @param props.streamId
+ * @param props.logEventIx
  * @return
  */
-const Message = ({message, filePath}: MessageProps) => {
+const Message = ({message, filePath, streamId, logEventIx}: MessageProps) => {
     return (
         <>
             {/* Parent `Text` component allows syntax highlighter to inherit AntD fonts. */}
@@ -37,7 +40,11 @@ const Message = ({message, filePath}: MessageProps) => {
                     {message}
                 </SyntaxHighlighter>
             </Text>
-            <LogViewerLink filePath={filePath}/>
+            <LogViewerLink
+                filePath={filePath}
+                streamId={streamId}
+                logEventIx={logEventIx}
+            />
         </>
     );
 };

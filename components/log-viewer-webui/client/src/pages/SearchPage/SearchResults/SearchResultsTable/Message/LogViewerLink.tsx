@@ -1,21 +1,17 @@
 import {LinkOutlined} from "@ant-design/icons";
 import {
     Tooltip,
-    Typography,
 } from "antd";
-
+import { Link } from "react-router";
+import { Typography } from "antd";
 import styles from "./index.module.css";
-
-
-const {Link} = Typography;
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Fix link to connect to package log viewer when log viewer setup finished. Also pass
-// proper args to package log viewer.
-const LOG_VIEWER_URL = "https://y-scope.github.io/yscope-log-viewer/";
+import { STREAM_TYPE } from "../utils"
 
 interface LogViewerLinkProps {
     filePath: string;
+    streamId: string;
+    logEventIx: number;
+    streamType: string; // Added streamType prop
 }
 
 /**
@@ -23,18 +19,29 @@ interface LogViewerLinkProps {
  *
  * @param props
  * @param props.filePath
+ * @param props.streamId
+ * @param props.logEventIdx
  * @return
  */
-const LogViewerLink = ({filePath}: LogViewerLinkProps) => (
+const LogViewerLink = ({filePath, streamId, logEventIx}: LogViewerLinkProps) => (
     <Tooltip title={"Open file"}>
-        <Link
-            href={LOG_VIEWER_URL}
-            target={"_blank"}
-            type={"secondary"}
-        >
-            <LinkOutlined className={styles["linkIcon"] || ""}/>
-            {filePath}
-        </Link>
+        <Typography.Link>
+            <Link
+                to={{
+                    pathname: "/stream",
+                    search:
+                        `?type=${encodeURIComponent(STREAM_TYPE)}` +
+                        `&streamId=${encodeURIComponent(streamId)}` +
+                        `&logEventIdx=${encodeURIComponent(logEventIx)}`
+                }}
+                className={styles["linkIcon"] || ""}
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                <LinkOutlined />
+                {filePath}
+            </Link>
+        </Typography.Link>
     </Tooltip>
 );
 

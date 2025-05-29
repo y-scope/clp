@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
 import Message from "./Message";
+import {getStreamId} from "./utils";
 
 
 /**
@@ -15,6 +16,7 @@ interface SearchResult {
     filePath: string;
     orig_file_path: string;
     orig_file_id: string;
+    archive_id: string;
     log_event_ix: number;
 }
 
@@ -36,20 +38,15 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         render: (_, record) => (
             <Message
                 filePath={record.orig_file_path}
-                message={record.message}/>
+                message={record.message}
+                streamId={getStreamId(record)}
+                logEventIx={record.log_event_ix}
+            />
         ),
         title: "Message",
         width: 85,
     },
 ];
 
-/**
- * Padding for the table to the bottom of the page.
- */
-const TABLE_BOTTOM_PADDING = 75;
-
-
 export type {SearchResult};
-export {
-    searchResultsTableColumns, TABLE_BOTTOM_PADDING,
-};
+export {searchResultsTableColumns};
