@@ -7,7 +7,7 @@ import {
     computeTimelineConfig,
 } from "./utils";
 import { SEARCH_UI_STATE } from "../../SearchState/typings";
-import { useAggregationResults } from "../../reactive-mongo-queries/useAggregationResults";
+import { useAggregationResults } from "./useAggregationResults";
 import { handleQuerySubmit } from "../../SearchControls/search-requests";
 import {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 import { TimelineConfig } from "src/components/ResultsTimeline/typings";
