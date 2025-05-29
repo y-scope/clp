@@ -6,12 +6,12 @@ import React, {
 
 import {Table} from "antd";
 
-import {useSearchResults} from "./useSearchResults";
 import {
     SearchResult,
     searchResultsTableColumns,
     TABLE_BOTTOM_PADDING,
 } from "./typings";
+import {useSearchResults} from "./useSearchResults";
 
 
 /**
