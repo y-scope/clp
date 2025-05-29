@@ -28,7 +28,7 @@ const LogViewerLink = ({filePath, streamId, logEventIx}: LogViewerLinkProps) => 
         <Typography.Link>
             <Link
                 to={{
-                    pathname: "/stream",
+                    pathname: "/streamFile",
                     search:
                         `?type=${encodeURIComponent(STREAM_TYPE)}` +
                         `&streamId=${encodeURIComponent(streamId)}` +

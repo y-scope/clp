@@ -24,7 +24,7 @@ const router = createBrowserRouter([
         ],
     },
     {
-    path: "/stream",
+    path: "/streamFile",
         Component: QueryStatus,
     },
 ]);
