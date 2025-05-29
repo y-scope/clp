@@ -1,8 +1,10 @@
+import {Nullable} from "src/typings/common";
+
 import DetailsCard from "./DetailsCard";
 
 
 interface MessagesProps {
-    numMessages: number;
+    numMessages: Nullable<number>;
 }
 
 /**
@@ -15,7 +17,7 @@ interface MessagesProps {
 const Messages = ({numMessages}: MessagesProps) => {
     return (
         <DetailsCard
-            stat={numMessages.toString()}
+            stat={(numMessages ?? 0).toString()}
             title={"Messages"}/>
     );
 };

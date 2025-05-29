@@ -1,8 +1,4 @@
 import {
-    SEARCH_SIGNAL,
-    SearchResultsMetadataDocument,
-} from "@common/searchResultsMetadata.js";
-import {
     FastifyBaseLogger,
     FastifyInstance,
 } from "fastify";
@@ -10,6 +6,11 @@ import type {
     Collection,
     Db,
 } from "mongodb";
+
+import {
+    SEARCH_SIGNAL,
+    type SearchResultsMetadataDocument,
+} from "../../../../../../common/index.js";
 
 
 /**
