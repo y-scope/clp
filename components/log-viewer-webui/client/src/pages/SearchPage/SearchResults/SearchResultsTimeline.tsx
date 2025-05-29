@@ -1,13 +1,14 @@
 import {Card} from "antd";
 import dayjs from "dayjs";
 
-import ResultsTimeline, {TimelineBucket} from "../../../components/ResultsTimeline";
+import ResultsTimeline from "../../../components/ResultsTimeline";
 import {expandTimeRangeToDurationMultiple} from "../../../components/ResultsTimeline/datetime";
 import {TimeRange} from "../../../components/ResultsTimeline/datetime/typings";
 import {computeTimelineConfig} from "../../../components/ResultsTimeline/utils";
 import {TIME_RANGE_OPTION} from "../SearchControls/TimeRangeInput/utils";
 import useSearchStore from "../SearchState";
 import {SearchResult} from "./SearchResultsTable/typings";
+import {TimelineBucket} from "../../../components/ResultsTimeline/typings";
 
 
 // eslint-disable-next-line no-warning-comments

@@ -1,20 +1,17 @@
-import {CssVarsProvider} from "@mui/joy";
+import {RouterProvider} from "react-router";
 
-import {LOCAL_STORAGE_KEY} from "./typings/config";
-import QueryStatus from "./ui/QueryStatus";
+import router from "./router";
+
+import "@ant-design/v5-patch-for-react-19";
 
 
 /**
- * Renders the main application.
+ * Renders Web UI app.
  *
  * @return
  */
-const App = () => {
-    return (
-        <CssVarsProvider modeStorageKey={LOCAL_STORAGE_KEY.THEME}>
-            <QueryStatus/>
-        </CssVarsProvider>
-    );
+const AntApp = () => {
+    return <RouterProvider router={router}/>;
 };
 
-export default App;
+export default AntApp;
