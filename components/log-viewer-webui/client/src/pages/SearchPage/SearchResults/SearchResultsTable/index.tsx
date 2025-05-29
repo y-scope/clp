@@ -6,7 +6,7 @@ import React, {
 
 import {Table} from "antd";
 
-import {useSearchResults} from "../useSearchResults";
+import {useSearchResults} from "./useSearchResults";
 import {
     SearchResult,
     searchResultsTableColumns,

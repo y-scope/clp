@@ -1,7 +1,7 @@
-import MongoCollectionSocket from "../../../api/socket/MongoCollectionSocket";
-import {useCursor} from "../../../api/socket/useCursor";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/index";
-import {SearchResult} from "./SearchResultsTable/typings";
+import MongoCollectionSocket from "../../../../api/socket/MongoCollectionSocket";
+import {useCursor} from "../../../../api/socket/useCursor";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
+import {SearchResult} from "./typings";
 
 
 /**
@@ -14,7 +14,7 @@ const useSearchResults = () => {
 
     const searchResultsCursor = useCursor<SearchResult>(
         () => {
-            // If there is no active search job, there is no metadata to fetch. The cursor will
+            // If there is no active search job, there are no results to fetch. The cursor will
             // return null.
             if (searchJobId === SEARCH_STATE_DEFAULT.searchJobId) {
                 return null;
