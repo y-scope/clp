@@ -24,8 +24,8 @@ const SearchResultsTable = () => {
     const [tableHeight, setTableHeight] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Antd table requires a fixed height for virtual scrolling. The effect
-    // sets a fixed height based on the window height minus some fixed padding.
+    // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
+    // based on the window height, container top, and fixed padding.
     useEffect(() => {
         const updateHeight = () => {
             if (containerRef.current) {
@@ -42,8 +42,6 @@ const SearchResultsTable = () => {
             window.removeEventListener("resize", updateHeight);
         };
     }, []);
-
-    console.log("SearchResultsTable: rendering with tableHeight", tableHeight);
 
     return (
         <div ref={containerRef}>
