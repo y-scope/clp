@@ -168,13 +168,13 @@ set(
 )
 
 add_library(
-        clp_s_IO
+        clp_s_io
         ${CLP_S_IO_SOURCES}
 )
-add_library(clp_s::IO ALIAS clp_s_IO)
-target_compile_features(clp_s_IO PRIVATE cxx_std_20)
+add_library(clp_s::io ALIAS clp_s_io)
+target_compile_features(clp_s_io PRIVATE cxx_std_20)
 target_link_libraries(
-        clp_s_IO
+        clp_s_io
         PRIVATE
         Boost::iostreams Boost::url
         clp_s::clp_dependencies
@@ -182,7 +182,7 @@ target_link_libraries(
         spdlog::spdlog
         ZStd::ZStd
 )
-target_include_directories(clp_s_IO PUBLIC ../)
+target_include_directories(clp_s_io PUBLIC ../)
 
 set(
         CLP_S_ARCHIVE_WRITER_SOURCES
@@ -226,16 +226,16 @@ set(
 )
 
 add_library(
-        clp_s_ArchiveWriter
+        clp_s_archive_writer
         ${CLP_S_ARCHIVE_WRITER_SOURCES}
 )
-add_library(clp_s::ArchiveWriter ALIAS clp_s_ArchiveWriter)
-target_compile_features(clp_s_ArchiveWriter PRIVATE cxx_std_20)
+add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
+target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
 target_link_libraries(
-        clp_s_ArchiveWriter
+        clp_s_archive_writer
         PUBLIC
         absl::flat_hash_map
-        clp_s::IO
+        clp_s::io
         simdjson::simdjson
         PRIVATE
         Boost::url
@@ -247,7 +247,7 @@ target_link_libraries(
         nlohmann_json::nlohmann_json
         spdlog::spdlog
 )
-target_include_directories(clp_s_ArchiveWriter PUBLIC ../)
+target_include_directories(clp_s_archive_writer PUBLIC ../)
 
 set(
         CLP_S_ARCHIVE_READER_SOURCES
@@ -287,16 +287,16 @@ set(
 )
 
 add_library(
-        clp_s_ArchiveReader
+        clp_s_archive_reader
         ${CLP_S_ARCHIVE_READER_SOURCES}
 )
-add_library(clp_s::ArchiveReader ALIAS clp_s_ArchiveReader)
-target_compile_features(clp_s_ArchiveReader PRIVATE cxx_std_20)
+add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
+target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
 target_link_libraries(
-        clp_s_ArchiveReader
+        clp_s_archive_reader
         PUBLIC
         absl::flat_hash_map
-        clp_s::IO
+        clp_s::io
         nlohmann_json::nlohmann_json
         PRIVATE
         absl::flat_hash_map
@@ -308,7 +308,7 @@ target_link_libraries(
         msgpack-cxx
         spdlog::spdlog
 )
-target_include_directories(clp_s_ArchiveReader PUBLIC ../)
+target_include_directories(clp_s_archive_reader PUBLIC ../)
 
 set(
         CLP_S_JSON_CONSTRUCTOR_SOURCES
@@ -319,21 +319,21 @@ set(
 )
 
 add_library(
-        clp_s_JsonConstructor
+        clp_s_json_constructor
         ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
 )
-add_library(clp_s::JsonConstructor ALIAS clp_s_JsonConstructor)
-target_compile_features(clp_s_JsonConstructor PRIVATE cxx_std_20)
+add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
+target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
 target_link_libraries(
-        clp_s_JsonConstructor
+        clp_s_json_constructor
         PUBLIC
-        clp_s::ArchiveReader
+        clp_s::archive_reader
         PRIVATE
         fmt::fmt
         ${MONGOCXX_TARGET}
         spdlog::spdlog
 )
-target_include_directories(clp_s_JsonConstructor PUBLIC ../)
+target_include_directories(clp_s_json_constructor PUBLIC ../)
 
 set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
@@ -360,7 +360,7 @@ target_link_libraries(
 target_include_directories(clp_s_TimestampPattern PUBLIC ../)
 
 set(
-        CLP_S_SOURCES
+        CLP_S_EXE_SOURCES
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         ErrorCode.hpp
@@ -374,18 +374,18 @@ set(
 add_executable(
         clp-s
         clp-s.cpp
-        ${CLP_S_SOURCES}
+        ${CLP_S_EXE_SOURCES}
 )
 target_compile_features(clp-s PRIVATE cxx_std_20)
 target_link_libraries(
         clp-s
         PRIVATE
         Boost::program_options
-        clp_s::ArchiveReader
-        clp_s::ArchiveWriter
+        clp_s::archive_reader
+        clp_s::archive_writer
         clp_s::clp_dependencies
-        clp_s::IO
-        clp_s::JsonConstructor
+        clp_s::io
+        clp_s::json_constructor
         clp_s::reducer_dependencies
         clp_s::search
         clp_s::search::ast

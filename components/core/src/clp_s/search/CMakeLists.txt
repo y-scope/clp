@@ -38,7 +38,7 @@ target_link_libraries(
         clp_s_search
         PUBLIC
         absl::flat_hash_map
-        clp_s::ArchiveReader
+        clp_s::archive_reader
         clp_s::search::ast
         simdjson::simdjson
         PRIVATE
