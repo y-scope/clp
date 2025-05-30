@@ -41,7 +41,7 @@ const SubmitButton = () => {
         timeRange]);
 
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
-    
+
     return (
         <Tooltip
             title={isQueryStringEmpty ?

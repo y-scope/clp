@@ -175,7 +175,7 @@ const ResultsTimeline = ({
                         const {min, max} = xAxis;
                         const newTimeRange: [Dayjs, Dayjs] = [
                             convertZoomTimestampToUtcDatetime(min),
-                            convertZoomTimestampToUtcDatetime(max)
+                            convertZoomTimestampToUtcDatetime(max),
                         ];
 
                         onTimelineZoom(newTimeRange);
