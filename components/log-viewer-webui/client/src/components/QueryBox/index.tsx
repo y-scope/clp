@@ -1,3 +1,5 @@
+import {useCallback} from "react";
+
 import {
     Button,
     Input,
@@ -12,7 +14,7 @@ import {Nullable} from "src/typings/common";
 import styles from "./index.module.css";
 
 
-export interface CaseSensitiveToggleProps {
+interface CaseSensitiveToggleProps {
     isCaseSensitive: boolean;
     onCaseSensitiveChange: (newValue: boolean) => void;
 }
@@ -32,23 +34,29 @@ const CaseSensitiveToggle = ({
     isCaseSensitive,
     onCaseSensitiveChange,
 }: CaseSensitiveToggleProps) => {
+    const handleButtonClick = useCallback(() => {
+        onCaseSensitiveChange(!isCaseSensitive);
+    }, [
+        isCaseSensitive,
+        onCaseSensitiveChange,
+    ]);
+
     return (
         <Tooltip title={"Match case"}>
             <Button
                 color={"default"}
                 icon={<Typography.Text disabled={!isCaseSensitive}>Aa</Typography.Text>}
+                size={"small"}
                 variant={isCaseSensitive ?
                     "filled" :
                     "text"}
-                onClick={() => {
-                    onCaseSensitiveChange(!isCaseSensitive);
-                }}/>
+                onClick={handleButtonClick}/>
         </Tooltip>
     );
 };
 
 
-export interface QueryBoxProps extends InputProps, CaseSensitiveToggleProps {
+interface QueryBoxProps extends InputProps, CaseSensitiveToggleProps {
     /**
      * The progress of the progress bar from `0` to `100`. Hides the bar if `null`.
      */
@@ -96,4 +104,6 @@ const QueryBox = ({
         </div>
     );
 };
+
+export type {QueryBoxProps};
 export default QueryBox;
