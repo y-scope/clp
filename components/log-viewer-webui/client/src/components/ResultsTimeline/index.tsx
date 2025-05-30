@@ -173,9 +173,10 @@ const ResultsTimeline = ({
                             return;
                         }
                         const {min, max} = xAxis;
-                        const newTimeRange: [Dayjs, Dayjs] =
-                            [convertZoomTimestampToUtcDatetime(min),
-                                convertZoomTimestampToUtcDatetime(max)];
+                        const newTimeRange: [Dayjs, Dayjs] = [
+                            convertZoomTimestampToUtcDatetime(min),
+                            convertZoomTimestampToUtcDatetime(max)
+                        ];
 
                         onTimelineZoom(newTimeRange);
                     },

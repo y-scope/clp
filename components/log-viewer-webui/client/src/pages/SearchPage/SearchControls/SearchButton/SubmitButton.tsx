@@ -20,7 +20,6 @@ import styles from "./index.module.css";
  */
 const SubmitButton = () => {
     const {searchUiState, timeRange, queryString, updateTimelineConfig} = useSearchStore();
-    const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
 
     /**
      * Submits search query.
@@ -41,6 +40,8 @@ const SubmitButton = () => {
         updateTimelineConfig,
         timeRange]);
 
+    const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
+    
     return (
         <Tooltip
             title={isQueryStringEmpty ?
