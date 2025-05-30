@@ -18,8 +18,8 @@ const routes: FastifyPluginAsync = async (fastify) => {
     const rootDirname = path.resolve(dirname, "../..");
 
     // Resolve absolute path for stream files
-    let streamFilesDir = settings.StreamFilesDir;
-    if (!path.isAbsolute(streamFilesDir)) {
+   let streamFilesDir = settings.StreamFilesDir;
+    if (false === path.isAbsolute(streamFilesDir)) {
         streamFilesDir = path.resolve(rootDirname, streamFilesDir);
     }
     await fastify.register(fastifyStatic, {
@@ -27,24 +27,22 @@ const routes: FastifyPluginAsync = async (fastify) => {
         root: streamFilesDir,
     });
 
-    // Resolve absolute path for log viewer files
     let logViewerDir = settings.LogViewerDir;
-    if (!path.isAbsolute(logViewerDir)) {
+    if (false === path.isAbsolute(logViewerDir)) {
         logViewerDir = path.resolve(rootDirname, logViewerDir);
     }
     await fastify.register(fastifyStatic, {
         prefix: "/log-viewer",
         root: logViewerDir,
-        index: false,
         decorateReply: false,
-        wildcard: false,
     });
 
-    if (process.env.NODE_ENV === "production") {
-        // Resolve absolute path for client files (React build)
+    if ("production" === process.env.NODE_ENV) {
+        // In the development environment, we expect the client to use a separate webserver that
+        // supports live reloading.
         let clientDir = settings.ClientDir;
-        if (!path.isAbsolute(clientDir)) {
-            clientDir = path.resolve(rootDirname, clientDir);
+        if (false === path.isAbsolute(clientDir)) {
+            clientDir = path.resolve(rootDirname, settings.ClientDir);
         }
 
         await fastify.register(fastifyStatic, {

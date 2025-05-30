@@ -7,6 +7,7 @@ import {highlighterCustomStyles} from "./utils";
 
 import "highlight.js/styles/intellij-light.css";
 
+
 const {Text} = Typography;
 
 interface MessageProps {

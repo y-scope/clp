@@ -53,6 +53,7 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
  */
 const TABLE_BOTTOM_PADDING = 75;
 
+
 export type {SearchResult};
 export {
     searchResultsTableColumns, TABLE_BOTTOM_PADDING,
