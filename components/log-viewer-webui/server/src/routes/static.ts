@@ -18,7 +18,7 @@ const routes: FastifyPluginAsync = async (fastify) => {
     const dirname = path.dirname(filename);
     const rootDirname = path.resolve(dirname, "../..");
 
-   let streamFilesDir = settings.StreamFilesDir;
+    let streamFilesDir = settings.StreamFilesDir;
     if (false === path.isAbsolute(streamFilesDir)) {
         streamFilesDir = path.resolve(rootDirname, streamFilesDir);
     }
@@ -52,8 +52,8 @@ const routes: FastifyPluginAsync = async (fastify) => {
             wildcard: false,
         });
 
-        fastify.get('/streamFile', function (_, reply) {
-            reply.sendFile('index.html', clientDir);
+        fastify.get("/streamFile", (_, reply) => {
+            reply.sendFile("index.html", clientDir);
         });
     }
 };

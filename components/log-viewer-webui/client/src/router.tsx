@@ -8,6 +8,7 @@ import IngestPage from "./pages/IngestPage";
 import SearchPage from "./pages/SearchPage";
 import QueryStatus from "./ui/QueryStatus";
 
+
 const router = createBrowserRouter([
     {
         path: "/",
@@ -24,7 +25,7 @@ const router = createBrowserRouter([
         ],
     },
     {
-    path: "/streamFile",
+        path: "/streamFile",
         Component: QueryStatus,
     },
 ]);

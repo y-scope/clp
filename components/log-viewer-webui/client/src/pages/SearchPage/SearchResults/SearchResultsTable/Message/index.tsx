@@ -24,7 +24,7 @@ interface MessageProps {
  * @param props.message
  * @param props.filePath
  * @param props.streamId
- * @param props.logEventIx
+ * @param props.logEventIdx
  * @return
  */
 const Message = ({message, filePath, streamId, logEventIdx}: MessageProps) => {
@@ -43,9 +43,8 @@ const Message = ({message, filePath, streamId, logEventIdx}: MessageProps) => {
             </Text>
             <LogViewerLink
                 filePath={filePath}
-                streamId={streamId}
                 logEventIdx={logEventIdx}
-            />
+                streamId={streamId}/>
         </>
     );
 };

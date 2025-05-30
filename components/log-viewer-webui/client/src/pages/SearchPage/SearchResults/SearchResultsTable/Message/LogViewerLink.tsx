@@ -1,11 +1,14 @@
+import {Link} from "react-router";
+
 import {LinkOutlined} from "@ant-design/icons";
 import {
     Tooltip,
+    Typography,
 } from "antd";
-import { Link } from "react-router";
-import { Typography } from "antd";
+
+import {STREAM_TYPE} from "../utils";
 import styles from "./index.module.css";
-import { STREAM_TYPE } from "../utils"
+
 
 interface LogViewerLinkProps {
     filePath: string;
@@ -26,17 +29,17 @@ const LogViewerLink = ({filePath, streamId, logEventIdx}: LogViewerLinkProps) =>
     <Tooltip title={"Open file"}>
         <Typography.Link>
             <Link
+                className={styles["linkIcon"] || ""}
+                target={"_blank"}
                 to={{
                     pathname: "/streamFile",
                     search:
                         `?type=${encodeURIComponent(STREAM_TYPE)}` +
                         `&streamId=${encodeURIComponent(streamId)}` +
-                        `&logEventIdx=${encodeURIComponent(logEventIdx)}`
+                        `&logEventIdx=${encodeURIComponent(logEventIdx)}`,
                 }}
-                className={styles["linkIcon"] || ""}
-                target={"_blank"}
             >
-                <LinkOutlined />
+                <LinkOutlined/>
                 {filePath}
             </Link>
         </Typography.Link>

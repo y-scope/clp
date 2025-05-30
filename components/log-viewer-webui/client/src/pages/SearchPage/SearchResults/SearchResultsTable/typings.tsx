@@ -38,10 +38,9 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         render: (_, record) => (
             <Message
                 filePath={record.orig_file_path}
-                message={record.message}
-                streamId={getStreamId(record)}
                 logEventIdx={record.log_event_ix}
-            />
+                message={record.message}
+                streamId={getStreamId(record)}/>
         ),
         title: "Message",
         width: 85,
