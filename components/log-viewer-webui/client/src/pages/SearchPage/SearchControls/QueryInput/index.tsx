@@ -21,7 +21,13 @@ import {
  * @return
  */
 const QueryInput = () => {
-    const {queryString, updateQueryString, searchUiState} = useSearchStore();
+    const {
+        queryString,
+        queryIsCaseSensitive,
+        updateQueryString,
+        updateQueryIsCaseSensitive,
+        searchUiState,
+    } = useSearchStore();
     const [pseudoProgress, setPseudoProgress] = useState<Nullable<number>>(null);
     const intervalIdRef = useRef<number>(0);
 
@@ -55,6 +61,7 @@ const QueryInput = () => {
 
     return (
         <QueryBox
+            isCaseSensitive={queryIsCaseSensitive}
             placeholder={"Enter your query"}
             progress={pseudoProgress}
             size={"large"}
@@ -63,6 +70,9 @@ const QueryInput = () => {
                 searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                 searchUiState === SEARCH_UI_STATE.QUERYING
             }
+            onCaseSensitiveChange={(newValue) => {
+                updateQueryIsCaseSensitive(newValue);
+            }}
             onChange={(e) => {
                 updateQueryString(e.target.value);
             }}/>
