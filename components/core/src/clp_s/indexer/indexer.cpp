@@ -4,7 +4,6 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include "../ReaderUtils.hpp"
 #include "CommandLineArguments.hpp"
 #include "IndexManager.hpp"
 

@@ -27,7 +27,6 @@
 #include "../clp/TraceableException.hpp"
 #include "CommandLineArguments.hpp"
 #include "InputConfig.hpp"
-#include "ReaderUtils.hpp"
 #include "search/ast/Expression.hpp"
 
 // This include has a circular dependency with the `.inc` file.
@@ -250,7 +249,7 @@ auto search_kv_ir_stream(
     }
 
     auto const raw_reader{
-            ReaderUtils::try_create_reader(stream_path, command_line_arguments.get_network_auth())
+            try_create_reader(stream_path, command_line_arguments.get_network_auth())
     };
     if (nullptr == raw_reader) {
         return KvIrSearchError{KvIrSearchErrorEnum::StreamReaderCreationFailure};
