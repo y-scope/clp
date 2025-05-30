@@ -1101,7 +1101,7 @@ TEMPLATE_TEST_CASE(
     }
     auto result = log_event_deserializer.deserialize_log_event();
     REQUIRE(result.has_error());
-    REQUIRE(std::errc::no_message_available == result.error());
+    REQUIRE(std::errc::no_message == result.error());
 }
 
 TEMPLATE_TEST_CASE(
