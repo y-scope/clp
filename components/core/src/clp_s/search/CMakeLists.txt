@@ -34,6 +34,7 @@ add_library(
 )
 add_library(clp_s::search ALIAS clp_s_search)
 target_compile_features(clp_s_search PRIVATE cxx_std_20)
+target_include_directories(clp_s_search PUBLIC ../../)
 target_link_libraries(
         clp_s_search
         PUBLIC
@@ -44,4 +45,3 @@ target_link_libraries(
         PRIVATE
         spdlog::spdlog
 )
-target_include_directories(clp_s_search PUBLIC ../../)

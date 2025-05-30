@@ -173,6 +173,7 @@ add_library(
 )
 add_library(clp_s::io ALIAS clp_s_io)
 target_compile_features(clp_s_io PRIVATE cxx_std_20)
+target_include_directories(clp_s_io PUBLIC ../)
 target_link_libraries(
         clp_s_io
         PRIVATE
@@ -182,7 +183,6 @@ target_link_libraries(
         spdlog::spdlog
         ZStd::ZStd
 )
-target_include_directories(clp_s_io PUBLIC ../)
 
 set(
         CLP_S_ARCHIVE_WRITER_SOURCES
@@ -231,6 +231,7 @@ add_library(
 )
 add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
 target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
+target_include_directories(clp_s_archive_writer PUBLIC ../)
 target_link_libraries(
         clp_s_archive_writer
         PUBLIC
@@ -247,7 +248,6 @@ target_link_libraries(
         nlohmann_json::nlohmann_json
         spdlog::spdlog
 )
-target_include_directories(clp_s_archive_writer PUBLIC ../)
 
 set(
         CLP_S_ARCHIVE_READER_SOURCES
@@ -292,6 +292,7 @@ add_library(
 )
 add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
 target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
+target_include_directories(clp_s_archive_reader PUBLIC ../)
 target_link_libraries(
         clp_s_archive_reader
         PUBLIC
@@ -308,7 +309,6 @@ target_link_libraries(
         msgpack-cxx
         spdlog::spdlog
 )
-target_include_directories(clp_s_archive_reader PUBLIC ../)
 
 set(
         CLP_S_JSON_CONSTRUCTOR_SOURCES
@@ -324,6 +324,7 @@ add_library(
 )
 add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
 target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
+target_include_directories(clp_s_json_constructor PUBLIC ../)
 target_link_libraries(
         clp_s_json_constructor
         PUBLIC
@@ -333,7 +334,6 @@ target_link_libraries(
         ${MONGOCXX_TARGET}
         spdlog::spdlog
 )
-target_include_directories(clp_s_json_constructor PUBLIC ../)
 
 set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
@@ -350,6 +350,7 @@ add_library(
 )
 add_library(clp_s::TimestampPattern ALIAS clp_s_TimestampPattern)
 target_compile_features(clp_s_TimestampPattern PRIVATE cxx_std_20)
+target_include_directories(clp_s_TimestampPattern PUBLIC ../)
 target_link_libraries(
         clp_s_TimestampPattern
         PRIVATE
@@ -357,7 +358,6 @@ target_link_libraries(
         date::date
         spdlog::spdlog
 )
-target_include_directories(clp_s_TimestampPattern PUBLIC ../)
 
 set(
         CLP_S_EXE_SOURCES
@@ -377,6 +377,10 @@ add_executable(
         ${CLP_S_EXE_SOURCES}
 )
 target_compile_features(clp-s PRIVATE cxx_std_20)
+target_include_directories(clp-s
+        PRIVATE
+        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
+)
 target_link_libraries(
         clp-s
         PRIVATE
@@ -394,10 +398,6 @@ target_link_libraries(
         msgpack-cxx
         spdlog::spdlog
         ystdlib::error_handling
-)
-target_include_directories(clp-s
-        PRIVATE
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
 )
 set_target_properties(
         clp-s
