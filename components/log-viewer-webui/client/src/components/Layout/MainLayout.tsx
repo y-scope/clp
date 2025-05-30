@@ -40,7 +40,7 @@ const MainLayout = () => {
                 collapsed={collapsed}
                 collapsible={true}
                 theme={"light"}
-                width={"150"}
+                width={150}
                 onCollapse={(value) => {
                     setCollapsed(value);
                 }}
