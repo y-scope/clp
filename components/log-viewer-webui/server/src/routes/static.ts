@@ -7,7 +7,6 @@ import {FastifyPluginAsync} from "fastify";
 
 import settings from "../../settings.json" with {type: "json"};
 
-
 /**
  * Creates static files serving routes.
  *
@@ -18,8 +17,9 @@ const routes: FastifyPluginAsync = async (fastify) => {
     const dirname = path.dirname(filename);
     const rootDirname = path.resolve(dirname, "../..");
 
+    // Resolve absolute path for stream files
     let streamFilesDir = settings.StreamFilesDir;
-    if (false === path.isAbsolute(streamFilesDir)) {
+    if (!path.isAbsolute(streamFilesDir)) {
         streamFilesDir = path.resolve(rootDirname, streamFilesDir);
     }
     await fastify.register(fastifyStatic, {
@@ -27,8 +27,9 @@ const routes: FastifyPluginAsync = async (fastify) => {
         root: streamFilesDir,
     });
 
+    // Resolve absolute path for log viewer files
     let logViewerDir = settings.LogViewerDir;
-    if (false === path.isAbsolute(logViewerDir)) {
+    if (!path.isAbsolute(logViewerDir)) {
         logViewerDir = path.resolve(rootDirname, logViewerDir);
     }
     await fastify.register(fastifyStatic, {
@@ -37,12 +38,11 @@ const routes: FastifyPluginAsync = async (fastify) => {
         decorateReply: false,
     });
 
-    if ("production" === process.env.NODE_ENV) {
-        // In the development environment, we expect the client to use a separate webserver that
-        // supports live reloading.
+    if (process.env.NODE_ENV === "production") {
+        // Resolve absolute path for client files (React build)
         let clientDir = settings.ClientDir;
-        if (false === path.isAbsolute(clientDir)) {
-            clientDir = path.resolve(rootDirname, settings.ClientDir);
+        if (!path.isAbsolute(clientDir)) {
+            clientDir = path.resolve(rootDirname, clientDir);
         }
 
         await fastify.register(fastifyStatic, {
@@ -50,7 +50,12 @@ const routes: FastifyPluginAsync = async (fastify) => {
             root: clientDir,
             decorateReply: false,
         });
-    }
+
+        fastify.get('/streamFile*', function (reply) {
+            reply.sendFile('index.html') // serving path.join(__dirname, 'public', 'myHtml.html') directly
+         })
+
+        }
 };
 
 export default routes;

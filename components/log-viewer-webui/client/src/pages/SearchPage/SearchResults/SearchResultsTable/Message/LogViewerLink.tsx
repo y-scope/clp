@@ -3,7 +3,7 @@ import {
     Tooltip,
 } from "antd";
 import { Link } from "react-router";
-import { Typography } from "antd";
+//import { Typography } from "antd";
 import styles from "./index.module.css";
 import { STREAM_TYPE } from "../utils"
 
@@ -24,8 +24,6 @@ interface LogViewerLinkProps {
  */
 const LogViewerLink = ({filePath, streamId, logEventIx}: LogViewerLinkProps) => (
     <Tooltip title={"Open file"}>
-        // Wrap react router link in antd link to apply theme styles.
-        <Typography.Link>
             <Link
                 to={{
                     pathname: "/streamFile",
@@ -35,13 +33,11 @@ const LogViewerLink = ({filePath, streamId, logEventIx}: LogViewerLinkProps) => 
                         `&logEventIdx=${encodeURIComponent(logEventIx)}`
                 }}
                 className={styles["linkIcon"] || ""}
-                target="_blank"
-                rel="noopener noreferrer"
+                target={"_blank"}
             >
                 <LinkOutlined />
                 {filePath}
             </Link>
-        </Typography.Link>
     </Tooltip>
 );
 
