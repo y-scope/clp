@@ -300,7 +300,6 @@ target_link_libraries(
         clp_s::io
         nlohmann_json::nlohmann_json
         PRIVATE
-        absl::flat_hash_map
         Boost::url
         clp_s::clp_dependencies
         clp_s::TimestampPattern
