@@ -35,7 +35,9 @@ const routes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(fastifyStatic, {
         prefix: "/log-viewer",
         root: logViewerDir,
+        index: false,
         decorateReply: false,
+        wildcard: false,
     });
 
     if (process.env.NODE_ENV === "production") {
@@ -49,13 +51,13 @@ const routes: FastifyPluginAsync = async (fastify) => {
             prefix: "/",
             root: clientDir,
             decorateReply: false,
+            wildcard: false,
         });
 
-        fastify.get('/streamFile*', function (reply) {
-            reply.sendFile('index.html') // serving path.join(__dirname, 'public', 'myHtml.html') directly
-         })
-
-        }
+        fastify.get('/streamFile', function (_, reply) {
+            reply.sendFile('index.html', clientDir);
+        });
+    }
 };
 
 export default routes;
