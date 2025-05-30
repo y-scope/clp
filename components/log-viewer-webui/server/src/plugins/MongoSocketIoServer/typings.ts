@@ -1,16 +1,17 @@
 import {
-    ClientToServerEvents,
-    InterServerEvents,
-    ServerToClientEvents,
-    SocketData,
-} from "@common/index.js";
-import {
     ChangeStream,
     Document,
     Filter,
     FindOptions,
 } from "mongodb";
 import {Socket} from "socket.io";
+
+import {
+    ClientToServerEvents,
+    InterServerEvents,
+    ServerToClientEvents,
+    SocketData,
+} from "../../../../common/index.js";
 
 
 /**

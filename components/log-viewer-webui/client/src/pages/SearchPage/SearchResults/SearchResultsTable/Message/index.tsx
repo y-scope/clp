@@ -32,6 +32,7 @@ const Message = ({message, filePath}: MessageProps) => {
                     customStyle={highlighterCustomStyles}
                     language={"armasm"}
                     useInlineStyles={false}
+                    wrapLongLines={true}
                 >
                     {message}
                 </SyntaxHighlighter>
