@@ -1,39 +1,18 @@
+import {
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+
 import {Table} from "antd";
 
 import {
     SearchResult,
     searchResultsTableColumns,
+    TABLE_BOTTOM_PADDING,
 } from "./typings";
+import {useSearchResults} from "./useSearchResults";
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_RESULTS: SearchResult[] = [
-    {
-        id: 1,
-        timestamp: "2023-01-01 12:00:00",
-        message: "INFO: User login successful for user 'john.doe'.",
-        filePath: "/var/logs/auth.log",
-    },
-    {
-        id: 2,
-        timestamp: "2023-01-01 12:01:00",
-        message: "ERROR: Failed to connect to database 'logs_db'.",
-        filePath: "/var/logs/db.log",
-    },
-    {
-        id: 3,
-        timestamp: "2023-01-01 12:02:00",
-        message: "WARN: Disk space running low on volume '/var/logs'.",
-        filePath: "/var/logs/system.log",
-    },
-    {
-        id: 4,
-        timestamp: "2023-01-01 12:03:00",
-        message: "DEBUG: Processing request ID 12345.",
-        filePath: "/var/logs/app.log",
-    },
-];
 
 /**
  * Renders search results in a table.
@@ -41,13 +20,41 @@ const DUMMY_RESULTS: SearchResult[] = [
  * @return
  */
 const SearchResultsTable = () => {
+    const searchResults = useSearchResults();
+    const [tableHeight, setTableHeight] = useState<number>(0);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
+    // based on the window height, container top, and fixed padding.
+    useEffect(() => {
+        const updateHeight = () => {
+            if (containerRef.current) {
+                const {top} = containerRef.current.getBoundingClientRect();
+                const availableHeight = window.innerHeight - top - TABLE_BOTTOM_PADDING;
+                setTableHeight(availableHeight);
+            }
+        };
+
+        updateHeight();
+        window.addEventListener("resize", updateHeight);
+
+        return () => {
+            window.removeEventListener("resize", updateHeight);
+        };
+    }, []);
+
     return (
-        <Table<SearchResult>
-            columns={searchResultsTableColumns}
-            dataSource={DUMMY_RESULTS}
-            pagination={false}
-            rowKey={(record) => record.id.toString()}
-            virtual={true}/>
+        <div ref={containerRef}>
+            <Table<SearchResult>
+                columns={searchResultsTableColumns}
+                pagination={false}
+                rowKey={(record) => record._id.toString()}
+                scroll={{y: tableHeight}}
+                virtual={true}
+                dataSource={searchResults ?
+                    searchResults :
+                    []}/>
+        </div>
     );
 };
 

@@ -62,8 +62,8 @@ export const autoConfig = {
     // Needed to read .env in root folder
     dotenv: {
         path: [
-            ".env.local",
             ".env",
+            ".env.local",
         ],
     },
 

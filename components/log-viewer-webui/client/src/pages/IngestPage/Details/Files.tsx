@@ -1,8 +1,10 @@
+import {Nullable} from "src/typings/common";
+
 import DetailsCard from "./DetailsCard";
 
 
 interface FilesProps {
-    numFiles: number;
+    numFiles: Nullable<number>;
 }
 
 /**
@@ -15,7 +17,7 @@ interface FilesProps {
 const Files = ({numFiles}: FilesProps) => {
     return (
         <DetailsCard
-            stat={numFiles.toString()}
+            stat={(numFiles ?? 0).toString()}
             title={"Files"}/>
     );
 };
