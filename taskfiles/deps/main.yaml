@@ -56,7 +56,6 @@ tasks:
     run: "once"
     deps:
       - task: "absl"
-      - task: "antlr-runtime"
       - task: "catch2"
       - task: "date"
       - task: "fmt"
@@ -83,27 +82,6 @@ tasks:
           LIB_NAME: "absl"
           TARBALL_SHA256: "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed"
           TARBALL_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz"
-
-  antlr-runtime:
-    internal: true
-    run: "once"
-    vars:
-      DEP_NAME: "antlr"
-
-      # Paths
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.DEP_NAME}}.md5"
-      OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.DEP_NAME}}"
-    cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          FILE_SHA256: "da20d487524d7f0a8b13f73a8dc326de7fc2e5775f5a49693c0a4e59c6b1410c"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          URL: "https://github.com/antlr/antlr4/archive/refs/tags/{{.G_ANTLR_VERSION}}.tar.gz"
-      - >-
-        echo "set(
-        ANTLR_RUNTIME_HEADER \"{{.OUTPUT_DIR}}/runtime/Cpp/runtime/src\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.DEP_NAME}}.cmake"
 
   catch2:
     internal: true
