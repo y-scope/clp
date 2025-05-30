@@ -1,6 +1,8 @@
 // Code from CLP
 #include "ZstdCompressor.hpp"
 
+#include <spdlog/spdlog.h>
+
 namespace clp_s {
 ZstdCompressor::ZstdCompressor()
         : Compressor{CompressorType::ZSTD},

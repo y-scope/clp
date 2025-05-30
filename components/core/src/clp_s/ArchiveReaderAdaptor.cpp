@@ -18,7 +18,6 @@
 #include "archive_constants.hpp"
 #include "InputConfig.hpp"
 #include "RangeIndexWriter.hpp"
-#include "ReaderUtils.hpp"
 #include "SingleFileArchiveDefs.hpp"
 
 namespace clp_s {
@@ -261,7 +260,7 @@ std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at
             return nullptr;
         }
     } else {
-        return ReaderUtils::try_create_reader(m_archive_path, m_network_auth);
+        return try_create_reader(m_archive_path, m_network_auth);
     }
 }
 

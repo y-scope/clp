@@ -1,12 +1,12 @@
 #ifndef CLP_S_READERUTILS_HPP
 #define CLP_S_READERUTILS_HPP
 
+#include <map>
+#include <memory>
 #include <string>
 
-#include "../clp/ReaderInterface.hpp"
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
-#include "InputConfig.hpp"
 #include "Schema.hpp"
 #include "SchemaReader.hpp"
 #include "SchemaTree.hpp"
@@ -66,15 +66,6 @@ public:
     static std::shared_ptr<LogTypeDictionaryReader> get_array_dictionary_reader(
             ArchiveReaderAdaptor& adaptor
     );
-
-    /**
-     * Tries to open a clp::ReaderInterface using the given Path and NetworkAuthOption.
-     * @param path
-     * @param network_auth
-     * @return the opened clp::ReaderInterface or nullptr on error
-     */
-    static std::shared_ptr<clp::ReaderInterface>
-    try_create_reader(Path const& path, NetworkAuthOption const& network_auth);
 
 private:
     /**
