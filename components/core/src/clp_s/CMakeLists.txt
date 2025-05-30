@@ -241,7 +241,7 @@ target_link_libraries(
         PRIVATE
         Boost::url
         clp_s::clp_dependencies
-        clp_s::TimestampPattern
+        clp_s::timestamp_pattern
         ${CURL_LIBRARIES}
         fmt::fmt
         msgpack-cxx
@@ -302,7 +302,7 @@ target_link_libraries(
         PRIVATE
         Boost::url
         clp_s::clp_dependencies
-        clp_s::TimestampPattern
+        clp_s::timestamp_pattern
         ${CURL_LIBRARIES}
         fmt::fmt
         msgpack-cxx
@@ -344,14 +344,14 @@ set(
 )
 
 add_library(
-        clp_s_TimestampPattern
+        clp_s_timestamp_pattern
         ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
 )
-add_library(clp_s::TimestampPattern ALIAS clp_s_TimestampPattern)
-target_compile_features(clp_s_TimestampPattern PRIVATE cxx_std_20)
-target_include_directories(clp_s_TimestampPattern PUBLIC ../)
+add_library(clp_s::timestamp_pattern ALIAS clp_s_timestamp_pattern)
+target_compile_features(clp_s_timestamp_pattern PRIVATE cxx_std_20)
+target_include_directories(clp_s_timestamp_pattern PUBLIC ../)
 target_link_libraries(
-        clp_s_TimestampPattern
+        clp_s_timestamp_pattern
         PRIVATE
         clp::string_utils
         date::date

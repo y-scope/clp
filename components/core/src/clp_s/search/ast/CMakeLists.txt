@@ -59,7 +59,7 @@ target_compile_features(clp_s_search_ast PRIVATE cxx_std_20)
 target_link_libraries(
     clp_s_search_ast
     PUBLIC
-    clp_s::TimestampPattern
+    clp_s::timestamp_pattern
     PRIVATE
     simdjson::simdjson
 )

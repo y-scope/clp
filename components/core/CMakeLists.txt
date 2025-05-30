@@ -688,7 +688,7 @@ target_link_libraries(unitTest
         clp_s::search::ast
         clp_s::search::kql
         clp_s::search::sql
-        clp_s::TimestampPattern
+        clp_s::timestamp_pattern
         date::date
         fmt::fmt
         log_surgeon::log_surgeon
