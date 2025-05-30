@@ -7,6 +7,7 @@ import {FastifyPluginAsync} from "fastify";
 
 import settings from "../../settings.json" with {type: "json"};
 
+
 /**
  * Creates static files serving routes.
  *
@@ -17,7 +18,6 @@ const routes: FastifyPluginAsync = async (fastify) => {
     const dirname = path.dirname(filename);
     const rootDirname = path.resolve(dirname, "../..");
 
-    // Resolve absolute path for stream files
    let streamFilesDir = settings.StreamFilesDir;
     if (false === path.isAbsolute(streamFilesDir)) {
         streamFilesDir = path.resolve(rootDirname, streamFilesDir);

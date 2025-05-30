@@ -12,7 +12,7 @@
 
     "ClientDir": "../../client/dist",
     "LogViewerDir": "../../yscope-log-viewer/dist",
-    "StreamFilesDir": "/home/davidmawk/clp-yscope/build/clp-package/var/data/streams",
+    "StreamFilesDir": "../../../../build/clp-package/var/data/streams",
     "StreamTargetUncompressedSize": 134217728,
     "StreamFilesS3Region": null,
     "StreamFilesS3PathPrefix": null,

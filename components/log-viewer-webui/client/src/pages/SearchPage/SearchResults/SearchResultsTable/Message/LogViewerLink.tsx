@@ -10,7 +10,7 @@ import { STREAM_TYPE } from "../utils"
 interface LogViewerLinkProps {
     filePath: string;
     streamId: string;
-    logEventIx: number;
+    logEventIdx: number;
 }
 
 /**
@@ -22,7 +22,7 @@ interface LogViewerLinkProps {
  * @param props.logEventIdx
  * @return
  */
-const LogViewerLink = ({filePath, streamId, logEventIx}: LogViewerLinkProps) => (
+const LogViewerLink = ({filePath, streamId, logEventIdx}: LogViewerLinkProps) => (
     <Tooltip title={"Open file"}>
         <Typography.Link>
             <Link
@@ -31,7 +31,7 @@ const LogViewerLink = ({filePath, streamId, logEventIx}: LogViewerLinkProps) => 
                     search:
                         `?type=${encodeURIComponent(STREAM_TYPE)}` +
                         `&streamId=${encodeURIComponent(streamId)}` +
-                        `&logEventIdx=${encodeURIComponent(logEventIx)}`
+                        `&logEventIdx=${encodeURIComponent(logEventIdx)}`
                 }}
                 className={styles["linkIcon"] || ""}
                 target={"_blank"}

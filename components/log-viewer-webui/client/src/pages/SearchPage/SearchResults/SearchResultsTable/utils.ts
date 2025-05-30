@@ -2,6 +2,10 @@ import type { SearchResult } from "./typings";
 import settings from "../../../../../settings.json";
 
 const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine;
+
+/**
+ * Stream type based on the storage engine (i.e. clp vs. clp-s).
+ */
 const STREAM_TYPE = SETTINGS_STORAGE_ENGINE === "clp" ? "ir" : "json";
 
 /**

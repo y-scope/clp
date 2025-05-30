@@ -40,7 +40,7 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
                 filePath={record.orig_file_path}
                 message={record.message}
                 streamId={getStreamId(record)}
-                logEventIx={record.log_event_ix}
+                logEventIdx={record.log_event_ix}
             />
         ),
         title: "Message",

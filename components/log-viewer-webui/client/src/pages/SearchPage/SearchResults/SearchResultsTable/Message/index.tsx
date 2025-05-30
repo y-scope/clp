@@ -14,7 +14,7 @@ interface MessageProps {
     message: string;
     filePath: string;
     streamId: string;
-    logEventIx: number;
+    logEventIdx: number;
 }
 
 /**
@@ -27,7 +27,7 @@ interface MessageProps {
  * @param props.logEventIx
  * @return
  */
-const Message = ({message, filePath, streamId, logEventIx}: MessageProps) => {
+const Message = ({message, filePath, streamId, logEventIdx}: MessageProps) => {
     return (
         <>
             {/* Parent `Text` component allows syntax highlighter to inherit AntD fonts. */}
@@ -44,7 +44,7 @@ const Message = ({message, filePath, streamId, logEventIx}: MessageProps) => {
             <LogViewerLink
                 filePath={filePath}
                 streamId={streamId}
-                logEventIx={logEventIx}
+                logEventIdx={logEventIdx}
             />
         </>
     );
