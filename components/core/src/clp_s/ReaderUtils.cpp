@@ -1,18 +1,9 @@
 #include "ReaderUtils.hpp"
 
-#include <exception>
 #include <string>
 #include <string_view>
 
-#include <spdlog/spdlog.h>
-
-#include "../clp/aws/AwsAuthenticationSigner.hpp"
-#include "../clp/FileReader.hpp"
-#include "../clp/NetworkReader.hpp"
-#include "../clp/ReaderInterface.hpp"
-#include "../clp/spdlog_with_specializations.hpp"
 #include "archive_constants.hpp"
-#include "Utils.hpp"
 
 namespace clp_s {
 std::shared_ptr<SchemaTree> ReaderUtils::read_schema_tree(ArchiveReaderAdaptor& adaptor) {
@@ -142,86 +133,5 @@ std::shared_ptr<ReaderUtils::SchemaMap> ReaderUtils::read_schemas(ArchiveReaderA
     adaptor.checkin_reader_for_section(constants::cArchiveSchemaMapFile);
 
     return schemas_pointer;
-}
-
-namespace {
-std::shared_ptr<clp::ReaderInterface> try_create_file_reader(std::string_view const file_path) {
-    try {
-        return std::make_shared<clp::FileReader>(std::string{file_path});
-    } catch (clp::FileReader::OperationFailed const& e) {
-        SPDLOG_ERROR("Failed to open file for reading - {} - {}", file_path, e.what());
-        return nullptr;
-    }
-}
-
-bool try_sign_url(std::string& url) {
-    auto const aws_access_key = std::getenv(cAwsAccessKeyIdEnvVar);
-    auto const aws_secret_access_key = std::getenv(cAwsSecretAccessKeyEnvVar);
-    if (nullptr == aws_access_key || nullptr == aws_secret_access_key) {
-        SPDLOG_ERROR(
-                "{} and {} environment variables not available for presigned url authentication.",
-                cAwsAccessKeyIdEnvVar,
-                cAwsSecretAccessKeyEnvVar
-        );
-        return false;
-    }
-    std::optional<std::string> optional_aws_session_token{std::nullopt};
-    auto const aws_session_token = std::getenv(cAwsSessionTokenEnvVar);
-    if (nullptr != aws_session_token) {
-        optional_aws_session_token = std::string{aws_session_token};
-    }
-
-    clp::aws::AwsAuthenticationSigner signer{
-            aws_access_key,
-            aws_secret_access_key,
-            optional_aws_session_token
-    };
-
-    try {
-        clp::aws::S3Url s3_url{url};
-        if (auto const rc = signer.generate_presigned_url(s3_url, url);
-            clp::ErrorCode::ErrorCode_Success != rc)
-        {
-            return false;
-        }
-    } catch (std::exception const& e) {
-        return false;
-    }
-    return true;
-}
-
-std::shared_ptr<clp::ReaderInterface>
-try_create_network_reader(std::string_view const url, NetworkAuthOption const& auth) {
-    std::string request_url{url};
-    switch (auth.method) {
-        case AuthMethod::S3PresignedUrlV4:
-            if (false == try_sign_url(request_url)) {
-                return nullptr;
-            }
-            break;
-        case AuthMethod::None:
-            break;
-        default:
-            return nullptr;
-    }
-
-    try {
-        return std::make_shared<clp::NetworkReader>(request_url);
-    } catch (clp::NetworkReader::OperationFailed const& e) {
-        SPDLOG_ERROR("Failed to open url for reading - {}", e.what());
-        return nullptr;
-    }
-}
-}  // namespace
-
-std::shared_ptr<clp::ReaderInterface>
-ReaderUtils::try_create_reader(Path const& path, NetworkAuthOption const& network_auth) {
-    if (InputSource::Filesystem == path.source) {
-        return try_create_file_reader(path.path);
-    } else if (InputSource::Network == path.source) {
-        return try_create_network_reader(path.path, network_auth);
-    } else {
-        return nullptr;
-    }
 }
 }  // namespace clp_s

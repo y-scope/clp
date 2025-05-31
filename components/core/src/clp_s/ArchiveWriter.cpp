@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 #include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"

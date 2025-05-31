@@ -1,27 +1,34 @@
-#include "OutputHandler.hpp"
+#include "OutputHandlerImpl.hpp"
 
 #include <sstream>
 #include <string>
 #include <string_view>
 
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
+#include <mongocxx/exception/exception.hpp>
+#include <mongocxx/instance.hpp>
+#include <mongocxx/uri.hpp>
+#include <msgpack.hpp>
 #include <spdlog/spdlog.h>
 
-#include "../../clp/networking/socket_utils.hpp"
-#include "../../reducer/CountOperator.hpp"
-#include "../../reducer/network_utils.hpp"
-#include "../../reducer/Record.hpp"
-#include "../archive_constants.hpp"
+#include "../clp/networking/socket_utils.hpp"
+#include "../reducer/CountOperator.hpp"
+#include "../reducer/network_utils.hpp"
+#include "../reducer/Record.hpp"
+#include "archive_constants.hpp"
+#include "search/OutputHandler.hpp"
 
 using std::string;
 using std::string_view;
 
-namespace clp_s::search {
+namespace clp_s {
 NetworkOutputHandler::NetworkOutputHandler(
         string const& host,
         int port,
         bool should_output_timestamp
 )
-        : OutputHandler(should_output_timestamp, true) {
+        : ::clp_s::search::OutputHandler(should_output_timestamp, true) {
     m_socket_fd = clp::networking::connect_to_server(host, std::to_string(port));
     if (-1 == m_socket_fd) {
         SPDLOG_ERROR("Failed to connect to the server, errno={}", errno);
@@ -53,7 +60,7 @@ ResultsCacheOutputHandler::ResultsCacheOutputHandler(
         uint64_t max_num_results,
         bool should_output_timestamp
 )
-        : OutputHandler(should_output_timestamp, true),
+        : ::clp_s::search::OutputHandler(should_output_timestamp, true),
           m_batch_size(batch_size),
           m_max_num_results(max_num_results) {
     try {
@@ -143,7 +150,7 @@ void ResultsCacheOutputHandler::write(
 }
 
 CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
-        : OutputHandler(false, false),
+        : ::clp_s::search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),
           m_pipeline(reducer::PipelineInputMode::InterStage) {
     m_pipeline.add_pipeline_stage(std::make_shared<reducer::CountOperator>());
@@ -176,4 +183,4 @@ ErrorCode CountByTimeOutputHandler::finish() {
     }
     return ErrorCode::ErrorCodeSuccess;
 }
-}  // namespace clp_s::search
+}  // namespace clp_s

@@ -46,7 +46,7 @@ const MainLayout = () => {
                 collapsedWidth={50}
                 collapsible={true}
                 theme={"light"}
-                width={"200"}
+                width={150}
             >
                 <div className={styles["siderContainer"]}>
                     <div className={styles["siderLogoContainer"]}>

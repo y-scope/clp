@@ -19,15 +19,12 @@
 #include "../clp/ffi/Value.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "ArchiveWriter.hpp"
-#include "CommandLineArguments.hpp"
 #include "DictionaryWriter.hpp"
 #include "FileReader.hpp"
 #include "FileWriter.hpp"
 #include "InputConfig.hpp"
 #include "ParsedMessage.hpp"
-#include "ReaderUtils.hpp"
 #include "Schema.hpp"
-#include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
 #include "TimestampDictionaryWriter.hpp"
@@ -39,7 +36,7 @@ using namespace simdjson;
 namespace clp_s {
 struct JsonParserOption {
     std::vector<Path> input_paths;
-    CommandLineArguments::FileType input_file_type{CommandLineArguments::FileType::Json};
+    FileType input_file_type{FileType::Json};
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size{};

@@ -2,7 +2,7 @@
 #define CLP_S_TEST_UTILS_HPP
 #include <string>
 
-#include "../src/clp_s/CommandLineArguments.hpp"
+#include "../src/clp_s/InputConfig.hpp"
 
 /**
  * Compresses a file into an archive directory according to a given set of configuration options.
@@ -20,6 +20,6 @@ void compress_archive(
         std::string const& archive_directory,
         bool single_file_archive,
         bool structurize_arrays,
-        clp_s::CommandLineArguments::FileType file_type
+        clp_s::FileType file_type
 );
 #endif  // CLP_S_TEST_UTILS_HPP

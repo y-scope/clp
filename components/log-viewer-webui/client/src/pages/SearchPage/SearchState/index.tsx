@@ -14,6 +14,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    queryIsCaseSensitive: false,
     queryString: "",
     searchJobId: null,
     searchResultsMetadata: null,
@@ -27,6 +28,11 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /**
+     * Whether the query is case sensitive.
+     */
+    queryIsCaseSensitive: boolean;
 
     /**
      * The search query string.
@@ -54,6 +60,7 @@ interface SearchState {
     timeRangeOption: TIME_RANGE_OPTION;
 
     updateAggregationJobId: (id: string | null) => void;
+    updateQueryIsCaseSensitive: (newValue: boolean) => void;
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
@@ -65,6 +72,9 @@ const useSearchStore = create<SearchState>((set) => ({
     ...SEARCH_STATE_DEFAULT,
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateQueryIsCaseSensitive: (newValue: boolean) => {
+        set({queryIsCaseSensitive: newValue});
     },
     updateQueryString: (query) => {
         set({queryString: query});
