@@ -4,25 +4,36 @@ import {
     useState,
 } from "react";
 
+import {Nullable} from "../../typings/common";
 import {MongoCursorSocket} from "./MongoCursorSocket.js";
 
 
 /**
  * Custom hook which returns a real-time reactive array of documents from a `MongoCursorSocket`.
  *
- * @param query Function which returns a `MongoCursorSocket` instance.
+ * @template T The document type returned by the cursor.
+ * @param query Function which returns a `MongoCursorSocket` instance or null.
  * @param dependencies Array of dependencies for the query.
- * @return Reactive array.
+ * @return
+ * - If `query` returns a `MongoCursorSocket` instance, then hook returns null while
+ * the subscription is pending, and a reactive array of documents when the subscription is ready.
+ * - If `query` returns null, then the hook also returns null.
  */
-const useCursor = (
-    query: () => MongoCursorSocket,
+const useCursor = <T = object>(
+    query: () => Nullable<MongoCursorSocket>,
     dependencies: DependencyList = []
-): object[] => {
-    const [data, setData] = useState<object[]>([]);
-
+): Nullable<T[]> => {
+    const [data, setData] = useState<Nullable<T[]>>(null);
 
     useEffect(() => {
         const cursor = query();
+
+        if (null === cursor) {
+            setData(null);
+
+            return () => {
+            };
+        }
 
         // Flag to ignore updates after unmounting.
         let ignore = false;
@@ -31,7 +42,7 @@ const useCursor = (
         // Handler to set data updates from the server.
         const onDataUpdate = (dataUpdate: object[]) => {
             if (false === ignore) {
-                setData(dataUpdate);
+                setData(dataUpdate as T[]);
             }
         };
 
