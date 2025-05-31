@@ -1,11 +1,10 @@
-import {useCallback} from "react";
+import React, {useCallback} from "react";
 
-import {
-    FormatPainterOutlined,
-    MoonOutlined,
-    SunOutlined,
-} from "@ant-design/icons";
 import {Menu} from "antd";
+
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import SettingsBrightnessOutlinedIcon from "@mui/icons-material/SettingsBrightnessOutlined";
 
 import {
     THEME_MODE,
@@ -13,13 +12,15 @@ import {
 } from "../../theme";
 
 
+const {Item} = Menu;
+
 /**
  * Maps theme mode to icon.
  */
 const THEME_MODE_TO_ICON: Record<THEME_MODE, React.ReactNode> = Object.freeze({
-    [THEME_MODE.SYSTEM]: <FormatPainterOutlined/>,
-    [THEME_MODE.DARK]: <MoonOutlined/>,
-    [THEME_MODE.LIGHT]: <SunOutlined/>,
+    [THEME_MODE.SYSTEM]: <SettingsBrightnessOutlinedIcon/>,
+    [THEME_MODE.DARK]: <DarkModeOutlinedIcon/>,
+    [THEME_MODE.LIGHT]: <LightModeOutlinedIcon/>,
 });
 
 /**
@@ -30,8 +31,6 @@ const THEME_MODE_TO_LABEL: Record<THEME_MODE, string> = Object.freeze({
     [THEME_MODE.DARK]: "Dark",
     [THEME_MODE.LIGHT]: "Light",
 });
-
-const {Item} = Menu;
 
 /**
  * Displays a theme toggle menu item.
