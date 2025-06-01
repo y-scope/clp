@@ -315,6 +315,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/JsonFileIterator.hpp
     src/clp_s/JsonParser.cpp
     src/clp_s/JsonParser.hpp
+    src/clp_s/OutputHandlerImpl.cpp
+    src/clp_s/OutputHandlerImpl.hpp
     src/clp_s/PackedStreamReader.cpp
     src/clp_s/PackedStreamReader.hpp
     src/clp_s/RangeIndexWriter.cpp
@@ -345,7 +347,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/EvaluateTimestampIndex.hpp
     src/clp_s/search/Output.cpp
     src/clp_s/search/Output.hpp
-    src/clp_s/search/OutputHandler.cpp
     src/clp_s/search/OutputHandler.hpp
     src/clp_s/search/Projection.cpp
     src/clp_s/search/Projection.hpp
@@ -687,10 +688,11 @@ target_link_libraries(unitTest
         Catch2::Catch2
         ${CURL_LIBRARIES}
         clp_s::search::ast
-        clp_s::TimestampPattern
+        clp_s::search::kql
+        clp_s::search::sql
+        clp_s::timestamp_pattern
         date::date
         fmt::fmt
-        kql
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
@@ -698,7 +700,6 @@ target_link_libraries(unitTest
         nlohmann_json::nlohmann_json
         simdjson::simdjson
         spdlog::spdlog
-        sql
         OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}

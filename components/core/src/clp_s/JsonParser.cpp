@@ -28,6 +28,7 @@
 #include "../clp/time_types.hpp"
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
+#include "InputConfig.hpp"
 #include "JsonFileIterator.hpp"
 #include "JsonParser.hpp"
 #include "search/ast/ColumnDescriptor.hpp"
@@ -484,7 +485,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
 bool JsonParser::parse() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
     for (auto const& path : m_input_paths) {
-        auto reader{ReaderUtils::try_create_reader(path, m_network_auth)};
+        auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
             m_archive_writer->close();
             return false;
@@ -947,7 +948,7 @@ auto JsonParser::parse_from_ir() -> bool {
     constexpr size_t cDecompressorReadBufferCapacity{64 * 1024};  // 64 KB
     auto archive_creator_id = boost::uuids::to_string(m_generator());
     for (auto const& path : m_input_paths) {
-        auto reader{ReaderUtils::try_create_reader(path, m_network_auth)};
+        auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
             m_archive_writer->close();
             return false;

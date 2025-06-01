@@ -15,8 +15,8 @@
 
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
-#include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
+#include "../src/clp_s/OutputHandlerImpl.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../src/clp_s/search/ast/ConvertToExists.hpp"
 #include "../src/clp_s/search/ast/EmptyExpr.hpp"
@@ -30,7 +30,6 @@
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/Output.hpp"
-#include "../src/clp_s/search/OutputHandler.hpp"
 #include "../src/clp_s/search/Projection.hpp"
 #include "../src/clp_s/search/SchemaMatch.hpp"
 #include "../src/clp_s/Utils.hpp"
@@ -54,7 +53,7 @@ void search(
         std::vector<int64_t> const& expected_results
 );
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 );
 
@@ -103,7 +102,7 @@ auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search
 }
 
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 ) {
     std::set<int64_t> results_set;
@@ -150,7 +149,7 @@ void search(
     expr = convert_pass.run(expr);
     REQUIRE(nullptr != expr);
 
-    std::vector<clp_s::search::VectorOutputHandler::QueryResult> results;
+    std::vector<clp_s::VectorOutputHandler::QueryResult> results;
     for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         auto archive_path = clp_s::Path{
@@ -180,7 +179,7 @@ void search(
         archive_expr = match_pass->run(archive_expr);
         REQUIRE(nullptr != archive_expr);
 
-        auto output_handler = std::make_unique<clp_s::search::VectorOutputHandler>(results);
+        auto output_handler = std::make_unique<clp_s::VectorOutputHandler>(results);
         clp_s::search::Output output_pass(
                 match_pass,
                 archive_expr,
@@ -233,7 +232,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             std::string{cTestSearchArchiveDirectory},
             single_file_archive,
             structurize_arrays,
-            clp_s::CommandLineArguments::FileType::Json
+            clp_s::FileType::Json
     ));
 
     for (auto const& [query, expected_results] : queries_and_results) {
