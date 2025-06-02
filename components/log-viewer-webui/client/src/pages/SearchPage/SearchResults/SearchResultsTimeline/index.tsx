@@ -1,36 +1,15 @@
 import {Card} from "antd";
-import dayjs from "dayjs";
+import {Dayjs} from "dayjs";
+import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
-import {TimeRange} from "../../../../components/ResultsTimeline/datetime/typings";
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
-import {TimelineBucket} from "../../../../components/ResultsTimeline/typings";
+import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
-import useSearchStore from "../../SearchState";
-import {
-    computeTimelineConfig,
-    expandTimeRangeToDurationMultiple,
-} from "./utils";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import {useAggregationResults} from "./useAggregationResults";
+import {computeTimelineConfig} from "./utils";
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_BUCKETS: TimelineBucket[] = [
-    {
-        count: 2,
-        timestamp: dayjs().subtract(10, "day")
-            .valueOf(),
-    },
-    {
-        count: 3,
-        // eslint-disable-next-line no-magic-numbers
-        timestamp: dayjs().subtract(5, "day")
-            .valueOf(),
-    },
-    {
-        count: 5,
-        timestamp: dayjs().valueOf(),
-    },
-];
 
 /**
  * Renders timeline visualization of search results.
@@ -39,40 +18,50 @@ const DUMMY_BUCKETS: TimelineBucket[] = [
  */
 const SearchResultsTimeline = () => {
     const {
+        queryString,
         updateTimeRange,
-        timeRange: [beginTime, endTime],
         updateTimeRangeOption,
+        timelineConfig,
+        searchUiState,
+        updateTimelineConfig,
     } = useSearchStore();
-    const timestampBeginUnixMillis = beginTime.utc().valueOf();
-    const timestampEndUnixMillis = endTime.utc().valueOf();
 
-    const timelineConfig = computeTimelineConfig(timestampBeginUnixMillis, timestampEndUnixMillis);
+    const aggregationResults = useAggregationResults();
 
-    const handleTimelineZoom = (newTimeRange: TimeRange) => {
-        // Expand the time range to the granularity of buckets so if the user
-        // pans across at least one bar in the graph, we will zoom into a region
-        // that still contains log events.
-        const expandedTimeRange = expandTimeRangeToDurationMultiple(
-            timelineConfig.bucketDuration,
-            newTimeRange,
-        );
 
-        updateTimeRange([expandedTimeRange.begin,
-            expandedTimeRange.end]);
+    const handleTimelineZoom = (newTimeRange: [Dayjs, Dayjs]) => {
+        const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);
+
+        // Update range picker selection to match zoomed range.
+        updateTimeRange(newTimeRange);
         updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
+        updateTimelineConfig(newTimelineConfig);
 
-        // eslint-disable-next-line no-warning-comments
-        // TODO: submit query based on timelineConfig.
+        const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
+        if (isQueryStringEmpty) {
+            return;
+        }
+
+        handleQuerySubmit({
+            ignoreCase: false,
+            queryString: queryString,
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            timestampBegin: newTimeRange[0].valueOf(),
+            timestampEnd: newTimeRange[1].valueOf(),
+        });
     };
 
-    // eslint-disable-next-line no-warning-comments
-    // TODO: fix `isInputDisabled` .
     return (
         <Card>
             <ResultsTimeline
-                isInputDisabled={false}
-                timelineBuckets={DUMMY_BUCKETS}
                 timelineConfig={timelineConfig}
+                isInputDisabled={
+                    searchUiState === SEARCH_UI_STATE.QUERYING ||
+                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING
+                }
+                timelineBuckets={aggregationResults ?
+                    aggregationResults :
+                    []}
                 onTimelineZoom={handleTimelineZoom}/>
         </Card>
     );
