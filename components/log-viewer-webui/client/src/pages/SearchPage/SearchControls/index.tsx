@@ -11,7 +11,6 @@ import TimeRangeInput from "./TimeRangeInput";
  */
 const SearchControls = () => {
     return (
-        // OnSubmit callback prevents page reload on submit.
         <form onSubmit={e => e.preventDefault()}>
             <div className={styles["searchControlsContainer"]}>
                 <QueryInput/>
