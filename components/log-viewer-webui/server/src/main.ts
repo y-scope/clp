@@ -56,7 +56,6 @@ const init = async (): Promise<void> => {
     );
 
     await app.ready();
-    app.config
 
     try {
         await app.listen({host: app.config.HOST, port: app.config.PORT});
