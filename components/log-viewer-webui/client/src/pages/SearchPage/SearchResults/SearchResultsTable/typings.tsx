@@ -30,9 +30,11 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         sorter: (a, b) => a.timestamp - b.timestamp,
 
         // Specifying a third sort direction removes ability for user to cancel sorting.
-        sortDirections: ["ascend",
+        sortDirections: [
+            "ascend",
             "descend",
-            "ascend"],
+            "ascend",
+        ],
         title: "Timestamp",
         width: 15,
     },
