@@ -2,6 +2,7 @@
 #define CLP_STRING_UTILS_STRING_UTILS_HPP
 
 #include <charconv>
+#include <concepts>
 #include <string>
 
 namespace clp::string_utils {
@@ -121,24 +122,16 @@ bool wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_vie
  * @param converted
  * @return true if the conversion was successful, false otherwise
  */
-template <typename integer_t>
+template <std::integral integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted);
 
-template <typename integer_t>
+template <std::integral integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted) {
-#if defined(_MSC_VER)
-    auto* raw_begin = raw.data();
-    auto* raw_end = raw_begin + raw.size();
-#else
-    auto raw_begin = raw.cbegin();
-    auto raw_end = raw.cend();
-#endif
-    auto result = std::from_chars(raw_begin, raw_end, converted);
-    if (raw_end != result.ptr) {
-        return false;
-    } else {
-        return result.ec == std::errc();
-    }
+    auto const* raw_begin{raw.data()};
+    auto const* raw_end{raw_begin + raw.size()};
+    auto const result{std::from_chars(raw_begin, raw_end, converted)};
+
+    return result.ptr == raw_end && std::errc{} == result.ec;
 }
 }  // namespace clp::string_utils
 
