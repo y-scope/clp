@@ -24,12 +24,14 @@ interface SearchResult {
 const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
         dataIndex: "timestamp",
+        defaultSortOrder: "ascend",
         key: "timestamp",
         render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
         sorter: (a, b) => a.timestamp - b.timestamp,
-        defaultSortOrder: "ascend",
         // Specifying a third sort direction removes ability for user to cancel sorting.
-        sortDirections: ['ascend', 'descend', 'ascend'],
+        sortDirections: ["ascend",
+            "descend",
+            "ascend"],
         title: "Timestamp",
         width: 15,
     },
