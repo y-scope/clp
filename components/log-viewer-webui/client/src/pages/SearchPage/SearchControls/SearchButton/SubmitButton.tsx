@@ -19,27 +19,28 @@ import styles from "./index.module.css";
  * @return
  */
 const SubmitButton = () => {
-    const {searchUiState, timeRange, queryString} = useSearchStore();
-    const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
+    const {searchUiState, timeRange, queryString, updateTimelineConfig} = useSearchStore();
 
     /**
      * Submits search query.
      */
     const handleSubmitButtonClick = useCallback(() => {
-        const timelineConfig = computeTimelineConfig(
-            timeRange[0].valueOf(),
-            timeRange[1].valueOf()
-        );
+        // Update timeline to match range picker selection.
+        const newTimelineConfig = computeTimelineConfig(timeRange);
+        updateTimelineConfig(newTimelineConfig);
 
         handleQuerySubmit({
             ignoreCase: false,
             queryString: queryString,
-            timeRangeBucketSizeMillis: timelineConfig.bucketDuration.asMilliseconds(),
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: timeRange[0].valueOf(),
             timestampEnd: timeRange[1].valueOf(),
         });
     }, [queryString,
+        updateTimelineConfig,
         timeRange]);
+
+    const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
 
     return (
         <Tooltip
