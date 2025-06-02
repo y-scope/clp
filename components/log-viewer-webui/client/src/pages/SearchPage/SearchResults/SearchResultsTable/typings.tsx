@@ -11,13 +11,13 @@ import {getStreamId} from "./utils";
  */
 interface SearchResult {
     _id: string;
-    timestamp: number;
-    message: string;
-    filePath: string;
-    orig_file_path: string;
-    orig_file_id: string;
     archive_id: string;
+    filePath: string;
     log_event_ix: number;
+    message: string;
+    orig_file_id: string;
+    orig_file_path: string;
+    timestamp: number;
 }
 
 /**

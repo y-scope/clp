@@ -25,5 +25,6 @@ const getStreamId = (result: SearchResult): string => {
 
 
 export {
-    getStreamId, STREAM_TYPE,
+    getStreamId,
+    STREAM_TYPE,
 };

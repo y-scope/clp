@@ -12,8 +12,8 @@ import styles from "./index.module.css";
 
 interface LogViewerLinkProps {
     filePath: string;
-    streamId: string;
     logEventIdx: number;
+    streamId: string;
 }
 
 /**
@@ -21,11 +21,15 @@ interface LogViewerLinkProps {
  *
  * @param props
  * @param props.filePath
- * @param props.streamId
  * @param props.logEventIdx
+ * @param props.streamId
  * @return
  */
-const LogViewerLink = ({filePath, streamId, logEventIdx}: LogViewerLinkProps) => (
+const LogViewerLink = ({
+    filePath,
+    logEventIdx,
+    streamId,
+}: LogViewerLinkProps) => (
     <Tooltip title={"Open file"}>
         <Typography.Link>
             <Link

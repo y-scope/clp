@@ -11,23 +11,28 @@ import "highlight.js/styles/intellij-light.css";
 const {Text} = Typography;
 
 interface MessageProps {
-    message: string;
     filePath: string;
-    streamId: string;
+    message: string;
     logEventIdx: number;
+    streamId: string;
 }
 
 /**
  * Renders a message with syntax highlighting and a file path link.
  *
  * @param props
- * @param props.message
  * @param props.filePath
- * @param props.streamId
  * @param props.logEventIdx
+ * @param props.message
+ * @param props.streamId
  * @return
  */
-const Message = ({message, filePath, streamId, logEventIdx}: MessageProps) => {
+const Message = ({
+    message,
+    filePath,
+    streamId,
+    logEventIdx,
+}: MessageProps) => {
     return (
         <>
             {/* Parent `Text` component allows syntax highlighter to inherit AntD fonts. */}
