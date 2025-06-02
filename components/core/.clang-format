@@ -4,9 +4,9 @@ IncludeCategories:
   # NOTE: A header is grouped by first matching regex
   # Library headers. Update when adding new libraries.
   # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
-  - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|curl|date|fmt|log_surgeon|lzma|mongocxx\
-|msgpack|mysql|nlohmann|openssl|outcome|regex_utils|simdjson|spdlog|sqlite3|string_utils|yaml-cpp\
-|ystdlib|zstd)"
+  - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|clp_s|curl|date|fmt|log_surgeon|lzma\
+|mongocxx|msgpack|mysql|nlohmann|openssl|outcome|regex_utils|simdjson|spdlog|sqlite3|string_utils\
+|yaml-cpp|ystdlib|zstd)"
     Priority: 3
   # C system headers
   - Regex: "^<.+\\.h>"
