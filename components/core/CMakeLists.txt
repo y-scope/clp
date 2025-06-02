@@ -9,6 +9,9 @@ project(CLP LANGUAGES CXX C)
 
 validate_compiler_versions()
 
+# Include options for CLP build
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
+
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
@@ -283,14 +286,16 @@ if(NOT CLP_NO_NEED_YSTDLIB)
 endif()
 
 # Find and setup ZStd Library
-if(CLP_USE_STATIC_LIBS)
-    set(ZStd_USE_STATIC_LIBS ON)
-endif()
-find_package(ZStd 1.4.4 REQUIRED)
-if(ZStd_FOUND)
-    message(STATUS "Found ZStd ${ZStd_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+if(NOT CLP_NO_NEED_ZSTD)
+    if(CLP_USE_STATIC_LIBS)
+        set(ZStd_USE_STATIC_LIBS ON)
+    endif()
+    find_package(ZStd 1.4.4 REQUIRED)
+    if(ZStd_FOUND)
+        message(STATUS "Found ZStd ${ZStd_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+    endif()
 endif()
 
 # Find and setup LZMA Library
