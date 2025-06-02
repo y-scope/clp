@@ -54,6 +54,7 @@ const SubmitButton = () => {
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}
+                htmlType={"submit"}
                 onClick={handleSubmitButtonClick}
             >
                 Search

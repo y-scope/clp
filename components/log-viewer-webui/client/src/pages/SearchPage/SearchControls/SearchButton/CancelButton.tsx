@@ -44,6 +44,7 @@ const CancelButton = () => {
             size={"large"}
             type={"primary"}
             onClick={handleCancelButtonClick}
+            form={undefined} // Prevent enter key from triggering cancel request.
         >
             Cancel
         </Button>
