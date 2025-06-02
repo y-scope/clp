@@ -28,6 +28,7 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         key: "timestamp",
         render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
         sorter: (a, b) => a.timestamp - b.timestamp,
+
         // Specifying a third sort direction removes ability for user to cancel sorting.
         sortDirections: ["ascend",
             "descend",
