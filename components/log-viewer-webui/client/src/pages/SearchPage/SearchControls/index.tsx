@@ -11,7 +11,11 @@ import TimeRangeInput from "./TimeRangeInput";
  */
 const SearchControls = () => {
     return (
-        <form onSubmit={e => e.preventDefault()}>
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+            }}
+        >
             <div className={styles["searchControlsContainer"]}>
                 <QueryInput/>
                 <TimeRangeInput/>
