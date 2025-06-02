@@ -5,12 +5,8 @@
 
 #include <string>
 
-#include <simdjson.h>
-
 #include "DictionaryEntry.hpp"
 #include "DictionaryWriter.hpp"
-
-using namespace simdjson;
 
 namespace clp_s {
 class VariableEncoder {

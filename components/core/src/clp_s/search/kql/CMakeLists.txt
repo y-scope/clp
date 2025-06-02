@@ -12,19 +12,21 @@ set(ANTLR_GENERATED_KQL_CODE
 )
 
 add_library(
-        kql
+        clp_s_search_kql
         ${CMAKE_CURRENT_SOURCE_DIR}/../antlr_common/ErrorListener.hpp
         ${ANTLR_GENERATED_KQL_CODE}
         ${CMAKE_CURRENT_SOURCE_DIR}/kql.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/kql.hpp
 )
-target_compile_features(kql PRIVATE cxx_std_20)
-target_include_directories(kql
+add_library(clp_s::search::kql ALIAS clp_s_search_kql)
+target_compile_features(clp_s_search_kql PRIVATE cxx_std_20)
+target_include_directories(clp_s_search_kql
 	PRIVATE
 	${ANTLR_GENERATED_KQL_CODE_DIR}
 )
+
 target_link_libraries(
-	kql
+	clp_s_search_kql
 	PRIVATE
 	antlr4_static
 	clp::string_utils
