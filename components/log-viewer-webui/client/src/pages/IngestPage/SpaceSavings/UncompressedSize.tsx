@@ -1,10 +1,9 @@
-import {Nullable} from "src/typings/common";
-
 import DetailsCard from "../Details/DetailsCard";
+import {formatSizeInBytes} from "../Jobs/units";
 
 
 interface UncompressedSizeProps {
-    UncompressedSize: Nullable<number>;
+    uncompressedSize: number;
 }
 
 /**
@@ -14,10 +13,10 @@ interface UncompressedSizeProps {
  * @param props.uncompressedSize
  * @return
  */
-const UncompressedSize = ({UncompressedSize}: UncompressedSizeProps) => {
+const UncompressedSize = ({uncompressedSize}: UncompressedSizeProps) => {
     return (
         <DetailsCard
-            stat={(UncompressedSize ?? 0).toString()}
+            stat={formatSizeInBytes(uncompressedSize, false)}
             title={"Uncompressed Size"}/>
     );
 };

@@ -9,13 +9,12 @@ import {theme} from "antd";
 import StatCard from "../../../components/StatCard";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
+import CompressedSize from "./CompressedSize";
+import styles from "./index.module.css";
 import {
     getSpaceSavingsSql,
     SpaceSavingsResp,
 } from "./sql";
-
-import styles from "./index.module.css";
-import CompressedSize from "./CompressedSize";
 import UncompressedSize from "./UncompressedSize";
 
 

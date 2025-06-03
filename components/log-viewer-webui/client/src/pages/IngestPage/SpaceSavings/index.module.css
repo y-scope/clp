@@ -10,4 +10,8 @@
     grid-column: span 2;
 }
 
+.spaceSavingsCard :global(.ant-card) {
+    flex: 1;
+}
+
 

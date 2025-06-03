@@ -1,10 +1,9 @@
-import {Nullable} from "src/typings/common";
-
 import DetailsCard from "../Details/DetailsCard";
+import {formatSizeInBytes} from "../Jobs/units";
 
 
 interface CompressedSizeProps {
-    compressedSize: Nullable<number>;
+    compressedSize: number;
 }
 
 /**
@@ -14,12 +13,12 @@ interface CompressedSizeProps {
  * @param props.compressedSize
  * @return
  */
-const compressedSize = ({compressedSize}: CompressedSizeProps) => {
+const CompressedSize = ({compressedSize}: CompressedSizeProps) => {
     return (
         <DetailsCard
-            stat={(compressedSize ?? 0).toString()}
-            title={"compressedSize Size"}/>
+            stat={formatSizeInBytes(compressedSize, false)}
+            title={"compressed Size"}/>
     );
 };
 
-export default compressedSize;
+export default CompressedSize;
