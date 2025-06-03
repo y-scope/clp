@@ -5,17 +5,22 @@ import TimeRangeInput from "./TimeRangeInput";
 
 
 /**
+ * Prevents the default behavior to avoid page reload when submitting query.
+ *
+ * @param e
+ */
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+};
+
+/**
  * Renders controls for submitting queries.
  *
  * @return
  */
 const SearchControls = () => {
     return (
-        <form
-            onSubmit={(e) => {
-                e.preventDefault();
-            }}
-        >
+        <form onSubmit={handleSubmit}>
             <div className={styles["searchControlsContainer"]}>
                 <QueryInput/>
                 <TimeRangeInput/>
