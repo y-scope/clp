@@ -18,7 +18,6 @@ import {
 } from "./sql";
 import TimeRange from "./TimeRange";
 
-
 /**
  * Default state for details.
  */

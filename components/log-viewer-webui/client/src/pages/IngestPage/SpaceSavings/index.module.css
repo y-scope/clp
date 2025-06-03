@@ -1,10 +1,13 @@
-.detailsGrid {
+.spaceSavingsGrid {
     display: grid;
     grid-template-columns: repeat(2, minmax(200px, 1fr));
     gap: 8px;
+    align-items: stretch;
 }
 
-.timeRange {
+.spaceSavingsCard {
     display: flex;
     grid-column: span 2;
 }
+
+

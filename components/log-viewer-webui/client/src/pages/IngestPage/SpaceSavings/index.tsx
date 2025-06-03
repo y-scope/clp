@@ -14,6 +14,10 @@ import {
     SpaceSavingsResp,
 } from "./sql";
 
+import styles from "./index.module.css";
+import CompressedSize from "./CompressedSize";
+import UncompressedSize from "./UncompressedSize";
+
 
 /**
  * Default state for space savings.
@@ -72,13 +76,19 @@ const SpaceSavings = () => {
     const spaceSavingsPercentText = `${spaceSavingsPercent.toFixed(2)}%`;
 
     return (
-        <StatCard
-            backgroundColor={token.colorPrimary}
-            stat={spaceSavingsPercentText}
-            statColor={token.colorWhite}
-            statSize={"6rem"}
-            title={"Space Savings"}
-            titleColor={token.colorWhite}/>
+        <div className={styles["spaceSavingsGrid"]}>
+            <div className={styles["spaceSavingsCard"]}>
+                <StatCard
+                    backgroundColor={token.colorPrimary}
+                    stat={spaceSavingsPercentText}
+                    statColor={token.colorWhite}
+                    statSize={"6.5rem"}
+                    title={"Space Savings"}
+                    titleColor={token.colorWhite}/>
+            </div>
+            <UncompressedSize UncompressedSize={compressedSize}/>
+            <CompressedSize compressedSize={compressedSize}/>
+        </div>
     );
 };
 
