@@ -124,6 +124,29 @@ packet-beta
 
 ## Metadata section
 
+The metadata section is made up of a compressed sequence of metadata packets with the following
+format:
+```
+[num_packets: uint8_t]
+[
+  [packet_type: uint8_t]
+  [packet_size: uint32_t]
+  [packet_content: uint8_t][packet_size]
+][num_packets]
+```
+
+Each metadata packet has a type, size, and arbitrary binary payload. Different packet types make
+different choices for encoding content in this binary payload. Since the size of each packet is
+well-defined reader implementations can attempt to read archives containing packet types they are
+unfamiliar with by simply skipping the corresponding content. Generally this metadata section design
+is intended to allow for some degree of forwards-compatibility and extensibility.
+
+Archives currently support the following metadata packet types, some of which are mandatory:
+* 0x00 - ArchiveInfo (mandatory)
+* 0x01 - ArchiveFileInfo (mandatory)
+* 0x02 - TimestampDictionary
+* 0x03 - RangeIndex
+
 ### ArchiveInfo packet
 
 ### ArchiveFileInfo packet
