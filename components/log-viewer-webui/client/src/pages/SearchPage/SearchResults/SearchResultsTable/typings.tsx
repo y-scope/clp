@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
 import Message from "./Message";
+import {getStreamId} from "./utils";
 
 
 /**
@@ -10,12 +11,13 @@ import Message from "./Message";
  */
 interface SearchResult {
     _id: string;
-    timestamp: number;
-    message: string;
+    archive_id: string;
     filePath: string;
-    orig_file_path: string;
-    orig_file_id: string;
     log_event_ix: number;
+    message: string;
+    orig_file_id: string;
+    orig_file_path: string;
+    timestamp: number;
 }
 
 /**
@@ -24,9 +26,17 @@ interface SearchResult {
 const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
         dataIndex: "timestamp",
+        defaultSortOrder: "ascend",
         key: "timestamp",
         render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
-        sorter: true,
+        sorter: (a, b) => a.timestamp - b.timestamp,
+
+        // Specifying a third sort direction removes ability for user to cancel sorting.
+        sortDirections: [
+            "ascend",
+            "descend",
+            "ascend",
+        ],
         title: "Timestamp",
         width: 15,
     },
@@ -36,7 +46,9 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         render: (_, record) => (
             <Message
                 filePath={record.orig_file_path}
-                message={record.message}/>
+                logEventIdx={record.log_event_ix}
+                message={record.message}
+                streamId={getStreamId(record)}/>
         ),
         title: "Message",
         width: 85,
