@@ -17,7 +17,7 @@ const CompressedSize = ({compressedSize}: CompressedSizeProps) => {
     return (
         <DetailsCard
             stat={formatSizeInBytes(compressedSize, false)}
-            title={"compressed Size"}/>
+            title={"Compressed Size"}/>
     );
 };
 

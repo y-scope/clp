@@ -85,7 +85,7 @@ const SpaceSavings = () => {
                     title={"Space Savings"}
                     titleColor={token.colorWhite}/>
             </div>
-            <UncompressedSize UncompressedSize={compressedSize}/>
+            <UncompressedSize uncompressedSize={uncompressedSize}/>
             <CompressedSize compressedSize={compressedSize}/>
         </div>
     );
