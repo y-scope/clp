@@ -134,7 +134,19 @@ packet-beta
 
 ## Files section
 
-### Merged Parse Tree
+### Merged parse tree
+
+### Schema map
+
+### Table metadata
+
+### Variable dictionary
+
+### Log-type dictionary
+
+### Array log-type dictionary
+
+### Table segments
 
 :::{warning}
 🚧 This section is still under construction.
