@@ -47,9 +47,7 @@ const QueryInput = () => {
                     return (v ?? 0) + PROGRESS_INCREMENT;
                 });
             }, PROGRESS_INTERVAL_MILLIS);
-        } else if (
-            searchUiState === SEARCH_UI_STATE.DONE
-        ) {
+        } else if (searchUiState === SEARCH_UI_STATE.DONE) {
             clearInterval(intervalIdRef.current);
             intervalIdRef.current = 0;
             setPseudoProgress(null);

@@ -12,7 +12,7 @@ import {useResultsMetadata} from "./useResultsMetadata";
  * that the query is complete.
  */
 const useUiUpdateOnDoneSignal = () => {
-    const {updateSearchUiState} =  useSearchStore.getState();
+    const {updateSearchUiState} = useSearchStore();
     const resultsMetadata = useResultsMetadata();
     useEffect(() => {
         if (null === resultsMetadata

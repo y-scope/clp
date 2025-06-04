@@ -4,7 +4,6 @@ import settings from "../../../../settings.json" with { type: "json" };
 import MongoCollectionSocket from "../../../api/socket/MongoCollectionSocket";
 import {useCursor} from "../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "./index";
-import { SEARCH_UI_STATE } from "./typings";
 
 
 /**
@@ -13,7 +12,7 @@ import { SEARCH_UI_STATE } from "./typings";
  * @return
  */
 const useResultsMetadata = () => {
-    const {searchJobId, searchUiState} = useSearchStore();
+    const {searchJobId} = useSearchStore();
 
     const resultsMetadataCursor = useCursor<SearchResultsMetadataDocument>(
         () => {
@@ -47,5 +46,6 @@ const useResultsMetadata = () => {
 
     return resultsMetadata;
 };
+
 
 export {useResultsMetadata};
