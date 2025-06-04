@@ -105,6 +105,7 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    generates: ["{{.CHECKSUM_FILE}}"]
     sources:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
@@ -112,7 +113,7 @@ tasks:
     cmds:
       - for: ["kql", "sql"]
         cmd: |-
-          rm -rf {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/antlr_generated/* \
+          rm -rf "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/antlr_generated/*" \
           && java -jar {{.G_ANTLR_JAR_PATH}} \
             -Dlanguage=Cpp \
             -no-listener \
