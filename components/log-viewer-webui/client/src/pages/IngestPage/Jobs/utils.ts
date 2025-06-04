@@ -51,12 +51,12 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
 
     const uncompressedSize = Number(job.uncompressed_size);
     if (false === isNaN(uncompressedSize) && 0 !== uncompressedSize) {
-        uncompressedSizeText = formatSizeInBytes(uncompressedSize);
+        uncompressedSizeText = formatSizeInBytes(uncompressedSize, false);
     }
 
     const compressedSize = Number(job.compressed_size);
     if (false === isNaN(compressedSize) && 0 !== compressedSize) {
-        compressedSizeText = formatSizeInBytes(compressedSize);
+        compressedSizeText = formatSizeInBytes(compressedSize, false);
     }
 
     if (false === isNaN(uncompressedSize) &&
@@ -64,7 +64,7 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
         null !== job.duration &&
         0 < job.duration
     ) {
-        speedText = `${formatSizeInBytes(uncompressedSize / job.duration)}/s`;
+        speedText = `${formatSizeInBytes(uncompressedSize / job.duration, false)}/s`;
     }
 
     return {
