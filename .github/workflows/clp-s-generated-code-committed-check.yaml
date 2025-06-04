@@ -33,10 +33,10 @@ jobs:
       - name: "Check if the generated parsers are the latest"
         shell: "bash"
         run:
-          - |
-            git status --porcelain \
-              components/core/src/clp_s/search/kql/antlr_generated \
-              components/core/src/clp_s/search/sql/antlr_generated \
-              | grep . > /dev/null \
-                && exit 1 \
-                || exit 0
+          |
+          git status --porcelain \
+            components/core/src/clp_s/search/kql/antlr_generated \
+            components/core/src/clp_s/search/sql/antlr_generated \
+            | grep . > /dev/null \
+              && exit 1 \
+              || exit 0
