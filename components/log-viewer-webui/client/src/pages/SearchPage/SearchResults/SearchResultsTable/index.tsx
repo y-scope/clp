@@ -6,13 +6,13 @@ import {
 
 import {Table} from "antd";
 
+import useSearchStore from "../../SearchState/index";
 import {
     SearchResult,
     searchResultsTableColumns,
     TABLE_BOTTOM_PADDING,
 } from "./typings";
 import {useSearchResults} from "./useSearchResults";
-import useSearchStore from "../../SearchState/index";
 
 
 /**
@@ -21,15 +21,21 @@ import useSearchStore from "../../SearchState/index";
  * @return
  */
 const SearchResultsTable = () => {
-    const { updateNumSearchResultsTable } = useSearchStore();
+    const {updateNumSearchResultsTable} = useSearchStore();
     const searchResults = useSearchResults();
     const [tableHeight, setTableHeight] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const num = searchResults ? searchResults.length : 0;
+        const num = searchResults ?
+            searchResults.length :
+            0;
+
         updateNumSearchResultsTable(num);
-    }, [searchResults, updateNumSearchResultsTable]);
+    }, [
+        searchResults,
+        updateNumSearchResultsTable,
+    ]);
 
     // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
     // based on the window height, container top, and fixed padding.

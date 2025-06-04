@@ -14,6 +14,7 @@ import {
     PROGRESS_INTERVAL_MILLIS,
 } from "./typings";
 
+
 /**
  * Renders a query input and pseudo progress bar.
  *

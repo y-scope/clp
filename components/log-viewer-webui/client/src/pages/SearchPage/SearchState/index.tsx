@@ -16,6 +16,8 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    numSearchResultsTable: 0,
+    numSearchResultsTimeline: 0,
     queryIsCaseSensitive: false,
     queryString: "",
     searchJobId: null,
@@ -24,8 +26,6 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
     timeRangeOption: DEFAULT_TIME_RANGE,
     timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]),
-    numSearchResultsTable: 0,
-    numSearchResultsTimeline: 0,
 });
 
 interface SearchState {
@@ -33,6 +33,16 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /**
+     * The number of search table results.
+     */
+    numSearchResultsTable: number;
+
+    /**
+     * The number of timeline results.
+     */
+    numSearchResultsTimeline: number;
 
     /**
      * Whether the query is case sensitive.
@@ -71,17 +81,9 @@ interface SearchState {
      */
     timelineConfig: TimelineConfig;
 
-    /**
-     * The number of search table results.
-     */
-    numSearchResultsTable: number;
-
-    /**
-     * The total number of timeline results (sum of all counts).
-     */
-    numSearchResultsTimeline: number;
-
     updateAggregationJobId: (id: string | null) => void;
+    updateNumSearchResultsTable: (num: number) => void;
+    updateNumSearchResultsTimeline: (num: number) => void;
     updateQueryIsCaseSensitive: (newValue: boolean) => void;
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
@@ -89,14 +91,18 @@ interface SearchState {
     updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
-    updateNumSearchResultsTable: (num: number) => void;
-    updateNumSearchResultsTimeline: (num: number) => void;
 }
 
 const useSearchStore = create<SearchState>((set) => ({
     ...SEARCH_STATE_DEFAULT,
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateNumSearchResultsTable: (num) => {
+        set({numSearchResultsTable: num});
+    },
+    updateNumSearchResultsTimeline: (num) => {
+        set({numSearchResultsTimeline: num});
     },
     updateQueryIsCaseSensitive: (newValue: boolean) => {
         set({queryIsCaseSensitive: newValue});
@@ -118,12 +124,6 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateTimelineConfig: (config) => {
         set({timelineConfig: config});
-    },
-    updateNumSearchResultsTable: (num) => {
-        set({numSearchResultsTable: num});
-    },
-    updateNumSearchResultsTimeline: (num) => {
-        set({numSearchResultsTimeline: num});
     },
 }));
 

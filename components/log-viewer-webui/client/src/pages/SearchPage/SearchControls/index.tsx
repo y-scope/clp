@@ -1,6 +1,5 @@
 import styles from "./index.module.css";
 import QueryInput from "./QueryInput";
-import QueryStatus from "../SearchQueryStatus";
 import SearchButton from "./SearchButton/SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
 

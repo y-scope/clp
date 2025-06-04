@@ -1,9 +1,9 @@
 import styles from "./index.module.css";
 import SearchControls from "./SearchControls";
+import SearchQueryStatus from "./SearchQueryStatus";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
 import {useUiUpdateOnDoneSignal} from "./SearchState/useUpdateStateWithMetadata";
-import SearchQueryStatus from "./SearchQueryStatus";
 
 
 /**
@@ -13,6 +13,7 @@ import SearchQueryStatus from "./SearchQueryStatus";
  */
 const SearchPage = () => {
     useUiUpdateOnDoneSignal();
+
     return (
         <div className={styles["searchPageContainer"]}>
             <div>

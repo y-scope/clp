@@ -47,12 +47,11 @@ const handleClearResults = () => {
 const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     const store = useSearchStore.getState();
 
-    // Buttons to submit a query should be disabled while an existing query is in progress.
+    // User should be unable to submit a new query while an existing query is in progress.
     if (
         store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
         store.searchUiState !== SEARCH_UI_STATE.DONE &&
         store.searchUiState !== SEARCH_UI_STATE.CANCELLED
-
     ) {
         console.error("Cannot submit query while existing query is in progress.");
 

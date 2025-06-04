@@ -28,6 +28,7 @@ const useUiUpdateOnDoneSignal = () => {
     }, [
         resultsMetadata,
         updateSearchUiState,
+        searchUiState,
     ]);
 };
 
