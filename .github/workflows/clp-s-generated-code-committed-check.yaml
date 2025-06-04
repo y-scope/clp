@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  antlr-generation-check:
+  antlr-generated-code-committed-check:
     name: "antlr-generated-code-committed-check"
     strategy:
       matrix:
