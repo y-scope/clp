@@ -23,7 +23,9 @@ such because its various components exist as individual files in the multi-file 
 
 :::{note}
 This format is little-endian and all fields in the remainder of this document should be treated as
-little-endian unless specified otherwise.
+little-endian unless specified otherwise. Furthermore, any "struct-like" descriptions of binary
+formats should be interpreted as _not_ having padding for alignment, e.g. an int32_t followed by
+an int64_t should be interpreted as a 12-byte structure without padding.
 :::
 
 (figure-1)=
@@ -224,6 +226,43 @@ practice we currently just store an empty dictionary in this section when struct
 enabled.
 
 ### TimestampDictionary packet
+
+(figure-6)=
+::::{card}
+```
+enum EncodingType : uint64_t {
+  Epoch = 0x1,
+  DoubleEpoch = 0x2
+}
+
+TimestampRangeEntry {
+  key_len: uint64_t
+  key: char[key_len]
+  num_column_ids: uint64_t
+  column_ids: int32_t[num_column_ids]
+  encoding_type: EncodingType
+  epoch_start: union {epochtime_t, double}
+  epoch_end: union {epochtime_t, double}
+}
+
+TimestampPattern {
+  pattern_id: uint64_t
+  pattern_len: uint64_t
+  pattern: char[pattern_len]
+}
+
+TimestampDictionary {
+  num_range_entries: uint64_t
+  range_entries: TimestampRangeEntry[num_entries]
+  num_patterns: uint64_t
+  patterns: TimestampPattern[num_patterns]
+}
+
+```
++++
+**Figure 6**: TimestampDictionary binary payload format. The payload is equivalent to a single
+instance of "TimestampDictionary".
+::::
 
 ### RangeIndex packet
 
