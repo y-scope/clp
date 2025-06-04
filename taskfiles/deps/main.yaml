@@ -56,6 +56,7 @@ tasks:
     run: "once"
     deps:
       - task: "absl"
+      - task: "antlr-jar"
       - task: "antlr-runtime"
       - task: "catch2"
       - task: "date"
@@ -83,6 +84,30 @@ tasks:
           LIB_NAME: "absl"
           TARBALL_SHA256: "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed"
           TARBALL_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz"
+
+  antlr-jar:
+    internal: true
+    run: "once"
+    deps:
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.G_ANTLR_JAR_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.G_ANTLR_JAR_PATH}}"
+      - task: "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:curl"
+        vars:
+          FILE_SHA256: "bc13a9c57a8dd7d5196888211e5ede657cb64a3ce968608697e4f668251a8487"
+          OUTPUT_FILE: "{{.G_ANTLR_JAR_PATH}}"
+          URL: "{{.G_ANTLR_DOWNLOAD_URL}}"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.G_ANTLR_JAR_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.G_ANTLR_JAR_PATH}}"
 
   antlr-runtime:
     internal: true

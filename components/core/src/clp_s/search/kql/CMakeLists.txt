@@ -1,20 +1,20 @@
-set(ANTLR_GENERATED_KQL_CODE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/antlr_generated)
+set(ANTLR_GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/antlr_generated)
 
-set(ANTLR_GENERATED_KQL_CODE
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlBaseVisitor.cpp
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlBaseVisitor.h
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlLexer.cpp
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlLexer.h
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlParser.cpp
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlParser.h
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlVisitor.cpp
-		${ANTLR_GENERATED_KQL_CODE_DIR}/KqlVisitor.h
+set(ANTLR_GENERATED_SOURCE
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlBaseVisitor.cpp
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlBaseVisitor.h
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlLexer.cpp
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlLexer.h
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlParser.cpp
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlParser.h
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlVisitor.cpp
+		${ANTLR_GENERATED_SOURCE_DIR}/KqlVisitor.h
 )
 
 add_library(
         clp_s_search_kql
         ${CMAKE_CURRENT_SOURCE_DIR}/../antlr_common/ErrorListener.hpp
-        ${ANTLR_GENERATED_KQL_CODE}
+        ${ANTLR_GENERATED_SOURCE}
         ${CMAKE_CURRENT_SOURCE_DIR}/kql.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/kql.hpp
 )
@@ -22,7 +22,7 @@ add_library(clp_s::search::kql ALIAS clp_s_search_kql)
 target_compile_features(clp_s_search_kql PRIVATE cxx_std_20)
 target_include_directories(clp_s_search_kql
 	PRIVATE
-	${ANTLR_GENERATED_KQL_CODE_DIR}
+	${ANTLR_GENERATED_SOURCE_DIR}
 )
 
 target_link_libraries(
