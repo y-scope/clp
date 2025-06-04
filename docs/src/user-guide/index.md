@@ -52,6 +52,11 @@ quick-start-overview
 quick-start-cluster-setup/index
 quick-start-compression/index
 quick-start-search/index
+quick-start/index
+quick-start/setup/main-page
+quick-start/clp-json/main-page
+quick-start/clp-text/main-page
+
 :::
 
 :::{toctree}
