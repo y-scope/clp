@@ -124,16 +124,28 @@ packet-beta
 
 ## Metadata section
 
-The metadata section is made up of a compressed sequence of metadata packets with the following
-format:
+The metadata section is made up of a compressed sequence of metadata packets with the binary format
+shown in [Figure 3](#figure-3). Metadata packets generally contain information that relates to an
+entire archive or large sections of an archive.
+
+(figure-3)=
+::::{card}
 ```
-[num_packets: uint8_t]
-[
-  [packet_type: uint8_t]
-  [packet_size: uint32_t]
-  [packet_content: uint8_t][packet_size]
-][num_packets]
+MetadataPacket {
+  packet_type: uint8_t
+  packet_size: uint32_t
+  packet_content: uint8_t[packet_size]
+}
+
+MetadataPacketStream {
+  num_packets: uint8_t
+  packets: MetadataPacket[num_packets]
+}
 ```
++++
+**Figure 3**: Metadata section packet stream binary format. The metadata section is equivalent to a
+single instance of "MetadataPacketStream".
+::::
 
 Each metadata packet has a type, size, and arbitrary binary payload. Different packet types make
 different choices for encoding content in this binary payload. Since the size of each packet is
@@ -142,14 +154,74 @@ unfamiliar with by simply skipping the corresponding content. Generally this met
 is intended to allow for some degree of forwards-compatibility and extensibility.
 
 Archives currently support the following metadata packet types, some of which are mandatory:
-* 0x00 - ArchiveInfo (mandatory)
-* 0x01 - ArchiveFileInfo (mandatory)
-* 0x02 - TimestampDictionary
-* 0x03 - RangeIndex
+* `0x00` - ArchiveInfo (mandatory)
+* `0x01` - ArchiveFileInfo (mandatory)
+* `0x02` - TimestampDictionary
+* `0x03` - RangeIndex
 
 ### ArchiveInfo packet
 
+The ArchiveInfo packet is a msgpack map that currently only records the number of segments in an
+archive as shown in [Figure 4](#figure-4). Each archive currently consists of only a single segment
+(i.e. there is only one tables segment file), but we still record the number of segments in order
+to offer backwards compatibility if we do start splitting tables into multiple segments.
+
+This metadata packet was originally intended to mimic the "ArchiveMetadata" structure in CLP, but
+most of what "ArchiveMetata" records is now present in either the header or the RangeIndex metadata
+packet.
+
+(figure-4)=
+::::{card}
+```json
+{
+  "num_segments": 1
+}
+```
++++
+**Figure 4**: Layout of the ArchiveInfo msgpack payload.
+::::
+
 ### ArchiveFileInfo packet
+
+The ArchiveFileInfo packet is a msgpack map that records the name and offset relative to the start
+of the files section of each entry in the files section, as shown in [Figure 5](#figure-5). Entries
+are ordered by their offset into the files section. This means that the order of entries in the
+ArchiveFileInfo packet corresponds to the order in which the components of the files section should
+be read to avoid backwards seeks. The offsets stored in this section can be combined with
+information from the header to determine the size and absolute offset of every entry in the files
+section.
+
+(figure-5)=
+::::{card}
+```json
+{
+  "files": [
+    {
+      "n": "/schema_tree",
+      "o": 0
+    },
+    "..."
+  ]
+}
+```
++++
+**Figure 5**: Layout of the ArchiveFileInfo msgpack payload. The files array contains entries for
+each file in the files section ordered by their offset. Each file is described by its name "n" and
+offset into the files section "o".
+::::
+
+The ArchiveFileInfo packet has entries entries with the following names in order:
+* `"/schema_tree"` - the Merged Parse Tree
+* `"/schema_ids"` - the Schema Map
+* `"/table_metadata"` - metadata describing the contents of the tables segments
+* `"/var.dict"` - the Variable Dictionary
+* `"/log.dict"` - the Log-type Dictionary
+* `"/array.dict"` - the Array Log-type Dictionary (optional)
+* `"/0"` - the first tables segment
+
+The Array Log-type Dictionary is nominally optional for archives that use structured arrays, but in
+practice we currently just store an empty dictionary in this section when structured arrays are
+enabled.
 
 ### TimestampDictionary packet
 
