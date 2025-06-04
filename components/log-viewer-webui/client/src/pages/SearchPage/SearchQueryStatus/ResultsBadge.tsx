@@ -51,7 +51,7 @@ const ResultsBadge = () => {
                 showZero={true}
                 color={
                     searchUiState === SEARCH_UI_STATE.QUERYING ||
-                searchUiState === SEARCH_UI_STATE.CANCELLED ?
+                    searchUiState === SEARCH_UI_STATE.CANCELLED ?
                         "yellow" :
                         "green"
                 }/>

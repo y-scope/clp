@@ -12,8 +12,10 @@ import ResultsBadge from "./ResultsBadge";
  * @return
  */
 const SearchQueryStatus = () => {
-    const {searchJobId,
-        searchUiState} = useSearchStore();
+    const {
+        searchJobId,
+        searchUiState
+    } = useSearchStore();
 
     return (
         <div className={styles["status"]}>
