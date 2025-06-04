@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.2
 
 
 #include "KqlLexer.h"
@@ -7,7 +7,7 @@
 
 using namespace antlr4;
 
-using namespace clp_s::search::kql;
+using namespace clp_s::search::kql::generated;
 
 
 using namespace antlr4;
@@ -46,7 +46,7 @@ struct KqlLexerStaticData final {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
 static thread_local
 #endif
-KqlLexerStaticData *kqllexerLexerStaticData = nullptr;
+std::unique_ptr<KqlLexerStaticData> kqllexerLexerStaticData = nullptr;
 
 void kqllexerLexerInitialize() {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
@@ -146,7 +146,7 @@ void kqllexerLexerInitialize() {
   for (size_t i = 0; i < count; i++) { 
     staticData->decisionToDFA.emplace_back(staticData->atn->getDecisionState(i), i);
   }
-  kqllexerLexerStaticData = staticData.release();
+  kqllexerLexerStaticData = std::move(staticData);
 }
 
 }

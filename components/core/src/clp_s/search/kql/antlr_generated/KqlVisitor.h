@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.2
 
 #pragma once
 
@@ -8,7 +8,7 @@
 #include "KqlParser.h"
 
 
-namespace clp_s::search::kql {
+namespace clp_s::search::kql::generated {
 
 /**
  * This class defines an abstract visitor for a parse tree
@@ -47,4 +47,4 @@ public:
 
 };
 
-}  // namespace clp_s::search::kql
+}  // namespace clp_s::search::kql::generated

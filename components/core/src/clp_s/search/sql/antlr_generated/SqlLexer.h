@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.2
 
 #pragma once
 
@@ -7,7 +7,7 @@
 #include "antlr4-runtime.h"
 
 
-namespace clp_s::search::sql {
+namespace clp_s::search::sql::generated {
 
 
 class  SqlLexer : public antlr4::Lexer {
@@ -48,4 +48,4 @@ private:
 
 };
 
-}  // namespace clp_s::search::sql
+}  // namespace clp_s::search::sql::generated

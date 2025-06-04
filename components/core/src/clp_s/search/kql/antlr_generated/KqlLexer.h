@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.2
 
 #pragma once
 
@@ -7,7 +7,7 @@
 #include "antlr4-runtime.h"
 
 
-namespace clp_s::search::kql {
+namespace clp_s::search::kql::generated {
 
 
 class  KqlLexer : public antlr4::Lexer {
@@ -50,4 +50,4 @@ private:
 
 };
 
-}  // namespace clp_s::search::kql
+}  // namespace clp_s::search::kql::generated

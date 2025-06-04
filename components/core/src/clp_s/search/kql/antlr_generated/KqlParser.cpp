@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.2
 
 
 #include "KqlVisitor.h"
@@ -8,7 +8,7 @@
 
 
 using namespace antlrcpp;
-using namespace clp_s::search::kql;
+using namespace clp_s::search::kql::generated;
 
 using namespace antlr4;
 
@@ -41,7 +41,7 @@ struct KqlParserStaticData final {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
 static thread_local
 #endif
-KqlParserStaticData *kqlParserStaticData = nullptr;
+std::unique_ptr<KqlParserStaticData> kqlParserStaticData = nullptr;
 
 void kqlParserInitialize() {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
@@ -99,7 +99,7 @@ void kqlParserInitialize() {
   for (size_t i = 0; i < count; i++) { 
     staticData->decisionToDFA.emplace_back(staticData->atn->getDecisionState(i), i);
   }
-  kqlParserStaticData = staticData.release();
+  kqlParserStaticData = std::move(staticData);
 }
 
 }

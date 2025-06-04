@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.2
 
 
 #include "SqlLexer.h"
@@ -7,7 +7,7 @@
 
 using namespace antlr4;
 
-using namespace clp_s::search::sql;
+using namespace clp_s::search::sql::generated;
 
 
 using namespace antlr4;
@@ -46,7 +46,7 @@ struct SqlLexerStaticData final {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
 static thread_local
 #endif
-SqlLexerStaticData *sqllexerLexerStaticData = nullptr;
+std::unique_ptr<SqlLexerStaticData> sqllexerLexerStaticData = nullptr;
 
 void sqllexerLexerInitialize() {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
@@ -87,7 +87,7 @@ void sqllexerLexerInitialize() {
   for (size_t i = 0; i < count; i++) { 
     staticData->decisionToDFA.emplace_back(staticData->atn->getDecisionState(i), i);
   }
-  sqllexerLexerStaticData = staticData.release();
+  sqllexerLexerStaticData = std::move(staticData);
 }
 
 }

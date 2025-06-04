@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/kql/Kql.g4 by ANTLR 4.13.2
 
 #pragma once
 
@@ -8,7 +8,7 @@
 #include "KqlVisitor.h"
 
 
-namespace clp_s::search::kql {
+namespace clp_s::search::kql::generated {
 
 /**
  * This class provides an empty implementation of KqlVisitor, which can be
@@ -68,4 +68,4 @@ public:
 
 };
 
-}  // namespace clp_s::search::kql
+}  // namespace clp_s::search::kql::generated

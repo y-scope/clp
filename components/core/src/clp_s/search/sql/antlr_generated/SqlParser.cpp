@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.2
 
 
 #include "SqlVisitor.h"
@@ -8,7 +8,7 @@
 
 
 using namespace antlrcpp;
-using namespace clp_s::search::sql;
+using namespace clp_s::search::sql::generated;
 
 using namespace antlr4;
 
@@ -41,7 +41,7 @@ struct SqlParserStaticData final {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
 static thread_local
 #endif
-SqlParserStaticData *sqlParserStaticData = nullptr;
+std::unique_ptr<SqlParserStaticData> sqlParserStaticData = nullptr;
 
 void sqlParserInitialize() {
 #if ANTLR4_USE_THREAD_LOCAL_CACHE
@@ -75,7 +75,7 @@ void sqlParserInitialize() {
   for (size_t i = 0; i < count; i++) { 
     staticData->decisionToDFA.emplace_back(staticData->atn->getDecisionState(i), i);
   }
-  sqlParserStaticData = staticData.release();
+  sqlParserStaticData = std::move(staticData);
 }
 
 }

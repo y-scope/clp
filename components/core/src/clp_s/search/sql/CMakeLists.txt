@@ -1,6 +1,6 @@
 set(ANTLR_GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/antlr_generated)
 
-set(ANTLR_GENERATED_SOURCE
+set(ANTLR_GENERATED_SOURCES
 		${ANTLR_GENERATED_SOURCE_DIR}/SqlBaseVisitor.cpp
 		${ANTLR_GENERATED_SOURCE_DIR}/SqlBaseVisitor.h
 		${ANTLR_GENERATED_SOURCE_DIR}/SqlLexer.cpp
@@ -13,8 +13,8 @@ set(ANTLR_GENERATED_SOURCE
 
 add_library(
         clp_s_search_sql
+		${ANTLR_GENERATED_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/../antlr_common/ErrorListener.hpp
-        ${ANTLR_GENERATED_SOURCE}
         ${CMAKE_CURRENT_SOURCE_DIR}/sql.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/sql.hpp
 )

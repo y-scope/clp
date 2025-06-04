@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.2
 
 #pragma once
 
@@ -8,7 +8,7 @@
 #include "SqlVisitor.h"
 
 
-namespace clp_s::search::sql {
+namespace clp_s::search::sql::generated {
 
 /**
  * This class provides an empty implementation of SqlVisitor, which can be
@@ -24,4 +24,4 @@ public:
 
 };
 
-}  // namespace clp_s::search::sql
+}  // namespace clp_s::search::sql::generated

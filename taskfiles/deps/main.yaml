@@ -100,7 +100,7 @@ tasks:
         vars:
           FILE_SHA256: "bc13a9c57a8dd7d5196888211e5ede657cb64a3ce968608697e4f668251a8487"
           OUTPUT_FILE: "{{.G_ANTLR_JAR_PATH}}"
-          URL: "{{.G_ANTLR_DOWNLOAD_URL}}"
+          URL: "https://www.antlr.org/download/{{.G_ANTLR_JAR_NAME}}"
 
       # This command must be last
       - task: "yscope-dev-utils:checksum:compute"
@@ -137,7 +137,7 @@ tasks:
           INCLUDE_PATTERNS: ["*/runtime/Cpp"]
           NUM_COMPONENTS_TO_STRIP: 3
           OUTPUT_DIR: "{{.SOURCE_DIR}}"
-          URL: "https://github.com/antlr/antlr4/archive/refs/tags/4.13.2.tar.gz"
+          URL: "https://github.com/antlr/antlr4/archive/refs/tags/{{.G_ANTLR_VERSION}}.tar.gz"
       - task: "yscope-dev-utils:cmake:generate"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"

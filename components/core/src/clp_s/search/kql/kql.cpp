@@ -44,6 +44,9 @@ using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::StringLiteral;
 
 namespace clp_s::search::kql {
+
+using namespace generated;
+
 namespace {
 class ParseTreeVisitor : public KqlBaseVisitor {
 private:

@@ -1,11 +1,8 @@
-name: "clp-s-antlr-generation"
+name: "clp-s-generated-code-committed-check"
 
 on:
   pull_request:
   push:
-  schedule:
-    # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
-    - cron: "15 0 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -15,7 +12,7 @@ concurrency:
 
 jobs:
   antlr-generation-check:
-    name: "antlr-generation-check"
+    name: "antlr-generated-code-committed-check"
     strategy:
       matrix:
         os: ["macos-latest", "ubuntu-latest"]
@@ -25,10 +22,6 @@ jobs:
         with:
           submodules: "recursive"
 
-      - uses: "actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38"
-        with:
-          python-version: "3.11"
-
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli"
@@ -37,6 +30,13 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      - name: "Run clp-s-generate-antlr-check task"
+      - name: "Check if the generated parsers are the latest"
         shell: "bash"
-        run: "task clp-s-generate-antlr-check"
+        run:
+          - |
+            git status --porcelain \
+              components/core/src/clp_s/search/kql/antlr_generated \
+              components/core/src/clp_s/search/sql/antlr_generated \
+              | grep . > /dev/null \
+                && exit 1 \
+                || exit 0

@@ -20,6 +20,9 @@ using clp_s::search::ast::EmptyExpr;
 using clp_s::search::ast::Expression;
 
 namespace clp_s::search::sql {
+
+using namespace generated;
+
 namespace {
 class ParseTreeVisitor : public SqlBaseVisitor {
 public:

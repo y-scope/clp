@@ -1,5 +1,5 @@
 
-// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.1
+// Generated from clp_s/search/sql/Sql.g4 by ANTLR 4.13.2
 
 #pragma once
 
@@ -8,7 +8,7 @@
 #include "SqlParser.h"
 
 
-namespace clp_s::search::sql {
+namespace clp_s::search::sql::generated {
 
 /**
  * This class defines an abstract visitor for a parse tree
@@ -25,4 +25,4 @@ public:
 
 };
 
-}  // namespace clp_s::search::sql
+}  // namespace clp_s::search::sql::generated
