@@ -5,8 +5,7 @@
 
 
 #include "antlr4-runtime.h"
-#include "KqlVisitor.h"
-
+#include "KqlVisitor.h
 
 namespace clp_s::search::kql {
 
