@@ -18,7 +18,12 @@ enum SEARCH_UI_STATE {
     QUERYING,
 
     /**
-     * When the query is complete or cancelled.
+     * When the query is cancelled.
+     */
+    CANCELLED,
+
+    /**
+     * When the query is complete.
      */
     DONE,
 }
