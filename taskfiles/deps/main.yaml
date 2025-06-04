@@ -128,6 +128,7 @@ tasks:
       - task: "yscope-dev-utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
+          JOBS: 2
       - task: "yscope-dev-utils:cmake:install"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
