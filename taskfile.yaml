@@ -235,7 +235,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
-    deps: 
+    deps:
       - "deps:core"
       - "clp-s-generate-parsers"
     cmds:
