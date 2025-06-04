@@ -35,6 +35,10 @@ vars:
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
 
+  # Build parameters
+  G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
+    {{default "" (env  "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
+
 tasks:
   default:
     deps: ["package"]
@@ -212,6 +216,7 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
   clp-package-utils:
