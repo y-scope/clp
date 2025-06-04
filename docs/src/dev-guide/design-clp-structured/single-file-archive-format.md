@@ -84,7 +84,7 @@ determine the size and offset both the "metadata" and "files" sections.
 
 The compression type for an archive indicates the general purpose compressor used to compress each
 section of the archive and is currently one of:
-* 0x0000 - ZStandard
+* `0x0000` - ZStandard
 
 All "reserved padding" is reserved for use in future versions of the single-file archive format.
 
@@ -227,6 +227,12 @@ enabled.
 
 ### TimestampDictionary packet
 
+The TimestampDictionary packet is a binary format that records:
+1. The key name, corresponding MPT nodes, and range of values for zero or more timestamp columns
+2. The format and Id of zero or more timestamp patterns used to encode timestamps in the archive
+
+The details of the binary format can be seen in [Figure 6](#figure-6).
+
 (figure-6)=
 ::::{card}
 ```
@@ -235,7 +241,7 @@ enum EncodingType : uint64_t {
   DoubleEpoch = 0x2
 }
 
-TimestampRangeEntry {
+TimestampRange {
   key_len: uint64_t
   key: char[key_len]
   num_column_ids: uint64_t
@@ -252,8 +258,8 @@ TimestampPattern {
 }
 
 TimestampDictionary {
-  num_range_entries: uint64_t
-  range_entries: TimestampRangeEntry[num_entries]
+  num_ranges: uint64_t
+  ranges: TimestampRange[num_entries]
   num_patterns: uint64_t
   patterns: TimestampPattern[num_patterns]
 }
@@ -263,6 +269,17 @@ TimestampDictionary {
 **Figure 6**: TimestampDictionary binary payload format. The payload is equivalent to a single
 instance of "TimestampDictionary".
 ::::
+
+The key name in each TimestampRange follows the same
+[escaping rules](../../user-guide/reference-json-search-syntax.md) we use for key names in kql
+search. Note that we allow each key to map to multiple MPT nodes and have its range recorded as
+either integer epoch time or double epoch time in order to handle timestamp columns with polymorphic
+types.
+
+The pattern in each TimestampPattern entry is a format string that follows the specification from
+the `clp_s::TimestampPattern` class. The associated pattern_id can be used to uniquely identify each
+format string. This allows string timestamps in the archive to be encoded as a tuple of epoch time
+and pattern id.
 
 ### RangeIndex packet
 
