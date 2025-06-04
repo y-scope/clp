@@ -44,7 +44,7 @@ const useResultsMetadata = () => {
         return null;
     }
 
-    
+
     return resultsMetadata;
 };
 
