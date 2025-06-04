@@ -51,7 +51,6 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     if (
         store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
         store.searchUiState !== SEARCH_UI_STATE.DONE &&
-        store.searchUiState !== SEARCH_UI_STATE.CANCELLED
     ) {
         console.error("Cannot submit query while existing query is in progress.");
 
@@ -91,7 +90,7 @@ const handleQueryCancel = (payload: QueryJobSchema) => {
         return;
     }
 
-    store.updateSearchUiState(SEARCH_UI_STATE.CANCELLED);
+    store.updateSearchUiState(SEARCH_UI_STATE.DONE);
     cancelQuery(
         payload
     ).then(() => {

@@ -12,7 +12,7 @@ import {useResultsMetadata} from "./useResultsMetadata";
  * that the query is complete.
  */
 const useUiUpdateOnDoneSignal = () => {
-    const {updateSearchUiState, searchUiState} =  useSearchStore.getState();
+    const {updateSearchUiState} =  useSearchStore.getState();
     const resultsMetadata = useResultsMetadata();
     useEffect(() => {
         if (null === resultsMetadata
@@ -21,9 +21,7 @@ const useUiUpdateOnDoneSignal = () => {
         }
 
         if (resultsMetadata.lastSignal === SEARCH_SIGNAL.RESP_DONE) {
-            if (searchUiState !== SEARCH_UI_STATE.QUERYING) {
-                updateSearchUiState(SEARCH_UI_STATE.DONE);
-            }
+            updateSearchUiState(SEARCH_UI_STATE.DONE);
         }
     }, [
         resultsMetadata,

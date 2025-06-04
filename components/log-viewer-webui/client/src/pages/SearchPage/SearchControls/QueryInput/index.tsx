@@ -48,8 +48,7 @@ const QueryInput = () => {
                 });
             }, PROGRESS_INTERVAL_MILLIS);
         } else if (
-            searchUiState === SEARCH_UI_STATE.DONE ||
-            searchUiState === SEARCH_UI_STATE.CANCELLED
+            searchUiState === SEARCH_UI_STATE.DONE
         ) {
             clearInterval(intervalIdRef.current);
             intervalIdRef.current = 0;

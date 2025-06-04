@@ -22,7 +22,6 @@ const SearchQueryStatus = () => {
     return (
         <div className={styles["status"]}>
             {(searchUiState === SEARCH_UI_STATE.QUERYING ||
-              searchUiState === SEARCH_UI_STATE.CANCELLED ||
               searchUiState === SEARCH_UI_STATE.DONE) && (
                 <Text type="secondary">
                     Search job #{searchJobId} found{" "}

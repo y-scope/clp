@@ -45,10 +45,6 @@ const useResultsMetadata = () => {
         return null;
     }
 
-    if (searchUiState !== SEARCH_UI_STATE.CANCELLED) {
-        return null;
-    }
-
     return resultsMetadata;
 };
 

@@ -38,7 +38,6 @@ const Results = () => {
 
     let textType: TextTypes;
     switch (searchUiState) {
-        case SEARCH_UI_STATE.CANCELLED:
         case SEARCH_UI_STATE.QUERYING:
             textType = "warning";
             break;
