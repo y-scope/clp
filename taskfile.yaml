@@ -36,6 +36,7 @@ vars:
   G_PACKAGE_VERSION: "0.2.0-dev"
 
   # Build parameters
+  # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
   G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
     {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
