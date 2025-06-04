@@ -5,7 +5,7 @@ import {
     QueryJobSchema,
     submitQuery,
 } from "../../../api/search";
-import useSearchStore from "../SearchState/index";
+import useSearchStore, { SEARCH_STATE_DEFAULT } from "../SearchState/index";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 
 
@@ -60,8 +60,11 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 
     handleClearResults();
 
+    store.updateNumSearchResultsTable(0);
+    store.updateNumSearchResultsTimeline(0);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
+    // Goes into queryID PENDING
     submitQuery(payload)
         .then((result) => {
             store.updateSearchJobId(result.data.searchJobId);

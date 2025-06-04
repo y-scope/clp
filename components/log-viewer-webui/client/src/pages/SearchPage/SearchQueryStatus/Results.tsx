@@ -1,12 +1,17 @@
 import {useMemo} from "react";
 
-import {Typography} from "antd";
+import {
+    GetProps,
+    Typography,
+} from "antd";
 
 import useSearchStore from "../SearchState/index";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 
 
 const {Text} = Typography;
+type TextTypes = GetProps<typeof Text>["type"];
+
 
 /**
  * Displays the number of search results.
@@ -31,11 +36,22 @@ const Results = () => {
         ]
     );
 
-    const textType =
-        searchUiState === SEARCH_UI_STATE.QUERYING ||
-        searchUiState === SEARCH_UI_STATE.CANCELLED ?
-            "warning" :
-            "success";
+    let textType: TextTypes;
+    switch (searchUiState) {
+        case SEARCH_UI_STATE.CANCELLED:
+        case SEARCH_UI_STATE.QUERYING:
+            textType = "warning";
+            break;
+        case SEARCH_UI_STATE.DEFAULT:
+        case SEARCH_UI_STATE.QUERY_ID_PENDING:
+            textType = "secondary";
+            break;
+        case SEARCH_UI_STATE.DONE:
+            textType = "success";
+            break;
+        default:
+            textType = "secondary";
+    }
 
     return (
         <Text
