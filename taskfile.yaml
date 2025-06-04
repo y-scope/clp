@@ -37,7 +37,7 @@ vars:
 
   # Build parameters
   G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
-    {{default "" (env  "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
+    {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
 tasks:
   default:
