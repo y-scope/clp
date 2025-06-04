@@ -3,8 +3,10 @@ import {Typography} from "antd";
 import useSearchStore from "../SearchState/index";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 import styles from "./index.module.css";
-import ResultsBadge from "./ResultsBadge";
+import Results from "./Results";
 
+
+const {Text} = Typography;
 
 /**
  * Displays the search job ID and the number of results found.
@@ -14,22 +16,26 @@ import ResultsBadge from "./ResultsBadge";
 const SearchQueryStatus = () => {
     const {
         searchJobId,
-        searchUiState
+        searchUiState,
     } = useSearchStore();
 
     return (
         <div className={styles["status"]}>
-            {searchUiState !== SEARCH_UI_STATE.DEFAULT && (
-                <Typography.Text type={"secondary"}>
-                    Search job #
-                    {searchJobId}
-                    {" "}
-                    found
-                    {" "}
-                </Typography.Text>
-            )}
-            <ResultsBadge/>
-            <Typography.Text type={"secondary"}> results</Typography.Text>
+            {(
+                searchUiState !== SEARCH_UI_STATE.DEFAULT &&
+                searchUiState !== SEARCH_UI_STATE.QUERY_ID_PENDING
+            ) &&
+             (
+                 <Text type={"secondary"}>
+                     Search job #
+                     {searchJobId}
+                     {" "}
+                     found
+                     {" "}
+                 </Text>
+             )}
+            <Results/>
+            <Text type={"secondary"}> results</Text>
         </div>
     );
 };
