@@ -103,8 +103,8 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR:
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated"
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated"
+        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated"
+        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated"
     deps:
       - "deps:antlr-jar"
       - task: "utils:checksum:validate"
@@ -119,16 +119,16 @@ tasks:
     cmds:
       - for: ["kql", "sql"]
         cmd: |-
-          rm -rf "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/antlr_generated/*" \
+          rm -rf "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated/*" \
           && java -jar {{.G_ANTLR_JAR_PATH}} \
             -Dlanguage=Cpp \
             -no-listener \
             -visitor \
             -package clp_s::search::{{.ITEM}}::generated \
-            -o clp_s/search/{{.ITEM}}/antlr_generated \
+            -o clp_s/search/{{.ITEM}}/generated \
             -Xexact-output-dir \
             clp_s/search/{{.ITEM}}/*.g4 \
-            && find "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/antlr_generated" \
+            && find "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated" \
               -type f -and -not \( -name "*.cpp" -o -name "*.h" \) \
               -exec rm {} \;
       # This command must be last
