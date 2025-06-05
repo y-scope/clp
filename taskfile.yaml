@@ -35,12 +35,18 @@ vars:
   # Versions
   G_PACKAGE_VERSION: "0.2.0-dev"
 
+
   # ANTLR codegen related
   G_ANTLR_VERSION: "4.13.2"
   G_ANTLR_JAR_DIR: "{{.G_BUILD_DIR}}/antlr"
   G_ANTLR_JAR_CHECKSUM_FILE: "{{.G_ANTLR_JAR_DIR}}/checksum/antlr.md5"
   G_ANTLR_JAR_NAME: "antlr-{{.G_ANTLR_VERSION}}-complete.jar"
   G_ANTLR_JAR_PATH: "{{.G_ANTLR_JAR_DIR}}/{{.G_ANTLR_JAR_NAME}}"
+
+  # Build parameters
+  # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
+  G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
+    {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
 tasks:
   default:
@@ -259,6 +265,7 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
   clp-package-utils:

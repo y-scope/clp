@@ -74,7 +74,7 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      - run: "task deps:core"
+      - run: "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
