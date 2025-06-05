@@ -116,14 +116,14 @@ Check out the [quick-start guide](../../quick-start/index) for your chosen flavo
 :gutter: 2
 
 :::{grid-item-card}
-:link: ../../../quick-start/clp-json/main-page
+:link: ../../quick-start/clp-json/main-page
 clp-json
 ^^^
 Compress and search JSON logs.
 :::
 
 :::{grid-item-card}
-:link: ../../../quick-start/clp-text/main-page
+:link: ../../quick-start/clp-text/main-page
 clp-text
 ^^^
 Compress and search unstructured text logs.
