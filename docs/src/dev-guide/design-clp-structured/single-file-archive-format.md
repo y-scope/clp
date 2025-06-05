@@ -155,11 +155,11 @@ well-defined reader implementations can attempt to read archives containing pack
 unfamiliar with by simply skipping the corresponding content. Generally this metadata section design
 is intended to allow for some degree of forwards-compatibility and extensibility.
 
-Archives currently support the following metadata packet types, some of which are mandatory:
-* `0x00` - ArchiveInfo (mandatory)
-* `0x01` - ArchiveFileInfo (mandatory)
-* `0x02` - TimestampDictionary
-* `0x03` - RangeIndex
+Archives currently support the following metadata packet types, some of which are optional:
+* `0x00` - ArchiveInfo
+* `0x01` - ArchiveFileInfo
+* `0x02` - TimestampDictionary (optional)
+* `0x03` - RangeIndex (optional)
 
 ### ArchiveInfo packet
 
