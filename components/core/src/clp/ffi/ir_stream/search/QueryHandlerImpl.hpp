@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../clp_s/search/ast/AndExpr.hpp"
 #include "../../../../clp_s/search/ast/ColumnDescriptor.hpp"
@@ -50,7 +50,7 @@ public:
          *   tokens.
          */
         [[nodiscard]] static auto create(clp_s::search::ast::ColumnDescriptor* column_descriptor)
-                -> outcome_v2::std_result<ColumnDescriptorTokenIterator> {
+                -> ystdlib::error_handling::Result<ColumnDescriptorTokenIterator> {
             auto const token_begin_it{column_descriptor->descriptor_begin()};
             if (column_descriptor->descriptor_end() == token_begin_it) {
                 return ErrorCode{ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds};
@@ -72,7 +72,8 @@ public:
          * - ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds if the current token is already
          *   the last one.
          */
-        [[nodiscard]] auto next() const -> outcome_v2::std_result<ColumnDescriptorTokenIterator> {
+        [[nodiscard]] auto next() const
+                -> ystdlib::error_handling::Result<ColumnDescriptorTokenIterator> {
             if (is_last()) {
                 return ErrorCode{ErrorCodeEnum::ColumnDescriptorTokenIteratorOutOfBounds};
             }
@@ -137,7 +138,7 @@ public:
             std::vector<std::pair<std::string, clp_s::search::ast::literal_type_bitmask_t>> const&
                     projections,
             bool case_sensitive_match
-    ) -> outcome_v2::std_result<QueryHandlerImpl>;
+    ) -> ystdlib::error_handling::Result<QueryHandlerImpl>;
 
     // Delete copy constructor and assignment operator
     QueryHandlerImpl(QueryHandlerImpl const&) = delete;
@@ -161,7 +162,7 @@ public:
      * - Forwards `advance_ast_dfs_evaluation`'s return values.
      */
     [[nodiscard]] auto evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event)
-            -> outcome_v2::std_result<AstEvaluationResult>;
+            -> ystdlib::error_handling::Result<AstEvaluationResult>;
 
     /**
      * Implementation of `QueryHandler::update_partially_resolved_columns` with new projected
@@ -182,7 +183,7 @@ public:
             SchemaTree::NodeLocator const& node_locator,
             SchemaTree::Node::id_t node_id,
             NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
-    ) -> outcome_v2::std_result<void>;
+    ) -> ystdlib::error_handling::Result<void>;
 
     [[nodiscard]] auto get_resolved_column_to_schema_tree_node_ids() const -> std::unordered_map<
             clp_s::search::ast::ColumnDescriptor*,
@@ -209,7 +210,7 @@ private:
          *   - clp_s::search::ast::OrExpr
          */
         [[nodiscard]] static auto create(clp_s::search::ast::Value* expr)
-                -> outcome_v2::std_result<AstExprIterator>;
+                -> ystdlib::error_handling::Result<AstExprIterator>;
 
         // Methods
         /**
@@ -221,7 +222,8 @@ private:
          * - Forwards `create`'s return values.
          * @return std::nullopt if there are no more child operators to visit.
          */
-        [[nodiscard]] auto next_op() -> std::optional<outcome_v2::std_result<AstExprIterator>>;
+        [[nodiscard]] auto next_op()
+                -> std::optional<ystdlib::error_handling::Result<AstExprIterator>>;
 
         /**
          * @return The underlying expression as `clp_s::search::ast::AndExpr` if the underlying type
@@ -327,7 +329,7 @@ private:
             SchemaTree::NodeLocator const& node_locator,
             ColumnDescriptorTokenIterator const& token_it,
             NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
-    ) -> outcome_v2::std_result<void>;
+    ) -> ystdlib::error_handling::Result<void>;
 
     /**
      * Evaluates the filter expression against the given kv-pair log event.
@@ -343,7 +345,7 @@ private:
     [[nodiscard]] auto evaluate_filter_expr(
             clp_s::search::ast::FilterExpr* filter_expr,
             KeyValuePairLogEvent const& log_event
-    ) -> outcome_v2::std_result<AstEvaluationResult>;
+    ) -> ystdlib::error_handling::Result<AstEvaluationResult>;
 
     auto push_to_ast_dfs_stack(AstExprIterator ast_expr_it) -> void {
         m_ast_dfs_stack.emplace_back(ast_expr_it, ast_evaluation_result_bitmask_t{});
@@ -374,7 +376,7 @@ private:
     [[nodiscard]] auto advance_ast_dfs_evaluation(
             KeyValuePairLogEvent const& log_event,
             std::optional<AstEvaluationResult>& query_evaluation_result
-    ) -> outcome_v2::std_result<void>;
+    ) -> ystdlib::error_handling::Result<void>;
 
     // Variables
     std::shared_ptr<clp_s::search::ast::Expression> m_query;
@@ -397,20 +399,20 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
         SchemaTree::NodeLocator const& node_locator,
         SchemaTree::Node::id_t node_id,
         NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
-) -> outcome_v2::std_result<void> {
+) -> ystdlib::error_handling::Result<void> {
     auto const parent_node_id{node_locator.get_parent_id()};
     auto& partial_resolutions_to_update{
             is_auto_generated ? m_auto_gen_namespace_partial_resolutions
                               : m_user_gen_namespace_partial_resolutions
     };
     if (false == partial_resolutions_to_update.contains(parent_node_id)) {
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
 
     std::vector<std::pair<SchemaTree::Node::id_t, ColumnDescriptorTokenIterator>>
             new_partial_resolutions;
     for (auto const& token_it : partial_resolutions_to_update.at(parent_node_id)) {
-        OUTCOME_TRYV(handle_column_resolution_on_new_schema_tree_node(
+        YSTDLIB_ERROR_HANDLING_TRYV(handle_column_resolution_on_new_schema_tree_node(
                 is_auto_generated,
                 node_id,
                 node_locator,
@@ -432,7 +434,10 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
             //   match.
             new_partial_resolutions.emplace_back(node_id, token_it);
             if (false == token_it.is_last()) {
-                new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(token_it.next()));
+                new_partial_resolutions.emplace_back(
+                        node_id,
+                        YSTDLIB_ERROR_HANDLING_TRYX(token_it.next())
+                );
             }
             continue;
         }
@@ -443,11 +448,14 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
             continue;
         }
 
-        auto const next_token_it{OUTCOME_TRYX(token_it.next())};
+        auto const next_token_it{YSTDLIB_ERROR_HANDLING_TRYX(token_it.next())};
         new_partial_resolutions.emplace_back(node_id, next_token_it);
         if (false == next_token_it.is_last() && next_token_it.is_wildcard()) {
             // Handle the case where the wildcard matches nothing
-            new_partial_resolutions.emplace_back(node_id, OUTCOME_TRYX(next_token_it.next()));
+            new_partial_resolutions.emplace_back(
+                    node_id,
+                    YSTDLIB_ERROR_HANDLING_TRYX(next_token_it.next())
+            );
         }
     }
 
@@ -459,7 +467,7 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
         it->second.emplace_back(token_it);
     }
 
-    return outcome_v2::success();
+    return ystdlib::error_handling::success();
 }
 
 template <NewProjectedSchemaTreeNodeCallbackReq NewProjectedSchemaTreeNodeCallbackType>
@@ -469,9 +477,9 @@ auto QueryHandlerImpl::handle_column_resolution_on_new_schema_tree_node(
         SchemaTree::NodeLocator const& node_locator,
         QueryHandlerImpl::ColumnDescriptorTokenIterator const& token_it,
         NewProjectedSchemaTreeNodeCallbackType new_projected_schema_tree_node_callback
-) -> outcome_v2::std_result<void> {
+) -> ystdlib::error_handling::Result<void> {
     if ((false == token_it.is_last()
-         && false == OUTCOME_TRYX(token_it.next()).is_trailing_wildcard())
+         && false == YSTDLIB_ERROR_HANDLING_TRYX(token_it.next()).is_trailing_wildcard())
         || false == token_it.match_schema_tree_node_type(node_locator.get_type())
         || (false == token_it.is_wildcard() && token_it.get_token() != node_locator.get_key_name()))
     {
@@ -480,17 +488,17 @@ auto QueryHandlerImpl::handle_column_resolution_on_new_schema_tree_node(
         // - doesn't match the new node's type
         // - is neither a wildcard nor equal to the new node's key
         // There should be no resolution.
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
 
     auto* col{token_it.get_column_descriptor()};
     if (m_projected_column_to_original_key.contains(col)) {
-        OUTCOME_TRYV(new_projected_schema_tree_node_callback(
+        YSTDLIB_ERROR_HANDLING_TRYV(new_projected_schema_tree_node_callback(
                 is_auto_generated,
                 node_id,
                 m_projected_column_to_original_key.at(col)
         ));
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
 
     auto [it, inserted] = m_resolved_column_to_schema_tree_node_ids.try_emplace(
@@ -498,7 +506,7 @@ auto QueryHandlerImpl::handle_column_resolution_on_new_schema_tree_node(
             std::unordered_set<SchemaTree::Node::id_t>{}
     );
     it->second.emplace(node_id);
-    return outcome_v2::success();
+    return ystdlib::error_handling::success();
 }
 }  // namespace clp::ffi::ir_stream::search
 
