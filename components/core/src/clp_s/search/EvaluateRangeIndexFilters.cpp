@@ -42,6 +42,7 @@ auto get_encoded_text_ast(std::string_view text)
     std::vector<int32_t> dict_var_bounds;
     clp::ffi::encode_message(text, logtype, encoded_vars, dict_var_bounds);
     std::vector<std::string> dict_vars;
+    dict_vars.reserve(dict_var_bounds.size() / 2);
     for (size_t i{0}; i < dict_var_bounds.size(); i += 2) {
         auto const begin_pos{static_cast<size_t>(dict_var_bounds[i])};
         auto const end_pos{static_cast<size_t>(dict_var_bounds[i + 1])};
@@ -275,15 +276,13 @@ auto EvaluateRangeIndexFilters::evaluate_filter(
                 work_list.emplace_back(cur_it_tmp, field);
                 work_list.emplace_back(cur_it, field);
             }
-        } else if (cur_field.is_object()) {
-            if (cur_field.contains(cur_it->get_token())) {
-                auto const& next_field(cur_field.at(cur_it->get_token()));
-                work_list.emplace_back(++cur_it, next_field);
+        } else if (cur_field.is_object() && cur_field.contains(cur_it->get_token())) {
+            auto const& next_field(cur_field.at(cur_it->get_token()));
+            work_list.emplace_back(++cur_it, next_field);
 
-                // Allow wildcard to match zero tokens.
-                if (col->descriptor_end() != cur_it && cur_it->wildcard()) {
-                    work_list.emplace_back(++cur_it, next_field);
-                }
+            // Allow wildcard to match zero tokens.
+            if (col->descriptor_end() != cur_it && cur_it->wildcard()) {
+                work_list.emplace_back(++cur_it, next_field);
             }
         }
     }
