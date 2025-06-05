@@ -2,6 +2,7 @@
 
 [![Open bug reports](https://img.shields.io/github/issues/y-scope/clp/bug?label=bugs)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 [![Open feature requests](https://img.shields.io/github/issues/y-scope/clp/enhancement?label=feature-requests)](https://github.com/y-scope/clp/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
+[![Discord][discord-badge]][yscope-community-discord]
 [![CLP on Zulip](https://img.shields.io/badge/zulip-yscope--clp%20chat-1888FA?logo=zulip)](https://yscope-clp.zulipchat.com/)
 
 YScope's Compressed Log Processor (CLP) compresses your logs, and allows you to search the
@@ -83,7 +84,8 @@ You can find our docs [online][clp-docs] or view the source in `docs/src`.
 
 You can use GitHub issues to [report a bug][bug-report] or [request a feature][feature-req].
 
-Join us on [Zulip][zulip] to chat with developers and other community members.
+Need help? Join us on [Discord][yscope-community-discord] now to chat directly with our developers
+and other community members!
 
 # Next Steps
 
@@ -101,6 +103,7 @@ If you would like a feature or want to report a bug, please file an issue and we
 [core]: http://docs.yscope.com/clp/main/dev-guide/components-core
 [core-container]: http://docs.yscope.com/clp/main/user-guide/core-container
 [datasets]: https://docs.yscope.com/clp/main/user-guide/resources-datasets
+[discord-badge]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=%235561f5
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
@@ -109,4 +112,5 @@ If you would like a feature or want to report a bug, please file an issue and we
 [logback-appenders]: https://github.com/y-scope/logback-appenders
 [re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
+[yscope-community-discord]: https://discord.gg/7kZA2m5G87
 [zulip]: https://yscope-clp.zulipchat.com/
