@@ -10,16 +10,16 @@ The sections are as follows:
 
 :::{grid-item-card}
 :link: quick-start/index
-Quick start
+Quick-start
 ^^^
-A quick start guide for choosing a flavour of CLP, setting it up, compressing your logs, and searching them.
+A quick-start guide for choosing a flavour of CLP, setting it up, compressing your logs, and searching them.
 :::
 
 :::{grid-item-card}
 :link: guides/guides-overview
 Guides
 ^^^
-Guides for using CLP in a variety of use cases.
+Guides for using CLP in various use cases.
 :::
 
 :::{grid-item-card}
@@ -46,7 +46,7 @@ Reference docs like format specifications, etc.
 
 :::{toctree}
 :hidden:
-:caption: Quick start
+:caption: quick-start
 
 quick-start/index
 quick-start/setup/main-page

@@ -12,7 +12,7 @@ To run properly on your system, CLP requires a few other programs. Before you se
 
 CLP uses Docker to deploy its different components. You can check whether Docker is already installed on your system by running the command
 
-``` bash
+```bash
 docker version
 ```
 
@@ -26,11 +26,11 @@ If you're using Docker Desktop, ensure version 4.34 or higher is installed, and 
 
 CLP uses Python to interpret the scripts that coordinate how it runs. Specifically, CLP needs Python version 3.8 or higher. Many Linux distributions come with Python pre-installed, but just to be sure, run the command
 
-``` bash
+```bash
 python3 --version
 ```
 
-If Python isn't on your system, or if the version isn't high enough, follow the instructions [here][Python] to install or upgrade it.
+If Python isn't on your system, or if the version isn't high enough, install or upgrade it.
 
 :::{note}
 If you're planning on deploying CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../../guides/guides-multi-node/multi-node) page for more details.
@@ -74,7 +74,7 @@ object. For example:
 The log file above contains two log events represented by two JSON objects printed one after the
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
-If your logs are JSON logs, download and extract the JSON flavour tarball from the [Releases][clp-releases] page on GitHub, and proceed to the CLP-JSON portal below.
+If your logs are JSON logs, download and extract the JSON flavour tarball from the [Releases][clp-releases] page on GitHub, and proceed to the clp-json portal below.
 
 ::::{grid} 1 1 1 1
 :gutter: 2
@@ -83,7 +83,7 @@ If your logs are JSON logs, download and extract the JSON flavour tarball from t
 :link: ../clp-json/main-page
 CLP for JSON logs
 ^^^
-Learn how to start up CLP-JSON, and begin compressing and searching JSON logs.
+Learn how to start up clp-json, and begin compressing and searching JSON logs.
 :::
 ::::
 
@@ -112,7 +112,7 @@ Caused by: java.net.UnknownHostException: i-e5d112ea
 The log file above contains two log events, both beginning with a timestamp. The first is a single
 line while the second contains multiple lines.
 
-If your logs are unstructured text logs, download and extract the unstructured text flavour tarball from the [Releases][clp-releases] page on GitHub, and proceed to the CLP-text portal below.
+If your logs are unstructured text logs, download and extract the unstructured text flavour tarball from the [Releases][clp-releases] page on GitHub, and proceed to the clp-text portal below.
 
 ::::{grid} 1 1 1 1
 :gutter: 2
@@ -121,12 +121,11 @@ If your logs are unstructured text logs, download and extract the unstructured t
 :link: ../clp-text/main-page
 CLP for unstructured logs
 ^^^
-Learn how to start up CLP-text, and begin compressing and searching unstructured text logs.
+Learn how to start up clp-text, and begin compressing and searching unstructured text logs.
 :::
 ::::
 
 [Docker]: https://docs.docker.com/engine/install/
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
 [docker-desktop-host-networking]: https://docs.docker.com/engine/network/drivers/host/#docker-desktop
-[Python]: https://www.geeksforgeeks.org/how-to-install-python-on-linux/
 [clp-releases]: https://github.com/y-scope/clp/releases

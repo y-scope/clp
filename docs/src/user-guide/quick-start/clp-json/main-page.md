@@ -1,6 +1,6 @@
-# CLP-JSON
+# clp-json Quick-start
 
-This page will walk you through how to start up CLP, and also show you how to use CLP to compress and search JSON logs.
+This page will walk you through how to start up CLP, and then use it to compress and search JSON logs.
 
 :::{caution}
 If you're using the `clp-json` release, you can only compress JSON logs.
@@ -55,7 +55,7 @@ To compress logs from object storage, see
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../../resources/resources-datasets.md).
+For some sample logs, check out the open-source [datasets](../../resources/resources-datasets).
 
 ### Examining compression statistics
 
@@ -145,4 +145,4 @@ sbin/stop-clp.sh
 
 ## More information
 
-You've reached the end of the clp-json quick start guide. For more information on clp-json, visit the [CLP for JSON logs](../../core/core-clp-s) page.
+You've reached the end of the clp-json quick-start guide. For more information on clp-json, visit the [CLP for JSON logs](../../core/core-clp-s) page.

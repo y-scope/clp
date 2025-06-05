@@ -117,14 +117,14 @@ Check out the quick-start guide for your chosen flavour of CLP to learn how to c
 
 :::{grid-item-card}
 :link: ../../../quick-start/clp-json/main-page
-CLP-JSON
+clp-json
 ^^^
 Compress and search JSON logs.
 :::
 
 :::{grid-item-card}
 :link: ../../../quick-start/clp-text/main-page
-CLP-text
+clp-text
 ^^^
 Compress and search unstructured text logs.
 :::

@@ -1,6 +1,6 @@
 # Overview
 
-To learn how to use CLP, follow the "Setup" link.
+If you're new to CLP, follow the link below to learn how to set it up.
 
 ::::{grid} 1 1 1 1
 :gutter: 2

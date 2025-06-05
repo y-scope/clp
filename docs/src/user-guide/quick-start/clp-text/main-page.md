@@ -1,9 +1,9 @@
-# CLP-text
+# clp-text Quick-start
 
-This page will walk you through how to start up CLP, and also show you how to use CLP to compress and search unstructured text logs.
+This page will walk you through how to start up CLP, and then use it to compress and search unstructured text logs.
 
 :::{caution}
-If you're using the `clp-text` release, you should only compress unstructured text logs. `clp-text` can compress and search JSON logs as if it was unstructured text, but `clp-text` cannot query individual fields. This limitation will be addressed in a future version of CLP.
+If you're using the `clp-text` release, you should only compress unstructured text logs. `clp-text` is able to compress and search JSON logs as if it was unstructured text, but `clp-text` cannot query individual fields. This limitation will be addressed in a future version of CLP.
 :::
 
 ---
@@ -37,7 +37,7 @@ Compressed logs will be stored in the `/var/bin/archives` directory.
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../../resources/resources-datasets.md).
+For some sample logs, check out the open-source [datasets](../../resources/resources-datasets).
 
 ### Examining compression statistics
 
@@ -54,13 +54,13 @@ You can search through your logs using queries from the UI or from the command l
 
 Regardless of what method you use to search, you'll need a query to find the logs you're looking for. All unstructured text log queries are written as plain text. 
 
-You can use a couple special characters to make these queries more versatile. `*` can be used as a placeholder for an unknown number of characters, and `?` can be used for a single character. For example, the query
+You can use a couple of special characters to make these queries more versatile. `*` can be used as a placeholder for an unknown number of characters, and `?` can be used for a single character. For example, the query
 
-``` bash
-one * two?three
+```bash
+a*b?c
 ```
 
-would return all logs that contain the sequence of characters "one" followed by any number (even zero) of other characters, followed by "two", followed by one other character, followed by "three".
+would return all logs that contain the character `"a"` followed by any number (including zero) of other characters, followed by `"b"`, followed by one other character, followed by `"c"`.
 
 There are a number of other syntax rules specific to unstructured text queries that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference/reference-text-search-syntax).
 
@@ -125,4 +125,4 @@ sbin/stop-clp.sh
 
 ## More information
 
-You've reached the end of the clp-text quick start guide. For more information on clp-text, visit the [CLP for unstructured logs](../../core/core-unstructured/index) page.
+You've reached the end of the clp-text quick-start guide. For more information on clp-text, visit the [CLP for unstructured logs](../../core/core-unstructured/index) page.
