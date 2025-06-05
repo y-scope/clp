@@ -50,7 +50,7 @@ Compressed logs will be stored in the `/var/bin/archives` directory.
 
 :::{tip}
 To compress logs from object storage, see
-[Using object storage](../../guides-using-object-storage/index).
+[Using object storage](../../guides/guides-using-object-storage/index).
 :::
 
 ### Sample logs

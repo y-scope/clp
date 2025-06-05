@@ -110,8 +110,25 @@ Where `<component>` is the name of the component in the groups above.
 
 ## Using CLP
 
-Check out the [compression](../quick-start-compression/index) and
-[search](../quick-start-search/index) guides to compress and search your logs.
+Check out the quick-start guide for your chosen flavour of CLP to learn how to compress and search your logs.
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: ../../../quick-start/clp-json/main-page
+CLP-JSON
+^^^
+Compress and search JSON logs.
+:::
+
+:::{grid-item-card}
+:link: ../../../quick-start/clp-text/main-page
+CLP-text
+^^^
+Compress and search unstructured text logs.
+:::
+::::
 
 ## Stopping CLP
 

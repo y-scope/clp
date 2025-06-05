@@ -94,7 +94,6 @@ Multi-node deployment
 :caption: Cluster setup
 
 single-node
-multi-node
 :::
 
 [clp-releases]: https://github.com/y-scope/clp/releases

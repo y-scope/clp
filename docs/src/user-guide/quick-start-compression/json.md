@@ -23,7 +23,7 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
 
 :::{tip}
 To compress logs from object storage, see
-[Using object storage](../guides-using-object-storage/index).
+[Using object storage](../guides/guides-using-object-storage/index).
 :::
 
 # Sample logs

@@ -33,7 +33,7 @@ python3 --version
 If Python isn't on your system, or if the version isn't high enough, follow the instructions [here][Python] to install or upgrade it.
 
 :::{note}
-If you're planning on deploying CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../../quick-start-cluster-setup/multi-node) page for more details.
+If you're planning on deploying CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../../guides/guides-multi-node/multi-node) page for more details.
 :::
 
 ---
