@@ -136,8 +136,8 @@ tasks:
       - task: ":utils:cpp-lint:clang-format"
         vars:
           EXCLUDE_PATTERNS:
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/*"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/*"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated/*"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated/*"
           FLAGS: ["--dry-run"]
           INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
@@ -150,8 +150,8 @@ tasks:
       - task: ":utils:cpp-lint:clang-format"
         vars:
           EXCLUDE_PATTERNS:
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/antlr_generated/*"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/antlr_generated/*"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated/*"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated/*"
           FLAGS: ["-i"]
           INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
