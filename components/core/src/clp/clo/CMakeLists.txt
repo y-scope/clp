@@ -155,7 +155,6 @@ add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
 target_compile_features(clo PRIVATE cxx_std_20)
 target_include_directories(clo
         PRIVATE
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
         "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
 )
 target_link_libraries(clo
