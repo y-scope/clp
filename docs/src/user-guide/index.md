@@ -23,21 +23,21 @@ Guides for using CLP in a variety of use cases.
 :::
 
 :::{grid-item-card}
-:link: core-overview
+:link: core/core-overview
 Core
 ^^^
 Docs about CLP's core component for compressing, decompressing, and searching logs.
 :::
 
 :::{grid-item-card}
-:link: resources-datasets
+:link: resources/resources-datasets
 Resources
 ^^^
 Resources like log datasets, etc.
 :::
 
 :::{grid-item-card}
-:link: reference-json-search-syntax
+:link: reference/reference-json-search-syntax
 Reference
 ^^^
 Reference docs like format specifications, etc.
@@ -71,24 +71,24 @@ guides/guides-multi-node/multi-node
 :caption: Core
 :glob:
 
-core-overview
-core-container
-core-clp-s
-core-unstructured/index
+core/core-overview
+core/core-container
+core/core-clp-s
+core/core-unstructured/index
 :::
 
 :::{toctree}
 :hidden:
 :caption: Resources
 
-resources-datasets
+resources/resources-datasets
 :::
 
 :::{toctree}
 :hidden:
 :caption: Reference
 
-reference-json-search-syntax
-reference-text-search-syntax
-reference-unstructured-schema-file
+reference/reference-json-search-syntax
+reference/reference-text-search-syntax
+reference/reference-unstructured-schema-file
 :::

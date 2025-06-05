@@ -37,7 +37,7 @@ Compressed logs will be stored in the `/var/bin/archives` directory.
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../../resources-datasets.md).
+For some sample logs, check out the open-source [datasets](../../resources/resources-datasets.md).
 
 ### Examining compression statistics
 
@@ -62,7 +62,7 @@ one * two?three
 
 would return all logs that contain the sequence of characters "one" followed by any number (even zero) of other characters, followed by "two", followed by one other character, followed by "three".
 
-There are a number of other syntax rules specific to unstructured text queries that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference-text-search-syntax).
+There are a number of other syntax rules specific to unstructured text queries that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference/reference-text-search-syntax).
 
 ### Searching from the command line
 
