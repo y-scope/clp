@@ -37,7 +37,7 @@ Resources like log datasets, etc.
 :::
 
 :::{grid-item-card}
-:link: reference/reference-json-search-syntax
+:link: reference/index
 Reference
 ^^^
 Reference docs like format specifications, etc.
@@ -88,6 +88,7 @@ resources/resources-datasets
 :hidden:
 :caption: Reference
 
+reference/index
 reference/reference-json-search-syntax
 reference/reference-text-search-syntax
 reference/reference-unstructured-schema-file
