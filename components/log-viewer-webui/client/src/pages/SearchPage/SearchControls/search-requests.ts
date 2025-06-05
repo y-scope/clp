@@ -7,6 +7,9 @@ import {
 } from "../../../api/search";
 import useSearchStore from "../SearchState/index";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
+import {CLP_STORAGE_ENGINES, SETTINGS_STORAGE_ENGINE} from "../../../config";
+import { unquoteString } from "./utils";
+import { message } from "antd";
 
 
 /**
@@ -58,6 +61,20 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     }
 
     handleClearResults();
+
+
+    if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+        try {
+            payload.queryString = unquoteString(payload.queryString, '"', "\\");
+            if ("" === payload.queryString) {
+                message.error("Query string cannot be empty.");
+                return;
+            }
+        } catch (e: unknown) {
+            message.error(`Error processing query string: ${e instanceof Error ? e.message : String(e)}`);
+            return;
+        }
+    }
 
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 

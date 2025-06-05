@@ -1,15 +1,6 @@
-import settings from "../../../../../settings.json";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
 import type {SearchResult} from "./typings";
 
-
-const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine;
-
-/**
- * Stream type based on the storage engine (i.e. clp vs. clp-s).
- */
-const STREAM_TYPE = "clp" === SETTINGS_STORAGE_ENGINE ?
-    "ir" :
-    "json";
 
 /**
  * Returns the stream id based on the storage engine.
@@ -26,5 +17,4 @@ const getStreamId = (result: SearchResult): string => {
 
 export {
     getStreamId,
-    STREAM_TYPE,
 };
