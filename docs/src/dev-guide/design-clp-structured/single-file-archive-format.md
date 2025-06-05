@@ -283,6 +283,53 @@ and pattern id.
 
 ### RangeIndex packet
 
+The archive range index allows users associate arbitrary properties with each file (or any other
+unit of data) ingested into clp-s. Collectively these units of data are referred to as "ingestion
+units". Since each archive can potentially aggregate data from multiple files the archive range
+index associates these ingestion unit properties with a logical range of records in an archive.
+Note that ingestion units can be split across multiple archives in order to maintain a configured
+archive size and that in these cases the properties get associated with each chunk of the ingestion
+unit in each archive.
+
+By default we automatically store the following properties about each ingestion unit:
+* `"_filename"` - the original filename of the ingestion unit as it was passed to clp-s compression
+* `"_file_split_number"` - incremented each time this ingestion-unit is split across antoher archive
+* `"_archive_creator_id"` - UUID associated with a particular _invocation_ of compression
+
+Currently clp-s will store these default properties as well as any properties present in the
+metadata section of a KV-IR stream. There will likely be future support for associating arbitrary
+additional properties with an ingestion unit at compression time.
+
+The RangeIndex packet is encoded as a msgpack array with the format shown in [Figure 7](#figure-7).
+
+(figure-7)=
+::::{card}
+```json
+[
+  {
+    "s": 0,
+    "e": 100,
+    "f": {
+      "_filename": "/my/file.jsonl",
+      "_file_split_number": 0,
+      "_archive_creator_id": " 03f2958a-7a2e-448c-a203-60f2cc990d74",
+      "arbitrary_user_property": "..."
+    }
+  },
+  "..."
+]
+```
++++
+**Figure 7**: Layout of the RangeIndex msgpack payload. Each entry in the array records a start
+index "s" and end index "e" indicating that the properties correspond to the logical range of
+records [s, e). No entries in the range index have overlapping logical ranges and all entries are
+ordered by logical range. The "f" object contains the properties associated with an ingestion unit.
+::::
+
+Note that properties created and used by clp-s are always prefixed with the "_" character. To avoid
+naming collisions with properties created by clp-s users should avoid creating properties with this
+prefix.
+
 ## Files section
 
 ### Merged parse tree
