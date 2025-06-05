@@ -1,4 +1,4 @@
-set(ANTLR_GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/antlr_generated)
+set(ANTLR_GENERATED_SOURCE_DIR antlr_generated)
 
 set(ANTLR_GENERATED_SOURCES
 		${ANTLR_GENERATED_SOURCE_DIR}/KqlBaseVisitor.cpp
@@ -14,9 +14,9 @@ set(ANTLR_GENERATED_SOURCES
 add_library(
         clp_s_search_kql
 		${ANTLR_GENERATED_SOURCES}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../antlr_common/ErrorListener.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/kql.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/kql.hpp
+        ../antlr_common/ErrorListener.hpp
+        kql.cpp
+        kql.hpp
 )
 add_library(clp_s::search::kql ALIAS clp_s_search_kql)
 target_compile_features(clp_s_search_kql PRIVATE cxx_std_20)

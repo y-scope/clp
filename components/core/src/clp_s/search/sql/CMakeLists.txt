@@ -1,4 +1,4 @@
-set(ANTLR_GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/antlr_generated)
+set(ANTLR_GENERATED_SOURCE_DIR antlr_generated)
 
 set(ANTLR_GENERATED_SOURCES
 		${ANTLR_GENERATED_SOURCE_DIR}/SqlBaseVisitor.cpp
@@ -14,9 +14,9 @@ set(ANTLR_GENERATED_SOURCES
 add_library(
         clp_s_search_sql
 		${ANTLR_GENERATED_SOURCES}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../antlr_common/ErrorListener.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/sql.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/sql.hpp
+        ../antlr_common/ErrorListener.hpp
+        sql.cpp
+        sql.hpp
 )
 add_library(clp_s::search::sql ALIAS clp_s_search_sql)
 target_compile_features(clp_s_search_sql PRIVATE cxx_std_20)
