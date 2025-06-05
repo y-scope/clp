@@ -120,3 +120,9 @@ If you need to stop CLP, run the command
 ```bash
 sbin/stop-clp.sh
 ```
+
+---
+
+## More information
+
+You've reached the end of the clp-text quick start guide. For more information on clp-text, visit the [CLP for unstructured logs](../../core/core-unstructured/index) page.

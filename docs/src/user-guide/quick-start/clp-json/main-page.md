@@ -140,3 +140,9 @@ If you need to stop CLP, run the command
 ```bash
 sbin/stop-clp.sh
 ```
+
+---
+
+## More information
+
+You've reached the end of the clp-json quick start guide. For more information on clp-json, visit the [CLP for JSON logs](../../core/core-clp-s) page.
