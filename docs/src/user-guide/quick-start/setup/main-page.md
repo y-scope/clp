@@ -16,7 +16,7 @@ CLP uses Docker to deploy its different components. You can check whether Docker
 docker version
 ```
 
-If Docker is not on your system, follow the instructions [here][Docker] to install it. 
+If Docker is not on your system, follow the instructions [here][Docker] to install it.
 
 If you're not running as root, ensure Docker can be run [without superuser privileges][docker-non-root].
 
@@ -24,7 +24,7 @@ If you're using Docker Desktop, ensure version 4.34 or higher is installed, and 
 
 ### Python
 
-CLP uses Python to interpret the scripts that coordinate how it runs. Specifically, CLP needs Python version 3.8 or higher. Many Linux distributions come with Python pre-installed, but just to be sure, run the command
+CLP uses Python to interpret the scripts that coordinate how it runs. Specifically, CLP needs Python version 3.8 or higher. Many Linux distributions come with Python pre-installed; to confirm that it's on your system, run the command
 
 ```bash
 python3 --version
@@ -33,7 +33,7 @@ python3 --version
 If Python isn't on your system, or if the version isn't high enough, install or upgrade it.
 
 :::{note}
-If you're planning on deploying CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../../guides/guides-multi-node/multi-node) page for more details.
+If you're planning to deploy CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../../guides/guides-multi-node/multi-node) page for more details.
 :::
 
 ---
@@ -52,7 +52,7 @@ Both flavours contain the same binaries but are configured with different values
 
 ### clp-json
 
-The JSON flavour of CLP is appropriate for JSON logs where each log event is an independent JSON
+The JSON flavour of CLP is appropriate for JSON logs, where each log event is an independent JSON
 object. For example:
 
 ```json lines
@@ -89,7 +89,7 @@ Learn how to start up clp-json, and begin compressing and searching JSON logs.
 
 ### clp-text
 
-The unstructured text flavour of CLP is appropriate for unstructured text logs where each log event contains a
+The unstructured text flavour of CLP is appropriate for unstructured text logs, where each log event contains a
 timestamp and may span one or more lines.
 
 :::{note}
@@ -99,7 +99,7 @@ it will treat each line as an independent log event.
 
 For example:
 
-```
+```text
 2015-03-23T15:50:17.926Z INFO container_1 Transitioned from ALLOCATED to ACQUIRED
 2015-03-23T15:50:17.927Z ERROR Scheduler: Error trying to assign container token
 java.lang.IllegalArgumentException: java.net.UnknownHostException: i-e5d112ea
