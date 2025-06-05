@@ -85,6 +85,7 @@ You can find our docs [online][clp-docs] or view the source in `docs/src`.
 You can use GitHub issues to [report a bug][bug-report] or [request a feature][feature-req].
 
 # Community
+
 Need help? Join us on one of our community servers:
 
 * [![Discord][badge-discord]][yscope-community-discord]
