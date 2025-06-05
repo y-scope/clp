@@ -153,6 +153,7 @@ tasks:
       - task: "yscope-dev-utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
+          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
       - task: "yscope-dev-utils:cmake:install"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
