@@ -37,7 +37,7 @@ Compressed logs will be stored in the `/var/bin/archives` directory.
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../../resources/resources-datasets).
+For some sample logs, check out the open-source [datasets](../../resources-datasets).
 
 ### Examining compression statistics
 
@@ -62,7 +62,7 @@ a*b?c
 
 would return all logs that contain the character `"a"` followed by any number (including zero) of other characters, followed by `"b"`, followed by one other character, followed by `"c"`.
 
-There are a number of other syntax rules specific to unstructured text queries that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference/reference-text-search-syntax).
+There are a number of other syntax rules specific to unstructured text queries that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference-text-search-syntax).
 
 ### Searching from the command line
 
@@ -125,4 +125,4 @@ sbin/stop-clp.sh
 
 ## More information
 
-You've reached the end of the clp-text quick-start guide. For more information on clp-text, visit the [CLP for unstructured logs](../../core/core-unstructured/index) page.
+You've reached the end of the clp-text quick-start guide. For more information on clp-text, visit the [CLP for unstructured logs](../../core-unstructured/index) page.

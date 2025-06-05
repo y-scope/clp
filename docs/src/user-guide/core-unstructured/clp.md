@@ -17,7 +17,7 @@ Usage:
   * You can use the same directory repeatedly and `clp` will add to the compressed logs within.
 * `input-path` is any plain-text log file or directory containing such files.
 * `options` allow you to specify things like a path to a custom
-  [schema](../../reference/reference-unstructured-schema-file) file (`--schema-path <file-path>`).
+  [schema](../reference-unstructured-schema-file) file (`--schema-path <file-path>`).
   * For a complete list, run `./clp c --help`
 
 ### Examples

@@ -78,7 +78,7 @@ Usage:
 ```
 
 * `archives-dir` is a directory containing archives.
-* `kql-query` is a [KQL](../reference/reference-json-search-syntax) query.
+* `kql-query` is a [KQL](reference-json-search-syntax) query.
 * `options` allow you to specify things like a specific archive (from within `archives-dir`) to
   search (`--archive-id <archive-id>`).
   * For a complete list, run `./clp-s s --help`
@@ -124,4 +124,4 @@ compressed data:**
 * The input directory structure is not preserved and during decompression all files are written to
   the same file.
 * In addition, there are a few limitations, related to querying arrays, described in the search
-  syntax [reference](../reference/reference-json-search-syntax).
+  syntax [reference](reference-json-search-syntax).

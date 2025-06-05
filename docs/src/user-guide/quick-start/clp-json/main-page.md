@@ -55,7 +55,7 @@ To compress logs from object storage, see
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../../resources/resources-datasets).
+For some sample logs, check out the open-source [datasets](../../resources-datasets).
 
 ### Examining compression statistics
 
@@ -82,7 +82,7 @@ where `key` is the name of the JSON key you'd like to search within, and `value`
 key1: value1 AND key2: value2 OR key3: value3 ...
 ```
 
-There are a number of other JSON-specific syntax rules that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference/reference-json-search-syntax).
+There are a number of other JSON-specific syntax rules that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference-json-search-syntax).
 
 ### Searching from the command line
 
@@ -145,4 +145,4 @@ sbin/stop-clp.sh
 
 ## More information
 
-You've reached the end of the clp-json quick-start guide. For more information on clp-json, visit the [CLP for JSON logs](../../core/core-clp-s) page.
+You've reached the end of the clp-json quick-start guide. For more information on clp-json, visit the [CLP for JSON logs](../../core-clp-s) page.
