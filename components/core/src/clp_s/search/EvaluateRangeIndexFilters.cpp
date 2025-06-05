@@ -1,4 +1,4 @@
-#include "EvaluateMetadataFilters.hpp"
+#include "EvaluateRangeIndexFilters.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -55,7 +55,7 @@ auto get_encoded_text_ast(std::string_view text)
 }
 }  // namespace
 
-auto EvaluateMetadataFilters::run(std::shared_ptr<ast::Expression>& expr)
+auto EvaluateRangeIndexFilters::run(std::shared_ptr<ast::Expression>& expr)
         -> std::shared_ptr<ast::Expression> {
     bool must_renormalize{false};
     std::vector<std::pair<ast::Expression*, std::optional<ast::OpList::iterator>>> work_list;
@@ -86,7 +86,7 @@ auto EvaluateMetadataFilters::run(std::shared_ptr<ast::Expression>& expr)
     return expr;
 }
 
-void EvaluateMetadataFilters::evaluate_and_rewrite_filter(
+void EvaluateRangeIndexFilters::evaluate_and_rewrite_filter(
         ast::FilterExpr* filter_expr,
         std::optional<ast::OpList::iterator> parent_it,
         std::shared_ptr<ast::Expression>& ast_root
@@ -153,7 +153,7 @@ void EvaluateMetadataFilters::evaluate_and_rewrite_filter(
     }
 }
 
-auto EvaluateMetadataFilters::evaluate_filter(
+auto EvaluateRangeIndexFilters::evaluate_filter(
         ast::FilterExpr* filter_expr,
         nlohmann::json const& fields
 ) const -> bool {

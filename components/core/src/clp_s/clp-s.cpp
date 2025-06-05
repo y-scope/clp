@@ -30,7 +30,7 @@
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
-#include "search/EvaluateMetadataFilters.hpp"
+#include "search/EvaluateRangeIndexFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
 #include "search/kql/kql.hpp"
 #include "search/Output.hpp"
@@ -173,7 +173,7 @@ bool search_archive(
         return false;
     }
 
-    EvaluateMetadataFilters metadata_filter_pass{
+    EvaluateRangeIndexFilters metadata_filter_pass{
             archive_reader->get_range_index(),
             false == command_line_arguments.get_ignore_case()
     };

@@ -26,7 +26,7 @@
 #include "../src/clp_s/search/ast/NarrowTypes.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/OrOfAndForm.hpp"
-#include "../src/clp_s/search/EvaluateMetadataFilters.hpp"
+#include "../src/clp_s/search/EvaluateRangeIndexFilters.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/Output.hpp"
@@ -160,7 +160,7 @@ void search(
 
         auto archive_expr = expr->copy();
 
-        clp_s::search::EvaluateMetadataFilters metadata_filter_pass{
+        clp_s::search::EvaluateRangeIndexFilters metadata_filter_pass{
                 archive_reader->get_range_index(),
                 false == ignore_case
         };

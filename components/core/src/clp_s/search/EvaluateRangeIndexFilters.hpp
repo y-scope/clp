@@ -1,5 +1,5 @@
-#ifndef CLP_S_SEARCH_EVALUATEMETADATAFILTERS_HPP
-#define CLP_S_SEARCH_EVALUATEMETADATAFILTERS_HPP
+#ifndef CLP_S_SEARCH_EVALUATE_RANGE_INDEX_FILTERS_HPP
+#define CLP_S_SEARCH_EVALUATE_RANGE_INDEX_FILTERS_HPP
 
 #include <memory>
 #include <optional>
@@ -18,9 +18,9 @@ namespace clp_s::search {
  * filters against the "log_event_idx" column in the metadata subtree of the MPT. Filters that do
  * not match any part of the metadata range index are replaced with `EmptyExpr`.
  */
-class EvaluateMetadataFilters : public ast::Transformation {
+class EvaluateRangeIndexFilters : public ast::Transformation {
 public:
-    explicit EvaluateMetadataFilters(
+    explicit EvaluateRangeIndexFilters(
             std::vector<clp_s::RangeIndexEntry> const& range_index,
             bool case_sensitive_match
     )
@@ -55,4 +55,4 @@ private:
     bool m_case_sensitive_match{false};
 };
 }  // namespace clp_s::search
-#endif  // CLP_S_SEARCH_EVALUATEMETADATAFILTERS_HPP
+#endif  // CLP_S_SEARCH_EVALUATE_RANGE_INDEX_FILTERS_HPP

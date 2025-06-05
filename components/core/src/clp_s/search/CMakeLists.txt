@@ -15,8 +15,8 @@ set(
         clp_search/Grep.hpp
         clp_search/Query.cpp
         clp_search/Query.hpp
-        EvaluateMetadataFilters.cpp
-        EvaluateMetadataFilters.hpp
+        EvaluateRangeIndexFilters.cpp
+        EvaluateRangeIndexFilters.hpp
         EvaluateTimestampIndex.cpp
         EvaluateTimestampIndex.hpp
         Output.cpp
