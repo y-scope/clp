@@ -67,6 +67,7 @@ tasks:
           FILE_SHA256: "{{.TARBALL_SHA256}}"
           GEN_ARGS:
             ref: ".CMAKE_GEN_ARGS"
+          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
           NAME: "{{.LIB_NAME}}"
           URL: "{{.TARBALL_URL}}"
           WORK_DIR: "{{.G_DEPS_CORE_DIR}}"

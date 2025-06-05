@@ -179,7 +179,7 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            task deps:core
+            CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
             && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
             ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
             --source-dir /mnt/repo/components/core
@@ -222,7 +222,7 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            task deps:core
+            CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
             && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
             ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
             --source-dir /mnt/repo/components/core
@@ -358,7 +358,9 @@ jobs:
           # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
           # run_command: >-
           #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
-          run_command: "task lint:check-cpp-full"
+          run_command: >-
+            CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            task lint:check-cpp-full
 
       # Cache the source file checksums and the generated files (logs) for the
       # lint:check-cpp-static-full task, but only if it runs successfully on the main branch.
