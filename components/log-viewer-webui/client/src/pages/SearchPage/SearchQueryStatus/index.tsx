@@ -22,13 +22,17 @@ const SearchQueryStatus = () => {
     return (
         <div className={styles["status"]}>
             {(searchUiState === SEARCH_UI_STATE.QUERYING ||
-              searchUiState === SEARCH_UI_STATE.DONE) && (
-                <Text type="secondary">
-                    Search job #{searchJobId} found{" "}
+                searchUiState === SEARCH_UI_STATE.DONE) && (
+                <Text type={"secondary"}>
+                    Search job #
+                    {searchJobId}
+                    {" "}
+                    found
+                    {" "}
                 </Text>
             )}
             <Results/>
-            <Text type="secondary"> results</Text>
+            <Text type={"secondary"}> results</Text>
         </div>
     );
 };
