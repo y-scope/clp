@@ -70,24 +70,6 @@ version numbers respectively. For version 0.X.Y archives every minor version cha
 readers designed for a given minor version are only sometimes backwards compatible in order to
 reduce maintenance while the archive format stabilizes.
 
-The compressed archive size is the total size of an archive (including the size of the header). The
-original uncompressed size field indicates the total size of the data that was compressed into an
-archive. The interpretation of "original uncompressed size" changes somewhat based on what data was
-ingested into an archive. For example, when ingesting ndjson the field records the number of bytes
-of raw JSON data ingested into an archive and when ingesting KV-IR streams the field records the
-number of decompressed bytes of KV-IR ingested into an archive (since KV-IR streams are typically
-compressed by a general purposed compressor before being stored).
-
-The metadata section size field indicates the _compressed_ size of the metadata section in bytes.
-This field can be used in combination with the uncompressed size field and known header size to
-determine the size and offset both the "metadata" and "files" sections.
-
-The compression type for an archive indicates the general purpose compressor used to compress each
-section of the archive and is currently one of:
-* `0x0000` - ZStandard
-
-All "reserved padding" is reserved for use in future versions of the single-file archive format.
-
 (figure-2)=
 ::::{card}
 :::{mermaid}
@@ -123,6 +105,24 @@ packet-beta
 +++
 **Figure 2**: Layout of the 64-byte archive header.
 ::::
+
+The compressed archive size is the total size of an archive (including the size of the header). The
+original uncompressed size field indicates the total size of the data that was compressed into an
+archive. The interpretation of "original uncompressed size" changes somewhat based on what data was
+ingested into an archive. For example, when ingesting ndjson the field records the number of bytes
+of raw JSON data ingested into an archive and when ingesting KV-IR streams the field records the
+number of decompressed bytes of KV-IR ingested into an archive (since KV-IR streams are typically
+compressed by a general purposed compressor before being stored).
+
+The metadata section size field indicates the _compressed_ size of the metadata section in bytes.
+This field can be used in combination with the uncompressed size field and known header size to
+determine the size and offset both the "metadata" and "files" sections.
+
+The compression type for an archive indicates the general purpose compressor used to compress each
+section of the archive and is currently one of:
+* `0x0000` - ZStandard
+
+All "reserved padding" is reserved for use in future versions of the single-file archive format.
 
 ## Metadata section
 
