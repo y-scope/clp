@@ -1,3 +1,5 @@
+import {message} from "antd";
+
 import {
     cancelQuery,
     clearQueryResults,
@@ -5,11 +7,13 @@ import {
     QueryJobSchema,
     submitQuery,
 } from "../../../api/search";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../config";
 import useSearchStore from "../SearchState/index";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
-import {CLP_STORAGE_ENGINES, SETTINGS_STORAGE_ENGINE} from "../../../config";
-import { unquoteString } from "./utils";
-import { message } from "antd";
+import {unquoteString} from "./utils";
 
 
 /**
@@ -68,10 +72,14 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
             payload.queryString = unquoteString(payload.queryString, '"', "\\");
             if ("" === payload.queryString) {
                 message.error("Query string cannot be empty.");
+
                 return;
             }
         } catch (e: unknown) {
-            message.error(`Error processing query string: ${e instanceof Error ? e.message : String(e)}`);
+            message.error(`Error processing query string: ${e instanceof Error ?
+                e.message :
+                String(e)}`);
+
             return;
         }
     }

@@ -47,7 +47,7 @@ const unquoteString = (
     // Ensure any unescaped quotes are only at the beginning and end of the string
     let foundBeginQuote = false;
     let foundEndQuote = false;
-    positionOfCharsToRemove.forEach((pos) => {
+    for (const pos of positionOfCharsToRemove) {
         const char = chars[pos];
         if (quoteChar === char) {
             if (0 === pos) {
@@ -58,7 +58,7 @@ const unquoteString = (
                 throw new Error(`Found unescaped quote character (${quoteChar}) within.`);
             }
         }
-    });
+    }
     if (foundBeginQuote !== foundEndQuote) {
         throw new Error("Begin/end quote is missing.");
     }
