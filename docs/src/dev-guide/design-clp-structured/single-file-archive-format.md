@@ -2,12 +2,11 @@
 
 The clp-s single-file archive format is designed to offer high compression and fast search on
 dynamically structured log data such as JSON logs. This format is optimized for streaming reads in
-order to offer high decompression and search performance for archives stored on object storage
-systems such as S3.
+order to enable high performance for archives stored on object storage systems such as S3.
 
 This documentation records the details of the single-file archive v0.3.1 format and what it enables
 with only minimal discussion of design rationale --- for more information about the design decisions
-behind clp-s please refer to [our paper on clp-s][μSlope] or our [blog][s3-blog] on optimizing
+behind clp-s, please refer to [our paper on clp-s][μSlope], or our [blog][s3-blog] on optimizing
 clp-s for object storage.
 
 ## Format overview
@@ -67,8 +66,8 @@ most important metadata information about an archive as shown in [Figure 2](#fig
 begins with a 4-byte magic number which identifies the file as an archive. The magic number is
 followed by a 4-byte version number made up of a 2-byte patch version and 1-byte minor and major 
 version numbers respectively. For version 0.X.Y archives every minor version change is breaking and
-readers designed for a given minor version are only sometimes backwards compatible in order to
-reduce maintenance while the archive format stabilizes.
+readers designed for a given minor version are only sometimes backwards compatible to reduce
+maintenance while the archive format stabilizes.
 
 (figure-2)=
 ::::{card}
@@ -212,7 +211,7 @@ each file in the files section ordered by their offset. Each file is described b
 offset into the files section "o".
 ::::
 
-The ArchiveFileInfo packet has entries entries with the following names in order:
+The ArchiveFileInfo packet has entries with the following names in order:
 * `"/schema_tree"` - the Merged Parse Tree
 * `"/schema_ids"` - the Schema Map
 * `"/table_metadata"` - metadata describing the contents of the tables segments
@@ -273,8 +272,7 @@ instance of "TimestampDictionary".
 The key name in each TimestampRange follows the same
 [escaping rules](../../user-guide/reference-json-search-syntax.md) we use for key names in kql
 search. Note that we allow each key to map to multiple MPT nodes and have its range recorded as
-either integer epoch time or double epoch time in order to handle timestamp columns with polymorphic
-types.
+either integer epoch time or double epoch time to handle timestamp columns with polymorphic types.
 
 The pattern in each TimestampPattern entry is a format string that follows the specification from
 the `clp_s::TimestampPattern` class. The associated pattern_id can be used to uniquely identify each
