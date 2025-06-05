@@ -62,7 +62,6 @@ tasks:
       - task: "fmt"
       - task: "log-surgeon"
       - task: "nlohmann_json"
-      - task: "outcome"
       - task: "simdjson"
       - task: "spdlog"
       - task: "sqlite3"
@@ -190,40 +189,6 @@ tasks:
           # release tarball, since the latter is served from githubusercontent.com which is blocked
           # by some developers' firewalls. The contents of the former are a superset of the latter.
           TARBALL_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz"
-
-  outcome:
-    internal: true
-    vars:
-      LIB_NAME: "outcome"
-
-      # Paths
-      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/include"
-      INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
-      SRC_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
-    run: "once"
-    deps:
-      - task: "utils:init"
-    cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "14e15bda4e7c26ee42b0329d7ff746235f67bda084305c9d61297e9a521deb18"
-          INCLUDE_PATTERNS:
-            - "*/single-header"
-          OUTPUT_DIR: "{{.SRC_DIR}}"
-
-          # NOTE: We use the GitHub-generated source tarball for this version rather than the
-          # release tarball, since the latter is served from githubusercontent.com which is blocked
-          # by some developers' firewalls. The source files we use are identical between the two
-          # tarballs.
-          URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.12.tar.gz"
-      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
-      - "rm -f '{{.INSTALL_SYMLINK}}'"
-      - "ln -s '{{.SRC_DIR}}/single-header' '{{.INSTALL_SYMLINK}}'"
-      - >-
-        echo "set(
-        CLP_OUTCOME_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   simdjson:
     internal: true
