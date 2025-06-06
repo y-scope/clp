@@ -4,9 +4,8 @@ import {Typography} from "antd";
 
 import LogViewerLink from "./LogViewerLink";
 import {highlighterCustomStyles} from "./utils";
-
-import "highlight.js/styles/intellij-light.css";
-
+import { CLP_STORAGE_ENGINES, SETTINGS_STORAGE_ENGINE } from "../.././../../../config";
+import { qtcreatorLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 const {Text} = Typography;
 
@@ -39,8 +38,12 @@ const Message = ({
             <Text>
                 <SyntaxHighlighter
                     customStyle={highlighterCustomStyles}
-                    language={"armasm"}
-                    useInlineStyles={false}
+                    language={
+                        CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE
+                            ? "json"
+                            : "armasm"
+                    }
+                    style={qtcreatorLight}
                     wrapLongLines={true}
                 >
                     {message}
