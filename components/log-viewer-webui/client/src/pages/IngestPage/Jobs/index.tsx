@@ -4,10 +4,10 @@ import {
     useState,
 } from "react";
 
-import {Table} from "antd";
 import dayjs from "dayjs";
 
 import {DashboardCard} from "../../../components/DashboardCard";
+import VirtualTable from "../../../components/VirtualTable";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import styles from "./index.module.css";
@@ -85,11 +85,12 @@ const Jobs = ({className}: JobsProps) => {
     return (
         <div className={className}>
             <DashboardCard title={"Ingestion Jobs"}>
-                <Table<JobData>
+                <VirtualTable<JobData>
                     className={styles["jobs"] || ""}
                     columns={jobColumns}
                     dataSource={jobs}
-                    pagination={false}/>
+                    pagination={false}
+                    scroll={{y: 400}}/>
             </DashboardCard>
         </div>
     );
