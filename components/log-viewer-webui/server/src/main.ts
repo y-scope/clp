@@ -8,7 +8,6 @@ import serviceApp from "./fastify-v2/app.js";
 
 
 const DEFAULT_FASTIFY_CLOSE_GRACE_DELAY = 500;
-const DEFAULT_PORT = 3000;
 
 /**
  * Generates logger configuration options based on the environment.
@@ -59,7 +58,7 @@ const init = async (): Promise<void> => {
     await app.ready();
 
     try {
-        await app.listen({port: Number(process.env.PORT || DEFAULT_PORT)});
+        await app.listen({host: app.config.HOST, port: app.config.PORT});
     } catch (err) {
         app.log.error(err);
         process.exit(1);
