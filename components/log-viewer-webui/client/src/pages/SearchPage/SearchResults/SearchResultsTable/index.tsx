@@ -3,16 +3,15 @@ import {
     useRef,
     useState,
 } from "react";
+import VirtualTable from "../../../../components/VirtualTable";
 
-import {Table} from "antd";
-
+import useSearchStore from "../../SearchState/index";
 import {
     SearchResult,
     searchResultsTableColumns,
     TABLE_BOTTOM_PADDING,
 } from "./typings";
-import {useSearchResults} from "./useSearchResults";
-
+import { useSearchResults } from "./useSearchResults";
 
 /**
  * Renders search results in a table.
@@ -20,16 +19,21 @@ import {useSearchResults} from "./useSearchResults";
  * @return
  */
 const SearchResultsTable = () => {
+    const { updateNumSearchResultsTable } = useSearchStore();
     const searchResults = useSearchResults();
     const [tableHeight, setTableHeight] = useState<number>(0);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const tableRef = useRef<any>(null);
 
-    // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
-    // based on the window height, container top, and fixed padding.
+    useEffect(() => {
+        const num = searchResults ? searchResults.length : 0;
+        updateNumSearchResultsTable(num);
+    }, [searchResults, updateNumSearchResultsTable]);
+
     useEffect(() => {
         const updateHeight = () => {
-            if (containerRef.current) {
-                const {top} = containerRef.current.getBoundingClientRect();
+            if (tableRef.current?.nativeElement) {
+                const tableElement = tableRef.current.nativeElement;
+                const { top } = tableElement.getBoundingClientRect();
                 const availableHeight = window.innerHeight - top - TABLE_BOTTOM_PADDING;
                 setTableHeight(availableHeight);
             }
@@ -44,17 +48,14 @@ const SearchResultsTable = () => {
     }, []);
 
     return (
-        <div ref={containerRef}>
-            <Table<SearchResult>
-                columns={searchResultsTableColumns}
-                pagination={false}
-                rowKey={(record) => record._id.toString()}
-                scroll={{y: tableHeight}}
-                virtual={true}
-                dataSource={searchResults ?
-                    searchResults :
-                    []}/>
-        </div>
+        <VirtualTable<SearchResult>
+            ref={tableRef}
+            columns={searchResultsTableColumns}
+            rowKey={(record) => record._id.toString()}
+            scrollY={tableHeight}
+            dataSource={searchResults || []}
+            pagination={false}
+        />
     );
 };
 
