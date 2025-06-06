@@ -171,6 +171,7 @@ target_link_libraries(clo
         ${STD_FS_LIBS}
         clp::string_utils
         ystdlib::containers
+        ystdlib::error_handling
         ZStd::ZStd
 )
 # Put the built executable at the root of the build directory

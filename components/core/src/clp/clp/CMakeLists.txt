@@ -185,6 +185,7 @@ target_link_libraries(clp
         ${STD_FS_LIBS}
         clp::string_utils
         yaml-cpp
+        ystdlib::error_handling
         ystdlib::containers
         ZStd::ZStd
 )
