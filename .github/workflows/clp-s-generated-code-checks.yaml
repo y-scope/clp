@@ -1,4 +1,4 @@
-name: "clp-s-generated-code-committed-check"
+name: "clp-s-generated-code-checks"
 
 on:
   pull_request:
@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  antlr-generated-code-committed-check:
-    name: "antlr-generated-code-committed-check"
+  antlr-code-committed::
+    name: "antlr-code-committed"
     strategy:
       matrix:
         os: ["macos-latest", "ubuntu-latest"]

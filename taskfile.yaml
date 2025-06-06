@@ -91,44 +91,6 @@ tasks:
           FLAVOUR: "text"
           STORAGE_ENGINE: "clp"
 
-  clp-s-generate-parsers:
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR:
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated"
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated"
-    deps:
-      - "deps:antlr-jar"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    generates: ["{{.CHECKSUM_FILE}}"]
-    sources:
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
-    dir: "{{.G_CORE_COMPONENT_DIR}}/src/"
-    cmds:
-      - for: ["kql", "sql"]
-        cmd: |-
-          rm -rf "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated/*" \
-          && java -jar {{.G_ANTLR_JAR_FILE}} \
-            -Dlanguage=Cpp \
-            -no-listener \
-            -visitor \
-            -package clp_s::search::{{.ITEM}}::generated \
-            -o clp_s/search/{{.ITEM}}/generated \
-            -Xexact-output-dir \
-            clp_s/search/{{.ITEM}}/*.g4 \
-            && find "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated" \
-              -type f -and -not \( -name "*.cpp" -o -name "*.h" \) \
-              -exec rm {} \;
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
   package:
     env:
       NODE_ENV: "production"
@@ -219,6 +181,47 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  clp-s-generate-parsers:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIRS:
+        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated"
+        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated"
+    deps:
+      - "deps:antlr-jar"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            ref: ".OUTPUT_DIRS"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    sources:
+      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
+    dir: "{{.G_CORE_COMPONENT_DIR}}/src/"
+    cmds:
+      - for: ["kql", "sql"]
+        cmd: |-
+          rm -rf "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated/"* \
+          && java -jar {{.G_ANTLR_JAR_FILE}} \
+            -Dlanguage=Cpp \
+            -no-listener \
+            -visitor \
+            -package clp_s::search::{{.ITEM}}::generated \
+            -o clp_s/search/{{.ITEM}}/generated \
+            -Xexact-output-dir \
+            clp_s/search/{{.ITEM}}/*.g4 \
+            && find "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated" \
+              -type f -and -not \( -name "*.cpp" -o -name "*.h" \) \
+              -exec rm {} \;
+
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            ref: ".OUTPUT_DIRS"
 
   core:
     cmds:
