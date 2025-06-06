@@ -26,7 +26,6 @@
 #include "KqlParser.h"
 
 using namespace antlr4;
-using namespace kql;
 using clp_s::search::antlr_common::ErrorListener;
 
 using clp_s::search::ast::AndExpr;
@@ -45,6 +44,10 @@ using clp_s::search::ast::OrExpr;
 using clp_s::search::ast::StringLiteral;
 
 namespace clp_s::search::kql {
+using generated::KqlBaseVisitor;
+using generated::KqlLexer;
+using generated::KqlParser;
+
 namespace {
 class ParseTreeVisitor : public KqlBaseVisitor {
 private:

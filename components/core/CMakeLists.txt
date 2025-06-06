@@ -119,12 +119,9 @@ if (absl_FOUND)
 endif()
 
 # Find and setup ANTLR Library
-# We build and link to the static library
-find_package(ANTLR REQUIRED)
-if (ANTLR_FOUND)
-    message(STATUS "Found ANTLR ${ANTLR_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+find_package(antlr4-runtime REQUIRED)
+if (antlr4-runtime_FOUND)
+    message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
 endif()
 
 # Find and setup Boost Library
