@@ -1,11 +1,15 @@
 import SyntaxHighlighter from "react-syntax-highlighter";
+import {qtcreatorLight} from "react-syntax-highlighter/dist/esm/styles/hljs";
 
 import {Typography} from "antd";
 
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../.././../../../config";
 import LogViewerLink from "./LogViewerLink";
 import {highlighterCustomStyles} from "./utils";
-import { CLP_STORAGE_ENGINES, SETTINGS_STORAGE_ENGINE } from "../.././../../../config";
-import { qtcreatorLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+
 
 const {Text} = Typography;
 
@@ -38,13 +42,13 @@ const Message = ({
             <Text>
                 <SyntaxHighlighter
                     customStyle={highlighterCustomStyles}
-                    language={
-                        CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE
-                            ? "json"
-                            : "armasm"
-                    }
                     style={qtcreatorLight}
                     wrapLongLines={true}
+                    language={
+                        CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ?
+                            "json" :
+                            "armasm"
+                    }
                 >
                     {message}
                 </SyntaxHighlighter>
