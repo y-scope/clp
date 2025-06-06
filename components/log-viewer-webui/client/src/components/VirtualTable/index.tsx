@@ -3,27 +3,14 @@ import React, {
     useRef,
 } from "react";
 
+import {Table} from "antd";
+
 import {
-    Table,
-    type TableProps,
-} from "antd";
+    SCROLL_INCREMENT,
+    VIRTUAL_TABLE_HOLDER_SELECTOR,
+    type VirtualTableProps,
+} from "./typings";
 
-
-/**
- * Amount of pixels to scroll when using keyboard navigation.
- */
-const SCROLL_INCREMENT = 32;
-
-/**
- * CSS selector for the virtual table body element.
- */
-const VIRTUAL_TABLE_HOLDER_SELECTOR = ".ant-table-tbody-virtual-holder";
-
-/**
- * Antd Table props with virtual omitted since set by VirtualTable.
- */
-type VirtualTableProps<RecordType> = Omit<TableProps<RecordType>, "virtual"> & {
-};
 
 /**
  * Virtual table that supports keyboard navigation.
@@ -86,9 +73,9 @@ const VirtualTable = <RecordType extends object = Record<string, unknown>>({
     return (
         <div
             ref={containerRef}
+            style={{outline: "none"}}
             tabIndex={0}
             onKeyDown={handleKeyDown}
-            style={{outline: "none"}}
         >
             <Table<RecordType>
                 virtual={true}

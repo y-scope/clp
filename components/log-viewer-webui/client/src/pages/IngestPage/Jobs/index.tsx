@@ -7,7 +7,7 @@ import {
 import dayjs from "dayjs";
 
 import {DashboardCard} from "../../../components/DashboardCard";
-import VirtualTable from "../../../components/VirtualTable";
+import {VirtualTable} from "../../../components/VirtualTable";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import styles from "./index.module.css";
