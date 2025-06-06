@@ -238,8 +238,8 @@ tasks:
       - "{{.TASKFILE}}"
       - "/etc/os-release"
     deps:
-      - "deps:core"
       - "clp-s-generate-parsers"
+      - "deps:core"
     cmds:
       - task: "utils:cmake:generate"
         vars:
