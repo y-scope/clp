@@ -111,10 +111,6 @@ tasks:
           FILE_SHA256: "eae2dfa119a64327444672aff63e9ec35a20180dc5b8090b7a6ab85125df4d76"
           OUTPUT_FILE: "{{.OUTPUT_FILE}}"
           URL: "https://www.antlr.org/download/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
-      - >-
-        echo "set(
-        ANTLR_EXECUTABLE \"{{.OUTPUT_FILE}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.DEP_NAME}}.cmake"
 
       # This command must be last
       - task: "yscope-dev-utils:checksum:compute"
