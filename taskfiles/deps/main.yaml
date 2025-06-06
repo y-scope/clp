@@ -92,10 +92,7 @@ tasks:
   antlr-jar:
     internal: true
     vars:
-      DEP_NAME: "antlr"
-
-      # Paths
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.DEP_NAME}}.md5"
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/antlr-jar.md5"
       OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
     run: "once"
     deps:
