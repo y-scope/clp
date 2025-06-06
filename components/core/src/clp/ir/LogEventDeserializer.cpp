@@ -3,8 +3,8 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
-#include <outcome/outcome.hpp>
 #include <string_utils/string_utils.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ffi/ir_stream/protocol_constants.hpp"
@@ -14,7 +14,7 @@
 namespace clp::ir {
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
+        -> ystdlib::error_handling::Result<LogEventDeserializer<encoded_variable_t>> {
     ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata;
     auto ir_error_code = ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata);
@@ -70,7 +70,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
 
 template <typename encoded_variable_t>
 auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
-        -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
+        -> ystdlib::error_handling::Result<LogEvent<encoded_variable_t>> {
     // Process any packets before the log event
     ffi::ir_stream::encoded_tag_t tag{};
     while (true) {
@@ -135,11 +135,11 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
 template auto LogEventDeserializer<eight_byte_encoded_variable_t>::create(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
+        -> ystdlib::error_handling::Result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::create(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
+        -> ystdlib::error_handling::Result<LogEventDeserializer<four_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event()
-        -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
+        -> ystdlib::error_handling::Result<LogEvent<eight_byte_encoded_variable_t>>;
 template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event()
-        -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
+        -> ystdlib::error_handling::Result<LogEvent<four_byte_encoded_variable_t>>;
 }  // namespace clp::ir

@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ErrorCode.hpp"
 #include "../../ir/types.hpp"
@@ -124,7 +124,7 @@ template <
 [[nodiscard]] auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
         ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
+) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>>;
 
 /**
  * @param ir_error_code
@@ -240,10 +240,10 @@ template <
 auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
         ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>> {
     auto size_dependent_deserialize_and_decode_schema_tree_node_id
             = [&reader]<SignedIntegerType encoded_node_id_t>()
-            -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+            -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>> {
         encoded_node_id_t encoded_node_id{};
         if (false == deserialize_int(reader, encoded_node_id)) {
             return std::errc::result_out_of_range;

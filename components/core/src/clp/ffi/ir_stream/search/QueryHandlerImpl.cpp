@@ -10,7 +10,7 @@
 #include <variant>
 #include <vector>
 
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../clp_s/archive_constants.hpp"
 #include "../../../../clp_s/search/ast/AndExpr.hpp"
@@ -49,7 +49,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
  * - ErrorCodeEnum::QueryTransformationPassFailed if any of the transformation pass failed.
  */
 [[nodiscard]] auto preprocess_query(std::shared_ptr<Expression> query)
-        -> outcome_v2::std_result<std::shared_ptr<Expression>>;
+        -> ystdlib::error_handling::Result<std::shared_ptr<Expression>>;
 
 /**
  * Creates column descriptors and column-to-original-key map from the given projections.
@@ -67,7 +67,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
 [[nodiscard]] auto create_projected_columns_and_projection_map(
         std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections
 )
-        -> outcome_v2::std_result<std::pair<
+        -> ystdlib::error_handling::Result<std::pair<
                 std::vector<std::shared_ptr<ColumnDescriptor>>,
                 QueryHandlerImpl::ProjectionMap>>;
 
@@ -88,7 +88,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
         std::shared_ptr<Expression> const& query,
         QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key
 )
-        -> outcome_v2::std_result<std::pair<
+        -> ystdlib::error_handling::Result<std::pair<
                 QueryHandlerImpl::PartialResolutionMap,
                 QueryHandlerImpl::PartialResolutionMap>>;
 
@@ -105,7 +105,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
         std::shared_ptr<Expression> const& root,
         QueryHandlerImpl::PartialResolutionMap& auto_gen_namespace_partial_resolutions,
         QueryHandlerImpl::PartialResolutionMap& user_gen_namespace_partial_resolutions
-) -> outcome_v2::std_result<void>;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * @param key_namespace
@@ -133,7 +133,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
         std::optional<Value> const& value,
         SchemaTree const& schema_tree,
         bool case_sensitive_match
-) -> outcome_v2::std_result<AstEvaluationResult>;
+) -> ystdlib::error_handling::Result<AstEvaluationResult>;
 
 /**
  * Evaluates a wildcard filter expression.
@@ -150,10 +150,10 @@ using clp_s::search::ast::literal_type_bitmask_t;
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         SchemaTree const& schema_tree,
         bool case_sensitive_match
-) -> outcome_v2::std_result<AstEvaluationResult>;
+) -> ystdlib::error_handling::Result<AstEvaluationResult>;
 
 auto preprocess_query(std::shared_ptr<Expression> query)
-        -> outcome_v2::std_result<std::shared_ptr<Expression>> {
+        -> ystdlib::error_handling::Result<std::shared_ptr<Expression>> {
     if (nullptr == query) {
         return query;
     }
@@ -184,7 +184,7 @@ auto preprocess_query(std::shared_ptr<Expression> query)
 auto create_projected_columns_and_projection_map(
         std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections
 )
-        -> outcome_v2::std_result<std::pair<
+        -> ystdlib::error_handling::Result<std::pair<
                 std::vector<std::shared_ptr<ColumnDescriptor>>,
                 QueryHandlerImpl::ProjectionMap>> {
     std::unordered_set<std::string_view> unique_projected_columns;
@@ -234,7 +234,7 @@ auto create_initial_partial_resolutions(
         std::shared_ptr<Expression> const& query,
         QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key
 )
-        -> outcome_v2::std_result<std::pair<
+        -> ystdlib::error_handling::Result<std::pair<
                 QueryHandlerImpl::PartialResolutionMap,
                 QueryHandlerImpl::PartialResolutionMap>> {
     QueryHandlerImpl::PartialResolutionMap auto_gen_namespace_partial_resolutions;
@@ -253,12 +253,12 @@ auto create_initial_partial_resolutions(
                 SchemaTree::cRootId,
                 std::vector<QueryHandlerImpl::ColumnDescriptorTokenIterator>{}
         );
-        it->second.emplace_back(
-                OUTCOME_TRYX(QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col))
-        );
+        it->second.emplace_back(YSTDLIB_ERROR_HANDLING_TRYX(
+                QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col)
+        ));
     }
 
-    OUTCOME_TRYV(initialize_partial_resolution_from_search_ast(
+    YSTDLIB_ERROR_HANDLING_TRYV(initialize_partial_resolution_from_search_ast(
             query,
             auto_gen_namespace_partial_resolutions,
             user_gen_namespace_partial_resolutions
@@ -272,9 +272,9 @@ auto initialize_partial_resolution_from_search_ast(
         std::shared_ptr<Expression> const& root,
         QueryHandlerImpl::PartialResolutionMap& auto_gen_namespace_partial_resolutions,
         QueryHandlerImpl::PartialResolutionMap& user_gen_namespace_partial_resolutions
-) -> outcome_v2::std_result<void> {
+) -> ystdlib::error_handling::Result<void> {
     if (nullptr == root) {
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
 
     std::vector<Expression*> ast_dfs_stack;
@@ -320,17 +320,17 @@ auto initialize_partial_resolution_from_search_ast(
                 std::vector<QueryHandlerImpl::ColumnDescriptorTokenIterator>{}
         );
 
-        auto const begin_token_it{
-                OUTCOME_TRYX(QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col))
-        };
+        auto const begin_token_it{YSTDLIB_ERROR_HANDLING_TRYX(
+                QueryHandlerImpl::ColumnDescriptorTokenIterator::create(col)
+        )};
         it->second.emplace_back(begin_token_it);
         if (false == begin_token_it.is_last() && begin_token_it.is_wildcard()) {
             // To handle the case where the prefix wildcard matches nothing
-            it->second.emplace_back(OUTCOME_TRYX(begin_token_it.next()));
+            it->second.emplace_back(YSTDLIB_ERROR_HANDLING_TRYX(begin_token_it.next()));
         }
     }
 
-    return outcome_v2::success();
+    return ystdlib::error_handling::success();
 }
 
 auto is_auto_generated(std::string_view key_namespace) -> std::optional<bool> {
@@ -349,7 +349,7 @@ auto evaluate_filter_against_node_id_value_pair(
         std::optional<Value> const& value,
         SchemaTree const& schema_tree,
         bool case_sensitive_match
-) -> outcome_v2::std_result<AstEvaluationResult> {
+) -> ystdlib::error_handling::Result<AstEvaluationResult> {
     try {
         auto const node_type{schema_tree.get_node(node_id).get_type()};
         auto const literal_type{schema_tree_node_type_value_pair_to_literal_type(node_type, value)};
@@ -381,16 +381,18 @@ auto evaluate_wildcard_filter(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         SchemaTree const& schema_tree,
         bool case_sensitive_match
-) -> outcome_v2::std_result<AstEvaluationResult> {
+) -> ystdlib::error_handling::Result<AstEvaluationResult> {
     ast_evaluation_result_bitmask_t evaluation_results{};
     for (auto const& [node_id, value] : node_id_value_pairs) {
-        auto const evaluation_result{OUTCOME_TRYX(evaluate_filter_against_node_id_value_pair(
-                filter_expr,
-                node_id,
-                value,
-                schema_tree,
-                case_sensitive_match
-        ))};
+        auto const evaluation_result{
+                YSTDLIB_ERROR_HANDLING_TRYX(evaluate_filter_against_node_id_value_pair(
+                        filter_expr,
+                        node_id,
+                        value,
+                        schema_tree,
+                        case_sensitive_match
+                ))
+        };
         if (AstEvaluationResult::True == evaluation_result) {
             return AstEvaluationResult::True;
         }
@@ -407,12 +409,12 @@ auto QueryHandlerImpl::create(
         std::shared_ptr<Expression> query,
         std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
         bool case_sensitive_match
-) -> outcome_v2::std_result<QueryHandlerImpl> {
-    query = OUTCOME_TRYX(preprocess_query(query));
+) -> ystdlib::error_handling::Result<QueryHandlerImpl> {
+    query = YSTDLIB_ERROR_HANDLING_TRYX(preprocess_query(query));
     auto [projected_columns, projected_column_to_original_key]
-            = OUTCOME_TRYX(create_projected_columns_and_projection_map(projections));
+            = YSTDLIB_ERROR_HANDLING_TRYX(create_projected_columns_and_projection_map(projections));
     auto [auto_gen_namespace_partial_resolutions, user_gen_namespace_partial_resolutions]
-            = OUTCOME_TRYX(
+            = YSTDLIB_ERROR_HANDLING_TRYX(
                     create_initial_partial_resolutions(query, projected_column_to_original_key)
             );
 
@@ -427,7 +429,7 @@ auto QueryHandlerImpl::create(
 }
 
 auto QueryHandlerImpl::evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event)
-        -> outcome_v2::std_result<AstEvaluationResult> {
+        -> ystdlib::error_handling::Result<AstEvaluationResult> {
     if (nullptr == m_query) {
         return AstEvaluationResult::True;
     }
@@ -438,9 +440,11 @@ auto QueryHandlerImpl::evaluate_kv_pair_log_event(KeyValuePairLogEvent const& lo
 
     std::optional<AstEvaluationResult> optional_evaluation_result;
     m_ast_dfs_stack.clear();
-    push_to_ast_dfs_stack(OUTCOME_TRYX(AstExprIterator::create(m_query.get())));
+    push_to_ast_dfs_stack(YSTDLIB_ERROR_HANDLING_TRYX(AstExprIterator::create(m_query.get())));
     while (false == m_ast_dfs_stack.empty()) {
-        OUTCOME_TRYV(advance_ast_dfs_evaluation(log_event, optional_evaluation_result));
+        YSTDLIB_ERROR_HANDLING_TRYV(
+                advance_ast_dfs_evaluation(log_event, optional_evaluation_result)
+        );
     }
 
     if (false == optional_evaluation_result.has_value()) {
@@ -451,7 +455,7 @@ auto QueryHandlerImpl::evaluate_kv_pair_log_event(KeyValuePairLogEvent const& lo
 }
 
 auto QueryHandlerImpl::AstExprIterator::create(clp_s::search::ast::Value* expr)
-        -> outcome_v2::std_result<AstExprIterator> {
+        -> ystdlib::error_handling::Result<AstExprIterator> {
     if (auto* and_expr{dynamic_cast<clp_s::search::ast::AndExpr*>(expr)}; nullptr != and_expr) {
         return AstExprIterator{
                 ExprVariant{and_expr},
@@ -485,7 +489,7 @@ auto QueryHandlerImpl::AstExprIterator::create(clp_s::search::ast::Value* expr)
 }
 
 auto QueryHandlerImpl::AstExprIterator::next_op()
-        -> std::optional<outcome_v2::std_result<AstExprIterator>> {
+        -> std::optional<ystdlib::error_handling::Result<AstExprIterator>> {
     if (m_op_end_it == m_op_next_it) {
         return std::nullopt;
     }
@@ -498,11 +502,11 @@ auto QueryHandlerImpl::AstExprIterator::next_op()
 auto QueryHandlerImpl::evaluate_filter_expr(
         clp_s::search::ast::FilterExpr* filter_expr,
         KeyValuePairLogEvent const& log_event
-) -> outcome_v2::std_result<AstEvaluationResult> {
+) -> ystdlib::error_handling::Result<AstEvaluationResult> {
     auto* col{filter_expr->get_column().get()};
 
     if (col->is_pure_wildcard()) {
-        auto const auto_gen_evaluation_result{OUTCOME_TRYX(evaluate_wildcard_filter(
+        auto const auto_gen_evaluation_result{YSTDLIB_ERROR_HANDLING_TRYX(evaluate_wildcard_filter(
                 filter_expr,
                 log_event.get_auto_gen_node_id_value_pairs(),
                 log_event.get_auto_gen_keys_schema_tree(),
@@ -512,7 +516,7 @@ auto QueryHandlerImpl::evaluate_filter_expr(
             return AstEvaluationResult::True;
         }
 
-        auto const user_gen_evaluation_result{OUTCOME_TRYX(evaluate_wildcard_filter(
+        auto const user_gen_evaluation_result{YSTDLIB_ERROR_HANDLING_TRYX(evaluate_wildcard_filter(
                 filter_expr,
                 log_event.get_user_gen_node_id_value_pairs(),
                 log_event.get_user_gen_keys_schema_tree(),
@@ -553,13 +557,15 @@ auto QueryHandlerImpl::evaluate_filter_expr(
         if (false == node_id_value_pairs.contains(matchable_node_id)) {
             continue;
         }
-        auto const evaluation_result{OUTCOME_TRYX(evaluate_filter_against_node_id_value_pair(
-                filter_expr,
-                matchable_node_id,
-                node_id_value_pairs.at(matchable_node_id),
-                schema_tree,
-                m_case_sensitive_match
-        ))};
+        auto const evaluation_result{
+                YSTDLIB_ERROR_HANDLING_TRYX(evaluate_filter_against_node_id_value_pair(
+                        filter_expr,
+                        matchable_node_id,
+                        node_id_value_pairs.at(matchable_node_id),
+                        schema_tree,
+                        m_case_sensitive_match
+                ))
+        };
         if (AstEvaluationResult::True == evaluation_result) {
             return AstEvaluationResult::True;
         }
@@ -593,14 +599,14 @@ auto QueryHandlerImpl::pop_from_ast_dfs_stack_and_update_evaluation_results(
 auto QueryHandlerImpl::advance_ast_dfs_evaluation(
         KeyValuePairLogEvent const& log_event,
         std::optional<AstEvaluationResult>& query_evaluation_result
-) -> outcome_v2::std_result<void> {
+) -> ystdlib::error_handling::Result<void> {
     auto& [expr_it, evaluation_results] = m_ast_dfs_stack.back();
     if (auto* filter_expr{expr_it.as_filter_expr()}; nullptr != filter_expr) {
         pop_from_ast_dfs_stack_and_update_evaluation_results(
-                OUTCOME_TRYX(evaluate_filter_expr(filter_expr, log_event)),
+                YSTDLIB_ERROR_HANDLING_TRYX(evaluate_filter_expr(filter_expr, log_event)),
                 query_evaluation_result
         );
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
 
     if (auto const* and_expr{expr_it.as_and_expr()}; nullptr != and_expr) {
@@ -610,25 +616,25 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
                     AstEvaluationResult::Pruned,
                     query_evaluation_result
             );
-            return outcome_v2::success();
+            return ystdlib::error_handling::success();
         }
         if (0 != (evaluation_results & AstEvaluationResult::False)) {
             pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::False,
                     query_evaluation_result
             );
-            return outcome_v2::success();
+            return ystdlib::error_handling::success();
         }
         auto const optional_next_op_it{expr_it.next_op()};
         if (optional_next_op_it.has_value()) {
-            push_to_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
+            push_to_ast_dfs_stack(YSTDLIB_ERROR_HANDLING_TRYX(optional_next_op_it.value()));
         } else {
             pop_from_ast_dfs_stack_and_update_evaluation_results(
                     AstEvaluationResult::True,
                     query_evaluation_result
             );
         }
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
 
     // Handle `OrExpr` evaluation
@@ -641,19 +647,19 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
                 AstEvaluationResult::True,
                 query_evaluation_result
         );
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
     auto const optional_next_op_it{expr_it.next_op()};
     if (optional_next_op_it.has_value()) {
-        push_to_ast_dfs_stack(OUTCOME_TRYX(optional_next_op_it.value()));
-        return outcome_v2::success();
+        push_to_ast_dfs_stack(YSTDLIB_ERROR_HANDLING_TRYX(optional_next_op_it.value()));
+        return ystdlib::error_handling::success();
     }
     if (0 != (evaluation_results & AstEvaluationResult::False)) {
         pop_from_ast_dfs_stack_and_update_evaluation_results(
                 AstEvaluationResult::False,
                 query_evaluation_result
         );
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     }
 
     // All pruned
@@ -661,6 +667,6 @@ auto QueryHandlerImpl::advance_ast_dfs_evaluation(
             AstEvaluationResult::Pruned,
             query_evaluation_result
     );
-    return outcome_v2::success();
+    return ystdlib::error_handling::success();
 }
 }  // namespace clp::ffi::ir_stream::search

@@ -5,8 +5,8 @@
 #include <string>
 #include <string_view>
 
-#include <outcome/outcome.hpp>
 #include <string_utils/string_utils.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "constants.hpp"
 #include "ErrorCode.hpp"
@@ -359,7 +359,7 @@ auto is_same_char_opposite_case(char ch0, char ch1) -> bool {
 }
 }  // namespace
 
-auto regex_to_wildcard(string_view regex_str) -> OUTCOME_V2_NAMESPACE::std_result<string> {
+auto regex_to_wildcard(string_view regex_str) -> ystdlib::error_handling::Result<string> {
     return regex_to_wildcard(
             regex_str,
             {/*case_insensitive_wildcard=*/false, /*add_prefix_suffix_wildcards=*/false}
@@ -367,7 +367,7 @@ auto regex_to_wildcard(string_view regex_str) -> OUTCOME_V2_NAMESPACE::std_resul
 }
 
 auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig const& config)
-        -> OUTCOME_V2_NAMESPACE::std_result<string> {
+        -> ystdlib::error_handling::Result<string> {
     if (regex_str.empty()) {
         return string{};
     }

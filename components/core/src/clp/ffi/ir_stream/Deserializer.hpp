@@ -10,7 +10,7 @@
 
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
@@ -56,7 +56,7 @@ public:
      * - Forwards `create_generic`'s return values.
      */
     [[nodiscard]] static auto create(ReaderInterface& reader, IrUnitHandlerType ir_unit_handler)
-            -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>
+            -> ystdlib::error_handling::Result<Deserializer>
     requires std::is_same_v<QueryHandlerType, search::EmptyQueryHandler>
     {
         return create_generic(reader, std::move(ir_unit_handler), {});
@@ -75,7 +75,7 @@ public:
     [[nodiscard]] static auto
     create(ReaderInterface& reader,
            IrUnitHandlerType ir_unit_handler,
-           QueryHandlerType query_handler) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>
+           QueryHandlerType query_handler) -> ystdlib::error_handling::Result<Deserializer>
     requires search::IsNonEmptyQueryHandler<QueryHandlerType>::value
     {
         return create_generic(reader, std::move(ir_unit_handler), std::move(query_handler));
@@ -138,7 +138,7 @@ public:
      *   unit handling failure.
      */
     [[nodiscard]] auto deserialize_next_ir_unit(ReaderInterface& reader)
-            -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType>;
+            -> ystdlib::error_handling::Result<IrUnitType>;
 
     /**
      * @return Whether the stream has completed. A stream is considered completed if an
@@ -176,7 +176,7 @@ private:
             ReaderInterface& reader,
             IrUnitHandlerType ir_unit_handler,
             QueryHandlerType query_handler
-    ) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer>;
+    ) -> ystdlib::error_handling::Result<Deserializer>;
 
     // Constructor
     Deserializer(
@@ -206,7 +206,7 @@ private:
  */
 template <IrUnitHandlerReq IrUnitHandler>
 [[nodiscard]] auto make_deserializer(ReaderInterface& reader, IrUnitHandler ir_unit_handler)
-        -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandler>>;
+        -> ystdlib::error_handling::Result<Deserializer<IrUnitHandler>>;
 
 /**
  * Wrapper for `Deserializer`'s factory function to enable automatic type deduction.
@@ -220,14 +220,14 @@ template <IrUnitHandlerReq IrUnitHandler, search::QueryHandlerReq QueryHandlerTy
         ReaderInterface& reader,
         IrUnitHandler ir_unit_handler,
         QueryHandlerType query_handler
-) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandler, QueryHandlerType>>;
+) -> ystdlib::error_handling::Result<Deserializer<IrUnitHandler, QueryHandlerType>>;
 
 template <IrUnitHandlerReq IrUnitHandlerType, search::QueryHandlerReq QueryHandlerType>
 auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
         ReaderInterface& reader,
         IrUnitHandlerType ir_unit_handler,
         QueryHandlerType query_handler
-) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer> {
+) -> ystdlib::error_handling::Result<Deserializer> {
     bool is_four_byte_encoded{};
     if (auto const err{get_encoding_type(reader, is_four_byte_encoded)};
         IRErrorCode::IRErrorCode_Success != err)
@@ -278,7 +278,7 @@ auto Deserializer<IrUnitHandlerType, QueryHandlerType>::create_generic(
 template <IrUnitHandlerReq IrUnitHandler, search::QueryHandlerReq QueryHandlerType>
 auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<IrUnitType> {
+) -> ystdlib::error_handling::Result<IrUnitType> {
     if (is_stream_completed()) {
         return std::errc::operation_not_permitted;
     }
@@ -296,7 +296,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
     auto const ir_unit_type{optional_ir_unit_type.value()};
     switch (ir_unit_type) {
         case IrUnitType::LogEvent: {
-            auto log_event{OUTCOME_TRYX(deserialize_ir_unit_kv_pair_log_event(
+            auto log_event{YSTDLIB_ERROR_HANDLING_TRYX(deserialize_ir_unit_kv_pair_log_event(
                     reader,
                     tag,
                     m_auto_gen_keys_schema_tree,
@@ -306,7 +306,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
 
             if constexpr (search::IsNonEmptyQueryHandler<QueryHandlerType>::value) {
                 if (search::AstEvaluationResult::True
-                    != OUTCOME_TRYX(m_query_handler.evaluate_kv_pair_log_event(log_event)))
+                    != YSTDLIB_ERROR_HANDLING_TRYX(
+                            m_query_handler.evaluate_kv_pair_log_event(log_event)
+                    ))
                 {
                     break;
                 }
@@ -322,7 +324,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
 
         case IrUnitType::SchemaTreeNodeInsertion: {
             std::string key_name;
-            auto const [is_auto_generated, node_locator]{OUTCOME_TRYX(
+            auto const [is_auto_generated, node_locator]{YSTDLIB_ERROR_HANDLING_TRYX(
                     deserialize_ir_unit_schema_tree_node_insertion(reader, tag, key_name)
             )};
             auto& schema_tree_to_insert{
@@ -336,7 +338,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
             auto const node_id{schema_tree_to_insert->insert_node(node_locator)};
 
             if constexpr (search::IsNonEmptyQueryHandler<QueryHandlerType>::value) {
-                OUTCOME_TRYV(m_query_handler.update_partially_resolved_columns(
+                YSTDLIB_ERROR_HANDLING_TRYV(m_query_handler.update_partially_resolved_columns(
                         is_auto_generated,
                         node_locator,
                         node_id
@@ -356,7 +358,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
         }
 
         case IrUnitType::UtcOffsetChange: {
-            auto const new_utc_offset{OUTCOME_TRYX(deserialize_ir_unit_utc_offset_change(reader))};
+            auto const new_utc_offset{
+                    YSTDLIB_ERROR_HANDLING_TRYX(deserialize_ir_unit_utc_offset_change(reader))
+            };
             if (auto const err{
                         m_ir_unit_handler.handle_utc_offset_change(m_utc_offset, new_utc_offset)
                 };
@@ -388,7 +392,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
 
 template <IrUnitHandlerReq IrUnitHandlerType>
 [[nodiscard]] auto make_deserializer(ReaderInterface& reader, IrUnitHandlerType ir_unit_handler)
-        -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandlerType>> {
+        -> ystdlib::error_handling::Result<Deserializer<IrUnitHandlerType>> {
     return Deserializer<IrUnitHandlerType>::create(reader, std::move(ir_unit_handler));
 }
 
@@ -397,7 +401,7 @@ template <IrUnitHandlerReq IrUnitHandlerType, search::QueryHandlerReq QueryHandl
         ReaderInterface& reader,
         IrUnitHandlerType ir_unit_handler,
         QueryHandlerType query_handler
-) -> OUTCOME_V2_NAMESPACE::std_result<Deserializer<IrUnitHandlerType, QueryHandlerType>> {
+) -> ystdlib::error_handling::Result<Deserializer<IrUnitHandlerType, QueryHandlerType>> {
     return Deserializer<IrUnitHandlerType, QueryHandlerType>::create(
             reader,
             std::move(ir_unit_handler),

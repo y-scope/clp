@@ -4,7 +4,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../SchemaTree.hpp"
 
@@ -23,7 +23,7 @@ namespace clp::ffi::ir_stream::search {
  */
 template <typename NewProjectedSchemaTreeNodeCallbackType>
 concept NewProjectedSchemaTreeNodeCallbackReq = std::is_invocable_r_v<
-        outcome_v2::std_result<void>,
+        ystdlib::error_handling::Result<void>,
         NewProjectedSchemaTreeNodeCallbackType,
         bool,
         SchemaTree::Node::id_t,

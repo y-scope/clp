@@ -169,7 +169,6 @@ add_executable(clp ${CLP_SOURCES})
 target_compile_features(clp PRIVATE cxx_std_20)
 target_include_directories(clp
         PRIVATE
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
         "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
 )
 target_link_libraries(clp
@@ -186,6 +185,7 @@ target_link_libraries(clp
         ${STD_FS_LIBS}
         clp::string_utils
         yaml-cpp
+        ystdlib::error_handling
         ystdlib::containers
         ZStd::ZStd
 )
