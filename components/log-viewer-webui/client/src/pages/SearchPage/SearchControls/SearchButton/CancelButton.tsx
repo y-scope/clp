@@ -40,6 +40,7 @@ const CancelButton = () => {
     return (
         <Button
             danger={true}
+            htmlType={"button"}
             icon={<CloseOutlined/>}
             size={"large"}
             type={"primary"}

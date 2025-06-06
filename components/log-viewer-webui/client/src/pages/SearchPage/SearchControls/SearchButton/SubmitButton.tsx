@@ -51,6 +51,7 @@ const SubmitButton = () => {
             <Button
                 className={styles["gradientButton"] || ""}
                 disabled={isQueryStringEmpty || searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
+                htmlType={"submit"}
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}
