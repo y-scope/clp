@@ -15,6 +15,8 @@ set(
         clp_search/Grep.hpp
         clp_search/Query.cpp
         clp_search/Query.hpp
+        EvaluateRangeIndexFilters.cpp
+        EvaluateRangeIndexFilters.hpp
         EvaluateTimestampIndex.cpp
         EvaluateTimestampIndex.hpp
         Output.cpp
@@ -43,5 +45,6 @@ target_link_libraries(
         clp_s::search::ast
         simdjson::simdjson
         PRIVATE
+	clp_s::clp_dependencies
         spdlog::spdlog
 )
