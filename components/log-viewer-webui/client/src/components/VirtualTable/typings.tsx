@@ -2,7 +2,7 @@ import type {TableProps} from "antd";
 
 
 /**
- * Amount of pixels to scroll when using keyboard navigation.
+ * Number of pixels to scroll vertically when using keyboard arrow navigation.
  */
 export const SCROLL_INCREMENT = 32;
 
