@@ -12,7 +12,6 @@ import {
 } from "./typings";
 import {useSearchResults} from "./useSearchResults";
 
-
 /**
  * Renders search results in a table.
  *
@@ -26,7 +25,7 @@ const SearchResultsTable = () => {
     useEffect(() => {
         const updateHeight = () => {
             if (containerRef.current) {
-                const {top} = containerRef.current.getBoundingClientRect();
+                const { top } = containerRef.current.getBoundingClientRect();
                 const availableHeight = window.innerHeight - top - TABLE_BOTTOM_PADDING;
                 setTableHeight(availableHeight);
             }
@@ -41,13 +40,14 @@ const SearchResultsTable = () => {
     }, []);
 
     return (
-        <div ref={containerRef}>
+        <div ref={containerRef} style={{outline: "none"}}>
             <VirtualTable<SearchResult>
                 columns={searchResultsTableColumns}
                 dataSource={searchResults || []}
                 pagination={false}
                 rowKey={(record) => record._id.toString()}
-                scroll={{y: tableHeight}}/>
+                scroll={{ y: tableHeight }}
+            />
         </div>
     );
 };

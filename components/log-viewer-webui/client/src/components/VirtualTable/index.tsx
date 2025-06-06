@@ -88,6 +88,7 @@ const VirtualTable = <RecordType extends object = Record<string, unknown>>({
             ref={containerRef}
             tabIndex={0}
             onKeyDown={handleKeyDown}
+            style={{outline: "none"}}
         >
             <Table<RecordType>
                 virtual={true}
