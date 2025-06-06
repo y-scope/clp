@@ -1,6 +1,13 @@
-import React, { useRef, useCallback } from "react";
-import { Table } from "antd";
-import type { TableProps } from "antd";
+import React, {
+    useCallback,
+    useRef,
+} from "react";
+
+import {
+    Table,
+    type TableProps,
+} from "antd";
+
 
 /**
  * Amount of pixels to scroll when using keyboard navigation.
@@ -10,37 +17,41 @@ const SCROLL_INCREMENT = 32;
 /**
  * CSS selector for the virtual table body element.
  */
-const VIRTUAL_TABLE_HOLDER_SELECTOR = '.ant-table-tbody-virtual-holder';
+const VIRTUAL_TABLE_HOLDER_SELECTOR = ".ant-table-tbody-virtual-holder";
 
 /**
- * Props for VirtualTable. Omits both virtual and scroll antd props since they're set by this component.
+ * Antd Table props with virtual omitted since set by VirtualTable.
  */
-type VirtualTableProps<RecordType> = Omit<TableProps<RecordType>, 'virtual' | 'scroll'> & {
-    /**
-     * Height of the virtual table's scrollable area.
-     */
-  scrollY: number | string;
-  ref?: React.Ref<any>;
+type VirtualTableProps<RecordType> = Omit<TableProps<RecordType>, "virtual"> & {
 };
 
 /**
  * Virtual table that supports keyboard navigation.
+ *
+ * @param props
+ * @param props.tableProps
+ * @return
  */
-const VirtualTable = <RecordType extends object = any>({
-    scrollY,
-    ref,
+const VirtualTable = <RecordType extends object = Record<string, unknown>>({
     ...tableProps
 }: VirtualTableProps<RecordType>) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (!containerRef.current) return;
+        if (null === containerRef.current) {
+            return;
+        }
 
-        const scrollNode = containerRef.current.querySelector<HTMLElement>(VIRTUAL_TABLE_HOLDER_SELECTOR);
-        if (!scrollNode) return;
+        const scrollNode = containerRef.current.querySelector<HTMLElement>(
+            VIRTUAL_TABLE_HOLDER_SELECTOR
+        );
+
+        if (null === scrollNode) {
+            return;
+        }
 
         const visibleTableHeight = scrollNode.clientHeight;
-        let scrollTop = scrollNode.scrollTop;
+        let {scrollTop} = scrollNode;
 
         switch (e.key) {
             case "ArrowDown":
@@ -79,11 +90,8 @@ const VirtualTable = <RecordType extends object = any>({
             onKeyDown={handleKeyDown}
         >
             <Table<RecordType>
-                ref={ref}
-                virtual
-                scroll={{ y: scrollY }}
-                {...tableProps}
-            />
+                virtual={true}
+                {...tableProps}/>
         </div>
     );
 };
