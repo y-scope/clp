@@ -53,7 +53,6 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
                 &decompressed_stream_block,
                 &m_compressed_stream_block
         )};
-
         if (ZSTD_isError(ret)) {
             SPDLOG_ERROR(
                     "streaming_compression::zstd::Decompressor: ZSTD_decompressStream() error: {}",
@@ -61,7 +60,6 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
             );
             return ErrorCode_Failure;
         }
-
         m_frame_has_more_data = (ret > 0);
     }
 
