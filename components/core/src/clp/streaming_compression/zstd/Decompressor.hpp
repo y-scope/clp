@@ -121,6 +121,14 @@ private:
 
     // Methods
     /**
+     * Refills the compressed buffer with data from the underlying reader.
+     *
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_EndOfFile if no more data is available
+     */
+    [[nodiscard]] auto refill_compressed_buffer() -> ErrorCode;
+
+    /**
      * Reset streaming decompression state so it will start decompressing from the beginning of
      * the stream afterwards
      */
@@ -142,6 +150,7 @@ private:
     ZSTD_inBuffer m_compressed_stream_block{};
 
     size_t m_decompressed_stream_pos{0ULL};
+    bool m_frame_has_more_data{false};
 
     ystdlib::containers::Array<char> m_unused_decompressed_stream_block_buffer;
 };
