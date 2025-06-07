@@ -61,7 +61,6 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
             return ErrorCode_Failure;
         }
 
-        // ret > 0 means there might be more data in the current frame
         m_frame_has_more_data = (ret > 0);
     }
 
