@@ -63,7 +63,7 @@ tasks:
     cmds:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
-          NAME: "{{.LIB_NAME}}"
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
           TAR_SHA256: "{{.TARBALL_SHA256}}"
           TAR_URL: "{{.TARBALL_URL}}"
           WORK_DIR: "{{.G_DEPS_CORE_DIR}}"
