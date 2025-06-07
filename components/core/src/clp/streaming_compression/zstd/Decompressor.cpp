@@ -33,6 +33,7 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
     }
 
     num_bytes_read = 0;
+
     ZSTD_outBuffer decompressed_stream_block{buf, num_bytes_to_read, 0};
     while (decompressed_stream_block.pos < num_bytes_to_read) {
         // Check if there's data that can be decompressed
