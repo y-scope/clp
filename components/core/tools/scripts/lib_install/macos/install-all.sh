@@ -44,6 +44,7 @@ brew install \
   llvm@16 \
   lz4 \
   mariadb-connector-c \
+  mongo-c-driver \
   mongo-cxx-driver \
   msgpack-cxx \
   xz \
