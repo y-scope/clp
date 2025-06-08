@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonParser.hpp"
