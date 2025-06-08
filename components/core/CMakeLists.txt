@@ -212,9 +212,7 @@ endif()
 
 # Find and setup mongocxx
 find_package(mongocxx REQUIRED)
-if(mongocxx_FOUND)
-    message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-endif()
+message(STATUS "Found mongocxx ${mongocxx_VERSION}")
 if(CLP_USE_STATIC_LIBS)
     set(MONGOCXX_TARGET mongo::mongocxx_static)
 else()
