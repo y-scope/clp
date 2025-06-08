@@ -199,25 +199,16 @@ def search_and_schedule_new_tasks(
         if StorageEngine.CLP_S == clp_storage_engine:
             dataset_name = input_config.dataset
             if dataset_name not in datasets_cache:
-                archive_storage_uri: str
+                archive_storage_directory: Path
                 if StorageType.S3 == clp_archive_output.storage.type:
                     s3_config = clp_archive_output.storage.s3_config
-                    archive_storage_uri = (
-                        f"https://{s3_config.bucket}.s3.{s3_config.region_code}.amazonaws.com"
-                        f"/{Path(s3_config.key_prefix) / dataset_name}"
-                    )
+                    archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
                 else:
-                    archive_storage_uri = (
-                        f"file://{clp_archive_output.get_directory() / dataset_name}"
-                    )
+                    archive_storage_directory = clp_archive_output.get_directory() / dataset_name
 
                 try:
                     insert_new_datasets_table_entry(
-                        db_cursor,
-                        table_prefix,
-                        dataset_name,
-                        clp_archive_output.storage.type,
-                        archive_storage_uri,
+                        db_cursor, table_prefix, dataset_name, archive_storage_directory
                     )
                     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
                     db_conn.commit()
