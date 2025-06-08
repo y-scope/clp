@@ -103,7 +103,7 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
             `name` VARCHAR(255) NOT NULL,
-            `archive_storage_type` VARCHAR(64) NOT NULL,
+            `archive_storage_type` VARCHAR(4096) NOT NULL,
             `archive_storage_directory` VARCHAR(4096) NOT NULL,
             PRIMARY KEY (`name`)
         )
