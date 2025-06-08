@@ -330,7 +330,7 @@ target_link_libraries(
         clp_s::archive_reader
         PRIVATE
         fmt::fmt
-        ${MONGOCXX_TARGET}
+        mongo::mongocxx_static
         spdlog::spdlog
 )
 
@@ -393,7 +393,7 @@ target_link_libraries(
         clp_s::search
         clp_s::search::ast
         clp_s::search::kql
-        ${MONGOCXX_TARGET}
+        mongo::mongocxx_static
         msgpack-cxx
         spdlog::spdlog
         ystdlib::error_handling

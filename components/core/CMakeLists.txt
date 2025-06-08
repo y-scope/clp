@@ -211,12 +211,6 @@ else()
 endif()
 
 # Find and setup mongocxx
-if(CLP_USE_STATIC_LIBS)
-    set(MONGOCXX_TARGET mongo::mongocxx_static)
-else()
-    set(MONGOCXX_TARGET mongo::mongocxx_shared)
-endif()
-
 find_package(mongocxx REQUIRED)
 if(mongocxx_FOUND)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")
@@ -691,7 +685,7 @@ target_link_libraries(unitTest
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
-        ${MONGOCXX_TARGET}
+        mongo::mongocxx_static
         nlohmann_json::nlohmann_json
         simdjson::simdjson
         spdlog::spdlog
