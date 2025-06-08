@@ -12,6 +12,10 @@ add_library(
         ${REGEX_UTILS_HEADER_LIST}
 )
 add_library(clp::regex_utils ALIAS regex_utils)
+target_include_directories(regex_utils
+        PUBLIC
+        ../
+)
 target_link_libraries(regex_utils
         PUBLIC
         ystdlib::error_handling
