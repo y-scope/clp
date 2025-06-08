@@ -214,8 +214,6 @@ endif()
 find_package(mongocxx REQUIRED)
 if(mongocxx_FOUND)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
 endif()
 
 # Find and setup msgpack
