@@ -233,7 +233,7 @@ tasks:
   mongocxx:
     internal: true
     vars:
-      VERSION: "3.10.2"
+      VERSION: "r3.10.2"
     run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
@@ -247,8 +247,8 @@ tasks:
             - "-DENABLE_UNINSTALL=OFF"
           LIB_NAME: "mongocxx"
           TARBALL_SHA256: "52b99b2866019b5ea25d15c5a39e2a88c70fe1259c40f1091deff8bfae0194be"
-          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/r{{.VERSION}}\
-          /mongo-cxx-driver-r{{.VERSION}}.tar.gz"
+          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
+          /mongo-cxx-driver-{{.VERSION}}.tar.gz"
 
   nlohmann_json:
     internal: true
