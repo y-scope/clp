@@ -393,7 +393,7 @@ target_link_libraries(
         clp_s::search
         clp_s::search::ast
         clp_s::search::kql
-        mongo::mongocxx_static
+        ${MONGOCXX_TARGET}
         msgpack-cxx
         spdlog::spdlog
         ystdlib::error_handling
