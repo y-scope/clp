@@ -25,8 +25,8 @@ using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::FilterOperation;
 using clp_s::search::ast::Literal;
+using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::LiteralType;
-using clp_s::search::ast::LiteralTypeBitmask;
 using clp_s::search::ast::OpList;
 using clp_s::search::ast::OrExpr;
 
@@ -47,13 +47,13 @@ auto QueryRunner::schema_init(int32_t schema_id) -> EvaluatedValue {
     m_schema = schema_id;
     populate_searched_wildcard_columns(m_expr);
 
-    auto result = constant_propagate(m_expr);
-    if (result == EvaluatedValue::False) {
-        return result;
+    m_expression_value = constant_propagate(m_expr);
+    if (m_expression_value == EvaluatedValue::False) {
+        return m_expression_value;
     }
 
     add_wildcard_columns_to_searched_columns();
-    return result;
+    return m_expression_value;
 }
 
 void QueryRunner::clear_readers() {
@@ -64,10 +64,6 @@ void QueryRunner::clear_readers() {
 }
 
 void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_reader) {
-    if (true == m_metadata_columns.contains(column_id)) {
-        return;
-    }
-
     if ((0
          != (m_wildcard_type_mask
              & node_to_literal_type(m_schema_tree->get_node(column_id).get_type())))
@@ -199,9 +195,16 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     auto literal = expr->get_operand();
     auto* column = expr->get_column().get();
     auto op = expr->get_operation();
+    auto const& subtree_type{column->get_subtree_type()};
+    auto const matches_metadata{
+            subtree_type.has_value() && constants::cMetadataSubtreeType == subtree_type.value()
+    };
     if (column->matches_type(LiteralType::ClpStringT)) {
-        Query* q = m_expr_clp_query[expr];
+        Query* q = m_expr_clp_query.at(expr);
         for (auto const& entry : m_clp_string_readers) {
+            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                continue;
+            }
             if (evaluate_clp_string_filter(op, q, entry.second)) {
                 return true;
             }
@@ -211,6 +214,9 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
     if (column->matches_type(LiteralType::VarStringT)) {
         std::unordered_set<int64_t>* matching_vars = m_expr_var_match_map[expr];
         for (auto const& entry : m_var_string_readers) {
+            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                continue;
+            }
             if (evaluate_var_string_filter(op, entry.second, matching_vars)) {
                 return true;
             }
@@ -219,6 +225,9 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
 
     if (column->matches_type(LiteralType::EpochDateT)) {
         for (auto entry : m_datestring_readers) {
+            if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
+                continue;
+            }
             if (evaluate_epoch_date_filter(op, entry.second, literal)) {
                 return true;
             }
@@ -227,6 +236,9 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
 
     m_maybe_number = expr->get_column()->matches_type(LiteralType::FloatT);
     for (int32_t column_id : m_wildcard_to_searched_basic_columns[column]) {
+        if (false == matches_metadata && m_metadata_columns.contains(column_id)) {
+            continue;
+        }
         bool ret = false;
         switch (node_to_literal_type(m_schema_tree->get_node(column_id).get_type())) {
             case LiteralType::IntegerT:
@@ -269,7 +281,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
         case LiteralType::FloatT:
             return evaluate_float_filter(expr->get_operation(), column_id, literal);
         case LiteralType::ClpStringT:
-            q = m_expr_clp_query[expr];
+            q = m_expr_clp_query.at(expr);
             return evaluate_clp_string_filter(
                     expr->get_operation(),
                     q,
@@ -935,7 +947,7 @@ void QueryRunner::populate_searched_wildcard_columns(std::shared_ptr<Expression>
             return;
         }
         m_wildcard_columns.push_back(col);
-        LiteralTypeBitmask matching_types{0};
+        literal_type_bitmask_t matching_types{0};
         for (int32_t node : (*m_schemas)[m_schema]) {
             if (Schema::schema_entry_is_unordered_object(node)) {
                 continue;
@@ -1048,9 +1060,9 @@ EvaluatedValue QueryRunner::constant_propagate(std::shared_ptr<Expression> const
             bool matches_var_string = false;
             bool has_clp_string = false;
             bool matches_clp_string = false;
-            constexpr LiteralTypeBitmask other_types = LiteralType::ArrayT | ast::cIntegralTypes
-                                                       | LiteralType::NullT | LiteralType::BooleanT
-                                                       | LiteralType::EpochDateT;
+            constexpr literal_type_bitmask_t other_types
+                    = LiteralType::ArrayT | ast::cIntegralTypes | LiteralType::NullT
+                      | LiteralType::BooleanT | LiteralType::EpochDateT;
             bool has_other = wildcard->matches_any(other_types);
             std::string filter_string;
             bool valid

@@ -80,7 +80,7 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
         }
 
         if (ffi::ir_stream::cProtocol::Eof == tag) {
-            return std::errc::no_message_available;
+            return std::errc::no_message;
         }
 
         if (ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == tag) {

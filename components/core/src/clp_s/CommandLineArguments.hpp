@@ -36,11 +36,6 @@ public:
         Stdout,
     };
 
-    enum class FileType : uint8_t {
-        Json = 0,
-        KeyValueIr
-    };
-
     // Constructors
     explicit CommandLineArguments(std::string const& program_name) : m_program_name(program_name) {}
 

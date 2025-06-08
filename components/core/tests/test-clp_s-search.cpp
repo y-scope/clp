@@ -13,21 +13,26 @@
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
+#include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
 #include "../src/clp_s/InputConfig.hpp"
-#include "../src/clp_s/JsonParser.hpp"
+#include "../src/clp_s/OutputHandlerImpl.hpp"
+#include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../src/clp_s/search/ast/ConvertToExists.hpp"
 #include "../src/clp_s/search/ast/EmptyExpr.hpp"
 #include "../src/clp_s/search/ast/Expression.hpp"
+#include "../src/clp_s/search/ast/FilterExpr.hpp"
+#include "../src/clp_s/search/ast/Integral.hpp"
 #include "../src/clp_s/search/ast/NarrowTypes.hpp"
+#include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/OrOfAndForm.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/Output.hpp"
-#include "../src/clp_s/search/OutputHandler.hpp"
 #include "../src/clp_s/search/Projection.hpp"
 #include "../src/clp_s/search/SchemaMatch.hpp"
 #include "../src/clp_s/Utils.hpp"
+#include "clp_s_test_utils.hpp"
 #include "TestOutputCleaner.hpp"
 
 constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archive"};
@@ -38,11 +43,16 @@ constexpr std::string_view cTestIdxKey{"idx"};
 namespace {
 auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path;
 auto get_test_input_local_path() -> std::string;
-void compress(bool structurize_arrays, bool single_file_archive);
+auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression>;
 void
 search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results);
+void search(
+        std::shared_ptr<clp_s::search::ast::Expression> expr,
+        bool ignore_case,
+        std::vector<int64_t> const& expected_results
+);
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 );
 
@@ -56,41 +66,42 @@ auto get_test_input_local_path() -> std::string {
     return (tests_dir / get_test_input_path_relative_to_tests_dir()).string();
 }
 
-void compress(bool structurize_arrays, bool single_file_archive) {
-    constexpr auto cDefaultTargetEncodedSize = 8ULL * 1024 * 1024 * 1024;  // 8 GiB
-    constexpr auto cDefaultMaxDocumentSize = 512ULL * 1024 * 1024;  // 512 MiB
-    constexpr auto cDefaultMinTableSize = 1ULL * 1024 * 1024;  // 1 MiB
-    constexpr auto cDefaultCompressionLevel = 3;
-    constexpr auto cDefaultPrintArchiveStats = false;
-
-    std::filesystem::create_directory(cTestSearchArchiveDirectory);
-    REQUIRE((std::filesystem::is_directory(cTestSearchArchiveDirectory)));
-
-    clp_s::JsonParserOption parser_option{};
-    parser_option.input_paths.emplace_back(
-            clp_s::Path{
-                    .source = clp_s::InputSource::Filesystem,
-                    .path = get_test_input_local_path()
-            }
+auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression> {
+    auto zero_literal = clp_s::search::ast::Integral::create_from_int(0);
+    auto one_literal = clp_s::search::ast::Integral::create_from_int(1);
+    auto column_with_no_subtree_type
+            = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
+                    {std::string{clp_s::constants::cLogEventIdxName}},
+                    std::string{clp_s::constants::cDefaultNamespace}
+            );
+    auto column_with_object_subtree_type = column_with_no_subtree_type->copy();
+    column_with_object_subtree_type->set_subtree_type(
+            std::string{clp_s::constants::cObjectSubtreeType}
     );
-    parser_option.archives_dir = cTestSearchArchiveDirectory;
-    parser_option.target_encoded_size = cDefaultTargetEncodedSize;
-    parser_option.max_document_size = cDefaultMaxDocumentSize;
-    parser_option.min_table_size = cDefaultMinTableSize;
-    parser_option.compression_level = cDefaultCompressionLevel;
-    parser_option.print_archive_stats = cDefaultPrintArchiveStats;
-    parser_option.structurize_arrays = structurize_arrays;
-    parser_option.single_file_archive = single_file_archive;
-
-    clp_s::JsonParser parser{parser_option};
-    REQUIRE(parser.parse());
-    parser.store();
-
-    REQUIRE((false == std::filesystem::is_empty(cTestSearchArchiveDirectory)));
+    auto column_with_metadata_subtree_type = column_with_no_subtree_type->copy();
+    column_with_metadata_subtree_type->set_subtree_type(
+            std::string{clp_s::constants::cMetadataSubtreeType}
+    );
+    auto const op = clp_s::search::ast::FilterOperation::EQ;
+    auto matching_filter = clp_s::search::ast::FilterExpr::create(
+            column_with_metadata_subtree_type,
+            op,
+            zero_literal
+    );
+    auto non_matching_filter
+            = clp_s::search::ast::FilterExpr::create(column_with_no_subtree_type, op, one_literal);
+    auto object_subtree_non_matching_filter = clp_s::search::ast::FilterExpr::create(
+            column_with_object_subtree_type,
+            op,
+            one_literal
+    );
+    auto expr = clp_s::search::ast::OrExpr::create(matching_filter, non_matching_filter);
+    expr->add_operand(object_subtree_non_matching_filter);
+    return expr;
 }
 
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 ) {
     std::set<int64_t> results_set;
@@ -114,6 +125,14 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
     REQUIRE(expected_results.size() > 0);
     auto query_stream = std::istringstream{query};
     auto expr = clp_s::search::kql::parse_kql_expression(query_stream);
+    search(expr, ignore_case, expected_results);
+}
+
+void search(
+        std::shared_ptr<clp_s::search::ast::Expression> expr,
+        bool ignore_case,
+        std::vector<int64_t> const& expected_results
+) {
     REQUIRE(nullptr != expr);
     REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(expr));
 
@@ -129,7 +148,7 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
     expr = convert_pass.run(expr);
     REQUIRE(nullptr != expr);
 
-    std::vector<clp_s::search::VectorOutputHandler::QueryResult> results;
+    std::vector<clp_s::VectorOutputHandler::QueryResult> results;
     for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         auto archive_path = clp_s::Path{
@@ -151,7 +170,7 @@ search(std::string const& query, bool ignore_case, std::vector<int64_t> const& e
         archive_expr = match_pass->run(archive_expr);
         REQUIRE(nullptr != archive_expr);
 
-        auto output_handler = std::make_unique<clp_s::search::VectorOutputHandler>(results);
+        auto output_handler = std::make_unique<clp_s::VectorOutputHandler>(results);
         clp_s::search::Output output_pass(
                 match_pass,
                 archive_expr,
@@ -179,16 +198,28 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "Msg 5: \rAbc123")aa", {5}},
             {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
-            {R"aa(arr.b > 1000)aa", {7, 8}}
+            {R"aa(arr.b > 1000)aa", {7, 8}},
+            {R"aa(var_string: *)aa", {9}},
+            {R"aa(clp_string: *)aa", {9}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
-    compress(structurize_arrays, single_file_archive);
+    REQUIRE_NOTHROW(compress_archive(
+            get_test_input_local_path(),
+            std::string{cTestSearchArchiveDirectory},
+            single_file_archive,
+            structurize_arrays,
+            clp_s::FileType::Json
+    ));
 
     for (auto const& [query, expected_results] : queries_and_results) {
-        search(query, false, expected_results);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
     }
+
+    std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
+    REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
+    REQUIRE_NOTHROW(search(expr, false, {0}));
 }

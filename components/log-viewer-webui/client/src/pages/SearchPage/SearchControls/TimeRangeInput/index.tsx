@@ -1,15 +1,13 @@
-import {useState} from "react";
-
 import {
     DatePicker,
     Select,
 } from "antd";
 import dayjs from "dayjs";
 
-import useSearchStore from "../../SearchState";
+import useSearchStore from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import {
-    DEFAULT_TIME_RANGE,
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
@@ -25,13 +23,18 @@ import {
  * @return
  */
 const TimeRangeInput = () => {
-    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
-    const [selectedOption, setSelectedOption] = useState<TIME_RANGE_OPTION>(DEFAULT_TIME_RANGE);
+    const {
+        timeRange,
+        updateTimeRange,
+        timeRangeOption,
+        updateTimeRangeOption,
+        searchUiState,
+    } = useSearchStore();
 
-    const handleSelectChange = (timeRangeOption: TIME_RANGE_OPTION) => {
-        setSelectedOption(timeRangeOption);
-        if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption];
+    const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
+        updateTimeRangeOption(newTimeRangeOption);
+        if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
+            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption];
             updateTimeRange(dayJsRange);
         }
     };
@@ -50,22 +53,27 @@ const TimeRangeInput = () => {
             className={styles["timeRangeInputContainer"]}
         >
             <Select
-                defaultValue={DEFAULT_TIME_RANGE}
                 listHeight={300}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
                 size={"large"}
+                value={timeRangeOption}
                 variant={"filled"}
-                className={selectedOption === TIME_RANGE_OPTION.CUSTOM ?
+                className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
                     (styles["customSelected"] || "") :
                     ""}
+                disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                            searchUiState === SEARCH_UI_STATE.QUERYING}
                 onChange={handleSelectChange}/>
-            {selectedOption === TIME_RANGE_OPTION.CUSTOM && (
+            {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
                     className={styles["rangePicker"] || ""}
                     showNow={true}
                     showTime={true}
                     size={"large"}
+                    value={timeRange}
+                    disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                                searchUiState === SEARCH_UI_STATE.QUERYING}
                     onChange={(dates) => {
                         handleRangePickerChange(dates);
                     }}/>

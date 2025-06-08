@@ -20,6 +20,10 @@ vars:
   # Library names
   G_FMT_LIB_NAME: "fmt"
 
+  # Antlr
+  G_ANTLR_VERSION: "4.13.2"
+  G_ANTLR_JAR_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+
 tasks:
   default:
     deps:
@@ -56,7 +60,8 @@ tasks:
     run: "once"
     deps:
       - task: "absl"
-      - task: "antlr"
+      - task: "antlr-jar"
+      - task: "antlr-runtime"
       - task: "catch2"
       - task: "date"
       - task: "fmt"
@@ -84,14 +89,11 @@ tasks:
           TARBALL_SHA256: "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed"
           TARBALL_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz"
 
-  antlr:
+  antlr-jar:
     internal: true
     vars:
-      DEP_NAME: "antlr"
-
-      # Paths
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.DEP_NAME}}.md5"
-      OUTPUT_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-4.13.1-complete.jar"
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/antlr-jar.md5"
+      OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
     run: "once"
     deps:
       - task: "yscope-dev-utils:checksum:validate"
@@ -103,13 +105,9 @@ tasks:
     cmds:
       - task: "yscope-dev-utils:remote:curl"
         vars:
-          FILE_SHA256: "bc13a9c57a8dd7d5196888211e5ede657cb64a3ce968608697e4f668251a8487"
+          FILE_SHA256: "eae2dfa119a64327444672aff63e9ec35a20180dc5b8090b7a6ab85125df4d76"
           OUTPUT_FILE: "{{.OUTPUT_FILE}}"
-          URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
-      - >-
-        echo "set(
-        ANTLR_EXECUTABLE \"{{.OUTPUT_FILE}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.DEP_NAME}}.cmake"
+          URL: "https://www.antlr.org/download/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
 
       # This command must be last
       - task: "yscope-dev-utils:checksum:compute"
@@ -117,6 +115,64 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS:
             - "{{.OUTPUT_FILE}}"
+
+  antlr-runtime:
+    internal: true
+    run: "once"
+    vars:
+      LIB_NAME: "antlr4-runtime"
+
+      # Paths
+      BUILD_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-build"
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
+      SOURCE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+    deps:
+      - task: "utils:init"
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+    # NOTE: We can't use `yscope-dev-utils:cmake:install-remote-tar` (and by extension
+    # `utils:install-remote-cmake-lib`) since it doesn't yet support the `INCLUDE_PATTERNS` and
+    # `NUM_COMPONENTS_TO_STRIP` parameters.
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          FILE_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
+          INCLUDE_PATTERNS: ["*/runtime/Cpp"]
+          NUM_COMPONENTS_TO_STRIP: 3
+          OUTPUT_DIR: "{{.SOURCE_DIR}}"
+          URL: "https://github.com/antlr/antlr4/archive/refs/tags/{{.G_ANTLR_VERSION}}.tar.gz"
+      - task: "yscope-dev-utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          EXTRA_ARGS:
+            - "-DANTLR4_INSTALL=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+
+            # Set CMP0135 so that extracted files use the current timestamp as their modification
+            # timestamp, which ensures the library gets rebuilt if the extracted files change.
+            - "-DCMAKE_POLICY_DEFAULT_CMP0135=NEW"
+          SOURCE_DIR: "{{.SOURCE_DIR}}"
+      - task: "yscope-dev-utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+      - task: "yscope-dev-utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+          NAME: "{{.LIB_NAME}}"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
 
   catch2:
     internal: true

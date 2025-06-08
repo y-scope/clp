@@ -1,6 +1,9 @@
 version: "3"
 
 vars:
+  # Ignore https://github.com/msgpack/msgpack-c/issues/1098
+  G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098: >-
+    {\"name\":\"cpp11_zone.hpp\",\"lines\":[[197,197]]}
   G_LINT_CLANG_TIDY_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
   G_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
@@ -132,6 +135,9 @@ tasks:
     cmds:
       - task: ":utils:cpp-lint:clang-format"
         vars:
+          EXCLUDE_PATTERNS:
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated/*"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated/*"
           FLAGS: ["--dry-run"]
           INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
@@ -143,6 +149,9 @@ tasks:
     cmds:
       - task: ":utils:cpp-lint:clang-format"
         vars:
+          EXCLUDE_PATTERNS:
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated/*"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated/*"
           FLAGS: ["-i"]
           INCLUDE_FILENAME_PATTERNS: ["*.cpp", "*.h", "*.hpp", "*.inc"]
           ROOT_PATHS: *cpp_source_files
@@ -165,6 +174,8 @@ tasks:
         vars:
           FLAGS:
             - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            - >-
+              --line-filter "[{{.G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098}}]"
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
           OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
@@ -247,11 +258,9 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/decoding_methods.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/decoding_methods.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/decoding_methods.inc"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/Deserializer.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/encoding_methods.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/encoding_methods.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/protocol_constants.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/Serializer.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/ffi/ir_stream/Serializer.hpp"
@@ -426,6 +435,8 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/JsonParser.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/JsonParser.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/JsonSerializer.hpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/OutputHandlerImpl.cpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/OutputHandlerImpl.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/PackedStreamReader.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/PackedStreamReader.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/ParsedMessage.hpp"
@@ -485,18 +496,18 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/clp_search/Query.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/EvaluateTimestampIndex.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/EvaluateTimestampIndex.hpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated/*"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/kql.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/kql.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Output.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Output.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/OutputHandler.cpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/OutputHandler.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Projection.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/Projection.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/QueryRunner.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/QueryRunner.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/SchemaMatch.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/SchemaMatch.hpp"
+            - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated/*"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/sql.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/SingleFileArchiveDefs.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/TimestampDictionaryReader.cpp"
@@ -750,6 +761,8 @@ tasks:
           # yamllint enable rule:line-length
           FLAGS:
             - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            - >-
+              --line-filter "[{{.G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098}}]"
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
           INCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/*"

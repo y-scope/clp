@@ -74,7 +74,7 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      - run: "task deps:core"
+      - run: "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
@@ -108,7 +108,9 @@ jobs:
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
       # - run: >-
       #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
-      - run: "task lint:check-cpp-full"
+      - run: >-
+          CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+          task lint:check-cpp-full
         shell: "bash"
 
       # Cache the source file checksums and the generated files (logs) for the

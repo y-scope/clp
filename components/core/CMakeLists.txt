@@ -119,12 +119,9 @@ if (absl_FOUND)
 endif()
 
 # Find and setup ANTLR Library
-# We build and link to the static library
-find_package(ANTLR REQUIRED)
-if (ANTLR_FOUND)
-    message(STATUS "Found ANTLR ${ANTLR_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+find_package(antlr4-runtime REQUIRED)
+if (antlr4-runtime_FOUND)
+    message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
 endif()
 
 # Find and setup Boost Library
@@ -315,6 +312,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/JsonFileIterator.hpp
     src/clp_s/JsonParser.cpp
     src/clp_s/JsonParser.hpp
+    src/clp_s/OutputHandlerImpl.cpp
+    src/clp_s/OutputHandlerImpl.hpp
     src/clp_s/PackedStreamReader.cpp
     src/clp_s/PackedStreamReader.hpp
     src/clp_s/RangeIndexWriter.cpp
@@ -343,7 +342,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/EvaluateTimestampIndex.hpp
     src/clp_s/search/Output.cpp
     src/clp_s/search/Output.hpp
-    src/clp_s/search/OutputHandler.cpp
     src/clp_s/search/OutputHandler.hpp
     src/clp_s/search/Projection.cpp
     src/clp_s/search/Projection.hpp
@@ -447,7 +445,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/encoding_methods.hpp
         src/clp/ffi/ir_stream/IrErrorCode.cpp
         src/clp/ffi/ir_stream/IrErrorCode.hpp
-        src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+        src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
@@ -461,6 +459,8 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/search/QueryHandler.hpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.cpp
         src/clp/ffi/ir_stream/search/QueryHandlerImpl.hpp
+        src/clp/ffi/ir_stream/search/QueryHandlerReq.hpp
+        src/clp/ffi/ir_stream/search/test/test_deserializer_integration.cpp
         src/clp/ffi/ir_stream/search/test/test_QueryHandlerImpl.cpp
         src/clp/ffi/ir_stream/search/test/test_utils.cpp
         src/clp/ffi/ir_stream/search/test/utils.cpp
@@ -628,15 +628,18 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
+        tests/clp_s_test_utils.cpp
+        tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
         tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-ffi_IrUnitHandlerInterface.cpp
+        tests/test-ffi_IrUnitHandlerReq.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
@@ -680,10 +683,11 @@ target_link_libraries(unitTest
         Catch2::Catch2
         ${CURL_LIBRARIES}
         clp_s::search::ast
-        clp_s::TimestampPattern
+        clp_s::search::kql
+        clp_s::search::sql
+        clp_s::timestamp_pattern
         date::date
         fmt::fmt
-        kql
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
@@ -691,7 +695,6 @@ target_link_libraries(unitTest
         nlohmann_json::nlohmann_json
         simdjson::simdjson
         spdlog::spdlog
-        sql
         OpenSSL::Crypto
         ${sqlite_LIBRARY_DEPENDENCIES}
         ${STD_FS_LIBS}

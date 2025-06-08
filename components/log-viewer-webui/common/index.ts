@@ -31,14 +31,9 @@ type Response<T> = Err | Success<T>;
  */
 type ClientToServerEvents = {
     "disconnect": () => void;
-    "collection::init": (
-        requestArgs: {
-            collectionName: string;
-        },
-        callback: (res: Response<void>) => void
-    ) => void;
     "collection::find::subscribe": (
         requestArgs: {
+            collectionName: string;
             query: object;
             options: object;
         },
@@ -54,6 +49,9 @@ type ClientToServerEvents = {
  * Events that the server can emit to the client.
  */
 interface ServerToClientEvents {
+    // eslint-disable-next-line no-warning-comments
+    // TODO: Consider replacing this with `collection::find::update${number}`, which will
+    // limit callbacks being triggered in the client to their respective query IDs.
     "collection::find::update": (respArgs: {
         queryId: QueryId;
         data: object[];
@@ -73,7 +71,41 @@ interface SocketData {
     collectionName?: string;
 }
 
+/**
+ * Enum of search-related signals.
+ *
+ * This includes request and response signals for various search operations and their respective
+ * states.
+ */
+enum SEARCH_SIGNAL {
+    NONE = "none",
+
+    REQ_CANCELLING = "req-cancelling",
+    REQ_CLEARING = "req-clearing",
+    REQ_QUERYING = "req-querying",
+
+    RESP_DONE = "resp-done",
+    RESP_QUERYING = "resp-querying",
+}
+
+/**
+ * MongoDB document for search results metadata. `numTotalResults` is optional
+ * since it is only set when the search job is completed.
+ */
+interface SearchResultsMetadataDocument {
+    _id: string;
+
+    // eslint-disable-next-line no-warning-comments
+    // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
+    errorMsg: string | null;
+    lastSignal: SEARCH_SIGNAL;
+    numTotalResults?: number;
+}
 export {
+    SEARCH_SIGNAL,
+};
+export type {
+    SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,
     InterServerEvents,

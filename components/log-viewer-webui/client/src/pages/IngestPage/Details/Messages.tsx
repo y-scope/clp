@@ -1,19 +1,23 @@
+import {Nullable} from "src/typings/common";
+
 import DetailsCard from "./DetailsCard";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_MESSAGES = 1235844;
+interface MessagesProps {
+    numMessages: Nullable<number>;
+}
 
 /**
  * Renders the messages statistic.
  *
+ * @param props
+ * @param props.numMessages
  * @return
  */
-const Messages = () => {
+const Messages = ({numMessages}: MessagesProps) => {
     return (
         <DetailsCard
-            stat={DUMMY_MESSAGES.toString()}
+            stat={(numMessages ?? 0).toString()}
             title={"Messages"}/>
     );
 };

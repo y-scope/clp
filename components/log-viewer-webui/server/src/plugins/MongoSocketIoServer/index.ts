@@ -3,14 +3,6 @@
 // TODO: Move listeners to a separate file to reduce lines
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
-import type {
-    ClientToServerEvents,
-    InterServerEvents,
-    QueryId,
-    Response,
-    ServerToClientEvents,
-    SocketData,
-} from "@common/index.js";
 import {
     FastifyInstance,
     FastifyPluginAsync,
@@ -19,6 +11,14 @@ import fastifyPlugin from "fastify-plugin";
 import {Db} from "mongodb";
 import {Server} from "socket.io";
 
+import type {
+    ClientToServerEvents,
+    InterServerEvents,
+    QueryId,
+    Response,
+    ServerToClientEvents,
+    SocketData,
+} from "../../../../common/index.js";
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,
@@ -55,6 +55,9 @@ class MongoSocketIoServer {
     // Mapping of connection IDs to the query IDs they are subscribed to. A connection can
     // subscribe to the same queryID multiple times, so the list can contain duplicates.
     #subscribedQueryIdsMap: Map<ConnectionId, QueryId[]> = new Map();
+
+    // Counter for generating unique query IDs.
+    #queryIdCounter: QueryId = 0;
 
     readonly #mongoDb: Db;
 
@@ -99,7 +102,6 @@ class MongoSocketIoServer {
         this.#io.on("connection", (socket) => {
             this.#fastify.log.info(`New socket connected with ID:${socket.id}`);
             socket.on("disconnect", this.#disconnectListener.bind(this, socket));
-            socket.on("collection::init", this.#collectionInitListener.bind(this, socket));
             socket.on(
                 "collection::find::subscribe",
                 this.#collectionFindSubscribeListener.bind(this, socket)
@@ -147,38 +149,6 @@ class MongoSocketIoServer {
     }
 
     /**
-     * Listener for initializing a connection to a collection.
-     *
-     * @param socket
-     * @param requestArgs
-     * @param requestArgs.collectionName
-     * @param callback
-     */
-    async #collectionInitListener (
-        socket: MongoCustomSocket,
-        requestArgs: {collectionName: string},
-        callback:(res: Response<void>) => void
-    ): Promise<void> {
-        const {collectionName} = requestArgs;
-        this.#fastify.log.info(
-            `Socket:${socket.id} requested init of collection:${collectionName}`
-        );
-
-        const hasCollection = await this.#hasCollection(collectionName);
-        if (false === hasCollection) {
-            this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
-            callback({
-                error: `Collection ${collectionName} does not exist in MongoDB`,
-            });
-
-            return;
-        }
-
-        socket.data = {...socket.data, collectionName};
-    }
-
-
-    /**
      * Adds the query ID to the connection's subscribed query IDs.
      *
      * @param queryId
@@ -209,17 +179,33 @@ class MongoSocketIoServer {
                 return queryId;
             }
         }
+        const queryId = this.#queryIdCounter;
+        this.#queryIdToQueryHashMap.set(queryId, queryHash);
 
-        let queryId = 0;
-        if (0 === this.#queryIdToQueryHashMap.size) {
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        } else {
-            const maxKey = Math.max(...Array.from(this.#queryIdToQueryHashMap.keys()));
-            queryId = maxKey + 1;
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        }
+        // JS is single threaded and ++ is atomic, so we can safely increment the global counter.
+        this.#queryIdCounter++;
 
         return queryId;
+    }
+
+    /**
+     * Gets an existing watcher collection or creates a new one if it doesn't exist.
+     *
+     * @param collectionName
+     * @return The watcher collection instance.
+     */
+    #getOrCreateWatcherCollection (
+        collectionName: string
+    )
+        : MongoWatcherCollection {
+        let watcherCollection = this.#collections.get(collectionName);
+        if ("undefined" === typeof watcherCollection) {
+            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
+            this.#fastify.log.info(`Initialize Mongo watcher collection:${collectionName}.`);
+            this.#collections.set(collectionName, watcherCollection);
+        }
+
+        return watcherCollection;
     }
 
     /**
@@ -230,32 +216,32 @@ class MongoSocketIoServer {
      * @param requestArgs
      * @param requestArgs.query
      * @param requestArgs.options
+     * @param requestArgs.collectionName
      * @param callback
      */
     async #collectionFindSubscribeListener (
         socket: MongoCustomSocket,
-        requestArgs: {query: object; options: object},
+        requestArgs: {collectionName: string; query: object; options: object},
         callback: (res: Response<{queryId: number; initialDocuments: object[]}>) => void
     ): Promise<void> {
-        const {query, options} = requestArgs;
-        const {collectionName} = socket.data;
-
-        if ("undefined" === typeof collectionName) {
-            this.#fastify.log.error(`Collection name:${collectionName} is undefined`);
-
-            return;
-        }
+        const {collectionName, query, options} = requestArgs;
 
         this.#fastify.log.info(
             `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
 
-        let watcherCollection = this.#collections.get(collectionName);
-        if ("undefined" === typeof watcherCollection) {
-            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#collections.set(collectionName, watcherCollection);
+        const hasCollection = await this.#hasCollection(collectionName);
+        if (false === hasCollection) {
+            this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
+            callback({
+                error: `Collection ${collectionName} does not exist in MongoDB on server`,
+            });
+
+            return;
         }
+
+        const watcherCollection = this.#getOrCreateWatcherCollection(collectionName);
 
         const queryParameters: QueryParameters = {collectionName, query, options};
         const queryId = this.#getQueryId(queryParameters);
