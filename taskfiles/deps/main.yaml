@@ -243,7 +243,6 @@ tasks:
             - "-DBUILD_SHARED_AND_STATIC_LIBS=OFF"
             - "-DBUILD_SHARED_LIBS=OFF"
 
-            # Other CMake options
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DENABLE_TESTS=OFF"

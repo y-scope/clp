@@ -164,7 +164,7 @@ target_link_libraries(clo
         date::date
         fmt::fmt
         log_surgeon::log_surgeon
-        mongo::mongocxx_static
+        ${MONGOCXX_TARGET}
         msgpack-cxx
         nlohmann_json::nlohmann_json
         spdlog::spdlog

@@ -46,7 +46,7 @@ target_link_libraries(reducer-server
         Boost::system
         clp::string_utils
         fmt::fmt
-        mongo::mongocxx_static
+        ${MONGOCXX_TARGET}
         msgpack-cxx
         nlohmann_json::nlohmann_json
         spdlog::spdlog

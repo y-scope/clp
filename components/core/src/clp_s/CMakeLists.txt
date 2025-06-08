@@ -330,7 +330,7 @@ target_link_libraries(
         clp_s::archive_reader
         PRIVATE
         fmt::fmt
-        mongo::mongocxx_static
+        ${MONGOCXX_TARGET}
         spdlog::spdlog
 )
 

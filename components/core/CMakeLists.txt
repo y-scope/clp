@@ -215,6 +215,11 @@ find_package(mongocxx REQUIRED)
 if(mongocxx_FOUND)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")
 endif()
+if(CLP_USE_STATIC_LIBS)
+    set(MONGOCXX_TARGET mongo::mongocxx_static)
+else()
+    set(MONGOCXX_TARGET mongo::mongocxx_shared)
+endif()
 
 # Find and setup msgpack
 find_package(msgpack-cxx 7.0.0 REQUIRED)
@@ -683,7 +688,7 @@ target_link_libraries(unitTest
         log_surgeon::log_surgeon
         LibArchive::LibArchive
         MariaDBClient::MariaDBClient
-        mongo::mongocxx_static
+        ${MONGOCXX_TARGET}
         nlohmann_json::nlohmann_json
         simdjson::simdjson
         spdlog::spdlog
