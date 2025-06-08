@@ -22,7 +22,7 @@ from clp_py_utils.clp_config import (
     S3Storage,
     StorageType,
 )
-from clp_py_utils.core import FileMetadata
+from clp_py_utils.compression import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
