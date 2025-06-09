@@ -2,9 +2,9 @@ import {Link} from "react-router";
 
 import {LinkOutlined} from "@ant-design/icons";
 import {
+    theme,
     Tooltip,
     Typography,
-    theme,
 } from "antd";
 
 import {STREAM_TYPE} from "../utils";
@@ -31,14 +31,14 @@ const LogViewerLink = ({
     logEventIdx,
     streamId,
 }: LogViewerLinkProps) => {
-    const { token } = theme.useToken();
+    const {token} = theme.useToken();
 
     return (
         <Tooltip title={"Open file"}>
             <Typography.Text>
                 <Link
                     className={styles["linkIcon"] || ""}
-                    style={{ color: token.colorLink }}
+                    style={{color: token.colorLink}}
                     target={"_blank"}
                     to={{
                         pathname: "/streamFile",
