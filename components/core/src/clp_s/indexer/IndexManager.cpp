@@ -1,9 +1,9 @@
 #include "IndexManager.hpp"
 
 #include <filesystem>
+#include <memory>
 #include <stack>
 #include <string>
-#include <memory>
 
 #include "../archive_constants.hpp"
 #include "../TimestampDictionaryReader.hpp"

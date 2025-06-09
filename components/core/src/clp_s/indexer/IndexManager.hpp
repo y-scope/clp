@@ -2,6 +2,7 @@
 #define CLP_S_INDEXER_INDEXMANAGER_HPP
 
 #include <functional>
+#include <memory>
 #include <optional>
 
 #include "../../clp/GlobalMetadataDBConfig.hpp"
