@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <memory>
 
-#include <outcome/outcome.hpp>
 #include <ystdlib/error_handling/ErrorCode.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "CommandLineArguments.hpp"
 #include "InputConfig.hpp"
@@ -42,7 +42,7 @@ using KvIrSearchError = ystdlib::error_handling::ErrorCode<KvIrSearchErrorEnum>;
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<search::ast::Expression> query,
         int reducer_socket_fd
-) -> outcome_v2::std_result<void>;
+) -> ystdlib::error_handling::Result<void>;
 }  // namespace clp_s
 
 YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp_s::KvIrSearchErrorEnum);

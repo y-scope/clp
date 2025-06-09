@@ -49,6 +49,11 @@ const routes: FastifyPluginAsync = async (fastify) => {
             prefix: "/",
             root: clientDir,
             decorateReply: false,
+            wildcard: false,
+        });
+
+        fastify.get("/streamFile", (_, reply) => {
+            reply.sendFile("index.html", clientDir);
         });
     }
 };
