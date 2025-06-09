@@ -208,7 +208,11 @@ def search_and_schedule_new_tasks(
 
                 try:
                     insert_new_datasets_table_entry(
-                        db_cursor, table_prefix, dataset_name, archive_storage_directory
+                        db_cursor,
+                        table_prefix,
+                        dataset_name,
+                        clp_archive_output.storage.type,
+                        archive_storage_directory,
                     )
                     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
                     db_conn.commit()
