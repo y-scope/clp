@@ -1,59 +1,13 @@
-import {useCallback} from "react";
-
 import {
-    Button,
     Input,
     InputProps,
     Progress,
     theme,
-    Tooltip,
-    Typography,
 } from "antd";
 import {Nullable} from "src/typings/common";
 
 import styles from "./index.module.css";
-
-
-interface CaseSensitiveToggleProps {
-    isCaseSensitive: boolean;
-    onCaseSensitiveChange: (newValue: boolean) => void;
-}
-
-/**
- * A toggle button component that switches between case-sensitive and case-insensitive modes.
- *
- * This component displays a button labeled "Aa". When clicked, it toggles the `isCaseSensitive`
- * state and invokes the `onCaseSensitiveChange` callback with the new value.
- *
- * @param props
- * @param props.isCaseSensitive
- * @param props.onCaseSensitiveChange
- * @return
- */
-const CaseSensitiveToggle = ({
-    isCaseSensitive,
-    onCaseSensitiveChange,
-}: CaseSensitiveToggleProps) => {
-    const handleButtonClick = useCallback(() => {
-        onCaseSensitiveChange(!isCaseSensitive);
-    }, [
-        isCaseSensitive,
-        onCaseSensitiveChange,
-    ]);
-
-    return (
-        <Tooltip title={"Match case"}>
-            <Button
-                color={"default"}
-                icon={<Typography.Text disabled={!isCaseSensitive}>Aa</Typography.Text>}
-                size={"small"}
-                variant={isCaseSensitive ?
-                    "filled" :
-                    "text"}
-                onClick={handleButtonClick}/>
-        </Tooltip>
-    );
-};
+import CaseSensitiveToggle, { CaseSensitiveToggleProps } from "./CaseSenstiveToggle";
 
 
 interface QueryBoxProps extends InputProps, CaseSensitiveToggleProps {
@@ -86,6 +40,7 @@ const QueryBox = ({
                 {...inputProps}
                 suffix={<CaseSensitiveToggle
                     isCaseSensitive={isCaseSensitive}
+                    disabled={inputProps.disabled}
                     onCaseSensitiveChange={onCaseSensitiveChange}/>}/>
             <div
                 className={styles["progressBarMask"]}
