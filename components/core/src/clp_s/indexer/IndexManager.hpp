@@ -48,7 +48,7 @@ public:
 
     // Methods
     /**
-     * Updates the metadata for a given archive
+     * Updates the metadata for a given archive.
      * @param archive_path
      */
     void update_metadata(Path const& archive_path);
