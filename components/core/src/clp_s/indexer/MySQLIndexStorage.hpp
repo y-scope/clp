@@ -1,7 +1,6 @@
 #ifndef CLP_S_INDEXER_MYSQLINDEXSTORAGE_HPP
 #define CLP_S_INDEXER_MYSQLINDEXSTORAGE_HPP
 
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -18,8 +17,6 @@ namespace clp_s::indexer {
  */
 class MySQLIndexStorage {
 public:
-    static constexpr std::string_view cColumnMetadataTableSuffix = "column_metadata";
-
     // Types
     class OperationFailed : public TraceableException {
     public:
@@ -60,13 +57,6 @@ public:
     auto add_field(std::string const& field_name, NodeType field_type) -> void;
 
 private:
-    // Types
-    enum class TableMetadataFieldIndexes : uint8_t {
-        Name = 0,
-        Type,
-        Length,
-    };
-
     // Variables
     clp::MySQLDB m_db;
     std::unique_ptr<clp::MySQLPreparedStatement> m_insert_field_statement;

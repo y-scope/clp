@@ -16,6 +16,7 @@
 #include "../ErrorCode.hpp"
 #include "../SchemaTree.hpp"
 #include "../TraceableException.hpp"
+#include "constants.hpp"
 
 namespace clp_s::indexer {
 using clp::enum_to_underlying_type;
@@ -47,11 +48,6 @@ MySQLIndexStorage::MySQLIndexStorage(
         );
     }
 
-    std::vector<std::string> table_metadata_field_names(
-            enum_to_underlying_type(TableMetadataFieldIndexes::Length)
-    );
-    table_metadata_field_names[enum_to_underlying_type(TableMetadataFieldIndexes::Name)] = "name";
-    table_metadata_field_names[enum_to_underlying_type(TableMetadataFieldIndexes::Type)] = "type";
     fmt::memory_buffer statement_buffer;
     auto statement_buffer_ix{std::back_inserter(statement_buffer)};
 
@@ -59,8 +55,15 @@ MySQLIndexStorage::MySQLIndexStorage(
             statement_buffer_ix,
             "INSERT IGNORE INTO {} ({}) VALUES ({})",
             table_name,
-            clp::get_field_names_sql(table_metadata_field_names),
-            clp::get_placeholders_sql(table_metadata_field_names.size())
+            clp::get_field_names_sql(
+                    std::vector<std::string>{
+                            cColumnMetadataTableFieldNames.begin(),
+                            cColumnMetadataTableFieldNames.end()
+                    }
+            ),
+            clp::get_placeholders_sql(
+                    enum_to_underlying_type(ColumnMetadataTableFieldIndexes::Length)
+            )
     );
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
     m_insert_field_statement = std::make_unique<clp::MySQLPreparedStatement>(
@@ -75,14 +78,14 @@ MySQLIndexStorage::~MySQLIndexStorage() {
 void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_type) {
     auto& statement_bindings{m_insert_field_statement->get_statement_bindings()};
     statement_bindings.bind_varchar(
-            enum_to_underlying_type(TableMetadataFieldIndexes::Name),
+            enum_to_underlying_type(ColumnMetadataTableFieldIndexes::Name),
             field_name.c_str(),
             field_name.length()
     );
 
     auto field_type_value{static_cast<uint8_t>(field_type)};
     statement_bindings.bind_uint8(
-            enum_to_underlying_type(TableMetadataFieldIndexes::Type),
+            enum_to_underlying_type(ColumnMetadataTableFieldIndexes::Type),
             field_type_value
     );
 

@@ -71,6 +71,7 @@ set(
         ../ZstdCompressor.hpp
         ../ZstdDecompressor.cpp
         ../ZstdDecompressor.hpp
+        constants.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         indexer.cpp
