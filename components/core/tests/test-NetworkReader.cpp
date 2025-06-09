@@ -238,9 +238,7 @@ TEST_CASE("network_reader_with_valid_http_header_kv_pairs", "[NetworkReader]") {
         // they're case insensitive).
         std::string key_lowercase{key};
         clp::string_utils::to_lower(key_lowercase);
-        REQUIRE((
-                std::string(value) == std::string(headers.at(key_lowercase).get<std::string_view>())
-        ));
+        REQUIRE((value == headers.at(key_lowercase).get<std::string_view>()));
     }
 }
 
