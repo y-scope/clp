@@ -2,6 +2,7 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_tostring.hpp>
 
 #include "../src/clp/ErrorCode.hpp"
 #include "../src/clp/hash_utils.hpp"

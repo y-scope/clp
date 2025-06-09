@@ -700,6 +700,9 @@ target_link_libraries(unitTest
         ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
         )
+target_compile_definitions(unitTest
+        PRIVATE CATCH_CONFIG_CPP17_STRING_VIEW
+        )
 target_compile_features(unitTest
         PRIVATE cxx_std_20
         )
