@@ -16,7 +16,7 @@ interface QueryBoxProps extends InputWithCaseSensitiveProps {
 }
 
 /**
- * Renders a Input with a case sensitivity toggle and progress bar.
+ * Renders an Input with a case sensitivity toggle and progress bar.
  *
  * @param props
  * @param props.progress

@@ -32,7 +32,7 @@ const CaseSensitiveToggle = ({
     const isDisabled = disabled ?? false;
 
     const handleButtonClick = useCallback(() => {
-        if (!isDisabled) {
+        if (false === isDisabled) {
             onCaseSensitiveChange(!isCaseSensitive);
         }
     }, [

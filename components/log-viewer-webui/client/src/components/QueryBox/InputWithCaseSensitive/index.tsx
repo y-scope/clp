@@ -37,5 +37,5 @@ const InputWithCaseSensitive = ({
     );
 };
 
-export default InputWithCaseSensitive;
 export type {InputWithCaseSensitiveProps};
+export default InputWithCaseSensitive;
