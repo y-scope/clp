@@ -35,7 +35,7 @@ The task will download, build, and install (within the build directory) the foll
 
 | Library                                                               | Version/commit |
 |-----------------------------------------------------------------------|----------------|
-| [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20230802.1     |
+| [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20250512.0     |
 | [ANTLR](https://www.antlr.org)                                        | v4.13.1        |
 | [Catch2](https://github.com/catchorg/Catch2.git)                      | v2.13.7        |
 | [date](https://github.com/HowardHinnant/date.git)                     | v3.0.1         |
