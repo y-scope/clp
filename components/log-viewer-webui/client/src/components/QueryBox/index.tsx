@@ -5,7 +5,7 @@ import {
 import {Nullable} from "src/typings/common";
 
 import styles from "./index.module.css";
-import InputWithCaseSensitive, {InputWithCaseSensitiveProps} from "./InputWithCaseSenstive";
+import InputWithCaseSensitive, {InputWithCaseSensitiveProps} from "./InputWithCaseSensitive";
 
 
 interface QueryBoxProps extends InputWithCaseSensitiveProps {
@@ -16,7 +16,7 @@ interface QueryBoxProps extends InputWithCaseSensitiveProps {
 }
 
 /**
- * Renders a Input with a case senstive toggle and progress bar.
+ * Renders a Input with a case sensitivity toggle and progress bar.
  *
  * @param props
  * @param props.progress
