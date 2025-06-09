@@ -87,7 +87,7 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "absl"
           TARBALL_SHA256: "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669"
-          TARBALL_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250512.0.tar.gz"
+          TARBALL_URL: "https://github.com/abseil/abseil-cpp/releases/download/20250512.0/abseil-cpp-20250512.0.tar.gz"
 
   antlr-jar:
     internal: true
