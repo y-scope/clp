@@ -19,15 +19,13 @@ type TextTypes = GetProps<typeof Text>["type"];
  * @return
  */
 const Results = () => {
-    const {
-        numSearchResultsTimeline,
-        numSearchResultsTable,
-        searchUiState,
-    } = useSearchStore();
+    const numSearchResultsTimeline = useSearchStore(state=>state.numSearchResultsTimeline);
+    const numSearchResultsTable = useSearchStore(state=>state.numSearchResultsTable);
+    const searchUiState= useSearchStore(state=>state.searchUiState);
 
     // Number of results is the maximum of the number of results in the timeline and table. The
     // timeline may have more results since the table results are capped. Having two sources may
-    // be provide more timely update to the user.
+    // provide more timely updates to the user.
     const numResults = useMemo(
         () => Math.max(numSearchResultsTimeline, numSearchResultsTable),
         [

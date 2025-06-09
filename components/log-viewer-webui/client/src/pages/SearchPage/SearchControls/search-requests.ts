@@ -5,7 +5,7 @@ import {
     QueryJobSchema,
     submitQuery,
 } from "../../../api/search";
-import useSearchStore from "../SearchState/index";
+import useSearchStore, { SEARCH_STATE_DEFAULT } from "../SearchState/index";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 
 
@@ -47,7 +47,7 @@ const handleClearResults = () => {
 const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     const store = useSearchStore.getState();
 
-    // User should be unable to submit a new query while an existing query is in progress.
+    // User should NOT be able to submit a new query while an existing query is in progress.
     if (
         store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
         store.searchUiState !== SEARCH_UI_STATE.DONE
@@ -59,8 +59,8 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 
     handleClearResults();
 
-    store.updateNumSearchResultsTable(0);
-    store.updateNumSearchResultsTimeline(0);
+    store.updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    store.updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)
