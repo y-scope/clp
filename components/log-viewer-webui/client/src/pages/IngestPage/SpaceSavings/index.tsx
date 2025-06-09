@@ -81,7 +81,7 @@ const SpaceSavings = () => {
                     backgroundColor={token.colorPrimary}
                     stat={spaceSavingsPercentText}
                     statColor={token.colorWhite}
-                    statSize={"6.5rem"}
+                    statSize={"5.5rem"}
                     title={"Space Savings"}
                     titleColor={token.colorWhite}/>
             </div>
