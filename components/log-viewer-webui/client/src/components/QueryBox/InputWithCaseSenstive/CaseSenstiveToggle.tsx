@@ -1,28 +1,33 @@
-import { useCallback } from "react";
-import { Button, Tooltip, Typography } from "antd";
+import {useCallback} from "react";
+
+import {
+    Button,
+    Tooltip,
+    Typography,
+} from "antd";
+
 
 export interface CaseSensitiveToggleProps {
+    disabled?: boolean | undefined;
     isCaseSensitive: boolean;
     onCaseSensitiveChange: (newValue: boolean) => void;
-    disabled?: boolean | undefined;
+
 }
 
 /**
- * A toggle button component that switches between case-sensitive and case-insensitive modes.
- *
- * This component displays a button labeled "Aa". When clicked, it toggles the `isCaseSensitive`
- * state and invokes the `onCaseSensitiveChange` callback with the new value.
+ * A toggle button component that switches between case-sensitive and case-insensitive
+ * modes when clicked.
  *
  * @param props
+ * @param props.disabled
  * @param props.isCaseSensitive
  * @param props.onCaseSensitiveChange
- * @param props.disabled
  * @return
  */
 const CaseSensitiveToggle = ({
+    disabled,
     isCaseSensitive,
     onCaseSensitiveChange,
-    disabled,
 }: CaseSensitiveToggleProps) => {
     const isDisabled = disabled ?? false;
 
@@ -31,24 +36,29 @@ const CaseSensitiveToggle = ({
             onCaseSensitiveChange(!isCaseSensitive);
         }
     }, [
+        isDisabled,
         isCaseSensitive,
         onCaseSensitiveChange,
     ]);
 
     return (
-        <Tooltip title={(isDisabled)? "": "Match case"}>
+        <Tooltip
+            title={(isDisabled) ?
+                "" :
+                "Match case"}
+        >
             <Button
                 color={"default"}
+                disabled={isDisabled}
+                size={"small"}
                 icon={
                     <Typography.Text disabled={isDisabled}>
                         Aa
                     </Typography.Text>
                 }
-                size={"small"}
                 variant={isCaseSensitive ?
                     "outlined" :
                     "text"}
-                disabled={isDisabled}
                 onClick={handleButtonClick}/>
         </Tooltip>
     );

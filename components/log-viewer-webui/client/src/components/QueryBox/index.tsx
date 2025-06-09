@@ -1,16 +1,14 @@
 import {
-    Input,
-    InputProps,
     Progress,
     theme,
 } from "antd";
 import {Nullable} from "src/typings/common";
 
 import styles from "./index.module.css";
-import CaseSensitiveToggle, { CaseSensitiveToggleProps } from "./CaseSenstiveToggle";
+import InputWithCaseSensitive, {InputWithCaseSensitiveProps} from "./InputWithCaseSenstive";
 
 
-interface QueryBoxProps extends InputProps, CaseSensitiveToggleProps {
+interface QueryBoxProps extends InputWithCaseSensitiveProps {
     /**
      * The progress of the progress bar from `0` to `100`. Hides the bar if `null`.
      */
@@ -21,27 +19,18 @@ interface QueryBoxProps extends InputProps, CaseSensitiveToggleProps {
  * Renders an Input with a progress bar.
  *
  * @param props
- * @param props.progress
  * @param props.inputProps
- * @param props.onCaseSensitiveChange
- * @param props.isCaseSensitive
+ * @param props.progress The progress value for the progress bar
  * @return
  */
 const QueryBox = ({
     progress,
-    isCaseSensitive,
-    onCaseSensitiveChange,
     ...inputProps
 }: QueryBoxProps) => {
     const {token} = theme.useToken();
     return (
         <div className={styles["queryBox"]}>
-            <Input
-                {...inputProps}
-                suffix={<CaseSensitiveToggle
-                    isCaseSensitive={isCaseSensitive}
-                    disabled={inputProps.disabled}
-                    onCaseSensitiveChange={onCaseSensitiveChange}/>}/>
+            <InputWithCaseSensitive {...inputProps}/>
             <div
                 className={styles["progressBarMask"]}
                 style={{borderRadius: token.borderRadiusLG}}
