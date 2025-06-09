@@ -7,10 +7,10 @@ import TimeRangeInput from "./TimeRangeInput";
 /**
  * Prevents the default behavior to avoid page reload when submitting query.
  *
- * @param e
+ * @param ev
  */
-const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
+    ev.preventDefault();
 };
 
 /**
