@@ -12,12 +12,12 @@ import CaseSensitiveToggle, {CaseSensitiveToggleProps} from "./CaseSenstiveToggl
 type InputWithCaseSensitiveProps = Omit<InputProps, "suffix"> & CaseSensitiveToggleProps;
 
 /**
- * An input component with a built-in case sensitivity toggle.
+ * Antd Input with a built-in case sensitivity toggle.
  *
  * @param props
- * @param props.inputProps
  * @param props.isCaseSensitive
  * @param props.onCaseSensitiveChange
+ * @param props.inputProps
  * @return
  */
 const InputWithCaseSensitive = ({

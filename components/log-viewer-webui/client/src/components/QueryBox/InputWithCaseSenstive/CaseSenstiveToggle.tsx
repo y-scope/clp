@@ -7,7 +7,7 @@ import {
 } from "antd";
 
 
-export interface CaseSensitiveToggleProps {
+interface CaseSensitiveToggleProps {
     disabled?: boolean | undefined;
     isCaseSensitive: boolean;
     onCaseSensitiveChange: (newValue: boolean) => void;
@@ -65,3 +65,4 @@ const CaseSensitiveToggle = ({
 };
 
 export default CaseSensitiveToggle;
+export type {CaseSensitiveToggleProps};
