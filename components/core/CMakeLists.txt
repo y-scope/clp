@@ -243,17 +243,12 @@ endif()
 
 # Find and setup mongocxx
 if(NOT CLP_NO_NEED_MONGOCXX)
+    find_package(mongocxx REQUIRED)
+    message(STATUS "Found mongocxx ${mongocxx_VERSION}")
     if(CLP_USE_STATIC_LIBS)
         set(MONGOCXX_TARGET mongo::mongocxx_static)
     else()
         set(MONGOCXX_TARGET mongo::mongocxx_shared)
-    endif()
-
-    find_package(mongocxx REQUIRED)
-    if(mongocxx_FOUND)
-        message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
     endif()
 endif()
 
@@ -720,7 +715,6 @@ if(NOT CLP_NO_BUILD_TESTS)
             )
     target_include_directories(unitTest
             PRIVATE
-            ${CLP_OUTCOME_INCLUDE_DIRECTORY}
             ${CLP_SQLITE3_INCLUDE_DIRECTORY}
             )
     target_link_libraries(unitTest

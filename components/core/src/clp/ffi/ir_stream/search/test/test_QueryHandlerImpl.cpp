@@ -10,7 +10,7 @@
 #include <catch2/catch.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../../clp_s/archive_constants.hpp"
 #include "../../../../../clp_s/search/ast/Expression.hpp"
@@ -529,7 +529,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     auto new_projected_schema_tree_node_callback
             = [&](bool is_auto_gen,
                   SchemaTree::Node::id_t node_id,
-                  std::string_view key) -> outcome_v2::std_result<void> {
+                  std::string_view key) -> ystdlib::error_handling::Result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
         auto [column_it, column_inserted] = actual_resolved_projections.try_emplace(
                 std::string{key},
@@ -537,7 +537,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
         );
         auto [node_id_it, node_id_inserted] = column_it->second.emplace(node_id);
         REQUIRE(node_id_inserted);
-        return outcome_v2::success();
+        return ystdlib::error_handling::success();
     };
     for (auto const& locator : locators) {
         REQUIRE_FALSE(query_handler_impl

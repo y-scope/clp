@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ErrorCode.hpp"
 #include "../../ir/EncodedTextAst.hpp"
@@ -53,7 +53,7 @@ using Schema = std::vector<SchemaTree::Node::id_t>;
  * @return Forwards `deserialize_and_decode_schema_tree_node_id`'s return values.
  */
 [[nodiscard]] auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>>;
+        -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>>;
 
 /**
  * Deserializes the key name of a schema tree node.
@@ -112,7 +112,7 @@ deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string& dese
 [[nodiscard]] auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         ReaderInterface& reader,
         encoded_tag_t& tag
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<KeyValuePairLogEvent::NodeIdValuePairs, Schema>>;
+) -> ystdlib::error_handling::Result<std::pair<KeyValuePairLogEvent::NodeIdValuePairs, Schema>>;
 
 /**
  * Deserializes the next value and pushes the result into `node_id_value_pairs`.
@@ -209,7 +209,7 @@ auto schema_tree_node_tag_to_type(encoded_tag_t tag) -> std::optional<SchemaTree
 }
 
 auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::Node::id_t>> {
+        -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::Node::id_t>> {
     encoded_tag_t tag{};
     if (auto const err{deserialize_tag(reader, tag)}; IRErrorCode::IRErrorCode_Success != err) {
         return ir_error_code_to_errc(err);
@@ -301,7 +301,7 @@ auto deserialize_string(ReaderInterface& reader, encoded_tag_t tag, std::string&
 auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         ReaderInterface& reader,
         encoded_tag_t& tag
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<KeyValuePairLogEvent::NodeIdValuePairs, Schema>> {
+) -> ystdlib::error_handling::Result<std::pair<KeyValuePairLogEvent::NodeIdValuePairs, Schema>> {
     KeyValuePairLogEvent::NodeIdValuePairs auto_gen_node_id_value_pairs;
     Schema user_gen_schema;
 
@@ -567,7 +567,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::string& key_name
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::NodeLocator>> {
+) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>> {
     auto const type{schema_tree_node_tag_to_type(tag)};
     if (false == type.has_value()) {
         return ir_error_code_to_errc(IRErrorCode::IRErrorCode_Corrupted_IR);
@@ -588,7 +588,7 @@ auto deserialize_ir_unit_schema_tree_node_insertion(
 }
 
 auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset> {
+        -> ystdlib::error_handling::Result<UtcOffset> {
     UtcOffset utc_offset{0};
     if (auto const err{deserialize_utc_offset_change(reader, utc_offset)};
         IRErrorCode::IRErrorCode_Success != err)
@@ -604,7 +604,7 @@ auto deserialize_ir_unit_kv_pair_log_event(
         std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
         std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
         UtcOffset utc_offset
-) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
+) -> ystdlib::error_handling::Result<KeyValuePairLogEvent> {
     auto auto_gen_node_id_value_pairs_and_user_gen_schema_result{
             deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(reader, tag)
     };

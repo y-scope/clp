@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../clp_s/search/ast/FilterExpr.hpp"
 #include "../../../../clp_s/search/ast/Literal.hpp"
@@ -50,7 +50,7 @@ namespace clp::ffi::ir_stream::search {
         clp_s::search::ast::LiteralType literal_type,
         std::optional<Value> const& value,
         bool case_sensitive_match
-) -> outcome_v2::std_result<bool>;
+) -> ystdlib::error_handling::Result<bool>;
 }  // namespace clp::ffi::ir_stream::search
 
 #endif  // CLP_FFI_IR_STREAM_SEARCH_UTILS_HPP

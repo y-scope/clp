@@ -16,7 +16,6 @@ if(NOT CLP_NO_BUILD_CLP_REGEX_UTILS)
         target_include_directories(regex_utils
                 PUBLIC
                 ../
-                "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(regex_utils
                 PUBLIC

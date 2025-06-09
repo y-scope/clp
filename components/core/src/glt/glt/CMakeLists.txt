@@ -176,7 +176,6 @@ if(NOT CLP_NO_BUILD_BINARIES)
         target_compile_features(glt PRIVATE cxx_std_20)
         target_include_directories(glt
                 PRIVATE
-                "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
                 "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
         )
         target_link_libraries(glt
@@ -192,6 +191,7 @@ if(NOT CLP_NO_BUILD_BINARIES)
                 ${STD_FS_LIBS}
                 clp::string_utils
                 yaml-cpp
+                ystdlib::error_handling
                 ZStd::ZStd
         )
         # Put the built executable at the root of the build directory
