@@ -3,8 +3,10 @@
 #include <filesystem>
 #include <stack>
 #include <string>
+#include <memory>
 
 #include "../archive_constants.hpp"
+#include "../TimestampDictionaryReader.hpp"
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
